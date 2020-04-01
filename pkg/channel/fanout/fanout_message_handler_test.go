@@ -31,7 +31,7 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 )
 
@@ -227,10 +227,17 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		subs = append(subs, sub)
 	}
 
-	h, err := NewMessageHandler(zap.NewNop(), Config{
-		Subscriptions: subs,
-		AsyncHandler:  async,
-	})
+	// The test syncs using WaitGroups checking for subscriber/replier correctly invoked, but it doesn't sync on the async
+	// goroutine created by FanoutMessageHandler in async mode.
+	// So the test logger (zaptest) doesn't work, because it could log messages after the test is closed.
+	logger, _ := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+
+	h, err := NewMessageHandler(
+		logger,
+		Config{
+			Subscriptions: subs,
+			AsyncHandler:  async,
+		})
 	if err != nil {
 		t.Fatalf("NewHandler failed. Error:%s", err)
 	}
@@ -246,7 +253,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		h.timeout = timeout
 	} else {
 		// Reasonable timeout for the tests.
-		h.timeout = 100 * time.Millisecond
+		h.timeout = 10000 * time.Second
 	}
 
 	event := makeCloudEventNew()

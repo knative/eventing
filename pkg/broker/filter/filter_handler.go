@@ -239,10 +239,10 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	}
 
 	reportArgs := &ReportArgs{
-		ns:         t.Namespace,
-		trigger:    t.Name,
-		broker:     t.Spec.Broker,
-		filterType: triggerFilterAttribute(t.Spec.Filter, "type"),
+		Namespace:  t.Namespace,
+		Trigger:    t.Name,
+		Broker:     t.Spec.Broker,
+		FilterType: triggerFilterAttribute(t.Spec.Filter, "type"),
 	}
 
 	subscriberURI := t.Status.SubscriberURI

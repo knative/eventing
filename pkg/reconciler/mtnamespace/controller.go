@@ -20,13 +20,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/scheme"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	client "knative.dev/pkg/client/injection/kube/client"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -51,37 +47,15 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 
-	logger := logging.FromContext(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 
-	recorder := controller.GetEventRecorder(ctx)
-	if recorder == nil {
-		// Create event broadcaster
-		logger.Debug("Creating event broadcaster")
-		eventBroadcaster := record.NewBroadcaster()
-		watches := []watch.Interface{
-			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
-			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: client.Get(ctx).CoreV1().Events("")}),
-		}
-		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
-		go func() {
-			<-ctx.Done()
-			for _, w := range watches {
-				w.Stop()
-			}
-		}()
-	}
-
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
-		namespaceLister:   namespaceInformer.Lister(),
 		brokerLister:      brokerInformer.Lister(),
-		recorder:          recorder,
 	}
 
-	impl := controller.NewImpl(r, logging.FromContext(ctx), ReconcilerName)
+	impl := namespacereconciler.NewImpl(ctx, r)
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
 	logging.FromContext(ctx).Info("Setting up event handlers")

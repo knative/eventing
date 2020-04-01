@@ -28,6 +28,8 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -48,7 +50,6 @@ func init() {
 func TestAllCases(t *testing.T) {
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
-	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
 
 	// Object
 	namespace := NewNamespace(testNS,
@@ -74,7 +75,6 @@ func TestAllCases(t *testing.T) {
 		WantErr:                 false,
 		WantEvents: []string{
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			broker,
@@ -95,9 +95,6 @@ func TestAllCases(t *testing.T) {
 			),
 		},
 		Key: testNS,
-		WantEvents: []string{
-			nsEvent,
-		},
 	}, {
 		Name: "Namespace enabled",
 		Objects: []runtime.Object{
@@ -110,7 +107,6 @@ func TestAllCases(t *testing.T) {
 		WantErr:                 false,
 		WantEvents: []string{
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			broker,
@@ -128,9 +124,6 @@ func TestAllCases(t *testing.T) {
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-		WantEvents: []string{
-			nsEvent,
-		},
 	}, {
 		Name: "Namespace enabled, broker exists with no label",
 		Objects: []runtime.Object{
@@ -151,11 +144,13 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
-			namespaceLister:   listers.GetNamespaceLister(),
 			brokerLister:      listers.GetV1Beta1BrokerLister(),
-			recorder:          controller.GetEventRecorder(ctx),
 		}
+
+		return namespacereconciler.NewReconciler(ctx, logger,
+			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
+			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }

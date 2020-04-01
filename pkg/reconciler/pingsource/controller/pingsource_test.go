@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -70,6 +71,8 @@ const (
 	jobRunnerImage = "job-runner-image"
 	sourceName     = "test-ping-source"
 	sourceUID      = "1234"
+	sourceNameLong = "test-pingserver-source-with-a-very-long-name"
+	sourceUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
 	testNS         = "testnamespace"
 	testSchedule   = "*/2 * * * *"
 	testData       = "data"
@@ -441,6 +444,59 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
+		}, {
+			Name:                    "deprecated named adapter deployment found",
+			SkipNamespaceValidation: true,
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha1(sourceNameLong, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceResourceScopeAnnotation,
+					WithPingSourceUID(sourceUIDLong),
+					WithPingSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeAvailableReceiveAdapterDeprecatedName(sourceNameLong, sourceUIDLong, sinkDest),
+			},
+			Key: testNS + "/" + sourceNameLong,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, pingSourceDeploymentDeleted, `Deprecated deployment removed: "%s/%s"`, testNS, makeAvailableReceiveAdapterDeprecatedName(sourceNameLong, sourceUIDLong, sinkDest).Name),
+				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Deployment created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceNameLong),
+			},
+			WantCreates: []runtime.Object{
+				// makeJobRunner(),
+				makeReceiveAdapterWithSinkAndCustomData(sourceNameLong, sourceUIDLong, sinkDest),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewPingSourceV1Alpha1(sourceNameLong, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceResourceScopeAnnotation,
+					WithPingSourceUID(sourceUIDLong),
+					WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithPingSourceNotDeployed(makeReceiveAdapterWithSinkAndCustomData(sourceNameLong, sourceUIDLong, sinkDest).Name),
+					WithInitPingSourceConditions,
+					WithValidPingSourceSchedule,
+					WithValidPingSourceResources,
+					WithPingSourceEventType,
+					WithPingSourceSink(sinkURI),
+					WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: makeAvailableReceiveAdapterDeprecatedName(sourceNameLong, sourceUIDLong, sinkDest).Name,
+			}},
 		},
 	}
 
@@ -472,7 +528,17 @@ func makeAvailableReceiveAdapter(dest duckv1.Destination) *appsv1.Deployment {
 	return ra
 }
 
-func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
+// makeAvailableReceiveAdapterDeprecatedName needed to simulate pre 0.14 adapter whose name was generated using utils.GenerateFixedName
+func makeAvailableReceiveAdapterDeprecatedName(sourceName string, sourceUID string, dest duckv1.Destination) *appsv1.Deployment {
+	ra := makeReceiveAdapterWithSink(dest)
+	src := &sourcesv1alpha1.PingSource{}
+	src.UID = types.UID(sourceUID)
+	ra.Name = utils.GenerateFixedName(src, fmt.Sprintf("pingsource-%s", sourceName))
+	WithDeploymentAvailable()(ra)
+	return ra
+}
+
+func makeReceiveAdapterWithSinkAndCustomData(sourceName, sourceUID string, dest duckv1.Destination) *appsv1.Deployment {
 	source := NewPingSourceV1Alpha1(sourceName, testNS,
 		WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 			Schedule: testSchedule,
@@ -495,6 +561,10 @@ func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
 		SinkURI: sinkURI,
 	}
 	return resources.MakeReceiveAdapter(&args)
+}
+
+func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
+	return makeReceiveAdapterWithSinkAndCustomData(sourceName, sourceUID, dest)
 }
 
 func makeJobRunner() *appsv1.Deployment {

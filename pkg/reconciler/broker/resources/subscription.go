@@ -29,7 +29,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	"knative.dev/eventing/pkg/utils"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -38,7 +37,7 @@ func MakeSubscription(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *core
 	return &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
-			Name:      utils.GenerateFixedName(b, fmt.Sprintf("internal-ingress-%s", b.Name)),
+			Name:      kmeta.ChildName(fmt.Sprintf("internal-ingress-%s", b.Name), string(b.GetUID())),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
@@ -75,7 +74,7 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 	return &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
-			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)),
+			Name:      kmeta.ChildName(fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name), string(t.GetUID())),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(t),
 			},

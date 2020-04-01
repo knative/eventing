@@ -20,13 +20,14 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
 // ConvertTo implements apis.Convertible
@@ -48,24 +49,7 @@ func (source *InMemoryChannelSpec) ConvertTo(ctx context.Context, sink *v1beta1.
 	if source.Subscribable != nil {
 		sink.Subscribers = make([]duckv1beta1.SubscriberSpec, len(source.Subscribable.Subscribers))
 		for i, s := range source.Subscribable.Subscribers {
-			sink.Subscribers[i] = duckv1beta1.SubscriberSpec{
-				UID:           s.UID,
-				Generation:    s.Generation,
-				SubscriberURI: s.SubscriberURI,
-				ReplyURI:      s.ReplyURI,
-			}
-			// If the source has delivery, use it.
-			if s.Delivery != nil {
-				sink.Subscribers[i].Delivery = s.Delivery
-			} else {
-				// If however, there's a Deprecated DeadLetterSinkURI, convert that up
-				// to DeliverySpec.
-				sink.Subscribers[i].Delivery = &duckv1beta1.DeliverySpec{
-					DeadLetterSink: &duckv1.Destination{
-						URI: s.DeadLetterSinkURI,
-					},
-				}
-			}
+			s.ConvertTo(ctx, &sink.Subscribers[i])
 		}
 	}
 	return nil
@@ -114,18 +98,7 @@ func (sink *InMemoryChannelSpec) ConvertFrom(ctx context.Context, source v1beta1
 			Subscribers: make([]eventingduck.SubscriberSpec, len(source.Subscribers)),
 		}
 		for i, s := range source.Subscribers {
-			var deadLetterSinkURI *apis.URL
-			if s.Delivery != nil && s.Delivery.DeadLetterSink != nil {
-				deadLetterSinkURI = s.Delivery.DeadLetterSink.URI
-			}
-			sink.Subscribable.Subscribers[i] = eventingduck.SubscriberSpec{
-				UID:               s.UID,
-				Generation:        s.Generation,
-				SubscriberURI:     s.SubscriberURI,
-				ReplyURI:          s.ReplyURI,
-				Delivery:          s.Delivery,
-				DeadLetterSinkURI: deadLetterSinkURI,
-			}
+			sink.Subscribable.Subscribers[i].ConvertFrom(ctx, s)
 		}
 	}
 }

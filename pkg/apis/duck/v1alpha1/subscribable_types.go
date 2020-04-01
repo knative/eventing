@@ -120,6 +120,8 @@ var (
 	// Verify SubscribableType resources meet duck contracts.
 	_ duck.Populatable = (*SubscribableType)(nil)
 	_ apis.Listable    = (*SubscribableType)(nil)
+
+	_ apis.Convertible = (*SubscribableType)(nil)
 )
 
 // GetSubscribableTypeStatus method Returns the Default SubscribableStatus in this case it's SubscribableStatus

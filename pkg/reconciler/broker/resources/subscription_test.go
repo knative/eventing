@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,6 +30,7 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 )
 
 func TestMakeSubscription(t *testing.T) {
@@ -106,7 +108,8 @@ func TestNewSubscription(t *testing.T) {
 	trigger := &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
-			Name:      "t-name",
+			Name:      "t-name-is-a-long-name",
+			UID:       "cafed00d-cafed00d-cafed00d-cafed00d",
 		},
 		Spec: v1alpha1.TriggerSpec{
 			Broker: "broker-name",
@@ -132,17 +135,18 @@ func TestNewSubscription(t *testing.T) {
 	want := &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
-			Name:      "broker-name-t-name-",
+			Name:      kmeta.ChildName(fmt.Sprintf("%s-%s-", "broker-name", "t-name-is-a-long-name"), "cafed00d-cafed00d-cafed00d-cafed00d"),
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion:         "eventing.knative.dev/v1alpha1",
 				Kind:               "Trigger",
-				Name:               "t-name",
+				Name:               "t-name-is-a-long-name",
+				UID:                "cafed00d-cafed00d-cafed00d-cafed00d",
 				Controller:         &TrueValue,
 				BlockOwnerDeletion: &TrueValue,
 			}},
 			Labels: map[string]string{
 				eventing.BrokerLabelKey:        "broker-name",
-				"eventing.knative.dev/trigger": "t-name",
+				"eventing.knative.dev/trigger": "t-name-is-a-long-name",
 			},
 		},
 		Spec: messagingv1alpha1.SubscriptionSpec{

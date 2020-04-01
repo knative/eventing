@@ -31,6 +31,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -283,12 +284,8 @@ func TestReceiver(t *testing.T) {
 				Header: http.Header{
 					// foo won't pass filtering.
 					"foo": []string{"bar"},
-					// b3 will not pass filtering.
-					"B3": []string{"0"},
-					// X-B3-Foo will not pass filtering.
-					"X-B3-Foo": []string{"abc"},
-					// X-Ot-Foo will not pass filtering.
-					"X-Ot-Foo": []string{"haden"},
+					// Traceparent will not pass filtering.
+					"Traceparent": []string{"0"},
 					// Knative-Foo will pass as a prefix match.
 					"Knative-Foo": []string{"baz", "qux"},
 					// X-Request-Id will pass as an exact header match.
@@ -336,7 +333,7 @@ func TestReceiver(t *testing.T) {
 			listers := reconcilertesting.NewListers(correctURI)
 			reporter := &mockReporter{}
 			r, err := NewHandler(
-				zap.NewNop(),
+				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
 				8080)

@@ -33,7 +33,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 )
 
@@ -161,8 +161,8 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 		reply = sub.ReplyURI.URL()
 	}
 	var deadLetter *url.URL
-	if sub.DeadLetterSinkURI != nil {
-		deadLetter = sub.DeadLetterSinkURI.URL()
+	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 	return f.dispatcher.DispatchMessage(ctx, message, additionalHeaders, destination, reply, deadLetter)
 }

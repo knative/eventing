@@ -30,6 +30,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -559,7 +560,7 @@ func TestDispatchEvent(t *testing.T) {
 			tctx.Header = tc.header
 			ctx = cehttp.WithTransportContext(ctx, tctx)
 
-			md := NewEventDispatcher(zap.NewNop())
+			md := NewEventDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			destination := getDomain(t, tc.sendToDestination, destServer.URL)
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
 

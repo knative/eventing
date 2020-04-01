@@ -30,7 +30,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 )
 
@@ -138,5 +138,9 @@ func (f *Handler) dispatch(ctx context.Context, event cloudevents.Event) error {
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *Handler) makeFanoutRequest(ctx context.Context, event cloudevents.Event, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchEventWithDelivery(ctx, event, sub.SubscriberURI.String(), sub.ReplyURI.String(), &channel.DeliveryOptions{DeadLetterSink: sub.DeadLetterSinkURI.String()})
+	var opts *channel.DeliveryOptions
+	if sub.Delivery != nil {
+		opts = &channel.DeliveryOptions{DeadLetterSink: sub.Delivery.DeadLetterSink.URI.String()}
+	}
+	return f.dispatcher.DispatchEventWithDelivery(ctx, event, sub.SubscriberURI.String(), sub.ReplyURI.String(), opts)
 }

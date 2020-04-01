@@ -19,14 +19,15 @@ package tracing
 import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	"github.com/cloudevents/sdk-go/v2/extensions"
 	"go.opencensus.io/trace"
 )
 
 // AddTraceparent returns a CloudEvent that is identical to the input event,
 // with the traceparent CloudEvents extension attribute added.
 func AddTraceparent(span *trace.Span) []binding.TransformerFactory {
-	val := traceparentAttributeValue(span)
-	return transformer.SetExtension(traceparentAttribute, val, func(i2 interface{}) (i interface{}, err error) {
-		return val, nil
+	dt := extensions.FromSpanContext(span.SpanContext())
+	return transformer.SetExtension(extensions.TraceParentExtension, dt.TraceParent, func(i2 interface{}) (i interface{}, err error) {
+		return dt.TraceParent, nil
 	})
 }

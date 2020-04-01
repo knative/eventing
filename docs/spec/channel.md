@@ -272,10 +272,10 @@ If a Channel receives an event queueing request and is unable to parse a valid
 CloudEvent, then it MUST reject the request.
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
-In particular, it MUST translate any incoming OpenTracing or B3 headers to the
+In particular, it MUST translate any incoming W3C Tracecontext headers to the
 [Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 The Channel SHOULD sample and write traces to the location specified in
-[`config-tracing`](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
+[`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
 
 ##### HTTP
 

@@ -60,9 +60,9 @@ var (
 )
 
 type ReportArgs struct {
-	ns        string
-	broker    string
-	eventType string
+	Namespace string
+	Broker    string
+	EventType string
 }
 
 func init() {
@@ -148,9 +148,9 @@ func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Cont
 		emptyContext,
 		tag.Insert(broker.ContainerTagKey, r.container),
 		tag.Insert(broker.UniqueTagKey, r.uniqueName),
-		tag.Insert(namespaceKey, args.ns),
-		tag.Insert(brokerKey, args.broker),
-		tag.Insert(eventTypeKey, args.eventType),
+		tag.Insert(namespaceKey, args.Namespace),
+		tag.Insert(brokerKey, args.Broker),
+		tag.Insert(eventTypeKey, args.EventType),
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
 		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 }

@@ -79,9 +79,11 @@ const (
 	filterContainerName  = "filter"
 	ingressContainerName = "ingress"
 
-	triggerChannel channelType = "TriggerChannel"
-	triggerName                = "test-trigger"
-	triggerUID                 = "test-trigger-uid"
+	triggerChannel  channelType = "TriggerChannel"
+	triggerName                 = "test-trigger"
+	triggerUID                  = "test-trigger-uid"
+	triggerNameLong             = "test-trigger-name-is-a-long-name"
+	triggerUIDLong              = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
 
 	subscriberURI     = "http://example.com/subscriber/"
 	subscriberKind    = "Service"
@@ -1464,6 +1466,40 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDependencyReady(),
 				),
 			}},
+		}, {
+			Name: "Trigger has deprecated named subscriber",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong),
+				NewTrigger(triggerNameLong, testNS, brokerName,
+					WithTriggerUID(triggerUIDLong),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+				)}...),
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, subscriptionDeleted, `Deprecated subscription removed: "%s/%s"`, testNS, makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name),
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerNameLong, testNS, brokerName,
+					WithTriggerUID(triggerUIDLong),
+					WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDependencyReady(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeIngressSubscriptionWithCustomData(triggerNameLong, triggerUIDLong),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name,
+			}},
 		},
 	}
 
@@ -1740,6 +1776,17 @@ func makeIngressSubscription() *messagingv1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
 }
 
+func makeIngressSubscriptionWithCustomData(triggerName, triggerUID string) *messagingv1alpha1.Subscription {
+	t := makeTrigger()
+	t.Name = triggerName
+	t.UID = types.UID(triggerUID)
+
+	uri := makeServiceURI()
+	uri.Path = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
+
+	return resources.NewSubscription(t, createTriggerChannelRef(), makeBrokerRef(), uri, makeEmptyDelivery())
+}
+
 func makeTrigger() *v1alpha1.Trigger {
 	return &v1alpha1.Trigger{
 		TypeMeta: metav1.TypeMeta{
@@ -1863,6 +1910,15 @@ func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription 
 
 func makeReadySubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	return s
+}
+
+func makeReadySubscriptionDeprecatedName(triggerName, triggerUID string) *messagingv1alpha1.Subscription {
+	s := makeIngressSubscription()
+	t := NewTrigger(triggerName, testNS, brokerName)
+	t.UID = types.UID(triggerUID)
+	s.Name = utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", brokerName, triggerName))
 	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s
 }

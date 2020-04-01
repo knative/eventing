@@ -114,6 +114,8 @@ func ToDNS1123Subdomain(name string) string {
 
 // GenerateFixedName generates a fixed name for the given owning resource and human readable prefix.
 // The name's length will be short enough to be valid for K8s Services.
+//
+// Deprecated, use knative.dev/pkg/kmeta.ChildName instead.
 func GenerateFixedName(owner metav1.Object, prefix string) string {
 	uid := string(owner.GetUID())
 

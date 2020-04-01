@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"knative.dev/pkg/kmeta"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -78,7 +79,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
-			Name:      fmt.Sprintf("apiserversource-%s-1234", name),
+			Name:      kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", name), string(src.UID)),
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",

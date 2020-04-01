@@ -18,6 +18,8 @@ package apiserversource
 
 import (
 	"context"
+	"fmt"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -71,10 +73,11 @@ var (
 )
 
 const (
-	image      = "github.com/knative/test/image"
-	sourceName = "test-apiserver-source"
-	sourceUID  = "1234"
-	testNS     = "testnamespace"
+	image          = "github.com/knative/test/image"
+	sourceName     = "test-apiserver-source"
+	sourceNameLong = "test-apiserver-source-with-a-very-long-name"
+	sourceUID      = "1234"
+	testNS         = "testnamespace"
 
 	sinkName = "testsink"
 	source   = "apiserveraddr"
@@ -549,6 +552,10 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {
+	return makeReceiveAdapterWithName(sourceName)
+}
+
+func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKind{{
@@ -575,6 +582,16 @@ func makeReceiveAdapter() *appsv1.Deployment {
 
 func makeAvailableReceiveAdapter() *appsv1.Deployment {
 	ra := makeReceiveAdapter()
+	WithDeploymentAvailable()(ra)
+	return ra
+}
+
+// makeAvailableReceiveAdapterDeprecatedName needed to simulate pre 0.14 adapter whose name was generated using utils.GenerateFixedName
+func makeAvailableReceiveAdapterDeprecatedName(sourceName string) *appsv1.Deployment {
+	ra := makeReceiveAdapter()
+	src := &sourcesv1alpha1.ApiServerSource{}
+	src.UID = sourceUID
+	ra.Name = utils.GenerateFixedName(src, fmt.Sprintf("apiserversource-%s", sourceName))
 	WithDeploymentAvailable()(ra)
 	return ra
 }
