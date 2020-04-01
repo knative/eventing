@@ -33,6 +33,4 @@ func (ss *ApiServerSourceSpec) SetDefaults(ctx context.Context) {
 	if ss.ServiceAccountName == "" {
 		ss.ServiceAccountName = "default"
 	}
-
-	// TODO anything?
 }

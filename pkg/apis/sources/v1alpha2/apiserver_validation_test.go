@@ -35,9 +35,7 @@ func TestAPIServerValidation(t *testing.T) {
 		name: "valid spec",
 		spec: ApiServerSourceSpec{
 			EventMode: "Resource",
-			Resources: []APIVersionKind{
-				{},
-			},
+			Resources: []APIVersionKindSelector{{}},
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
@@ -53,9 +51,7 @@ func TestAPIServerValidation(t *testing.T) {
 		name: "empty sink",
 		spec: ApiServerSourceSpec{
 			EventMode: "Resource",
-			Resources: []APIVersionKind{
-				{},
-			},
+			Resources: []APIVersionKindSelector{{}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -66,9 +62,7 @@ func TestAPIServerValidation(t *testing.T) {
 		name: "invalid mode",
 		spec: ApiServerSourceSpec{
 			EventMode: "Test",
-			Resources: []APIVersionKind{
-				{},
-			},
+			Resources: []APIVersionKindSelector{{}},
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{

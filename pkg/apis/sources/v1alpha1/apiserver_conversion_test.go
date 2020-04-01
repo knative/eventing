@@ -98,6 +98,9 @@ func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 				Resources: []ApiServerResource{{
 					APIVersion: "A1",
 					Kind:       "K1",
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"A1": "K1"},
+					},
 				}, {
 					APIVersion: "A2",
 					Kind:       "K2",
@@ -303,7 +306,6 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 func fixApiServerSourceDeprecated(in *ApiServerSource) *ApiServerSource {
 	for i := range in.Spec.Resources {
 		in.Spec.Resources[i].Controller = false
-		in.Spec.Resources[i].LabelSelector = metav1.LabelSelector{}
 		in.Spec.Resources[i].ControllerSelector = metav1.OwnerReference{}
 	}
 	if in.Spec.Sink != nil {

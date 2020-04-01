@@ -24,68 +24,46 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/ptr"
+
 	_ "knative.dev/pkg/metrics/testing"
+	_ "knative.dev/pkg/system/testing"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
 	name := "source-name"
-	src := &v1alpha1.ApiServerSource{
+	src := &v1alpha2.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "source-namespace",
 			UID:       "1234",
 		},
-		Spec: v1alpha1.ApiServerSourceSpec{
-			ServiceAccountName: "source-svc-acct",
-			Resources: []v1alpha1.ApiServerResource{
-				{
-					APIVersion: "",
-					Kind:       "Namespace",
+		Spec: v1alpha2.ApiServerSourceSpec{
+			Resources: []v1alpha2.APIVersionKindSelector{{
+				APIVersion: ptr.String(""),
+				Kind:       ptr.String("Namespace"),
+			}, {
+				APIVersion: ptr.String("batch/v1"),
+				Kind:       ptr.String("Job"),
+			}, {
+				APIVersion: ptr.String(""),
+				Kind:       ptr.String("Pod"),
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"test-key1": "test-value1"},
 				},
-				{
-					APIVersion: "",
-					Kind:       "Pod",
-					Controller: true,
-				},
-				{
-					APIVersion: "",
-					Kind:       "Pod",
-					LabelSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{"test-key1": "test-value1"},
-					},
-				},
-				{
-					APIVersion: "",
-					Kind:       "Pod",
-					LabelSelector: metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{Key: "akey", Operator: "Exists"},
-							{Key: "anotherkey", Operator: "DoesNotExist"},
-						},
-					},
-				},
-				{
-					APIVersion: "",
-					Kind:       "Pod",
-					LabelSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{"test-key2": "test-value2"},
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{Key: "akey", Operator: "Exists"},
-							{Key: "anotherkey", Operator: "DoesNotExist"},
-						},
-					},
-					ControllerSelector: metav1.OwnerReference{
-						APIVersion: "foo/v1alpha1",
-						Kind:       "Foo",
-					},
-				},
+			}},
+			ResourceOwner: &v1alpha2.APIVersionKind{
+				APIVersion: ptr.String("custom/v1"),
+				Kind:       ptr.String("Parent"),
 			},
+			EventMode:          "Resource",
+			ServiceAccountName: "source-svc-acct",
 		},
 	}
 
-	got := MakeReceiveAdapter(&ReceiveAdapterArgs{
+	got, _ := MakeReceiveAdapter(&ReceiveAdapterArgs{
 		Image:  "test-image",
 		Source: src,
 		Labels: map[string]string{
@@ -108,7 +86,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion:         "sources.knative.dev/v1alpha1",
+					APIVersion:         "sources.knative.dev/v1alpha2",
 					Kind:               "ApiServerSource",
 					Name:               name,
 					UID:                "1234",
@@ -147,28 +125,14 @@ func TestMakeReceiveAdapter(t *testing.T) {
 							}},
 							Env: []corev1.EnvVar{
 								{
-									Name:  "SINK_URI",
+									Name:  "K_SINK",
 									Value: "sink-uri",
 								}, {
-									Name: "MODE",
+									Name:  "K_SOURCE_CONFIG",
+									Value: `{"namespace":"source-namespace","resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
 								}, {
-									Name:  "API_VERSION",
-									Value: ";;;;",
-								}, {
-									Name:  "KIND",
-									Value: "Namespace;Pod;Pod;Pod;Pod",
-								}, {
-									Name:  "OWNER_API_VERSION",
-									Value: ";;;;foo/v1alpha1",
-								}, {
-									Name:  "OWNER_KIND",
-									Value: ";;;;Foo",
-								}, {
-									Name:  "CONTROLLER",
-									Value: "false,true,false,false,false",
-								}, {
-									Name:  "SELECTOR",
-									Value: ";;test-key1=test-value1;akey,!anotherkey;akey,!anotherkey,test-key2=test-value2",
+									Name:  "SYSTEM_NAMESPACE",
+									Value: "knative-testing",
 								}, {
 									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{

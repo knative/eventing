@@ -27,12 +27,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 )
 
 func TestApiServerSource(t *testing.T) {
@@ -45,23 +46,21 @@ func TestApiServerSource(t *testing.T) {
 		baseLoggerPodName     = "e2e-api-server-source-logger-pod"
 	)
 
-	mode := "Ref"
+	mode := "Reference"
 	table := []struct {
 		name     string
-		spec     sourcesv1alpha1.ApiServerSourceSpec
+		spec     sourcesv1alpha2.ApiServerSourceSpec
 		pod      func(name string) *corev1.Pod
 		expected string
 	}{
 		{
 			name: "event-ref",
-			spec: sourcesv1alpha1.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha1.ApiServerResource{
-					{
-						APIVersion: "v1",
-						Kind:       "Event",
-					},
-				},
-				Mode:               mode,
+			spec: sourcesv1alpha2.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+					APIVersion: ptr.String("v1"),
+					Kind:       ptr.String("Event"),
+				}},
+				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
 			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
@@ -69,15 +68,13 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-unmatch-label",
-			spec: sourcesv1alpha1.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha1.ApiServerResource{
-					{
-						APIVersion:    "v1",
-						Kind:          "Pod",
-						LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
-					},
-				},
-				Mode:               mode,
+			spec: sourcesv1alpha2.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+					APIVersion:    ptr.String("v1"),
+					Kind:          ptr.String("Pod"),
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+				}},
+				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
 			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
@@ -85,15 +82,13 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label",
-			spec: sourcesv1alpha1.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha1.ApiServerResource{
-					{
-						APIVersion:    "v1",
-						Kind:          "Pod",
-						LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
-					},
-				},
-				Mode:               mode,
+			spec: sourcesv1alpha2.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+					APIVersion:    ptr.String("v1"),
+					Kind:          ptr.String("Pod"),
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+				}},
+				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
 			pod: func(name string) *corev1.Pod {
@@ -103,20 +98,16 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label-expr",
-			spec: sourcesv1alpha1.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha1.ApiServerResource{
-					{
-						APIVersion: "v1",
-						Kind:       "Pod",
-						LabelSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{"e2e": "testing"},
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{Key: "e2e", Operator: "Exists"},
-							},
-						},
+			spec: sourcesv1alpha2.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+					APIVersion: ptr.String("v1"),
+					Kind:       ptr.String("Pod"),
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels:      map[string]string{"e2e": "testing"},
+						MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "e2e", Operator: "Exists"}},
 					},
-				},
-				Mode:               mode,
+				}},
+				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
 			pod: func(name string) *corev1.Pod {
@@ -149,7 +140,7 @@ func TestApiServerSource(t *testing.T) {
 
 		// create event logger pod and service
 		loggerPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-		tc.spec.Sink = &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)}
+		tc.spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(loggerPodName)}
 
 		loggerPod := resources.EventLoggerPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
@@ -224,17 +215,17 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 		sourceName,
 		client.Namespace,
 		eventingtesting.WithApiServerSourceSpec(
-			sourcesv1alpha1.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha1.ApiServerResource{{
-					APIVersion: "v1",
-					Kind:       "Event",
+			sourcesv1alpha2.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+					APIVersion: ptr.String("v1"),
+					Kind:       ptr.String("Event"),
 				}},
-				Mode:               "Ref",
+				EventMode:          "Reference",
 				ServiceAccountName: serviceAccountName,
 				// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
-				Sink: &duckv1beta1.Destination{Ref: &corev1.ObjectReference{APIVersion: "eventing.knative.dev/v1alpha1", Kind: "Broker", Name: pkgResources.DefaultBrokerName, Namespace: client.Namespace}},
 			}),
 	)
+	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1alpha1", Kind: "Broker", Name: pkgResources.DefaultBrokerName, Namespace: client.Namespace}}
 
 	client.CreateApiServerSourceOrFail(apiServerSource)
 
@@ -246,14 +237,14 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error retrieving EventTypes: %v", err)
 	}
-	if len(eventTypes.Items) != len(sourcesv1alpha1.ApiServerSourceEventTypes) {
-		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1alpha1.ApiServerSourceEventTypes), len(eventTypes.Items))
+	if len(eventTypes.Items) != len(sourcesv1alpha2.ApiServerSourceEventTypes) {
+		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1alpha2.ApiServerSourceEventTypes), len(eventTypes.Items))
 	}
 
-	expectedCeTypes := sets.NewString(sourcesv1alpha1.ApiServerSourceEventTypes...)
+	expectedCeTypes := sets.NewString(sourcesv1alpha2.ApiServerSourceEventTypes...)
 	for _, et := range eventTypes.Items {
 		if !expectedCeTypes.Has(et.Spec.Type) {
-			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1alpha1.ApiServerSourceEventTypes, et.Spec.Type)
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1alpha2.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
 }

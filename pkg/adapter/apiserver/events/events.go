@@ -20,53 +20,70 @@ import (
 	"fmt"
 	"strings"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	cloudevents "github.com/cloudevents/sdk-go/v1"
-
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
-func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {
+func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
 	if obj == nil {
-		return nil, fmt.Errorf("resource can not be nil")
+		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceAddEventType, object, object)
+	var data interface{}
+	var eventType string
+	if ref {
+		data = getRef(object)
+		eventType = sourcesv1alpha2.ApiServerSourceAddRefEventType
+	} else {
+		data = object
+		eventType = sourcesv1alpha2.ApiServerSourceAddEventType
+	}
+
+	return makeEvent(source, eventType, object, data)
 }
 
-func MakeUpdateEvent(source string, obj interface{}) (*cloudevents.Event, error) {
+func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
 	if obj == nil {
-		return nil, fmt.Errorf("resource can not be nil")
+		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceUpdateEventType, object, object)
+	var data interface{}
+	var eventType string
+	if ref {
+		data = getRef(object)
+		eventType = sourcesv1alpha2.ApiServerSourceUpdateRefEventType
+	} else {
+		data = object
+		eventType = sourcesv1alpha2.ApiServerSourceUpdateEventType
+	}
+
+	return makeEvent(source, eventType, object, data)
 }
 
-func MakeDeleteEvent(source string, obj interface{}) (*cloudevents.Event, error) {
+func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
 	if obj == nil {
-		return nil, fmt.Errorf("resource can not be nil")
+		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
+	var data interface{}
+	var eventType string
+	if ref {
+		data = getRef(object)
+		eventType = sourcesv1alpha2.ApiServerSourceDeleteRefEventType
+	} else {
+		data = object
+		eventType = sourcesv1alpha2.ApiServerSourceDeleteEventType
+	}
 
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceDeleteEventType, object, object)
+	return makeEvent(source, eventType, object, data)
 }
 
-func getRef(object *unstructured.Unstructured, asController bool) corev1.ObjectReference {
-	if asController {
-		if owner := metav1.GetControllerOf(object); owner != nil {
-			return corev1.ObjectReference{
-				APIVersion: owner.APIVersion,
-				Kind:       owner.Kind,
-				Name:       owner.Name,
-				Namespace:  object.GetNamespace(),
-			}
-		}
-	}
+func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 	return corev1.ObjectReference{
 		APIVersion: object.GetAPIVersion(),
 		Kind:       object.GetKind(),
@@ -75,31 +92,7 @@ func getRef(object *unstructured.Unstructured, asController bool) corev1.ObjectR
 	}
 }
 
-func MakeAddRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("resource can not be nil")
-	}
-	object := obj.(*unstructured.Unstructured)
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceAddRefEventType, object, getRef(object, asController))
-}
-
-func MakeUpdateRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("new resource can not be nil")
-	}
-	object := obj.(*unstructured.Unstructured)
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceUpdateRefEventType, object, getRef(object, asController))
-}
-
-func MakeDeleteRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("resource can not be nil")
-	}
-	object := obj.(*unstructured.Unstructured)
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceDeleteRefEventType, object, getRef(object, asController))
-}
-
-func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (*cloudevents.Event, error) {
+func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (cloudevents.Event, error) {
 	subject := createSelfLink(corev1.ObjectReference{
 		APIVersion: obj.GetAPIVersion(),
 		Kind:       obj.GetKind(),
@@ -111,12 +104,11 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 	event.SetType(eventType)
 	event.SetSource(source)
 	event.SetSubject(subject)
-	event.SetDataContentType(cloudevents.ApplicationJSON)
 
-	if err := event.SetData(data); err != nil {
-		return nil, err
+	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
+		return event, err
 	}
-	return &event, nil
+	return event, nil
 }
 
 // Creates a URI of the form found in object metadata selfLinks
@@ -128,7 +120,7 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 // Track these issues at https://github.com/kubernetes/kubernetes/issues/66313
 // We could possibly work around this by adding a lister for the resources referenced by these events.
 func createSelfLink(o corev1.ObjectReference) string {
-	collectionNameHack := strings.ToLower(o.Kind) + "s"
+	gvr, _ := meta.UnsafeGuessKindToResource(o.GroupVersionKind())
 	versionNameHack := o.APIVersion
 
 	// Core API types don't have a separate package name and only have a version string (e.g. /apis/v1/namespaces/default/pods/myPod)
@@ -136,5 +128,5 @@ func createSelfLink(o corev1.ObjectReference) string {
 	if strings.Contains(versionNameHack, ".") && !strings.Contains(versionNameHack, "/") {
 		versionNameHack = versionNameHack + "/versionUnknown"
 	}
-	return fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", versionNameHack, o.Namespace, collectionNameHack, o.Name)
+	return fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", versionNameHack, o.Namespace, gvr.Resource, o.Name)
 }

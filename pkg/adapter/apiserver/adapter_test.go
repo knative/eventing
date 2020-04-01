@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -29,211 +28,35 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
-	"knative.dev/eventing/pkg/adapter"
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
+	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/pkg/logging"
 	pkgtesting "knative.dev/pkg/reconciler/testing"
-	"knative.dev/pkg/source"
 )
-
-type mockReporter struct {
-	eventCount int
-}
-
-var (
-	fakeMasterURL = "test-source"
-)
-
-func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount += 1
-	return nil
-}
-
-func TestNewAdaptor(t *testing.T) {
-	ce := kncetesting.NewTestClient()
-
-	masterURL = &fakeMasterURL
-
-	testCases := map[string]struct {
-		opt    envConfig
-		source string
-
-		wantMode      string
-		wantNamespace string
-		wantGVRCs     []GVRC
-	}{
-		"with source": {
-			source:   "test-source",
-			opt:      envConfig{},
-			wantMode: RefMode,
-		},
-		"with namespace": {
-			source: "test-source",
-			opt: envConfig{
-				EnvConfig: adapter.EnvConfig{
-					Namespace: "test-ns",
-				},
-			},
-			wantMode:      RefMode,
-			wantNamespace: "test-ns",
-		},
-		"with mode resource": {
-			source: "test-source",
-			opt: envConfig{
-				Mode: ResourceMode,
-			},
-			wantMode: ResourceMode,
-		},
-		"with mode ref": {
-			source: "test-source",
-			opt: envConfig{
-				Mode: RefMode,
-			},
-			wantMode: RefMode,
-		},
-		"with mode trash": {
-			source: "test-source",
-			opt: envConfig{
-				Mode: "trash",
-			},
-			wantMode: RefMode,
-		},
-		"with mode gvrs": {
-			source: "test-source",
-			opt: envConfig{
-				ApiVersion:      StringList{"apps/v1"},
-				Kind:            StringList{"ReplicaSet"},
-				OwnerApiVersion: StringList{""},
-				OwnerKind:       StringList{""},
-				LabelSelector:   StringList{""},
-				Controller:      []bool{true},
-			},
-			wantMode: RefMode,
-			wantGVRCs: []GVRC{{
-				GVR: schema.GroupVersionResource{
-					Group:    "apps",
-					Version:  "v1",
-					Resource: "replicasets",
-				},
-				Controller: true,
-			}},
-		},
-		"with label selector": {
-			source: "test-source",
-			opt: envConfig{
-				ApiVersion:      StringList{"apps/v1"},
-				Kind:            StringList{"ReplicaSet"},
-				Controller:      []bool{true},
-				OwnerApiVersion: StringList{""},
-				OwnerKind:       StringList{""},
-				LabelSelector:   StringList{"environment=production,tier!=frontend"},
-			},
-			wantMode: RefMode,
-			wantGVRCs: []GVRC{{
-				GVR: schema.GroupVersionResource{
-					Group:    "apps",
-					Version:  "v1",
-					Resource: "replicasets",
-				},
-				Controller:    true,
-				LabelSelector: "environment=production,tier!=frontend",
-			}},
-		},
-		"with owner selector": {
-			source: "test-source",
-			opt: envConfig{
-				ApiVersion:      StringList{"apps/v1"},
-				Kind:            StringList{"ReplicaSet"},
-				Controller:      []bool{false},
-				OwnerApiVersion: StringList{"v1"},
-				OwnerKind:       StringList{"Pod"},
-				LabelSelector:   StringList{""},
-			},
-			wantMode: RefMode,
-			wantGVRCs: []GVRC{{
-				GVR: schema.GroupVersionResource{
-					Group:    "apps",
-					Version:  "v1",
-					Resource: "replicasets",
-				},
-				OwnerApiVersion: "v1",
-				OwnerKind:       "Pod",
-			}},
-		},
-		"with multiple resources": {
-			source: "test-source",
-			opt: envConfig{
-				ApiVersion:      StringList{"apps/v1", "v1"},
-				Kind:            StringList{"ReplicaSet", "Service"},
-				Controller:      []bool{false, true},
-				OwnerApiVersion: StringList{"v1", ""},
-				OwnerKind:       StringList{"Pod", ""},
-				LabelSelector:   StringList{"", ""},
-			},
-			wantMode: RefMode,
-			wantGVRCs: []GVRC{{
-				GVR: schema.GroupVersionResource{
-					Group:    "apps",
-					Version:  "v1",
-					Resource: "replicasets",
-				},
-				OwnerApiVersion: "v1",
-				OwnerKind:       "Pod",
-			}, {
-				GVR: schema.GroupVersionResource{
-					Group:    "",
-					Version:  "v1",
-					Resource: "services",
-				},
-				Controller: true,
-			}},
-		},
-	}
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			r := &mockReporter{}
-			ctx, _ := pkgtesting.SetupFakeContext(t)
-			a := NewAdapter(ctx, &tc.opt, ce, r)
-
-			got, ok := a.(*apiServerAdapter)
-			if !ok {
-				t.Errorf("expected NewAdapter to return a *adapter, but did not")
-			}
-			if diff := cmp.Diff(tc.source, got.source); diff != "" {
-				t.Errorf("unexpected source diff (-want, +got) = %v", diff)
-			}
-			if diff := cmp.Diff(tc.wantMode, got.mode); diff != "" {
-				t.Errorf("unexpected mode diff (-want, +got) = %v", diff)
-			}
-			if diff := cmp.Diff(tc.wantNamespace, got.namespace); diff != "" {
-				t.Errorf("unexpected namespace diff (-want, +got) = %v", diff)
-			}
-			if diff := cmp.Diff(tc.wantGVRCs, got.gvrcs); diff != "" {
-				t.Errorf("unexpected namespace diff (-want, +got) = %v", diff)
-			}
-		})
-	}
-}
 
 func TestAdapter_StartRef(t *testing.T) {
-	ce := kncetesting.NewTestClient()
+	ce := adaptertest.NewTestClient()
 
-	opt := envConfig{
-		EnvConfig: adapter.EnvConfig{
-			Namespace: "default",
-		},
-		Name:            "test-source",
-		Mode:            RefMode,
-		ApiVersion:      StringList{"v1"},
-		Kind:            StringList{"Pod"},
-		Controller:      []bool{false},
-		OwnerApiVersion: StringList{""},
-		OwnerKind:       StringList{""},
-		LabelSelector:   StringList{""},
+	config := Config{
+		Namespace: "default",
+		Resources: []ResourceWatch{{
+			GVR: schema.GroupVersionResource{
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+		EventMode: "Resource",
 	}
-	r := &mockReporter{}
 	ctx, _ := pkgtesting.SetupFakeContext(t)
-	a := NewAdapter(ctx, &opt, ce, r)
+
+	a := &apiServerAdapter{
+		ce:     ce,
+		logger: logging.FromContext(ctx),
+		config: config,
+		k8s:    makeDynamicClient(simplePod("foo", "default")),
+		source: "unit-test",
+		name:   "unittest",
+	}
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -246,7 +69,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	// Wait for the reflector to be fully initialized.
 	// Ideally we want to check LastSyncResourceVersion is not empty but we
 	// don't have access to it.
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	stopCh <- struct{}{}
 	<-done
@@ -257,25 +80,28 @@ func TestAdapter_StartRef(t *testing.T) {
 }
 
 func TestAdapter_StartResource(t *testing.T) {
-	ce := kncetesting.NewTestClient()
+	ce := adaptertest.NewTestClient()
 
-	opt := envConfig{
-		EnvConfig: adapter.EnvConfig{
-			Namespace: "default",
-		},
-		Name:            "test-source",
-		Mode:            ResourceMode,
-		ApiVersion:      StringList{"v1"},
-		Kind:            StringList{"pods"},
-		Controller:      []bool{false},
-		OwnerApiVersion: StringList{""},
-		OwnerKind:       StringList{""},
-		LabelSelector:   StringList{""},
+	config := Config{
+		Namespace: "default",
+		Resources: []ResourceWatch{{
+			GVR: schema.GroupVersionResource{
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+		EventMode: "Resource",
 	}
-
-	r := &mockReporter{}
 	ctx, _ := pkgtesting.SetupFakeContext(t)
-	a := NewAdapter(ctx, &opt, ce, r)
+
+	a := &apiServerAdapter{
+		ce:     ce,
+		logger: logging.FromContext(ctx),
+		config: config,
+		k8s:    makeDynamicClient(simplePod("foo", "default")),
+		source: "unit-test",
+		name:   "unittest",
+	}
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -288,7 +114,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	// Wait for the reflector to be fully initialized.
 	// Ideally we want to check LastSyncResourceVersion is not empty but we
 	// don't have access to it.
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	stopCh <- struct{}{}
 	<-done
@@ -301,7 +127,7 @@ func TestAdapter_StartResource(t *testing.T) {
 // Common methods:
 
 // GetDynamicClient returns the mockDynamicClient to use for this test case.
-func makeDynamicClient(objects []runtime.Object) dynamic.Interface {
+func makeDynamicClient(objects ...runtime.Object) dynamic.Interface {
 	sc := runtime.NewScheme()
 	_ = corev1.AddToScheme(sc)
 	dynamicMocks := rectesting.DynamicMocks{} // TODO: maybe we need to customize this.
@@ -345,7 +171,7 @@ func simpleOwnedPod(name, namespace string) *unstructured.Unstructured {
 	}
 }
 
-func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
+func validateSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, want string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
@@ -355,42 +181,27 @@ func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want stri
 	}
 }
 
-func validateNotSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
+func validateNotSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, want string) {
 	if got := len(ce.Sent()); got != 0 {
 		t.Errorf("Expected 0 event to be sent, got %d", got)
 	}
 }
 
-func makeResourceAndTestingClient() (*resource, *kncetesting.TestCloudEventsClient) {
-	ce := kncetesting.NewTestClient()
-	source := "unit-test"
-	logger := zap.NewExample().Sugar()
-	r := &mockReporter{}
-	return &resource{
-		ce:       ce,
-		source:   source,
-		logger:   logger,
-		reporter: r,
+func makeResourceAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsClient) {
+	ce := adaptertest.NewTestClient()
+	return &resourceDelegate{
+		ce:     ce,
+		source: "unit-test",
+		logger: zap.NewExample().Sugar(),
 	}, ce
 }
 
-func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
-	ce := kncetesting.NewTestClient()
-	source := "unit-test"
-	logger := zap.NewExample().Sugar()
-	r := &mockReporter{}
-	return &ref{
-		ce:       ce,
-		source:   source,
-		logger:   logger,
-		reporter: r,
+func makeRefAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsClient) {
+	ce := adaptertest.NewTestClient()
+	return &resourceDelegate{
+		ce:     ce,
+		source: "unit-test",
+		logger: zap.NewExample().Sugar(),
+		ref:    true,
 	}, ce
-}
-
-func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
-	if mockReporter, ok := reporter.(*mockReporter); !ok {
-		t.Errorf("reporter is not a mockReporter")
-	} else if mockReporter.eventCount != want {
-		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
-	}
 }

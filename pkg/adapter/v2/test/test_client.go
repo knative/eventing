@@ -84,12 +84,12 @@ func (c *TestCloudEventsClient) Sent() []cloudevents.Event {
 	return r
 }
 
-func NewTestClient(reporter source.StatsReporter) *TestCloudEventsClient {
+func NewTestClient(reporter ...source.StatsReporter) *TestCloudEventsClient {
 	c := &TestCloudEventsClient{
 		sent: make([]cloudevents.Event, 0),
 	}
-	if reporter != nil {
-		c.reporter = metrics.NewStatsReporterAdapter(reporter)
+	if len(reporter) > 0 && reporter[0] != nil {
+		c.reporter = metrics.NewStatsReporterAdapter(reporter[0])
 	}
 
 	return c
