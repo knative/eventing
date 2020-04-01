@@ -26,11 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
+	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -39,7 +39,6 @@ import (
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
-	"knative.dev/pkg/source"
 )
 
 const (
@@ -63,15 +62,6 @@ var (
 
 	sinkURI, _ = apis.ParseURL("https://" + sinkName)
 )
-
-type mockReporter struct {
-	eventCount int
-}
-
-func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount += 1
-	return nil
-}
 
 func TestAllCases(t *testing.T) {
 	pingsourceKey := testNS + "/" + pingSourceName
@@ -184,8 +174,8 @@ func TestAllCases(t *testing.T) {
 	}
 
 	logger := logtesting.TestLogger(t)
-	reporter := &mockReporter{}
-	ce := kncetesting.NewTestClient()
+	reporter := &MockStatsReporter{}
+	ce := adaptertesting.NewTestClient(reporter)
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
