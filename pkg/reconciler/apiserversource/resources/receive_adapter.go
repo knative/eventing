@@ -18,6 +18,7 @@ package resources
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -45,8 +46,14 @@ type ReceiveAdapterArgs struct {
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
 // ApiServer Sources.
-func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
+func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*v1.Deployment, error) {
 	replicas := int32(1)
+
+	env, err := makeEnv(args)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
@@ -74,7 +81,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 						{
 							Name:  "receive-adapter",
 							Image: args.Image,
-							Env:   makeEnv(args),
+							Env:   env,
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
@@ -84,10 +91,10 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
-func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
+func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	cfg := &apiserver.Config{
 		Namespace:     args.Source.Namespace,
 		Resources:     make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
@@ -97,15 +104,15 @@ func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 
 	for _, r := range args.Source.Spec.Resources {
 		if r.APIVersion == nil {
-			panic("nil api version") // TODO: not really do this.
+			return nil, errors.New("APIVersion is nil but required")
 		}
 		gv, err := schema.ParseGroupVersion(*r.APIVersion)
 		if err != nil {
-			panic(err) // TODO: not really do this.
+			return nil, fmt.Errorf("failed to parse APIVersion, %s", err)
 		}
 
 		if r.Kind == nil {
-			panic("nil kind") // TODO: not really do this.
+			return nil, errors.New("Kind is nil but required")
 		}
 		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(*r.Kind))
 
@@ -152,5 +159,5 @@ func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 	}, {
 		Name:  "K_LOGGING_CONFIG",
 		Value: args.LoggingConfig,
-	}}
+	}}, nil
 }

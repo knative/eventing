@@ -63,7 +63,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 	}
 
-	got := MakeReceiveAdapter(&ReceiveAdapterArgs{
+	got, _ := MakeReceiveAdapter(&ReceiveAdapterArgs{
 		Image:  "test-image",
 		Source: src,
 		Labels: map[string]string{

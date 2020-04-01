@@ -156,7 +156,10 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Api
 		LoggingConfig: loggingConfig,
 		MetricsConfig: metricsConfig,
 	}
-	expected := resources.MakeReceiveAdapter(&adapterArgs)
+	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
+	if err != nil {
+		return nil, err
+	}
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {

@@ -18,8 +18,6 @@ package apiserversource
 
 import (
 	"context"
-	"fmt"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -575,21 +573,12 @@ func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
 		Labels:  resources.Labels(sourceName),
 		SinkURI: sinkURI.String(),
 	}
-	return resources.MakeReceiveAdapter(&args)
+	ra, _ := resources.MakeReceiveAdapter(&args)
+	return ra
 }
 
 func makeAvailableReceiveAdapter() *appsv1.Deployment {
 	ra := makeReceiveAdapter()
-	WithDeploymentAvailable()(ra)
-	return ra
-}
-
-// makeAvailableReceiveAdapterDeprecatedName needed to simulate pre 0.14 adapter whose name was generated using utils.GenerateFixedName
-func makeAvailableReceiveAdapterDeprecatedName(sourceName string) *appsv1.Deployment {
-	ra := makeReceiveAdapter()
-	src := &sourcesv1alpha1.ApiServerSource{}
-	src.UID = sourceUID
-	ra.Name = utils.GenerateFixedName(src, fmt.Sprintf("apiserversource-%s", sourceName))
 	WithDeploymentAvailable()(ra)
 	return ra
 }
@@ -616,7 +605,7 @@ func makeAvailableReceiveAdapterWithTargetURI() *appsv1.Deployment {
 		Labels:  resources.Labels(sourceName),
 		SinkURI: sinkTargetURI.String(),
 	}
-	ra := resources.MakeReceiveAdapter(&args)
+	ra, _ := resources.MakeReceiveAdapter(&args)
 	WithDeploymentAvailable()(ra)
 	return ra
 }
