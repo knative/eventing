@@ -18,7 +18,6 @@ package resources
 
 import (
 	"fmt"
-	"knative.dev/pkg/kmeta"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -26,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 
 	_ "knative.dev/pkg/metrics/testing"
