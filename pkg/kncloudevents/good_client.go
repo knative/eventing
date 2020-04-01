@@ -63,29 +63,6 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	return NewDefaultHTTPClient(t)
 }
 
-// NewDefaultClientGivenHttpTransport is deprecated: use NewDefaultHTTPClient instead.
-func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connectionArgs *ConnectionArgs, opts ...client.Option) (cloudevents.Client, error) {
-	// Add connection options to the default transport.
-	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-	connectionArgs.ConfigureTransport(base)
-	t.Client = &nethttp.Client{
-		Transport: base,
-	}
-
-	if opts == nil {
-		opts = make([]client.Option, 0)
-	}
-	opts = append(opts, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
-
-	// Use the transport to make a new CloudEvents client.
-	c, err := cloudevents.NewClient(t, opts...)
-
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
 // NewDefaultHTTPClient creates a new client from an HTTP transport.
 func NewDefaultHTTPClient(t *cloudevents.HTTPTransport, opts ...client.Option) (cloudevents.Client, error) {
 	if opts == nil {

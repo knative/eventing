@@ -79,8 +79,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 				// Ce headers won't pass through our header filtering as they should actually be set in the CloudEvent itself,
 				// as extensions. The SDK then sets them as as Ce- headers when sending them through HTTP.
 				"cE-not-pass-through": {"true"},
-				"x-B3-pass":           {"will not pass"},
-				"x-ot-pass":           {"will not pass"},
+				"Traceparent":         {"will not pass"},
 			},
 			body: "event-body",
 			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
