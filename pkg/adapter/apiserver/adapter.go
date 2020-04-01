@@ -67,8 +67,8 @@ func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 			zap.String("APIVersion", a.config.ResourceOwner.APIVersion),
 			zap.String("Kind", a.config.ResourceOwner.Kind))
 		delegate = &controllerFilter{
-			apiVersion: *a.config.ResourceOwner.APIVersion,
-			kind:       *a.config.ResourceOwner.Kind,
+			apiVersion: a.config.ResourceOwner.APIVersion,
+			kind:       a.config.ResourceOwner.Kind,
 			delegate:   delegate,
 		}
 	}
