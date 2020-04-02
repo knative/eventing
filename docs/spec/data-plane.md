@@ -55,7 +55,7 @@ Sink MUST respond with `404 Not Found`.
 Every non-Callable Sink MUST respond with `202 Accepted` if the request is
 accepted.
 
-If Sink is Callable it MAY respond with `202 OK` and a single event in the HTTP
+If Sink is Callable it MAY respond with `200 OK` and a single event in the HTTP
 response. A returned event is not required to be related to the received event.
 The Callable should return a successful response if the event was processed
 successfully. If there is no event to send back then Callable Sink MUST respond
