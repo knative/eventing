@@ -28,6 +28,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
 
@@ -53,6 +54,16 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			},
 			expectedStatus:      http.StatusInternalServerError,
 			asyncExpectedStatus: http.StatusInternalServerError,
+		},
+		"receiver has span": {
+			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ http.Header) error {
+				if span := trace.FromContext(ctx); span == nil {
+					return errors.New("missing span")
+				}
+				return nil
+			},
+			expectedStatus:      http.StatusAccepted,
+			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"fanout times out": {
 			timeout: time.Millisecond,
@@ -227,23 +238,21 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		subs = append(subs, sub)
 	}
 
-	// The test syncs using WaitGroups checking for subscriber/replier correctly invoked, but it doesn't sync on the async
-	// goroutine created by FanoutMessageHandler in async mode.
-	// So the test logger (zaptest) doesn't work, because it could log messages after the test is closed.
-	logger, _ := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.DebugLevel))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	h, err := NewMessageHandler(
-		logger,
-		Config{
-			Subscriptions: subs,
-			AsyncHandler:  async,
-		})
+	h, err := NewMessageHandler(logger, Config{
+		Subscriptions: subs,
+		AsyncHandler:  async,
+	})
 	if err != nil {
 		t.Fatalf("NewHandler failed. Error:%s", err)
 	}
 
 	if receiverFunc != nil {
-		receiver, err := channel.NewMessageReceiver(receiverFunc, zap.NewNop())
+		receiver, err := channel.NewMessageReceiver(receiverFunc, logger)
 		if err != nil {
 			t.Fatalf("NewEventReceiver failed. Error:%s", err)
 		}
@@ -257,10 +266,11 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	}
 
 	event := makeCloudEventNew()
-	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil)
+	reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
+	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil).WithContext(reqCtx)
 
 	ctx := context.Background()
-	err = bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req, binding.TransformerFactories{})
+	err = bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req)
 	if err != nil {
 		t.Fatal(err)
 	}
