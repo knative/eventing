@@ -14,7 +14,7 @@ interpreted as described in RFC2119.
 
 ## Data plane contract for Sinks
 
-A **Sink** MUST be idempotent and MUST be able to handle duplicate events.
+A **Sink** MUST be able to handle duplicate events.
 
 A **Sink** is an [_addressable_](./interfaces.md#addressable) resource that
 takes responsibility for the event. A Sink could be a consumer of events, or
