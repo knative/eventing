@@ -375,6 +375,112 @@ func TestDispatchMessage(t *testing.T) {
 				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
 		},
+		"invalid destination and delivery option - deadletter reply without event": {
+			sendToDestination: true,
+			hasDeadLetterSink: true,
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			expectedDeadLetterRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			fakeDeadLetterResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+			},
+		},
+		"invalid reply and delivery option - deadletter reply without event": {
+			sendToReply:       true,
+			hasDeadLetterSink: true,
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedReplyRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			expectedDeadLetterRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			fakeReplyResponse: &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			fakeDeadLetterResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+			},
+		},
 		"destination and invalid reply and delivery option": {
 			sendToDestination: true,
 			sendToReply:       true,
