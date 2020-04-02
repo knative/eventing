@@ -129,7 +129,7 @@ func (in *ApiServerSourceSpec) DeepCopyInto(out *ApiServerSourceSpec) {
 	if in.ResourceOwner != nil {
 		in, out := &in.ResourceOwner, &out.ResourceOwner
 		*out = new(v1alpha2.APIVersionKind)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 	return
 }

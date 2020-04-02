@@ -18,6 +18,9 @@ package v1alpha2
 
 import (
 	"context"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"knative.dev/pkg/apis"
 )
@@ -36,10 +39,6 @@ func (c *ApiServerSource) Validate(ctx context.Context) *apis.FieldError {
 func (cs *ApiServerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	if len(cs.Resources) == 0 {
-		errs = errs.Also(apis.ErrMissingField("resources"))
-	}
-
 	// Validate mode, if can be empty or set as certain value
 	switch cs.EventMode {
 	case ReferenceMode, ResourceMode:
@@ -50,6 +49,29 @@ func (cs *ApiServerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	// Validate sink
 	errs = errs.Also(cs.Sink.Validate(ctx).ViaField("sink"))
+
+	if len(cs.Resources) == 0 {
+		errs = errs.Also(apis.ErrMissingField("resources"))
+	}
+	for i, res := range cs.Resources {
+		_, err := schema.ParseGroupVersion(res.APIVersion)
+		if err != nil {
+			errs = errs.Also(apis.ErrInvalidValue(res.APIVersion, "apiVersion").ViaFieldIndex("resources", i))
+		}
+		if strings.TrimSpace(res.Kind) == "" {
+			errs = errs.Also(apis.ErrMissingField("kind").ViaFieldIndex("resources", i))
+		}
+	}
+
+	if cs.ResourceOwner != nil {
+		_, err := schema.ParseGroupVersion(cs.ResourceOwner.APIVersion)
+		if err != nil {
+			errs = errs.Also(apis.ErrInvalidValue(cs.ResourceOwner.APIVersion, "apiVersion").ViaField("owner"))
+		}
+		if strings.TrimSpace(cs.ResourceOwner.Kind) == "" {
+			errs = errs.Also(apis.ErrMissingField("kind").ViaField("owner"))
+		}
+	}
 
 	return errs
 }

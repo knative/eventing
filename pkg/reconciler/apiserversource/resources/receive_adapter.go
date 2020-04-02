@@ -18,7 +18,6 @@ package resources
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -103,18 +102,11 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}
 
 	for _, r := range args.Source.Spec.Resources {
-		if r.APIVersion == nil {
-			return nil, errors.New("APIVersion is nil but required")
-		}
-		gv, err := schema.ParseGroupVersion(*r.APIVersion)
+		gv, err := schema.ParseGroupVersion(r.APIVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse APIVersion, %s", err)
 		}
-
-		if r.Kind == nil {
-			return nil, errors.New("Kind is nil but required")
-		}
-		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(*r.Kind))
+		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(r.Kind))
 
 		rw := apiserver.ResourceWatch{GVR: gvr}
 

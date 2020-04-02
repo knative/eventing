@@ -261,11 +261,11 @@ func (r *Reconciler) runAccessCheck(src *v1alpha2.ApiServerSource) error {
 	sep := ""
 
 	for _, res := range src.Spec.Resources {
-		gv, err := schema.ParseGroupVersion(*res.APIVersion) // TODO: Test for nil APIVersion.
-		if err != nil {                                      // shouldn't happened after #2134 is fixed
+		gv, err := schema.ParseGroupVersion(res.APIVersion)
+		if err != nil {
 			return err
 		}
-		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: *res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
 		missingVerbs := ""
 		sep1 := ""
 		for _, verb := range verbs {

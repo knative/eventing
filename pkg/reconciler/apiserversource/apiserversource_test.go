@@ -41,7 +41,6 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -97,8 +96,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -116,8 +115,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -147,8 +146,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -169,8 +168,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -198,8 +197,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -220,8 +219,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -249,8 +248,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{
 						Sink: duckv1.Destination{
@@ -276,8 +275,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{
 						Sink: duckv1.Destination{
@@ -310,8 +309,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -333,8 +332,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -365,8 +364,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{
 						Sink: sinkDest,
@@ -391,8 +390,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{
 						Sink: sinkDest,
@@ -426,8 +425,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -449,8 +448,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
@@ -481,8 +480,8 @@ func TestReconcile(t *testing.T) {
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: brokerDest},
 				}),
@@ -503,8 +502,8 @@ func TestReconcile(t *testing.T) {
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-						APIVersion: ptr.String("v1"),
-						Kind:       ptr.String("Namespace"),
+						APIVersion: "v1",
+						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: brokerDest},
 				}),
@@ -555,8 +554,8 @@ func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-				APIVersion: ptr.String("v1"),
-				Kind:       ptr.String("Namespace"),
+				APIVersion: "v1",
+				Kind:       "Namespace",
 			}},
 			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 		}),
@@ -587,8 +586,8 @@ func makeAvailableReceiveAdapterWithTargetURI() *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-				APIVersion: ptr.String("v1"),
-				Kind:       ptr.String("Namespace"),
+				APIVersion: "v1",
+				Kind:       "Namespace",
 			}},
 			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 		}),

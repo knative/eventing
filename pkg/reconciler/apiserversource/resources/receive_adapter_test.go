@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/ptr"
 
 	_ "knative.dev/pkg/metrics/testing"
 	_ "knative.dev/pkg/system/testing"
@@ -42,21 +41,21 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 		Spec: v1alpha2.ApiServerSourceSpec{
 			Resources: []v1alpha2.APIVersionKindSelector{{
-				APIVersion: ptr.String(""),
-				Kind:       ptr.String("Namespace"),
+				APIVersion: "",
+				Kind:       "Namespace",
 			}, {
-				APIVersion: ptr.String("batch/v1"),
-				Kind:       ptr.String("Job"),
+				APIVersion: "batch/v1",
+				Kind:       "Job",
 			}, {
-				APIVersion: ptr.String(""),
-				Kind:       ptr.String("Pod"),
+				APIVersion: "",
+				Kind:       "Pod",
 				LabelSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"test-key1": "test-value1"},
 				},
 			}},
 			ResourceOwner: &v1alpha2.APIVersionKind{
-				APIVersion: ptr.String("custom/v1"),
-				Kind:       ptr.String("Parent"),
+				APIVersion: "custom/v1",
+				Kind:       "Parent",
 			},
 			EventMode:          "Resource",
 			ServiceAccountName: "source-svc-acct",

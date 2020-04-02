@@ -63,15 +63,13 @@ func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 	}
 
 	if a.config.ResourceOwner != nil {
-		if a.config.ResourceOwner.APIVersion != nil && a.config.ResourceOwner.Kind != nil {
-			a.logger.Infow("will be filtered",
-				zap.String("APIVersion", *a.config.ResourceOwner.APIVersion),
-				zap.String("Kind", *a.config.ResourceOwner.Kind))
-			delegate = &controllerFilter{
-				apiVersion: *a.config.ResourceOwner.APIVersion,
-				kind:       *a.config.ResourceOwner.Kind,
-				delegate:   delegate,
-			}
+		a.logger.Infow("will be filtered",
+			zap.String("APIVersion", a.config.ResourceOwner.APIVersion),
+			zap.String("Kind", a.config.ResourceOwner.Kind))
+		delegate = &controllerFilter{
+			apiVersion: a.config.ResourceOwner.APIVersion,
+			kind:       a.config.ResourceOwner.Kind,
+			delegate:   delegate,
 		}
 	}
 
