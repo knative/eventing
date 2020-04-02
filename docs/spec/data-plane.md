@@ -22,7 +22,7 @@ middleware. A Sink MUST be able to receive CloudEvents over HTTP and HTTPS.
 
 A **Sink** MAY be [_callable_](./interfaces.md#callable) resource that
 represents an Addressable endpoint which receives an event as input and
-optionally returns an event to forward downstream
+optionally returns an event to forward downstream.
 
 Almost every component in Knative Eventing may be a Sink providing
 composability.
@@ -39,7 +39,7 @@ This section adds restrictions on
 [requirements in HTTP Protocol Binding for CloudEvents](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md#12-relation-to-http).
 
 Sinks MUST accept HTTP requests with POST method and MAY support other HTTP
-methods. If a method is not supported Sink SHOULD respond with HTTP status code
+methods. If a method is not supported Sink MUST respond with HTTP status code
 `405 Method Not Supported`. Non-event requests (e.g. health checks) are not
 constrained.
 
