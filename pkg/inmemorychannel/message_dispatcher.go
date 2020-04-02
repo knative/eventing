@@ -88,6 +88,7 @@ func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageD
 		handler:              args.Handler,
 		httpBindingsReceiver: bindingsReceiver,
 		logger:               args.Logger,
+		writeTimeout:         args.WriteTimeout,
 	}
 
 	return dispatcher

@@ -121,6 +121,6 @@ func TestAllCases(t *testing.T) {
 type fakeDispatcher struct{}
 
 func (d *fakeDispatcher) UpdateConfig(ctx context.Context, config *multichannelfanout.Config) error {
-	// TODO set error.
+	// TODO set error
 	return nil
 }
