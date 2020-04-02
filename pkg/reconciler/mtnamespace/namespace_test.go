@@ -47,7 +47,7 @@ func init() {
 	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func TestAllCases(t *testing.T) {
+func TestEnabledByDefault(t *testing.T) {
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 
@@ -146,6 +146,111 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
+			filter:            onByDefault,
+			brokerLister:      listers.GetV1Beta1BrokerLister(),
+		}
+
+		return namespacereconciler.NewReconciler(ctx, logger,
+			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
+			controller.GetEventRecorder(ctx), r)
+	}, false, logger))
+}
+
+func TestDisabledByDefault(t *testing.T) {
+	// Events
+	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
+
+	// Object
+	namespace := NewNamespace(testNS,
+		WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+	)
+	broker := resources.MakeBroker(namespace)
+
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "foo/not-found",
+	}, {
+		Name: "Namespace is not labeled",
+		Objects: []runtime.Object{
+			NewNamespace(testNS),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		// When we're off by default, nothing happens when the label is missing.
+	}, {
+		Name: "Namespace is labeled disabled",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionDisabledLabels())),
+		},
+		Key: testNS,
+	}, {
+		Name: "Namespace is deleted no resources",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceDeleted,
+			),
+		},
+		Key: testNS,
+	}, {
+		Name: "Namespace enabled",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			brokerEvent,
+		},
+		WantCreates: []runtime.Object{
+			broker,
+		},
+	}, {
+		Name: "Namespace enabled, broker exists",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+			resources.MakeBroker(NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			)),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+	}, {
+		Name: "Namespace enabled, broker exists with no label",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionDisabledLabels()),
+			),
+			&v1alpha1.Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNS,
+					Name:      resources.DefaultBrokerName,
+				},
+			},
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+	}}
+
+	logger := logtesting.TestLogger(t)
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		r := &Reconciler{
+			eventingClientSet: fakeeventingclient.Get(ctx),
+			filter:            offByDefault,
 			brokerLister:      listers.GetV1Beta1BrokerLister(),
 		}
 
