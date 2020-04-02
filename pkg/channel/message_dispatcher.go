@@ -103,7 +103,9 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 				if deadLetterErr != nil {
 					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
-				messagesToFinish = append(messagesToFinish, deadLetterResponse)
+				if deadLetterResponse != nil {
+					messagesToFinish = append(messagesToFinish, deadLetterResponse)
+				}
 
 				return nil
 			}
@@ -136,7 +138,9 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 			if deadLetterErr != nil {
 				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
-			messagesToFinish = append(messagesToFinish, deadLetterResponse)
+			if deadLetterResponse != nil {
+				messagesToFinish = append(messagesToFinish, deadLetterResponse)
+			}
 
 			return nil
 		}
