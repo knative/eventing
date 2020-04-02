@@ -107,4 +107,4 @@ See [Broker Delivery specification](../spec/broker.md)
 ## Changelog
 
 - 2020-04-20: `0.13.x release`: initial version that documents common contract
-  from sources, channles and brokers.
+  for sinks, sources, channles and brokers.
