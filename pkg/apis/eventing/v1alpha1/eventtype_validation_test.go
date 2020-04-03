@@ -25,45 +25,13 @@ import (
 )
 
 func TestEventTypeValidation(t *testing.T) {
-	name := "invalid type"
-	et := &EventType{Spec: EventTypeSpec{}}
+	tests := []CRDTest{{
+		name: "invalid type",
+		cr:   &EventType{Spec: EventTypeSpec{}},
+		want: apis.ErrMissingField("type").ViaField("spec"),
+	}}
 
-	want := &apis.FieldError{
-		Paths:   []string{"spec.type"},
-		Message: "missing field(s)",
-	}
-
-	t.Run(name, func(t *testing.T) {
-		got := et.Validate(context.TODO())
-		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("EventType.Validate (-want, +got) = %v", diff)
-		}
-	})
-}
-
-func TestEventTypeSpecValidation(t *testing.T) {
-	tests := []struct {
-		name string
-		ets  *EventTypeSpec
-		want *apis.FieldError
-	}{{
-		name: "invalid eventtype type",
-		ets:  &EventTypeSpec{},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("type")
-			return fe
-		}(),
-	},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.ets.Validate(context.TODO())
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: Validate EventTypeSpec (-want, +got) = %v", test.name, diff)
-			}
-		})
-	}
+	doValidateTest(t, tests)
 }
 
 func TestEventTypeImmutableFields(t *testing.T) {
