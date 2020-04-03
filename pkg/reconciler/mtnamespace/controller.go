@@ -19,9 +19,11 @@ package mtnamespace
 import (
 	"context"
 
+	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -40,6 +42,18 @@ const (
 	controllerAgentName = "knative-eventing-namespace-controller"
 )
 
+type envConfig struct {
+	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"true"`
+}
+
+func onByDefault(labels map[string]string) bool {
+	return labels[resources.InjectionLabelKey] == resources.InjectionDisabledLabelValue
+}
+
+func offByDefault(labels map[string]string) bool {
+	return labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue
+}
+
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
@@ -50,8 +64,20 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 
+	var filter labelFilter
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logging.FromContext(ctx).Fatalf("mtnamespace was unable to process environment: %v", err)
+	} else if env.InjectionDefault {
+		filter = onByDefault
+	} else {
+		filter = offByDefault
+	}
+
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
+		filter:            filter,
 		brokerLister:      brokerInformer.Lister(),
 	}
 
