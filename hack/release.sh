@@ -27,6 +27,7 @@ COMPONENTS=(
   ["channel-broker.yaml"]="config/brokers/channel-broker"
   ["mt-channel-broker.yaml"]="config/brokers/mt-channel-broker"
   ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
+  ["upgrade-to-v0.14.0.yaml"]="config/upgrade/v0.14.0"
 )
 readonly COMPONENTS
 
