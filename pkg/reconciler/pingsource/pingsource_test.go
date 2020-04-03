@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package pingsource
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
-	"knative.dev/eventing/pkg/reconciler/pingsource/controller/resources"
+	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"

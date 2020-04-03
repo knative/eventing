@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,24 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package jobrunner
+package main
 
 import (
-	"testing"
-
-	"knative.dev/pkg/configmap"
-	. "knative.dev/pkg/reconciler/testing"
-
-	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource/fake"
+	"knative.dev/eventing/pkg/adapter/mtping"
+	"knative.dev/pkg/injection/sharedmain"
 )
 
-func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
-
-	c := NewController(ctx, &configmap.InformedWatcher{})
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
+func main() {
+	sharedmain.Main("mt-pingsource", mtping.NewController)
 }

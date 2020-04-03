@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package pingsource
 
 import (
 	"context"
@@ -45,7 +45,7 @@ import (
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler/pingsource/controller/resources"
+	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	"knative.dev/eventing/pkg/utils"
 )
 
