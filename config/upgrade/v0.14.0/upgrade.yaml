@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: v0.14.0-upgrade
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  template:
+    spec:
+      serviceAccountName: eventing-controller
+      restartPolicy: Never
+      containers:
+      - name: upgrade-brokers
+        image: ko://knative.dev/eventing/cmd/upgrade/v0.14.0/
+
