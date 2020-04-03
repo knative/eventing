@@ -30,7 +30,6 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
@@ -41,21 +40,13 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 )
 
-var (
-	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
-)
-
 const (
 	testNS      = "test-namespace"
 	triggerName = "test-trigger"
 	triggerUID  = "test-trigger-uid"
 	brokerName  = "test-broker"
 
-	subscriberGroup   = "serving.knative.dev"
-	subscriberVersion = "v1"
-	subscriberKind    = "Service"
-	subscriberName    = "subscriber-name"
-	subscriberURI     = "http://example.com/subscriber/"
+	subscriberURI = "http://example.com/subscriber/"
 
 	injectionAnnotation = "enabled"
 )
@@ -181,37 +172,6 @@ func TestAllCases(t *testing.T) {
 			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
-}
-
-func makeTrigger() *v1alpha1.Trigger {
-	return &v1alpha1.Trigger{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Trigger",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      triggerName,
-			UID:       triggerUID,
-		},
-		Spec: v1alpha1.TriggerSpec{
-			Broker: brokerName,
-			Filter: &v1alpha1.TriggerFilter{
-				DeprecatedSourceAndType: &v1alpha1.TriggerFilterSourceAndType{
-					Source: "Any",
-					Type:   "Any",
-				},
-			},
-			Subscriber: duckv1.Destination{
-				Ref: &duckv1.KReference{
-					Name:       subscriberName,
-					Namespace:  testNS,
-					Kind:       subscriberKind,
-					APIVersion: subscriberAPIVersion,
-				},
-			},
-		},
-	}
 }
 
 func makeBroker() *v1alpha1.Broker {

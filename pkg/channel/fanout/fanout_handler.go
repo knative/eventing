@@ -65,10 +65,7 @@ type Handler struct {
 }
 
 // forwardEvent is passed between the Receiver and the Dispatcher.
-type forwardEvent struct {
-	event cloudevents.Event
-	done  chan<- error
-}
+type forwardEvent struct{}
 
 // NewHandler creates a new fanout.Handler.
 func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {

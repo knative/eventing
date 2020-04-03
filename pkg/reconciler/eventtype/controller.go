@@ -34,9 +34,6 @@ import (
 const (
 	// ReconcilerName is the name of the reconciler.
 	ReconcilerName = "EventTypes"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "eventtype-controller"
 )
 
 // NewController initializes the controller and is called by the generated code

@@ -60,8 +60,6 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 )
 
-type channelType string
-
 const (
 	systemNS   = "knative-testing"
 	testNS     = "test-namespace"
@@ -94,8 +92,6 @@ const (
 )
 
 var (
-	trueVal = true
-
 	testKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
@@ -1051,16 +1047,6 @@ func TestReconcile(t *testing.T) {
 	))
 }
 
-func ownerReferences() []metav1.OwnerReference {
-	return []metav1.OwnerReference{{
-		APIVersion:         v1alpha1.SchemeGroupVersion.String(),
-		Kind:               "Broker",
-		Name:               brokerName,
-		Controller:         &trueVal,
-		BlockOwnerDeletion: &trueVal,
-	}}
-}
-
 func channel() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: "messaging.knative.dev/v1alpha1",
@@ -1202,19 +1188,6 @@ func makeBrokerRef() *corev1.ObjectReference {
 }
 func makeEmptyDelivery() *eventingduckv1beta1.DeliverySpec {
 	return nil
-}
-func makeBroker() *v1alpha1.Broker {
-	return &v1alpha1.Broker{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Broker",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      brokerName,
-		},
-		Spec: v1alpha1.BrokerSpec{},
-	}
 }
 
 func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {

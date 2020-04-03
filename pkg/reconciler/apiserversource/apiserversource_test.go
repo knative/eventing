@@ -70,11 +70,10 @@ var (
 )
 
 const (
-	image          = "github.com/knative/test/image"
-	sourceName     = "test-apiserver-source"
-	sourceNameLong = "test-apiserver-source-with-a-very-long-name"
-	sourceUID      = "1234"
-	testNS         = "testnamespace"
+	image      = "github.com/knative/test/image"
+	sourceName = "test-apiserver-source"
+	sourceUID  = "1234"
+	testNS     = "testnamespace"
 
 	sinkName = "testsink"
 	source   = "apiserveraddr"

@@ -340,10 +340,8 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 		"datacontentencoding": event.DeprecatedDataContentEncoding(),
 	}
 	ext := event.Extensions()
-	if ext != nil {
-		for k, v := range ext {
-			ce[k] = v
-		}
+	for k, v := range ext {
+		ce[k] = v
 	}
 
 	for k, v := range attrs {

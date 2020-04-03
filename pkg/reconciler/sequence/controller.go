@@ -35,12 +35,6 @@ import (
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "sequence-controller"
-)
-
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(

@@ -57,8 +57,7 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the Broker reconciliation process.
-	brokerReconcileError = "BrokerReconcileError"
-	brokerReconciled     = "BrokerReconciled"
+	brokerReconciled = "BrokerReconciled"
 )
 
 type Reconciler struct {
@@ -357,19 +356,17 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) error {
 	current, err := r.deploymentLister.Deployments(d.Namespace).Get(d.Name)
 	if apierrs.IsNotFound(err) {
-		current, err = r.kubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
+		_, err = r.kubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
 		if err != nil {
 			return err
 		}
 	} else if err != nil {
 		return err
-	}
-
-	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
+	} else if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
 		// Don't modify the informers copy.
 		desired := current.DeepCopy()
 		desired.Spec = d.Spec
-		current, err = r.kubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
+		_, err = r.kubeClientSet.AppsV1().Deployments(desired.Namespace).Update(desired)
 		if err != nil {
 			return err
 		}

@@ -54,7 +54,6 @@ import (
 const (
 	testNS             = "test-namespace"
 	parallelName       = "test-parallel"
-	parallelUID        = "test-parallel-uid"
 	replyChannelName   = "reply-channel"
 	parallelGeneration = 79
 )

@@ -42,7 +42,6 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process.
-	configMapPropagationReconcileError                  = "ConfigMapPropagationReconcileError"
 	configMapPropagationPropagateSingleConfigMapFailed  = "ConfigMapPropagationPropagateSingleConfigMapFailed"
 	configMapPropagationPropagateSingleConfigMapSucceed = "ConfigMapPropagationPropagateSingleConfigMapSucceed"
 
@@ -226,13 +225,13 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 			// But it is not an error for ConfigMapPropagation for not propagating successfully.
 			succeed = false
 		}
-		if current, err = r.kubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Update(expected); err != nil {
+		if _, err = r.kubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Update(expected); err != nil {
 			return fmt.Errorf("error updating ConfigMap in current namespace: %w", err), false
 		}
 		return nil, succeed
 	}
 
-	if current, err = r.kubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Create(expected); err != nil {
+	if _, err = r.kubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Create(expected); err != nil {
 		return fmt.Errorf("error creating ConfigMap in current namespace: %w", err), false
 	}
 	return nil, true

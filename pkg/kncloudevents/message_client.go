@@ -68,7 +68,6 @@ type HttpMessageReceiver struct {
 
 	handler  nethttp.Handler
 	server   *nethttp.Server
-	addr     net.Addr
 	listener net.Listener
 }
 

@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/tracker"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
@@ -53,7 +52,6 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 type Reconciler struct {
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
-	tracker            tracker.Interface
 	channelableTracker duck.ListableTracker
 	subscriptionLister messaginglisters.SubscriptionLister
 

@@ -32,12 +32,7 @@ import (
 )
 
 const (
-	namespace       = "testNamespace"
-	brokerName      = "testBroker"
 	validURI        = "/testNamespace/testBroker"
-	urlHost         = "testHost"
-	urlPath         = "/"
-	urlScheme       = "http"
 	validHTTPMethod = nethttp.MethodPost
 )
 

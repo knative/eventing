@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -310,9 +309,7 @@ func TestBrokerIsReady(t *testing.T) {
 	}}
 
 	for _, test := range tests {
-		testName := fmt.Sprintf("%s", test.name)
-		//			t.Run(test.name, func(t *testing.T) {
-		t.Run(testName, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			bs := &BrokerStatus{}
 			if test.markIngressReady != nil {
 				var ep *corev1.Endpoints

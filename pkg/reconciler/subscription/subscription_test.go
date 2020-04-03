@@ -68,11 +68,9 @@ const (
 
 var (
 	channelDNS = "channel.mynamespace.svc." + utils.GetClusterDomainName()
-	channelURI = apis.HTTP(channelDNS)
 
-	subscriberDNS         = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
-	subscriberURI         = apis.HTTP(subscriberDNS)
-	subscriberURIWithPath = &apis.URL{Scheme: "http", Host: subscriberDNS, Path: "/"}
+	subscriberDNS = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
+	subscriberURI = apis.HTTP(subscriberDNS)
 
 	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
 	replyURI = apis.HTTP(replyDNS)
@@ -81,9 +79,8 @@ var (
 	serviceURI         = apis.HTTP(serviceDNS)
 	serviceURIWithPath = &apis.URL{Scheme: "http", Host: serviceDNS, Path: "/"}
 
-	dlcDNS         = "dlc.mynamespace.svc." + utils.GetClusterDomainName()
-	dlcURI         = apis.HTTP(dlcDNS)
-	dlcURIWithPath = &apis.URL{Scheme: "http", Host: dlcDNS, Path: "/"}
+	dlcDNS = "dlc.mynamespace.svc." + utils.GetClusterDomainName()
+	dlcURI = apis.HTTP(dlcDNS)
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -96,14 +93,6 @@ var (
 		Version: "v1alpha1",
 		Kind:    "Trigger",
 	}
-
-	nonSubscribableGVK = metav1.GroupVersionKind{
-		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "EventType",
-	}
-
-	nonSubscribableCRDName = "eventtypes.eventing.knative.dev"
 
 	serviceGVK = metav1.GroupVersionKind{
 		Version: "v1",

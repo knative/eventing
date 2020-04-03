@@ -54,8 +54,7 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the Broker reconciliation process.
-	brokerReconcileError = "BrokerReconcileError"
-	brokerReconciled     = "BrokerReconciled"
+	brokerReconciled = "BrokerReconciled"
 )
 
 type Reconciler struct {

@@ -52,9 +52,6 @@ import (
 const (
 	// ReconcilerName is the name of the reconciler
 	ReconcilerName = "Brokers"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "broker-controller"
 )
 
 type envConfig struct {

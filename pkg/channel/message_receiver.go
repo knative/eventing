@@ -172,7 +172,6 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	}
 
 	response.WriteHeader(nethttp.StatusAccepted)
-	return
 }
 
 var _ nethttp.Handler = (*MessageReceiver)(nil)
