@@ -14,13 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
-
-import (
-	"knative.dev/eventing/pkg/reconciler/pingsource/jobrunner"
-	"knative.dev/pkg/injection/sharedmain"
-)
-
-func main() {
-	sharedmain.Main("pingsource-jobrunner-controller", jobrunner.NewController)
-}
+// Package controller implements the PingSource controller.
+package pingsource

@@ -2510,7 +2510,7 @@ data:
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(rate(pingsource_jobrunner_controller_event_count{response_code_class!=\"2xx\"}[1m])) / sum(rate(pingsource_jobrunner_controller_event_count[1m]))",
+              "expr": "sum(rate(mt_pingsource_event_count{response_code_class!=\"2xx\"}[1m])) / sum(rate(mt_pingsource_event_count[1m]))",
               "format": "time_series",
               "instant": false,
               "refId": "A"

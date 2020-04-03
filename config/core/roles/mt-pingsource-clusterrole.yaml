@@ -1,4 +1,4 @@
-# Copyright 2018 The Knative Authors
+# Copyright 2020 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: pingsource-jobrunner
-  namespace: knative-eventing
-  labels:
-    eventing.knative.dev/release: devel
-
----
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: ClusterRole
 metadata:
-  name: pingsource-jobrunner
+  name: knative-eventing-mt-pingsource
   labels:
     eventing.knative.dev/release: devel
-subjects:
-  - kind: ServiceAccount
-    name: pingsource-jobrunner
-    namespace: knative-eventing
-roleRef:
-  kind: ClusterRole
-  name: knative-eventing-jobrunner
-  apiGroup: rbac.authorization.k8s.io
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources
+      - pingsources/status
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources/finalizers
+    verbs:
+      - "patch"
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - "create"
+      - "patch"
