@@ -23,6 +23,7 @@ import (
 
 	types "k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/pkg/apis/duck"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -35,62 +36,89 @@ import (
 // ChannelBasedBroker
 func Upgrade(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
-	kubeClient := kubeclient.Get(ctx)
-	eventingClient := eventingclient.Get(ctx)
-	nsClient := kubeClient.CoreV1().Namespaces()
+
+	nsClient := kubeclient.Get(ctx).CoreV1().Namespaces()
 	namespaces, err := nsClient.List(metav1.ListOptions{})
 	if err != nil {
 		logger.Warnf("Failed to list namespaces: %v", err)
 		return err
 	}
 	for _, ns := range namespaces.Items {
-		logger.Infof("Processing Brokers in namespace: %q", ns.Name)
-		brokerClient := eventingClient.EventingV1alpha1().Brokers(ns.Name)
-		brokers, err := brokerClient.List(metav1.ListOptions{})
+		err = ProcessNamespace(ctx, ns.Name)
 		if err != nil {
-			logger.Warnf("Failed to list brokers for namespace %q: %v", ns.Name, err)
 			return err
-		}
-		for _, broker := range brokers.Items {
-			logger.Infof("Processing Broker \"%s/%s\"", broker.Namespace, broker.Name)
-
-			annotations := broker.ObjectMeta.GetAnnotations()
-			if annotations == nil {
-				annotations = make(map[string]string, 1)
-			}
-			if brokerClass, present := annotations[eventing.BrokerClassKey]; present {
-				logger.Infof("Annotation found \"%s/%s\" => %q", broker.Namespace, broker.Name, brokerClass)
-				continue
-			}
-
-			// No annotations, or missing, add it...
-			modified := broker.DeepCopy()
-			modifiedAnnotations := modified.ObjectMeta.GetAnnotations()
-			if modifiedAnnotations == nil {
-				modifiedAnnotations = make(map[string]string, 1)
-			}
-			if _, present := modifiedAnnotations[eventing.BrokerClassKey]; !present {
-				modifiedAnnotations[eventing.BrokerClassKey] = eventing.ChannelBrokerClassValue
-				modified.ObjectMeta.SetAnnotations(modifiedAnnotations)
-			}
-			patch, err := duck.CreateMergePatch(broker, modified)
-			if err != nil {
-				logger.Warnf("Failed to create patch for \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
-				return err
-			}
-			logger.Infof("Patch: %q", string(patch))
-			// If there is nothing to patch, we are good, just return.
-			// Empty patch is {}, hence we check for that.
-			if len(patch) <= 2 {
-				logger.Warnf("no diffs found...")
-				continue
-			}
-			patched, err := brokerClient.Patch(broker.Name, types.MergePatchType, patch)
-			if err != nil {
-				logger.Warnf("Failed to patch \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
-			}
-			logger.Infof("Patched \"%s/%s\" successfully new Annotations: %+v", broker.Namespace, broker.Name, patched.ObjectMeta.GetAnnotations())
 		}
 	}
 	return nil
+}
+
+func ProcessNamespace(ctx context.Context, ns string) error {
+	logger := logging.FromContext(ctx)
+	logger.Infof("Processing Brokers in namespace: %q", ns)
+
+	eventingClient := eventingclient.Get(ctx)
+	brokerClient := eventingClient.EventingV1alpha1().Brokers(ns)
+	brokers, err := brokerClient.List(metav1.ListOptions{})
+	if err != nil {
+		logger.Warnf("Failed to list brokers for namespace %q: %v", ns, err)
+		return err
+	}
+	for _, broker := range brokers.Items {
+		patch, err := ProcessBroker(ctx, broker)
+		if err != nil {
+			logger.Warnf("Failed to process a Broker \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
+			return err
+		}
+		if len(patch) == 0 {
+			logger.Infof("Broker \"%s/%s\" has annotation already", broker.Namespace, broker.Name)
+			continue
+		}
+
+		// Ok, there are differences, apply the patch
+		logger.Infof("Patching Broker \"%s/%s\" with %q", broker.Namespace, broker.Name, string(patch))
+		patched, err := brokerClient.Patch(broker.Name, types.MergePatchType, patch)
+		if err != nil {
+			logger.Warnf("Failed to patch \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
+		}
+		logger.Infof("Patched \"%s/%s\" successfully new Annotations: %+v", broker.Namespace, broker.Name, patched.ObjectMeta.GetAnnotations())
+	}
+	return nil
+}
+
+// Process a single Broker to see if it needs a patch applied to it or not.
+// Returns non-empty patch bytes if a patch is necessary.
+func ProcessBroker(ctx context.Context, broker v1alpha1.Broker) ([]byte, error) {
+	logger := logging.FromContext(ctx)
+
+	annotations := broker.ObjectMeta.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string, 1)
+	}
+	if brokerClass, present := annotations[eventing.BrokerClassKey]; present {
+		logger.Infof("Annotation found \"%s/%s\" => %q", broker.Namespace, broker.Name, brokerClass)
+		return []byte{}, nil
+	}
+
+	// No annotations, or missing, add it...
+	modified := broker.DeepCopy()
+	modifiedAnnotations := modified.ObjectMeta.GetAnnotations()
+	if modifiedAnnotations == nil {
+		modifiedAnnotations = make(map[string]string, 1)
+	}
+	if _, present := modifiedAnnotations[eventing.BrokerClassKey]; !present {
+		modifiedAnnotations[eventing.BrokerClassKey] = eventing.ChannelBrokerClassValue
+		modified.ObjectMeta.SetAnnotations(modifiedAnnotations)
+	}
+	patch, err := duck.CreateMergePatch(broker, modified)
+	if err != nil {
+		logger.Warnf("Failed to create patch for \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
+		return []byte{}, err
+	}
+	logger.Infof("Patch: %q", string(patch))
+	// If there is nothing to patch, we are good, just return.
+	// Empty patch is {}, hence we check for that.
+	if len(patch) <= 2 {
+		return []byte{}, nil
+	}
+	return patch, nil
 }
