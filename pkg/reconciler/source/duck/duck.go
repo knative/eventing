@@ -164,7 +164,7 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]
 		return make([]v1alpha1.EventType, 0), nil
 	}
 
-	entries := make(map[string]eventTypeEntry, 0)
+	entries := make(map[string]eventTypeEntry)
 	// Get the description and schema from the CRD, in case they are there.
 	// The CRD annotation has the types as well. But given that different Sources have their own configurations, I'm just
 	// grabbing the description and schema from the CRD, using the type as "primary key".
@@ -183,10 +183,8 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]
 				logging.FromContext(ctx).Error("Error unmarshalling EventTypes", zap.String("annotation", eventing.EventTypesAnnotationKey), zap.Error(err))
 			}
 		}
-		if ets != nil {
-			for _, et := range ets {
-				entries[et.Type] = et
-			}
+		for _, et := range ets {
+			entries[et.Type] = et
 		}
 	}
 
@@ -242,7 +240,7 @@ func (r *Reconciler) computeDiff(current []v1alpha1.EventType, expected []v1alph
 }
 
 func asMap(eventTypes []v1alpha1.EventType, keyFunc func(*v1alpha1.EventType) string) map[string]v1alpha1.EventType {
-	eventTypesAsMap := make(map[string]v1alpha1.EventType, 0)
+	eventTypesAsMap := make(map[string]v1alpha1.EventType)
 	for _, eventType := range eventTypes {
 		key := keyFunc(&eventType)
 		eventTypesAsMap[key] = eventType

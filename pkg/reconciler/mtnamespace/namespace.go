@@ -34,9 +34,6 @@ import (
 )
 
 const (
-	namespaceReconciled       = "NamespaceReconciled"
-	namespaceReconcileFailure = "NamespaceReconcileFailure"
-
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated = "BrokerCreated"
 )

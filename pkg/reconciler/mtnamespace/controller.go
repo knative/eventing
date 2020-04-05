@@ -36,10 +36,6 @@ import (
 const (
 	// ReconcilerName is the name of the reconciler
 	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "knative-eventing-namespace-controller"
 )
 
 type envConfig struct {

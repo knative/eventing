@@ -52,7 +52,6 @@ import (
 const (
 	testNS             = "test-namespace"
 	sequenceName       = "test-sequence"
-	sequenceUID        = "test-sequence-uid"
 	replyChannelName   = "reply-channel"
 	sequenceGeneration = 7
 )

@@ -45,7 +45,6 @@ import (
 	"knative.dev/pkg/controller"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	"knative.dev/eventing/pkg/utils"
 
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -65,19 +64,10 @@ const (
 var (
 	trueVal = true
 
-	nonsinkDest = duckv1.Destination{
-		Ref: &duckv1.KReference{
-			Name:       sinkName,
-			Kind:       "Trigger",
-			APIVersion: "eventing.knative.dev/v1alpha1",
-		},
-	}
-
 	deploymentName  = fmt.Sprintf("%s-deployment", sourceName)
 	sinkBindingName = fmt.Sprintf("%s-sinkbinding", sourceName)
 
-	conditionTrue  = corev1.ConditionTrue
-	conditionFalse = corev1.ConditionFalse
+	conditionTrue = corev1.ConditionTrue
 
 	sinkDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
@@ -86,8 +76,6 @@ var (
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = apis.HTTP(sinkDNS)
 )
 
 func init() {

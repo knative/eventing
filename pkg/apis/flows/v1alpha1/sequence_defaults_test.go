@@ -40,13 +40,6 @@ var (
 			Kind:       "InMemoryChannel",
 		},
 	}
-
-	defaultTemplate = &messagingv1beta1.ChannelTemplateSpec{
-		TypeMeta: v1.TypeMeta{
-			APIVersion: SchemeGroupVersion.String(),
-			Kind:       "InMemoryChannel",
-		},
-	}
 )
 
 func TestSequenceSetDefaults(t *testing.T) {

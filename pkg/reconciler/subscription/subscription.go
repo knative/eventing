@@ -476,20 +476,6 @@ func (r *Reconciler) updateChannelRemoveSubscription(ctx context.Context, channe
 	r.updateChannelAddSubscriptionV1Alpha1(ctx, channel, sub)
 }
 
-func (r *Reconciler) updateChannelRemoveSubscriptionV1Alpha1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1alpha1.Subscription) {
-	if channel.Spec.Subscribable == nil {
-		return
-	}
-
-	for i, v := range channel.Spec.Subscribable.Subscribers {
-		if v.UID == sub.UID {
-			channel.Spec.Subscribable.Subscribers = append(
-				channel.Spec.Subscribable.Subscribers[:i],
-				channel.Spec.Subscribable.Subscribers[i+1:]...)
-			return
-		}
-	}
-}
 func (r *Reconciler) updateChannelRemoveSubscriptionV1Beta1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1alpha1.Subscription) {
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {

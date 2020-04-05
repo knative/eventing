@@ -48,7 +48,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
@@ -79,11 +78,12 @@ const (
 	filterContainerName  = "filter"
 	ingressContainerName = "ingress"
 
-	triggerChannel  channelType = "TriggerChannel"
-	triggerName                 = "test-trigger"
-	triggerUID                  = "test-trigger-uid"
-	triggerNameLong             = "test-trigger-name-is-a-long-name"
-	triggerUIDLong              = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
+	triggerChannel channelType = "TriggerChannel"
+
+	triggerName     = "test-trigger"
+	triggerUID      = "test-trigger-uid"
+	triggerNameLong = "test-trigger-name-is-a-long-name"
+	triggerUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
 
 	subscriberURI     = "http://example.com/subscriber/"
 	subscriberKind    = "Service"
@@ -104,7 +104,6 @@ const (
 	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
 	currentGeneration     = 1
 	outdatedGeneration    = 0
-	triggerGeneration     = 7
 
 	finalizerName = "brokers.eventing.knative.dev"
 )
@@ -112,9 +111,7 @@ const (
 var (
 	trueVal = true
 
-	testKey                 = fmt.Sprintf("%s/%s", testNS, brokerName)
-	channelGenerateName     = fmt.Sprintf("%s-broker-", brokerName)
-	subscriptionChannelName = fmt.Sprintf("%s-broker", brokerName)
+	testKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 
@@ -123,25 +120,8 @@ var (
 	ingressDeploymentName = fmt.Sprintf("%s-broker-ingress", brokerName)
 	ingressServiceName    = fmt.Sprintf("%s-broker", brokerName)
 
-	ingressSubscriptionGenerateName = fmt.Sprintf("internal-ingress-%s-", brokerName)
-	subscriptionName                = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
+	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 
-	channelGVK = metav1.GroupVersionKind{
-		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "Channel",
-	}
-
-	imcGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "InMemoryChannel",
-	}
-
-	serviceGVK = metav1.GroupVersionKind{
-		Version: "v1",
-		Kind:    "Service",
-	}
 	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
 	subscriberGVK        = metav1.GroupVersionKind{
 		Group:   subscriberGroup,
@@ -152,13 +132,6 @@ var (
 		Group:   "",
 		Version: "v1",
 		Kind:    "Service",
-	}
-	brokerDest = duckv1beta1.Destination{
-		Ref: &corev1.ObjectReference{
-			Name:       sinkName,
-			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1alpha1",
-		},
 	}
 	brokerDestv1 = duckv1.Destination{
 		Ref: &duckv1.KReference{

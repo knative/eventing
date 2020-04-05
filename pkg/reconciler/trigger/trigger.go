@@ -35,7 +35,6 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process.
-	triggerReconcileFailed  = "TriggerReconcileFailed"
 	triggerNamespaceLabeled = "TriggerNamespaceLabeled"
 )
 

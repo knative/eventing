@@ -17,11 +17,9 @@
 package v1beta1
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/pkg/apis"
 )
 
 var (
@@ -31,8 +29,4 @@ var (
 			Kind:       "InMemoryChannel",
 		},
 	}
-
-	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-		apis.Condition{},
-		"LastTransitionTime", "Message", "Reason", "Severity")
 )

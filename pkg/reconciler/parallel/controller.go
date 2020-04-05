@@ -34,12 +34,6 @@ import (
 	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
 )
 
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "parallel-controller"
-)
-
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
