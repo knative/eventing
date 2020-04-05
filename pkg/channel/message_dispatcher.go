@@ -72,14 +72,23 @@ func NewMessageDispatcherFromConfig(logger *zap.Logger, config EventDispatcherCo
 }
 
 func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMessage cloudevents.Message, initialAdditionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error {
-	// All messages that should be finished at the end of this function
-	// are placed in this slice
+	messages, err := d.dispatchMessage(ctx, initialMessage, initialAdditionalHeaders, destination, reply, deadLetter)
+	for _, msg := range messages {
+		_ = msg.Finish(err)
+	}
+	return err
+}
+
+func (d *MessageDispatcherImpl) dispatchMessage(
+	ctx context.Context,
+	initialMessage cloudevents.Message,
+	initialAdditionalHeaders nethttp.Header,
+	destination *url.URL,
+	reply *url.URL,
+	deadLetter *url.URL,
+) ([]binding.Message, error) {
+	// All messages that should be finished are placed in this slice
 	var messagesToFinish []binding.Message
-	defer func() {
-		for _, msg := range messagesToFinish {
-			_ = msg.Finish(nil)
-		}
-	}()
 
 	// sanitize eventual host-only URLs
 	destination = d.sanitizeURL(destination)
@@ -102,16 +111,16 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 			if deadLetter != nil {
 				deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
 				if deadLetterErr != nil {
-					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
+					return messagesToFinish, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
 				if deadLetterResponse != nil {
 					messagesToFinish = append(messagesToFinish, deadLetterResponse)
 				}
 
-				return nil
+				return messagesToFinish, nil
 			}
 			// No DeadLetter, just fail
-			return fmt.Errorf("unable to complete request to %s: %v", destination, err)
+			return messagesToFinish, fmt.Errorf("unable to complete request to %s: %v", destination, err)
 		}
 	} else {
 		// No destination url, try to send to reply if available
@@ -121,14 +130,14 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 
 	// No response, dispatch completed
 	if responseMessage == nil {
-		return nil
+		return messagesToFinish, nil
 	}
 
 	messagesToFinish = append(messagesToFinish, responseMessage)
 
 	if reply == nil {
 		d.logger.Debug("cannot forward response as reply is empty")
-		return nil
+		return messagesToFinish, nil
 	}
 
 	responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders)
@@ -137,22 +146,22 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		if deadLetter != nil {
 			deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
 			if deadLetterErr != nil {
-				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
+				return messagesToFinish, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
 				messagesToFinish = append(messagesToFinish, deadLetterResponse)
 			}
 
-			return nil
+			return messagesToFinish, nil
 		}
 		// No DeadLetter, just fail
-		return fmt.Errorf("failed to forward reply to %s: %v", reply, err)
+		return messagesToFinish, fmt.Errorf("failed to forward reply to %s: %v", reply, err)
 	}
 	if responseResponseMessage != nil {
 		messagesToFinish = append(messagesToFinish, responseResponseMessage)
 	}
 
-	return nil
+	return messagesToFinish, nil
 }
 
 func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header) (cloudevents.Message, nethttp.Header, error) {

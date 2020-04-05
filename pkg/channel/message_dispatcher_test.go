@@ -635,9 +635,10 @@ func TestDispatchMessage(t *testing.T) {
 				t.Fatal(err)
 			}
 			message = binding.ToMessage(ev)
-			finishInvoked := 0
+			const expectedNumErrors = 1
+			finishErrors := make([]error, 0, expectedNumErrors)
 			message = binding.WithFinish(message, func(err error) {
-				finishInvoked++
+				finishErrors = append(finishErrors, err)
 			})
 
 			err = md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deadLetterSink)
@@ -645,8 +646,13 @@ func TestDispatchMessage(t *testing.T) {
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
-			if finishInvoked != 1 {
-				t.Errorf("Finish should be invoked exactly one time. Actual: %d", finishInvoked)
+			if len(finishErrors) != expectedNumErrors {
+				t.Errorf("Finish should be invoked exactly one time. Actual: %d %v", len(finishErrors), finishErrors)
+			}
+			for _, e := range finishErrors {
+				if e != err {
+					t.Errorf("Unexpected Finish error. Expected: %v. Actual: %v", err, e)
+				}
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)
