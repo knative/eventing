@@ -647,7 +647,7 @@ func TestDispatchMessage(t *testing.T) {
 				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
 			if len(finishErrors) != expectedNumErrors {
-				t.Errorf("Finish should be invoked exactly one time. Actual: %d %v", len(finishErrors), finishErrors)
+				t.Errorf("Finish should be invoked exactly %d times. Actual: %d errors: %v", expectedNumErrors, len(finishErrors), finishErrors)
 			}
 			for _, e := range finishErrors {
 				if e != err {
