@@ -26,18 +26,6 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// No-op test because method does nothing.
-func TestBrokerValidation(t *testing.T) {
-	b := Broker{}
-	_ = b.Validate(context.Background())
-}
-
-// No-op test because method does nothing.
-func TestBrokerSpecValidation(t *testing.T) {
-	bs := BrokerSpec{}
-	_ = bs.Validate(context.Background())
-}
-
 func TestBrokerImmutableFields(t *testing.T) {
 	original := &Broker{
 		Spec: BrokerSpec{
@@ -84,61 +72,48 @@ func TestBrokerImmutableFields(t *testing.T) {
 	}
 }
 
-func TestValidSpec(t *testing.T) {
-	tests := []struct {
-		name string
-		spec BrokerSpec
-		want *apis.FieldError
-	}{{
-		/* This test should fail: TODO: https://github.com/knative/eventing/issues/2128
-		name: "invalid empty, missing channeltemplatespec",
-		spec: BrokerSpec{},
-		want: apis.ErrMissingField("channelTemplateSpec"),
-		*/
-	}, {
+func TestBrokerValidation(t *testing.T) {
+	/* This test should fail: TODO: https://github.com/knative/eventing/issues/2128
+	name: "invalid empty, missing channeltemplatespec",
+	spec: BrokerSpec{},
+	want: apis.ErrMissingField("channelTemplateSpec"),
+	*/
+
+	tests := []CRDTest{{
 		name: "valid provider",
-		spec: BrokerSpec{
-			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
-				TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion", Kind: "mykind"},
+		cr: &Broker{
+			Spec: BrokerSpec{
+				ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
+					TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion", Kind: "mykind"},
+				},
 			},
 		},
 		want: nil,
 	}, {
 		name: "invalid templatespec, missing kind",
-		spec: BrokerSpec{
-			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}},
+		cr: &Broker{
+			Spec: BrokerSpec{
+				ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}},
+			},
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("kind").ViaField("channelTemplateSpec")
-			errs = errs.Also(fe)
-			return errs
-		}(),
+		want: apis.ErrMissingField("kind").ViaField("spec.channelTemplateSpec"),
 	}, {
 		name: "invalid templatespec, missing apiVersion",
-		spec: BrokerSpec{
-			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
+		cr: &Broker{
+			Spec: BrokerSpec{
+				ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
+			},
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("apiVersion").ViaField("channelTemplateSpec")
-			errs = errs.Also(fe)
-			return errs
-		}(),
+		want: apis.ErrMissingField("apiVersion").ViaField("spec.channelTemplateSpec"),
 	}, {
 		name: "valid templatespec",
-		spec: BrokerSpec{
-			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind", APIVersion: "myapiversion"}},
+		cr: &Broker{
+			Spec: BrokerSpec{
+				ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind", APIVersion: "myapiversion"}},
+			},
 		},
 		want: nil,
 	}}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.spec.Validate(context.Background())
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("BrokerSpec.Validate (-want, +got) = %v", diff)
-			}
-		})
-	}
+	doValidateTest(t, tests)
 }

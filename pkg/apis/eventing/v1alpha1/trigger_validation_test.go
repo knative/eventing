@@ -81,13 +81,9 @@ const (
 )
 
 func TestTriggerValidation(t *testing.T) {
-	tests := []struct {
-		name string
-		t    *Trigger
-		want *apis.FieldError
-	}{{
+	tests := []CRDTest{{
 		name: "invalid trigger spec",
-		t:    &Trigger{Spec: TriggerSpec{}},
+		cr:   &Trigger{Spec: TriggerSpec{}},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrMissingField("spec.broker", "spec.filter")
@@ -98,7 +94,7 @@ func TestTriggerValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "invalid trigger name",
-		t: &Trigger{
+		cr: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				// ups ... name too long
 				Name:      invalidLabelNameMaxCharsReached,
@@ -117,7 +113,7 @@ func TestTriggerValidation(t *testing.T) {
 		},
 	}, {
 		name: "invalid broker name",
-		t: &Trigger{
+		cr: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      validLabelNameMaxCharsNotReached,
 				Namespace: "dummy",
@@ -136,7 +132,7 @@ func TestTriggerValidation(t *testing.T) {
 		},
 	}, {
 		name: "invalid dependency annotation, not a corev1.ObjectReference",
-		t: &Trigger{
+		cr: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				Annotations: map[string]string{
 					DependencyAnnotation: invalidDependencyAnnotation,
@@ -153,7 +149,7 @@ func TestTriggerValidation(t *testing.T) {
 		},
 	}, {
 		name: "invalid dependency annotation, trigger namespace is not equal to dependency namespace)",
-		t: &Trigger{
+		cr: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: "test-ns-1",
 				Annotations: map[string]string{
@@ -168,143 +164,131 @@ func TestTriggerValidation(t *testing.T) {
 			Paths:   []string{dependencyAnnotationPath + "." + "namespace"},
 			Message: "Namespace must be empty or equal to the trigger namespace \"test-ns-1\"",
 		},
-	},
-		{
-			name: "invalid dependency annotation, missing kind)",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						DependencyAnnotation: "{\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
-					}},
-				Spec: TriggerSpec{
-					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
-					Subscriber: validSubscriber,
+	}, {
+		name: "invalid dependency annotation, missing kind)",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					DependencyAnnotation: "{\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
 				}},
-			want: &apis.FieldError{
-				Paths:   []string{dependencyAnnotationPath + "." + "kind"},
-				Message: "missing field(s)",
-			},
-		}, {
-			name: "invalid dependency annotation, missing name",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						DependencyAnnotation: "{\"kind\":\"PingSource\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
-					}},
-				Spec: TriggerSpec{
-					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
-					Subscriber: validSubscriber,
-				}},
-			want: &apis.FieldError{
-				Paths:   []string{dependencyAnnotationPath + "." + "name"},
-				Message: "missing field(s)",
-			},
-		}, {
-			name: "invalid dependency annotation, missing apiVersion",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						DependencyAnnotation: "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\"}",
-					}},
-				Spec: TriggerSpec{
-					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
-					Subscriber: validSubscriber,
-				}},
-			want: &apis.FieldError{
-				Paths:   []string{dependencyAnnotationPath + "." + "apiVersion"},
-				Message: "missing field(s)",
-			},
-		}, {
-			name: "invalid dependency annotation, missing kind, name, apiVersion",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						DependencyAnnotation: "{}",
-					}},
-				Spec: TriggerSpec{
-					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
-					Subscriber: validSubscriber,
-				}},
-			want: &apis.FieldError{
-				Paths: []string{
-					dependencyAnnotationPath + "." + "kind",
-					dependencyAnnotationPath + "." + "name",
-					dependencyAnnotationPath + "." + "apiVersion"},
-				Message: "missing field(s)",
-			},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Paths:   []string{dependencyAnnotationPath + "." + "kind"},
+			Message: "missing field(s)",
 		},
-		{
-			name: "invalid trigger spec, invalid dependency annotation(missing kind, name, apiVersion)",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						DependencyAnnotation: "{}",
-					}},
-				Spec: TriggerSpec{Subscriber: validSubscriber}},
-			want: &apis.FieldError{
-				Paths: []string{
-					"spec.broker", "spec.filter",
-					dependencyAnnotationPath + "." + "kind",
-					dependencyAnnotationPath + "." + "name",
-					dependencyAnnotationPath + "." + "apiVersion"},
-				Message: "missing field(s)",
-			},
-		},
-		{
-			name: "invalid injection annotation value",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						InjectionAnnotation: invalidInjectionAnnotation,
-					}},
-				Spec: TriggerSpec{
-					Broker:     "default",
-					Filter:     validEmptyFilter,
-					Subscriber: validSubscriber,
+	}, {
+		name: "invalid dependency annotation, missing name",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					DependencyAnnotation: "{\"kind\":\"PingSource\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
 				}},
-			want: &apis.FieldError{
-				Paths:   []string{injectionAnnotationPath},
-				Message: "The provided injection annotation value can only be \"enabled\", not \"disabled\"",
-			},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Paths:   []string{dependencyAnnotationPath + "." + "name"},
+			Message: "missing field(s)",
 		},
-		{
-			name: "valid injection annotation value, non-default broker specified",
-			t: &Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						InjectionAnnotation: validInjectionAnnotation,
-					}},
-				Spec: TriggerSpec{
-					Broker:     "test-broker",
-					Filter:     validEmptyFilter,
-					Subscriber: validSubscriber,
+	}, {
+		name: "invalid dependency annotation, missing apiVersion",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					DependencyAnnotation: "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\"}",
 				}},
-			want: &apis.FieldError{
-				Paths:   []string{injectionAnnotationPath},
-				Message: "The provided injection annotation is only used for default broker, but non-default broker specified here: \"test-broker\"",
-			},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Paths:   []string{dependencyAnnotationPath + "." + "apiVersion"},
+			Message: "missing field(s)",
 		},
-	}
+	}, {
+		name: "invalid dependency annotation, missing kind, name, apiVersion",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					DependencyAnnotation: "{}",
+				}},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Paths: []string{
+				dependencyAnnotationPath + "." + "kind",
+				dependencyAnnotationPath + "." + "name",
+				dependencyAnnotationPath + "." + "apiVersion"},
+			Message: "missing field(s)",
+		},
+	}, {
+		name: "invalid trigger spec, invalid dependency annotation(missing kind, name, apiVersion)",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					DependencyAnnotation: "{}",
+				}},
+			Spec: TriggerSpec{Subscriber: validSubscriber}},
+		want: &apis.FieldError{
+			Paths: []string{
+				"spec.broker", "spec.filter",
+				dependencyAnnotationPath + "." + "kind",
+				dependencyAnnotationPath + "." + "name",
+				dependencyAnnotationPath + "." + "apiVersion"},
+			Message: "missing field(s)",
+		},
+	}, {
+		name: "invalid injection annotation value",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					InjectionAnnotation: invalidInjectionAnnotation,
+				}},
+			Spec: TriggerSpec{
+				Broker:     "default",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Paths:   []string{injectionAnnotationPath},
+			Message: "The provided injection annotation value can only be \"enabled\", not \"disabled\"",
+		},
+	}, {
+		name: "valid injection annotation value, non-default broker specified",
+		cr: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					InjectionAnnotation: validInjectionAnnotation,
+				}},
+			Spec: TriggerSpec{
+				Broker:     "test-broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Paths:   []string{injectionAnnotationPath},
+			Message: "The provided injection annotation is only used for default broker, but non-default broker specified here: \"test-broker\"",
+		},
+	}}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.t.Validate(context.TODO())
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("Trigger.Validate (-want, +got) = %v", diff)
-			}
-		})
-	}
+	doValidateTest(t, tests)
 }
 
 func TestTriggerSpecValidation(t *testing.T) {
