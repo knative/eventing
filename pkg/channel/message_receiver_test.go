@@ -230,8 +230,8 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 		http.WithTarget(server.URL),
 		http.WithMethod(method),
 	)
-	p.RequestTemplate.Host = host
 	require.NoError(t, err)
+	p.RequestTemplate.Host = host
 
 	client, err := cloudevents.NewClient(p, cloudevents.WithTracePropagation)
 	require.NoError(t, err)
