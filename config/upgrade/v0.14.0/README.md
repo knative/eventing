@@ -23,4 +23,4 @@ It will create a job called v0.14.0-upgrade in the knative-eventing namespace.
 If you installed to different namespace, you need to modify the upgrade.yaml
 appropriately. Also the job by default runs as `eventing-controller` service
 account, you can also modify that but the service account will need to have
-permissions to list `Namespace`s, list and patch `Broker`s. 
+permissions to list `Namespace`s, list and patch `Broker`s.
