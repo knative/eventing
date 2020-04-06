@@ -20,7 +20,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/test"
+	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/stretchr/testify/require"
 	"go.opencensus.io/trace"
 )
 
@@ -86,6 +89,61 @@ func TestTraceparentTransformer(t *testing.T) {
 			InputEvent:   withTraceparent,
 			WantEvent:    withTraceparentExpected,
 			Transformers: AddTraceparent(newSpan),
+		},
+	})
+}
+
+type mockExporter chan *trace.SpanData
+
+func (m mockExporter) ExportSpan(s *trace.SpanData) {
+	m <- s
+}
+
+func TestPopulateSpan(t *testing.T) {
+	mockExp := make(mockExporter, 1)
+	trace.RegisterExporter(mockExp)
+
+	_, testSpanBinary := trace.StartSpan(context.Background(), "name", trace.WithSampler(trace.AlwaysSample()))
+	_, testSpanEvent := trace.StartSpan(context.Background(), "name", trace.WithSampler(trace.AlwaysSample()))
+
+	wantEvent := event.New(event.CloudEventsVersionV1)
+	wantEvent.SetID("aaa")
+	wantEvent.SetDataContentType("application/json")
+	wantEvent.SetSubject("sub")
+	wantEvent.SetType("hello.world")
+	wantEvent.SetSource("example.com")
+
+	expectedAttributes := map[string]interface{}{
+		"cloudevents.id":              "aaa",
+		"cloudevents.datacontenttype": "application/json",
+		"cloudevents.subject":         "sub",
+		"cloudevents.type":            "hello.world",
+		"cloudevents.source":          "example.com",
+		"cloudevents.specversion":     "1.0",
+	}
+
+	test.RunTransformerTests(t, context.Background(), []test.TransformerTestArgs{
+		{
+			Name:         "Populate span for binary messages",
+			InputMessage: test.MustCreateMockBinaryMessage(wantEvent),
+			AssertFunc: func(t *testing.T, haveEvent event.Event) {
+				test.AssertEventEquals(t, wantEvent, haveEvent) // Event should be unchanged
+				testSpanBinary.End()
+				spanData := <-mockExp
+				require.Equal(t, expectedAttributes, spanData.Attributes)
+			},
+			Transformers: []binding.TransformerFactory{PopulateSpan(testSpanBinary)},
+		},
+		{
+			Name:       "Populate span for event messages",
+			InputEvent: wantEvent,
+			AssertFunc: func(t *testing.T, haveEvent event.Event) {
+				test.AssertEventEquals(t, wantEvent, haveEvent) // Event should be unchanged
+				testSpanEvent.End()
+				spanData := <-mockExp
+				require.Equal(t, expectedAttributes, spanData.Attributes)
+			},
+			Transformers: []binding.TransformerFactory{PopulateSpan(testSpanEvent)},
 		},
 	})
 }

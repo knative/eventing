@@ -25,13 +25,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/test"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 	"go.opencensus.io/trace"
 	_ "knative.dev/pkg/system/testing"
 
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 
 	"go.uber.org/zap"
@@ -185,6 +189,60 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
+	want := test.ExToStr(t, test.FullEvent())
+
+	done := make(chan struct{}, 1)
+
+	receiverFunc := func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
+		if r.Namespace != "test-namespace" || r.Name != "test-name" {
+			return fmt.Errorf("test receiver func -- bad reference: %v", r)
+		}
+
+		if span := trace.FromContext(ctx); span == nil {
+			return errors.New("missing span")
+		}
+
+		done <- struct{}{}
+
+		return nil
+	}
+
+	// Default the common things.
+	method := nethttp.MethodPost
+	host := "test-name.test-namespace.svc." + utils.GetClusterDomainName()
+
+	logger, _ := zap.NewDevelopment()
+
+	r, err := NewMessageReceiver(receiverFunc, logger)
+	if err != nil {
+		t.Fatalf("Error creating new event receiver. Error:%s", err)
+	}
+
+	server := httptest.NewServer(kncloudevents.CreateHandler(r))
+	defer server.Close()
+
+	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample))
+
+	p, err := cloudevents.NewHTTP(
+		http.WithTarget(server.URL),
+		http.WithMethod(method),
+	)
+	require.NoError(t, err)
+	p.RequestTemplate.Host = host
+
+	client, err := cloudevents.NewClient(p, cloudevents.WithTracePropagation)
+	require.NoError(t, err)
+
+	res := client.Send(context.Background(), want)
+	require.True(t, cloudevents.IsACK(res))
+	var httpResult *http.Result
+	require.True(t, cloudevents.ResultAs(res, &httpResult))
+	require.Equal(t, 202, httpResult.StatusCode)
+
+	<-done
 }
 
 func TestMessageReceiver_WrongRequest(t *testing.T) {
