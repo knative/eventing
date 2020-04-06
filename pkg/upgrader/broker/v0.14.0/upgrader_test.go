@@ -20,8 +20,6 @@ import (
 	"context"
 	"reflect"
 
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,11 +29,12 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
 	_ "knative.dev/eventing/pkg/client/clientset/versioned"
-	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
-	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	_ "knative.dev/pkg/reconciler/testing"
 )
 
@@ -121,7 +120,7 @@ func TestProcessNamespace(t *testing.T) {
 		// Not important what we ret, it's just logged
 		return true, broker("b1", testns, annotationExists), nil
 	})
-	err := ProcessNamespace(ctx, testns)
+	err := processNamespace(ctx, testns)
 	if err != nil {
 		t.Errorf("Failed to process namespace: %v", err)
 	}
@@ -155,11 +154,11 @@ func TestProcessBroker(t *testing.T) {
 	}{
 		"nilannotations": {
 			&v1alpha1.Broker{ObjectMeta: metav1.ObjectMeta{Name: testbroker}},
-			[]byte("{\"metadata\":{\"annotations\":{\"eventing.knative.dev/broker.class\":\"ChannelBasedBroker\"}}}"),
+			patchbytes,
 		},
 		"empty": {
 			broker(testbroker, testns, map[string]string{}),
-			[]byte("{\"metadata\":{\"annotations\":{\"eventing.knative.dev/broker.class\":\"ChannelBasedBroker\"}}}"),
+			patchbytes,
 		},
 		"existing": {
 			broker(testbroker, testns, annotationExists),
@@ -171,13 +170,13 @@ func TestProcessBroker(t *testing.T) {
 		},
 		"onlyothers": {
 			broker(testbroker, testns, annotationOthers),
-			[]byte("{\"metadata\":{\"annotations\":{\"eventing.knative.dev/broker.class\":\"ChannelBasedBroker\"}}}"),
+			patchbytes,
 		},
 	}
 
 	for _, tc := range testcases {
 		ctx, _ := fakeeventingclient.With(context.Background(), tc.in)
-		patch, err := ProcessBroker(ctx, *tc.in)
+		patch, err := processBroker(ctx, *tc.in)
 		if err != nil {
 			t.Errorf("Failed to process broker: %v", err)
 		}

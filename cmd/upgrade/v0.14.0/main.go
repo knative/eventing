@@ -21,6 +21,8 @@ import (
 	//	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"context"
+	"fmt"
+	"os"
 
 	"k8s.io/client-go/kubernetes"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -37,5 +39,8 @@ func main() {
 	cfg := sharedmain.ParseAndGetConfigOrDie()
 	ctx = context.WithValue(ctx, kubeclient.Key{}, kubernetes.NewForConfigOrDie(cfg))
 	ctx = context.WithValue(ctx, eventingclient.Key{}, versioned.NewForConfigOrDie(cfg))
-	broker.Upgrade(ctx)
+	if err := broker.Upgrade(ctx); err != nil {
+		fmt.Printf("Broker Upgrade failed with: %v\n", err)
+		os.Exit(1)
+	}
 }

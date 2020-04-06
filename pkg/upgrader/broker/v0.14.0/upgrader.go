@@ -20,7 +20,6 @@ import (
 	"context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	types "k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -30,10 +29,10 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-// Upgrade upgrades all the brokers by applying an Annotation to all the
+// Upgrade upgrades all the brokers by applying the Broker Class to all the
 // ones that do not have them. This is necessary to ensure that existing Brokers
-// that do not have Annotation will continue to be reconciled by the existing
-// ChannelBasedBroker
+// that do not have the eventing.knative.dev/broker.class will continue to be
+// reconciled by the existing ChannelBasedBroker
 func Upgrade(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
@@ -44,7 +43,7 @@ func Upgrade(ctx context.Context) error {
 		return err
 	}
 	for _, ns := range namespaces.Items {
-		err = ProcessNamespace(ctx, ns.Name)
+		err = processNamespace(ctx, ns.Name)
 		if err != nil {
 			return err
 		}
@@ -52,7 +51,7 @@ func Upgrade(ctx context.Context) error {
 	return nil
 }
 
-func ProcessNamespace(ctx context.Context, ns string) error {
+func processNamespace(ctx context.Context, ns string) error {
 	logger := logging.FromContext(ctx)
 	logger.Infof("Processing Brokers in namespace: %q", ns)
 
@@ -64,7 +63,7 @@ func ProcessNamespace(ctx context.Context, ns string) error {
 		return err
 	}
 	for _, broker := range brokers.Items {
-		patch, err := ProcessBroker(ctx, broker)
+		patch, err := processBroker(ctx, broker)
 		if err != nil {
 			logger.Warnf("Failed to process a Broker \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
 			return err
@@ -79,6 +78,7 @@ func ProcessNamespace(ctx context.Context, ns string) error {
 		patched, err := brokerClient.Patch(broker.Name, types.MergePatchType, patch)
 		if err != nil {
 			logger.Warnf("Failed to patch \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
+			return err
 		}
 		logger.Infof("Patched \"%s/%s\" successfully new Annotations: %+v", broker.Namespace, broker.Name, patched.ObjectMeta.GetAnnotations())
 	}
@@ -87,10 +87,11 @@ func ProcessNamespace(ctx context.Context, ns string) error {
 
 // Process a single Broker to see if it needs a patch applied to it or not.
 // Returns non-empty patch bytes if a patch is necessary.
-func ProcessBroker(ctx context.Context, broker v1alpha1.Broker) ([]byte, error) {
+func processBroker(ctx context.Context, broker v1alpha1.Broker) ([]byte, error) {
 	logger := logging.FromContext(ctx)
 
-	annotations := broker.ObjectMeta.GetAnnotations()
+	modified := broker.DeepCopy()
+	annotations := modified.ObjectMeta.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string, 1)
 	}
@@ -98,23 +99,16 @@ func ProcessBroker(ctx context.Context, broker v1alpha1.Broker) ([]byte, error) 
 		logger.Infof("Annotation found \"%s/%s\" => %q", broker.Namespace, broker.Name, brokerClass)
 		return []byte{}, nil
 	}
-
-	// No annotations, or missing, add it...
-	modified := broker.DeepCopy()
-	modifiedAnnotations := modified.ObjectMeta.GetAnnotations()
-	if modifiedAnnotations == nil {
-		modifiedAnnotations = make(map[string]string, 1)
-	}
-	if _, present := modifiedAnnotations[eventing.BrokerClassKey]; !present {
-		modifiedAnnotations[eventing.BrokerClassKey] = eventing.ChannelBrokerClassValue
-		modified.ObjectMeta.SetAnnotations(modifiedAnnotations)
+	if _, present := annotations[eventing.BrokerClassKey]; !present {
+		annotations[eventing.BrokerClassKey] = eventing.ChannelBrokerClassValue
+		modified.ObjectMeta.SetAnnotations(annotations)
 	}
 	patch, err := duck.CreateMergePatch(broker, modified)
 	if err != nil {
 		logger.Warnf("Failed to create patch for \"%s/%s\" : %v", broker.Namespace, broker.Name, err)
 		return []byte{}, err
 	}
-	logger.Infof("Patch: %q", string(patch))
+	logger.Infof("Patched \"%s/%s\": %q", broker.Namespace, broker.Name, string(patch))
 	// If there is nothing to patch, we are good, just return.
 	// Empty patch is {}, hence we check for that.
 	if len(patch) <= 2 {
