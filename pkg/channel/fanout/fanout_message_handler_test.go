@@ -238,7 +238,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		subs = append(subs, sub)
 	}
 
-	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.DebugLevel))
+	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -84,14 +84,11 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 		return err
 	}
 
-	recv.handler = handler
+	recv.handler = CreateHandler(handler)
 
 	recv.server = &nethttp.Server{
-		Addr: recv.listener.Addr().String(),
-		Handler: &ochttp.Handler{
-			Propagation: &tracecontext.HTTPFormat{},
-			Handler:     recv.handler,
-		},
+		Addr:    recv.listener.Addr().String(),
+		Handler: recv.handler,
 	}
 
 	errChan := make(chan error, 1)
@@ -109,5 +106,12 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 		return err
 	case err := <-errChan:
 		return err
+	}
+}
+
+func CreateHandler(handler nethttp.Handler) nethttp.Handler {
+	return &ochttp.Handler{
+		Propagation: &tracecontext.HTTPFormat{},
+		Handler:     handler,
 	}
 }
