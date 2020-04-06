@@ -103,7 +103,7 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 			if deadLetter != nil {
 				var deadLetterResponse binding.Message
 				var deadLetterErr error
-				ctx, deadLetterResponse, _, deadLetterErr = d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
+				_, deadLetterResponse, _, deadLetterErr = d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
 				if deadLetterErr != nil {
 					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
@@ -140,7 +140,7 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		if deadLetter != nil {
 			var deadLetterResponse binding.Message
 			var deadLetterErr error
-			ctx, deadLetterResponse, _, deadLetterErr = d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
+			_, deadLetterResponse, _, deadLetterErr = d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
 			if deadLetterErr != nil {
 				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
