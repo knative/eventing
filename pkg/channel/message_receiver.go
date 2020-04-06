@@ -25,11 +25,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -155,10 +153,6 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	}
 
 	transformers := append(defaultTransformers, AddHistory(host)...)
-	span := trace.FromContext(request.Context())
-	if span != nil {
-		transformers = append(transformers, tracing.AddTraceparent(span)...)
-	}
 
 	err = r.receiverFunc(request.Context(), channel, message, transformers, utils.PassThroughHeaders(request.Header))
 	if err != nil {
