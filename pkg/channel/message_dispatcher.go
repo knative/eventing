@@ -97,11 +97,11 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		// Try to send to destination
 		messagesToFinish = append(messagesToFinish, initialMessage)
 
-		responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, initialMessage, initialAdditionalHeaders)
+		ctx, responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, initialMessage, initialAdditionalHeaders)
 		if err != nil {
 			// DeadLetter is configured, send the message to it
 			if deadLetter != nil {
-				deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
+				_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
 				if deadLetterErr != nil {
 					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
@@ -132,11 +132,11 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		return nil
 	}
 
-	responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders)
+	ctx, responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders)
 	if err != nil {
 		// DeadLetter is configured, send the message to it
 		if deadLetter != nil {
-			deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
+			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
 			if deadLetterErr != nil {
 				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
@@ -156,7 +156,7 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 	return nil
 }
 
-func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header) (cloudevents.Message, nethttp.Header, error) {
+func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header) (context.Context, cloudevents.Message, nethttp.Header, error) {
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
@@ -164,28 +164,34 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 
 	req, err := d.sender.NewCloudEventRequestWithTarget(ctx, url.String())
 	if err != nil {
-		return nil, nil, err
+		return ctx, nil, nil, err
 	}
 
-	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, tracing.PopulateSpan(span))
+	if span.IsRecordingEvents() {
+		err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, tracing.PopulateSpan(span))
+	} else {
+		err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+	}
 	if err != nil {
-		return nil, nil, err
+		return ctx, nil, nil, err
 	}
 
 	response, err := d.sender.Send(req)
 	if err != nil {
-		return nil, nil, err
+		return ctx, nil, nil, err
 	}
 	if isFailure(response.StatusCode) {
+		_ = response.Body.Close()
 		// Reject non-successful responses.
-		return nil, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
+		return ctx, nil, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
 	}
 	responseMessage := http.NewMessageFromHttpResponse(response)
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
+		_ = response.Body.Close()
 		d.logger.Debug("Response is a non event, discarding it", zap.Int("status_code", response.StatusCode))
-		return nil, nil, nil
+		return ctx, nil, nil, nil
 	}
-	return responseMessage, utils.PassThroughHeaders(response.Header), nil
+	return ctx, responseMessage, utils.PassThroughHeaders(response.Header), nil
 }
 
 func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
