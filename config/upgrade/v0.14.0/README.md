@@ -16,7 +16,7 @@ annotation like so.
 To run the upgrade script:
 
 ```shell
-ko apply -f ./upgrade.yaml
+kubectl apply -f https://github.com/knative/eventing/releases/download/v0.14.0/upgrade-to-v0.14.0.yaml
 ```
 
 It will create a job called v0.14.0-upgrade in the knative-eventing namespace.
