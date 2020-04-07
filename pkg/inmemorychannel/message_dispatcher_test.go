@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ limitations under the License.
 package inmemorychannel
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,15 +26,15 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 )
 
-func TestNewDispatcher(t *testing.T) {
+func TestNewMessageDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyHandler(logger)
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger)
 
 	if err != nil {
 		t.Fatalf("Failed to create handler")
 	}
 
-	args := &InMemoryDispatcherArgs{
+	args := &InMemoryMessageDispatcherArgs{
 		Port:         8080,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
@@ -41,7 +42,7 @@ func TestNewDispatcher(t *testing.T) {
 		Logger:       logger,
 	}
 
-	d := NewDispatcher(args)
+	d := NewMessageDispatcher(args)
 
 	if d == nil {
 		t.Fatalf("Failed to create with NewDispatcher")

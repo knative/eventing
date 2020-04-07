@@ -37,7 +37,7 @@ import (
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	configStore             *channel.EventDispatcherConfigStore
-	dispatcher              inmemorychannel.Dispatcher
+	dispatcher              inmemorychannel.MessageDispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 }
@@ -61,7 +61,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	}
 
 	config := r.newConfigFromInMemoryChannels(inmemoryChannels)
-	err = r.dispatcher.UpdateConfig(config)
+	err = r.dispatcher.UpdateConfig(ctx, config)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
 		return err

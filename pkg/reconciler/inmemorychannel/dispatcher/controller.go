@@ -59,19 +59,19 @@ func NewController(
 		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
-	sh, err := swappable.NewEmptyHandler(logger.Desugar())
+	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar())
 	if err != nil {
-		logger.Fatalw("Error creating swappable.Handler", zap.Error(err))
+		logger.Fatalw("Error creating swappable.MessageHandler", zap.Error(err))
 	}
 
-	args := &inmemorychannel.InMemoryDispatcherArgs{
+	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
 	}
-	inMemoryDispatcher := inmemorychannel.NewDispatcher(args)
+	inMemoryDispatcher := inmemorychannel.NewMessageDispatcher(args)
 
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 	informer := inmemorychannelInformer.Informer()

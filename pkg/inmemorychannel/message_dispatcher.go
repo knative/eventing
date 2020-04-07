@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"errors"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
@@ -28,38 +27,38 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
-type Dispatcher interface {
-	UpdateConfig(config *multichannelfanout.Config) error
+type MessageDispatcher interface {
+	UpdateConfig(ctx context.Context, config *multichannelfanout.Config) error
 }
 
-type InMemoryDispatcher struct {
-	handler      *swappable.Handler
-	ceClient     cloudevents.Client
-	writeTimeout time.Duration
-	logger       *zap.Logger
+type InMemoryMessageDispatcher struct {
+	handler              *swappable.MessageHandler
+	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
+	writeTimeout         time.Duration
+	logger               *zap.Logger
 }
 
-type InMemoryDispatcherArgs struct {
+type InMemoryMessageDispatcherArgs struct {
 	Port         int
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
-	Handler      *swappable.Handler
+	Handler      *swappable.MessageHandler
 	Logger       *zap.Logger
 }
 
-func (d *InMemoryDispatcher) UpdateConfig(config *multichannelfanout.Config) error {
-	return d.handler.UpdateConfig(config)
+func (d *InMemoryMessageDispatcher) UpdateConfig(ctx context.Context, config *multichannelfanout.Config) error {
+	return d.handler.UpdateConfig(ctx, config)
 }
 
 // Start starts the inmemory dispatcher's message processing.
 // This is a blocking call.
-func (d *InMemoryDispatcher) Start(ctx context.Context) error {
+func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- d.ceClient.StartReceiver(ctx, d.handler.ServeHTTP)
+		errCh <- d.httpBindingsReceiver.StartListen(ctx, d.handler)
 	}()
 
 	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
@@ -70,28 +69,26 @@ func (d *InMemoryDispatcher) Start(ctx context.Context) error {
 		break
 	}
 
-	// Done channel has been closed, we need to gracefully shutdown d.ceClient. The cancel() method will start its
+	// Done channel has been closed, we need to gracefully shutdown d.bindingsReceiver. The cancel() method will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
 	cancel()
 	select {
 	case err := <-errCh:
 		return err
 	case <-time.After(d.writeTimeout):
-		return errors.New("timeout shutting down ceClient")
+		return errors.New("timeout shutting http bindings receiver")
 	}
 }
 
-func NewDispatcher(args *InMemoryDispatcherArgs) *InMemoryDispatcher {
-	// TODO set read and write timeouts and port?
-	ceClient, err := kncloudevents.NewDefaultClient()
-	if err != nil {
-		args.Logger.Fatal("failed to create cloudevents client", zap.Error(err))
-	}
+func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
+	// TODO set read and write timeouts?
+	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(args.Port)
 
-	dispatcher := &InMemoryDispatcher{
-		handler:  args.Handler,
-		ceClient: ceClient,
-		logger:   args.Logger,
+	dispatcher := &InMemoryMessageDispatcher{
+		handler:              args.Handler,
+		httpBindingsReceiver: bindingsReceiver,
+		logger:               args.Logger,
+		writeTimeout:         args.WriteTimeout,
 	}
 
 	return dispatcher
