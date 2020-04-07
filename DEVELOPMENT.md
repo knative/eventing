@@ -133,6 +133,19 @@ ko apply -f config/channels/in-memory-channel/
 Depending on your needs you might want to install other
 [channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
 
+## Install Brokers
+
+Install the
+[Channel Broker](https://github.com/knative/eventing/tree/master/config/brokers/channel-broker)
+or any of the other Brokers available inside the `config/brokers/` directory.
+
+```shell
+ko apply -f config/brokers/channel-broker/
+```
+
+Depending on your needs you might want to install other
+[Broker implementations](https://github.com/knative/eventing/tree/master/docs/broker).
+
 ## Iterating
 
 As you make changes to the code-base, there are two special cases to be aware
