@@ -411,6 +411,14 @@
   version = "v1.1.9"
 
 [[projects]]
+  branch = "master"
+  digest = "1:cf68a79fd02ab0f6942b9567d03d054b6568212fcc22de2a4afdefd096923749"
+  name = "github.com/kballard/go-shellquote"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "95032a82bc518f77982ea72343cc1ade730072f0"
+
+[[projects]]
   digest = "1:08c58ac78a8c1f61e9a96350066d30fe194b8779799bd932a79932a5166a173f"
   name = "github.com/kelseyhightower/envconfig"
   packages = ["."]
@@ -1398,7 +1406,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9b83d1c207c67003de88414626add45e9bce8c47502e07cbe6cb5fd48e39f2df"
+  digest = "1:462fe2b87ea48e65015f45b404de9db04ebd1332fca8f06e19642641308869f7"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1478,6 +1486,7 @@
     "system",
     "system/testing",
     "test",
+    "test/cmd",
     "test/ghutil",
     "test/gke",
     "test/helpers",
@@ -1509,18 +1518,18 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "92cdec5b35931192590f5d8affad86898b6c50d6"
+  revision = "466c676678ddd57b3ec05a06a2d0bc6cfca8c3db"
 
 [[projects]]
   branch = "master"
-  digest = "1:d8858077778bca77705b26d5b5262bf33a6bfbaa701fffca1578fd7ef4c4b975"
+  digest = "1:ce8214f24f811aa582a58b2680e3380ff3fac7668a00d490fb23349a21051dcb"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "e84f0d1a364732918a6635cb07d895ff77ecba76"
+  revision = "a7b18bf0c37bf1a10743fba5c1ce988b7c2e0e30"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
