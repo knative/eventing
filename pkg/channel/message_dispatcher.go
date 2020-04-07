@@ -167,7 +167,11 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 		return ctx, nil, nil, err
 	}
 
-	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, tracing.PopulateSpan(span))
+	if span.IsRecordingEvents() {
+		err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, tracing.PopulateSpan(span))
+	} else {
+		err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+	}
 	if err != nil {
 		return ctx, nil, nil, err
 	}
