@@ -10,6 +10,7 @@ require (
 	github.com/google/gofuzz v1.1.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
 	github.com/google/uuid v1.1.1
+	github.com/hashicorp/go-retryablehttp v0.6.6
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0

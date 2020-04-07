@@ -28,7 +28,11 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/pkg/apis"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
@@ -39,6 +43,11 @@ type MessageDispatcher interface {
 	//
 	// The destination and reply are URLs.
 	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error
+
+	// DispatchMessage dispatches an event to a destination over HTTP.
+	//
+	// The destination and reply are URLs.
+	Dispatch(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *eventingduckv1.DeliverySpec) error
 }
 
 // MessageDispatcherImpl is the 'real' MessageDispatcher used everywhere except unit tests.
@@ -63,12 +72,11 @@ func NewMessageDispatcherFromConfig(logger *zap.Logger, config EventDispatcherCo
 	sender, err := kncloudevents.NewHttpMessageSender(&config.ConnectionArgs, "")
 	if err != nil {
 		logger.Fatal("Unable to create cloudevents binding sender", zap.Error(err))
-		return nil
 	}
 	return NewMessageDispatcherFromSender(logger, sender)
 }
 
-// NewMessageDispatcherFromConfig creates a new Message dispatcher from a sender.
+// NewMessageDispatcherFromConfig creates a new event dispatcher.
 func NewMessageDispatcherFromSender(logger *zap.Logger, sender *kncloudevents.HttpMessageSender) *MessageDispatcherImpl {
 	return &MessageDispatcherImpl{
 		sender:           sender,
@@ -77,7 +85,13 @@ func NewMessageDispatcherFromSender(logger *zap.Logger, sender *kncloudevents.Ht
 	}
 }
 
-func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMessage cloudevents.Message, initialAdditionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error {
+func (d *MessageDispatcherImpl) Dispatch(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *eventingduckv1.DeliverySpec) error {
+
+	var deadLetterURL *url.URL
+	if deadLetter != nil && deadLetter.DeadLetterSink != nil && deadLetter.DeadLetterSink.URI != nil {
+		deadLetterURL = deadLetter.DeadLetterSink.URI.URL()
+	}
+
 	// All messages that should be finished at the end of this function
 	// are placed in this slice
 	var messagesToFinish []binding.Message
@@ -87,10 +101,18 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		}
 	}()
 
+	retryConfig := kncloudevents.NoRetries()
+	if deadLetter != nil {
+		_retryConfig, err := kncloudevents.RetryConfigFromDeliverySpec(*deadLetter)
+		if err == nil {
+			retryConfig = _retryConfig
+		}
+	}
+
 	// sanitize eventual host-only URLs
 	destination = d.sanitizeURL(destination)
 	reply = d.sanitizeURL(reply)
-	deadLetter = d.sanitizeURL(deadLetter)
+	deadLetterURL = d.sanitizeURL(deadLetterURL)
 
 	// If there is a destination, variables response* are filled with the response of the destination
 	// Otherwise, they are filled with the original message
@@ -100,15 +122,16 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 	if destination != nil {
 		var err error
 		// Try to send to destination
-		messagesToFinish = append(messagesToFinish, initialMessage)
+		messagesToFinish = append(messagesToFinish, message)
 
-		ctx, responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, initialMessage, initialAdditionalHeaders)
+		ctx, responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, message, additionalHeaders, retryConfig)
 		if err != nil {
 			// DeadLetter is configured, send the message to it
-			if deadLetter != nil {
-				_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
+			if deadLetter != nil && deadLetterURL != nil {
+
+				_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetterURL, message, additionalHeaders, retryConfig)
 				if deadLetterErr != nil {
-					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
+					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetterURL, deadLetterErr)
 				}
 				if deadLetterResponse != nil {
 					messagesToFinish = append(messagesToFinish, deadLetterResponse)
@@ -121,8 +144,8 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		}
 	} else {
 		// No destination url, try to send to reply if available
-		responseMessage = initialMessage
-		responseAdditionalHeaders = initialAdditionalHeaders
+		responseMessage = message
+		responseAdditionalHeaders = additionalHeaders
 	}
 
 	// No response, dispatch completed
@@ -137,13 +160,13 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 		return nil
 	}
 
-	ctx, responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders)
+	ctx, responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retryConfig)
 	if err != nil {
 		// DeadLetter is configured, send the message to it
-		if deadLetter != nil {
-			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
+		if deadLetterURL != nil {
+			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetterURL, message, responseAdditionalHeaders, retryConfig)
 			if deadLetterErr != nil {
-				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
+				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetterURL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
 				messagesToFinish = append(messagesToFinish, deadLetterResponse)
@@ -159,9 +182,18 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMess
 	}
 
 	return nil
+
 }
 
-func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header) (context.Context, cloudevents.Message, nethttp.Header, error) {
+func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMessage cloudevents.Message, initialAdditionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error {
+	return d.Dispatch(ctx, initialMessage, initialAdditionalHeaders, destination, reply, &eventingduckv1.DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{
+			URI: (*apis.URL)(deadLetter),
+		},
+	})
+}
+
+func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header, configs kncloudevents.RetryConfig) (context.Context, cloudevents.Message, nethttp.Header, error) {
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
@@ -181,7 +213,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 		return ctx, nil, nil, err
 	}
 
-	response, err := d.sender.Send(req)
+	response, err := d.sender.SendWithRetries(req, configs)
 	if err != nil {
 		return ctx, nil, nil, err
 	}

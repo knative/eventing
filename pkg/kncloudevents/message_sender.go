@@ -18,10 +18,21 @@ package kncloudevents
 
 import (
 	"context"
+	"fmt"
+	"math"
 	nethttp "net/http"
+	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/rickb777/date/period"
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+)
+
+const (
+	defaultRetryMax = 4
 )
 
 // ConnectionArgs allow to configure connection parameters to the underlying
@@ -70,5 +81,97 @@ func (s *HttpMessageSender) NewCloudEventRequestWithTarget(ctx context.Context, 
 }
 
 func (s *HttpMessageSender) Send(req *nethttp.Request) (*nethttp.Response, error) {
-	return s.Client.Do(req)
+	return s.SendWithRetries(req, RetryConfig{
+		RetryMax: defaultRetryMax,
+		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+			// TODO(https://github.com/knative/eventing/issues/2411) Retryable status codes
+			return resp.StatusCode >= nethttp.StatusMultipleChoices, nil
+		},
+		Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+			return retryablehttp.DefaultBackoff(time.Second, time.Minute, attemptNum, resp)
+		},
+	})
+}
+
+// CheckRetry specifies a policy for handling retries. It is called
+// following each request with the response and error values returned by
+// the http.Client. If CheckRetry returns false, the Client stops retrying
+// and returns the response to the caller. If CheckRetry returns an error,
+// that error value is returned in lieu of the error from the request. The
+// Client will close any response body when retrying, but if the retry is
+// aborted it is up to the CheckRetry callback to properly close any
+// response body before returning.
+type CheckRetry func(ctx context.Context, resp *nethttp.Response, err error) (bool, error)
+
+// Backoff specifies a policy for how long to wait between retries.
+// It is called after a failing request to determine the amount of time
+// that should pass before trying again.
+type Backoff func(attemptNum int, resp *nethttp.Response) time.Duration
+
+type RetryConfig struct {
+
+	// Maximum number of retries
+	RetryMax int
+
+	CheckRetry CheckRetry
+
+	Backoff Backoff
+}
+
+func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config RetryConfig) (*nethttp.Response, error) {
+
+	retryableClient := retryablehttp.NewClient()
+	retryableClient.HTTPClient = s.Client
+	retryableClient.CheckRetry = retryablehttp.CheckRetry(config.CheckRetry)
+	retryableClient.Backoff = func(_, _ time.Duration, attemptNum int, resp *nethttp.Response) time.Duration {
+		return config.Backoff(attemptNum, resp)
+	}
+	retryableClient.ErrorHandler = func(resp *nethttp.Response, err error, numTries int) (*nethttp.Response, error) {
+		return resp, err
+	}
+
+	return retryableClient.Do(&retryablehttp.Request{Request: req})
+}
+
+func NoRetries() RetryConfig {
+	return RetryConfig{
+		RetryMax: 0,
+		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+			return false, nil
+		},
+		Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+			return 0
+		},
+	}
+}
+
+func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) {
+
+	retryConfig := NoRetries()
+
+	if spec.Retry != nil {
+		retryConfig.RetryMax = int(*spec.Retry)
+	}
+
+	if spec.BackoffPolicy != nil && spec.BackoffDelay != nil {
+
+		delay, err := period.Parse(*spec.BackoffDelay)
+		if err != nil {
+			return retryConfig, fmt.Errorf("failed to parse Spec.BackoffDelay: %w", err)
+		}
+
+		delayDuration, _ := delay.Duration()
+		switch *spec.BackoffPolicy {
+		case duckv1.BackoffPolicyExponential:
+			retryConfig.Backoff = func(attemptNum int, resp *nethttp.Response) time.Duration {
+				return time.Duration(math.Pow(float64(delayDuration*2), float64(attemptNum)))
+			}
+		case duckv1.BackoffPolicyLinear:
+			retryConfig.Backoff = func(attemptNum int, resp *nethttp.Response) time.Duration {
+				return delayDuration
+			}
+		}
+	}
+
+	return retryConfig, nil
 }

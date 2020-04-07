@@ -33,6 +33,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 )
@@ -164,17 +165,21 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub eventingduck.SubscriberSpec) error {
+
 	var destination *url.URL
 	if sub.SubscriberURI != nil {
 		destination = sub.SubscriberURI.URL()
 	}
+
 	var reply *url.URL
 	if sub.ReplyURI != nil {
 		reply = sub.ReplyURI.URL()
 	}
-	var deadLetter *url.URL
-	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
-		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
+
+	delivery := &eventingduckv1.DeliverySpec{}
+	if sub.Delivery != nil {
+		_ = sub.Delivery.ConvertTo(ctx, delivery)
 	}
-	return f.dispatcher.DispatchMessage(ctx, message, additionalHeaders, destination, reply, deadLetter)
+
+	return f.dispatcher.Dispatch(ctx, message, additionalHeaders, destination, reply, delivery)
 }
