@@ -10,19 +10,21 @@ Also take a look at:
 
 ## Getting started
 
-1. Setup [Knative Serving](http://github.com/knative/serving)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 1. [Install a channel implementation](#install-channels)
 
 Once you meet these requirements, you can
 [start the eventing-controller](#starting-eventing-controller).
 
+> :information_source: If you intend to use event sinks based on Knative
+> Services as described in some of our examples, consider installing
+> [Knative Serving](http://github.com/knative/serving). A few
+> [contrib](http://github.com/knative/eventing-contrib) projects also have a
+> dependency on Serving.
+
 Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 
 ### Requirements
-
-You must have the core of [Knative](http://github.com/knative/serving) running
-on your cluster.
 
 You must have [`ko`](https://github.com/google/ko) installed.
 
@@ -40,9 +42,10 @@ You must have [`ko`](https://github.com/google/ko) installed.
    - [Google Container Registry quickstart](https://cloud.google.com/container-registry/docs/pushing-and-pulling)
    - [Docker Hub quickstart](https://docs.docker.com/docker-hub/)
 
-**Note**: You'll need to be authenticated with your `KO_DOCKER_REPO` before
-pushing images. Run `gcloud auth configure-docker` if you are using Google
-Container Registry or `docker login` if you are using Docker Hub.
+> :information_source: You'll need to be authenticated with your
+> `KO_DOCKER_REPO` before pushing images. Run `gcloud auth configure-docker` if
+> you are using Google Container Registry or `docker login` if you are using
+> Docker Hub.
 
 ### Setup your environment
 
@@ -56,10 +59,10 @@ recommend adding them to your `.bashrc`):
 1. `KO_DOCKER_REPO`: The docker repository to which developer images should be
    pushed (e.g. `gcr.io/[gcloud-project]`).
 
-- **Note**: if you are using docker hub to store your images your
-  `KO_DOCKER_REPO` variable should be `docker.io/<username>`.
-- **Note**: Currently Docker Hub doesn't let you create subdirs under your
-  username.
+> :information_source: If you are using Docker Hub to store your images, your
+> `KO_DOCKER_REPO` variable should have the format `docker.io/<username>`.
+> Currently, Docker Hub doesn't let you create subdirs under your username (e.g.
+> `<username>/knative`).
 
 `.bashrc` example:
 
