@@ -10,19 +10,21 @@ Also take a look at:
 
 ## Getting started
 
-1. Setup [Knative Serving](http://github.com/knative/serving)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 1. [Install a channel implementation](#install-channels)
 
 Once you meet these requirements, you can
 [start the eventing-controller](#starting-eventing-controller).
 
+> :information_source: If you intend to use event sinks based on Knative
+> Services as described in some of our examples, consider installing
+> [Knative Serving](http://github.com/knative/serving). A few
+> [contrib](http://github.com/knative/eventing-contrib) projects also have a
+> dependency on Serving.
+
 Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 
 ### Requirements
-
-You must have the core of [Knative](http://github.com/knative/serving) running
-on your cluster.
 
 You must have [`ko`](https://github.com/google/ko) installed.
 
