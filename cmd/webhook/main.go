@@ -104,6 +104,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation"): &configsv1alpha1.ConfigMapPropagation{},
 }
 
+var callbacks = map[schema.GroupVersionKind]validation.Callback{}
+
 func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	// Decorate contexts with the current state of the config.
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
@@ -125,7 +127,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 		// The path on which to serve the webhook.
 		"/defaulting",
 
-		// The resources to validate and default.
+		// The resources to default.
 		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
@@ -157,7 +159,7 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 		// The path on which to serve the webhook.
 		"/resource-validation",
 
-		// The resources to validate and default.
+		// The resources to validate.
 		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
@@ -165,6 +167,9 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 		// Whether to disallow unknown fields.
 		true,
+
+		// Extra validating callbacks to be applied to resources.
+		callbacks,
 	)
 }
 
