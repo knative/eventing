@@ -198,7 +198,7 @@ func makeDiscoveryClient() discovery.DiscoveryInterface {
 					GroupVersion: "v1",
 					APIResources: []metav1.APIResource{
 						// All resources used at tests need to be listed here
-						metav1.APIResource{
+						{
 							Name:       "pods",
 							Namespaced: true,
 							Group:      "",
