@@ -285,7 +285,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			event.SetData(cloudevents.ApplicationJSON, "{}")
 
 			req := httptest.NewRequest(http.MethodPost, "http://"+tc.key+"/", nil)
-			err = bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req, binding.TransformerFactories{})
+			err = bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req)
 			if err != nil {
 				t.Fatal(err)
 			}

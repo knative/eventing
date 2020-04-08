@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-var defaultTransformers = []binding.TransformerFactory{
+var defaultTransformers = []binding.Transformer{
 	transformer.AddTimeNow,
 }
 
@@ -48,7 +48,7 @@ type MessageReceiver struct {
 // The provided message is not buffered, so it can't be safely read more times.
 // When you perform the write (or the buffering) of the Message, you must use the transformers provided as parameters.
 // This function is responsible for invoking Message.Finish().
-type UnbufferedMessageReceiverFunc func(context.Context, ChannelReference, binding.Message, []binding.TransformerFactory, nethttp.Header) error
+type UnbufferedMessageReceiverFunc func(context.Context, ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error
 
 // ReceiverOptions provides functional options to MessageReceiver function.
 type MessageReceiverOptions func(*MessageReceiver) error
@@ -152,7 +152,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
-	transformers := append(defaultTransformers, AddHistory(host)...)
+	transformers := append(defaultTransformers, AddHistory(host))
 
 	err = r.receiverFunc(request.Context(), channel, message, transformers, utils.PassThroughHeaders(request.Header))
 	if err != nil {

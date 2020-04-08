@@ -3,42 +3,37 @@ package transformer
 import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
-	"github.com/cloudevents/sdk-go/v2/event"
 )
 
-// Converts the event context version to the specified one.
-func Version(version spec.Version) binding.TransformerFactory {
-	return versionTransformerFactory{version: version}
-}
+// Version converts the event context version to the specified one.
+func Version(newVersion spec.Version) binding.TransformerFunc {
+	return func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error {
+		_, sv := reader.GetAttribute(spec.SpecVersion)
+		if newVersion.String() == sv {
+			return nil
+		}
 
-type versionTransformerFactory struct {
-	version spec.Version
-}
-
-func (v versionTransformerFactory) StructuredTransformer(binding.StructuredWriter) binding.StructuredWriter {
-	return nil // Not supported, must fallback to EventTransformer!
-}
-
-func (v versionTransformerFactory) BinaryTransformer(encoder binding.BinaryWriter) binding.BinaryWriter {
-	return binaryVersionTransformer{BinaryWriter: encoder, version: v.version}
-}
-
-func (v versionTransformerFactory) EventTransformer() binding.EventTransformer {
-	return func(e *event.Event) error {
-		e.Context = v.version.Convert(e.Context)
+		for _, newAttr := range newVersion.Attributes() {
+			oldAttr, val := reader.GetAttribute(newAttr.Kind())
+			if oldAttr != nil && val != nil {
+				// Erase old attr
+				err := writer.SetAttribute(oldAttr, nil)
+				if err != nil {
+					return nil
+				}
+				if newAttr.Kind() == spec.SpecVersion {
+					err = writer.SetAttribute(newAttr, newVersion.String())
+					if err != nil {
+						return nil
+					}
+				} else {
+					err = writer.SetAttribute(newAttr, val)
+					if err != nil {
+						return nil
+					}
+				}
+			}
+		}
 		return nil
 	}
-}
-
-type binaryVersionTransformer struct {
-	binding.BinaryWriter
-	version spec.Version
-}
-
-func (b binaryVersionTransformer) SetAttribute(attribute spec.Attribute, value interface{}) error {
-	if attribute.Kind() == spec.SpecVersion {
-		return b.BinaryWriter.SetAttribute(b.version.AttributeFromKind(spec.SpecVersion), b.version.String())
-	}
-	attributeInDifferentVersion := b.version.AttributeFromKind(attribute.Kind())
-	return b.BinaryWriter.SetAttribute(attributeInDifferentVersion, value)
 }

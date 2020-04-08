@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/test"
 )
 
@@ -38,37 +39,37 @@ func TestHistoryTransformer(t *testing.T) {
 			Name:         "Add history in Mock Structured message",
 			InputMessage: test.MustCreateMockStructuredMessage(withoutHistory),
 			WantEvent:    withoutHistoryExpected,
-			Transformers: AddHistory("example.com"),
+			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Add history in Mock Binary message",
 			InputMessage: test.MustCreateMockBinaryMessage(withoutHistory),
 			WantEvent:    withoutHistoryExpected,
-			Transformers: AddHistory("example.com"),
+			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Add history in Event message",
 			InputEvent:   withoutHistory,
 			WantEvent:    withoutHistoryExpected,
-			Transformers: AddHistory("example.com"),
+			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Update history in Mock Structured message",
 			InputMessage: test.MustCreateMockStructuredMessage(withHistory),
 			WantEvent:    withHistoryExpected,
-			Transformers: AddHistory("example.com"),
+			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Update history in Mock Binary message",
 			InputMessage: test.MustCreateMockBinaryMessage(withHistory),
 			WantEvent:    withHistoryExpected,
-			Transformers: AddHistory("example.com"),
+			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Update history in Event message",
 			InputEvent:   withHistory,
 			WantEvent:    withHistoryExpected,
-			Transformers: AddHistory("example.com"),
+			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 	})
 }

@@ -27,72 +27,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const (
-	traceparentAttribute = "Traceparent"
-)
-
-func traceparentAttributeValue(span *trace.Span) string {
-	flags := "00"
-	if span.SpanContext().IsSampled() {
-		flags = "01"
-	}
-	return "00-" + span.SpanContext().TraceID.String() + "-" +
-		span.SpanContext().SpanID.String() + "-" + flags
-}
-
-func TestTraceparentTransformer(t *testing.T) {
-	_, span := trace.StartSpan(context.Background(), "name", trace.WithSampler(trace.NeverSample()))
-	_, newSpan := trace.StartSpan(context.Background(), "name", trace.WithSampler(trace.NeverSample()))
-
-	withoutTraceparent := test.MinEvent()
-	withoutTraceparentExpected := withoutTraceparent.Clone()
-	withoutTraceparentExpected.SetExtension(traceparentAttribute, traceparentAttributeValue(span))
-
-	withTraceparent := test.MinEvent()
-	withTraceparent.SetExtension(traceparentAttribute, traceparentAttributeValue(span))
-	withTraceparentExpected := withTraceparent.Clone()
-	withTraceparentExpected.SetExtension(traceparentAttribute, traceparentAttributeValue(newSpan))
-
-	test.RunTransformerTests(t, context.Background(), []test.TransformerTestArgs{
-		{
-			Name:         "Add traceparent in Mock Structured message",
-			InputMessage: test.MustCreateMockStructuredMessage(withoutTraceparent),
-			WantEvent:    withoutTraceparentExpected,
-			Transformers: AddTraceparent(span),
-		},
-		{
-			Name:         "Add traceparent in Mock Binary message",
-			InputMessage: test.MustCreateMockBinaryMessage(withoutTraceparent),
-			WantEvent:    withoutTraceparentExpected,
-			Transformers: AddTraceparent(span),
-		},
-		{
-			Name:         "Add traceparent in Event message",
-			InputEvent:   withoutTraceparent,
-			WantEvent:    withoutTraceparentExpected,
-			Transformers: AddTraceparent(span),
-		},
-		{
-			Name:         "Update traceparent in Mock Structured message",
-			InputMessage: test.MustCreateMockStructuredMessage(withTraceparent),
-			WantEvent:    withTraceparentExpected,
-			Transformers: AddTraceparent(newSpan),
-		},
-		{
-			Name:         "Update traceparent in Mock Binary message",
-			InputMessage: test.MustCreateMockBinaryMessage(withTraceparent),
-			WantEvent:    withTraceparentExpected,
-			Transformers: AddTraceparent(newSpan),
-		},
-		{
-			Name:         "Update traceparent in Event message",
-			InputEvent:   withTraceparent,
-			WantEvent:    withTraceparentExpected,
-			Transformers: AddTraceparent(newSpan),
-		},
-	})
-}
-
 type mockExporter chan *trace.SpanData
 
 func (m mockExporter) ExportSpan(s *trace.SpanData) {
@@ -108,18 +42,14 @@ func TestPopulateSpan(t *testing.T) {
 
 	wantEvent := event.New(event.CloudEventsVersionV1)
 	wantEvent.SetID("aaa")
-	wantEvent.SetDataContentType("application/json")
-	wantEvent.SetSubject("sub")
 	wantEvent.SetType("hello.world")
 	wantEvent.SetSource("example.com")
 
 	expectedAttributes := map[string]interface{}{
-		"cloudevents.id":              "aaa",
-		"cloudevents.datacontenttype": "application/json",
-		"cloudevents.subject":         "sub",
-		"cloudevents.type":            "hello.world",
-		"cloudevents.source":          "example.com",
-		"cloudevents.specversion":     "1.0",
+		"cloudevents.id":          "aaa",
+		"cloudevents.type":        "hello.world",
+		"cloudevents.source":      "example.com",
+		"cloudevents.specversion": "1.0",
 	}
 
 	test.RunTransformerTests(t, context.Background(), []test.TransformerTestArgs{
@@ -132,7 +62,7 @@ func TestPopulateSpan(t *testing.T) {
 				spanData := <-mockExp
 				require.Equal(t, expectedAttributes, spanData.Attributes)
 			},
-			Transformers: []binding.TransformerFactory{PopulateSpan(testSpanBinary)},
+			Transformers: binding.Transformers{PopulateSpan(testSpanBinary)},
 		},
 		{
 			Name:       "Populate span for event messages",
@@ -143,7 +73,7 @@ func TestPopulateSpan(t *testing.T) {
 				spanData := <-mockExp
 				require.Equal(t, expectedAttributes, spanData.Attributes)
 			},
-			Transformers: []binding.TransformerFactory{PopulateSpan(testSpanEvent)},
+			Transformers: binding.Transformers{PopulateSpan(testSpanEvent)},
 		},
 	})
 }

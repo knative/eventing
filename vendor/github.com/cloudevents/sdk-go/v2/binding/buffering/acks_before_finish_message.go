@@ -4,11 +4,20 @@ import (
 	"sync/atomic"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 )
 
 type acksMessage struct {
 	binding.Message
 	requiredAcks int32
+}
+
+func (m *acksMessage) GetAttribute(k spec.Kind) (spec.Attribute, interface{}) {
+	return m.Message.(binding.MessageMetadataReader).GetAttribute(k)
+}
+
+func (m *acksMessage) GetExtension(s string) interface{} {
+	return m.Message.(binding.MessageMetadataReader).GetExtension(s)
 }
 
 func (m *acksMessage) GetWrappedMessage() binding.Message {

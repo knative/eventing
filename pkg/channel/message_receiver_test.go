@@ -64,13 +64,13 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			expected: nethttp.StatusInternalServerError,
 		},
 		"unknown channel error": {
-			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
+			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 				return &UnknownChannelError{c: c}
 			},
 			expected: nethttp.StatusNotFound,
 		},
 		"other receiver function error": {
-			receiverFunc: func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
+			receiverFunc: func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 				return errors.New("test induced receiver function error")
 			},
 			expected: nethttp.StatusInternalServerError,
@@ -83,12 +83,9 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"nor":                       {"this-one"},
 				"x-requEst-id":              {"1234"},
 				"knatIve-will-pass-through": {"true", "always"},
-				// Ce headers won't pass through our header filtering as they should actually be set in the CloudEvent itself,
-				// as extensions. The SDK then sets them as as Ce- headers when sending them through HTTP.
-				"cE-not-pass-through": {"true"},
 			},
 			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
-			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
+			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
 				}
@@ -162,7 +159,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			req = req.WithContext(reqCtx)
 			req.Host = tc.host
 
-			err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req, binding.TransformerFactories{})
+			err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -190,7 +187,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 
 	done := make(chan struct{}, 1)
 
-	receiverFunc := func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
+	receiverFunc := func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 		if r.Namespace != "test-namespace" || r.Name != "test-name" {
 			return fmt.Errorf("test receiver func -- bad reference: %v", r)
 		}
@@ -242,7 +239,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 func TestMessageReceiver_WrongRequest(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
 
-	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
+	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
 	r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
@@ -264,7 +261,7 @@ func TestMessageReceiver_WrongRequest(t *testing.T) {
 func TestMessageReceiver_UnknownHost(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
 
-	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
+	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
 	r, err := NewMessageReceiver(
@@ -286,7 +283,7 @@ func TestMessageReceiver_UnknownHost(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://localhost:8080/", nil)
 	req.Host = host
 
-	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req, binding.TransformerFactories{})
+	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req)
 	if err != nil {
 		t.Fatal(err)
 	}

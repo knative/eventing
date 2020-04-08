@@ -181,7 +181,7 @@ func assertRequestBindingAccepted(t *testing.T, h *MessageHandler) {
 	event.SetData("text/plain", "")
 
 	req := httptest.NewRequest(http.MethodPost, "http://"+hostName+"/", nil)
-	err := bindingshttp.WriteRequest(context.Background(), binding.ToMessage(&event), req, binding.TransformerFactories{})
+	err := bindingshttp.WriteRequest(context.Background(), binding.ToMessage(&event), req)
 	if err != nil {
 		t.Fatal(err)
 	}
