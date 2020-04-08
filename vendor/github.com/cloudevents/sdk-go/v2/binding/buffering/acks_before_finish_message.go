@@ -13,11 +13,11 @@ type acksMessage struct {
 }
 
 func (m *acksMessage) GetAttribute(k spec.Kind) (spec.Attribute, interface{}) {
-	return binding.MessageMetadataReader(m).GetAttribute(k)
+	return m.Message.(binding.MessageMetadataReader).GetAttribute(k)
 }
 
 func (m *acksMessage) GetExtension(s string) interface{} {
-	return binding.MessageMetadataReader(m).GetExtension(s)
+	return m.Message.(binding.MessageMetadataReader).GetExtension(s)
 }
 
 func (m *acksMessage) GetWrappedMessage() binding.Message {
