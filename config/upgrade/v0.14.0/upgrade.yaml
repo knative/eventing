@@ -12,5 +12,5 @@ spec:
       restartPolicy: Never
       containers:
       - name: upgrade-brokers
-        image: ko://knative.dev/eventing/cmd/upgrade/v0.14.0/
+        image: ko://knative.dev/eventing/cmd/upgrade/v0.14.0
 
