@@ -205,7 +205,7 @@ func makeDiscoveryClient() discovery.DiscoveryInterface {
 							Version:    "v1",
 							Kind:       "Pod",
 						},
-						metav1.APIResource{
+						{
 							Name:       "namespaces",
 							Namespaced: false,
 							Group:      "",
