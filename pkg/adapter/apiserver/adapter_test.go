@@ -194,7 +194,7 @@ func makeDiscoveryClient() discovery.DiscoveryInterface {
 	return &discoveryfake.FakeDiscovery{
 		Fake: &kubetesting.Fake{
 			Resources: []*metav1.APIResourceList{
-				&metav1.APIResourceList{
+				{
 					GroupVersion: "v1",
 					APIResources: []metav1.APIResource{
 						// All resources used at tests need to be listed here
