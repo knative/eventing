@@ -35,6 +35,8 @@ readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 
 # MT Channel Based Broker config.
 readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
+# MT Channel Based Broker config.
+readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/mt-channel-broker.yaml"
 
 # Channel Based Broker Controller.
 readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
@@ -60,6 +62,7 @@ function install_broker() {
 }
 
 function install_mt_broker() {
+  ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
   ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with MT Broker did not come up"
 }
