@@ -67,12 +67,12 @@ func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClie
 	}
 
 	return &apiServerAdapter{
-		kubeClient: kubeclient.Get(ctx),
-		k8s:        dynamicclient.Get(ctx),
-		ce:         ceClient,
-		source:     Get(ctx),
-		name:       env.Name,
-		config:     config,
+		discover: kubeclient.Get(ctx).Discovery(),
+		k8s:      dynamicclient.Get(ctx),
+		ce:       ceClient,
+		source:   Get(ctx),
+		name:     env.Name,
+		config:   config,
 
 		logger: logger,
 	}

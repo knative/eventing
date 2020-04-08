@@ -25,8 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
@@ -45,10 +45,10 @@ type apiServerAdapter struct {
 
 	config Config
 
-	kubeClient kubernetes.Interface
-	k8s        dynamic.Interface
-	source     string // TODO: who dis?
-	name       string // TODO: who dis?
+	discover discovery.DiscoveryInterface
+	k8s      dynamic.Interface
+	source   string // TODO: who dis?
+	name     string // TODO: who dis?
 }
 
 func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
@@ -79,7 +79,7 @@ func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 
 	for _, configRes := range a.config.Resources {
 
-		resources, err := a.kubeClient.Discovery().ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
+		resources, err := a.discover.ServerResourcesForGroupVersion(configRes.GVR.GroupVersion().String())
 		if err != nil {
 			a.logger.Errorf("Could not retrieve information about resource %s: %s", configRes.GVR.String(), err.Error())
 			continue
