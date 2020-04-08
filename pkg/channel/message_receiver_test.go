@@ -283,7 +283,7 @@ func TestMessageReceiver_UnknownHost(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://localhost:8080/", nil)
 	req.Host = host
 
-	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req, binding.Transformers{})
+	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req)
 	if err != nil {
 		t.Fatal(err)
 	}
