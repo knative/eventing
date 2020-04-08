@@ -22,8 +22,11 @@ import (
 	"github.com/cloudevents/sdk-go/v2/types"
 )
 
-func AddHistory(host string) []binding.TransformerFactory {
-	return transformer.SetExtension(EventHistory, host, func(i interface{}) (interface{}, error) {
+func AddHistory(host string) binding.Transformer {
+	return transformer.SetExtension(EventHistory, func(i interface{}) (interface{}, error) {
+		if types.IsZero(i) {
+			return host, nil
+		}
 		str, err := types.Format(i)
 		if err != nil {
 			return nil, err

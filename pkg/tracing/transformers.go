@@ -19,54 +19,48 @@ package tracing
 import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
-	"github.com/cloudevents/sdk-go/v2/binding/transformer"
-	"github.com/cloudevents/sdk-go/v2/client"
-	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/cloudevents/sdk-go/v2/extensions"
+	"github.com/cloudevents/sdk-go/v2/types"
 	"go.opencensus.io/trace"
 )
 
-// AddTraceparent returns a CloudEvent that is identical to the input event,
-// with the traceparent CloudEvents extension attribute added.
-func AddTraceparent(span *trace.Span) []binding.TransformerFactory {
-	dt := extensions.FromSpanContext(span.SpanContext())
-	return transformer.SetExtension(extensions.TraceParentExtension, dt.TraceParent, func(i2 interface{}) (i interface{}, err error) {
-		return dt.TraceParent, nil
-	})
-}
+func PopulateSpan(span *trace.Span) binding.TransformerFunc {
+	return func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error {
+		_, specVersion := reader.GetAttribute(spec.SpecVersion)
+		if specVersion != nil {
+			specVersionParsed, err := types.Format(specVersion)
+			if err != nil {
+				return err
+			}
+			span.AddAttributes(trace.StringAttribute("cloudevents.specversion", specVersionParsed))
+		}
 
-func PopulateSpan(span *trace.Span) binding.TransformerFactory {
-	return populateSpanTransformerFactory{span: span}
-}
+		_, id := reader.GetAttribute(spec.ID)
+		if id != nil {
+			idParsed, err := types.Format(id)
+			if err != nil {
+				return err
+			}
+			span.AddAttributes(trace.StringAttribute("cloudevents.id", idParsed))
+		}
 
-type populateSpanTransformerFactory struct {
-	span *trace.Span
-}
+		_, ty := reader.GetAttribute(spec.Type)
+		if ty != nil {
+			tyParsed, err := types.Format(ty)
+			if err != nil {
+				return err
+			}
+			span.AddAttributes(trace.StringAttribute("cloudevents.type", tyParsed))
+		}
 
-func (v populateSpanTransformerFactory) StructuredTransformer(binding.StructuredWriter) binding.StructuredWriter {
-	return nil // Not supported, must fallback to EventTransformer!
-}
+		_, source := reader.GetAttribute(spec.Source)
+		if source != nil {
+			sourceParsed, err := types.Format(source)
+			if err != nil {
+				return err
+			}
+			span.AddAttributes(trace.StringAttribute("cloudevents.source", sourceParsed))
+		}
 
-func (v populateSpanTransformerFactory) BinaryTransformer(encoder binding.BinaryWriter) binding.BinaryWriter {
-	return &binaryPopulateSpanTransformer{BinaryWriter: encoder, span: v.span}
-}
-
-func (v populateSpanTransformerFactory) EventTransformer() binding.EventTransformer {
-	return func(e *event.Event) error {
-		v.span.AddAttributes(client.EventTraceAttributes(e)...)
-		v.span.AddAttributes(trace.StringAttribute("cloudevents.id", e.ID()))
 		return nil
 	}
-}
-
-type binaryPopulateSpanTransformer struct {
-	binding.BinaryWriter
-	span *trace.Span
-}
-
-func (b *binaryPopulateSpanTransformer) SetAttribute(attribute spec.Attribute, value interface{}) error {
-	if s, ok := value.(string); ok {
-		b.span.AddAttributes(trace.StringAttribute("cloudevents."+attribute.Name(), s))
-	}
-	return b.BinaryWriter.SetAttribute(attribute, value)
 }

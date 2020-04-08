@@ -630,7 +630,7 @@ func TestDispatchMessage(t *testing.T) {
 			// We need to do message -> event -> message to emulate the same transformers the event receiver would do
 			message := binding.ToMessage(&event)
 			var err error
-			ev, err := binding.ToEvent(ctx, message, binding.TransformerFactories{transformer.AddTimeNow})
+			ev, err := binding.ToEvent(ctx, message, binding.Transformers{transformer.AddTimeNow})
 			if err != nil {
 				t.Fatal(err)
 			}

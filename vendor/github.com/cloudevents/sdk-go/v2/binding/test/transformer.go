@@ -16,7 +16,7 @@ type TransformerTestArgs struct {
 	InputMessage binding.Message
 	WantEvent    event.Event
 	AssertFunc   func(t *testing.T, event event.Event)
-	Transformers []binding.TransformerFactory
+	Transformers []binding.Transformer
 }
 
 func RunTransformerTests(t *testing.T, ctx context.Context, tests []TransformerTestArgs) {

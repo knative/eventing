@@ -122,7 +122,7 @@
   version = "v0.2.1"
 
 [[projects]]
-  digest = "1:b30641faf096423bc58a952a0cbdb5c9c7fe9dc8ef17f914871fd2eca697bba7"
+  digest = "1:b9af34f31489b3c0047a31bca9895efc406dbb81f67623adfb21ffb404bd413f"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     "v1",
@@ -159,8 +159,8 @@
     "v2/types",
   ]
   pruneopts = "NUT"
-  revision = "6dc020a8df7f3ee38d729e53cde2193ea7edf12a"
-  version = "v2.0.0-preview8"
+  revision = "c875624dcc187e3e2119e41e51ad83f1962dd20f"
+  version = "v2.0.0-RC1"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -1546,9 +1546,7 @@
     "github.com/cloudevents/sdk-go/v2/binding/spec",
     "github.com/cloudevents/sdk-go/v2/binding/test",
     "github.com/cloudevents/sdk-go/v2/binding/transformer",
-    "github.com/cloudevents/sdk-go/v2/client",
     "github.com/cloudevents/sdk-go/v2/event",
-    "github.com/cloudevents/sdk-go/v2/extensions",
     "github.com/cloudevents/sdk-go/v2/protocol",
     "github.com/cloudevents/sdk-go/v2/protocol/http",
     "github.com/cloudevents/sdk-go/v2/types",

@@ -49,14 +49,14 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		asyncExpectedStatus int
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(context.Context, channel.ChannelReference, binding.Message, []binding.TransformerFactory, http.Header) error {
+			receiverFunc: func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, http.Header) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus:      http.StatusInternalServerError,
 			asyncExpectedStatus: http.StatusInternalServerError,
 		},
 		"receiver has span": {
-			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ http.Header) error {
+			receiverFunc: func(ctx context.Context, _ channel.ChannelReference, _ binding.Message, _ []binding.Transformer, _ http.Header) error {
 				if span := trace.FromContext(ctx); span == nil {
 					return errors.New("missing span")
 				}
