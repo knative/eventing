@@ -50,13 +50,9 @@ import (
 	"knative.dev/pkg/system"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "mt-broker-controller"
-)
+// controllerAgentName is the string used by this controller to identify itself
+// when creating events.
+const controllerAgentName = "mt-broker-controller"
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events

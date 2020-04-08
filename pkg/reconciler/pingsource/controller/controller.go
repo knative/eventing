@@ -37,11 +37,6 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "PingSources"
-)
-
 // envConfig will be used to extract the required environment variables using
 // github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
 // NewController will panic.
