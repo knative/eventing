@@ -81,7 +81,6 @@ func NewController(
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: informer,
 	}
-	//	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
 	// Nothing to filer, enqueue all imcs if configmap updates.

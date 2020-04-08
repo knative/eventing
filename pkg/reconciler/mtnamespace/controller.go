@@ -33,11 +33,6 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-)
-
 type envConfig struct {
 	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"true"`
 }

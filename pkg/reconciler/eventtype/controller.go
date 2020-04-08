@@ -31,11 +31,6 @@ import (
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler.
-	ReconcilerName = "EventTypes"
-)
-
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 // TODO remove https://github.com/knative/eventing/issues/2750

@@ -49,11 +49,6 @@ import (
 	"knative.dev/pkg/resolver"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
-)
-
 type envConfig struct {
 	IngressImage          string `envconfig:"BROKER_INGRESS_IMAGE" required:"true"`
 	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
