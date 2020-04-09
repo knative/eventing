@@ -141,8 +141,8 @@ func ContextWithMetricTag(ctx context.Context, metric *MetricTag) context.Contex
 // Returns nil if no metric tag is set in context, or if the stored value is
 // not of correct type.
 func MetricTagFromContext(ctx context.Context) *MetricTag {
-	if logger, ok := ctx.Value(metricKey{}).(*MetricTag); ok {
-		return logger
+	if metrictag, ok := ctx.Value(metricKey{}).(*MetricTag); ok {
+		return metrictag
 	}
 	return &MetricTag{
 		Name:          "unknown",
