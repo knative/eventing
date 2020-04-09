@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package kncloudevents
 
 import (
@@ -30,38 +29,6 @@ import (
 const (
 	DefaultShutdownTimeout = time.Minute * 1
 )
-
-type HttpMessageSender struct {
-	Client *nethttp.Client
-	Target string
-}
-
-func NewHttpMessageSender(connectionArgs *ConnectionArgs, target string) (*HttpMessageSender, error) {
-	// Add connection options to the default transport.
-	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-	connectionArgs.ConfigureTransport(base)
-	// Add output tracing.
-	client := &nethttp.Client{
-		Transport: &ochttp.Transport{
-			Base:        base,
-			Propagation: &tracecontext.HTTPFormat{},
-		},
-	}
-
-	return &HttpMessageSender{Client: client, Target: target}, nil
-}
-
-func (s *HttpMessageSender) NewCloudEventRequest(ctx context.Context) (*nethttp.Request, error) {
-	return nethttp.NewRequestWithContext(ctx, "POST", s.Target, nil)
-}
-
-func (s *HttpMessageSender) NewCloudEventRequestWithTarget(ctx context.Context, target string) (*nethttp.Request, error) {
-	return nethttp.NewRequestWithContext(ctx, "POST", target, nil)
-}
-
-func (s *HttpMessageSender) Send(req *nethttp.Request) (*nethttp.Response, error) {
-	return s.Client.Do(req)
-}
 
 type HttpMessageReceiver struct {
 	port int
@@ -99,7 +66,7 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 	// wait for the server to return or ctx.Done().
 	select {
 	case <-ctx.Done():
-		ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), getShutdownTimeout(ctx))
 		defer cancel()
 		err := recv.server.Shutdown(ctx)
 		<-errChan // Wait for server goroutine to exit
@@ -107,6 +74,20 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 	case err := <-errChan:
 		return err
 	}
+}
+
+type shutdownTimeoutKey struct{}
+
+func getShutdownTimeout(ctx context.Context) time.Duration {
+	v := ctx.Value(shutdownTimeoutKey{})
+	if v == nil {
+		return DefaultShutdownTimeout
+	}
+	return v.(time.Duration)
+}
+
+func WithShutdownTimeout(ctx context.Context, timeout time.Duration) context.Context {
+	return context.WithValue(ctx, shutdownTimeoutKey{}, timeout)
 }
 
 func CreateHandler(handler nethttp.Handler) nethttp.Handler {
