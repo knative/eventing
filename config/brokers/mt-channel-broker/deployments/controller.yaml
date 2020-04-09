@@ -54,13 +54,13 @@ spec:
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
 
-          # Due to the trivial per-Broker cost, we inject Brokers into every
+          # Due to the trivial per-Broker cost, we _can_ inject Brokers into every
           # namespace by default. To change this default simply change this
-          # to "false".  To opt namespaces out of Broker injection, label
+          # to "true".  To opt namespaces out of Broker injection, label
           # them with:
           #    knative-eventing-injection: disabled
           - name: BROKER_INJECTION_DEFAULT
-            value: "true"
+            value: "false"
 
         securityContext:
           allowPrivilegeEscalation: false
