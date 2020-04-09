@@ -17,6 +17,8 @@ kind: ConfigMap
 metadata:
   name: default-ch-webhook
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 data:
   # Configuration for defaulting channels that do not specify CRD implementations.
   default-ch-config: |
