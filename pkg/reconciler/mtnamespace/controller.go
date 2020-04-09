@@ -34,7 +34,7 @@ import (
 )
 
 type envConfig struct {
-	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"true"`
+	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"false"`
 }
 
 func onByDefault(labels map[string]string) bool {
