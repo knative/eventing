@@ -71,6 +71,43 @@ func TestNewMessageDispatcher(t *testing.T) {
 }
 
 // This test emulates a real dispatcher usage
+func TestDispatcher_close(t *testing.T) {
+	logger := logtesting.TestLogger(t).Desugar()
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	port, err := freePort()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+		Port:         port,
+		ReadTimeout:  1 * time.Minute,
+		WriteTimeout: 1 * time.Minute,
+		Handler:      sh,
+		Logger:       logger,
+	}
+
+	dispatcher := NewMessageDispatcher(dispatcherArgs)
+
+	serverCtx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- dispatcher.Start(serverCtx)
+	}()
+
+	cancel()
+	err = <-errCh
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// This test emulates a real dispatcher usage
 func TestDispatcher_dispatch(t *testing.T) {
 	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
 	if err != nil {

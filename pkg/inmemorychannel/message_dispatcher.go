@@ -17,7 +17,6 @@ package inmemorychannel
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"go.uber.org/zap"
@@ -53,35 +52,11 @@ func (d *InMemoryMessageDispatcher) UpdateConfig(ctx context.Context, config *mu
 // Start starts the inmemory dispatcher's message processing.
 // This is a blocking call.
 func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- d.httpBindingsReceiver.StartListen(ctx, d.handler)
-	}()
-
-	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
-	select {
-	case err := <-errCh:
-		return err
-	case <-ctx.Done():
-		break
-	}
-
-	// Done channel has been closed, we need to gracefully shutdown d.bindingsReceiver. The cancel() method will start its
-	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
-	cancel()
-	select {
-	case err := <-errCh:
-		return err
-	case <-time.After(d.writeTimeout):
-		return errors.New("timeout shutting http bindings receiver")
-	}
+	return d.httpBindingsReceiver.StartListen(kncloudevents.WithShutdownTimeout(ctx, d.writeTimeout), d.handler)
 }
 
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
-	// TODO set read and write timeouts?
+	// TODO set read timeouts?
 	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(args.Port)
 
 	dispatcher := &InMemoryMessageDispatcher{
