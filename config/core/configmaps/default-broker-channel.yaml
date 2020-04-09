@@ -17,6 +17,8 @@ kind: ConfigMap
 metadata:
   name: config-br-default-channel
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 data:
   channelTemplateSpec: |
     apiVersion: messaging.knative.dev/v1alpha1
