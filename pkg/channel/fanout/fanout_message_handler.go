@@ -17,8 +17,8 @@ limitations under the License.
 // Package fanout provides an http.Handler that takes in one request and fans it out to N other
 // requests, based on a list of Subscriptions. Logically, it represents all the Subscriptions to a
 // single Knative Channel.
-// It will normally be used in conjunction with multichannelfanout.Handler, which contains multiple
-// fanout.Handlers, each corresponding to a single Knative Channel.
+// It will normally be used in conjunction with multichannelfanout.MessageHandler, which contains multiple
+// fanout.MessageHandler, each corresponding to a single Knative Channel.
 package fanout
 
 import (
@@ -37,6 +37,21 @@ import (
 	"knative.dev/eventing/pkg/channel"
 )
 
+const (
+	defaultTimeout = 15 * time.Minute
+
+	eventBufferSize = 500
+)
+
+// Config for a fanout.MessageHandler.
+type Config struct {
+	Subscriptions []eventingduck.SubscriberSpec `json:"subscriptions"`
+	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
+	// It is expected to be false when used as a sidecar.
+	AsyncHandler     bool `json:"asyncHandler,omitempty"`
+	DispatcherConfig channel.EventDispatcherConfig
+}
+
 // Handler is a http.Handler that takes a single request in and fans it out to N other servers.
 type MessageHandler struct {
 	config Config
@@ -51,7 +66,7 @@ type MessageHandler struct {
 	logger *zap.Logger
 }
 
-// NewHandler creates a new fanout.Handler.
+// NewHandler creates a new fanout.MessageHandler.
 func NewMessageHandler(logger *zap.Logger, config Config) (*MessageHandler, error) {
 	handler := &MessageHandler{
 		logger:     logger,

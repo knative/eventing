@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package swappable provides an http.Handler that delegates all HTTP requests to an underlying
-// multichannelfanout.Handler. When a new configuration is available, a new
-// multichannelfanout.Handler is created and swapped in. All subsequent requests go to the new
+// multichannelfanout.MessageHandler. When a new configuration is available, a new
+// multichannelfanout.MessageHandler is created and swapped in. All subsequent requests go to the new
 // handler.
 // It is often used in conjunction with something that notices changes to ConfigMaps, such as
 // configmap.watcher or configmap.filesystem.
@@ -36,19 +36,22 @@ import (
 
 // Handler is an http.Handler that atomically swaps between underlying handlers.
 type MessageHandler struct {
-	// The current multichannelfanout.Handler to delegate HTTP requests to. Never use this directly,
-	// instead use {get,set}MultiChannelFanoutHandler, which enforces the type we expect.
+	// The current multichannelfanout.MessageHandler to delegate HTTP requests to. Never use this directly,
+	// instead use {get,set}Handler, which enforces the type we expect.
 	fanout     atomic.Value
 	updateLock sync.Mutex
 	logger     *zap.Logger
 }
+
+// UpdateConfig updates the configuration to use the new config, returning an error if it can't.
+type UpdateConfig func(config *multichannelfanout.Config) error
 
 // NewMessageHandler creates a new swappable.Handler.
 func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger) *MessageHandler {
 	h := &MessageHandler{
 		logger: logger.With(zap.String("httpHandler", "swappable")),
 	}
-	h.setMultiChannelFanoutHandler(handler)
+	h.setHandler(handler)
 	return h
 }
 
@@ -61,19 +64,19 @@ func NewEmptyMessageHandler(context context.Context, logger *zap.Logger) (*Messa
 	return NewMessageHandler(h, logger), nil
 }
 
-// getMultiChannelFanoutHandler gets the current multichannelfanout.Handler to delegate all HTTP
+// getHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
 // requests to.
-func (h *MessageHandler) getMultiChannelFanoutHandler() *multichannelfanout.MessageHandler {
+func (h *MessageHandler) getHandler() *multichannelfanout.MessageHandler {
 	return h.fanout.Load().(*multichannelfanout.MessageHandler)
 }
 
-// setMultiChannelFanoutHandler sets a new multichannelfanout.Handler to delegate all subsequent
+// setHandler sets a new multichannelfanout.MessageHandler to delegate all subsequent
 // HTTP requests to.
-func (h *MessageHandler) setMultiChannelFanoutHandler(nh *multichannelfanout.MessageHandler) {
+func (h *MessageHandler) setHandler(nh *multichannelfanout.MessageHandler) {
 	h.fanout.Store(nh)
 }
 
-// UpdateConfig copies the current inner multichannelfanout.Handler with the new configuration. If
+// UpdateConfig copies the current inner multichannelfanout.MessageHandler with the new configuration. If
 // the new configuration is valid, then the new inner handler is swapped in and will start serving
 // HTTP traffic.
 func (h *MessageHandler) UpdateConfig(context context.Context, config *multichannelfanout.Config) error {
@@ -84,7 +87,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, config *multichan
 	h.updateLock.Lock()
 	defer h.updateLock.Unlock()
 
-	ih := h.getMultiChannelFanoutHandler()
+	ih := h.getHandler()
 	if diff := ih.ConfigDiff(*config); diff != "" {
 		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
 		newIh, err := ih.CopyWithNewConfig(context, *config)
@@ -92,14 +95,13 @@ func (h *MessageHandler) UpdateConfig(context context.Context, config *multichan
 			h.logger.Info("Unable to update config", zap.Error(err), zap.Any("config", config))
 			return err
 		}
-		h.setMultiChannelFanoutHandler(newIh)
+		h.setHandler(newIh)
 	}
 	return nil
 }
 
-// ServeHTTP delegates all HTTP requests to the current multichannelfanout.Handler.
+// ServeHTTP delegates all HTTP requests to the current multichannelfanout.MessageHandler.
 func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	// Hand work off to the current multi channel fanout handler.
-	h.logger.Debug("ServeHTTP request received")
-	h.getMultiChannelFanoutHandler().ServeHTTP(response, request)
+	h.getHandler().ServeHTTP(response, request)
 }

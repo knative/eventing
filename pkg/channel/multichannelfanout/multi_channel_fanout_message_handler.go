@@ -16,13 +16,13 @@ limitations under the License.
 
 // Package multichannelfanout provides an http.Handler that takes in one request to a Knative
 // Channel and fans it out to N other requests. Logically, it represents multiple Knative Channels.
-// It is made up of a map, map[channel]fanout.Handler and each incoming request is inspected to
-// determine which Channel it is on. This Handler delegates the HTTP handling to the fanout.Handler
+// It is made up of a map, map[channel]fanout.MessageHandler and each incoming request is inspected to
+// determine which Channel it is on. This Handler delegates the HTTP handling to the fanout.MessageHandler
 // corresponding to the incoming request's Channel.
 // It is often used in conjunction with a swappable.Handler. The swappable.Handler delegates all its
-// requests to the multichannelfanout.Handler. When a new configuration is available, a new
-// multichannelfanout.Handler is created and swapped in for all subsequent requests. The old
-// multichannelfanout.Handler is discarded.
+// requests to the multichannelfanout.MessageHandler. When a new configuration is available, a new
+// multichannelfanout.MessageHandler is created and swapped in for all subsequent requests. The old
+// multichannelfanout.MessageHandler is discarded.
 package multichannelfanout
 
 import (
@@ -36,8 +36,14 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
+// makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
+// MakeChannelKey.
+func makeChannelKeyFromConfig(config ChannelConfig) string {
+	return config.HostName
+}
+
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
-// on, and then delegates handling of that request to the single fanout.Handler corresponding to
+// on, and then delegates handling of that request to the single fanout.MessageHandler corresponding to
 // that Channel.
 type MessageHandler struct {
 	logger   *zap.Logger
@@ -83,7 +89,7 @@ func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, conf Config) (*M
 	return NewMessageHandler(ctx, h.logger, conf)
 }
 
-// ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the
+// ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the
 // request's channel key.
 func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	channelKey := request.Host
