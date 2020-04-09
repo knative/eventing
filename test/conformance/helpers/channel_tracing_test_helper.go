@@ -106,7 +106,7 @@ func tracingTest(
 	matches := assertEventMatch(t, client, loggerPodName, mustMatch)
 
 	traceID := getTraceIDHeader(t, matches)
-	trace, err := zipkin.JSONTracePred(traceID, 2*time.Minute, func(trace []model.SpanModel) bool {
+	trace, err := zipkin.JSONTracePred(traceID, 5*time.Minute, func(trace []model.SpanModel) bool {
 		tree, err := tracinghelper.GetTraceTree(trace)
 		if err != nil {
 			return false
