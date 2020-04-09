@@ -17,10 +17,22 @@ limitations under the License.
 package channel
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	"github.com/cloudevents/sdk-go/v2/types"
 )
+
+const (
+	// EventHistory is the header containing all channel hosts traversed by the event.
+	// This is an experimental header: https://github.com/knative/eventing/issues/638.
+	EventHistory          = "knativehistory"
+	EventHistorySeparator = "; "
+)
+
+var historySplitter = regexp.MustCompile(`\s*` + regexp.QuoteMeta(EventHistorySeparator) + `\s*`)
 
 func AddHistory(host string) binding.Transformer {
 	return transformer.SetExtension(EventHistory, func(i interface{}) (interface{}, error) {
@@ -35,4 +47,25 @@ func AddHistory(host string) binding.Transformer {
 		h = append(h, host)
 		return encodeEventHistory(h), nil
 	})
+}
+
+func cleanupEventHistoryItem(host string) string {
+	return strings.Trim(host, " ")
+}
+
+func encodeEventHistory(history []string) string {
+	return strings.Join(history, EventHistorySeparator)
+}
+
+func decodeEventHistory(historyStr string) []string {
+	readHistory := historySplitter.Split(historyStr, -1)
+	// Filter and cleanup in-place
+	history := readHistory[:0]
+	for _, item := range readHistory {
+		cleanItem := cleanupEventHistoryItem(item)
+		if cleanItem != "" {
+			history = append(history, cleanItem)
+		}
+	}
+	return history
 }

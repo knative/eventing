@@ -24,6 +24,85 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/test"
 )
 
+func TestMessageHistory(t *testing.T) {
+	var cases = []struct {
+		start    string
+		set      []string
+		append   []string
+		expected string
+		len      int
+	}{
+		{
+			expected: "",
+			len:      0,
+		},
+		{
+			append:   []string{"name.ns.service.local"},
+			expected: "name.ns.service.local",
+			len:      1,
+		},
+		{
+			append:   []string{"name.withspace.service.local  "},
+			expected: "name.withspace.service.local",
+			len:      1,
+		},
+		{
+			append:   []string{"name1.ns1.service.local", "name2.ns2.service.local"},
+			expected: "name1.ns1.service.local; name2.ns2.service.local",
+			len:      2,
+		},
+		{
+			start:    "name1.ns1.service.local",
+			append:   []string{"name2.ns2.service.local", "name3.ns3.service.local"},
+			expected: "name1.ns1.service.local; name2.ns2.service.local; name3.ns3.service.local",
+			len:      3,
+		},
+		{
+			start:    "name1.ns1.service.local; name2.ns2.service.local",
+			append:   []string{"nameadd.nsadd.service.local"},
+			expected: "name1.ns1.service.local; name2.ns2.service.local; nameadd.nsadd.service.local",
+			len:      3,
+		},
+		{
+			start:    "name1.ns1.service.local; name2.ns2.service.local",
+			set:      []string{"name3.ns3.service.local"},
+			expected: "name3.ns3.service.local",
+			len:      1,
+		},
+		{
+			start:    "  ",
+			append:   []string{"name1.ns1.service.local"},
+			expected: "name1.ns1.service.local",
+			len:      1,
+		},
+		{
+			start:    "  ",
+			append:   []string{" ", "name.multispace.service.local", "  "},
+			expected: "name.multispace.service.local",
+			len:      1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.expected, func(t *testing.T) {
+			val := encodeEventHistory(decodeEventHistory(tc.start))
+			if tc.set != nil {
+				val = encodeEventHistory(tc.set)
+			}
+			for _, name := range tc.append {
+				val = encodeEventHistory(append(decodeEventHistory(val), decodeEventHistory(name)...))
+			}
+			h := decodeEventHistory(val)
+			if len(h) != tc.len {
+				t.Errorf("Unexpected number of elements. Want %d, got %d", tc.len, len(h))
+			}
+			if val != tc.expected {
+				t.Errorf("Unexpected history. Want %q, got %q", tc.expected, val)
+			}
+		})
+	}
+}
+
 func TestHistoryTransformer(t *testing.T) {
 	withoutHistory := test.MinEvent()
 	withoutHistoryExpected := withoutHistory.Clone()

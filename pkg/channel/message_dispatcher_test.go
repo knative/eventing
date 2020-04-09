@@ -23,16 +23,47 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"knative.dev/eventing/pkg/utils"
+)
+
+var (
+	// Headers that are added to the response, but we don't want to check in our assertions.
+	unimportantHeaders = sets.NewString(
+		"accept-encoding",
+		"content-length",
+		"content-type",
+		"user-agent",
+		"tracestate",
+		"ce-tracestate",
+	)
+
+	// Headers that should be present, but their value should not be asserted.
+	ignoreValueHeaders = sets.NewString(
+		// These are headers added for tracing, they will have random values, so don't bother
+		// checking them.
+		"traceparent",
+		// CloudEvents headers, they will have random values, so don't bother checking them.
+		"ce-id",
+		"ce-time",
+		"ce-traceparent",
+	)
+)
+
+const (
+	testCeSource = "testsource"
+	testCeType   = "testtype"
 )
 
 func TestDispatchMessage(t *testing.T) {
@@ -684,4 +715,92 @@ func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *url.URL 
 		}
 	}
 	return nil
+}
+
+type requestValidation struct {
+	Host    string
+	Headers http.Header
+	Body    string
+}
+
+type fakeHandler struct {
+	t        *testing.T
+	response *http.Response
+	requests []requestValidation
+}
+
+func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	// Make a copy of the request.
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		f.t.Error("Failed to read the request body")
+	}
+	f.requests = append(f.requests, requestValidation{
+		Host:    r.Host,
+		Headers: r.Header,
+		Body:    string(body),
+	})
+
+	// Write the response.
+	if f.response != nil {
+		for h, vs := range f.response.Header {
+			for _, v := range vs {
+				w.Header().Add(h, v)
+			}
+		}
+		w.WriteHeader(f.response.StatusCode)
+		var buf bytes.Buffer
+		buf.ReadFrom(f.response.Body)
+		w.Write(buf.Bytes())
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(""))
+	}
+}
+
+func (f *fakeHandler) popRequest(t *testing.T) requestValidation {
+	if len(f.requests) == 0 {
+		t.Error("Unable to pop request")
+		return requestValidation{
+			Host: "MADE UP, no such request",
+			Body: "MADE UP, no such request",
+		}
+	}
+	rv := f.requests[0]
+	f.requests = f.requests[1:]
+	return rv
+}
+
+func assertEquality(t *testing.T, replacementURL string, expected, actual requestValidation) {
+	t.Helper()
+	server, err := url.Parse(replacementURL)
+	if err != nil {
+		t.Errorf("Bad replacement URL: %q", replacementURL)
+	}
+	expected.Host = server.Host
+	canonicalizeHeaders(expected, actual)
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Errorf("Unexpected difference (-want, +got): %v", diff)
+	}
+}
+
+func canonicalizeHeaders(rvs ...requestValidation) {
+	// HTTP header names are case-insensitive, so normalize them to lower case for comparison.
+	for _, rv := range rvs {
+		headers := rv.Headers
+		for n, v := range headers {
+			delete(headers, n)
+			n = strings.ToLower(n)
+			if unimportantHeaders.Has(n) {
+				continue
+			}
+			if ignoreValueHeaders.Has(n) {
+				headers[n] = []string{"ignored-value-header"}
+			} else {
+				headers[n] = v
+			}
+		}
+	}
 }
