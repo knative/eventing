@@ -64,6 +64,8 @@ function install_broker() {
 function install_mt_broker() {
   ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
   ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
+  wait_until_pods_running knative-eventing || return 1
+  kubectl -n knative-eventing set env deployment/mt-broker-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
