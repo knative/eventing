@@ -17,9 +17,9 @@ limitations under the License.
 package helpers
 
 import (
-	"github.com/pkg/errors"
 	"testing"
 
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
