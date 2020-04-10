@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"github.com/pkg/errors"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -37,37 +38,28 @@ func ChannelMetadataTestHelperWithChannelTestRunner(
 		defer lib.TearDown(client)
 
 		t.Run("Channel is namespaced", func(t *testing.T) {
-			channelIsNamespaced(st, client, channel, options...)
+			channelIsNamespaced(st, client, channel)
 		})
 		t.Run("Channel has required label", func(t *testing.T) {
-			channelCRDHasSubscribableLabel(st, client, channel, options...)
+			channelCRDHasSubscribableLabel(st, client, channel)
+		})
+		t.Run("Channel has required label", func(t *testing.T) {
+			channelHasProperCategory(st, client, channel)
 		})
 	})
 }
 
-func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
-	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
-	apiResourceList, err := client.Kube.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
+func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+	apiResource, err := getApiResource(client, channel)
 	if err != nil {
-		client.T.Fatalf("Unable to list server resources for groupVersion of %q: %v", channel, err)
+		client.T.Fatalf("Error finding server resource for %q: %v", channel, err)
 	}
-
-	found := false
-	for _, apiResource := range apiResourceList.APIResources {
-		if apiResource.Kind == channel.Kind {
-			found = true
-			if !apiResource.Namespaced {
-				client.T.Fatalf("%q is not namespace scoped: %v", channel, err)
-			}
-			break
-		}
-	}
-	if !found {
-		client.T.Fatalf("Unable to find server resources for %q: %v", channel, err)
+	if !apiResource.Namespaced {
+		client.T.Fatalf("%q is not namespace scoped: %v", channel, err)
 	}
 }
 
-func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
+func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
@@ -80,4 +72,36 @@ func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel m
 	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
 		client.T.Fatalf("Channel doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
 	}
+}
+
+func channelHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+	apiResource, err := getApiResource(client, channel)
+	if err != nil {
+		client.T.Fatalf("Error finding server resource for %q: %v", channel, err)
+	}
+	found := false
+	for _, cat := range apiResource.Categories {
+		if cat == "channel" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		client.T.Fatalf("%q does not have the category 'channel': %v", channel, err)
+	}
+}
+
+func getApiResource(client *lib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
+	gvr, _ := meta.UnsafeGuessKindToResource(typeMeta.GroupVersionKind())
+	apiResourceList, err := client.Kube.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
+	if err != nil {
+		return nil, errors.Wrapf(err, "Unable to list server resources for groupVersion of %q: %v", typeMeta, err)
+	}
+
+	for _, apiResource := range apiResourceList.APIResources {
+		if apiResource.Kind == typeMeta.Kind {
+			return &apiResource, nil
+		}
+	}
+	return nil, errors.Errorf("Unable to find server resource for %q: %v", typeMeta, err)
 }
