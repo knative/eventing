@@ -35,21 +35,27 @@ func ChannelMetadataTestHelperWithChannelTestRunner(
 
 	channelName := "ch"
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		st.Logf("Running metadata conformance test with channel %q", channel)
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
-
-		// create channel
-		st.Logf("Creating channel")
-		client.CreateChannelOrFail(channelName, &channel)
-
-		client.T.Logf("Creating channel %+v-%s", channel, channelName)
-		// empty namespace on purpose
-		namespace := ""
-		metaResource := resources.NewMetaResource(channelName, namespace, &channel)
-		_, err := duck.CreateGenericChannelObject(client.Dynamic, metaResource)
-		if err == nil {
-			client.T.Fatalf("Failed to reject non-namespaced %q %q: %v", channel.Kind, channelName, err)
-		}
+		t.Run("channel is namespaced", func(t *testing.T) {
+			channelIsNamespaced(st, channelName, channel, options...)
+		})
 	})
+}
+
+func channelIsNamespaced(st *testing.T, channelName string, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
+	st.Logf("Running metadata conformance test with channel %q", channel)
+	client := lib.Setup(st, true, options...)
+	defer lib.TearDown(client)
+
+	// create channel
+	st.Logf("Creating channel")
+	client.CreateChannelOrFail(channelName, &channel)
+
+	client.T.Logf("Creating channel %+v-%s", channel, channelName)
+	// empty namespace on purpose
+	namespace := ""
+	metaResource := resources.NewMetaResource(channelName, namespace, &channel)
+	_, err := duck.CreateGenericChannelObject(client.Dynamic, metaResource)
+	if err == nil {
+		client.T.Fatalf("Failed to reject non-namespaced %q %q: %v", channel.Kind, channelName, err)
+	}
 }
