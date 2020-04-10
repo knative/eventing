@@ -17,11 +17,12 @@ limitations under the License.
 package helpers
 
 import (
+	"testing"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	"testing"
 )
 
 // ChannelMetadataTestHelperWithChannelTestRunner runs the Channel metadata tests for all Channels in
