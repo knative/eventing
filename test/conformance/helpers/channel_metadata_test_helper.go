@@ -40,7 +40,7 @@ func ChannelMetadataTestHelperWithChannelTestRunner(
 			channelIsNamespaced(st, client, channel, options...)
 		})
 		t.Run("Channel has required label", func(t *testing.T) {
-			channelApiResourceHasSubscribableLabel(st, client, channel, options...)
+			channelCRDHasSubscribableLabel(st, client, channel, options...)
 		})
 	})
 }
@@ -67,7 +67,7 @@ func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeM
 	}
 }
 
-func channelApiResourceHasSubscribableLabel(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
+func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
