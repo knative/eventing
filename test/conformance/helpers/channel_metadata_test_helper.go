@@ -17,6 +17,8 @@ limitations under the License.
 package helpers
 
 import (
+	"fmt"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -37,15 +39,15 @@ func ChannelMetadataTestHelperWithChannelTestRunner(
 		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
-		t.Run("Channel is namespaced", func(t *testing.T) {
-			channelIsNamespaced(st, client, channel)
-		})
+		//t.Run("Channel is namespaced", func(t *testing.T) {
+		//	channelIsNamespaced(st, client, channel)
+		//})
 		t.Run("Channel has required label", func(t *testing.T) {
 			channelCRDHasSubscribableLabel(st, client, channel)
 		})
-		t.Run("Channel has required label", func(t *testing.T) {
-			channelHasProperCategory(st, client, channel)
-		})
+		//t.Run("Channel has required label", func(t *testing.T) {
+		//	channelHasProperCategory(st, client, channel)
+		//})
 	})
 }
 
@@ -63,11 +65,18 @@ func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel m
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	client.T.Logf("gvr is : %v", gvr)
 	crdName := gvr.Resource + "." + gvr.Group
+	client.T.Logf("crdName is : %v", crdName)
 
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{
-		TypeMeta: metav1.TypeMeta{},
-	})
-	client.T.Logf("crd is : %v", crd)
+	allCrds, err := client.Apiextensions.CustomResourceDefinitions().List(metav1.ListOptions{})
+	client.T.Logf("err is : %v", err)
+	client.T.Logf("allCrds is : %v", len(allCrds.Items))
+
+	for _, c := range allCrds.Items {
+		client.T.Logf("c is : %v ### %v ### %v\n", c.Spec.Group, c.Spec.Names, getSomeText(c.Spec.Versions))
+	}
+
+	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
+	//client.T.Logf("crd is : %v", crd)
 	client.T.Logf("err is : %v", err)
 	if err != nil {
 		client.T.Fatalf("Unable to find CRD for %q: %v", channel, err)
@@ -76,6 +85,17 @@ func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel m
 	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
 		client.T.Fatalf("Channel doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
 	}
+}
+
+func getSomeText(arr []v1.CustomResourceDefinitionVersion) string {
+	ret := ""
+
+	for _, v := range arr {
+		ret += fmt.Sprintf("%v %v %v, ", v.Name, v.Served, v.Storage)
+
+	}
+
+	return ret
 }
 
 func channelHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
