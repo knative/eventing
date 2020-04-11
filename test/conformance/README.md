@@ -15,6 +15,8 @@ Run test with e2e tag and optionally select conformance test
 go test -v -tags=e2e -count=1 ./test/conformance/...
 
 go test -v -timeout 30s -tags e2e knative.dev/eventing/test/conformance -run ^TestMustPassTracingHeaders$
+ 
+go test -v -timeout 30s -tags e2e knative.dev/eventing/test/conformance -run ^TestChannelMetadata$ -channels messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel
 
 go test -v -timeout 30s -tags e2e knative.dev/eventing/test/conformance -run ^TestMustPassTracingHeaders$ --kubeconfig $KUBECONFIG
 ```

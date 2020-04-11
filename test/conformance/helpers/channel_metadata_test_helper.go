@@ -61,14 +61,18 @@ func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeM
 
 func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
+	client.T.Logf("gvr is : %v", gvr)
 	crdName := gvr.Resource + "." + gvr.Group
 
 	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{
 		TypeMeta: metav1.TypeMeta{},
 	})
+	client.T.Logf("crd is : %v", crd)
+	client.T.Logf("err is : %v", err)
 	if err != nil {
 		client.T.Fatalf("Unable to find CRD for %q: %v", channel, err)
 	}
+	client.T.Logf("crd.Labels is : %v", crd.Labels)
 	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
 		client.T.Fatalf("Channel doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
 	}
@@ -93,15 +97,21 @@ func channelHasProperCategory(st *testing.T, client *lib.Client, channel metav1.
 
 func getApiResource(client *lib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
 	gvr, _ := meta.UnsafeGuessKindToResource(typeMeta.GroupVersionKind())
+	client.T.Logf("gvr is : %v", gvr)
 	apiResourceList, err := client.Kube.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
+	client.T.Logf("apiResourceList is : %v", apiResourceList)
+	client.T.Logf("err is : %v", err)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Unable to list server resources for groupVersion of %q: %v", typeMeta, err)
 	}
 
 	for _, apiResource := range apiResourceList.APIResources {
+		client.T.Logf("apiResource is : %v", apiResource)
 		if apiResource.Kind == typeMeta.Kind {
+			client.T.Logf("found apiResource is : %v", apiResource)
 			return &apiResource, nil
 		}
 	}
+	client.T.Logf("No apiResource found")
 	return nil, errors.Errorf("Unable to find server resource for %q: %v", typeMeta, err)
 }
