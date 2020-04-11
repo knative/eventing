@@ -25,9 +25,9 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
-// ChannelMetadataTestHelperWithChannelTestRunner runs the Channel metadata tests for all Channels in
-// the ChannelTestRunner.
-func ChannelMetadataTestHelperWithChannelTestRunner(
+// ChannelCRDMetadataTestHelperWithChannelTestRunner runs the Channel CRD metadata tests for all
+// Channel resources in the ChannelTestRunner.
+func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption,
@@ -40,11 +40,11 @@ func ChannelMetadataTestHelperWithChannelTestRunner(
 		t.Run("Channel is namespaced", func(t *testing.T) {
 			channelIsNamespaced(st, client, channel)
 		})
-		t.Run("Channel has required label", func(t *testing.T) {
+		t.Run("Channel CRD has required label", func(t *testing.T) {
 			channelCRDHasSubscribableLabel(st, client, channel)
 		})
-		t.Run("Channel has required label", func(t *testing.T) {
-			channelHasProperCategory(st, client, channel)
+		t.Run("Channel CRD has required label", func(t *testing.T) {
+			channelCRDHasProperCategory(st, client, channel)
 		})
 	})
 }
@@ -70,11 +70,11 @@ func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel m
 		client.T.Fatalf("Unable to find CRD for %q: %v", channel, err)
 	}
 	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
-		client.T.Fatalf("Channel doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
+		client.T.Fatalf("Channel CRD doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
 	}
 }
 
-func channelHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
 	apiResource, err := getApiResource(client, channel)
 	if err != nil {
 		client.T.Fatalf("Error finding server resource for %q: %v", channel, err)
@@ -87,7 +87,7 @@ func channelHasProperCategory(st *testing.T, client *lib.Client, channel metav1.
 		}
 	}
 	if !found {
-		client.T.Fatalf("%q does not have the category 'channel': %v", channel, err)
+		client.T.Fatalf("Channel CRD %q does not have the category 'channel': %v", channel, err)
 	}
 }
 

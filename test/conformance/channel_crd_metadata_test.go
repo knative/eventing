@@ -25,6 +25,6 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
-func TestChannelMetadata(t *testing.T) {
-	helpers.ChannelMetadataTestHelperWithChannelTestRunner(t, channelTestRunner, lib.SetupClientOptionNoop)
+func TestChannelCRDMetadata(t *testing.T) {
+	helpers.ChannelCRDMetadataTestHelperWithChannelTestRunner(t, channelTestRunner, lib.SetupClientOptionNoop)
 }
