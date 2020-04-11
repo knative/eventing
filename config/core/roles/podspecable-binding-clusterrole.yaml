@@ -33,7 +33,7 @@ metadata:
   name: builtin-podspecable-binding
   labels:
     eventing.knative.dev/release: devel
-    duck.knative.dev/addressable: "true"
+    duck.knative.dev/podspecable: "true"
 # Do not use this role directly. These rules will be added to the "podspecable-binding role.
 rules:
 
