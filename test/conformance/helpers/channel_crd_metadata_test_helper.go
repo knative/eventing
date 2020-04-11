@@ -41,7 +41,7 @@ func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 			channelIsNamespaced(st, client, channel)
 		})
 		t.Run("Channel CRD has required label", func(t *testing.T) {
-			channelCRDHasSubscribableLabel(st, client, channel)
+			channelCRDHasRequiredLabels(st, client, channel)
 		})
 		t.Run("Channel CRD has required label", func(t *testing.T) {
 			channelCRDHasProperCategory(st, client, channel)
@@ -50,6 +50,8 @@ func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 }
 
 func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+	// From spec: Each channel is namespaced
+
 	apiResource, err := getApiResource(client, channel)
 	if err != nil {
 		client.T.Fatalf("Error finding server resource for %q: %v", channel, err)
@@ -59,7 +61,12 @@ func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeM
 	}
 }
 
-func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasRequiredLabels(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+	// From spec:
+	// Each channel MUST have the following:
+	//   label of messaging.knative.dev/subscribable: "true"
+	//   label of duck.knative.dev/addressable: "true"
+
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
@@ -72,9 +79,15 @@ func channelCRDHasSubscribableLabel(st *testing.T, client *lib.Client, channel m
 	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
 		client.T.Fatalf("Channel CRD doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
 	}
+	if crd.Labels["duck.knative.dev/addressable"] != "true" {
+		client.T.Fatalf("Channel CRD doesn't have the label 'duck.knative.dev/addressable=true' %q: %v", channel, err)
+	}
 }
 
 func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+	// From spec:
+	// Each channel MUST have the following: the category channel
+
 	apiResource, err := getApiResource(client, channel)
 	if err != nil {
 		client.T.Fatalf("Error finding server resource for %q: %v", channel, err)
