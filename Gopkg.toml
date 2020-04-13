@@ -39,6 +39,11 @@ required = [
   name = "knative.dev/pkg"
   branch = "release-0.14"
 
+# Our master branch tracks knative/test-infra master or a release.
+[[override]]
+  name = "knative.dev/test-infra"
+  branch = "release-0.14"
+
 # TODO why is this overridden?
 [[override]]
   name = "gopkg.in/yaml.v2"
