@@ -80,19 +80,8 @@ required = [
   version = "kubernetes-1.16.4"
 
 [[override]]
-  name = "github.com/json-iterator/go"
-  # For k8s 1.16.4, the corresponding version is v1.1.7
-  # https://github.com/kubernetes/kubernetes/blob/v1.16.4/go.mod#L81
-  version = "v1.1.7"
-
-[[override]]
   name = "contrib.go.opencensus.io/exporter/ocagent"
   version = "v0.6.0"
-
-# TODO why is this overridden?
-[[override]]
-  name = "github.com/Shopify/sarama"
-  version = "1.19.0"
 
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
