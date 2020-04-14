@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"go.opencensus.io/trace"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -29,7 +30,14 @@ func MessagingMessageIDAttribute(ID string) trace.Attribute {
 func BrokerMessagingDestination(b types.NamespacedName) string {
 	return fmt.Sprintf("broker:%s.%s", b.Name, b.Namespace)
 }
-
 func BrokerMessagingDestinationAttribute(b types.NamespacedName) trace.Attribute {
 	return trace.StringAttribute(MessagingDestinationAttributeName, BrokerMessagingDestination(b))
+}
+
+func TriggerMessagingDestination(t types.NamespacedName) string {
+	return fmt.Sprintf("trigger:%s.%s", t.Name, t.Namespace)
+}
+
+func TriggerMessagingDestinationAttribute(t types.NamespacedName) trace.Attribute {
+	return trace.StringAttribute(MessagingDestinationAttributeName, TriggerMessagingDestination(t))
 }

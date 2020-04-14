@@ -28,6 +28,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
@@ -102,7 +103,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
-		client.CreateTriggerOrFail(
+		loggerTrigger := client.CreateTriggerOrFail(
 			"logger",
 			resources.WithBroker(broker.Name),
 			resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
@@ -119,7 +120,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
-		client.CreateTriggerOrFail(
+		transformerTrigger := client.CreateTriggerOrFail(
 			"transformer",
 			resources.WithBroker(broker.Name),
 			resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
@@ -164,10 +165,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 
 		transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 			Note: "3. Broker Filter for the 'transformer' trigger sends the event to the transformer pod.",
-			Span: tracinghelper.MatchHTTPSpanWithReply(
-				model.Client,
-				tracinghelper.WithHTTPHostAndPath(transformerSVCHost, "/"),
-			),
+			Span: triggerSpan(transformerTrigger, eventID),
 			Children: []tracinghelper.TestSpanTree{
 				{
 					Note: "4. Transformer pod receives the event from the Broker Filter for the 'transformer' trigger.",
@@ -185,11 +183,8 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 			Span: ingressSpan(broker, eventID),
 			Children: []tracinghelper.TestSpanTree{
 				{
-					Span: tracinghelper.MatchHTTPSpanNoReply(
-						model.Client,
-						tracinghelper.WithHTTPHostAndPath(loggerSVCHost, "/"),
-					),
 					Note: "6. Broker Filter for the 'logger' trigger sends the event to the logger pod.",
+					Span: triggerSpan(loggerTrigger, eventID),
 					Children: []tracinghelper.TestSpanTree{
 						{
 							Note: "7. Logger pod receives the event from the Broker Filter for the 'logger' trigger.",
@@ -243,11 +238,21 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 	}
 }
 
-func ingressSpan(broker *v1alpha1.Broker, eventID string) *tracinghelper.SpanMatcher {
+func ingressSpan(broker *v1beta1.Broker, eventID string) *tracinghelper.SpanMatcher {
 	return &tracinghelper.SpanMatcher{
 		Tags: map[string]string{
 			"messaging.system":      "knative",
 			"messaging.destination": fmt.Sprintf("broker:%s.%s", broker.Name, broker.Namespace),
+			"messaging.message_id":  eventID,
+		},
+	}
+}
+
+func triggerSpan(trigger *v1alpha1.Trigger, eventID string) *tracinghelper.SpanMatcher {
+	return &tracinghelper.SpanMatcher{
+		Tags: map[string]string{
+			"messaging.system":      "knative",
+			"messaging.destination": fmt.Sprintf("trigger:%s.%s", trigger.Name, trigger.Namespace),
 			"messaging.message_id":  eventID,
 		},
 	}
