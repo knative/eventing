@@ -1,28 +1,10 @@
-/*
-Copyright 2020 The Knative Authors
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package inmemorychannel
 
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
 	"sync"
 	"testing"
 	"time"
@@ -31,9 +13,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/test"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	protocolhttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
@@ -42,89 +22,35 @@ import (
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/channel/swappable"
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
-
-	logtesting "knative.dev/pkg/logging/testing"
 )
 
-func TestNewMessageDispatcher(t *testing.T) {
-	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+type roundTripFunc func(req *http.Request) *http.Response
 
-	if err != nil {
-		t.Fatalf("Failed to create handler")
-	}
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
 
-	args := &InMemoryMessageDispatcherArgs{
-		Port:         8080,
-		ReadTimeout:  1 * time.Minute,
-		WriteTimeout: 1 * time.Minute,
-		Handler:      sh,
-		Logger:       logger,
-	}
-
-	d := NewMessageDispatcher(args)
-
-	if d == nil {
-		t.Fatalf("Failed to create with NewDispatcher")
+func mockedHttpClient(fn roundTripFunc) *http.Client {
+	return &http.Client{
+		Transport: fn,
 	}
 }
 
 // This test emulates a real dispatcher usage
-func TestDispatcher_close(t *testing.T) {
-	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	port, err := freePort()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
-		Port:         port,
-		ReadTimeout:  1 * time.Minute,
-		WriteTimeout: 1 * time.Minute,
-		Handler:      sh,
-		Logger:       logger,
-	}
-
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
-
-	serverCtx, cancel := context.WithCancel(context.Background())
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- dispatcher.Start(serverCtx)
-	}()
-
-	cancel()
-	err = <-errCh
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// This test emulates a real dispatcher usage
-func TestDispatcher_dispatch(t *testing.T) {
+func BenchmarkDispatcher_dispatch(b *testing.B) {
 	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
-	// tracing publishing is configured to let the code pass in all "critical" branches
-	tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracing.AlwaysSample)
-
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger)
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	port, err := freePort()
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	logger.Info("Starting dispatcher", zap.Int("port", port))
@@ -145,14 +71,14 @@ func TestDispatcher_dispatch(t *testing.T) {
 	// Start the dispatcher
 	go func() {
 		if err := dispatcher.Start(serverCtx); err != nil {
-			t.Fatal(err)
+			b.Fatal(err)
 		}
 	}()
 
 	// We need a channelaproxy and channelbproxy for handling correctly the Host header
-	channelAProxy := httptest.NewServer(createReverseProxy(t, "channela.svc", port))
+	channelAProxy := httptest.NewServer(createReverseProxy(b, "channela.svc", port))
 	defer channelAProxy.Close()
-	channelBProxy := httptest.NewServer(createReverseProxy(t, "channelb.svc", port))
+	channelBProxy := httptest.NewServer(createReverseProxy(b, "channelb.svc", port))
 	defer channelBProxy.Close()
 
 	// Start a bunch of test servers to simulate the various services
@@ -208,7 +134,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		transformed := r.Header.Get("ce-transformed")
 		if transformed != "" {
 			w.WriteHeader(500)
-			t.Fatalf("Not expecting ce-transformed, found %s", transformed)
+			b.Fatalf("Not expecting ce-transformed, found %s", transformed)
 		}
 	}))
 	defer deadLetterServer.Close()
@@ -230,19 +156,20 @@ func TestDispatcher_dispatch(t *testing.T) {
 				Name:      "channela",
 				HostName:  "channela.svc",
 				FanoutConfig: fanout.Config{
-					AsyncHandler: false,
+					AsyncHandler:     false,
+					DispatcherConfig: channel.EventDispatcherConfig{},
 					Subscriptions: []eventingduck.SubscriberSpec{{
 						UID:           "aaaa",
 						Generation:    1,
-						SubscriberURI: mustParseUrl(t, transformationsServer.URL),
-						ReplyURI:      mustParseUrl(t, channelBProxy.URL),
+						SubscriberURI: mustParseUrl(b, transformationsServer.URL),
+						ReplyURI:      mustParseUrl(b, channelBProxy.URL),
 					}, {
 						UID:           "cccc",
 						Generation:    1,
-						SubscriberURI: mustParseUrl(t, transformationsFailureServer.URL),
-						ReplyURI:      mustParseUrl(t, channelBProxy.URL),
+						SubscriberURI: mustParseUrl(b, transformationsFailureServer.URL),
+						ReplyURI:      mustParseUrl(b, channelBProxy.URL),
 						Delivery: &eventingduck.DeliverySpec{
-							DeadLetterSink: &duckv1.Destination{URI: mustParseUrl(t, deadLetterServer.URL)},
+							DeadLetterSink: &duckv1.Destination{URI: mustParseUrl(b, deadLetterServer.URL)},
 						},
 					}},
 				},
@@ -252,31 +179,33 @@ func TestDispatcher_dispatch(t *testing.T) {
 				Name:      "channelb",
 				HostName:  "channelb.svc",
 				FanoutConfig: fanout.Config{
-					AsyncHandler: false,
+					AsyncHandler:     false,
+					DispatcherConfig: channel.EventDispatcherConfig{},
 					Subscriptions: []eventingduck.SubscriberSpec{{
 						UID:           "bbbb",
 						Generation:    1,
-						SubscriberURI: mustParseUrl(t, receiverServer.URL),
+						SubscriberURI: mustParseUrl(b, receiverServer.URL),
 					}},
 				},
 			},
 		},
 	}
 
-	err = sh.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &config)
+	err = sh.UpdateConfig(context.TODO(), &config)
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	// Ok now everything should be ready to send the event
 	httpsender, err := kncloudevents.NewHttpMessageSender(nil, channelAProxy.URL)
+	httpsender.Client = http.Client{Transport: http.RoundTripper()}
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	req, err := httpsender.NewCloudEventRequest(context.Background())
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	event := test.FullEvent()
@@ -284,55 +213,22 @@ func TestDispatcher_dispatch(t *testing.T) {
 
 	res, err := httpsender.Send(req)
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	if res.StatusCode != 202 {
-		t.Fatalf("Expected 202, Have %d", res.StatusCode)
+		b.Fatalf("Expected 202, Have %d", res.StatusCode)
 	}
 
 	transformationsFailureWg.Wait()
 	deadLetterWg.Wait()
 	err = <-transformationsCh
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 	receiverWg.Wait()
 	err = <-receiverCh
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
-}
-
-func createReverseProxy(t *testing.T, host string, port int) *httputil.ReverseProxy {
-	director := func(req *http.Request) {
-		target := mustParseUrl(t, fmt.Sprintf("http://localhost:%d", port))
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.URL.Path = target.Path
-		req.Host = host
-	}
-	return &httputil.ReverseProxy{Director: director}
-}
-
-func mustParseUrl(t testing.TB, str string) *apis.URL {
-	url, err := apis.ParseURL(str)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return url
-}
-
-func freePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
 }
