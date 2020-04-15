@@ -215,7 +215,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	server := httptest.NewServer(kncloudevents.CreateHandler(r))
 	defer server.Close()
 
-	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample))
+	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracing.AlwaysSample))
 
 	p, err := cloudevents.NewHTTP(
 		http.WithTarget(server.URL),
