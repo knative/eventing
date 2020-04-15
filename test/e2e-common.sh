@@ -35,11 +35,12 @@ readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 
 # MT Channel Based Broker config.
 readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
-# MT Channel Based Broker config.
-readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/mt-channel-broker.yaml"
 
 # Channel Based Broker Controller.
 readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
+
+# Channel Based Broker config.
+readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
 
 # Setup the Knative environment for running tests. This installs
 # Everything from the config dir but then removes the Channel Based Broker.
@@ -57,20 +58,22 @@ function knative_setup() {
 }
 
 function install_broker() {
+  ko apply --strict -f ${CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
   ko apply --strict -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with Broker did not come up"
 }
 
 function install_mt_broker() {
-  ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
   ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
-  wait_until_pods_running knative-eventing || return 1
-  kubectl -n knative-eventing set env deployment/mt-broker-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
 function uninstall_broker() {
   ko delete -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
+}
+
+function uninstall_mt_broker() {
+  ko delete -f ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
 }
 
 # Teardown the Knative environment after tests finish.
