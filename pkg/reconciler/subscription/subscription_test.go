@@ -957,6 +957,9 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{
+						{UID: subscriptionUID, SubscriberURI: subscriberURI},
+					}),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -966,9 +969,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "SubscriberRemoved", "Subscription was removed from channel \"origin\""),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI},
-				}),
+				patchSubscribers(testNS, channelName, nil),
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -1017,9 +1018,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI},
-				}),
+				patchSubscribers(testNS, channelName, nil),
 			},
 		}, {
 			Name: "subscription deleted - channel does not exists",
