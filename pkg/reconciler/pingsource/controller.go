@@ -41,8 +41,8 @@ import (
 // github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
 // NewController will panic.
 type envConfig struct {
-	Image          string `envconfig:"PING_IMAGE" required:"true"`
-	JobRunnerImage string `envconfig:"JOB_RUNNER_IMAGE" required:"true"`
+	Image   string `envconfig:"PING_IMAGE" required:"true"`
+	MTImage string `envconfig:"MT_PING_IMAGE" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -68,7 +68,7 @@ func NewController(
 		logging.FromContext(ctx).Panicf("unable to process PingSourceSource's required environment variables: %v", err)
 	}
 	r.receiveAdapterImage = env.Image
-	r.jobRunnerImage = env.JobRunnerImage
+	r.receiveMTAdapterImage = env.MTImage
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
@@ -88,7 +88,7 @@ func NewController(
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), jobRunnerName),
+		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), mtadapterName),
 		Handler: controller.HandleAll(
 			controller.EnsureTypeMeta(
 				r.tracker.OnChanged,

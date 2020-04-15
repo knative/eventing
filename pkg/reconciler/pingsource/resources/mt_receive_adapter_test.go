@@ -28,13 +28,12 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-func TestMakeJobRunner(t *testing.T) {
+func TestMakeMTPingAdapter(t *testing.T) {
 	replicas := int32(1)
 
-	args := JobRunnerArgs{
+	args := MTArgs{
 		ServiceAccountName: "test-sa",
-		JobRunnerName:      "test-name",
-		JobRunnerNamespace: "test-namespace",
+		MTAdapterName:      "test-name",
 		Image:              "test-image",
 	}
 
@@ -44,17 +43,17 @@ func TestMakeJobRunner(t *testing.T) {
 			Kind:       "Deployments",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: args.JobRunnerNamespace,
-			Name:      args.JobRunnerName,
+			Namespace: system.Namespace(),
+			Name:      args.MTAdapterName,
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: jobRunnerLabels,
+				MatchLabels: mtlabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: jobRunnerLabels,
+					Labels: mtlabels,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
@@ -67,7 +66,7 @@ func TestMakeJobRunner(t *testing.T) {
 								Value: system.Namespace(),
 							}, {
 								Name:  "METRICS_DOMAIN",
-								Value: "knative.dev/pingsource-jobrunner",
+								Value: "knative.dev/eventing",
 							}, {
 								Name:  "CONFIG_OBSERVABILITY_NAME",
 								Value: "config-observability",
@@ -105,7 +104,7 @@ func TestMakeJobRunner(t *testing.T) {
 		},
 	}
 
-	got := MakeJobRunner(args)
+	got := MakeMTReceiveAdapter(args)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)
