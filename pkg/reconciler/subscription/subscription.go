@@ -472,7 +472,7 @@ func (r *Reconciler) updateChannelRemoveSubscription(ctx context.Context, channe
 			return
 		}
 	}
-	r.updateChannelAddSubscriptionV1Alpha1(ctx, channel, sub)
+	r.updateChannelRemoveSubscriptionV1Alpha1(ctx, channel, sub)
 }
 
 func (r *Reconciler) updateChannelRemoveSubscriptionV1Alpha1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1alpha1.Subscription) {
