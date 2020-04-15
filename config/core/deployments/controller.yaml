@@ -57,7 +57,7 @@ spec:
           - name: PING_IMAGE
             value: ko://knative.dev/eventing/cmd/ping
           - name: MT_PING_IMAGE
-            value: ko://knative.dev/eventing/cmd/mt-ping
+            value: ko://knative.dev/eventing/cmd/mtping
           # APIServerSource
           - name: APISERVER_RA_IMAGE
             value: ko://knative.dev/eventing/cmd/apiserver_receive_adapter

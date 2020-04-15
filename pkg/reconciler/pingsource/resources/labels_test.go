@@ -32,8 +32,8 @@ func TestPingSourceLabels(t *testing.T) {
 		"eventing.knative.dev/source":    controllerAgentName,
 	}
 	got := Labels(pingsourceName)
-	if diff := cmp.Diff(want, got); diff != "" {
 
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected labels (-want, +got) = %v", diff)
 	}
 }
