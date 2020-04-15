@@ -42,7 +42,6 @@ import (
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -68,7 +67,7 @@ var (
 
 const (
 	image          = "github.com/knative/test/image"
-	jobRunnerImage = "job-runner-image"
+	mtimage        = "github.com/knative/test/mtimage"
 	sourceName     = "test-ping-source"
 	sourceUID      = "1234"
 	sourceNameLong = "test-pingserver-source-with-a-very-long-name"
@@ -371,7 +370,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableJobRunner(),
+				makeAvailableMTAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -422,7 +421,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
-				makeJobRunner(),
+				MakeMTAdapter(),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha1(sourceName, testNS,
@@ -435,7 +434,7 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
-					WithPingSourceNotDeployed(jobRunnerName),
+					WithPingSourceNotDeployed(mtadapterName),
 					WithInitPingSourceConditions,
 					WithValidPingSourceSchedule,
 					WithValidPingSourceResources,
@@ -504,12 +503,12 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:       fakekubeclient.Get(ctx),
-			pingLister:          listers.GetPingSourceLister(),
-			deploymentLister:    listers.GetDeploymentLister(),
-			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
-			receiveAdapterImage: image,
-			jobRunnerImage:      jobRunnerImage,
+			kubeClientSet:         fakekubeclient.Get(ctx),
+			pingLister:            listers.GetPingSourceLister(),
+			deploymentLister:      listers.GetDeploymentLister(),
+			tracker:               tracker.New(func(types.NamespacedName) {}, 0),
+			receiveAdapterImage:   image,
+			receiveMTAdapterImage: mtimage,
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
@@ -567,18 +566,17 @@ func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
 	return makeReceiveAdapterWithSinkAndCustomData(sourceName, sourceUID, dest)
 }
 
-func makeJobRunner() *appsv1.Deployment {
-	args := resources.JobRunnerArgs{
-		ServiceAccountName: jobRunnerName,
-		JobRunnerName:      jobRunnerName,
-		JobRunnerNamespace: system.Namespace(),
-		Image:              jobRunnerImage,
+func MakeMTAdapter() *appsv1.Deployment {
+	args := resources.MTArgs{
+		ServiceAccountName: mtadapterName,
+		MTAdapterName:      mtadapterName,
+		Image:              mtimage,
 	}
-	return resources.MakeJobRunner(args)
+	return resources.MakeMTReceiveAdapter(args)
 }
 
-func makeAvailableJobRunner() *appsv1.Deployment {
-	jr := makeJobRunner()
-	WithDeploymentAvailable()(jr)
-	return jr
+func makeAvailableMTAdapter() *appsv1.Deployment {
+	ma := MakeMTAdapter()
+	WithDeploymentAvailable()(ma)
+	return ma
 }

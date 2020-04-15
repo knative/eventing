@@ -26,21 +26,20 @@ import (
 )
 
 var (
-	jobRunnerLabels = map[string]string{
-		"sources.knative.dev/source": "ping-source",
-		"sources.knative.dev/role":   "jobrunner",
+	mtlabels = map[string]string{
+		"sources.knative.dev/role":    "adapter",
+		"eventing.knative.dev/source": controllerAgentName,
 	}
 )
 
-type JobRunnerArgs struct {
+type MTArgs struct {
 	ServiceAccountName string
-	JobRunnerName      string
-	JobRunnerNamespace string
+	MTAdapterName      string
 	Image              string
 }
 
-// MakeJobRunner generates the jobrunner deployment for pingsource
-func MakeJobRunner(args JobRunnerArgs) *v1.Deployment {
+// MakeMTReceiveAdapter generates the mtping deployment for pingsources
+func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 	replicas := int32(1)
 
 	return &v1.Deployment{
@@ -49,17 +48,17 @@ func MakeJobRunner(args JobRunnerArgs) *v1.Deployment {
 			Kind:       "Deployments",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: args.JobRunnerNamespace,
-			Name:      args.JobRunnerName,
+			Namespace: system.Namespace(),
+			Name:      args.MTAdapterName,
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: jobRunnerLabels,
+				MatchLabels: mtlabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: jobRunnerLabels,
+					Labels: mtlabels,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
@@ -99,7 +98,7 @@ func makeEnv() []corev1.EnvVar {
 		Value: system.Namespace(),
 	}, {
 		Name:  "METRICS_DOMAIN",
-		Value: "knative.dev/pingsource-jobrunner",
+		Value: "knative.dev/eventing",
 	}, {
 		Name:  "CONFIG_OBSERVABILITY_NAME",
 		Value: "config-observability",

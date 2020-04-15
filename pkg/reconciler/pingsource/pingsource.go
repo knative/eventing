@@ -55,7 +55,7 @@ const (
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 	pingSourceDeploymentDeleted = "PingSourceDeploymentDeleted"
 	component                   = "pingsource"
-	jobRunnerName               = "pingsource-jobrunner"
+	mtadapterName               = "pingsource-mt-adapter"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -72,14 +72,14 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
 
-	receiveAdapterImage string
-	jobRunnerImage      string
+	receiveAdapterImage   string
+	receiveMTAdapterImage string
 
 	// listers index properties about resources
 	pingLister       listers.PingSourceLister
 	deploymentLister appsv1listers.DeploymentLister
 
-	// tracking jobrunner deployment changes
+	// tracking mt adapter deployment changes
 	tracker tracker.Interface
 
 	loggingContext context.Context
@@ -131,10 +131,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	}
 
 	if scope == eventing.ScopeCluster {
-		// Make sure the global job runner is running
-		d, err := r.reconcileJobRunner(ctx, source)
+		// Make sure the global mt receive adapter is running
+		d, err := r.reconcileMTReceiveAdapter(ctx, source)
 		if err != nil {
-			logging.FromContext(ctx).Error("Unable to reconcile the job runner", zap.Error(err))
+			logging.FromContext(ctx).Error("Unable to reconcile the mt receive adapter", zap.Error(err))
 			return err
 		}
 		source.Status.PropagateDeploymentAvailability(d)
@@ -228,20 +228,19 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 	return ra, nil
 }
 
-func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
 	if err := checkResourcesStatus(source); err != nil {
 		return nil, err
 	}
 
-	args := resources.JobRunnerArgs{
-		ServiceAccountName: jobRunnerName,
-		JobRunnerName:      jobRunnerName,
-		JobRunnerNamespace: system.Namespace(),
-		Image:              r.jobRunnerImage,
+	args := resources.MTArgs{
+		ServiceAccountName: mtadapterName,
+		MTAdapterName:      mtadapterName,
+		Image:              r.receiveMTAdapterImage,
 	}
-	expected := resources.MakeJobRunner(args)
+	expected := resources.MakeMTReceiveAdapter(args)
 
-	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(jobRunnerName)
+	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
@@ -252,7 +251,7 @@ func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.Pi
 			controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentCreated, "Cluster-scoped deployment created")
 			return d, nil
 		}
-		return nil, fmt.Errorf("error getting job runner deployment %v", err)
+		return nil, fmt.Errorf("error getting mt adapter deployment %v", err)
 	} else if podSpecChanged(d.Spec.Template.Spec, expected.Spec.Template.Spec) {
 		d.Spec.Template.Spec = expected.Spec.Template.Spec
 		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
