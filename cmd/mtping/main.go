@@ -22,5 +22,5 @@ import (
 )
 
 func main() {
-	sharedmain.Main("mt-pingsource", mtping.NewController)
+	sharedmain.Main("pingsource-mt-adapter", mtping.NewController)
 }

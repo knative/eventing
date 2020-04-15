@@ -55,7 +55,7 @@ func NewController(
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
 		pingsourceLister:  pingsourceInformer.Lister(),
-		entryidMu:         sync.Mutex{},
+		entryidMu:         sync.RWMutex{},
 		entryids:          make(map[string]cron.EntryID),
 	}
 

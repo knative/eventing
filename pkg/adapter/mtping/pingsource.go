@@ -39,7 +39,7 @@ type Reconciler struct {
 	eventingClientSet clientset.Interface
 	pingsourceLister  sourceslisters.PingSourceLister
 
-	entryidMu sync.Mutex
+	entryidMu sync.RWMutex
 	entryids  map[string]cron.EntryID // key: resource namespace/name
 }
 
@@ -75,12 +75,16 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 	// Is the schedule already cached?
-	if id, ok := r.entryids[key]; ok {
+	r.entryidMu.RLock()
+	id, ok := r.entryids[key]
+	r.entryidMu.RUnlock()
+
+	if ok {
 		r.cronRunner.RemoveSchedule(id)
 	}
 
 	// The schedule has already been validated by the validation webhook, so ignoring error
-	id, _ := r.cronRunner.AddSchedule(source.Namespace, source.Name, source.Spec.Schedule, source.Spec.JsonData, source.Status.SinkURI.String())
+	id, _ = r.cronRunner.AddSchedule(source.Namespace, source.Name, source.Spec.Schedule, source.Spec.JsonData, source.Status.SinkURI.String())
 
 	r.entryidMu.Lock()
 	r.entryids[key] = id
@@ -92,7 +96,11 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 
-	if id, ok := r.entryids[key]; ok {
+	r.entryidMu.RLock()
+	id, ok := r.entryids[key]
+	r.entryidMu.RUnlock()
+
+	if ok {
 		r.cronRunner.RemoveSchedule(id)
 
 		r.entryidMu.Lock()
