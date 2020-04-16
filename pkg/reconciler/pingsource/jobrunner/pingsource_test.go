@@ -181,7 +181,7 @@ func TestAllCases(t *testing.T) {
 			eventingClientSet: eventingclient.Get(ctx),
 			pingsourceLister:  listers.GetPingSourceV1alpha2Lister(),
 			cronRunner:        NewCronJobsRunner(ce, logger),
-			entryidMu:         sync.Mutex{},
+			entryidMu:         sync.RWMutex{},
 			entryids:          make(map[string]cron.EntryID),
 		}
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
