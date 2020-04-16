@@ -31,11 +31,11 @@ func getChannelDuckTypeSupportVersion(channelName string, client *lib.Client, ch
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1beta1.Channelable{})
 	if err != nil {
-		return "", errors.Wrapf(err, "Unable to GET the channel %q", metaResource)
+		return "", errors.Wrapf(err, "Unable to GET the channel %v", metaResource)
 	}
 	channelable, ok := obj.(*eventingduckv1beta1.Channelable)
 	if !ok {
-		return "", errors.Wrapf(err, "Unable to cast the channel %q", metaResource)
+		return "", errors.Wrapf(err, "Unable to cast the channel %v", metaResource)
 	}
 	return channelable.ObjectMeta.Annotations[SubscribableAnnotationKey], nil
 }
