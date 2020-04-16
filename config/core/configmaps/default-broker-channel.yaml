@@ -21,5 +21,5 @@ metadata:
     eventing.knative.dev/release: devel
 data:
   channelTemplateSpec: |
-    apiVersion: messaging.knative.dev/v1alpha1
+    apiVersion: messaging.knative.dev/v1beta1
     kind: InMemoryChannel
