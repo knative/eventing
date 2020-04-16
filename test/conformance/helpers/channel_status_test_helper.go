@@ -57,7 +57,7 @@ func channelHasRequiredStatus(st *testing.T, client *lib.Client, channel metav1.
 
 	dtsv, err := getChannelDuckTypeSupportVersion(channelName, client, &channel)
 	if err != nil {
-		st.Fatalf("Unable to check Channel duck type support version for: %q", channel)
+		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
 
 	if dtsv == "" || dtsv == "v1alpha1" {
