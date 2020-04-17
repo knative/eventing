@@ -30,6 +30,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
@@ -79,7 +80,8 @@ func TestMessageHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -125,7 +127,8 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -153,7 +156,8 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 }
 
 func TestMessageHandler_NilConfigChange(t *testing.T) {
-	h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+	h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 	if err != nil {
 		t.Errorf("Unexpected error creating handler: %v", err)
 	}

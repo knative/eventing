@@ -33,6 +33,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
@@ -46,18 +47,19 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 // on, and then delegates handling of that request to the single fanout.MessageHandler corresponding to
 // that Channel.
 type MessageHandler struct {
-	logger   *zap.Logger
-	handlers map[string]*fanout.MessageHandler
-	config   Config
+	logger            *zap.Logger
+	handlers          map[string]*fanout.MessageHandler
+	messageDispatcher channel.MessageDispatcher
+	config            Config
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(ctx context.Context, logger *zap.Logger, conf Config) (*MessageHandler, error) {
+func NewMessageHandler(ctx context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config) (*MessageHandler, error) {
 	handlers := make(map[string]*fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler, err := fanout.NewMessageHandler(logger, cc.FanoutConfig)
+		handler, err := fanout.NewMessageHandler(logger, messageDispatcher, cc.FanoutConfig)
 		if err != nil {
 			logger.Error("Failed creating new fanout handler.", zap.Error(err))
 			return nil, err
@@ -70,9 +72,10 @@ func NewMessageHandler(ctx context.Context, logger *zap.Logger, conf Config) (*M
 	}
 
 	return &MessageHandler{
-		logger:   logger,
-		config:   conf,
-		handlers: handlers,
+		logger:            logger,
+		config:            conf,
+		handlers:          handlers,
+		messageDispatcher: messageDispatcher,
 	}, nil
 }
 
@@ -86,7 +89,7 @@ func (h *MessageHandler) ConfigDiff(updated Config) string {
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
 // new Handler uses conf, rather than copying the existing Handler's config.
 func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, conf Config) (*MessageHandler, error) {
-	return NewMessageHandler(ctx, h.logger, conf)
+	return NewMessageHandler(ctx, h.logger, h.messageDispatcher, conf)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the

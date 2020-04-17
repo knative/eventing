@@ -31,6 +31,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
 
@@ -41,27 +42,30 @@ type MessageHandler struct {
 	fanout     atomic.Value
 	updateLock sync.Mutex
 	logger     *zap.Logger
+
+	messageDispatcher channel.MessageDispatcher
 }
 
 // UpdateConfig updates the configuration to use the new config, returning an error if it can't.
 type UpdateConfig func(config *multichannelfanout.Config) error
 
 // NewMessageHandler creates a new swappable.Handler.
-func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger) *MessageHandler {
+func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger, messageDispatcher channel.MessageDispatcher) *MessageHandler {
 	h := &MessageHandler{
-		logger: logger.With(zap.String("httpHandler", "swappable")),
+		logger:            logger.With(zap.String("httpHandler", "swappable")),
+		messageDispatcher: messageDispatcher,
 	}
 	h.setHandler(handler)
 	return h
 }
 
 // NewEmptyMessageHandler creates a new swappable.Handler with an empty configuration.
-func NewEmptyMessageHandler(context context.Context, logger *zap.Logger) (*MessageHandler, error) {
-	h, err := multichannelfanout.NewMessageHandler(context, logger, multichannelfanout.Config{})
+func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher) (*MessageHandler, error) {
+	h, err := multichannelfanout.NewMessageHandler(context, logger, messageDispatcher, multichannelfanout.Config{})
 	if err != nil {
 		return nil, err
 	}
-	return NewMessageHandler(h, logger), nil
+	return NewMessageHandler(h, logger, messageDispatcher), nil
 }
 
 // getHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
