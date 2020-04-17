@@ -27,10 +27,17 @@ import (
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+)
+
+var replaceDomain = apis.HTTP("replaceDomain")
+
+const (
+	hostName = "a.b.c.d"
 )
 
 func TestMessageHandler(t *testing.T) {
@@ -77,7 +84,7 @@ func TestMessageHandler(t *testing.T) {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
 			for _, c := range tc.configs {
-				updateConfigAndTestBinding(t, h, c)
+				updateConfigAndTest(t, h, c)
 			}
 		})
 	}
@@ -118,16 +125,16 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+			h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
 
-			server := httptest.NewServer(&successHandler{})
+			server := httptest.NewServer(http.HandlerFunc(successHandler))
 			defer server.Close()
 
 			rc := replaceDomains(tc.initialConfig, server.URL[7:])
-			err = h.UpdateConfig(&rc)
+			err = h.UpdateConfig(context.TODO(), &rc)
 			if err != nil {
 				t.Errorf("Unexpected error updating to initial config: %v", tc.initialConfig)
 			}
@@ -136,7 +143,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 			// Try to update to the new config, it will fail. But we should still be able to hit the
 			// original server.
 			ruc := replaceDomains(tc.badUpdateConfig, server.URL[7:])
-			err = h.UpdateConfig(&ruc)
+			err = h.UpdateConfig(context.TODO(), &ruc)
 			if err == nil {
 				t.Errorf("Expected an error when updating to a bad config.")
 			}
@@ -157,8 +164,8 @@ func TestMessageHandler_NilConfigChange(t *testing.T) {
 	}
 }
 
-func updateConfigAndTestBinding(t *testing.T, h *MessageHandler, config multichannelfanout.Config) {
-	server := httptest.NewServer(&successHandler{})
+func updateConfigAndTest(t *testing.T, h *MessageHandler, config multichannelfanout.Config) {
+	server := httptest.NewServer(http.HandlerFunc(successHandler))
 	defer server.Close()
 
 	rc := replaceDomains(config, server.URL[7:])
@@ -171,17 +178,20 @@ func updateConfigAndTestBinding(t *testing.T, h *MessageHandler, config multicha
 		t.Errorf("Expected the inner multiChannelFanoutHandler to change, it didn't: %v", orig)
 	}
 
-	assertRequestBindingAccepted(t, h)
+	assertRequestAccepted(t, h)
 }
 
-func assertRequestBindingAccepted(t *testing.T, h *MessageHandler) {
+func assertRequestAccepted(t *testing.T, h *MessageHandler) {
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType("testtype")
 	event.SetSource("testsource")
-	event.SetData("text/plain", "")
+	err := event.SetData("text/plain", "")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := httptest.NewRequest(http.MethodPost, "http://"+hostName+"/", nil)
-	err := bindingshttp.WriteRequest(context.Background(), binding.ToMessage(&event), req)
+	err = bindingshttp.WriteRequest(context.Background(), binding.ToMessage(&event), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,4 +202,25 @@ func assertRequestBindingAccepted(t *testing.T, h *MessageHandler) {
 	if resp.Code != http.StatusAccepted {
 		t.Errorf("Unexpected response code. Expected 202. Actual %v", resp.Code)
 	}
+}
+
+func successHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_ = r.Body.Close()
+}
+
+func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
+	for i, cc := range c.ChannelConfigs {
+		for j, sub := range cc.FanoutConfig.Subscriptions {
+			if sub.ReplyURI == replaceDomain {
+				sub.ReplyURI = apis.HTTP(replacement)
+			}
+			if sub.SubscriberURI == replaceDomain {
+				sub.SubscriberURI = apis.HTTP(replacement)
+			}
+			cc.FanoutConfig.Subscriptions[j] = sub
+		}
+		c.ChannelConfigs[i] = cc
+	}
+	return c
 }

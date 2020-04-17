@@ -208,3 +208,9 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 		Path:   "/",
 	}
 }
+
+// isFailure returns true if the status code is not a successful HTTP status.
+func isFailure(statusCode int) bool {
+	return statusCode < nethttp.StatusOK /* 200 */ ||
+		statusCode >= nethttp.StatusMultipleChoices /* 300 */
+}

@@ -34,6 +34,11 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
+var (
+	// The httptest.Server's host name will replace this value in all ChannelConfigs.
+	replaceDomain = apis.HTTP("replaceDomain")
+)
+
 func TestNewMessageHandler(t *testing.T) {
 	testCases := []struct {
 		name      string
@@ -266,7 +271,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			server := httptest.NewServer(&fakeHandler{statusCode: tc.respStatusCode})
+			server := httptest.NewServer(fakeHandler(tc.respStatusCode))
 			defer server.Close()
 
 			// Rewrite the replaceDomains to call the server we just created.
@@ -308,5 +313,27 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 				t.Errorf("Expected EncodingUnkwnown. Actual: %v", message.ReadEncoding())
 			}
 		})
+	}
+}
+
+func fakeHandler(statusCode int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(statusCode)
+		_ = r.Body.Close()
+	}
+}
+
+func replaceDomains(config Config, replacement string) {
+	for i, cc := range config.ChannelConfigs {
+		for j, sub := range cc.FanoutConfig.Subscriptions {
+			if sub.SubscriberURI == replaceDomain {
+				sub.SubscriberURI = apis.HTTP(replacement)
+			}
+			if sub.ReplyURI == replaceDomain {
+				sub.ReplyURI = apis.HTTP(replacement)
+			}
+			cc.FanoutConfig.Subscriptions[j] = sub
+		}
+		config.ChannelConfigs[i] = cc
 	}
 }

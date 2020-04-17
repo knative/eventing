@@ -19,6 +19,7 @@ package channel
 import (
 	"context"
 	"errors"
+	"fmt"
 	nethttp "net/http"
 	"time"
 
@@ -33,6 +34,27 @@ import (
 
 var defaultTransformers = []binding.Transformer{
 	transformer.AddTimeNow,
+}
+
+var (
+	shutdownTimeout = 1 * time.Minute
+)
+
+// UnknownChannelError represents the error when an event is received by a channel dispatcher for a
+// channel that does not exist.
+type UnknownChannelError struct {
+	c ChannelReference
+}
+
+func (e *UnknownChannelError) Error() string {
+	return fmt.Sprintf("unknown channel: %v", e.c)
+}
+
+// UnknownHostError represents the error when a ResolveMessageChannelFromHostHeader func cannot resolve an host
+type UnknownHostError string
+
+func (e UnknownHostError) Error() string {
+	return fmt.Sprintf("cannot map host to channel: %s", string(e))
 }
 
 // MessageReceiver starts a server to receive new events for the channel dispatcher. The new
@@ -52,6 +74,11 @@ type UnbufferedMessageReceiverFunc func(context.Context, ChannelReference, bindi
 
 // ReceiverOptions provides functional options to MessageReceiver function.
 type MessageReceiverOptions func(*MessageReceiver) error
+
+// ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
+// before calling receiverFunc.
+// Returns UnknownHostError if the channel is not found, otherwise returns a generic error.
+type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannel function.

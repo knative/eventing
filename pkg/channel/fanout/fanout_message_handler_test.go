@@ -29,11 +29,19 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
+)
+
+// Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
+// servers.
+var (
+	replaceSubscriber = apis.HTTP("replaceSubscriber")
+	replaceReplier    = apis.HTTP("replaceReplier")
 )
 
 func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
@@ -265,7 +273,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		h.timeout = 10000 * time.Second
 	}
 
-	event := makeCloudEventNew()
+	event := makeCloudEvent()
 	reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
 	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil).WithContext(reqCtx)
 
@@ -303,7 +311,7 @@ func (h *fakeHandlerWithWg) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func makeCloudEventNew() cloudevents.Event {
+func makeCloudEvent() cloudevents.Event {
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType("com.example.someevent")
 	event.SetSource("/mycontext")
@@ -311,4 +319,26 @@ func makeCloudEventNew() cloudevents.Event {
 	event.SetExtension("comexampleextension", "value")
 	event.SetData(cloudevents.ApplicationXML, "<much wow=\"xml\"/>")
 	return event
+}
+
+type succeedOnce struct {
+	called atomic.Bool
+}
+
+func (s *succeedOnce) handler(w http.ResponseWriter, _ *http.Request) {
+	if s.called.CAS(false, true) {
+		w.WriteHeader(http.StatusAccepted)
+	} else {
+		w.WriteHeader(http.StatusForbidden)
+	}
+}
+
+func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
+	writer.Header().Set("ce-specversion", cloudevents.VersionV1)
+	writer.Header().Set("ce-type", "com.example.someotherevent")
+	writer.Header().Set("ce-source", "/myothercontext")
+	writer.Header().Set("ce-id", "B234-1234-1234")
+	writer.Header().Set("Content-Type", cloudevents.ApplicationJSON)
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte("{}"))
 }
