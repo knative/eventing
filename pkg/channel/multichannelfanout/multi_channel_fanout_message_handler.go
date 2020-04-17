@@ -47,10 +47,9 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 // on, and then delegates handling of that request to the single fanout.MessageHandler corresponding to
 // that Channel.
 type MessageHandler struct {
-	logger            *zap.Logger
-	handlers          map[string]*fanout.MessageHandler
-	messageDispatcher channel.MessageDispatcher
-	config            Config
+	logger   *zap.Logger
+	handlers map[string]*fanout.MessageHandler
+	config   Config
 }
 
 // NewHandler creates a new Handler.
@@ -72,10 +71,9 @@ func NewMessageHandler(ctx context.Context, logger *zap.Logger, messageDispatche
 	}
 
 	return &MessageHandler{
-		logger:            logger,
-		config:            conf,
-		handlers:          handlers,
-		messageDispatcher: messageDispatcher,
+		logger:   logger,
+		config:   conf,
+		handlers: handlers,
 	}, nil
 }
 
@@ -88,8 +86,8 @@ func (h *MessageHandler) ConfigDiff(updated Config) string {
 
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
 // new Handler uses conf, rather than copying the existing Handler's config.
-func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, conf Config) (*MessageHandler, error) {
-	return NewMessageHandler(ctx, h.logger, h.messageDispatcher, conf)
+func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, conf Config) (*MessageHandler, error) {
+	return NewMessageHandler(ctx, h.logger, channel.NewMessageDispatcherFromConfig(h.logger, dispatcherConfig), conf)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the

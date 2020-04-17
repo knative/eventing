@@ -29,14 +29,15 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/pkg/controller"
-	logtesting "knative.dev/pkg/logging/testing"
-	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -108,9 +109,9 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO: FIx
-			inmemorychannelInformer: nil,
-			dispatcher:              &fakeDispatcher{},
-			configStore:             channel.NewEventDispatcherConfigStore(logger),
+			inmemorychannelInformer:    nil,
+			dispatcher:                 &fakeDispatcher{},
+			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -120,7 +121,7 @@ func TestAllCases(t *testing.T) {
 
 type fakeDispatcher struct{}
 
-func (d *fakeDispatcher) UpdateConfig(ctx context.Context, config *multichannelfanout.Config) error {
+func (d *fakeDispatcher) UpdateConfig(_ context.Context, _ channel.EventDispatcherConfig, _ *multichannelfanout.Config) error {
 	// TODO set error
 	return nil
 }

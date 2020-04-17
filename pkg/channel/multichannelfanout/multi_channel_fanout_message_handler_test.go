@@ -132,7 +132,7 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 	if !cmp.Equal(h.config, orig) {
 		t.Errorf("Incorrect config. Expected '%v'. Actual '%v'", orig, h.config)
 	}
-	newH, err := h.CopyWithNewConfig(context.TODO(), updated)
+	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated)
 	if err != nil {
 		t.Errorf("Unable to copy handler: %v", err)
 	}

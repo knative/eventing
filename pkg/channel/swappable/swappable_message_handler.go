@@ -42,18 +42,15 @@ type MessageHandler struct {
 	fanout     atomic.Value
 	updateLock sync.Mutex
 	logger     *zap.Logger
-
-	messageDispatcher channel.MessageDispatcher
 }
 
 // UpdateConfig updates the configuration to use the new config, returning an error if it can't.
 type UpdateConfig func(config *multichannelfanout.Config) error
 
 // NewMessageHandler creates a new swappable.Handler.
-func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger, messageDispatcher channel.MessageDispatcher) *MessageHandler {
+func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger) *MessageHandler {
 	h := &MessageHandler{
-		logger:            logger.With(zap.String("httpHandler", "swappable")),
-		messageDispatcher: messageDispatcher,
+		logger: logger.With(zap.String("httpHandler", "swappable")),
 	}
 	h.setHandler(handler)
 	return h
@@ -65,7 +62,7 @@ func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, message
 	if err != nil {
 		return nil, err
 	}
-	return NewMessageHandler(h, logger, messageDispatcher), nil
+	return NewMessageHandler(h, logger), nil
 }
 
 // getHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
@@ -83,7 +80,7 @@ func (h *MessageHandler) setHandler(nh *multichannelfanout.MessageHandler) {
 // UpdateConfig copies the current inner multichannelfanout.MessageHandler with the new configuration. If
 // the new configuration is valid, then the new inner handler is swapped in and will start serving
 // HTTP traffic.
-func (h *MessageHandler) UpdateConfig(context context.Context, config *multichannelfanout.Config) error {
+func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error {
 	if config == nil {
 		return errors.New("nil config")
 	}
@@ -94,7 +91,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, config *multichan
 	ih := h.getHandler()
 	if diff := ih.ConfigDiff(*config); diff != "" {
 		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
-		newIh, err := ih.CopyWithNewConfig(context, *config)
+		newIh, err := ih.CopyWithNewConfig(context, dispatcherConfig, *config)
 		if err != nil {
 			h.logger.Info("Unable to update config", zap.Error(err), zap.Any("config", config))
 			return err
