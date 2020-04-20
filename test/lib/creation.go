@@ -83,7 +83,7 @@ func (client *Client) CreateSubscriptionOrFail(
 	name, channelName string,
 	channelTypeMeta *metav1.TypeMeta,
 	options ...resources.SubscriptionOption,
-) {
+) *messagingv1alpha1.Subscription {
 	namespace := client.Namespace
 	subscription := resources.Subscription(name, channelName, channelTypeMeta, options...)
 	subscriptions := client.Eventing.MessagingV1alpha1().Subscriptions(namespace)
@@ -94,6 +94,7 @@ func (client *Client) CreateSubscriptionOrFail(
 		client.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
 	client.Tracker.AddObj(subscription)
+	return subscription
 }
 
 // CreateSubscriptionOrFailV1Beta1 will create a Subscription or fail the test if there is an error.
