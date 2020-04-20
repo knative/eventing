@@ -51,7 +51,7 @@ spec:
       JSONPath: .spec.broker
     - name: Subscriber_URI
       type: string
-      JSONPath: .status.subscriberURI
+      JSONPath: .status.subscriberUri
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
