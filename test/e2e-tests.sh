@@ -32,5 +32,14 @@ initialize $@ --skip-istio-addon
 
 install_broker || fail_test "Could not install Channel Based Broker"
 
+echo "----------------------------------------- kubectl get crd"
+kubectl get crd
+
+echo "----------------------------------------- kubectl get crd inmemorychannels.messaging.knative.dev -o yaml"
+kubectl get crd inmemorychannels.messaging.knative.dev -o yaml
+
+echo "----------------------------------------- kubectl get crd channels.messaging.knative.dev -o yaml"
+kubectl get crd channels.messaging.knative.dev -o yaml
+
 go_test_e2e -timeout=20m -parallel=12 ./test/conformance -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
 success
