@@ -17,22 +17,21 @@ limitations under the License.
 package cloudevents
 
 import (
-	ce "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	ce "github.com/cloudevents/sdk-go/v2"
 )
 
 // CloudEvent related constants.
 const (
-	DefaultEncoding = ce.Binary
+	DefaultEncoding = "binary"
 	DefaultSource   = "http://knative.test"
 	DefaultType     = "dev.knative.test.event"
 )
 
 // CloudEvent specifies the arguments for a CloudEvent used as input to create a new container in test.
 type CloudEvent struct {
-	ce.EventContextV1        // use cloud events v1 context
-	Data              string // must be in json format
-	Encoding          string // binary or structured
+	Event    ce.Event
+	Data     string // must be in json format
+	Encoding string // binary or structured
 }
 
 // Option enables further configuration of a CloudEvent.
@@ -41,21 +40,21 @@ type Option func(*CloudEvent)
 // WithType returns an option that changes the id for the given CloudEvent.
 func WithID(id string) Option {
 	return func(c *CloudEvent) {
-		c.ID = id
+		c.Event.SetID(id)
 	}
 }
 
 // WithSource returns an option that changes the source for the given CloudEvent.
 func WithSource(eventSource string) Option {
 	return func(c *CloudEvent) {
-		c.Source = *types.ParseURIRef(eventSource)
+		c.Event.SetSource(eventSource)
 	}
 }
 
 // WithType returns an option that changes the type for the given CloudEvent.
 func WithType(eventType string) Option {
 	return func(c *CloudEvent) {
-		c.Type = eventType
+		c.Event.SetType(eventType)
 	}
 }
 
@@ -69,20 +68,21 @@ func WithEncoding(encoding string) Option {
 // WithExtensions returns an option that changes the extensions for the given CloudEvent.
 func WithExtensions(extensions map[string]interface{}) Option {
 	return func(c *CloudEvent) {
-		c.Extensions = extensions
+		for k, v := range extensions {
+			c.Event.SetExtension(k, v)
+		}
 	}
 }
 
 // New returns a new CloudEvent with most preset default properties.
 func New(data string, options ...Option) *CloudEvent {
 	event := &CloudEvent{
-		EventContextV1: ce.EventContextV1{
-			Source: *types.ParseURIRef(DefaultSource),
-			Type:   DefaultType,
-		},
+		Event:    ce.NewEvent(),
 		Data:     data,
 		Encoding: DefaultEncoding,
 	}
+	event.Event.SetSource(DefaultSource)
+	event.Event.SetType(DefaultType)
 	for _, option := range options {
 		option(event)
 	}

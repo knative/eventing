@@ -24,8 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
@@ -117,7 +116,7 @@ type HttpLoadGenerator struct {
 
 	warmupAttacker *vegeta.Attacker
 	paceAttacker   *vegeta.Attacker
-	ceClient       client.Client
+	ceClient       cloudevents.Client
 }
 
 func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
@@ -186,9 +185,8 @@ func vegetaAttackerTransport() *http.Transport {
 	}
 }
 
-func newCloudEventsClient(sinkUrl string) (client.Client, error) {
-	t, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithBinaryEncoding(),
+func newCloudEventsClient(sinkUrl string) (cloudevents.Client, error) {
+	t, err := cloudevents.NewHTTP(
 		cloudevents.WithTarget(sinkUrl),
 	)
 	if err != nil {
@@ -219,7 +217,7 @@ func (h HttpLoadGenerator) SendGCEvent() {
 	event.SetType(common.GCEventType)
 	event.SetSource(h.eventSource)
 
-	_, _, _ = h.ceClient.Send(context.TODO(), event)
+	_ = h.ceClient.Send(context.TODO(), event)
 }
 
 func (h HttpLoadGenerator) SendEndEvent() {
@@ -229,5 +227,5 @@ func (h HttpLoadGenerator) SendEndEvent() {
 	event.SetType(common.EndEventType)
 	event.SetSource(h.eventSource)
 
-	_, _, _ = h.ceClient.Send(context.TODO(), event)
+	_ = h.ceClient.Send(context.TODO(), event)
 }
