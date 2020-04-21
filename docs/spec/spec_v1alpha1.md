@@ -16,7 +16,7 @@ This document details our _Spec_ and _Status_ customizations.
 
 ## kind: Trigger
 
-### group: eventing.knative.dev/v1beta1
+### group: eventing.knative.dev/v1alpha1
 
 _A Trigger represents a subscriber of events with a filter for a specific
 broker._
@@ -25,11 +25,11 @@ broker._
 
 #### Spec
 
-| Field        | Type                 | Description                                                                                                                                                                         | Constraints |
-| ------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| broker       | String               | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                                 |             |
-| filter       | TriggerFilter        | Optional Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
-| subscriber\* | pkg/duck.Destination | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                            |             |
+| Field        | Type                 | Description                                                                                                                                                                | Constraints |
+| ------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| broker       | String               | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
+| filter       | TriggerFilter        | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
+| subscriber\* | pkg/duck.Destination | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
 
 \*: Required
 
@@ -38,8 +38,8 @@ broker._
 | Field              | Type       | Description                                                               | Constraints |
 | ------------------ | ---------- | ------------------------------------------------------------------------- | ----------- |
 | observedGeneration | int64      | The 'Generation' of the Broker that was last processed by the controller. |             |
-| conditions         | Conditions | Trigger conditions.                                                       |             |
 | subscriberURI      | apis.URL   | Address of the subscribing endpoint.                                      |             |
+| conditions         | Conditions | Trigger conditions.                                                       |             |
 
 ##### Conditions
 
@@ -58,7 +58,7 @@ broker._
 
 ## kind: Broker
 
-### group: eventing.knative.dev/v1beta1
+### group: eventing.knative.dev/v1alpha1
 
 _A Broker represents an event mesh. It logically receives events on its input
 domain and forwards them to subscribers defined by one or more matching
@@ -68,18 +68,17 @@ Trigger._
 
 #### Spec
 
-| Field    | Type                             | Description                                                                                                                                                  | Constraints |
-| -------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| config   | ObjectReference                  | Config is an ObjectReference to the configuration that specifies configuration options for this Broker. For example, this could be a pointer to a ConfigMap. |             |
-| delivery | eventingduckv1beta1.DeliverySpec | Delivery is the delivery specification for Events within the Broker mesh. This includes things like retries, DLQ, etc.                                       |             |
+| Field           | Type        | Description                                                                                                     | Constraints                                  |
+| --------------- | ----------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to the default Channel for the namespace. | Only Channel and Arguments may be specified. |
 
 #### Status
 
 | Field              | Type        | Description                                                                                  | Constraints |
 | ------------------ | ----------- | -------------------------------------------------------------------------------------------- | ----------- |
 | observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                    |             |
-| conditions         | Conditions  | Broker conditions.                                                                           |             |
 | address            | Addressable | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions         | Conditions  | Broker conditions.                                                                           |             |
 
 ##### Conditions
 
@@ -95,7 +94,7 @@ Trigger._
 
 ## kind: Channel
 
-### group: messaging.knative.dev/v1beta1
+### group: messaging.knative.dev/v1alpha1
 
 _A Channel logically receives events on its input domain and forwards them to
 its subscribers. A custom channel implementation (other than the default
@@ -106,9 +105,10 @@ channel CRD can also be instantiated directly.\_
 
 #### Spec
 
-| Field           | Type                | Description                         | Constraints |
-| --------------- | ------------------- | ----------------------------------- | ----------- |
-| channelTemplate | ChannelTemplateSpec | Specifies which channel CRD to use. | Immutable   |
+| Field                    | Type                  | Description                                                           | Constraints                            |
+| ------------------------ | --------------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| channelTemplate          | ChannelTemplateSpec   | Specifies which channel CRD to use.                                   | Immutable                              |
+| subscribable.subscribers | duck.SubscriberSpec[] | Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
 
 #### Metadata
 
@@ -146,7 +146,7 @@ channel CRD can also be instantiated directly.\_
 
 ## kind: Subscription
 
-### group: messaging.knative.dev/v1beta1
+### group: eventing.knative.dev/v1alpha1
 
 _Describes a linkage between a Channel and a Callable and/or Addressable
 channel._
@@ -155,12 +155,11 @@ channel._
 
 #### Spec
 
-| Field                  | Type                             | Description                                                                       | Constraints        |
-| ---------------------- | -------------------------------- | --------------------------------------------------------------------------------- | ------------------ |
-| channel\*              | ObjectRef                        | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
-| subscriber<sup>1</sup> | Destination                      | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
-| reply<sup>1</sup>      | Destination                      | The continuation for the link.                                                    |                    |
-| delivery               | eventingduckv1beta1.DeliverySpec | Delivery configuration.                                                           |                    |
+| Field                  | Type        | Description                                                                       | Constraints        |
+| ---------------------- | ----------- | --------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef   | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
+| subscriber<sup>1</sup> | Destination | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
+| reply<sup>1</sup>      | Destination | The continuation for the link.                                                    |                    |
 
 \*: Required
 
@@ -215,15 +214,6 @@ channel._
 1: One or both (ref, uri), Required. If only uri is specified, it must be an
 absolute URL. If both are specified, uri will be resolved using the base URI
 retrieved from ref.
-
-### duck.DeliverySpec
-
-| Field          | Type          | Description                                                                                                                                        | Constraints    |
-| -------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| deadLetterSink | Destination   | DeadLetterSink is the sink receiving event that could not be sent to a destination.                                                                |                |
-| retry          | String        | Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.                   |                |
-| backoffPolicy  | BackoffPolicy |  BackoffPolicy is the retry backoff policy (linear, exponential).                                                                                  |                |
-| backoffDelay   | String        | For linear policy, backoff delay is the time interval between retries. For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>. |                |
 
 ### duck.SubscriberSpec
 
