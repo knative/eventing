@@ -22,7 +22,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -41,7 +40,6 @@ import (
 // github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
 // NewController will panic.
 type envConfig struct {
-	Image   string `envconfig:"PING_IMAGE" required:"true"`
 	MTImage string `envconfig:"MT_PING_IMAGE" required:"true"`
 }
 
@@ -67,7 +65,6 @@ func NewController(
 	if err := envconfig.Process("", env); err != nil {
 		logging.FromContext(ctx).Panicf("unable to process PingSourceSource's required environment variables: %v", err)
 	}
-	r.receiveAdapterImage = env.Image
 	r.receiveMTAdapterImage = env.MTImage
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
@@ -77,13 +74,7 @@ func NewController(
 	logging.FromContext(ctx).Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Watch for deployments owned by the source
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("PingSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	// Tracker is used to notify us that the jobrunner Deployment has changed so that
+	// Tracker is used to notify us that the mtping Deployment has changed so that
 	// we can reconcile PingSources that depends on it
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 

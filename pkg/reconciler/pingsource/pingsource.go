@@ -27,10 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
@@ -40,13 +38,11 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
-	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -72,7 +68,6 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
 
-	receiveAdapterImage   string
 	receiveMTAdapterImage string
 
 	// listers index properties about resources
@@ -125,39 +120,25 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	// TODO: remove MarkSchedule
 	source.Status.MarkSchedule()
 
-	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
-	if !ok {
-		scope = eventing.ScopeCluster
+	// Make sure the global mt receive adapter is running
+	d, err := r.reconcileMTReceiveAdapter(ctx, source)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to reconcile the mt receive adapter", zap.Error(err))
+		return err
 	}
+	source.Status.PropagateDeploymentAvailability(d)
 
-	if scope == eventing.ScopeCluster {
-		// Make sure the global mt receive adapter is running
-		d, err := r.reconcileMTReceiveAdapter(ctx, source)
-		if err != nil {
-			logging.FromContext(ctx).Error("Unable to reconcile the mt receive adapter", zap.Error(err))
-			return err
-		}
-		source.Status.PropagateDeploymentAvailability(d)
+	// Tell tracker to reconcile this PingSource whenever the deployment changes
+	err = r.tracker.TrackReference(tracker.Reference{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Namespace:  d.Namespace,
+		Name:       d.Name,
+	}, source)
 
-		// Tell tracker to reconcile this PingSource whenever the deployment changes
-		err = r.tracker.TrackReference(tracker.Reference{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Namespace:  d.Namespace,
-			Name:       d.Name,
-		}, source)
-
-		if err != nil {
-			logging.FromContext(ctx).Error("Unable to track the deployment", zap.Error(err))
-			return err
-		}
-	} else {
-		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
-		if err != nil {
-			logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
-			return fmt.Errorf("creating receive adapter: %v", err)
-		}
-		source.Status.PropagateDeploymentAvailability(ra)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to track the deployment", zap.Error(err))
+		return err
 	}
 
 	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
@@ -166,66 +147,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	}}
 
 	return newReconciledNormal(source.Namespace, source.Name)
-}
-
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
-	if err := checkResourcesStatus(src); err != nil {
-		return nil, err
-	}
-
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
-	}
-
-	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
-	}
-
-	adapterArgs := resources.Args{
-		Image:         r.receiveAdapterImage,
-		Source:        src,
-		Labels:        resources.Labels(src.Name),
-		SinkURI:       sinkURI,
-		LoggingConfig: loggingConfig,
-		MetricsConfig: metricsConfig,
-	}
-	expected := resources.MakeReceiveAdapter(&adapterArgs)
-
-	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		// Issue #2842: Adater deployment name uses kmeta.ChildName. If a deployment by the previous name pattern is found, it should
-		// be deleted. This might cause temporary downtime.
-		if deprecatedName := utils.GenerateFixedName(adapterArgs.Source, fmt.Sprintf("pingsource-%s", adapterArgs.Source.Name)); deprecatedName != expected.Name {
-			if err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Delete(deprecatedName, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("error deleting deprecated named deployment: %v", err)
-			}
-			controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentDeleted, "Deprecated deployment removed: \"%s/%s\"", src.Namespace, deprecatedName)
-		}
-
-		ra, err = r.kubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
-		msg := "Deployment created"
-		if err != nil {
-			msg = fmt.Sprintf("Deployment created, error: %v", err)
-		}
-		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentCreated, "%s", msg)
-		return ra, err
-	} else if err != nil {
-		return nil, fmt.Errorf("error getting receive adapter: %v", err)
-	} else if !metav1.IsControlledBy(ra, src) {
-		return nil, fmt.Errorf("deployment %q is not owned by PingSource %q", ra.Name, src.Name)
-	} else if podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
-		ra.Spec.Template.Spec = expected.Spec.Template.Spec
-		if ra, err = r.kubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
-			return ra, err
-		}
-		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Deployment %q updated", ra.Name)
-		return ra, nil
-	} else {
-		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
-	}
-	return ra, nil
 }
 
 func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
