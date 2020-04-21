@@ -315,7 +315,7 @@ func createReverseProxy(t *testing.T, host string, port int) *httputil.ReversePr
 	return &httputil.ReverseProxy{Director: director}
 }
 
-func mustParseUrl(t *testing.T, str string) *apis.URL {
+func mustParseUrl(t testing.TB, str string) *apis.URL {
 	url, err := apis.ParseURL(str)
 	if err != nil {
 		t.Fatal(err)

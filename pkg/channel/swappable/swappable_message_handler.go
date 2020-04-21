@@ -52,7 +52,7 @@ func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.L
 	h := &MessageHandler{
 		logger: logger.With(zap.String("httpHandler", "swappable")),
 	}
-	h.setHandler(handler)
+	h.SetHandler(handler)
 	return h
 }
 
@@ -65,15 +65,15 @@ func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, message
 	return NewMessageHandler(h, logger), nil
 }
 
-// getHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
+// GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
 // requests to.
-func (h *MessageHandler) getHandler() *multichannelfanout.MessageHandler {
+func (h *MessageHandler) GetHandler() *multichannelfanout.MessageHandler {
 	return h.fanout.Load().(*multichannelfanout.MessageHandler)
 }
 
-// setHandler sets a new multichannelfanout.MessageHandler to delegate all subsequent
+// SetHandler sets a new multichannelfanout.MessageHandler to delegate all subsequent
 // HTTP requests to.
-func (h *MessageHandler) setHandler(nh *multichannelfanout.MessageHandler) {
+func (h *MessageHandler) SetHandler(nh *multichannelfanout.MessageHandler) {
 	h.fanout.Store(nh)
 }
 
@@ -88,7 +88,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig 
 	h.updateLock.Lock()
 	defer h.updateLock.Unlock()
 
-	ih := h.getHandler()
+	ih := h.GetHandler()
 	if diff := ih.ConfigDiff(*config); diff != "" {
 		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
 		newIh, err := ih.CopyWithNewConfig(context, dispatcherConfig, *config)
@@ -96,7 +96,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig 
 			h.logger.Info("Unable to update config", zap.Error(err), zap.Any("config", config))
 			return err
 		}
-		h.setHandler(newIh)
+		h.SetHandler(newIh)
 	}
 	return nil
 }
@@ -104,5 +104,5 @@ func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig 
 // ServeHTTP delegates all HTTP requests to the current multichannelfanout.MessageHandler.
 func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	// Hand work off to the current multi channel fanout handler.
-	h.getHandler().ServeHTTP(response, request)
+	h.GetHandler().ServeHTTP(response, request)
 }
