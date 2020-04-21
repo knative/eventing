@@ -41,5 +41,8 @@ kubectl get crd inmemorychannels.messaging.knative.dev -o yaml
 echo "----------------------------------------- kubectl get crd channels.messaging.knative.dev -o yaml"
 kubectl get crd channels.messaging.knative.dev -o yaml
 
-go_test_e2e -timeout=20m -parallel=12 ./test/conformance -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+echo "----------------------------------------- echo \$KUBECONFIG"
+echo $KUBECONFIG
+
+go_test_e2e -timeout=20m -parallel=12 ./test/conformance || fail_test
 success
