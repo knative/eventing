@@ -22,12 +22,12 @@ source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 # Yaml files to generate, and the source config dir for them.
 declare -A COMPONENTS
 COMPONENTS=(
-  ["eventing-core.yaml"]="config/core"
-  ["eventing-crds.yaml"]="config/core/resources"
-  ["channel-broker.yaml"]="config/brokers/channel-broker"
-  ["mt-channel-broker.yaml"]="config/brokers/mt-channel-broker"
-  ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
-  ["upgrade-to-v0.14.0.yaml"]="config/upgrade/v0.14.0"
+  ["eventing-core.yaml"]="-R -f config/core"
+  ["eventing-crds.yaml"]="-f config/core/resources"
+  ["channel-broker.yaml"]="-f config/brokers/channel-broker"
+  ["mt-channel-broker.yaml"]="-f config/brokers/mt-channel-broker"
+  ["in-memory-channel.yaml"]="-f config/channels/in-memory-channel"
+  ["upgrade-to-v0.14.0.yaml"]="-f config/upgrade/v0.14.0"
 )
 readonly COMPONENTS
 
@@ -53,7 +53,7 @@ function build_release() {
     local config="${COMPONENTS[${yaml}]}"
     echo "Building Knative Eventing - ${config}"
     # TODO(chizhg): reenable --strict mode after https://github.com/knative/test-infra/issues/1262 is fixed.
-    ko resolve ${KO_FLAGS} -R -f ${config}/ | "${LABEL_YAML_CMD[@]}" > ${yaml}
+    ko resolve ${KO_FLAGS} ${config}/ | "${LABEL_YAML_CMD[@]}" > ${yaml}
     all_yamls+=(${yaml})
   done
   # Assemble the release
