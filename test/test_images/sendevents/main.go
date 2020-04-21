@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
-	"github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/tracing"
@@ -96,12 +96,14 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
+	ctx := context.Background()
+
 	var encodingOption http.Option
 	switch eventEncoding {
 	case "binary":
-		encodingOption = cloudevents.WithBinaryEncoding()
+		ctx = cloudevents.WithEncodingBinary(ctx)
 	case "structured":
-		encodingOption = cloudevents.WithStructuredEncoding()
+		ctx = cloudevents.WithEncodingStructured(ctx)
 	default:
 		log.Printf("unsupported encoding option: %q\n", eventEncoding)
 		os.Exit(1)
@@ -112,7 +114,7 @@ func main() {
 		encodingOption,
 	}
 
-	t, err := cloudevents.NewHTTPTransport(tOpts...)
+	t, err := cloudevents.NewHTTP(tOpts...)
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}
@@ -150,7 +152,6 @@ func main() {
 		if eventID != "" {
 			event.SetID(eventID)
 		}
-		event.SetDataContentType(cloudevents.ApplicationJSON)
 		event.SetType(eventType)
 		event.SetSource(eventSource)
 
@@ -164,13 +165,15 @@ func main() {
 			}
 		}
 
-		if err := event.SetData(untyped); err != nil {
+		if err := event.SetData(cloudevents.ApplicationJSON, untyped); err != nil {
 			log.Fatalf("failed to set data, %v", err)
 		}
 
-		if _, resp, err := c.Send(context.Background(), event); err != nil {
+		resp, result := c.Request(ctx, event)
+		if !cloudevents.IsACK(result) {
 			log.Printf("send returned an error: %v\n", err)
-		} else if resp != nil {
+		}
+		if resp != nil {
 			log.Printf("Got response from %s\n%s\n", sink, resp)
 		}
 
