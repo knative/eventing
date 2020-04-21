@@ -17,39 +17,34 @@ limitations under the License.
 package resources
 
 import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 )
 
-var (
-	mtlabels = map[string]string{
-		"sources.knative.dev/role":    "adapter",
-		"eventing.knative.dev/source": controllerAgentName,
-	}
-)
-
-type MTArgs struct {
-	ServiceAccountName string
-	MTAdapterName      string
-	Image              string
-}
-
-// MakeMTReceiveAdapter generates the mtping deployment for pingsources
-func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
+func TestMakePingAdapter(t *testing.T) {
 	replicas := int32(1)
 
-	return &v1.Deployment{
+	args := Args{
+		ServiceAccountName: "test-sa",
+		AdapterName:        "test-name",
+		Image:              "test-image",
+	}
+
+	want := &v1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "Deployments",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
-			Name:      args.MTAdapterName,
+			Name:      args.AdapterName,
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
@@ -66,8 +61,26 @@ func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 						{
 							Name:  "dispatcher",
 							Image: args.Image,
-							Env:   makeEnv(),
-
+							Env: []corev1.EnvVar{{
+								Name:  system.NamespaceEnvKey,
+								Value: system.Namespace(),
+							}, {
+								Name:  "METRICS_DOMAIN",
+								Value: "knative.dev/eventing",
+							}, {
+								Name:  "CONFIG_OBSERVABILITY_NAME",
+								Value: "config-observability",
+							}, {
+								Name:  "CONFIG_LOGGING_NAME",
+								Value: "config-logging",
+							}, {
+								Name: "NAMESPACE",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.namespace",
+									},
+								},
+							}},
 							// Set low resource requests and limits.
 							// This should be configurable.
 							Resources: corev1.ResourceRequirements{
@@ -90,27 +103,10 @@ func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 			},
 		},
 	}
-}
 
-func makeEnv() []corev1.EnvVar {
-	return []corev1.EnvVar{{
-		Name:  system.NamespaceEnvKey,
-		Value: system.Namespace(),
-	}, {
-		Name:  "METRICS_DOMAIN",
-		Value: "knative.dev/eventing",
-	}, {
-		Name:  "CONFIG_OBSERVABILITY_NAME",
-		Value: "config-observability",
-	}, {
-		Name:  "CONFIG_LOGGING_NAME",
-		Value: "config-logging",
-	}, {
-		Name: "NAMESPACE",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.namespace",
-			},
-		},
-	}}
+	got := MakeReceiveAdapter(args)
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+	}
 }

@@ -40,7 +40,7 @@ import (
 // github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
 // NewController will panic.
 type envConfig struct {
-	MTImage string `envconfig:"MT_PING_IMAGE" required:"true"`
+	MTImage string `envconfig:"PING_RA_IMAGE" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -65,7 +65,7 @@ func NewController(
 	if err := envconfig.Process("", env); err != nil {
 		logging.FromContext(ctx).Panicf("unable to process PingSourceSource's required environment variables: %v", err)
 	}
-	r.receiveMTAdapterImage = env.MTImage
+	r.receiveAdapterImage = env.MTImage
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 

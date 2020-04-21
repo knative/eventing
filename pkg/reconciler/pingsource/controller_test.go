@@ -44,11 +44,11 @@ func TestNew(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if tc.setEnv {
-				if err := os.Setenv("PING_IMAGE", "anything"); err != nil {
+				if err := os.Setenv("PING_RA_IMAGE", "anything"); err != nil {
 					t.Fatalf("Failed to set env var: %v", err)
 				}
 				defer func() {
-					if err := os.Unsetenv("PING_IMAGE"); err != nil {
+					if err := os.Unsetenv("PING_RA_IMAGE"); err != nil {
 						t.Fatalf("Failed to unset env var: %v", err)
 					}
 				}()

@@ -68,7 +68,7 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
 
-	receiveMTAdapterImage string
+	receiveAdapterImage string
 
 	// listers index properties about resources
 	pingLister       listers.PingSourceLister
@@ -121,7 +121,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	source.Status.MarkSchedule()
 
 	// Make sure the global mt receive adapter is running
-	d, err := r.reconcileMTReceiveAdapter(ctx, source)
+	d, err := r.reconcileReceiveAdapter(ctx, source)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the mt receive adapter", zap.Error(err))
 		return err
@@ -149,17 +149,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	return newReconciledNormal(source.Namespace, source.Name)
 }
 
-func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
 	if err := checkResourcesStatus(source); err != nil {
 		return nil, err
 	}
 
-	args := resources.MTArgs{
+	args := resources.Args{
 		ServiceAccountName: mtadapterName,
-		MTAdapterName:      mtadapterName,
-		Image:              r.receiveMTAdapterImage,
+		AdapterName:        mtadapterName,
+		Image:              r.receiveAdapterImage,
 	}
-	expected := resources.MakeMTReceiveAdapter(args)
+	expected := resources.MakeReceiveAdapter(args)
 
 	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
 	if err != nil {

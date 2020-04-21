@@ -144,7 +144,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableMTAdapter(),
+				makeAvailableAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -185,7 +185,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableMTAdapter(),
+				makeAvailableAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -211,7 +211,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "valid, existing MT adapter",
+			Name: "valid, existing adapter",
 			Objects: []runtime.Object{
 				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
@@ -226,7 +226,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableMTAdapter(),
+				makeAvailableAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -273,7 +273,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableMTAdapter(),
+				makeAvailableAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -314,7 +314,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableMTAdapter(),
+				makeAvailableAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -363,7 +363,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
-				MakeMTAdapter(),
+				MakeAdapter(),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha1(sourceName, testNS,
@@ -391,11 +391,11 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:         fakekubeclient.Get(ctx),
-			pingLister:            listers.GetPingSourceLister(),
-			deploymentLister:      listers.GetDeploymentLister(),
-			tracker:               tracker.New(func(types.NamespacedName) {}, 0),
-			receiveMTAdapterImage: mtimage,
+			kubeClientSet:       fakekubeclient.Get(ctx),
+			pingLister:          listers.GetPingSourceLister(),
+			deploymentLister:    listers.GetDeploymentLister(),
+			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
+			receiveAdapterImage: mtimage,
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
@@ -408,17 +408,17 @@ func TestAllCases(t *testing.T) {
 	))
 }
 
-func MakeMTAdapter() *appsv1.Deployment {
-	args := resources.MTArgs{
+func MakeAdapter() *appsv1.Deployment {
+	args := resources.Args{
 		ServiceAccountName: mtadapterName,
-		MTAdapterName:      mtadapterName,
+		AdapterName:        mtadapterName,
 		Image:              mtimage,
 	}
-	return resources.MakeMTReceiveAdapter(args)
+	return resources.MakeReceiveAdapter(args)
 }
 
-func makeAvailableMTAdapter() *appsv1.Deployment {
-	ma := MakeMTAdapter()
+func makeAvailableAdapter() *appsv1.Deployment {
+	ma := MakeAdapter()
 	WithDeploymentAvailable()(ma)
 	return ma
 }
