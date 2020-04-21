@@ -19,10 +19,13 @@ import (
 	"encoding/json"
 
 	"go.uber.org/zap"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+
+	"knative.dev/eventing/pkg/tracing"
 )
 
 type EnvConfigConstructor func() EnvConfigAccessor
@@ -58,6 +61,11 @@ type EnvConfig struct {
 	// This is used to configure the logging config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
 	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" required:"true"`
+
+	// TracingConfigJson is a json string of tracing.Config.
+	// This is used to configure the tracing config, the config is stored in
+	// a config map inside the controllers namespace and copied here.
+	TracingConfigJson string `envconfig:"K_TRACING_CONFIG" required:"true"`
 }
 
 // EnvConfigAccessor defines accessors for the minimal
@@ -80,6 +88,9 @@ type EnvConfigAccessor interface {
 
 	// Get the parsed logger.
 	GetLogger() *zap.SugaredLogger
+
+	// Setup tracing
+	SetupTracing(*zap.SugaredLogger) error
 
 	GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error)
 }
@@ -124,6 +135,14 @@ func (e *EnvConfig) GetNamespace() string {
 
 func (e *EnvConfig) GetName() string {
 	return e.Name
+}
+
+func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) error {
+	config, err := tracingconfig.JsonToTracingConfig(e.TracingConfigJson)
+	if err != nil {
+		logger.Error("Tracing configuration is invalid, using the no-op default", zap.Error(err))
+	}
+	return tracing.SetupStaticPublishing(logger, e.Component, config)
 }
 
 func (e *EnvConfig) GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error) {
