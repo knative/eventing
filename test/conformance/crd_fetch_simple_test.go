@@ -18,7 +18,7 @@ package conformance
 
 import (
 	"fmt"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	pkgTest "knative.dev/pkg/test"
 	"testing"
 
@@ -89,7 +89,7 @@ func TestGetCRD2(t *testing.T) {
 	}
 }
 
-func crdVersionToShortString(arr []v1.CustomResourceDefinitionVersion) string {
+func crdVersionToShortString(arr []apiextensionsv1beta1.CustomResourceDefinitionVersion) string {
 	ret := ""
 	for _, v := range arr {
 		ret += fmt.Sprintf("%v %v %v, ", v.Name, v.Served, v.Storage)

@@ -22,7 +22,7 @@ package lib
 import (
 	"testing"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/test"
@@ -34,7 +34,7 @@ import (
 type Client struct {
 	Kube          *test.KubeClient
 	Eventing      *eventing.Clientset
-	Apiextensions *apiextensionsv1.ApiextensionsV1Client
+	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
 	Dynamic       dynamic.Interface
 	Config        *rest.Config
 
@@ -65,7 +65,7 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
-	client.Apiextensions, err = apiextensionsv1.NewForConfig(client.Config)
+	client.Apiextensions, err = apiextensionsv1beta1.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}
