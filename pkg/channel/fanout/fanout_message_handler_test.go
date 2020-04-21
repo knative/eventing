@@ -251,10 +251,14 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		t.Fatal(err)
 	}
 
-	h, err := NewMessageHandler(logger, Config{
-		Subscriptions: subs,
-		AsyncHandler:  async,
-	})
+	h, err := NewMessageHandler(
+		logger,
+		channel.NewMessageDispatcher(logger),
+		Config{
+			Subscriptions: subs,
+			AsyncHandler:  async,
+		},
+	)
 	if err != nil {
 		t.Fatalf("NewHandler failed. Error:%s", err)
 	}

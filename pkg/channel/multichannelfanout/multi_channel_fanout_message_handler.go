@@ -33,6 +33,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
@@ -52,12 +53,12 @@ type MessageHandler struct {
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(ctx context.Context, logger *zap.Logger, conf Config) (*MessageHandler, error) {
+func NewMessageHandler(ctx context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config) (*MessageHandler, error) {
 	handlers := make(map[string]*fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler, err := fanout.NewMessageHandler(logger, cc.FanoutConfig)
+		handler, err := fanout.NewMessageHandler(logger, messageDispatcher, cc.FanoutConfig)
 		if err != nil {
 			logger.Error("Failed creating new fanout handler.", zap.Error(err))
 			return nil, err
@@ -85,8 +86,8 @@ func (h *MessageHandler) ConfigDiff(updated Config) string {
 
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
 // new Handler uses conf, rather than copying the existing Handler's config.
-func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, conf Config) (*MessageHandler, error) {
-	return NewMessageHandler(ctx, h.logger, conf)
+func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, conf Config) (*MessageHandler, error) {
+	return NewMessageHandler(ctx, h.logger, channel.NewMessageDispatcherFromConfig(h.logger, dispatcherConfig), conf)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the

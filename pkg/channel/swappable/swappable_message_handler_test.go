@@ -30,6 +30,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
@@ -79,7 +80,8 @@ func TestMessageHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -125,7 +127,8 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -134,7 +137,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 			defer server.Close()
 
 			rc := replaceDomains(tc.initialConfig, server.URL[7:])
-			err = h.UpdateConfig(context.TODO(), &rc)
+			err = h.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &rc)
 			if err != nil {
 				t.Errorf("Unexpected error updating to initial config: %v", tc.initialConfig)
 			}
@@ -143,7 +146,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 			// Try to update to the new config, it will fail. But we should still be able to hit the
 			// original server.
 			ruc := replaceDomains(tc.badUpdateConfig, server.URL[7:])
-			err = h.UpdateConfig(context.TODO(), &ruc)
+			err = h.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &ruc)
 			if err == nil {
 				t.Errorf("Expected an error when updating to a bad config.")
 			}
@@ -153,12 +156,13 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 }
 
 func TestMessageHandler_NilConfigChange(t *testing.T) {
-	h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+	h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 	if err != nil {
 		t.Errorf("Unexpected error creating handler: %v", err)
 	}
 
-	err = h.UpdateConfig(context.TODO(), nil)
+	err = h.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, nil)
 	if err == nil {
 		t.Errorf("Expected an error when updating to a nil config.")
 	}
@@ -170,7 +174,7 @@ func updateConfigAndTest(t *testing.T, h *MessageHandler, config multichannelfan
 
 	rc := replaceDomains(config, server.URL[7:])
 	orig := h.fanout.Load()
-	err := h.UpdateConfig(context.TODO(), &rc)
+	err := h.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &rc)
 	if err != nil {
 		t.Errorf("Unexpected error updating config: %+v", err)
 	}

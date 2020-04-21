@@ -49,7 +49,7 @@ import (
 
 func TestNewMessageDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger)
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 
 	if err != nil {
 		t.Fatalf("Failed to create handler")
@@ -73,7 +73,7 @@ func TestNewMessageDispatcher(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_close(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger)
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	// tracing publishing is configured to let the code pass in all "critical" branches
 	tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracing.AlwaysSample)
 
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger)
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,8 +230,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 				Name:      "channela",
 				HostName:  "channela.svc",
 				FanoutConfig: fanout.Config{
-					AsyncHandler:     false,
-					DispatcherConfig: channel.EventDispatcherConfig{},
+					AsyncHandler: false,
 					Subscriptions: []eventingduck.SubscriberSpec{{
 						UID:           "aaaa",
 						Generation:    1,
@@ -253,8 +252,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 				Name:      "channelb",
 				HostName:  "channelb.svc",
 				FanoutConfig: fanout.Config{
-					AsyncHandler:     false,
-					DispatcherConfig: channel.EventDispatcherConfig{},
+					AsyncHandler: false,
 					Subscriptions: []eventingduck.SubscriberSpec{{
 						UID:           "bbbb",
 						Generation:    1,
@@ -265,7 +263,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		},
 	}
 
-	err = sh.UpdateConfig(context.TODO(), &config)
+	err = sh.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &config)
 	if err != nil {
 		t.Fatal(err)
 	}

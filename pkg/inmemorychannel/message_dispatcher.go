@@ -21,13 +21,14 @@ import (
 
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/channel/swappable"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 type MessageDispatcher interface {
-	UpdateConfig(ctx context.Context, config *multichannelfanout.Config) error
+	UpdateConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error
 }
 
 type InMemoryMessageDispatcher struct {
@@ -45,8 +46,8 @@ type InMemoryMessageDispatcherArgs struct {
 	Logger       *zap.Logger
 }
 
-func (d *InMemoryMessageDispatcher) UpdateConfig(ctx context.Context, config *multichannelfanout.Config) error {
-	return d.handler.UpdateConfig(ctx, config)
+func (d *InMemoryMessageDispatcher) UpdateConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error {
+	return d.handler.UpdateConfig(ctx, dispatcherConfig, config)
 }
 
 // Start starts the inmemory dispatcher's message processing.

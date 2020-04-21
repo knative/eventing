@@ -48,8 +48,7 @@ type Config struct {
 	Subscriptions []eventingduck.SubscriberSpec `json:"subscriptions"`
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
-	AsyncHandler     bool `json:"asyncHandler,omitempty"`
-	DispatcherConfig channel.EventDispatcherConfig
+	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 
 // Handler is a http.Handler that takes a single request in and fans it out to N other servers.
@@ -57,7 +56,7 @@ type MessageHandler struct {
 	config Config
 
 	receiver   *channel.MessageReceiver
-	dispatcher *channel.MessageDispatcherImpl
+	dispatcher channel.MessageDispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -67,11 +66,11 @@ type MessageHandler struct {
 }
 
 // NewHandler creates a new fanout.MessageHandler.
-func NewMessageHandler(logger *zap.Logger, config Config) (*MessageHandler, error) {
+func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config) (*MessageHandler, error) {
 	handler := &MessageHandler{
 		logger:     logger,
 		config:     config,
-		dispatcher: channel.NewMessageDispatcherFromConfig(logger, config.DispatcherConfig),
+		dispatcher: messageDispatcher,
 		timeout:    defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after

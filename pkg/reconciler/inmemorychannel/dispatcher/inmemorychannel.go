@@ -36,10 +36,10 @@ import (
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
-	configStore             *channel.EventDispatcherConfigStore
-	dispatcher              inmemorychannel.MessageDispatcher
-	inmemorychannelLister   listers.InMemoryChannelLister
-	inmemorychannelInformer cache.SharedIndexInformer
+	eventDispatcherConfigStore *channel.EventDispatcherConfigStore
+	dispatcher                 inmemorychannel.MessageDispatcher
+	inmemorychannelLister      listers.InMemoryChannelLister
+	inmemorychannelInformer    cache.SharedIndexInformer
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryChannel) reconciler.Event {
@@ -61,7 +61,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	}
 
 	config := r.newConfigFromInMemoryChannels(inmemoryChannels)
-	err = r.dispatcher.UpdateConfig(ctx, config)
+	err = r.dispatcher.UpdateConfig(ctx, r.eventDispatcherConfigStore.GetConfig(), config)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
 		return err
@@ -86,9 +86,8 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 				s.ConvertTo(context.TODO(), &subs[i])
 			}
 			channelConfig.FanoutConfig = fanout.Config{
-				AsyncHandler:     true,
-				Subscriptions:    subs,
-				DispatcherConfig: r.configStore.GetConfig(),
+				AsyncHandler:  true,
+				Subscriptions: subs,
 			}
 		}
 		cc = append(cc, channelConfig)

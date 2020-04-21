@@ -31,6 +31,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
@@ -63,7 +64,13 @@ func TestNewMessageHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), tc.config)
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			_, err := NewMessageHandler(
+				context.TODO(),
+				logger,
+				channel.NewMessageDispatcher(logger),
+				tc.config,
+			)
 			if tc.createErr != "" {
 				if err == nil {
 					t.Errorf("Expected NewHandler error: '%v'. Actual nil", tc.createErr)
@@ -112,14 +119,20 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 	if cmp.Equal(orig, updated) {
 		t.Errorf("Orig and updated must be different")
 	}
-	h, err := NewMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), orig)
+	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+	h, err := NewMessageHandler(
+		context.TODO(),
+		logger,
+		channel.NewMessageDispatcher(logger),
+		orig,
+	)
 	if err != nil {
 		t.Errorf("Unable to create handler, %v", err)
 	}
 	if !cmp.Equal(h.config, orig) {
 		t.Errorf("Incorrect config. Expected '%v'. Actual '%v'", orig, h.config)
 	}
-	newH, err := h.CopyWithNewConfig(context.TODO(), updated)
+	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated)
 	if err != nil {
 		t.Errorf("Unable to copy handler: %v", err)
 	}
@@ -182,7 +195,8 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, err := NewMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), tc.orig)
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.orig)
 			if err != nil {
 				t.Errorf("Unable to create handler: %v", err)
 			}
@@ -277,7 +291,8 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			// Rewrite the replaceDomains to call the server we just created.
 			replaceDomains(tc.config, server.URL[7:])
 
-			h, err := NewMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), tc.config)
+			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}

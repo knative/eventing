@@ -31,6 +31,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
 
@@ -56,8 +57,8 @@ func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.L
 }
 
 // NewEmptyMessageHandler creates a new swappable.Handler with an empty configuration.
-func NewEmptyMessageHandler(context context.Context, logger *zap.Logger) (*MessageHandler, error) {
-	h, err := multichannelfanout.NewMessageHandler(context, logger, multichannelfanout.Config{})
+func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher) (*MessageHandler, error) {
+	h, err := multichannelfanout.NewMessageHandler(context, logger, messageDispatcher, multichannelfanout.Config{})
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func (h *MessageHandler) setHandler(nh *multichannelfanout.MessageHandler) {
 // UpdateConfig copies the current inner multichannelfanout.MessageHandler with the new configuration. If
 // the new configuration is valid, then the new inner handler is swapped in and will start serving
 // HTTP traffic.
-func (h *MessageHandler) UpdateConfig(context context.Context, config *multichannelfanout.Config) error {
+func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error {
 	if config == nil {
 		return errors.New("nil config")
 	}
@@ -90,7 +91,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, config *multichan
 	ih := h.getHandler()
 	if diff := ih.ConfigDiff(*config); diff != "" {
 		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
-		newIh, err := ih.CopyWithNewConfig(context, *config)
+		newIh, err := ih.CopyWithNewConfig(context, dispatcherConfig, *config)
 		if err != nil {
 			h.logger.Info("Unable to update config", zap.Error(err), zap.Any("config", config))
 			return err
