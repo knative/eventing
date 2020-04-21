@@ -24,8 +24,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/kmeta"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	_ "knative.dev/pkg/metrics/testing"
 	_ "knative.dev/pkg/system/testing"
@@ -150,6 +151,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Value: "",
 								}, {
 									Name:  "K_LOGGING_CONFIG",
+									Value: "",
+								},
+								{
+									Name:  "K_TRACING_CONFIG",
 									Value: "",
 								},
 							},
