@@ -35,10 +35,10 @@ install_broker || fail_test "Could not install Channel Based Broker"
 echo "----------------------------------------- kubectl get crd"
 kubectl get crd
 
-echo "----------------------------------------- kubectl get crd inmemorychannels.messaging.knative.dev -o yaml"
+echo "----------------------------------------- kubectl get crd inmemorychannels.messaging.knative.dev -o yaml-v=10"
 kubectl get crd inmemorychannels.messaging.knative.dev -o yaml
 
-echo "----------------------------------------- kubectl get crd channels.messaging.knative.dev -o yaml"
+echo "----------------------------------------- kubectl get crd channels.messaging.knative.dev -o yaml -v=10"
 kubectl get crd channels.messaging.knative.dev -o yaml
 
 echo "----------------------------------------- echo \$KUBECONFIG"

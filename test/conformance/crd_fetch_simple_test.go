@@ -22,47 +22,70 @@ import (
 	pkgTest "knative.dev/pkg/test"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
 )
 
-func TestCRDFetchSimple(t *testing.T) {
-	t.Run("TEST GET OR LIST CRDS - SIMPLE", func(t *testing.T) {
-		client, err := lib.NewClient(
-			pkgTest.Flags.Kubeconfig,
-			pkgTest.Flags.Cluster,
-			"foobar",
-			t)
-		if err != nil {
-			t.Fatalf("Can't create client %v", err)
-		}
+func TestListCRDs(t *testing.T) {
+	client, err := lib.NewClient(
+		pkgTest.Flags.Kubeconfig,
+		pkgTest.Flags.Cluster,
+		"default",
+		t)
+	if err != nil {
+		t.Fatalf("Can't create client %v", err)
+	}
 
-		getOrListCRDs(t, client, lib.InMemoryChannelTypeMeta)
-	})
-}
-
-func getOrListCRDs(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
-	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
-	client.T.Logf("gvr is : %v", gvr)
-	crdName := gvr.Resource + "." + gvr.Group
-	client.T.Logf("crdName is : %v", crdName)
+	client.T.Logf("Kubeconfig: %q", pkgTest.Flags.Kubeconfig)
+	client.T.Logf("Cluster: %q", pkgTest.Flags.Cluster)
 
 	allCrds, err := client.Apiextensions.CustomResourceDefinitions().List(metav1.ListOptions{})
 	if err != nil {
 		client.T.Logf("LIST CRDs failed. Err is : %v", err)
+		client.T.Fatalf("LIST CRDs failed. Err is : %v", err)
 	} else {
 		client.T.Logf("allCrds is : %v", len(allCrds.Items))
 		for _, c := range allCrds.Items {
 			client.T.Logf("c is : %v ### %v ### %v\n", c.Spec.Group, c.Spec.Names, crdVersionToShortString(c.Spec.Versions))
 		}
 	}
+}
 
-	singleCrd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
+func TestGetCRD1(t *testing.T) {
+	client, err := lib.NewClient(
+		pkgTest.Flags.Kubeconfig,
+		pkgTest.Flags.Cluster,
+		"default",
+		t)
+	if err != nil {
+		t.Fatalf("Can't create client %v", err)
+	}
+
+	singleCrd, err := client.Apiextensions.CustomResourceDefinitions().Get("inmemorychannels.messaging.knative.dev", metav1.GetOptions{})
 	if err != nil {
 		client.T.Logf("GET CRD failed. Err is : %v", err)
+		client.T.Fatalf("GET CRD failed. Err is : %v", err)
 	} else {
-		client.T.Logf("crd is : %v", singleCrd)
+		client.T.Logf("c is : %v ### %v ### %v\n", singleCrd.Spec.Group, singleCrd.Spec.Names, crdVersionToShortString(singleCrd.Spec.Versions))
+	}
+}
+
+func TestGetCRD2(t *testing.T) {
+	client, err := lib.NewClient(
+		pkgTest.Flags.Kubeconfig,
+		pkgTest.Flags.Cluster,
+		"default",
+		t)
+	if err != nil {
+		t.Fatalf("Can't create client %v", err)
+	}
+
+	singleCrd, err := client.Apiextensions.CustomResourceDefinitions().Get("inmemorychannel.messaging.knative.dev", metav1.GetOptions{})
+	if err != nil {
+		client.T.Logf("GET CRD failed. Err is : %v", err)
+		client.T.Fatalf("GET CRD failed. Err is : %v", err)
+	} else {
+		client.T.Logf("c is : %v ### %v ### %v\n", singleCrd.Spec.Group, singleCrd.Spec.Names, crdVersionToShortString(singleCrd.Spec.Versions))
 	}
 }
 
