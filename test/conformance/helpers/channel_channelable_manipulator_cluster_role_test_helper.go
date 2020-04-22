@@ -21,7 +21,7 @@ import (
 
 	"fmt"
 
-	authv1beta1 "k8s.io/api/authorization/v1beta1"
+	authv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,6 +53,7 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 			aggregationClusterRoleName,
 			saName+"-cluster-role-binding",
 		)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		for _, verb := range permissionTestCaseVerbs {
 			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %s on %s", verb, gvr), func(t *testing.T) {
@@ -79,10 +80,10 @@ func serviceAccountCanDoVerbOnResource(st *testing.T, client *lib.Client, gvr sc
 
 func isAllowed(saName string, client *lib.Client, verb string, gvr schema.GroupVersionResource, subresource string) (bool, error) {
 
-	r, err := client.Kube.Kube.AuthorizationV1beta1().SubjectAccessReviews().Create(&authv1beta1.SubjectAccessReview{
-		Spec: authv1beta1.SubjectAccessReviewSpec{
+	r, err := client.Kube.Kube.AuthorizationV1().SubjectAccessReviews().Create(&authv1.SubjectAccessReview{
+		Spec: authv1.SubjectAccessReviewSpec{
 			User: fmt.Sprintf("system:serviceaccount:%s:%s", client.Namespace, saName),
-			ResourceAttributes: &authv1beta1.ResourceAttributes{
+			ResourceAttributes: &authv1.ResourceAttributes{
 				Verb:        verb,
 				Group:       gvr.Group,
 				Version:     gvr.Version,
