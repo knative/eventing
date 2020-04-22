@@ -17,13 +17,16 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
-	authv1beta1 "k8s.io/api/authorization/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"testing"
 
+	"fmt"
+
+	authv1beta1 "k8s.io/api/authorization/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/storage/names"
+
 	"knative.dev/eventing/test/lib"
 )
 
@@ -41,18 +44,17 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
-		saName := "conformance-test-channel-manipulator"
-
-		client.CreateServiceAccountOrFail(saName)
-		client.CreateClusterRoleBindingOrFail(
-			saName,
-			aggregationClusterRoleName,
-			saName+"-cluster-role-binding",
-		)
-
 		gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 
 		for _, verb := range permissionTestCaseVerbs {
+			saName := names.SimpleNameGenerator.GenerateName("conformance-test-channel-manipulator-")
+			client.CreateServiceAccountOrFail(saName)
+			client.CreateClusterRoleBindingOrFail(
+				saName,
+				aggregationClusterRoleName,
+				saName+"-cluster-role-binding",
+			)
+
 			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q", verb), func(t *testing.T) {
 				serviceAccountCanDoVerbOnResource(st, client, gvr, "", saName, verb)
 			})
