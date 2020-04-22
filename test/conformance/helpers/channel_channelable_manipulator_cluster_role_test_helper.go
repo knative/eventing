@@ -55,10 +55,10 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 				saName+"-cluster-role-binding",
 			)
 
-			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q", verb), func(t *testing.T) {
+			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q on %q", verb, gvr), func(t *testing.T) {
 				serviceAccountCanDoVerbOnResource(st, client, gvr, "", saName, verb)
 			})
-			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q on status subresource", verb), func(t *testing.T) {
+			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q on status subresource of %q", verb, gvr), func(t *testing.T) {
 				serviceAccountCanDoVerbOnResource(st, client, gvr, "status", saName, verb)
 			})
 		}
