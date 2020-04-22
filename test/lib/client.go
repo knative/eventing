@@ -22,6 +22,7 @@ package lib
 import (
 	"testing"
 
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/test"
@@ -31,10 +32,11 @@ import (
 
 // Client holds instances of interfaces for making requests to Knative.
 type Client struct {
-	Kube     *test.KubeClient
-	Eventing *eventing.Clientset
-	Dynamic  dynamic.Interface
-	Config   *rest.Config
+	Kube          *test.KubeClient
+	Eventing      *eventing.Clientset
+	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
+	Dynamic       dynamic.Interface
+	Config        *rest.Config
 
 	Namespace string
 	T         *testing.T
@@ -59,6 +61,11 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	}
 
 	client.Eventing, err = eventing.NewForConfig(client.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Apiextensions, err = apiextensionsv1beta1.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}
