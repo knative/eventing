@@ -34,7 +34,10 @@ install_broker || fail_test "Could not install Channel Based Broker"
 
 #echo "Running tests with Channel Based Broker"
 go_test_e2e -timeout=20m -parallel=12 ./test/conformance -run ^TestChannelChannelableManipulatorClusterRoleTest$ -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
-#
+go_test_e2e -timeout=20m -parallel=12 ./test/conformance -run ^TestChannelChannelableManipulatorClusterRoleTest$ -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/conformance -run ^TestChannelChannelableManipulatorClusterRoleTest$ -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/conformance -run ^TestChannelChannelableManipulatorClusterRoleTest$ -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+
 #uninstall_broker || fail_test "Could not uninstall Channel Based Broker"
 #
 #install_mt_broker || fail_test "Could not uninstall MT Channel Based Broker"
