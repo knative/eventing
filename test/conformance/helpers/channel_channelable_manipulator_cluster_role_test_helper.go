@@ -46,29 +46,28 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 
 		gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 
+		saName := names.SimpleNameGenerator.GenerateName("conformance-test-channel-manipulator-")
+		client.CreateServiceAccountOrFail(saName)
+		client.CreateClusterRoleBindingOrFail(
+			saName,
+			aggregationClusterRoleName,
+			saName+"-cluster-role-binding",
+		)
+
 		for _, verb := range permissionTestCaseVerbs {
-			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q on %q", verb, gvr), func(t *testing.T) {
-				serviceAccountCanDoVerbOnResource(st, client, gvr, "", verb)
+			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %s on %s", verb, gvr), func(t *testing.T) {
+				serviceAccountCanDoVerbOnResource(st, client, gvr, "", saName, verb)
 			})
-			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q on status subresource of %q", verb, gvr), func(t *testing.T) {
-				serviceAccountCanDoVerbOnResource(st, client, gvr, "status", verb)
+			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %s on status subresource of %s", verb, gvr), func(t *testing.T) {
+				serviceAccountCanDoVerbOnResource(st, client, gvr, "status", saName, verb)
 			})
 		}
 	})
 }
 
-func serviceAccountCanDoVerbOnResource(st *testing.T, client *lib.Client, gvr schema.GroupVersionResource, subresource string, verb string) {
+func serviceAccountCanDoVerbOnResource(st *testing.T, client *lib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
 	// From spec: (...) ClusterRole MUST include permissions to create, get, list, watch, patch,
 	// and update the CRD's custom objects and their status.
-
-	saName := names.SimpleNameGenerator.GenerateName("conformance-test-channel-manipulator-")
-	client.CreateServiceAccountOrFail(saName)
-	client.CreateClusterRoleBindingOrFail(
-		saName,
-		aggregationClusterRoleName,
-		saName+"-cluster-role-binding",
-	)
-
 	allowed, err := isAllowed(saName, client, verb, gvr, subresource)
 	if err != nil {
 		client.T.Fatalf("Error while checking if %q is not allowed on %s.%s/%s subresource:%q. err: %q", verb, gvr.Resource, gvr.Group, gvr.Version, subresource, err)
