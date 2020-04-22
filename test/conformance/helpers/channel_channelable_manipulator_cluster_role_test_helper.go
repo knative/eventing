@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/test/lib"
 )
 
@@ -49,37 +50,42 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 			saName+"-cluster-role-binding",
 		)
 
+		gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
+
 		for _, verb := range permissionTestCaseVerbs {
 			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q", verb), func(t *testing.T) {
-				serviceAccountCanDoVerbOnResource(st, client, channel, saName, verb)
+				serviceAccountCanDoVerbOnResource(st, client, gvr, "", saName, verb)
+			})
+			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %q on status subresource", verb), func(t *testing.T) {
+				serviceAccountCanDoVerbOnResource(st, client, gvr, "status", saName, verb)
 			})
 		}
 	})
 }
 
-func serviceAccountCanDoVerbOnResource(st *testing.T, client *lib.Client, channel metav1.TypeMeta, saName string, verb string) {
+func serviceAccountCanDoVerbOnResource(st *testing.T, client *lib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
 	// From spec: (...) ClusterRole MUST include permissions to create, get, list, watch, patch,
 	// and update the CRD's custom objects and their status.
-	allowed, err := isAllowed(saName, client, verb, channel)
+	allowed, err := isAllowed(saName, client, verb, gvr, subresource)
 	if err != nil {
-		client.T.Fatalf("Error while checking if %q is not allowed on %q : %q", verb, channel, err)
+		client.T.Fatalf("Error while checking if %q is not allowed on %s.%s/%s subresource:%q. err: %q", verb, gvr.Resource, gvr.Group, gvr.Version, subresource, err)
 	}
 	if !allowed {
-		client.T.Fatalf("Operation %q is not allowed on : %q", verb, channel)
+		client.T.Fatalf("Operation %q is not allowed on %s.%s/%s subresource:%q", verb, gvr.Resource, gvr.Group, gvr.Version, subresource)
 	}
 }
 
-func isAllowed(saName string, client *lib.Client, verb string, typeMeta metav1.TypeMeta) (bool, error) {
-	gvr, _ := meta.UnsafeGuessKindToResource(typeMeta.GroupVersionKind())
+func isAllowed(saName string, client *lib.Client, verb string, gvr schema.GroupVersionResource, subresource string) (bool, error) {
 
 	r, err := client.Kube.Kube.AuthorizationV1beta1().SubjectAccessReviews().Create(&authv1beta1.SubjectAccessReview{
 		Spec: authv1beta1.SubjectAccessReviewSpec{
 			User: fmt.Sprintf("system:serviceaccount:%s:%s", client.Namespace, saName),
 			ResourceAttributes: &authv1beta1.ResourceAttributes{
-				Verb:     verb,
-				Group:    gvr.Group,
-				Version:  gvr.Version,
-				Resource: gvr.Resource,
+				Verb:        verb,
+				Group:       gvr.Group,
+				Version:     gvr.Version,
+				Resource:    gvr.Resource,
+				Subresource: subresource,
 			},
 		},
 	})
