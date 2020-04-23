@@ -24,7 +24,7 @@ const (
 
 func (e *Event) fieldError(field string, err error) {
 	if e.FieldErrors == nil {
-		e.FieldErrors = make(map[string]error)
+		e.FieldErrors = make(map[string]error, 0)
 	}
 	e.FieldErrors[field] = err
 }
@@ -47,7 +47,7 @@ func New(version ...string) Event {
 	return *e
 }
 
-// ExtensionAs is deprecated: access extensions directly via the e.Extensions() map.
+// DEPRECATED: Access extensions directly via the e.Extensions() map.
 // Use functions in the types package to convert extension values.
 // For example replace this:
 //

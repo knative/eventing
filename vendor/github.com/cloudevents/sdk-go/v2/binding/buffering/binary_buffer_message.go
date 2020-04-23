@@ -16,7 +16,6 @@ var binaryMessagePool bytebufferpool.Pool
 // binaryBufferedMessage implements a binary-mode message as a simple struct.
 // This message implementation is used by CopyMessage and BufferMessage
 type binaryBufferedMessage struct {
-	version    spec.Version
 	metadata   map[spec.Attribute]interface{}
 	extensions map[string]interface{}
 	body       *bytebufferpool.ByteBuffer
@@ -37,6 +36,10 @@ func (m *binaryBufferedMessage) ReadStructured(context.Context, binding.Structur
 }
 
 func (m *binaryBufferedMessage) ReadBinary(ctx context.Context, b binding.BinaryWriter) (err error) {
+	err = b.Start(ctx)
+	if err != nil {
+		return
+	}
 	for k, v := range m.metadata {
 		err = b.SetAttribute(k, v)
 		if err != nil {
@@ -55,18 +58,18 @@ func (m *binaryBufferedMessage) ReadBinary(ctx context.Context, b binding.Binary
 			return
 		}
 	}
-	return nil
+	return b.End(ctx)
 }
 
-func (m *binaryBufferedMessage) Finish(error) error {
-	if m.body != nil {
-		binaryMessagePool.Put(m.body)
+func (b *binaryBufferedMessage) Finish(error) error {
+	if b.body != nil {
+		binaryMessagePool.Put(b.body)
 	}
 	return nil
 }
 
 // Binary Encoder
-func (m *binaryBufferedMessage) SetData(data io.Reader) error {
+func (b *binaryBufferedMessage) SetData(data io.Reader) error {
 	buf := binaryMessagePool.Get()
 	w, err := io.Copy(buf, data)
 	if err != nil {
@@ -76,19 +79,18 @@ func (m *binaryBufferedMessage) SetData(data io.Reader) error {
 		binaryMessagePool.Put(buf)
 		return nil
 	}
-	m.body = buf
+	b.body = buf
 	return nil
 }
 
-func (m *binaryBufferedMessage) SetAttribute(attribute spec.Attribute, value interface{}) error {
+func (b *binaryBufferedMessage) SetAttribute(attribute spec.Attribute, value interface{}) error {
 	// If spec version we need to change to right context struct
-	m.version = attribute.Version()
-	m.metadata[attribute] = value
+	b.metadata[attribute] = value
 	return nil
 }
 
-func (m *binaryBufferedMessage) SetExtension(name string, value interface{}) error {
-	m.extensions[name] = value
+func (b *binaryBufferedMessage) SetExtension(name string, value interface{}) error {
+	b.extensions[name] = value
 	return nil
 }
 
@@ -96,18 +98,5 @@ func (m *binaryBufferedMessage) End(ctx context.Context) error {
 	return nil
 }
 
-func (m *binaryBufferedMessage) GetAttribute(k spec.Kind) (spec.Attribute, interface{}) {
-	a := m.version.AttributeFromKind(k)
-	if a != nil {
-		return a, m.metadata[a]
-	}
-	return nil, nil
-}
-
-func (m *binaryBufferedMessage) GetExtension(name string) interface{} {
-	return m.extensions[name]
-}
-
 var _ binding.Message = (*binaryBufferedMessage)(nil) // Test it conforms to the interface
-var _ binding.MessageMetadataReader = (*binaryBufferedMessage)(nil)
 var _ binding.BinaryWriter = (*binaryBufferedMessage)(nil)

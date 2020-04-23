@@ -13,14 +13,14 @@ import (
 	"github.com/cloudevents/sdk-go/v2/types"
 )
 
-// ErrCannotConvertToEvent is a generic error when a conversion of a Message to an Event fails
+// Generic error when a conversion of a Message to an Event fails
 var ErrCannotConvertToEvent = errors.New("cannot convert message to event")
 
-// ToEvent translates a Message with a valid Structured or Binary representation to an Event.
+// Translates a Message with a valid Structured or Binary representation to an Event.
 // This function returns the Event generated from the Message and the original encoding of the message or
 // an error that points the conversion error.
 // transformers can be nil and this function guarantees that they are invoked only once during the encoding process.
-func ToEvent(ctx context.Context, message MessageReader, transformers ...Transformer) (*event.Event, error) {
+func ToEvent(ctx context.Context, message MessageReader, transformers ...TransformerFactory) (*event.Event, error) {
 	if message == nil {
 		return nil, nil
 	}
@@ -29,13 +29,18 @@ func ToEvent(ctx context.Context, message MessageReader, transformers ...Transfo
 	if messageEncoding == EncodingEvent {
 		m := message
 		for m != nil {
-			switch mt := m.(type) {
-			case *EventMessage:
-				e := (*event.Event)(mt)
-				return e, Transformers(transformers).Transform(mt, (*messageToEventBuilder)(e))
-			case MessageWrapper:
-				m = mt.GetWrappedMessage()
-			default:
+			if em, ok := m.(*EventMessage); ok {
+				e := (*event.Event)(em)
+				var tf TransformerFactories
+				tf = transformers
+				if err := tf.EventTransformer()(e); err != nil {
+					return nil, err
+				}
+				return e, nil
+			}
+			if mw, ok := m.(MessageWrapper); ok {
+				m = mw.GetWrappedMessage()
+			} else {
 				break
 			}
 		}
@@ -43,31 +48,37 @@ func ToEvent(ctx context.Context, message MessageReader, transformers ...Transfo
 	}
 
 	e := event.New()
-	encoder := (*messageToEventBuilder)(&e)
-	_, err := DirectWrite(
+	encoder := &messageToEventBuilder{event: &e}
+	if _, err := DirectWrite(
 		context.Background(),
 		message,
 		encoder,
 		encoder,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
-	return &e, Transformers(transformers).Transform((*EventMessage)(&e), encoder)
+	var tf TransformerFactories
+	tf = transformers
+	if err := tf.EventTransformer()(&e); err != nil {
+		return nil, err
+	}
+	return &e, nil
 }
 
-type messageToEventBuilder event.Event
+type messageToEventBuilder struct {
+	event *event.Event
+}
 
 var _ StructuredWriter = (*messageToEventBuilder)(nil)
 var _ BinaryWriter = (*messageToEventBuilder)(nil)
 
-func (b *messageToEventBuilder) SetStructuredEvent(ctx context.Context, format format.Format, ev io.Reader) error {
+func (b *messageToEventBuilder) SetStructuredEvent(ctx context.Context, format format.Format, event io.Reader) error {
 	var buf bytes.Buffer
-	_, err := io.Copy(&buf, ev)
+	_, err := io.Copy(&buf, event)
 	if err != nil {
 		return err
 	}
-	return format.Unmarshal(buf.Bytes(), (*event.Event)(b))
+	return format.Unmarshal(buf.Bytes(), b.event)
 }
 
 func (b *messageToEventBuilder) Start(ctx context.Context) error {
@@ -85,16 +96,12 @@ func (b *messageToEventBuilder) SetData(data io.Reader) error {
 		return err
 	}
 	if w != 0 {
-		b.DataEncoded = buf.Bytes()
+		b.event.DataEncoded = buf.Bytes()
 	}
 	return nil
 }
 
 func (b *messageToEventBuilder) SetAttribute(attribute spec.Attribute, value interface{}) error {
-	if value == nil {
-		_ = attribute.Delete(b.Context)
-		return nil
-	}
 	// If spec version we need to change to right context struct
 	if attribute.Kind() == spec.SpecVersion {
 		str, err := types.ToString(value)
@@ -103,24 +110,22 @@ func (b *messageToEventBuilder) SetAttribute(attribute spec.Attribute, value int
 		}
 		switch str {
 		case event.CloudEventsVersionV03:
-			b.Context = b.Context.AsV03()
+			b.event.Context = b.event.Context.AsV03()
 		case event.CloudEventsVersionV1:
-			b.Context = b.Context.AsV1()
+			b.event.Context = b.event.Context.AsV1()
 		default:
 			return fmt.Errorf("unrecognized event version %s", str)
 		}
 		return nil
 	}
-	return attribute.Set(b.Context, value)
+	return attribute.Set(b.event.Context, value)
 }
 
 func (b *messageToEventBuilder) SetExtension(name string, value interface{}) error {
-	if value == nil {
-		return b.Context.SetExtension(name, nil)
-	}
 	value, err := types.Validate(value)
 	if err != nil {
 		return err
 	}
-	return b.Context.SetExtension(name, value)
+	b.event.SetExtension(name, value)
+	return nil
 }

@@ -12,7 +12,6 @@ type Receiver interface {
 	//
 	// A non-nil error means the receiver is closed.
 	// io.EOF means it closed cleanly, any other value indicates an error.
-	// The caller is responsible for `Finish()` the returned message
 	Receive(ctx context.Context) (binding.Message, error)
 }
 
@@ -32,10 +31,6 @@ type Responder interface {
 	//
 	// A non-nil error means the receiver is closed.
 	// io.EOF means it closed cleanly, any other value indicates an error.
-	// The caller is responsible for `Finish()` the returned message,
-	// while the protocol implementation is responsible for `Finish()` the response message.
-	// The caller MUST invoke ResponseFn, in order to avoid leaks.
-	// The correct flow for the caller is to finish the received message and then invoke the ResponseFn
 	Respond(ctx context.Context) (binding.Message, ResponseFn, error)
 }
 

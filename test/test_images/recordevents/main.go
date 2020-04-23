@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/kncloudevents"

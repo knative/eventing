@@ -9,7 +9,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// NewObserved produces a new client with the provided transport object and applied
+// New produces a new client with the provided transport object and applied
 // client options.
 func NewObserved(protocol interface{}, opts ...Option) (Client, error) {
 	client, err := New(protocol, opts...)

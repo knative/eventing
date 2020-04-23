@@ -19,9 +19,9 @@ package kncloudevents
 import (
 	nethttp "net/http"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
-	"github.com/cloudevents/sdk-go/v1/cloudevents/client"
-	"github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 )
 
 // ConnectionArgs allow to configure connection parameters to the underlying

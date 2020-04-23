@@ -32,7 +32,7 @@ func (r *EventReceiver) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ctx := context.Background()
 	msg, respFn, err := r.p.Respond(ctx)
 	if err != nil {
-		//lint:ignore SA9003 TODO: Branch left empty
+		// TODO
 	} else if err := r.invoker.Invoke(ctx, msg, respFn); err != nil {
 		// TODO
 	}

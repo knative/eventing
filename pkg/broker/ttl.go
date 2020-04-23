@@ -19,9 +19,9 @@ package broker
 import (
 	"context"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
-	"github.com/cloudevents/sdk-go/v1/cloudevents/client"
-	cetypes "github.com/cloudevents/sdk-go/v1/cloudevents/types"
+	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	cetypes "github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"go.uber.org/zap"
 )
 

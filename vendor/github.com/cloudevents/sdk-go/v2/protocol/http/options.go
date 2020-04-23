@@ -184,14 +184,3 @@ func WithRoundTripper(roundTripper nethttp.RoundTripper) Option {
 		return nil
 	}
 }
-
-// WithClient sets the protocol client
-func WithClient(client nethttp.Client) Option {
-	return func(p *Protocol) error {
-		if p == nil {
-			return fmt.Errorf("client option can not set nil protocol")
-		}
-		p.Client = &client
-		return nil
-	}
-}

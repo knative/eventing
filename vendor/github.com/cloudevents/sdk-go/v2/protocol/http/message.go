@@ -4,9 +4,7 @@ import (
 	"context"
 	"io"
 	nethttp "net/http"
-	"net/textproto"
 	"strings"
-	"unicode"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/format"
@@ -15,16 +13,7 @@ import (
 
 const prefix = "Ce-"
 
-var specs = spec.WithPrefixMatchExact(
-	func(s string) string {
-		if s == "datacontenttype" {
-			return "Content-Type"
-		} else {
-			return textproto.CanonicalMIMEHeaderKey("Ce-" + s)
-		}
-	},
-	"Ce-",
-)
+var specs = spec.WithPrefix(prefix)
 
 const ContentType = "Content-Type"
 const ContentLength = "Content-Length"
@@ -43,7 +32,6 @@ type Message struct {
 
 // Check if http.Message implements binding.Message
 var _ binding.Message = (*Message)(nil)
-var _ binding.MessageMetadataReader = (*Message)(nil)
 
 // NewMessage returns a binding.Message with header and data.
 // The returned binding.Message *cannot* be read several times. In order to read it more times, buffer it using binding/buffering methods
@@ -95,22 +83,26 @@ func (m *Message) ReadStructured(ctx context.Context, encoder binding.Structured
 	}
 }
 
-func (m *Message) ReadBinary(ctx context.Context, encoder binding.BinaryWriter) (err error) {
+func (m *Message) ReadBinary(ctx context.Context, encoder binding.BinaryWriter) error {
 	if m.version == nil {
 		return binding.ErrNotBinary
 	}
 
+	err := encoder.Start(ctx)
+	if err != nil {
+		return err
+	}
+
 	for k, v := range m.Header {
-		attr := m.version.Attribute(k)
-		if attr != nil {
-			err = encoder.SetAttribute(attr, v[0])
-		} else if strings.HasPrefix(k, prefix) {
-			// Trim Prefix + To lower
-			var b strings.Builder
-			b.Grow(len(k) - len(prefix))
-			b.WriteRune(unicode.ToLower(rune(k[len(prefix)])))
-			b.WriteString(k[len(prefix)+1:])
-			err = encoder.SetExtension(b.String(), v[0])
+		if strings.HasPrefix(k, prefix) {
+			attr := m.version.Attribute(k)
+			if attr != nil {
+				err = encoder.SetAttribute(attr, v[0])
+			} else {
+				err = encoder.SetExtension(strings.ToLower(strings.TrimPrefix(k, prefix)), v[0])
+			}
+		} else if k == ContentType {
+			err = encoder.SetAttribute(m.version.AttributeFromKind(spec.DataContentType), v[0])
 		}
 		if err != nil {
 			return err
@@ -124,27 +116,7 @@ func (m *Message) ReadBinary(ctx context.Context, encoder binding.BinaryWriter) 
 		}
 	}
 
-	return
-}
-
-func (m *Message) GetAttribute(k spec.Kind) (spec.Attribute, interface{}) {
-	attr := m.version.AttributeFromKind(k)
-	if attr != nil {
-		h := m.Header[attributeHeadersMapping[attr.Name()]]
-		if h != nil {
-			return attr, h[0]
-		}
-		return attr, nil
-	}
-	return nil, nil
-}
-
-func (m *Message) GetExtension(name string) interface{} {
-	h := m.Header[extNameToHeaderName(name)]
-	if h != nil {
-		return h[0]
-	}
-	return nil
+	return encoder.End(ctx)
 }
 
 func (m *Message) Finish(err error) error {

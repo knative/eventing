@@ -157,7 +157,7 @@ func (ec EventContextV1) AsV03() *EventContextV03 {
 	return &ret
 }
 
-// AsV1 implements EventContextConverter.AsV1
+// AsV04 implements EventContextConverter.AsV04
 func (ec EventContextV1) AsV1() *EventContextV1 {
 	return &ec
 }

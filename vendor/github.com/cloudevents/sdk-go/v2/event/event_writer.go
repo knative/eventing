@@ -28,6 +28,7 @@ func (e *Event) SetSpecVersion(v string) {
 		return
 	}
 	e.fieldOK("specversion")
+	return
 }
 
 // SetType implements EventWriter.SetType
@@ -93,7 +94,7 @@ func (e *Event) SetDataContentType(ct string) {
 	}
 }
 
-// SetDataContentEncoding is deprecated. Implements EventWriter.SetDataContentEncoding.
+// DeprecatedSetDataContentEncoding implements EventWriter.DeprecatedSetDataContentEncoding
 func (e *Event) SetDataContentEncoding(enc string) {
 	if err := e.Context.DeprecatedSetDataContentEncoding(enc); err != nil {
 		e.fieldError("datacontentencoding", err)

@@ -9,10 +9,8 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 )
 
-type eventFormatKey int
-
 const (
-	formatEventStructured eventFormatKey = iota
+	FORMAT_EVENT_STRUCTURED = "FORMAT_EVENT_STRUCTURED"
 )
 
 // EventMessage type-converts a event.Event object to implement Message.
@@ -32,7 +30,7 @@ func (m *EventMessage) ReadEncoding() Encoding {
 }
 
 func (m *EventMessage) ReadStructured(ctx context.Context, builder StructuredWriter) error {
-	f := GetOrDefaultFromCtx(ctx, formatEventStructured, format.JSON).(format.Format)
+	f := GetOrDefaultFromCtx(ctx, FORMAT_EVENT_STRUCTURED, format.JSON).(format.Format)
 	b, err := f.Marshal((*event.Event)(m))
 	if err != nil {
 		return err
@@ -41,6 +39,10 @@ func (m *EventMessage) ReadStructured(ctx context.Context, builder StructuredWri
 }
 
 func (m *EventMessage) ReadBinary(ctx context.Context, b BinaryWriter) (err error) {
+	err = b.Start(ctx)
+	if err != nil {
+		return err
+	}
 	err = eventContextToBinaryWriter(m.Context, b)
 	if err != nil {
 		return err
@@ -53,21 +55,7 @@ func (m *EventMessage) ReadBinary(ctx context.Context, b BinaryWriter) (err erro
 			return err
 		}
 	}
-	return nil
-}
-
-func (m *EventMessage) GetAttribute(k spec.Kind) (spec.Attribute, interface{}) {
-	sv := spec.VS.Version(m.Context.GetSpecVersion())
-	a := sv.AttributeFromKind(k)
-	if a != nil {
-		return a, a.Get(m.Context)
-	}
-	return nil, nil
-}
-
-func (m *EventMessage) GetExtension(name string) interface{} {
-	ext, _ := m.Context.GetExtension(name)
-	return ext
+	return b.End(ctx)
 }
 
 func eventContextToBinaryWriter(c event.EventContext, b BinaryWriter) (err error) {
@@ -94,10 +82,9 @@ func eventContextToBinaryWriter(c event.EventContext, b BinaryWriter) (err error
 
 func (*EventMessage) Finish(error) error { return nil }
 
-var _ Message = (*EventMessage)(nil)               // Test it conforms to the interface
-var _ MessageMetadataReader = (*EventMessage)(nil) // Test it conforms to the interface
+var _ Message = (*EventMessage)(nil) // Test it conforms to the interface
 
-// UseFormatForEvent configures which format to use when marshalling the event to structured mode
+// Configure which format to use when marshalling the event to structured mode
 func UseFormatForEvent(ctx context.Context, f format.Format) context.Context {
-	return context.WithValue(ctx, formatEventStructured, f)
+	return context.WithValue(ctx, FORMAT_EVENT_STRUCTURED, f)
 }

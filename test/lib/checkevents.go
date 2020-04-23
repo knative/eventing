@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"knative.dev/pkg/test/logging"
