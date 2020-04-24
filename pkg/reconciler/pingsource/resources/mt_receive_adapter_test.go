@@ -30,6 +30,8 @@ import (
 
 func TestMakeMTPingAdapter(t *testing.T) {
 	replicas := int32(1)
+	blockOwnerDeletion := true
+	isController := true
 
 	args := MTArgs{
 		ServiceAccountName: "test-sa",
@@ -45,6 +47,14 @@ func TestMakeMTPingAdapter(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
 			Name:      args.MTAdapterName,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "apps/v1",
+					Kind:               "Deployment",
+					Controller:         &isController,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+				},
+			},
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
