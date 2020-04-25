@@ -408,18 +408,19 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 		return nil, err
 	}
 
-	gvk = obj.GetObjectKind().GroupVersionKind()
+	retCh := ch.DeepCopy()
+	gvk = retCh.GetObjectKind().GroupVersionKind()
 	// IMC has been know to lie about the duck version it supports. We know that
 	// v1alpha1 supports v1alpha1 Subscribable duck so override it here.
 	// If there are other channels that have this lying behaviour, add them here...
 	if gvk.Kind == "InMemoryChannel" && gvk.Version == "v1alpha1" {
-		if ch.Annotations == nil {
-			ch.Annotations = make(map[string]string)
+		if retCh.Annotations == nil {
+			retCh.Annotations = make(map[string]string)
 		}
-		ch.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
+		retCh.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
 	}
 
-	return ch, nil
+	return retCh, nil
 }
 
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1beta1.DeliverySpec) bool {
