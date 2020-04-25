@@ -28,8 +28,6 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging"
-
-	//	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
@@ -39,6 +37,9 @@ func (source *InMemoryChannel) ConvertTo(ctx context.Context, obj apis.Convertib
 	switch sink := obj.(type) {
 	case *v1beta1.InMemoryChannel:
 		sink.ObjectMeta = source.ObjectMeta
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
 		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 		source.Status.ConvertTo(ctx, &sink.Status)
 		return source.Spec.ConvertTo(ctx, &sink.Spec)
@@ -88,6 +89,9 @@ func (sink *InMemoryChannel) ConvertFrom(ctx context.Context, obj apis.Convertib
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
 		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
 		return nil
 	default:
