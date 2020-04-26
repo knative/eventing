@@ -347,7 +347,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1alpha1.Sub
 // If the Channel is a channels.messaging type (hence, it's only a factory for
 // underlying channels), fetch and validate the "backing" channel.
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription) (*eventingduckv1alpha1.ChannelableCombined, pkgreconciler.Event) {
-	logging.FromContext(ctx).Info("GETTING channel", zap.Any("channel", sub.Spec.Channel))
+	logging.FromContext(ctx).Info("Getting channel", zap.Any("channel", sub.Spec.Channel))
 
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
@@ -357,6 +357,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
+
 	// Test to see if the channel is Channel.messaging because it is going
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
@@ -408,7 +409,20 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
 		return nil, err
 	}
-	return ch, nil
+
+	retCh := ch.DeepCopy()
+	gvk = retCh.GetObjectKind().GroupVersionKind()
+	// IMC has been know to lie about the duck version it supports. We know that
+	// v1alpha1 supports v1alpha1 Subscribable duck so override it here.
+	// If there are other channels that have this lying behaviour, add them here...
+	if gvk.Kind == "InMemoryChannel" && gvk.Version == "v1alpha1" {
+		if retCh.Annotations == nil {
+			retCh.Annotations = make(map[string]string)
+		}
+		retCh.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
+	}
+
+	return retCh, nil
 }
 
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1beta1.DeliverySpec) bool {
