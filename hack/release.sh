@@ -24,6 +24,7 @@ readonly EVENTING_CRDS_YAML="eventing-crds.yaml"
 readonly CHANNEL_BROKER_YAML="channel-broker.yaml"
 readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
 readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
+readonly UPGRADE_JOB="upgrade-to-v0.14.0.yaml"
 
 declare -A RELEASES
 RELEASES=(
@@ -39,10 +40,8 @@ function build_release() {
   else
     echo "Untagged release, will NOT update release labels"
     LABEL_YAML_CMD=(cat)
-    TAG="latest"
   fi
 
-  readonly UPGRADE_JOB="upgrade-to-${TAG}.yaml"
   # Build the components
   echo "Building Knative Eventing"
   # Create eventing core yaml
@@ -61,7 +60,7 @@ function build_release() {
   ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${IN_MEMORY_CHANNEL}"
 
   # Create upgrade job yaml
-  ko resolve ${KO_FLAGS} -f config/upgrade/v0.14/ | "${LABEL_YAML_CMD[@]}" > "${UPGRADE_JOB}"
+  ko resolve ${KO_FLAGS} -f config/upgrade/v0.14.0/ | "${LABEL_YAML_CMD[@]}" > "${UPGRADE_JOB}"
 
   local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${UPGRADE_JOB})
   # Assemble the release
