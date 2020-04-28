@@ -37,7 +37,7 @@ require (
 	k8s.io/apiserver v0.16.4
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20191010214722-8d271d903fe4
-	knative.dev/pkg v0.0.0-20200428133551-22b961371934
+	knative.dev/pkg v0.0.0-20200428194351-90fc61bae7f7
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -48,7 +48,4 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.16.4
 	k8s.io/client-go => k8s.io/client-go v0.16.4
 	k8s.io/code-generator => k8s.io/code-generator v0.16.4
-	//
-	knative.dev/pkg => github.com/chizhg/pkg v0.0.0-20200427225849-8dd906c83e27
-
 )
