@@ -1,7 +1,7 @@
 // +build tools
 
 /*
-Copyright 2020 The Knative Authors
+Copyright 2020 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,5 +21,14 @@ package tools
 // This package imports things required by this repository, to force `go mod` to see them as dependencies
 import (
 	_ "k8s.io/code-generator"
+	_ "k8s.io/code-generator/cmd/client-gen"
+	_ "k8s.io/code-generator/cmd/deepcopy-gen"
+	_ "k8s.io/code-generator/cmd/defaulter-gen"
+	_ "k8s.io/code-generator/cmd/informer-gen"
+	_ "k8s.io/code-generator/cmd/lister-gen"
+	_ "k8s.io/kube-openapi/cmd/openapi-gen"
+
+	_ "knative.dev/pkg/codegen/cmd/injection-gen"
+
 	_ "knative.dev/test-infra/scripts"
 )

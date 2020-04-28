@@ -30,24 +30,19 @@ FLOATING_DEPS=(
 )
 
 # Parse flags to determine any we should pass to dep.
-GO_GET=0
+DEP_FLAGS=()
 while [[ $# -ne 0 ]]; do
   parameter=$1
   case ${parameter} in
-    --upgrade) GO_GET=1 ;;
+    --upgrade) DEP_FLAGS=( -update ${FLOATING_DEPS[@]} ) ;;
     *) abort "unknown option ${parameter}" ;;
   esac
   shift
 done
-readonly GO_GET
+readonly DEP_FLAGS
 
-if (( GO_GET )); then
-  go get -d ${FLOATING_DEPS[@]}
-fi
-
-# Prune modules.
-go mod tidy
-go mod vendor
+# Ensure we have everything we need under vendor/
+dep ensure ${DEP_FLAGS[@]}
 
 rm -rf $(find vendor/ -name 'OWNERS')
 rm -rf $(find vendor/ -name '*_test.go')

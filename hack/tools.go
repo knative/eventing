@@ -19,13 +19,5 @@ limitations under the License.
 package tools
 
 import (
-	_ "knative.dev/test-infra/scripts"
-
-	// codegen: generate-groups.sh
-	_ "k8s.io/code-generator"
-
-	// codegen: hack/generate-knative.sh
 	_ "knative.dev/pkg/hack"
-
-	_ "knative.dev/pkg/codegen/cmd/injection-gen"
 )
