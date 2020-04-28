@@ -21,7 +21,7 @@ package e2e
 import (
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cloudevents "github.com/cloudevents/sdk-go"
 
 	"knative.dev/eventing/test/e2e/helpers"
 )

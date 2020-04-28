@@ -73,7 +73,7 @@ func WithShutdownTimeout(timeout time.Duration) Option {
 		if t == nil {
 			return fmt.Errorf("http shutdown timeout option can not set nil protocol")
 		}
-		t.ShutdownTimeout = &timeout
+		t.ShutdownTimeout = timeout
 		return nil
 	}
 }

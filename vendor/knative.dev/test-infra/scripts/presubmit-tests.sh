@@ -49,7 +49,7 @@ function pr_only_contains() {
 # List changed files in the current PR.
 # This is implemented as a function so it can be mocked in unit tests.
 function list_changed_files() {
-  git --no-pager diff --name-only ${PULL_BASE_SHA}..${PULL_SHA}
+  /workspace/githubhelper -list-changed-files -github-token /etc/repoview-token/token
 }
 
 # Initialize flags and context for presubmit tests:
@@ -129,7 +129,7 @@ function markdown_build_tests() {
   (( DISABLE_MD_LINTING && DISABLE_MD_LINK_CHECK )) && return 0
   # Get changed markdown files (ignore /vendor, github templates, and deleted files)
   local mdfiles=""
-  for file in $(echo "${CHANGED_FILES}" | grep \\.md$ | grep -v ^vendor/ | grep -v ^.github/); do
+  for file in $(echo "${CHANGED_FILES}" | grep \.md$ | grep -v ^vendor/ | grep -v ^.github/); do
     [[ -f "${file}" ]] && mdfiles="${mdfiles} ${file}"
   done
   [[ -z "${mdfiles}" ]] && return 0
@@ -306,8 +306,6 @@ function main() {
     kubectl version --client
     echo ">> go version"
     go version
-    echo ">> python3 version"
-    python3 --version
     echo ">> git version"
     git version
     echo ">> ko version"

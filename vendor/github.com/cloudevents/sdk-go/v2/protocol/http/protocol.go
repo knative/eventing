@@ -24,7 +24,6 @@ const (
 type Protocol struct {
 	Target          *url.URL
 	RequestTemplate *http.Request
-	transformers    binding.Transformers
 	Client          *http.Client
 	incoming        chan msgErr
 
@@ -32,7 +31,7 @@ type Protocol struct {
 
 	// ShutdownTimeout defines the timeout given to the http.Server when calling Shutdown.
 	// If nil, DefaultShutdownTimeout is used.
-	ShutdownTimeout *time.Duration
+	ShutdownTimeout time.Duration
 
 	// Port is the port to bind the receiver to. Defaults to 8080.
 	Port *int
@@ -53,8 +52,7 @@ type Protocol struct {
 
 func New(opts ...Option) (*Protocol, error) {
 	p := &Protocol{
-		transformers: make(binding.Transformers, 0),
-		incoming:     make(chan msgErr),
+		incoming: make(chan msgErr),
 	}
 	if err := p.applyOptions(opts...); err != nil {
 		return nil, err
@@ -68,9 +66,8 @@ func New(opts ...Option) (*Protocol, error) {
 		p.Client.Transport = p.roundTripper
 	}
 
-	if p.ShutdownTimeout == nil {
-		timeout := DefaultShutdownTimeout
-		p.ShutdownTimeout = &timeout
+	if p.ShutdownTimeout == 0 {
+		p.ShutdownTimeout = DefaultShutdownTimeout
 	}
 
 	return p, nil
@@ -86,19 +83,19 @@ func (p *Protocol) applyOptions(opts ...Option) error {
 }
 
 // Send implements binding.Sender
-func (p *Protocol) Send(ctx context.Context, m binding.Message) error {
+func (p *Protocol) Send(ctx context.Context, m binding.Message, transformers ...binding.Transformer) error {
 	if ctx == nil {
 		return fmt.Errorf("nil Context")
 	} else if m == nil {
 		return fmt.Errorf("nil Message")
 	}
 
-	_, err := p.Request(ctx, m)
+	_, err := p.Request(ctx, m, transformers...)
 	return err
 }
 
 // Request implements binding.Requester
-func (p *Protocol) Request(ctx context.Context, m binding.Message) (binding.Message, error) {
+func (p *Protocol) Request(ctx context.Context, m binding.Message, transformers ...binding.Transformer) (binding.Message, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("nil Context")
 	} else if m == nil {
@@ -114,7 +111,7 @@ func (p *Protocol) Request(ctx context.Context, m binding.Message) (binding.Mess
 		return nil, fmt.Errorf("not initialized: %#v", p)
 	}
 
-	if err = WriteRequest(ctx, m, req, p.transformers...); err != nil {
+	if err = WriteRequest(ctx, m, req, transformers...); err != nil {
 		return nil, err
 	}
 
@@ -233,7 +230,7 @@ func (p *Protocol) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return nil
 	}
 
-	var fn protocol.ResponseFn = func(ctx context.Context, resp binding.Message, er protocol.Result) error {
+	var fn protocol.ResponseFn = func(ctx context.Context, resp binding.Message, er protocol.Result, transformers ...binding.Transformer) error {
 		// Unblock the ServeHTTP after the reply is written
 		defer func() {
 			done <- struct{}{}
@@ -251,7 +248,7 @@ func (p *Protocol) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			}
 		}
 		if resp != nil {
-			err := WriteResponseWriter(ctx, resp, status, rw, p.transformers)
+			err := WriteResponseWriter(ctx, resp, status, rw, transformers...)
 			return resp.Finish(err)
 		}
 		rw.WriteHeader(status)
