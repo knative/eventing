@@ -45,6 +45,14 @@ rules:
       - "deployments"
     verbs: *everything
 
+  # PingSource controller manipulates Deployment owner reference
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments/finalizers"
+    verbs:
+      - "update"
+
   # The namespace annotation controller needs to manipulate RoleBindings.
   - apiGroups:
       - "rbac.authorization.k8s.io"
