@@ -24,13 +24,16 @@ set -o pipefail
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
+# This controls the release branch we track.
+VERSION="master"
+
 cd ${ROOT_DIR}
 
 # The list of dependencies that we track at HEAD and periodically
 # float forward in this repository.
 FLOATING_DEPS=(
-  "knative.dev/test-infra"
-  "knative.dev/pkg"
+  "knative.dev/test-infra@${VERSION}"
+  "knative.dev/pkg@${VERSION}"
 )
 
 # Parse flags to determine any we should pass to dep.
@@ -55,3 +58,6 @@ go mod vendor
 
 rm -rf $(find vendor/ -name 'OWNERS')
 rm -rf $(find vendor/ -name '*_test.go')
+
+update_licenses third_party/VENDOR-LICENSE \
+  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
