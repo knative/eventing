@@ -4,31 +4,24 @@ go 1.14
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.1 // indirect
-	contrib.go.opencensus.io/exporter/zipkin v0.1.1 // indirect
-	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
 	github.com/cloudevents/sdk-go v1.2.0
-	github.com/cloudevents/sdk-go/v2 v2.0.0-preview8
-	github.com/dgryski/go-gk v0.0.0-20200319235926-a69029f61654 // indirect
+	github.com/cloudevents/sdk-go/v2 v2.0.0-RC2
 	github.com/ghodss/yaml v1.0.0
 	github.com/gobuffalo/envy v1.7.1 // indirect
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
-	github.com/google/go-github v17.0.0+incompatible // indirect
-	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
 	github.com/google/uuid v1.1.1
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mailru/easyjson v0.7.1-0.20191009090205-6c0755d89d1e // indirect
-	github.com/markbates/inflect v1.0.4 // indirect
 	github.com/openzipkin/zipkin-go v0.2.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.1.0 // indirect
-	github.com/robfig/cron v1.2.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
-	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
 	go.opencensus.io v0.22.3
@@ -43,10 +36,8 @@ require (
 	k8s.io/apimachinery v0.16.5-beta.1
 	k8s.io/apiserver v0.16.4
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
-	k8s.io/code-generator v0.18.0 // indirect
 	k8s.io/utils v0.0.0-20191010214722-8d271d903fe4
 	knative.dev/pkg v0.0.0-20200428133551-22b961371934
-	knative.dev/test-infra v0.0.0-20200407185800-1b88cb3b45a5 // indirect
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -57,4 +48,7 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.16.4
 	k8s.io/client-go => k8s.io/client-go v0.16.4
 	k8s.io/code-generator => k8s.io/code-generator v0.16.4
+	//
+	knative.dev/pkg => github.com/chizhg/pkg v0.0.0-20200427225849-8dd906c83e27
+
 )

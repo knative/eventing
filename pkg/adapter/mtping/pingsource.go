@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	pkgreconciler "knative.dev/pkg/reconciler"
 

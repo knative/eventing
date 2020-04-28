@@ -37,9 +37,12 @@ type receiveInvoker struct {
 }
 
 func (r *receiveInvoker) Invoke(ctx context.Context, m binding.Message, respFn protocol.ResponseFn) (err error) {
+	var isFinished bool
 	defer func() {
-		if err2 := m.Finish(err); err2 == nil {
-			err = err2
+		if !isFinished {
+			if err2 := m.Finish(err); err2 == nil {
+				err = err2
+			}
 		}
 	}()
 
@@ -61,14 +64,22 @@ func (r *receiveInvoker) Invoke(ctx context.Context, m binding.Message, respFn p
 				cecontext.LoggerFrom(ctx).Error(fmt.Errorf("cloudevent validation failed on response event: %v, %w", verr, err))
 			}
 		}
-		if respFn != nil {
-			var rm binding.Message
-			if resp != nil {
-				rm = (*binding.EventMessage)(resp)
-			}
 
-			return respFn(ctx, rm, result) // TODO: there is a chance this never gets called. Is that ok?
+		// protocol can manual ack by the result
+		if respFn == nil {
+			if !protocol.IsACK(result) {
+				err = m.Finish(result)
+				isFinished = true
+			}
+			return
 		}
+
+		var rm binding.Message
+		if resp != nil {
+			rm = (*binding.EventMessage)(resp)
+		}
+
+		return respFn(ctx, rm, result)
 	}
 
 	return nil
