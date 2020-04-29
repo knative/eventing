@@ -1012,6 +1012,8 @@ knative.dev/pkg v0.0.0-20200428194351-90fc61bae7f7 h1:rxALStc3xq30qGIU6rrTn+uvUO
 knative.dev/pkg v0.0.0-20200428194351-90fc61bae7f7/go.mod h1:o+e8OVEJKIuvXPsGVPIautjXgs05xbos7G+QMRjuUps=
 knative.dev/test-infra v0.0.0-20200407185800-1b88cb3b45a5 h1:BEfxItc0hPeQmojxoiOwbCbmdVz0+L2SYWKUSQeFF8g=
 knative.dev/test-infra v0.0.0-20200407185800-1b88cb3b45a5/go.mod h1:xcdUkMJrLlBswIZqL5zCuBFOC22WIPMQoVX1L35i0vQ=
+knative.dev/test-infra v0.0.0-20200428221142-e594f444fabd h1:/uaxCMKfj6QH5enMrcI0v4quDZuGfEpBLNUyM/srftY=
+knative.dev/test-infra v0.0.0-20200428221142-e594f444fabd/go.mod h1:xcdUkMJrLlBswIZqL5zCuBFOC22WIPMQoVX1L35i0vQ=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
 modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=
 modernc.org/mathutil v1.0.0/go.mod h1:wU0vUrJsVWBZ4P6e7xtFJEhFSNsfRLJ8H458uRjg03k=
