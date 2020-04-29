@@ -162,7 +162,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 	imc.Status.MarkChannelServiceTrue()
 	imc.Status.SetAddress(apis.HTTP(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName())))
 
-	imc.Status.Subscribers = make([]eventingduck.SubscriberStatus, len(imc.Spec.Subscribers))
+	imc.Status.Subscribers = make([]eventingduck.SubscriberStatus, 0)
 	for _, sub := range imc.Spec.Subscribers {
 		imc.Status.Subscribers = append(imc.Status.Subscribers, eventingduck.SubscriberStatus{
 			UID:                sub.UID,
