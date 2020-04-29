@@ -20,5 +20,6 @@ package tools
 
 import (
 	_ "knative.dev/pkg/hack"
+	_ "knative.dev/pkg/testutils/clustermanager/perf-tests"
 	_ "knative.dev/test-infra/scripts"
 )
