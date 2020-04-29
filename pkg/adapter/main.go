@@ -36,7 +36,6 @@ import (
 	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
-
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/kncloudevents"
