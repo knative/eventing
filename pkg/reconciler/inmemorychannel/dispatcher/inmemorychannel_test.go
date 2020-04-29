@@ -22,7 +22,7 @@ import (
 
 	"knative.dev/eventing/pkg/channel"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
@@ -33,8 +33,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -48,11 +48,11 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
-	subscribers := []duckv1alpha1.SubscriberSpec{{
+	subscribers := []duckv1beta1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
@@ -78,27 +78,27 @@ func TestAllCases(t *testing.T) {
 			Name: "updated configuration, one channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentReady(),
-					reconciletesting.WithInMemoryChannelServiceReady(),
-					reconciletesting.WithInMemoryChannelEndpointsReady(),
-					reconciletesting.WithInMemoryChannelChannelServiceReady(),
-					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
+				reconciletesting.NewInMemoryChannelV1Beta1(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditionsV1Beta1,
+					reconciletesting.WithInMemoryChannelDeploymentReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelServiceReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelEndpointsReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelChannelServiceReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelAddressV1Beta1(channelServiceAddress)),
 			},
 			WantErr: false,
 		}, {
 			Name: "with subscribers",
 			Key:  imcKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentReady(),
-					reconciletesting.WithInMemoryChannelServiceReady(),
-					reconciletesting.WithInMemoryChannelEndpointsReady(),
-					reconciletesting.WithInMemoryChannelChannelServiceReady(),
-					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
-					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
+				reconciletesting.NewInMemoryChannelV1Beta1(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditionsV1Beta1,
+					reconciletesting.WithInMemoryChannelDeploymentReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelServiceReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelEndpointsReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelChannelServiceReadyV1Beta1(),
+					reconciletesting.WithInMemoryChannelSubscribersV1Beta1(subscribers),
+					reconciletesting.WithInMemoryChannelAddressV1Beta1(channelServiceAddress)),
 			},
 			WantErr: false,
 		}, {},
@@ -107,14 +107,14 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			inmemorychannelLister: listers.GetInMemoryChannelLister(),
+			inmemorychannelLister: listers.GetV1Beta1InMemoryChannelLister(),
 			// TODO: FIx
 			inmemorychannelInformer:    nil,
 			dispatcher:                 &fakeDispatcher{},
 			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
-			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
+			fakeeventingclient.Get(ctx), listers.GetV1Beta1InMemoryChannelLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
