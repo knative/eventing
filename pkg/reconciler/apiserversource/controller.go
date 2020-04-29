@@ -26,13 +26,15 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 
-	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+
+	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -79,6 +81,7 @@ func NewController(
 
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
+	cmw.Watch(tracingconfig.ConfigName, r.UpdateFromTracingConfigMap)
 
 	return impl
 }

@@ -26,6 +26,7 @@ import (
 
 	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/signals"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
@@ -112,7 +113,12 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing(logger, "", tracing.OnePercentSampling); err != nil {
+	// Retrieve tracing config
+	config, err := tracingconfig.JsonToTracingConfig(env.GetTracingConfigJson())
+	if err != nil {
+		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
+	}
+	if err := tracing.SetupStaticPublishing(logger, component, config); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))

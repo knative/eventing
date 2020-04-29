@@ -26,10 +26,11 @@ import (
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
-	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource/fake"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
+
+	// Fake injection informers
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource/fake"
 )
 
 func TestNew(t *testing.T) {
@@ -55,6 +56,14 @@ func TestNew(t *testing.T) {
 			"zap-logger-config":   "test-config",
 			"loglevel.controller": "info",
 			"loglevel.webhook":    "info",
+		},
+	}, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "config-tracing",
+			Namespace: "knative-eventing",
+		},
+		Data: map[string]string{
+			"_example": "test-config",
 		},
 	}))
 

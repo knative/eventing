@@ -32,18 +32,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
-	"knative.dev/eventing/pkg/utils"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	tracingconfig "knative.dev/pkg/tracing/config"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -80,6 +82,7 @@ type Reconciler struct {
 	loggingContext context.Context
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
+	tracingCfg     *tracingconfig.Config
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -148,6 +151,11 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Api
 		logging.FromContext(ctx).Error("error while converting metrics config to json", zap.Any("receiveAdapter", err))
 	}
 
+	tracingCfg, err := tracingconfig.TracingConfigToJson(r.tracingCfg)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting tracing config to json", zap.Any("receiveAdapter", err))
+	}
+
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.receiveAdapterImage,
 		Source:        src,
@@ -155,6 +163,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Api
 		SinkURI:       sinkURI,
 		LoggingConfig: loggingConfig,
 		MetricsConfig: metricsConfig,
+		TracingConfig: tracingCfg,
 	}
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {
@@ -238,6 +247,21 @@ func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 		ConfigMap: cfg.Data,
 	}
 	logging.FromContext(r.loggingContext).Debug("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
+}
+
+// TODO determine how to push the updated metrics config to existing data plane Pods.
+func (r *Reconciler) UpdateFromTracingConfigMap(cfg *corev1.ConfigMap) {
+	if cfg != nil {
+		delete(cfg.Data, "_example")
+	}
+
+	tracingCfg, err := tracingconfig.NewTracingConfigFromMap(cfg.Data)
+	if err != nil {
+		logging.FromContext(r.loggingContext).Warn("failed to create tracing config from configmap", zap.String("cfg.Name", cfg.Name))
+		return
+	}
+
+	r.tracingCfg = tracingCfg
 }
 
 func (r *Reconciler) runAccessCheck(src *v1alpha2.ApiServerSource) error {
