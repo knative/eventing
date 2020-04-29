@@ -60,5 +60,4 @@ rm -rf $(find vendor/ -name '*_test.go')
 
 export GOFLAGS=-mod=vendor
 
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+update_licenses third_party/VENDOR-LICENSE "./..."
