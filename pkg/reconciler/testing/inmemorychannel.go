@@ -26,10 +26,162 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
+
+// InMemoryChannelOptionV1Beta1 enables further configuration of a v1beta1.InMemoryChannel.
+type InMemoryChannelOptionV1Beta1 func(*v1beta1.InMemoryChannel)
+
+// NewInMemoryChannelV1Beta1 creates a v1beta1.InMemoryChannel with InMemoryChannelOptionV1Beta1 .
+func NewInMemoryChannelV1Beta1(name, namespace string, imcopt ...InMemoryChannelOptionV1Beta1) *v1beta1.InMemoryChannel {
+	imc := &v1beta1.InMemoryChannel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1beta1.InMemoryChannelSpec{},
+	}
+	for _, opt := range imcopt {
+		opt(imc)
+	}
+	imc.SetDefaults(context.Background())
+	return imc
+}
+
+func WithInitInMemoryChannelConditionsV1Beta1(imc *v1beta1.InMemoryChannel) {
+	imc.Status.InitializeConditions()
+}
+
+func WithInMemoryChannelGenerationV1Beta1(gen int64) InMemoryChannelOptionV1Beta1 {
+	return func(s *v1beta1.InMemoryChannel) {
+		s.Generation = gen
+	}
+}
+
+func WithInMemoryChannelStatusObservedGenerationV1Beta1(gen int64) InMemoryChannelOptionV1Beta1 {
+	return func(s *v1beta1.InMemoryChannel) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
+func WithInMemoryChannelDeletedV1Beta1(imc *v1beta1.InMemoryChannel) {
+	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
+	imc.ObjectMeta.SetDeletionTimestamp(&deleteTime)
+}
+
+func WithInMemoryChannelSubscribersV1Beta1(subscribers []duckv1beta1.SubscriberSpec) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Spec.Subscribers = subscribers
+	}
+}
+
+func WithInMemoryChannelDeploymentFailedV1Beta1(reason, message string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkDispatcherFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelDeploymentUnknownV1Beta1(reason, message string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkDispatcherUnknown(reason, message)
+	}
+}
+
+func WithInMemoryChannelDeploymentReadyV1Beta1() InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.PropagateDispatcherStatus(&appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}})
+	}
+}
+
+func WithInMemoryChannelServicetNotReadyV1Beta1(reason, message string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkServiceFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelServiceReadyV1Beta1() InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkServiceTrue()
+	}
+}
+
+func WithInMemoryChannelChannelServiceNotReadyV1Beta1(reason, message string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkChannelServiceFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelChannelServiceReadyV1Beta1() InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkChannelServiceTrue()
+	}
+}
+
+func WithInMemoryChannelEndpointsNotReadyV1Beta1(reason, message string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkEndpointsFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelEndpointsReadyV1Beta1() InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.MarkEndpointsTrue()
+	}
+}
+
+func WithInMemoryChannelAddressV1Beta1(a string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   a,
+		})
+	}
+}
+
+func WithInMemoryChannelReadyV1Beta1(host string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   host,
+		})
+		imc.Status.MarkChannelServiceTrue()
+		imc.Status.MarkEndpointsTrue()
+		imc.Status.MarkServiceTrue()
+	}
+}
+
+func WithInMemoryChannelReadySubscriberV1Beta1(uid string) InMemoryChannelOptionV1Beta1 {
+	return WithInMemoryChannelReadySubscriberAndGenerationV1Beta1(uid, 0)
+}
+
+func WithInMemoryChannelReadySubscriberAndGenerationV1Beta1(uid string, observedGeneration int64) InMemoryChannelOptionV1Beta1 {
+	return func(c *v1beta1.InMemoryChannel) {
+		c.Status.Subscribers = append(c.Status.Subscribers, duckv1beta1.SubscriberStatus{
+			UID:                types.UID(uid),
+			ObservedGeneration: observedGeneration,
+			Ready:              corev1.ConditionTrue,
+		})
+	}
+}
+
+func WithInMemoryChannelStatusSubscribersV1Beta1(subscriberStatuses []duckv1beta1.SubscriberStatus) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		imc.Status.Subscribers = subscriberStatuses
+	}
+}
+
+func WithInMemoryScopeAnnotationV1Beta1(value string) InMemoryChannelOptionV1Beta1 {
+	return func(imc *v1beta1.InMemoryChannel) {
+		if imc.Annotations == nil {
+			imc.Annotations = make(map[string]string)
+		}
+		imc.Annotations[eventing.ScopeAnnotationKey] = value
+	}
+}
 
 // InMemoryChannelOption enables further configuration of a InMemoryChannel.
 type InMemoryChannelOption func(*v1alpha1.InMemoryChannel)

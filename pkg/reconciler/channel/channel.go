@@ -26,14 +26,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/channel"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/channel/resources"
 	duckapis "knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
@@ -56,7 +57,7 @@ type Reconciler struct {
 var _ channelreconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1alpha1.Channel) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgreconciler.Event {
 	c.Status.InitializeConditions()
 	c.Status.ObservedGeneration = c.Generation
 
@@ -69,9 +70,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1alpha1.Channel) pkg
 		return fmt.Errorf("unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
 	}
 
-	track := r.channelableTracker.TrackInNamespace(c)
+	track := r.channelableTracker.TrackInNamespaceKReference(c)
 
-	backingChannelObjRef := corev1.ObjectReference{
+	backingChannelObjRef := duckv1.KReference{
 		Kind:       c.Spec.ChannelTemplate.Kind,
 		APIVersion: c.Spec.ChannelTemplate.APIVersion,
 		Name:       c.Name,
@@ -95,8 +96,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1alpha1.Channel) pkg
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1alpha1.Channel, backingChannelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
-	lister, err := r.channelableTracker.ListerFor(backingChannelObjRef)
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1beta1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1beta1.Channelable, error) {
+	lister, err := r.channelableTracker.ListerForKReference(backingChannelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
 		return nil, err
@@ -117,7 +118,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 				return nil, err
 			}
 			logging.FromContext(ctx).Debug("Created backing Channel", zap.Any("backingChannel", newBackingChannel))
-			channelable := &duckv1alpha1.Channelable{}
+			channelable := &duckv1beta1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannelObjRef), zap.Any("createdChannel", created), zap.Error(err))
@@ -130,7 +131,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		return nil, err
 	}
 	logging.FromContext(ctx).Debug("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
-	channelable, ok := backingChannel.(*duckv1alpha1.Channelable)
+	channelable, ok := backingChannel.(*duckv1beta1.Channelable)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannel), zap.Error(err))
 		return nil, err
