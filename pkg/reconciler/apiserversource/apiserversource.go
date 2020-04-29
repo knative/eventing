@@ -38,7 +38,7 @@ import (
 	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
-	pkgtracingconfig "knative.dev/pkg/tracing/config"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
@@ -82,7 +82,7 @@ type Reconciler struct {
 	loggingContext context.Context
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
-	tracingCfg     *pkgtracingconfig.Config
+	tracingCfg     *tracingconfig.Config
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -151,7 +151,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Api
 		logging.FromContext(ctx).Error("error while converting metrics config to json", zap.Any("receiveAdapter", err))
 	}
 
-	tracingCfg, err := pkgtracingconfig.TracingConfigToJson(r.tracingCfg)
+	tracingCfg, err := tracingconfig.TracingConfigToJson(r.tracingCfg)
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting tracing config to json", zap.Any("receiveAdapter", err))
 	}
@@ -255,7 +255,7 @@ func (r *Reconciler) UpdateFromTracingConfigMap(cfg *corev1.ConfigMap) {
 		delete(cfg.Data, "_example")
 	}
 
-	tracingCfg, err := pkgtracingconfig.NewTracingConfigFromMap(cfg.Data)
+	tracingCfg, err := tracingconfig.NewTracingConfigFromMap(cfg.Data)
 	if err != nil {
 		logging.FromContext(r.loggingContext).Warn("failed to create tracing config from configmap", zap.String("cfg.Name", cfg.Name))
 		return

@@ -92,7 +92,6 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
-	// Setup tracing
 	if err := env.SetupTracing(logger); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.

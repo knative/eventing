@@ -65,7 +65,8 @@ type EnvConfig struct {
 	// TracingConfigJson is a json string of tracing.Config.
 	// This is used to configure the tracing config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
-	TracingConfigJson string `envconfig:"K_TRACING_CONFIG" required:"true"`
+	// Default is no-op.
+	TracingConfigJson string `envconfig:"K_TRACING_CONFIG"`
 }
 
 // EnvConfigAccessor defines accessors for the minimal
@@ -89,7 +90,6 @@ type EnvConfigAccessor interface {
 	// Get the parsed logger.
 	GetLogger() *zap.SugaredLogger
 
-	// Setup tracing
 	SetupTracing(*zap.SugaredLogger) error
 
 	GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error)
@@ -140,7 +140,7 @@ func (e *EnvConfig) GetName() string {
 func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) error {
 	config, err := tracingconfig.JsonToTracingConfig(e.TracingConfigJson)
 	if err != nil {
-		logger.Error("Tracing configuration is invalid, using the no-op default", zap.Error(err))
+		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
 	return tracing.SetupStaticPublishing(logger, e.Component, config)
 }

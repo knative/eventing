@@ -153,9 +153,9 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}, {
 		Name:  "K_LOGGING_CONFIG",
 		Value: args.LoggingConfig,
+	}, {
+		Name:  "K_TRACING_CONFIG",
+		Value: args.TracingConfig,
 	},
-		{
-			Name:  "K_TRACING_CONFIG",
-			Value: args.TracingConfig,
-		}}, nil
+	}, nil
 }

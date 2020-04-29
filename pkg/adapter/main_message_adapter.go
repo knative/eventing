@@ -116,7 +116,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	// Retrieve tracing config
 	config, err := tracingconfig.JsonToTracingConfig(env.GetTracingConfigJson())
 	if err != nil {
-		logger.Warn("failed to create tracing options, using defaults", zap.Error(err))
+		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
 	if err := tracing.SetupStaticPublishing(logger, component, config); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter

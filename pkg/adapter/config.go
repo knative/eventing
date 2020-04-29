@@ -44,7 +44,8 @@ type EnvConfig struct {
 	// TracingConfigJson is a json string of tracing.Config.
 	// This is used to configure the tracing config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
-	TracingConfigJson string `envconfig:"K_TRACING_CONFIG" required:"true"`
+	// Default is no-op.
+	TracingConfigJson string `envconfig:"K_TRACING_CONFIG"`
 }
 
 // EnvConfigAccessor defines accessors for the minimal

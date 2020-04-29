@@ -26,7 +26,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
-	pkgtracingconfig "knative.dev/pkg/tracing/config"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 
@@ -81,7 +81,7 @@ func NewController(
 
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
-	cmw.Watch(pkgtracingconfig.ConfigName, r.UpdateFromTracingConfigMap)
+	cmw.Watch(tracingconfig.ConfigName, r.UpdateFromTracingConfigMap)
 
 	return impl
 }
