@@ -28,8 +28,8 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
-	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"

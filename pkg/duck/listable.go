@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
 )
@@ -40,13 +41,21 @@ type ListableTracker interface {
 	// TrackInNamespace returns a function that can be used to watch arbitrary apis.Listable resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
 	TrackInNamespace(obj metav1.Object) Track
+	// TrackInNamespaceKReference returns a function that can be used to watch arbitrary apis.Listable resources
+	// in the same namespace as obj. Any change will cause a callback for obj.
+	TrackInNamespaceKReference(obj metav1.Object) TrackKReference
 	// ListerFor returns the lister for the object reference. It returns an error if the lister does not exist.
 	ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error)
 	// InformerFor returns the informer for the object reference. It returns an error if the informer does not exist.
 	InformerFor(ref corev1.ObjectReference) (cache.SharedIndexInformer, error)
+	// ListerFor returns the lister for the KReference. It returns an error if the lister does not exist.
+	ListerForKReference(ref duckv1.KReference) (cache.GenericLister, error)
+	// InformerFor returns the informer for the KReference. It returns an error if the informer does not exist.
+	InformerForKReference(ref duckv1.KReference) (cache.SharedIndexInformer, error)
 }
 
 type Track func(corev1.ObjectReference) error
+type TrackKReference func(duckv1.KReference) error
 
 // NewListableTracker creates a new ListableTracker, backed by a TypedInformerFactory.
 func NewListableTracker(ctx context.Context, getter func(context.Context) duck.InformerFactory, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
@@ -129,6 +138,31 @@ func (t *listableTracker) TrackInNamespace(obj metav1.Object) Track {
 	}
 }
 
+// TrackInNamespaceKReference satisfies the ListableTracker interface.
+func (t *listableTracker) TrackInNamespaceKReference(obj metav1.Object) TrackKReference {
+	return func(ref duckv1.KReference) error {
+		// This is often used by Trigger and Subscription, both of which pass in refs that do not
+		// specify the namespace.
+		ref.Namespace = obj.GetNamespace()
+		coreRef := corev1.ObjectReference{APIVersion: ref.APIVersion, Kind: ref.Kind, Name: ref.Name, Namespace: ref.Namespace}
+		if err := t.ensureTracking(coreRef); err != nil {
+			return err
+		}
+
+		return t.tracker.TrackReference(tracker.Reference{
+			APIVersion: ref.APIVersion,
+			Kind:       ref.Kind,
+			Namespace:  obj.GetNamespace(),
+			Name:       ref.Name,
+		}, obj)
+	}
+}
+
+// ListerForKReference satisfies the ListableTracker interface.
+func (t *listableTracker) ListerForKReference(ref duckv1.KReference) (cache.GenericLister, error) {
+	return t.ListerFor(corev1.ObjectReference{APIVersion: ref.APIVersion, Kind: ref.Kind, Name: ref.Name, Namespace: ref.Namespace})
+}
+
 // ListerFor satisfies the ListableTracker interface.
 func (t *listableTracker) ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error) {
 	if equality.Semantic.DeepEqual(ref, &corev1.ObjectReference{}) {
@@ -144,6 +178,11 @@ func (t *listableTracker) ListerFor(ref corev1.ObjectReference) (cache.GenericLi
 		return nil, fmt.Errorf("no lister available for GVR %s", gvr.String())
 	}
 	return informerListerPair.lister, nil
+}
+
+// InformerForKReference satisfies the ListableTracker interface.
+func (t *listableTracker) InformerForKReference(ref duckv1.KReference) (cache.SharedIndexInformer, error) {
+	return t.InformerFor(corev1.ObjectReference{APIVersion: ref.APIVersion, Kind: ref.Kind, Name: ref.Name, Namespace: ref.Namespace})
 }
 
 // InformerFor satisfies the ListableTracker interface.

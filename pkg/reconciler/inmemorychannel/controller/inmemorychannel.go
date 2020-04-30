@@ -38,11 +38,11 @@ import (
 	"knative.dev/pkg/apis"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/eventing/pkg/utils"
@@ -95,7 +95,7 @@ type Reconciler struct {
 // Check that our Reconciler implements Interface
 var _ inmemorychannelreconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryChannel) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryChannel) pkgreconciler.Event {
 	imc.Status.InitializeConditions()
 	imc.Status.ObservedGeneration = imc.Generation
 
@@ -160,13 +160,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(&apis.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()),
-	})
+	imc.Status.SetAddress(apis.HTTP(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName())))
 
-	if subscribableStatus := r.createSubscribableStatus(imc.Spec.Subscribable); subscribableStatus != nil {
-		imc.Status.SubscribableTypeStatus.SetSubscribableTypeStatus(*subscribableStatus)
+	imc.Status.Subscribers = make([]eventingduck.SubscriberStatus, 0)
+	for _, sub := range imc.Spec.Subscribers {
+		imc.Status.Subscribers = append(imc.Status.Subscribers, eventingduck.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
+		})
 	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
@@ -174,7 +176,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	return newReconciledNormal(imc.Namespace, imc.Name)
 }
 
-func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1beta1.InMemoryChannel) (*appsv1.Deployment, error) {
 	if scope == eventing.ScopeNamespace {
 		// Configure RBAC in namespace to access the configmaps
 		// For cluster-deployed dispatcher, RBAC policies are already there.
@@ -230,7 +232,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherN
 	return d, nil
 }
 
-func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.ServiceAccount, error) {
+func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherNamespace string, imc *v1beta1.InMemoryChannel) (*corev1.ServiceAccount, error) {
 	sa, err := r.serviceAccountLister.ServiceAccounts(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -250,7 +252,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherName
 	return sa, nil
 }
 
-func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns string, imc *v1alpha1.InMemoryChannel, clusterRoleName string, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
+func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns string, imc *v1beta1.InMemoryChannel, clusterRoleName string, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
 	rb, err := r.roleBindingLister.RoleBindings(ns).Get(name)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -269,7 +271,7 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns s
 	return rb, nil
 }
 
-func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, dispatcherNamespace string, imc *v1beta1.InMemoryChannel) (*corev1.Service, error) {
 	svc, err := r.serviceLister.Services(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -293,7 +295,7 @@ func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, disp
 	return svc, nil
 }
 
-func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherNamespace string, imc *v1beta1.InMemoryChannel) (*corev1.Service, error) {
 	// Get the  Service and propagate the status to the Channel in case it does not exist.
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
@@ -340,22 +342,4 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 		return nil, err
 	}
 	return svc, nil
-}
-
-func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable) *eventingduck.SubscribableStatus {
-	if subscribable == nil {
-		return nil
-	}
-	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
-	for _, sub := range subscribable.Subscribers {
-		status := eventingduck.SubscriberStatus{
-			UID:                sub.UID,
-			ObservedGeneration: sub.Generation,
-			Ready:              corev1.ConditionTrue,
-		}
-		subscriberStatus = append(subscriberStatus, status)
-	}
-	return &eventingduck.SubscribableStatus{
-		Subscribers: subscriberStatus,
-	}
 }

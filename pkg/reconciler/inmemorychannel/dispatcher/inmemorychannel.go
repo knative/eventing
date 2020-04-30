@@ -24,12 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/logging"
 )
@@ -42,7 +41,7 @@ type Reconciler struct {
 	inmemorychannelInformer    cache.SharedIndexInformer
 }
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryChannel) reconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryChannel) reconciler.Event {
 	// This is a special Reconciler that does the following:
 	// 1. Lists the inmemory channels.
 	// 2. Creates a multi-channel-fanout-config.
@@ -53,7 +52,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 		return err
 	}
 
-	inmemoryChannels := make([]*v1alpha1.InMemoryChannel, 0)
+	inmemoryChannels := make([]*v1beta1.InMemoryChannel, 0)
 	for _, imc := range channels {
 		if imc.Status.IsReady() {
 			inmemoryChannels = append(inmemoryChannels, imc)
@@ -71,24 +70,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 }
 
 // newConfigFromInMemoryChannels creates a new Config from the list of inmemory channels.
-func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemoryChannel) *multichannelfanout.Config {
+func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1beta1.InMemoryChannel) *multichannelfanout.Config {
 	cc := make([]multichannelfanout.ChannelConfig, 0)
 	for _, c := range channels {
 		channelConfig := multichannelfanout.ChannelConfig{
 			Namespace: c.Namespace,
 			Name:      c.Name,
-			HostName:  c.Status.Address.Hostname,
-		}
-		if c.Spec.Subscribable != nil {
-			// Translate subs from v1alpha1 to v1beta1
-			subs := make([]duckv1beta1.SubscriberSpec, len(c.Spec.Subscribable.Subscribers))
-			for i, s := range c.Spec.Subscribable.Subscribers {
-				s.ConvertTo(context.TODO(), &subs[i])
-			}
-			channelConfig.FanoutConfig = fanout.Config{
+			HostName:  c.Status.Address.URL.Host,
+			FanoutConfig: fanout.Config{
 				AsyncHandler:  true,
-				Subscriptions: subs,
-			}
+				Subscriptions: c.Spec.Subscribers,
+			},
 		}
 		cc = append(cc, channelConfig)
 	}
