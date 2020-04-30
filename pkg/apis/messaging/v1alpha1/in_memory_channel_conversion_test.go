@@ -133,6 +133,7 @@ func TestInMemoryChannelConversion(t *testing.T) {
 						Addressable: duckv1beta1.Addressable{
 							URL: apis.HTTP("addressstatus.example.com"),
 						},
+						Hostname: "addressstatus.example.com",
 					},
 				},
 				SubscribableTypeStatus: eventingduck.SubscribableTypeStatus{
