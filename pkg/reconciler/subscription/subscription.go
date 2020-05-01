@@ -99,7 +99,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1beta1.Su
 		logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %+v", err)
 		return newChannelWarnEvent("Failed to get Spec.Channel as Channelable duck type. %s", err)
 	}
 
@@ -323,15 +323,15 @@ func (r *Reconciler) getSubStatusV1Beta1(subscription *v1beta1.Subscription, cha
 	return eventingduckv1beta1.SubscriberStatus{}, fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
 
-func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1beta1.Subscription, ref duckv1.KReference) (runtime.Object, pkgreconciler.Event) {
+func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1beta1.Subscription, ref corev1.ObjectReference) (runtime.Object, pkgreconciler.Event) {
 	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	if err := r.channelableTracker.TrackInNamespaceKReference(sub)(ref); err != nil {
+	if err := r.channelableTracker.TrackInNamespace(sub)(ref); err != nil {
 		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to spec.channel: %v", err)
 	}
-	chLister, err := r.channelableTracker.ListerForKReference(ref)
+	chLister, err := r.channelableTracker.ListerFor(ref)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
@@ -339,7 +339,8 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1beta1.Subs
 	obj, err := chLister.ByNamespace(sub.Namespace).Get(ref.Name)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("Failed to get the tracker lister: %v LISTER WAS: %+v", err, chLister)
+		//		return nil, err
 	}
 	return obj, err
 }
@@ -353,10 +354,11 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
-	kref := duckv1.KReference{Namespace: sub.Spec.Channel.Namespace, Name: sub.Spec.Channel.Name, APIVersion: sub.Spec.Channel.APIVersion, Kind: sub.Spec.Channel.Kind}
-	obj, err := r.trackAndFetchChannel(ctx, sub, kref)
+	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
 	if err != nil {
-		return nil, err
+		logging.FromContext(ctx).Info("TRACKANDFETCH failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
+		//		return nil, err
+		return nil, fmt.Errorf("TRACKANDFETCH FAILED: %+v", err)
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
@@ -383,7 +385,9 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 			Namespace:  sub.Namespace,
 			Name:       sub.Spec.Channel.Name,
 		}, sub); err != nil {
-			return nil, err
+			logging.FromContext(ctx).Info("TRACKREFERENCE failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
+			//			return nil, err
+			return nil, fmt.Errorf("TRACKREFERENCE failed: %v", err)
 		}
 
 		logging.FromContext(ctx).Warn("fetching backing channel", zap.Any("channel", sub.Spec.Channel))
@@ -393,7 +397,8 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 		// lister so that we get those bits.
 		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("ChannelLister failed: %v", err)
+			//			return nil, err
 		}
 
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
@@ -401,9 +406,11 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 			return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "ChannelNotReady", "Backing channel is not ready")
 		}
 
-		obj, err = r.trackAndFetchChannel(ctx, sub, *channel.Status.Channel)
+		statCh := corev1.ObjectReference{Name: channel.Status.Channel.Name, Namespace: sub.Namespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
+		obj, err = r.trackAndFetchChannel(ctx, sub, statCh)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("TrackAndFetchChannel failed: %v", err)
+			//			return nil, err
 		}
 	}
 

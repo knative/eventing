@@ -49,6 +49,9 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel/fake"
 	rt "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
@@ -108,13 +111,46 @@ var (
 		Kind:    "InMemoryChannel",
 	}
 
+	testV1Alpha1ChannelGVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "InMemoryChannel",
+	}
+
 	coreChannelGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
 		Version: "v1beta1",
 		Kind:    "Channel",
 	}
 
-	imcRef = duckv1.KReference{
+	coreV1Alpha1ChannelGVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Channel",
+	}
+
+	imcV1Alpha1KRef = duckv1.KReference{
+		APIVersion: "messaging.knative.dev/alpha1",
+		Kind:       "InMemoryChannel",
+		Namespace:  testNS,
+		Name:       channelName,
+	}
+
+	imcV1Beta1KRef = duckv1.KReference{
+		APIVersion: "messaging.knative.dev/v1beta1",
+		Kind:       "InMemoryChannel",
+		Namespace:  testNS,
+		Name:       channelName,
+	}
+
+	imcV1Alpha1Ref = corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "InMemoryChannel",
+		Namespace:  testNS,
+		Name:       channelName,
+	}
+
+	imcV1Beta1Ref = corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1beta1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
@@ -448,6 +484,49 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
+			// Use v1alpha1 IMC to make sure the patch uses the v1alpha1 subscribable
+			Name: "subscription v1alpha1 channels, valid channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
+				),
+				rt.NewInMemoryChannel(channelName, testNS,
+					rt.WithInitInMemoryChannelConditions,
+					rt.WithInMemoryChannelAddress(channelDNS),
+					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
 			Name: "subscription, valid channel+subscriber+missing delivery",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -534,7 +613,7 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+backing channel+subscriber",
+			Name: "subscription, valid v1beta1 channel+v1beta1 backing channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
@@ -546,7 +625,7 @@ func TestAllCases(t *testing.T) {
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
-					WithBackingChannelObjRef(&imcRef),
+					WithBackingChannelObjRef(&imcV1Beta1KRef),
 					WithBackingChannelReady,
 					WithChannelAddress("example.com"),
 				),
@@ -583,6 +662,157 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
+			// Use v1beta1 Channel, v1alpha IMC as backing channel to make sure that backing channel gets
+			// patched properly using v1alpha1
+			Name: "subscription, valid v1beta1 channel+v1alpha1 backing channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&imcV1Alpha1KRef),
+					WithBackingChannelReady,
+					WithChannelAddress("example.com"),
+				),
+				rt.NewInMemoryChannel(channelName, testNS,
+					rt.WithInitInMemoryChannelConditions,
+					rt.WithInMemoryChannelAddress(channelDNS),
+					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
+					rt.WithInMemoryChannelReady("example.com"),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			// Use v1alpha1 Channel with v1beta1 IMC channel.
+			Name: "subscription, valid v1alpha1 channel+v1beta1 backing channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
+				),
+				rt.NewChannel(channelName, testNS,
+					rt.WithInitChannelConditions,
+					rt.WithBackingChannelObjRef(&imcV1Beta1Ref),
+					rt.WithBackingChannelReady,
+					rt.WithChannelAddress("example.com"),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
+					WithInMemoryChannelReady("example.com"),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			// Use v1alpha1 Channel with v1alpha1 IMC channel.
+			Name: "subscription, valid v1alpha1 channel+v1alpha1 backing channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
+				),
+				rt.NewChannel(channelName, testNS,
+					rt.WithInitChannelConditions,
+					rt.WithBackingChannelObjRef(&imcV1Alpha1Ref),
+					rt.WithBackingChannelReady,
+					rt.WithChannelAddress("example.com"),
+				),
+				rt.NewInMemoryChannel(channelName, testNS,
+					rt.WithInitInMemoryChannelConditions,
+					rt.WithInMemoryChannelAddress(channelDNS),
+					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
+					rt.WithInMemoryChannelReady("example.com"),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
 			Name: "subscription, valid channel+backing channel not ready+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -595,7 +825,7 @@ func TestAllCases(t *testing.T) {
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
-					WithBackingChannelObjRef(&imcRef),
+					WithBackingChannelObjRef(&imcV1Beta1KRef),
 					WithBackingChannelReady,
 				),
 				NewInMemoryChannel(channelName, testNS,
