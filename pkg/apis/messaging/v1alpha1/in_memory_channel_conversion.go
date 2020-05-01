@@ -123,15 +123,10 @@ func (sink *InMemoryChannelStatus) ConvertFrom(ctx context.Context, source v1bet
 	}
 	if len(source.SubscribableStatus.Subscribers) > 0 {
 		sink.SubscribableTypeStatus.SubscribableStatus = &duckv1alpha1.SubscribableStatus{
-			Subscribers: make([]duckv1alpha1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
+			Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
 		}
 		for i, ss := range source.SubscribableStatus.Subscribers {
-			sink.SubscribableTypeStatus.SubscribableStatus.Subscribers[i] = duckv1alpha1.SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
-			}
+			sink.SubscribableTypeStatus.SubscribableStatus.Subscribers[i] = ss
 		}
 	}
 	return nil

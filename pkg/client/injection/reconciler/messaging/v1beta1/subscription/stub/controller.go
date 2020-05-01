@@ -21,8 +21,8 @@ package subscription
 import (
 	context "context"
 
-	subscription "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
-	v1alpha1subscription "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
+	subscription "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
+	v1beta1subscription "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
 	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
@@ -42,7 +42,7 @@ func NewController(
 	// TODO: setup additional informers here.
 
 	r := &Reconciler{}
-	impl := v1alpha1subscription.NewImpl(ctx, r)
+	impl := v1beta1subscription.NewImpl(ctx, r)
 
 	logger.Info("Setting up event handlers.")
 

@@ -17,14 +17,10 @@
 package v1beta1
 
 import (
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 type testHelper struct{}
@@ -49,37 +45,18 @@ func (testHelper) FalseSubscriptionCondition() *apis.Condition {
 	}
 }
 
-func (testHelper) ReadyChannelStatus() *duckv1alpha1.ChannelableStatus {
-	cs := &duckv1alpha1.ChannelableStatus{
-		Status: duckv1.Status{},
-		AddressStatus: pkgduckv1alpha1.AddressStatus{
-			Address: &pkgduckv1alpha1.Addressable{
-				Addressable: duckv1beta1.Addressable{
-					URL: &apis.URL{Scheme: "http", Host: "foo"},
-				},
-				Hostname: "foo",
-			},
-		},
-		SubscribableTypeStatus: duckv1alpha1.SubscribableTypeStatus{}}
-	return cs
+func (testHelper) ReadySubscriptionStatus() *messagingv1beta1.SubscriptionStatus {
+	ss := &messagingv1beta1.SubscriptionStatus{}
+	ss.MarkChannelReady()
+	ss.MarkReferencesResolved()
+	ss.MarkAddedToChannel()
+	return ss
 }
 
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.SetAddress(apis.HTTP("example.com"))
 	return bs
-}
-
-func (t testHelper) AvailableDeployment() *v1.Deployment {
-	d := &v1.Deployment{}
-	d.Name = "available"
-	d.Status.Conditions = []v1.DeploymentCondition{
-		{
-			Type:   v1.DeploymentAvailable,
-			Status: "True",
-		},
-	}
-	return d
 }
 
 func (t testHelper) UnknownBrokerStatus() *BrokerStatus {
