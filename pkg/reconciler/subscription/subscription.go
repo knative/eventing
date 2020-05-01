@@ -541,7 +541,6 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
 				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
 				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
-				// TODO: delivery?
 			}},
 		}
 		return
@@ -554,7 +553,6 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 			channel.Spec.Subscribable.Subscribers[i].SubscriberURI = sub.Status.PhysicalSubscription.SubscriberURI
 			channel.Spec.Subscribable.Subscribers[i].ReplyURI = sub.Status.PhysicalSubscription.ReplyURI
 			channel.Spec.Subscribable.Subscribers[i].DeadLetterSinkURI = sub.Status.PhysicalSubscription.DeadLetterSinkURI
-			// TODO: delivery?
 			return
 		}
 	}
@@ -567,7 +565,6 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 			SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
 			ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
 			DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
-			// TODO: delivery?
 		})
 }
 
