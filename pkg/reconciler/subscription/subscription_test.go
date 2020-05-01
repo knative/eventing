@@ -132,7 +132,7 @@ var (
 	}
 
 	imcV1Alpha1KRef = duckv1.KReference{
-		APIVersion: "messaging.knative.dev/alpha1",
+		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       channelName,
@@ -261,7 +261,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. inmemorychannels.messaging.knative.dev %q not found", channelName),
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel or backing channel: inmemorychannels.messaging.knative.dev %q not found", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -270,7 +270,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesResolvedUnknown(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel as Channelable duck type. inmemorychannels.messaging.knative.dev %q not found", channelName)),
+					WithSubscriptionReferencesResolvedUnknown(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel or backing channel: inmemorychannels.messaging.knative.dev %q not found", channelName)),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -302,7 +302,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesResolvedUnknown(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel as Channelable duck type. inmemorychannels.messaging.knative.dev %q not found", channelName)),
+					WithSubscriptionReferencesResolvedUnknown(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel or backing channel: inmemorychannels.messaging.knative.dev %q not found", channelName)),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -690,13 +690,6 @@ func TestAllCases(t *testing.T) {
 					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
 					rt.WithInMemoryChannelReady("example.com"),
 				),
-				// FAKE OBJECT to handle version mismatches at the testing infra...
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(channelDNS),
-					WithInMemoryChannelReadySubscriber(subscriptionUID),
-					WithInMemoryChannelReady("example.com"),
-				),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -741,6 +734,15 @@ func TestAllCases(t *testing.T) {
 					rt.WithBackingChannelReady,
 					rt.WithChannelAddress("example.com"),
 				),
+				// We need to create a fake v1beta1 object, since we use the v1beta1 lister
+				// in the actual code and our test infra won't set that up correctly.
+				// In real world, lister would find the correct version.
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&imcV1Beta1KRef),
+					WithBackingChannelReady,
+					WithChannelAddress("example.com"),
+				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
@@ -757,7 +759,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -791,6 +793,15 @@ func TestAllCases(t *testing.T) {
 					rt.WithBackingChannelReady,
 					rt.WithChannelAddress("example.com"),
 				),
+				// We need to create a fake v1beta1 object, since we use the v1beta1 lister
+				// in the actual code and our test infra won't set that up correctly.
+				// In real world, lister would find the correct version.
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&imcV1Alpha1KRef),
+					WithBackingChannelReady,
+					WithChannelAddress("example.com"),
+				),
 				rt.NewInMemoryChannel(channelName, testNS,
 					rt.WithInitInMemoryChannelConditions,
 					rt.WithInMemoryChannelAddress(channelDNS),
@@ -818,7 +829,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -849,7 +860,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "ChannelReferenceFailed", "Failed to get Spec.Channel as Channelable duck type. Backing channel is not ready"),
+				Eventf(corev1.EventTypeWarning, "ChannelReferenceFailed", "Failed to get Spec.Channel or backing channel: channel is not ready."),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -858,7 +869,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesResolvedUnknown("ChannelReferenceFailed", "Failed to get Spec.Channel as Channelable duck type. Backing channel is not ready"),
+					WithSubscriptionReferencesResolvedUnknown("ChannelReferenceFailed", "Failed to get Spec.Channel or backing channel: channel is not ready."),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1183,6 +1194,55 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
+			Name: "v1alpha1 imc+two subscribers for a channel",
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+				),
+				// an already rec'ed subscription
+				NewSubscription("b-"+subscriptionName, testNS,
+					WithSubscriptionUID("b-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+				),
+				rt.NewInMemoryChannel(channelName, testNS,
+					rt.WithInitInMemoryChannelConditions,
+					rt.WithInMemoryChannelAddress(channelDNS),
+					rt.WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					rt.WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
+				),
+				rt.NewService(serviceName, testNS),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURIWithPath},
+				}),
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+		}, {
 			Name: "v1beta1 imc+deleted - channel patch succeeded",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -1299,7 +1359,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, nil),
 			},
 		}, {
-			Name: "subscription deleted - channel does not exists",
+			Name: "subscription deleted - channel does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),

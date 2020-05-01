@@ -99,8 +99,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1beta1.Su
 		logging.FromContext(ctx).Warn("Failed to get Spec.Channel or backing channel as Channelable duck type",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel or backing channel: %v", err)
-		return newChannelWarnEvent("Failed to get Spec.Channel or backing channel: %v", err)
+		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel or backing channel: %s", err)
+		return newChannelWarnEvent("Failed to get Spec.Channel or backing channel: %s", err)
 	}
 
 	// Make sure all the URI's that are suppose to be in status are up to date.
@@ -339,7 +339,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1beta1.Subs
 	obj, err := chLister.ByNamespace(sub.Namespace).Get(ref.Name)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
-		return nil, fmt.Errorf("failed to get the channel: %+v %v", ref, err)
+		return nil, err
 	}
 	return obj, err
 }
@@ -355,9 +355,8 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 	//   a. If channel is a Channel.messaging.knative.dev
 	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
 	if err != nil {
-		logging.FromContext(ctx).Info(" failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
-		//		return nil, err
-		return nil, fmt.Errorf("failed to fetch channel: %+v %+v", sub.Spec.Channel, err)
+		logging.FromContext(ctx).Warn("failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
+		return nil, err
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
@@ -385,28 +384,28 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 			Name:       sub.Spec.Channel.Name,
 		}, sub); err != nil {
 			logging.FromContext(ctx).Info("TrackReference for Channel failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
-			return nil, fmt.Errorf("failed to fetch Channel: %v", err)
+			return nil, err
 		}
 
-		logging.FromContext(ctx).Warn("fetching backing channel", zap.Any("channel", sub.Spec.Channel))
+		logging.FromContext(ctx).Debug("fetching backing channel", zap.Any("channel", sub.Spec.Channel))
 		// Because the above (trackAndFetchChannel) gives us back a Channelable
 		// the status of it will not have the extra bits we need (namely, pointer
 		// and status of the actual "backing" channel), we fetch it using typed
 		// lister so that we get those bits.
 		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch Channel: %v", err)
+			return nil, err
 		}
 
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
 			logging.FromContext(ctx).Warn("backing channel not ready", zap.Any("channel", sub.Spec.Channel), zap.Any("backing channel", channel))
-			return nil, fmt.Errorf("Channel is not ready: %+v", channel.Status)
+			return nil, fmt.Errorf("channel is not ready.")
 		}
 
 		statCh := corev1.ObjectReference{Name: channel.Status.Channel.Name, Namespace: sub.Namespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
 		obj, err = r.trackAndFetchChannel(ctx, sub, statCh)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch backing channel: %+v %v", statCh, err)
+			return nil, err
 		}
 	}
 
@@ -414,7 +413,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 	ch, ok := obj.(*eventingduckv1alpha1.ChannelableCombined)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", obj)
 	}
 
 	retCh := ch.DeepCopy()
