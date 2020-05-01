@@ -35,6 +35,8 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
@@ -105,25 +107,25 @@ var (
 		Kind:    "Service",
 	}
 
-	testChannelGVK = metav1.GroupVersionKind{
+	imcV1Beta1GVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
 		Version: "v1beta1",
 		Kind:    "InMemoryChannel",
 	}
 
-	testV1Alpha1ChannelGVK = metav1.GroupVersionKind{
+	imcV1Alpha1GVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
 		Version: "v1alpha1",
 		Kind:    "InMemoryChannel",
 	}
 
-	coreChannelGVK = metav1.GroupVersionKind{
+	channelV1Beta1GVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
 		Version: "v1beta1",
 		Kind:    "Channel",
 	}
 
-	coreV1Alpha1ChannelGVK = metav1.GroupVersionKind{
+	channelV1Alpha1GVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
 		Version: "v1alpha1",
 		Kind:    "Channel",
@@ -163,6 +165,8 @@ func init() {
 	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
+	_ = messagingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
@@ -180,9 +184,9 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
 					MarkReferencesResolved,
@@ -233,9 +237,9 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
@@ -245,11 +249,11 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "subscription, but channel does not exist",
+			Name: "channel does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
@@ -262,7 +266,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -273,11 +277,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, but channel does not exist - fail status update",
+			Name: "channel does not exist - fail status update",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
@@ -294,7 +298,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -305,11 +309,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, but subscriber is not addressable",
+			Name: "subscriber is not addressable",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
@@ -326,7 +330,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -337,11 +341,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, but subscriber does not exist",
+			Name: "subscriber does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
@@ -357,7 +361,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -368,13 +372,13 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, reply does not exist",
+			Name: "reply does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
 					rt.WithUnstructuredAddressable(subscriberDNS)),
@@ -391,9 +395,9 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
@@ -404,11 +408,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, reply is not addressable",
+			Name: "reply is not addressable",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS), // reply will be a nonAddressableGVK for this test
 				),
@@ -429,7 +433,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS),
@@ -442,11 +446,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+subscriber",
+			Name: "v1beta1 imc, valid channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -467,7 +471,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -485,11 +489,11 @@ func TestAllCases(t *testing.T) {
 			},
 		}, {
 			// Use v1alpha1 IMC to make sure the patch uses the v1alpha1 subscribable
-			Name: "subscription v1alpha1 channels, valid channel+subscriber",
+			Name: "v1alpha1 imc, valid channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -510,7 +514,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -527,11 +531,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+subscriber+missing delivery",
+			Name: "v1beta1 imc, valid channel+subscriber+missing delivery",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 				),
@@ -553,7 +557,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 					// The first reconciliation will initialize the status conditions.
@@ -566,11 +570,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+subscriber+delivery",
+			Name: "v1beta imc, valid channel+subscriber+delivery",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 				),
@@ -595,7 +599,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 					// The first reconciliation will initialize the status conditions.
@@ -613,11 +617,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid v1beta1 channel+v1beta1 backing channel+subscriber",
+			Name: "v1beta1 channel+v1beta1 imc backing channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -645,7 +649,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -664,11 +668,11 @@ func TestAllCases(t *testing.T) {
 		}, {
 			// Use v1beta1 Channel, v1alpha IMC as backing channel to make sure that backing channel gets
 			// patched properly using v1alpha1
-			Name: "subscription, valid v1beta1 channel+v1alpha1 backing channel+subscriber",
+			Name: "v1beta1 channel+v1alpha1 imc backing channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -686,6 +690,13 @@ func TestAllCases(t *testing.T) {
 					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
 					rt.WithInMemoryChannelReady("example.com"),
 				),
+				// FAKE OBJECT to handle version mismatches at the testing infra...
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
+					WithInMemoryChannelReady("example.com"),
+				),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -696,7 +707,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -714,11 +725,11 @@ func TestAllCases(t *testing.T) {
 			},
 		}, {
 			// Use v1alpha1 Channel with v1beta1 IMC channel.
-			Name: "subscription, valid v1alpha1 channel+v1beta1 backing channel+subscriber",
+			Name: "v1alpha1 channel+v1beta1 imc backing channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -746,7 +757,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -764,11 +775,11 @@ func TestAllCases(t *testing.T) {
 			},
 		}, {
 			// Use v1alpha1 Channel with v1alpha1 IMC channel.
-			Name: "subscription, valid v1alpha1 channel+v1alpha1 backing channel+subscriber",
+			Name: "v1alpha1 channel+v1alpha1 imc backing channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -796,7 +807,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreV1Alpha1ChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -813,11 +824,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+backing channel not ready+subscriber",
+			Name: "v1beta1 channel+backing v1beta1 imc channel not ready+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -843,7 +854,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -854,12 +865,12 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+reply",
+			Name: "v1beta1 imc channel+reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -880,8 +891,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
@@ -896,12 +907,12 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+reply - not deprecated",
+			Name: "v1beta1 imc+reply - not deprecated",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -922,8 +933,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
@@ -938,13 +949,13 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+subscriber+reply",
+			Name: "v1beta1 imc+subscriber+reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 				),
 				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
 					rt.WithUnstructuredAddressable(subscriberDNS),
@@ -968,9 +979,9 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
@@ -986,12 +997,12 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid remove reply",
+			Name: "v1beta1 imc+valid remove reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionGeneration(subscriptionGeneration),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
@@ -1019,7 +1030,7 @@ func TestAllCases(t *testing.T) {
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionGeneration(subscriptionGeneration),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
@@ -1034,14 +1045,14 @@ func TestAllCases(t *testing.T) {
 				}),
 			},
 		}, {
-			Name: "subscription, valid remove subscriber",
+			Name: "v1beta1 imc+remove subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionGeneration(subscriptionGeneration),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithInitSubscriptionConditions,
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
@@ -1069,8 +1080,8 @@ func TestAllCases(t *testing.T) {
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionGeneration(subscriptionGeneration),
-					WithSubscriptionChannel(testChannelGVK, channelName),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
@@ -1084,11 +1095,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, valid channel+subscriber as service",
+			Name: "v1beta1 imc+subscriber as service",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
@@ -1107,7 +1118,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -1123,17 +1134,17 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, two subscribers for a channel",
+			Name: "v1beta1 imc+two subscribers for a channel",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b-"+subscriptionName, testNS,
 					WithSubscriptionUID("b-"+subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
@@ -1156,7 +1167,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -1172,11 +1183,11 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
-			Name: "subscription deleted - channel patch succeeded",
+			Name: "v1beta1 imc+deleted - channel patch succeeded",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
@@ -1206,11 +1217,45 @@ func TestAllCases(t *testing.T) {
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
+			Name: "v1alpha1 imc+deleted - channel patch succeeded",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeleted,
+				),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
+				),
+				rt.NewInMemoryChannel(channelName, testNS,
+					rt.WithInitInMemoryChannelConditions,
+					rt.WithInMemoryChannelAddress(channelDNS),
+					rt.WithInMemoryChannelSubscribers([]eventingduckv1alpha1.SubscriberSpec{
+						{UID: subscriptionUID, SubscriberURI: subscriberURI},
+					}),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberRemoved", "Subscription was removed from channel \"origin\""),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribersV1Alpha1(testNS, channelName, nil),
+				patchRemoveFinalizers(testNS, subscriptionName),
+			},
+		}, {
 			Name: "subscription not deleted - channel patch fails",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
@@ -1240,7 +1285,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					MarkNotAddedToChannel("PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch inmemorychannels"),
@@ -1258,9 +1303,9 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
