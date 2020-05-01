@@ -29,13 +29,13 @@ import (
 	"k8s.io/client-go/dynamic"
 	duckapis "knative.dev/pkg/apis/duck"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
-	listers "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
-	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/sequence"
+	listers "knative.dev/eventing/pkg/client/listers/flows/v1beta1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
@@ -63,7 +63,7 @@ type Reconciler struct {
 var _ sequencereconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1alpha1.Sequence) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkgreconciler.Event {
 	s.Status.InitializeConditions()
 	s.Status.ObservedGeneration = s.Generation
 
@@ -85,7 +85,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1alpha1.Sequence) pk
 	// Tell tracker to reconcile this Sequence whenever my channels change.
 	track := r.channelableTracker.TrackInNamespace(s)
 
-	channels := make([]*duckv1alpha1.Channelable, 0, len(s.Spec.Steps))
+	channels := make([]*duckv1beta1.Channelable, 0, len(s.Spec.Steps))
 	for i := 0; i < len(s.Spec.Steps); i++ {
 		ingressChannelName := resources.SequenceChannelName(s.Name, i)
 
@@ -111,7 +111,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1alpha1.Sequence) pk
 	}
 	s.Status.PropagateChannelStatuses(channels)
 
-	subs := make([]*messagingv1alpha1.Subscription, 0, len(s.Spec.Steps))
+	subs := make([]*messagingv1beta1.Subscription, 0, len(s.Spec.Steps))
 	for i := 0; i < len(s.Spec.Steps); i++ {
 		sub, err := r.reconcileSubscription(ctx, i, s)
 		if err != nil {
@@ -125,7 +125,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1alpha1.Sequence) pk
 	return newReconciledNormal(s.Namespace, s.Name)
 }
 
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1alpha1.Sequence, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*duckv1beta1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(channelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", channelObjRef), zap.Error(err))
@@ -147,7 +147,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			}
 			logging.FromContext(ctx).Debug("Created Channel", zap.Any("channel", newChannel))
 			// Convert to Channel duck so that we can treat all Channels the same.
-			channelable := &duckv1alpha1.Channelable{}
+			channelable := &duckv1beta1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
@@ -159,7 +159,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 		return nil, err
 	}
 	logging.FromContext(ctx).Debug("Found Channel", zap.Any("channel", channelObjRef))
-	channelable, ok := c.(*duckv1alpha1.Channelable)
+	channelable, ok := c.(*duckv1beta1.Channelable)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
 		return nil, err
@@ -167,7 +167,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	return channelable, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1alpha1.Sequence) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1beta1.Sequence) (*messagingv1beta1.Subscription, error) {
 	expected := resources.NewSubscription(step, p)
 
 	subName := resources.SequenceSubscriptionName(p.Name, step)
@@ -177,7 +177,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v", sub))
-		newSub, err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
+		newSub, err := r.eventingClientSet.MessagingV1beta1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequence's subscription failed: %v", err)
@@ -192,12 +192,12 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
-		err = r.eventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
+		err = r.eventingClientSet.MessagingV1beta1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
 			return nil, err
 		}
-		newSub, err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(expected)
+		newSub, err := r.eventingClientSet.MessagingV1beta1().Subscriptions(sub.Namespace).Create(expected)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
 			return nil, err

@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -28,10 +28,10 @@ import (
 	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	"knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/parallel"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
-	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
+	"knative.dev/eventing/pkg/client/injection/informers/flows/v1beta1/parallel"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
+	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/parallel"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -60,7 +60,7 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Parallel")),
+		FilterFunc: controller.FilterGroupKind(v1beta1.Kind("Parallel")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
