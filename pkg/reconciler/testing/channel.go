@@ -244,7 +244,7 @@ func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int6
 		if c.Status.GetSubscribableTypeStatus() == nil { // Both the SubscribableStatus fields are nil
 			c.Status.SetSubscribableTypeStatus(eventingduckv1alpha1.SubscribableStatus{})
 		}
-		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1alpha1.SubscriberStatus{
+		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1beta1.SubscriberStatus{
 			UID:                types.UID(uid),
 			ObservedGeneration: observedGeneration,
 			Ready:              v1.ConditionTrue,
@@ -252,7 +252,7 @@ func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int6
 	}
 }
 
-func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1alpha1.SubscriberStatus) ChannelOption {
+func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1beta1.SubscriberStatus) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.SetSubscribableTypeStatus(eventingduckv1alpha1.SubscribableStatus{
 			Subscribers: subscriberStatuses,

@@ -313,7 +313,7 @@ func WithInMemoryChannelReadySubscriberAndGeneration(uid string, observedGenerat
 		if c.Status.GetSubscribableTypeStatus() == nil { // Both the SubscribableStatus fields are nil
 			c.Status.SetSubscribableTypeStatus(duckv1alpha1.SubscribableStatus{})
 		}
-		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(duckv1alpha1.SubscriberStatus{
+		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(duckv1beta1.SubscriberStatus{
 			UID:                types.UID(uid),
 			ObservedGeneration: observedGeneration,
 			Ready:              corev1.ConditionTrue,
@@ -321,7 +321,7 @@ func WithInMemoryChannelReadySubscriberAndGeneration(uid string, observedGenerat
 	}
 }
 
-func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1alpha1.SubscriberStatus) InMemoryChannelOption {
+func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1beta1.SubscriberStatus) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
 		imc.Status.SetSubscribableTypeStatus(duckv1alpha1.SubscribableStatus{
 			Subscribers: subscriberStatuses})

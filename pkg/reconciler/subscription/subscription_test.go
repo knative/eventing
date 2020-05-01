@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 
@@ -32,14 +33,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
@@ -47,7 +49,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	rt "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -101,18 +104,18 @@ var (
 
 	testChannelGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1beta1",
 		Kind:    "InMemoryChannel",
 	}
 
 	coreChannelGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1beta1",
 		Kind:    "Channel",
 	}
 
-	imcRef = corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
+	imcRef = duckv1.KReference{
+		APIVersion: "messaging.knative.dev/v1beta1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       channelName,
@@ -152,8 +155,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
 				// Subscriber
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
@@ -213,7 +216,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
 			},
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
@@ -241,7 +244,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
@@ -273,7 +276,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
@@ -337,8 +340,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(testChannelGVK, replyName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS)),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS)),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
@@ -347,7 +350,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:InMemoryChannel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: inmemorychannels.messaging.knative.dev %q not found", replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:InMemoryChannel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1beta1,ResourceVersion:,FieldPath:,}: inmemorychannels.messaging.knative.dev %q not found", replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -358,7 +361,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:InMemoryChannel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: inmemorychannels.messaging.knative.dev %q not found", replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:InMemoryChannel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1beta1,ResourceVersion:,FieldPath:,}: inmemorychannels.messaging.knative.dev %q not found", replyName)),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -373,14 +376,14 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS), // reply will be a nonAddressableGVK for this test
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
 				),
-				NewUnstructured(nonAddressableGVK, replyName, testNS),
+				rt.NewUnstructured(nonAddressableGVK, replyName, testNS),
 			},
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
@@ -410,8 +413,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -453,8 +456,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -492,11 +495,11 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
-				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+				rt.NewUnstructured(subscriberGVK, dlcName, testNS,
+					rt.WithUnstructuredAddressable(dlcDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -526,7 +529,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, DeadLetterSinkURI: dlcURI, SubscriberURI: subscriberURI},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dlc.mynamespace.svc.cluster.local")}}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -538,8 +541,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(coreChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -587,8 +590,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(coreChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -713,8 +716,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(testChannelGVK, replyName, testNS),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -765,8 +768,8 @@ func TestAllCases(t *testing.T) {
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -863,7 +866,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelDNS),
 					WithInMemoryChannelReadySubscriber(subscriptionUID),
 				),
-				NewService(serviceName, testNS),
+				rt.NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -912,7 +915,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
 					WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
 				),
-				NewService(serviceName, testNS),
+				rt.NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
 			WantErr: false,
@@ -951,8 +954,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -985,8 +988,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1034,8 +1037,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS,
-					WithUnstructuredAddressable(subscriberDNS),
+				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
+					rt.WithUnstructuredAddressable(subscriberDNS),
 				),
 			},
 			Key: testNS + "/" + subscriptionName,
@@ -1067,7 +1070,7 @@ func TestAllCases(t *testing.T) {
 	}, false, logger))
 }
 
-func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
+func patchSubscribersV1Alpha1(namespace, name string, subscribers []eventingduckv1alpha1.SubscriberSpec) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
 	action.Namespace = namespace
@@ -1090,6 +1093,36 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 		spec = fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
 	} else {
 		spec = `{"subscribable":{"subscribers":null}}`
+	}
+
+	patch := `{"spec":` + spec + `}`
+	action.Patch = []byte(patch)
+	return action
+}
+
+func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+
+	var spec string
+	if subscribers != nil {
+		b, err := json.Marshal(subscribers)
+		if err != nil {
+			return action
+		}
+		ss := make([]map[string]interface{}, 0)
+		err = json.Unmarshal(b, &ss)
+		if err != nil {
+			return action
+		}
+		subs, err := json.Marshal(ss)
+		if err != nil {
+			return action
+		}
+		spec = fmt.Sprintf(`{"subscribers":%s}`, subs)
+	} else {
+		spec = `{"subscribers":null}`
 	}
 
 	patch := `{"spec":` + spec + `}`

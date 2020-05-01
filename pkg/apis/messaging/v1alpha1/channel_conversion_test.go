@@ -144,7 +144,7 @@ func TestChannelConversion(t *testing.T) {
 				},
 				SubscribableTypeStatus: eventingduck.SubscribableTypeStatus{
 					SubscribableStatus: &eventingduck.SubscribableStatus{
-						Subscribers: []eventingduck.SubscriberStatus{
+						Subscribers: []eventingduckv1beta1.SubscriberStatus{
 							{
 								UID:                "status-uid-1",
 								ObservedGeneration: 99,
