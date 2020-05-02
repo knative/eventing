@@ -22,20 +22,27 @@ import (
 	"fmt"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-
-	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/cloudevents"
-	"knative.dev/eventing/test/lib/resources"
 
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-
+	"knative.dev/eventing/test"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-func TestFlowsSequence(t *testing.T) {
+func TestSequence(t *testing.T) {
+	for _, c := range test.EventingFlags.Channels {
+		testSequenceWithChannel(t, &c)
+	}
+}
+
+func testSequenceWithChannel(t *testing.T, channelTypeMeta *metav1.TypeMeta) {
+	fmt.Printf("Testing Sequence with channel %+v\n", channelTypeMeta)
 	const (
 		sequenceName  = "e2e-sequence"
 		senderPodName = "e2e-sequence-sender-pod"
@@ -44,6 +51,7 @@ func TestFlowsSequence(t *testing.T) {
 		subscriptionName = "e2e-sequence-subscription"
 		loggerPodName    = "e2e-sequence-logger-pod"
 	)
+
 	stepSubscriberConfigs := []struct {
 		podName     string
 		msgAppender string
@@ -57,7 +65,6 @@ func TestFlowsSequence(t *testing.T) {
 		podName:     "e2e-stepper3",
 		msgAppender: "-step3",
 	}}
-	channelTypeMeta := &lib.DefaultChannel
 
 	client := setup(t, true)
 	defer tearDown(client)
