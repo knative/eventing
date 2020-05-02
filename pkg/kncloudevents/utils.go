@@ -30,10 +30,8 @@ func WriteHttpRequestWithAdditionalHeaders(ctx context.Context, message binding.
 		return err
 	}
 
-	if additionalHeaders != nil {
-		for k, v := range additionalHeaders {
-			req.Header[k] = v
-		}
+	for k, v := range additionalHeaders {
+		req.Header[k] = v
 	}
 
 	return nil
