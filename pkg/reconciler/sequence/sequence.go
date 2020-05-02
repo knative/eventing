@@ -138,38 +138,26 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			}
 			logging.FromContext(ctx).Debug("Created Channel", zap.Any("channel", newChannel))
 
+			// Played around with using r.trackAndFetchChannel here and seeing if the channel is ready,
+			// but let's face it, it's never ready as the reconciler has not taken a crack at it, so instead
+			// of just grabbing it, and if it doesn't exist yet through our lister returning a place holder,
+			// just return the placeholder here, since it was successfully created fine above.
 			// Grab it back so we get it in the duck shape.
-			c, err = r.trackAndFetchChannel(ctx, s, channelObjRef)
+			channelable := &eventingduckv1beta1.Channelable{}
+			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				if !apierrs.IsNotFound(err) {
-					logging.FromContext(ctx).Error("Failed to get back the created Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-					return nil, err
-				}
-				// Probably not filled in the informer yet, this is not an error, return a place holder
-				channelable := &eventingduckv1beta1.Channelable{}
-				err = duckapis.FromUnstructured(created, channelable)
-				if err != nil {
-					logging.FromContext(ctx).Error("Failed to convert to channelable", zap.Any("channel", created), zap.Error(err))
-				}
-				return &eventingduckv1alpha1.ChannelableCombined{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       channelable.Kind,
-						APIVersion: channelable.APIVersion,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      channelable.Name,
-						Namespace: channelable.Namespace,
-					},
-				}, nil
+				logging.FromContext(ctx).Error("Failed to convert to channelable", zap.Any("channel", created), zap.Error(err))
 			}
-
-			// Convert to ChannelableCombined duck so that we can treat all Channels the same.
-			channelable, ok := c.(*eventingduckv1alpha1.ChannelableCombined)
-			if !ok {
-				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", c))
-				return nil, err
-			}
-			return channelable, nil
+			return &eventingduckv1alpha1.ChannelableCombined{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       channelable.Kind,
+					APIVersion: channelable.APIVersion,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      channelable.Name,
+					Namespace: channelable.Namespace,
+				},
+			}, nil
 		}
 		logging.FromContext(ctx).Error("Failed to get Channel", zap.Any("channel", channelObjRef), zap.Error(err))
 		return nil, err

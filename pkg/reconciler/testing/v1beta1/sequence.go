@@ -27,10 +27,10 @@ import (
 )
 
 // SequenceOption enables further configuration of a Sequence.
-type FlowsSequenceOption func(*v1beta1.Sequence)
+type SequenceOption func(*v1beta1.Sequence)
 
 // NewSequence creates an Sequence with SequenceOptions.
-func NewFlowsSequence(name, namespace string, popt ...FlowsSequenceOption) *v1beta1.Sequence {
+func NewSequence(name, namespace string, popt ...SequenceOption) *v1beta1.Sequence {
 	p := &v1beta1.Sequence{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -45,70 +45,70 @@ func NewFlowsSequence(name, namespace string, popt ...FlowsSequenceOption) *v1be
 	return p
 }
 
-func WithFlowsSequenceGeneration(gen int64) FlowsSequenceOption {
+func WithSequenceGeneration(gen int64) SequenceOption {
 	return func(s *v1beta1.Sequence) {
 		s.Generation = gen
 	}
 }
 
-func WithFlowsSequenceStatusObservedGeneration(gen int64) FlowsSequenceOption {
+func WithSequenceStatusObservedGeneration(gen int64) SequenceOption {
 	return func(s *v1beta1.Sequence) {
 		s.Status.ObservedGeneration = gen
 	}
 }
 
-func WithInitFlowsSequenceConditions(p *v1beta1.Sequence) {
+func WithInitSequenceConditions(p *v1beta1.Sequence) {
 	p.Status.InitializeConditions()
 }
 
-func WithFlowsSequenceDeleted(p *v1beta1.Sequence) {
+func WithSequenceDeleted(p *v1beta1.Sequence) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithFlowsSequenceChannelTemplateSpec(cts *messagingv1beta1.ChannelTemplateSpec) FlowsSequenceOption {
+func WithSequenceChannelTemplateSpec(cts *messagingv1beta1.ChannelTemplateSpec) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Spec.ChannelTemplate = cts
 	}
 }
 
-func WithFlowsSequenceSteps(steps []v1beta1.SequenceStep) FlowsSequenceOption {
+func WithSequenceSteps(steps []v1beta1.SequenceStep) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Spec.Steps = steps
 	}
 }
 
-func WithFlowsSequenceReply(reply *duckv1.Destination) FlowsSequenceOption {
+func WithSequenceReply(reply *duckv1.Destination) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Spec.Reply = reply
 	}
 }
 
-func WithFlowsSequenceSubscriptionStatuses(subscriptionStatuses []v1beta1.SequenceSubscriptionStatus) FlowsSequenceOption {
+func WithSequenceSubscriptionStatuses(subscriptionStatuses []v1beta1.SequenceSubscriptionStatus) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Status.SubscriptionStatuses = subscriptionStatuses
 	}
 }
 
-func WithFlowsSequenceChannelStatuses(channelStatuses []v1beta1.SequenceChannelStatus) FlowsSequenceOption {
+func WithSequenceChannelStatuses(channelStatuses []v1beta1.SequenceChannelStatus) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Status.ChannelStatuses = channelStatuses
 	}
 }
 
-func WithFlowsSequenceChannelsNotReady(reason, message string) FlowsSequenceOption {
+func WithSequenceChannelsNotReady(reason, message string) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Status.MarkChannelsNotReady(reason, message)
 	}
 }
 
-func WithFlowsSequenceSubscriptionsNotReady(reason, message string) FlowsSequenceOption {
+func WithSequenceSubscriptionsNotReady(reason, message string) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Status.MarkSubscriptionsNotReady(reason, message)
 	}
 }
 
-func WithFlowsSequenceAddressableNotReady(reason, message string) FlowsSequenceOption {
+func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
 	return func(p *v1beta1.Sequence) {
 		p.Status.MarkAddressableNotReady(reason, message)
 	}
