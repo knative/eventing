@@ -26,10 +26,11 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	duckapis "knative.dev/pkg/apis/duck"
 
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
@@ -39,6 +40,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
+	duckapis "knative.dev/pkg/apis/duck"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
@@ -82,10 +84,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 		return fmt.Errorf("unable to create dynamic client for: %+v", s.Spec.ChannelTemplate)
 	}
 
-	// Tell tracker to reconcile this Sequence whenever my channels change.
-	track := r.channelableTracker.TrackInNamespace(s)
-
-	channels := make([]*duckv1beta1.Channelable, 0, len(s.Spec.Steps))
+	channels := make([]*eventingduckv1alpha1.ChannelableCombined, 0, len(s.Spec.Steps))
 	for i := 0; i < len(s.Spec.Steps); i++ {
 		ingressChannelName := resources.SequenceChannelName(s.Name, i)
 
@@ -94,10 +93,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 			APIVersion: s.Spec.ChannelTemplate.APIVersion,
 			Name:       ingressChannelName,
 			Namespace:  s.Namespace,
-		}
-		// Track channels and enqueue sequence when they change.
-		if err := track(channelObjRef); err != nil {
-			return fmt.Errorf("unable to track changes to Channel: %v", err)
 		}
 
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, s, channelObjRef)
@@ -125,17 +120,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 	return newReconciledNormal(s.Namespace, s.Name)
 }
 
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*duckv1beta1.Channelable, error) {
-	lister, err := r.channelableTracker.ListerFor(channelObjRef)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, err
-	}
-	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1alpha1.ChannelableCombined, error) {
+
+	c, err := r.trackAndFetchChannel(ctx, s, channelObjRef)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			newChannel, err := resources.NewChannel(channelObjRef.Name, s)
-			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
+			logging.FromContext(ctx).Info(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to create Channel resource object", zap.Any("channel", channelObjRef), zap.Error(err))
 				return nil, err
@@ -146,11 +137,36 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 				return nil, err
 			}
 			logging.FromContext(ctx).Debug("Created Channel", zap.Any("channel", newChannel))
-			// Convert to Channel duck so that we can treat all Channels the same.
-			channelable := &duckv1beta1.Channelable{}
-			err = duckapis.FromUnstructured(created, channelable)
+
+			// Grab it back so we get it in the duck shape.
+			c, err = r.trackAndFetchChannel(ctx, s, channelObjRef)
 			if err != nil {
-				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
+				if !apierrs.IsNotFound(err) {
+					logging.FromContext(ctx).Error("Failed to get back the created Channel", zap.Any("channel", channelObjRef), zap.Error(err))
+					return nil, err
+				}
+				// Probably not filled in the informer yet, this is not an error, return a place holder
+				channelable := &eventingduckv1beta1.Channelable{}
+				err = duckapis.FromUnstructured(created, channelable)
+				if err != nil {
+					logging.FromContext(ctx).Error("Failed to convert to channelable", zap.Any("channel", created), zap.Error(err))
+				}
+				return &eventingduckv1alpha1.ChannelableCombined{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       channelable.Kind,
+						APIVersion: channelable.APIVersion,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      channelable.Name,
+						Namespace: channelable.Namespace,
+					},
+				}, nil
+			}
+
+			// Convert to ChannelableCombined duck so that we can treat all Channels the same.
+			channelable, ok := c.(*eventingduckv1alpha1.ChannelableCombined)
+			if !ok {
+				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", c))
 				return nil, err
 			}
 			return channelable, nil
@@ -159,10 +175,10 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 		return nil, err
 	}
 	logging.FromContext(ctx).Debug("Found Channel", zap.Any("channel", channelObjRef))
-	channelable, ok := c.(*duckv1beta1.Channelable)
+	channelable, ok := c.(*eventingduckv1alpha1.ChannelableCombined)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", c)
 	}
 	return channelable, nil
 }
@@ -205,4 +221,25 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1b
 		return newSub, nil
 	}
 	return sub, nil
+}
+
+func (r *Reconciler) trackAndFetchChannel(ctx context.Context, seq *v1beta1.Sequence, ref corev1.ObjectReference) (runtime.Object, pkgreconciler.Event) {
+	// Track the channel using the channelableTracker.
+	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
+	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
+	// subscription controller will reconcile upon a `channel` change.
+	if err := r.channelableTracker.TrackInNamespace(seq)(ref); err != nil {
+		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to channel %+v : %v", ref, err)
+	}
+	chLister, err := r.channelableTracker.ListerFor(ref)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
+		return nil, err
+	}
+	obj, err := chLister.ByNamespace(seq.Namespace).Get(ref.Name)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
+		return nil, err
+	}
+	return obj, err
 }
