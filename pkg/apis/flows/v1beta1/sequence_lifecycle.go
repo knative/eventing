@@ -17,8 +17,6 @@
 package v1beta1
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -120,7 +118,6 @@ func (ss *SequenceStatus) PropagateChannelStatuses(channels []*eventingduckv1alp
 
 	}
 	for i, c := range channels {
-		fmt.Printf("Channel address: %+v\n", c.Status.AddressStatus)
 		ss.ChannelStatuses[i] = SequenceChannelStatus{
 			Channel: corev1.ObjectReference{
 				APIVersion: c.APIVersion,
@@ -164,7 +161,7 @@ func (ss *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, 
 }
 
 func (ss *SequenceStatus) setAddress(address *duckv1alpha1.Addressable) {
-	if address == nil {
+	if address == nil || address.URL == nil {
 		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyAddress", "addressable is nil")
 	} else {
 		ss.AddressStatus.Address = &duckv1.Addressable{URL: address.URL}
