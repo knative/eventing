@@ -60,6 +60,8 @@ func SequenceTestHelper(t *testing.T,
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := lib.Setup(st, true, options...)
+		defer lib.TearDown(client)
+
 		// construct steps for the sequence
 		steps := make([]v1alpha1.SequenceStep, 0)
 		for _, config := range stepSubscriberConfigs {
@@ -121,7 +123,7 @@ func SequenceTestHelper(t *testing.T,
 		eventData := cloudevents.BaseData{Message: msg}
 		eventDataBytes, err := json.Marshal(eventData)
 		if err != nil {
-			t.Fatalf("Failed to convert %v to json: %v", eventData, err)
+			st.Fatalf("Failed to convert %v to json: %v", eventData, err)
 		}
 		event := cloudevents.New(
 			string(eventDataBytes),
@@ -139,7 +141,7 @@ func SequenceTestHelper(t *testing.T,
 			expectedMsg += config.msgAppender
 		}
 		if err := client.CheckLog(loggerPodName, lib.CheckerContains(expectedMsg)); err != nil {
-			t.Fatalf("String %q not found in logs of logger pod %q: %v", expectedMsg, loggerPodName, err)
+			st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedMsg, loggerPodName, err)
 		}
 	})
 }
