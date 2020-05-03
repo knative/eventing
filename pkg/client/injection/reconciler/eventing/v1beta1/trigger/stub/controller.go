@@ -21,8 +21,8 @@ package trigger
 import (
 	context "context"
 
-	trigger "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	v1alpha1trigger "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
+	trigger "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
+	v1beta1trigger "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
 	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
@@ -42,7 +42,7 @@ func NewController(
 	// TODO: setup additional informers here.
 
 	r := &Reconciler{}
-	impl := v1alpha1trigger.NewImpl(ctx, r)
+	impl := v1beta1trigger.NewImpl(ctx, r)
 
 	logger.Info("Setting up event handlers.")
 
