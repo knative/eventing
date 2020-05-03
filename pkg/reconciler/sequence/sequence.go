@@ -120,7 +120,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1beta1.Channelable, error) {
-
 	c, err := r.trackAndFetchChannel(ctx, s, channelObjRef)
 	if err != nil {
 		if apierrs.IsNotFound(err) {

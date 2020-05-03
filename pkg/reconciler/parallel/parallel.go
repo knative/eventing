@@ -26,6 +26,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	duckapis "knative.dev/pkg/apis/duck"
 
@@ -87,9 +88,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1beta1.Parallel) pkg
 		return fmt.Errorf("unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
 	}
 
-	// Tell tracker to reconcile this Parallel whenever my channels change.
-	track := r.channelableTracker.TrackInNamespace(p)
-
 	var ingressChannel *duckv1beta1.Channelable
 	channels := make([]*duckv1beta1.Channelable, 0, len(p.Spec.Branches))
 	for i := -1; i < len(p.Spec.Branches); i++ {
@@ -105,11 +103,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1beta1.Parallel) pkg
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 			Name:       channelName,
 			Namespace:  p.Namespace,
-		}
-
-		// Track channels and enqueue parallel when they change.
-		if err := track(channelObjRef); err != nil {
-			return fmt.Errorf("unable to track changes to Channel: %v", err)
 		}
 
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, p, channelObjRef)
@@ -144,12 +137,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1beta1.Parallel) pkg
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1beta1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1beta1.Channelable, error) {
-	lister, err := r.channelableTracker.ListerFor(channelObjRef)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, err
-	}
-	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
+	c, err := r.trackAndFetchChannel(ctx, p, channelObjRef)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			newChannel, err := resources.NewChannel(channelObjRef.Name, p)
@@ -168,7 +156,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			channelable := &duckv1beta1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
+				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", created), zap.Error(err))
 				return nil, err
 			}
 			return channelable, nil
@@ -180,7 +168,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	channelable, ok := c.(*duckv1beta1.Channelable)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", c)
 	}
 	return channelable, nil
 }
@@ -240,4 +228,25 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 		return newSub, nil
 	}
 	return sub, nil
+}
+
+func (r *Reconciler) trackAndFetchChannel(ctx context.Context, p *v1beta1.Parallel, ref corev1.ObjectReference) (runtime.Object, pkgreconciler.Event) {
+	// Track the channel using the channelableTracker.
+	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
+	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
+	// subscription controller will reconcile upon a `channel` change.
+	if err := r.channelableTracker.TrackInNamespace(p)(ref); err != nil {
+		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to channel %+v : %v", ref, err)
+	}
+	chLister, err := r.channelableTracker.ListerFor(ref)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
+		return nil, err
+	}
+	obj, err := chLister.ByNamespace(p.Namespace).Get(ref.Name)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
+		return nil, err
+	}
+	return obj, err
 }
