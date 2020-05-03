@@ -27,10 +27,8 @@ import (
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 var sequenceConditionReady = apis.Condition{
@@ -62,19 +60,19 @@ func getSubscription(name string, ready bool) *messagingv1beta1.Subscription {
 	return &s
 }
 
-func getChannelableCombined(ready bool) *duckv1alpha1.ChannelableCombined {
+func getChannelable(ready bool) *eventingduckv1beta1.Channelable {
 	URL, _ := apis.ParseURL("http://example.com")
-	c := duckv1alpha1.ChannelableCombined{
+	c := eventingduckv1beta1.Channelable{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "InMemoryChannel",
 		},
 		ObjectMeta: metav1.ObjectMeta{},
-		Status:     duckv1alpha1.ChannelableCombinedStatus{},
+		Status:     eventingduckv1beta1.ChannelableStatus{},
 	}
 
 	if ready {
-		c.Status.Address = &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: URL}, Hostname: ""}
+		c.Status.Address = &duckv1.Addressable{URL: URL}
 	}
 
 	return &c
@@ -258,27 +256,27 @@ func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 func TestSequencePropagateChannelStatuses(t *testing.T) {
 	tests := []struct {
 		name     string
-		channels []*duckv1alpha1.ChannelableCombined
+		channels []*eventingduckv1beta1.Channelable
 		want     corev1.ConditionStatus
 	}{{
 		name:     "empty",
-		channels: []*duckv1alpha1.ChannelableCombined{},
+		channels: []*eventingduckv1beta1.Channelable{},
 		want:     corev1.ConditionFalse,
 	}, {
 		name:     "one channelable not ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(false)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(false)},
 		want:     corev1.ConditionFalse,
 	}, {
 		name:     "one channelable ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true)},
 		want:     corev1.ConditionTrue,
 	}, {
 		name:     "one channelable ready, one not",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true), getChannelableCombined(false)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true), getChannelable(false)},
 		want:     corev1.ConditionFalse,
 	}, {
 		name:     "two channelables ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true), getChannelableCombined(true)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true), getChannelable(true)},
 		want:     corev1.ConditionTrue,
 	}}
 
@@ -299,41 +297,41 @@ func TestSequenceReady(t *testing.T) {
 	tests := []struct {
 		name     string
 		subs     []*messagingv1beta1.Subscription
-		channels []*duckv1alpha1.ChannelableCombined
+		channels []*eventingduckv1beta1.Channelable
 		want     bool
 	}{{
 		name:     "empty",
 		subs:     []*messagingv1beta1.Subscription{},
-		channels: []*duckv1alpha1.ChannelableCombined{},
+		channels: []*eventingduckv1beta1.Channelable{},
 		want:     false,
 	}, {
 		name:     "one channelable not ready, one subscription ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(false)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(false)},
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", true)},
 		want:     false,
 	}, {
 		name:     "one channelable ready, one subscription not ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true)},
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", false)},
 		want:     false,
 	}, {
 		name:     "one channelable ready, one subscription ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true)},
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", true)},
 		want:     true,
 	}, {
 		name:     "one channelable ready, one not, two subsriptions ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true), getChannelableCombined(false)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true), getChannelable(false)},
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     false,
 	}, {
 		name:     "two channelables ready, one subscription ready, one not",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true), getChannelableCombined(true)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true), getChannelable(true)},
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
 		want:     false,
 	}, {
 		name:     "two channelables ready, two subscriptions ready",
-		channels: []*duckv1alpha1.ChannelableCombined{getChannelableCombined(true), getChannelableCombined(true)},
+		channels: []*eventingduckv1beta1.Channelable{getChannelable(true), getChannelable(true)},
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     true,
 	}}
@@ -356,7 +354,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 	URL, _ := apis.ParseURL("http://example.com")
 	tests := []struct {
 		name       string
-		address    *pkgduckv1alpha1.Addressable
+		address    *duckv1.Addressable
 		want       *pkgduckv1.Addressable
 		wantStatus corev1.ConditionStatus
 	}{{
@@ -366,17 +364,17 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 		wantStatus: corev1.ConditionFalse,
 	}, {
 		name:       "empty",
-		address:    &pkgduckv1alpha1.Addressable{},
+		address:    &duckv1.Addressable{},
 		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}, {
 		name:       "URL",
-		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: URL}, Hostname: ""},
+		address:    &duckv1.Addressable{URL: URL},
 		want:       &pkgduckv1.Addressable{URL: URL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "nil",
-		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: nil}, Hostname: ""},
+		address:    &duckv1.Addressable{URL: nil},
 		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}}

@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
+
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/sequence"
 	"knative.dev/eventing/pkg/duck"
@@ -39,7 +39,7 @@ import (
 	rt "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -60,7 +60,8 @@ const (
 func init() {
 	// Add types to scheme
 	_ = v1beta1.AddToScheme(scheme.Scheme)
-	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = duckv1beta1.AddToScheme(scheme.Scheme)
+	_ = duckv1.AddToScheme(scheme.Scheme)
 }
 
 func createReplyChannel(channelName string) *duckv1.Destination {
@@ -556,10 +557,9 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		ctx = channelablecombined.WithDuck(ctx)
 		r := &Reconciler{
 			sequenceLister:     listers.GetSequenceLister(),
-			channelableTracker: duck.NewListableTracker(ctx, channelablecombined.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),

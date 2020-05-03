@@ -28,7 +28,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1beta1/sequence"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/sequence"
@@ -55,7 +55,7 @@ func NewController(
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 
-	r.channelableTracker = duck.NewListableTracker(ctx, channelablecombined.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Sequence, so that

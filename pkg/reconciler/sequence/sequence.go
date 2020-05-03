@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
@@ -84,7 +83,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 		return fmt.Errorf("unable to create dynamic client for: %+v", s.Spec.ChannelTemplate)
 	}
 
-	channels := make([]*eventingduckv1alpha1.ChannelableCombined, 0, len(s.Spec.Steps))
+	channels := make([]*eventingduckv1beta1.Channelable, 0, len(s.Spec.Steps))
 	for i := 0; i < len(s.Spec.Steps); i++ {
 		ingressChannelName := resources.SequenceChannelName(s.Name, i)
 
@@ -120,7 +119,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 	return newReconciledNormal(s.Namespace, s.Name)
 }
 
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1alpha1.ChannelableCombined, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1beta1.Channelable, error) {
 
 	c, err := r.trackAndFetchChannel(ctx, s, channelObjRef)
 	if err != nil {
@@ -138,34 +137,21 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			}
 			logging.FromContext(ctx).Debug("Created Channel", zap.Any("channel", newChannel))
 
-			// Played around with using r.trackAndFetchChannel here and seeing if the channel is ready,
-			// but let's face it, it's never ready as the reconciler has not taken a crack at it, so instead
-			// of just grabbing it, and if it doesn't exist yet through our lister returning a place holder,
-			// just return the placeholder here, since it was successfully created fine above.
-			// Grab it back so we get it in the duck shape.
 			channelable := &eventingduckv1beta1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to convert to channelable", zap.Any("channel", created), zap.Error(err))
+				return nil, fmt.Errorf("Failed to convert created channel to channelable: %s", err)
 			}
-			return &eventingduckv1alpha1.ChannelableCombined{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       channelable.Kind,
-					APIVersion: channelable.APIVersion,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      channelable.Name,
-					Namespace: channelable.Namespace,
-				},
-			}, nil
+			return channelable, nil
 		}
 		logging.FromContext(ctx).Error("Failed to get Channel", zap.Any("channel", channelObjRef), zap.Error(err))
 		return nil, err
 	}
 	logging.FromContext(ctx).Debug("Found Channel", zap.Any("channel", channelObjRef))
-	channelable, ok := c.(*eventingduckv1alpha1.ChannelableCombined)
+	channelable, ok := c.(*eventingduckv1beta1.Channelable)
 	if !ok {
-		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
+		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", c), zap.Error(err))
 		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", c)
 	}
 	return channelable, nil
