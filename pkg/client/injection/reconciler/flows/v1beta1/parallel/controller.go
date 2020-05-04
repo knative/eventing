@@ -31,7 +31,7 @@ import (
 	record "k8s.io/client-go/tools/record"
 	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	injectionclient "knative.dev/eventing/pkg/client/injection/client"
-	parallel "knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/parallel"
+	parallel "knative.dev/eventing/pkg/client/injection/informers/flows/v1beta1/parallel"
 	client "knative.dev/pkg/client/injection/kube/client"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"

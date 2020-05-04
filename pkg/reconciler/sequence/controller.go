@@ -22,16 +22,16 @@ import (
 	"knative.dev/pkg/logging"
 
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	"knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/sequence"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
-	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
+	"knative.dev/eventing/pkg/client/injection/informers/flows/v1beta1/sequence"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
+	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/sequence"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
@@ -61,7 +61,7 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Sequence")),
+		FilterFunc: controller.FilterGroupKind(v1beta1.Kind("Sequence")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

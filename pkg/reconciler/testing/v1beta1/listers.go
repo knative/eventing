@@ -34,7 +34,7 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
@@ -42,7 +42,7 @@ import (
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
+	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1beta1"
 	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
@@ -124,8 +124,8 @@ func (l *Listers) GetSubscriptionLister() messaginglistersv1beta1.SubscriptionLi
 	return messaginglistersv1beta1.NewSubscriptionLister(l.indexerFor(&messagingv1beta1.Subscription{}))
 }
 
-func (l *Listers) GetFlowsSequenceLister() flowslisters.SequenceLister {
-	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1alpha1.Sequence{}))
+func (l *Listers) GetSequenceLister() flowslisters.SequenceLister {
+	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1beta1.Sequence{}))
 }
 
 func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
@@ -152,8 +152,8 @@ func (l *Listers) GetMessagingChannelLister() messaginglistersv1beta1.ChannelLis
 	return messaginglistersv1beta1.NewChannelLister(l.indexerFor(&messagingv1beta1.Channel{}))
 }
 
-func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
-	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
+func (l *Listers) GetParallelLister() flowslisters.ParallelLister {
+	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1beta1.Parallel{}))
 }
 
 func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {

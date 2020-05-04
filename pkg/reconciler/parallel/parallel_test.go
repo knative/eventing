@@ -24,7 +24,7 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
-	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
+	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/parallel"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,22 +33,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
-	. "knative.dev/eventing/pkg/reconciler/testing"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	rt "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 )
 
 const (
@@ -60,8 +61,8 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1alpha1.AddToScheme(scheme.Scheme)
-	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = duckv1beta1.AddToScheme(scheme.Scheme)
 	_ = duckv1.AddToScheme(scheme.Scheme)
 }
 
@@ -69,8 +70,8 @@ func TestAllBranches(t *testing.T) {
 	pKey := testNS + "/" + parallelName
 	imc := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "messaging.knative.dev/v1alpha1",
-			Kind:       "inmemorychannel",
+			APIVersion: "messaging.knative.dev/v1beta1",
+			Kind:       "InMemoryChannel",
 		},
 		Spec: &runtime.RawExtension{Raw: []byte("{}")},
 	}
@@ -87,7 +88,7 @@ func TestAllBranches(t *testing.T) {
 		}, { // TODO: there is a bug in the controller, it will query for ""
 			//			Name: "trigger key not found ",
 			//			Objects: []runtime.Object{
-			//				reconciletesting.NewTrigger(triggerName, testNS),
+			//				rt.NewTrigger(triggerName, testNS),
 			//			},
 			//			Key:     "foo/incomplete",
 			//			WantErr: true,
@@ -98,19 +99,19 @@ func TestAllBranches(t *testing.T) {
 			Name: "deleting",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelDeleted)},
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelDeleted)},
 			WantErr: false,
 		}, {
 			Name: "single branch, no filter",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelGeneration(parallelGeneration),
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelGeneration(parallelGeneration),
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
@@ -120,25 +121,25 @@ func TestAllBranches(t *testing.T) {
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 				}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelGeneration(parallelGeneration),
-					reconciletesting.WithFlowsParallelStatusObservedGeneration(parallelGeneration),
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelGeneration(parallelGeneration),
+					rt.WithFlowsParallelStatusObservedGeneration(parallelGeneration),
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -148,10 +149,10 @@ func TestAllBranches(t *testing.T) {
 			Name: "single branch, with filter",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
@@ -161,23 +162,23 @@ func TestAllBranches(t *testing.T) {
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
 				}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -187,11 +188,11 @@ func TestAllBranches(t *testing.T) {
 			Name: "single branch, no filter, with global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
@@ -201,26 +202,26 @@ func TestAllBranches(t *testing.T) {
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
-				}), reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
+				}), rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 					}),
-					reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
+					rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -230,11 +231,11 @@ func TestAllBranches(t *testing.T) {
 			Name: "single branch with reply, no filter, with case and global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0), Reply: createBranchReplyChannel(0)},
 					}))},
 			WantErr: false,
@@ -244,26 +245,26 @@ func TestAllBranches(t *testing.T) {
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0), Reply: createBranchReplyChannel(0)},
-				}), reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
+				}), rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0), Reply: createBranchReplyChannel(0)},
 					}),
-					reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
+					rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -273,10 +274,10 @@ func TestAllBranches(t *testing.T) {
 			Name: "two branches, no filters",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 						{Subscriber: createSubscriber(1)},
 					}))},
@@ -288,35 +289,35 @@ func TestAllBranches(t *testing.T) {
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
 				createBranchChannel(parallelName, 1),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
 				}))),
-				resources.NewFilterSubscription(1, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(1, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
 				}))),
-				resources.NewSubscription(1, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(1, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
 				})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 						{Subscriber: createSubscriber(1)},
 					}),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 							FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -332,11 +333,11 @@ func TestAllBranches(t *testing.T) {
 			Name: "two branches with global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 						{Subscriber: createSubscriber(1)},
 					}))},
@@ -348,37 +349,37 @@ func TestAllBranches(t *testing.T) {
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
 				createBranchChannel(parallelName, 1),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
-				}), reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
-				resources.NewFilterSubscription(1, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				}), rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
+				resources.NewFilterSubscription(1, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
 				}))),
-				resources.NewSubscription(1, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(1, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
-				}), reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
+				}), rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelReply(createReplyChannel(replyChannelName)),
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 						{Subscriber: createSubscriber(1)},
 					}),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{
 						{
 							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 							FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
@@ -395,15 +396,15 @@ func TestAllBranches(t *testing.T) {
 			Name: "single branch, no filter, update subscription",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(1)},
 					})),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
 					})))},
 			WantErr: false,
@@ -416,23 +417,23 @@ func TestAllBranches(t *testing.T) {
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(1)},
 				}))),
-				resources.NewSubscription(0, reconciletesting.NewFlowsParallel(parallelName, testNS, reconciletesting.WithFlowsParallelChannelTemplateSpec(imc), reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
 					{Subscriber: createSubscriber(1)},
 				}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
-					reconciletesting.WithInitFlowsParallelConditions,
-					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{{Subscriber: createSubscriber(1)}}),
-					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
-					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{{Subscriber: createSubscriber(1)}}),
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{{
 						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
@@ -445,14 +446,14 @@ func TestAllBranches(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
-			parallelLister:     listers.GetFlowsParallelLister(),
+			parallelLister:     listers.GetParallelLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 		}
 		return parallel.NewReconciler(ctx, logging.FromContext(ctx),
-			fakeeventingclient.Get(ctx), listers.GetFlowsParallelLister(),
+			fakeeventingclient.Get(ctx), listers.GetParallelLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
@@ -460,8 +461,8 @@ func TestAllBranches(t *testing.T) {
 func createBranchReplyChannel(caseNumber int) *duckv1.Destination {
 	return &duckv1.Destination{
 		Ref: &duckv1.KReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
-			Kind:       "inmemorychannel",
+			APIVersion: "messaging.knative.dev/v1beta1",
+			Kind:       "InMemoryChannel",
 			Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
 			Namespace:  testNS,
 		},
@@ -471,8 +472,8 @@ func createBranchReplyChannel(caseNumber int) *duckv1.Destination {
 func createReplyChannel(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
 		Ref: &duckv1.KReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
-			Kind:       "inmemorychannel",
+			APIVersion: "messaging.knative.dev/v1beta1",
+			Kind:       "InMemoryChannel",
 			Name:       channelName,
 			Namespace:  testNS,
 		},
@@ -482,15 +483,15 @@ func createReplyChannel(channelName string) *duckv1.Destination {
 func createChannel(parallelName string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1alpha1",
-			"kind":       "inmemorychannel",
+			"apiVersion": "messaging.knative.dev/v1beta1",
+			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
 				"namespace":         testNS,
 				"name":              resources.ParallelChannelName(parallelName),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
-						"apiVersion":         "flows.knative.dev/v1alpha1",
+						"apiVersion":         "flows.knative.dev/v1beta1",
 						"blockOwnerDeletion": true,
 						"controller":         true,
 						"kind":               "Parallel",
@@ -507,15 +508,15 @@ func createChannel(parallelName string) *unstructured.Unstructured {
 func createBranchChannel(parallelName string, caseNumber int) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1alpha1",
-			"kind":       "inmemorychannel",
+			"apiVersion": "messaging.knative.dev/v1beta1",
+			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
 				"namespace":         testNS,
 				"name":              resources.ParallelBranchChannelName(parallelName, caseNumber),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
-						"apiVersion":         "flows.knative.dev/v1alpha1",
+						"apiVersion":         "flows.knative.dev/v1beta1",
 						"blockOwnerDeletion": true,
 						"controller":         true,
 						"kind":               "Parallel",
@@ -529,11 +530,11 @@ func createBranchChannel(parallelName string, caseNumber int) *unstructured.Unst
 	}
 }
 
-func createParallelBranchChannelStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelChannelStatus {
-	return v1alpha1.ParallelChannelStatus{
+func createParallelBranchChannelStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1beta1.ParallelChannelStatus {
+	return v1beta1.ParallelChannelStatus{
 		Channel: corev1.ObjectReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
-			Kind:       "inmemorychannel",
+			APIVersion: "messaging.knative.dev/v1beta1",
+			Kind:       "InMemoryChannel",
 			Name:       resources.ParallelBranchChannelName(parallelName, caseNumber),
 			Namespace:  testNS,
 		},
@@ -546,11 +547,11 @@ func createParallelBranchChannelStatus(parallelName string, caseNumber int, stat
 	}
 }
 
-func createParallelChannelStatus(parallelName string, status corev1.ConditionStatus) v1alpha1.ParallelChannelStatus {
-	return v1alpha1.ParallelChannelStatus{
+func createParallelChannelStatus(parallelName string, status corev1.ConditionStatus) v1beta1.ParallelChannelStatus {
+	return v1beta1.ParallelChannelStatus{
 		Channel: corev1.ObjectReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
-			Kind:       "inmemorychannel",
+			APIVersion: "messaging.knative.dev/v1beta1",
+			Kind:       "InMemoryChannel",
 			Name:       resources.ParallelChannelName(parallelName),
 			Namespace:  testNS,
 		},
@@ -563,10 +564,10 @@ func createParallelChannelStatus(parallelName string, status corev1.ConditionSta
 	}
 }
 
-func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelSubscriptionStatus {
-	return v1alpha1.ParallelSubscriptionStatus{
+func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1beta1.ParallelSubscriptionStatus {
+	return v1beta1.ParallelSubscriptionStatus{
 		Subscription: corev1.ObjectReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 			Kind:       "Subscription",
 			Name:       resources.ParallelFilterSubscriptionName(parallelName, caseNumber),
 			Namespace:  testNS,
@@ -574,10 +575,10 @@ func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int,
 	}
 }
 
-func createParallelSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelSubscriptionStatus {
-	return v1alpha1.ParallelSubscriptionStatus{
+func createParallelSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1beta1.ParallelSubscriptionStatus {
+	return v1beta1.ParallelSubscriptionStatus{
 		Subscription: corev1.ObjectReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 			Kind:       "Subscription",
 			Name:       resources.ParallelSubscriptionName(parallelName, caseNumber),
 			Namespace:  testNS,

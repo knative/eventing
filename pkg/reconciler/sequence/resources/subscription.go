@@ -23,8 +23,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -32,11 +32,11 @@ func SequenceSubscriptionName(sequenceName string, step int) string {
 	return fmt.Sprintf("%s-kn-sequence-%d", sequenceName, step)
 }
 
-func NewSubscription(stepNumber int, s *v1alpha1.Sequence) *messagingv1alpha1.Subscription {
-	r := &messagingv1alpha1.Subscription{
+func NewSubscription(stepNumber int, s *v1beta1.Sequence) *messagingv1beta1.Subscription {
+	r := &messagingv1beta1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: s.Namespace,
@@ -46,7 +46,7 @@ func NewSubscription(stepNumber int, s *v1alpha1.Sequence) *messagingv1alpha1.Su
 				*kmeta.NewControllerRef(s),
 			},
 		},
-		Spec: messagingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1beta1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: s.Spec.ChannelTemplate.APIVersion,
 				Kind:       s.Spec.ChannelTemplate.Kind,
