@@ -19,24 +19,20 @@ package adapter
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
-
-	"knative.dev/pkg/profiling"
-	"knative.dev/pkg/signals"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/profiling"
+	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
 )
 
 type MessageAdapter interface {
@@ -57,18 +53,8 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 		log.Fatalf("Error processing env var: %s", err)
 	}
 
-	// Convert json logging.Config to logging.Config.
-	loggingConfig, err := logging.JsonToLoggingConfig(env.GetLoggingConfigJson())
-	if err != nil {
-		fmt.Printf("[ERROR] failed to process logging config: %s", err.Error())
-		// Use default logging config.
-		if loggingConfig, err = logging.NewConfigFromMap(map[string]string{}); err != nil {
-			// If this fails, there is no recovering.
-			panic(err)
-		}
-	}
-
-	logger, _ := logging.NewLoggerFromConfig(loggingConfig, component)
+	// Retrieve the logger from the env
+	logger := env.GetLogger()
 	defer flush(logger)
 	ctx = logging.WithLogger(ctx, logger)
 
@@ -80,7 +66,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	}
 
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
-	metricsConfig, err := metrics.JsonToMetricsOptions(env.GetMetricsConfigJson())
+	metricsConfig, err := env.GetMetricsConfig()
 	if err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
 	} else {
@@ -114,17 +100,13 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	}
 
 	// Retrieve tracing config
-	config, err := tracingconfig.JsonToTracingConfig(env.GetTracingConfigJson())
-	if err != nil {
-		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
-	}
-	if err := tracing.SetupStaticPublishing(logger, component, config); err != nil {
+	if err := env.SetupTracing(logger); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpBindingsSender, err := kncloudevents.NewHttpMessageSender(nil, env.GetSinkURI())
+	httpBindingsSender, err := kncloudevents.NewHttpMessageSender(nil, env.GetSink())
 	if err != nil {
 		logger.Fatal("error building cloud event client", zap.Error(err))
 	}

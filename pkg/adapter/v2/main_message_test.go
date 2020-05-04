@@ -48,8 +48,8 @@ func TestMainMessageAdapter(t *testing.T) {
 				t.Errorf("Expected mode mymode, got: %s", env.Mode)
 			}
 
-			if env.SinkURI != "http://sink" {
-				t.Errorf("Expected sinkURI http://sink, got: %s", env.SinkURI)
+			if env.Sink != "http://sink" {
+				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
 			}
 			return &myAdapterBindings{}
 		})
