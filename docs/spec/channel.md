@@ -36,7 +36,7 @@ Each Channel implementation is backed by its own CRD, like the
 `InMemoryChannel`. Below is an example for the `InMemoryChannel`:
 
 ```
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1beta1
 kind: InMemoryChannel
 metadata:
   name: my-channel
@@ -124,7 +124,7 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
-  version: v1alpha1
+  version: v1beta1
   names:
     kind: InMemoryChannel
     plural: inmemorychannels
