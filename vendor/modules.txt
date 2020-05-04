@@ -363,11 +363,20 @@ gonum.org/v1/gonum/lapack/gonum
 gonum.org/v1/gonum/lapack/lapack64
 gonum.org/v1/gonum/mat
 # google.golang.org/api v0.20.0
+google.golang.org/api/container/v1beta1
+google.golang.org/api/googleapi
+google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
+google.golang.org/api/internal/gensupport
+google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/iterator
 google.golang.org/api/option
+google.golang.org/api/option/internaloption
 google.golang.org/api/support/bundler
+google.golang.org/api/transport/cert
 google.golang.org/api/transport/grpc
+google.golang.org/api/transport/http
+google.golang.org/api/transport/http/internal/propagation
 # google.golang.org/appengine v1.6.5
 google.golang.org/appengine
 google.golang.org/appengine/internal
@@ -902,6 +911,7 @@ knative.dev/pkg/system
 knative.dev/pkg/system/testing
 knative.dev/pkg/test
 knative.dev/pkg/test/ghutil
+knative.dev/pkg/test/gke
 knative.dev/pkg/test/helpers
 knative.dev/pkg/test/ingress
 knative.dev/pkg/test/logging
@@ -914,6 +924,8 @@ knative.dev/pkg/test/monitoring
 knative.dev/pkg/test/slackutil
 knative.dev/pkg/test/spoof
 knative.dev/pkg/test/zipkin
+knative.dev/pkg/testutils/clustermanager/perf-tests
+knative.dev/pkg/testutils/clustermanager/perf-tests/pkg
 knative.dev/pkg/tracing
 knative.dev/pkg/tracing/config
 knative.dev/pkg/tracker
