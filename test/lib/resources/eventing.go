@@ -187,6 +187,29 @@ func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption
 	}
 }
 
+// WithConfigMapForBrokerConfig returns a function that configures the ConfigMap
+// for the Spec.Config for a given Broker. Note that the CM must exist and has
+// to be in the same namespace as the Broker and have the same Name. Typically
+// you'd do this by calling client.CreateBrokerConfigMapOrFail and then call this
+// method.
+// If those don't apply to your ConfigMap, look at WithConfigForBrokerV1Beta1
+func WithConfigMapForBrokerConfig() BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		b.Spec.Config = &duckv1.KReference{
+			Name:       b.Name,
+			Namespace:  b.Namespace,
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		}
+	}
+}
+
+func WithConfigForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		b.Spec.Config = config
+	}
+}
+
 // WithBrokerClassForBrokerV1Beta1 returns a function that adds a brokerClass
 // annotation to the given Broker.
 func WithBrokerClassForBrokerV1Beta1(brokerClass string) BrokerV1Beta1Option {
@@ -200,16 +223,17 @@ func WithBrokerClassForBrokerV1Beta1(brokerClass string) BrokerV1Beta1Option {
 	}
 }
 
-// WithChannelTemplateForBrokerV1Beta1 returns a function that adds a Config to the given Broker.
-func WithChannelTemplateForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta1Option {
-	return func(b *eventingv1beta1.Broker) {
-		b.Spec.Config = config
-	}
-}
-
 // WithDeliveryForBroker returns a function that adds a Delivery for the given Broker.
 func WithDeliveryForBroker(delivery *eventingduckv1beta1.DeliverySpec) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
+		b.Spec.Delivery = delivery
+	}
+}
+
+// WithDeliveryForBrokerV1Beta1 returns a function that adds a Delivery for the given
+// v1beta1 Broker.
+func WithDeliveryForBrokerV1Beta1(delivery *eventingduckv1beta1.DeliverySpec) BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
 		b.Spec.Delivery = delivery
 	}
 }
