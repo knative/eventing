@@ -21,15 +21,14 @@ import (
 	"fmt"
 	"net/url"
 
-	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.opencensus.io/plugin/ochttp"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
@@ -111,6 +110,7 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 
 	if cloudevents.IsACK(result) {
 		var res *http.Result
+
 		if !cloudevents.ResultAs(result, &res) {
 			return c.reportError(reportArgs, result)
 		}

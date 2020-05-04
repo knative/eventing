@@ -106,10 +106,17 @@ func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Cont
 		tag.Insert(eventTypeKey, args.EventType),
 		tag.Insert(sourceNameKey, args.Name),
 		tag.Insert(sourceResourceGroupKey, args.ResourceGroup),
+<<<<<<< HEAD
 		metrics.MaybeInsertIntTag(responseCodeKey, responseCode, responseCode > 0),
 		metrics.MaybeInsertStringTag(responseCodeClassKey, metrics.ResponseCodeClass(responseCode), responseCode > 0),
 		tag.Insert(responseError, args.Error),
 		metrics.MaybeInsertBoolTag(responseTimeout, args.Timeout, args.Error != ""))
+=======
+		metrics.MaybeInsertInt(responseCodeKey, responseCode, responseCode > 0),
+		metrics.MaybeInsertString(responseCodeClassKey, metrics.ResponseCodeClass(responseCode), responseCode > 0),
+		tag.Insert(responseError, args.Error),
+		metrics.MaybeInsertBool(responseTimeout, args.Timeout, args.Error != ""))
+>>>>>>> WIP: mtping reports general error and timeout
 }
 
 func register() {
