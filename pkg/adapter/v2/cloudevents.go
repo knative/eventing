@@ -98,9 +98,13 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 		ResourceGroup: tags.ResourceGroup,
 	}
 
+	var rres *http.RetriesResult
+	if cloudevents.ResultAs(result, &rres) {
+		result = rres.Result
+	}
+
 	if cloudevents.IsACK(result) {
 		var res *http.Result
-
 		if !cloudevents.ResultAs(result, &res) {
 			return c.reportError(reportArgs, result)
 		}
