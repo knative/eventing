@@ -49,18 +49,18 @@ Run the selected smoke test.
 In order to verify that we don't have data-plane unavailability during our
 control-plane outages (when we're upgrading the knative/eventing installation),
 we run a prober test that continually sends events to a service during the
-entire upgrade/downgrade process. When the upgrade completes, we make sure
-that all of those events propagated just once.
+entire upgrade/downgrade process. When the upgrade completes, we make sure that
+all of those events propagated just once.
 
 To achieve that a tool was prepared (https://github.com/cardil/wathola). It
-consists of 3 components: _sender_, _forwarder_, and _receiver_. _Sender_ is
-the usual Kubernetes pod that publishes events to the default `broker` with
-given interval. When it closes (by either `SIGTERM`, or `SIGINT`), an
-`finished` event is generated. _Forwarder_ is a knative serving service that
-scales from zero to receive the requested traffic. _Forwarders_ receive events
-and forwards them to given target. _Receiver_ is an ordinary pod that collects
-events from multiple forwarders and has an endpoint `/report` that can be
-polled to get the status of sent events.
+consists of 3 components: _sender_, _forwarder_, and _receiver_. _Sender_ is the
+usual Kubernetes pod that publishes events to the default `broker` with given
+interval. When it closes (by either `SIGTERM`, or `SIGINT`), an `finished` event
+is generated. _Forwarder_ is a knative serving service that scales from zero to
+receive the requested traffic. _Forwarders_ receive events and forwards them to
+given target. _Receiver_ is an ordinary pod that collects events from multiple
+forwarders and has an endpoint `/report` that can be polled to get the status of
+sent events.
 
 Diagram below describe the setup:
 

@@ -23,8 +23,6 @@ source "$(dirname "$0")/e2e-common.sh"
 # Overrides
 
 function knative_setup {
-  install_istio || fail_test 'Installing Istio failed'
-  install_knative_serving || fail_test 'Installing Knative Serving failed'
   install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
 }
 

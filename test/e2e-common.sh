@@ -176,38 +176,6 @@ function dump_extra_cluster_state() {
   done
 }
 
-function install_istio {
-  if [[ -z "${ISTIO_VERSION}" ]]; then
-    readonly ISTIO_VERSION="1.4.3"
-  fi
-  echo ">> Installing Istio: ${ISTIO_VERSION}"
-
-  local istio_base="./third_party/istio-${ISTIO_VERSION}"
-  INSTALL_ISTIO_CRD_YAML="${istio_base}/istio-crds.yaml"
-  INSTALL_ISTIO_YAML="${istio_base}/istio-minimal.yaml"
-
-  echo "Istio CRD YAML: ${INSTALL_ISTIO_CRD_YAML}"
-  echo "Istio YAML: ${INSTALL_ISTIO_YAML}"
-
-  echo ">> Bringing up Istio"
-  echo ">> Running Istio CRD installer"
-  kubectl apply -f "${INSTALL_ISTIO_CRD_YAML}" || return 1
-  wait_until_batch_job_complete istio-system || return 1
-  UNINSTALL_LIST+=( "${INSTALL_ISTIO_CRD_YAML}" )
-
-  echo ">> Running Istio"
-  kubectl apply -f "${INSTALL_ISTIO_YAML}" || return 1
-  UNINSTALL_LIST+=( "${INSTALL_ISTIO_YAML}" )
-}
-
-# Installs Knative Serving in the current cluster, and waits for it to be ready.
-function install_knative_serving {
-  echo ">> Installing Knative serving"
-  echo "Knative serving YAML: ${KNATIVE_SERVING_RELEASE}"
-  start_latest_knative_serving || fail_test 'Knative Serving failed to install'
-  UNINSTALL_LIST+=( "${KNATIVE_SERVING_RELEASE}" )
-}
-
 function wait_for_file {
   local file timeout waits
   file="$1"

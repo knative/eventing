@@ -73,7 +73,7 @@ func NewConfig(namespace string) *Config {
 		FinishedSleep:       5 * time.Second,
 		FailOnMissingEvents: true,
 		Serving: ServingConfig{
-			Use:         true,
+			Use:         false,
 			ScaleToZero: true,
 		},
 	}

@@ -31,8 +31,8 @@ import (
 
 // ServingClient holds clients required to get serving resources
 type ServingClient struct {
-	Kube     *pkgTest.KubeClient
-	Dynamic  dynamic.Interface
+	Kube    *pkgTest.KubeClient
+	Dynamic dynamic.Interface
 }
 
 // KServiceRoute represents ksvc route, so how much traffic is routed to given deployment
