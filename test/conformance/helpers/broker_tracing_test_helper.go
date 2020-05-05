@@ -89,7 +89,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 			client.CreateRBACResourcesForBrokers()
 		}
 		// Create a configmap used by the broker.
-		client.CreateBrokerConfigMapOrFail("default", channel)
+		client.CreateBrokerConfigMapOrFail("br", channel)
 
 		broker := client.CreateBrokerV1Beta1OrFail(
 			"br",
