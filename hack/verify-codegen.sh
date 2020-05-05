@@ -50,6 +50,9 @@ diff -Naupr --no-dereference \
   "${REPO_ROOT_DIR}/go.sum" "${TMP_DIFFROOT}/go.sum" || ret=1
 
 diff -Naupr --no-dereference \
+  "${REPO_ROOT_DIR}/go.mod" "${TMP_DIFFROOT}/go.mod" || ret=1
+
+diff -Naupr --no-dereference \
   "${REPO_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=1
 
 diff -Naupr --no-dereference \
