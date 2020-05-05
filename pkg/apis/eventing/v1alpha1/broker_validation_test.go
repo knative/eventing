@@ -72,6 +72,43 @@ func TestBrokerImmutableFields(t *testing.T) {
 	}
 }
 
+func TestBrokerValidationFailsWithCreateChannelTemplate(t *testing.T) {
+	b := &Broker{
+		Spec: BrokerSpec{
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
+				TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion", Kind: "mykind"},
+			},
+		},
+	}
+	tests := map[string]struct {
+		ctx     context.Context
+		wantErr *apis.FieldError
+	}{
+		"create fails": {
+			ctx:     apis.WithinCreate(context.Background()),
+			wantErr: apis.ErrDisallowedFields("channelTemplate").ViaField("spec"),
+		},
+		"delete works": {
+			ctx:     apis.WithinDelete(context.Background()),
+			wantErr: nil,
+		},
+		"update works": {
+			ctx:     apis.WithinUpdate(context.Background(), b),
+			wantErr: nil,
+		},
+		"no context, works": {
+			ctx:     context.Background(),
+			wantErr: nil,
+		},
+	}
+	for name, tc := range tests {
+		gotErr := b.Validate(tc.ctx)
+		if diff := cmp.Diff(tc.wantErr.Error(), gotErr.Error()); diff != "" {
+			t.Errorf("%s Broker.Validate (-want, +got) = %v", name, diff)
+		}
+	}
+}
+
 func TestBrokerValidation(t *testing.T) {
 	/* This test should fail: TODO: https://github.com/knative/eventing/issues/2128
 	name: "invalid empty, missing channeltemplatespec",

@@ -61,11 +61,14 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 
 		delivery := resources.Delivery(resources.WithDeadLetterSinkForDelivery(loggerPodName))
 
+		// Create a configmap used by the broker.
+		client.CreateBrokerConfigMapOrFail(brokerName, &channel)
+
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName,
-			resources.WithBrokerClassForBroker(brokerClass),
-			resources.WithChannelTemplateForBroker(&channel),
-			resources.WithDeliveryForBroker(delivery))
+		client.CreateBrokerV1Beta1OrFail(brokerName,
+			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+			resources.WithConfigMapForBrokerConfig(),
+			resources.WithDeliveryForBrokerV1Beta1(delivery))
 
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 

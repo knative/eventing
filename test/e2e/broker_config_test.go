@@ -23,7 +23,7 @@ import (
 	"knative.dev/eventing/test/e2e/helpers"
 )
 
-// TestBrokerDeadLetterSink tests Broker's DeadLetterSink
+// TestBrokerWithConfig tests Broker using Config instead of channel templates.
 func TestBrokerWithConfig(t *testing.T) {
 	helpers.TestBrokerWithConfig(t, brokerClass, channelTestRunner)
 }

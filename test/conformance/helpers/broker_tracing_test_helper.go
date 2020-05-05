@@ -88,10 +88,13 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 			client.CreateConfigMapPropagationOrFail(defaultCMPName)
 			client.CreateRBACResourcesForBrokers()
 		}
-		broker := client.CreateBrokerOrFail(
+		// Create a configmap used by the broker.
+		client.CreateBrokerConfigMapOrFail("br", channel)
+
+		broker := client.CreateBrokerV1Beta1OrFail(
 			"br",
-			resources.WithBrokerClassForBroker(brokerClass),
-			resources.WithChannelTemplateForBroker(channel),
+			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+			resources.WithConfigMapForBrokerConfig(),
 		)
 
 		// Create a logger (EventRecord) Pod and a K8s Service that points to it.
