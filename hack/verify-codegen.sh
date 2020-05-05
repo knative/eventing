@@ -37,6 +37,7 @@ mkdir -p "${TMP_DIFFROOT}"
 
 cp -aR \
   "${REPO_ROOT_DIR}/go.sum" \
+  "${REPO_ROOT_DIR}/go.mod" \
   "${REPO_ROOT_DIR}/pkg" \
   "${REPO_ROOT_DIR}/third_party" \
   "${REPO_ROOT_DIR}/vendor" \
