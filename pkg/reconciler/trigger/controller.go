@@ -24,9 +24,9 @@ import (
 	"knative.dev/pkg/controller"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
+	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 )

@@ -23,12 +23,13 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake"
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake"
+
+	//	_ "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
