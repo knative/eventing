@@ -852,7 +852,6 @@ knative.dev/pkg/client/injection/ducks/duck/v1/podspecable
 knative.dev/pkg/client/injection/ducks/duck/v1/source
 knative.dev/pkg/client/injection/ducks/duck/v1/source/fake
 knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable
-knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake
 knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake
 knative.dev/pkg/client/injection/kube/client

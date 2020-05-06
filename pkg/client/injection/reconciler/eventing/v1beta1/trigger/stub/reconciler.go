@@ -22,8 +22,8 @@ import (
 	context "context"
 
 	v1 "k8s.io/api/core/v1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	trigger "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
+	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	trigger "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
 	reconciler "knative.dev/pkg/reconciler"
 )
 
@@ -47,7 +47,7 @@ var _ trigger.Interface = (*Reconciler)(nil)
 //var _ trigger.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, o *v1alpha1.Trigger) reconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, o *v1beta1.Trigger) reconciler.Event {
 	// TODO: use this if the resource implements InitializeConditions.
 	// o.Status.InitializeConditions()
 
@@ -60,7 +60,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, o *v1alpha1.Trigger) rec
 
 // Optionally, use FinalizeKind to add finalizers. FinalizeKind will be called
 // when the resource is deleted.
-//func (r *Reconciler) FinalizeKind(ctx context.Context, o *v1alpha1.Trigger) reconciler.Event {
+//func (r *Reconciler) FinalizeKind(ctx context.Context, o *v1beta1.Trigger) reconciler.Event {
 //	// TODO: add custom finalization logic here.
 //	return nil
 //}

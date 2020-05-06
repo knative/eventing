@@ -18,7 +18,6 @@ package trigger
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,17 +25,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -53,8 +51,8 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1alpha1.AddToScheme(scheme.Scheme)
-	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1beta1.AddToScheme(scheme.Scheme)
+	//	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
@@ -100,7 +98,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNamespace(testNS,
-					reconciletesting.WithNamespaceLabeled(map[string]string{v1alpha1.InjectionAnnotation: injectionAnnotation})),
+					reconciletesting.WithNamespaceLabeled(map[string]string{v1beta1.InjectionAnnotation: injectionAnnotation})),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerNamespaceLabeled", "Trigger namespaced labeled for injection: %q", testNS),
@@ -143,7 +141,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNamespace(testNS,
-					reconciletesting.WithNamespaceLabeled(map[string]string{v1alpha1.InjectionAnnotation: injectionAnnotation})),
+					reconciletesting.WithNamespaceLabeled(map[string]string{v1beta1.InjectionAnnotation: injectionAnnotation})),
 			}},
 		}, {
 			Name: "Default broker found, with injection annotation enabled",
@@ -165,47 +163,37 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			kubeClientSet:     fakekubeclient.Get(ctx),
-			brokerLister:      listers.GetBrokerLister(),
+			brokerLister:      listers.GetV1Beta1BrokerLister(),
 			namespaceLister:   listers.GetNamespaceLister(),
 		}
 		return trigger.NewReconciler(ctx, logger,
-			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
+			fakeeventingclient.Get(ctx), listers.GetV1Beta1TriggerLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
 
-func makeBroker() *v1alpha1.Broker {
-	return &v1alpha1.Broker{
+func makeBroker() *v1beta1.Broker {
+	return &v1beta1.Broker{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "eventing.knative.dev/v1beta1",
 			Kind:       "Broker",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
 			Name:      brokerName,
 		},
-		Spec: v1alpha1.BrokerSpec{},
+		Spec: v1beta1.BrokerSpec{},
 	}
 }
 
-func makeReadyBroker() *v1alpha1.Broker {
+func makeReadyBroker() *v1beta1.Broker {
 	b := makeBroker()
-	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
-	b.Status.TriggerChannel = makeTriggerChannelRef()
+	b.Status = *v1beta1.TestHelper.ReadyBrokerStatus()
 	return b
 }
 
-func makeReadyDefaultBroker() *v1alpha1.Broker {
+func makeReadyDefaultBroker() *v1beta1.Broker {
 	b := makeReadyBroker()
 	b.Name = "default"
 	return b
-}
-
-func makeTriggerChannelRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
-	}
 }

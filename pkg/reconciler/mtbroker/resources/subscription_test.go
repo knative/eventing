@@ -24,20 +24,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestNewSubscription(t *testing.T) {
 	var TrueValue = true
-	trigger := &v1alpha1.Trigger{
+	trigger := &v1beta1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
 			Name:      "t-name",
 		},
-		Spec: v1alpha1.TriggerSpec{
+		Spec: v1beta1.TriggerSpec{
 			Broker: "broker-name",
 		},
 	}
@@ -58,12 +58,12 @@ func TestNewSubscription(t *testing.T) {
 		},
 	}
 	got := NewSubscription(trigger, triggerChannelRef, brokerRef, apis.HTTP("example.com"), delivery)
-	want := &messagingv1alpha1.Subscription{
+	want := &messagingv1beta1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
 			Name:      "broker-name-t-name-",
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "eventing.knative.dev/v1alpha1",
+				APIVersion:         "eventing.knative.dev/v1beta1",
 				Kind:               "Trigger",
 				Name:               "t-name",
 				Controller:         &TrueValue,
@@ -74,7 +74,7 @@ func TestNewSubscription(t *testing.T) {
 				"eventing.knative.dev/trigger": "t-name",
 			},
 		},
-		Spec: messagingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1beta1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				Name:       "tc-name",
 				Kind:       "tc-kind",

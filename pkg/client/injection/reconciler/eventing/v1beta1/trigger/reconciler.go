@@ -32,44 +32,44 @@ import (
 	sets "k8s.io/apimachinery/pkg/util/sets"
 	cache "k8s.io/client-go/tools/cache"
 	record "k8s.io/client-go/tools/record"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
-	eventingv1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 	reconciler "knative.dev/pkg/reconciler"
 )
 
 // Interface defines the strongly typed interfaces to be implemented by a
-// controller reconciling v1alpha1.Trigger.
+// controller reconciling v1beta1.Trigger.
 type Interface interface {
-	// ReconcileKind implements custom logic to reconcile v1alpha1.Trigger. Any changes
+	// ReconcileKind implements custom logic to reconcile v1beta1.Trigger. Any changes
 	// to the objects .Status or .Finalizers will be propagated to the stored
 	// object. It is recommended that implementors do not call any update calls
 	// for the Kind inside of ReconcileKind, it is the responsibility of the calling
 	// controller to propagate those properties. The resource passed to ReconcileKind
 	// will always have an empty deletion timestamp.
-	ReconcileKind(ctx context.Context, o *v1alpha1.Trigger) reconciler.Event
+	ReconcileKind(ctx context.Context, o *v1beta1.Trigger) reconciler.Event
 }
 
 // Finalizer defines the strongly typed interfaces to be implemented by a
-// controller finalizing v1alpha1.Trigger.
+// controller finalizing v1beta1.Trigger.
 type Finalizer interface {
-	// FinalizeKind implements custom logic to finalize v1alpha1.Trigger. Any changes
+	// FinalizeKind implements custom logic to finalize v1beta1.Trigger. Any changes
 	// to the objects .Status or .Finalizers will be ignored. Returning a nil or
 	// Normal type reconciler.Event will allow the finalizer to be deleted on
 	// the resource. The resource passed to FinalizeKind will always have a set
 	// deletion timestamp.
-	FinalizeKind(ctx context.Context, o *v1alpha1.Trigger) reconciler.Event
+	FinalizeKind(ctx context.Context, o *v1beta1.Trigger) reconciler.Event
 }
 
-// reconcilerImpl implements controller.Reconciler for v1alpha1.Trigger resources.
+// reconcilerImpl implements controller.Reconciler for v1beta1.Trigger resources.
 type reconcilerImpl struct {
 	// Client is used to write back status updates.
 	Client versioned.Interface
 
 	// Listers index properties about resources
-	Lister eventingv1alpha1.TriggerLister
+	Lister eventingv1beta1.TriggerLister
 
 	// Recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
@@ -89,7 +89,7 @@ type reconcilerImpl struct {
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*reconcilerImpl)(nil)
 
-func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client versioned.Interface, lister eventingv1alpha1.TriggerLister, recorder record.EventRecorder, r Interface, options ...controller.Options) controller.Reconciler {
+func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client versioned.Interface, lister eventingv1beta1.TriggerLister, recorder record.EventRecorder, r Interface, options ...controller.Options) controller.Reconciler {
 	// Check the options function input. It should be 0 or 1.
 	if len(options) > 1 {
 		logger.Fatalf("up to one options struct is supported, found %d", len(options))
@@ -208,13 +208,13 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *reconcilerImpl) updateStatus(existing *v1alpha1.Trigger, desired *v1alpha1.Trigger) error {
+func (r *reconcilerImpl) updateStatus(existing *v1beta1.Trigger, desired *v1beta1.Trigger) error {
 	existing = existing.DeepCopy()
 	return reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
 		if attempts > 0 {
 
-			getter := r.Client.EventingV1alpha1().Triggers(desired.Namespace)
+			getter := r.Client.EventingV1beta1().Triggers(desired.Namespace)
 
 			existing, err = getter.Get(desired.Name, metav1.GetOptions{})
 			if err != nil {
@@ -229,7 +229,7 @@ func (r *reconcilerImpl) updateStatus(existing *v1alpha1.Trigger, desired *v1alp
 
 		existing.Status = desired.Status
 
-		updater := r.Client.EventingV1alpha1().Triggers(existing.Namespace)
+		updater := r.Client.EventingV1beta1().Triggers(existing.Namespace)
 
 		_, err = updater.UpdateStatus(existing)
 		return err
@@ -239,7 +239,7 @@ func (r *reconcilerImpl) updateStatus(existing *v1alpha1.Trigger, desired *v1alp
 // updateFinalizersFiltered will update the Finalizers of the resource.
 // TODO: this method could be generic and sync all finalizers. For now it only
 // updates defaultFinalizerName or its override.
-func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource *v1alpha1.Trigger) (*v1alpha1.Trigger, error) {
+func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource *v1beta1.Trigger) (*v1beta1.Trigger, error) {
 
 	getter := r.Lister.Triggers(resource.Namespace)
 
@@ -286,7 +286,7 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 		return resource, err
 	}
 
-	patcher := r.Client.EventingV1alpha1().Triggers(resource.Namespace)
+	patcher := r.Client.EventingV1beta1().Triggers(resource.Namespace)
 
 	resource, err = patcher.Patch(resource.Name, types.MergePatchType, patch)
 	if err != nil {
@@ -299,7 +299,7 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 	return resource, err
 }
 
-func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx context.Context, resource *v1alpha1.Trigger) (*v1alpha1.Trigger, error) {
+func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx context.Context, resource *v1beta1.Trigger) (*v1beta1.Trigger, error) {
 	if _, ok := r.reconciler.(Finalizer); !ok {
 		return resource, nil
 	}
@@ -317,7 +317,7 @@ func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx context.Context, resource *
 	return r.updateFinalizersFiltered(ctx, resource)
 }
 
-func (r *reconcilerImpl) clearFinalizer(ctx context.Context, resource *v1alpha1.Trigger, reconcileEvent reconciler.Event) (*v1alpha1.Trigger, error) {
+func (r *reconcilerImpl) clearFinalizer(ctx context.Context, resource *v1beta1.Trigger, reconcileEvent reconciler.Event) (*v1beta1.Trigger, error) {
 	if _, ok := r.reconciler.(Finalizer); !ok {
 		return resource, nil
 	}

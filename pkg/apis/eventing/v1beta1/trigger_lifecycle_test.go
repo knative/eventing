@@ -322,7 +322,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
 			if test.brokerStatus != nil {
-				ts.PropagateBrokerStatus(test.brokerStatus)
+				ts.PropagateBrokerCondition(test.brokerStatus.GetTopLevelCondition())
 			}
 			if test.subscriptionCondition != nil {
 				ts.PropagateSubscriptionCondition(test.subscriptionCondition)

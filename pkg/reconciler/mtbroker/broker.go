@@ -34,18 +34,22 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
+	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	pkgduckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
@@ -66,7 +70,7 @@ type Reconciler struct {
 	brokerLister       eventinglisters.BrokerLister
 	endpointsLister    corev1listers.EndpointsLister
 	subscriptionLister messaginglisters.SubscriptionLister
-	triggerLister      eventinglisters.TriggerLister
+	triggerLister      eventingv1beta1listers.TriggerLister
 
 	channelableTracker duck.ListableTracker
 
@@ -156,7 +160,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return nil
 	}
-	if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
+	if url := triggerChan.Status.Address.URL; url.Host == "" {
 		// We check the trigger Channel's address here because it is needed to create the Ingress Deployment.
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
@@ -164,7 +168,9 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 		return nil
 	}
 	b.Status.TriggerChannel = &chanMan.ref
-	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
+
+	channelStatus := &duckv1alpha1.ChannelableStatus{AddressStatus: pkgduckv1alpha1.AddressStatus{Address: &pkgduckv1alpha1.Addressable{Addressable: pkgduckv1beta1.Addressable{URL: triggerChan.Status.Address.URL}}}}
+	b.Status.PropagateTriggerChannelReadiness(channelStatus)
 
 	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(names.BrokerFilterName)
 	if err != nil {
@@ -273,7 +279,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, b *v1alpha1.Broker) pkgre
 }
 
 // reconcileChannel reconciles Broker's 'b' underlying channel.
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1beta1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(channelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
@@ -290,7 +296,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 				return nil, err
 			}
 			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
-			channelable := &duckv1alpha1.Channelable{}
+			channelable := &duckv1beta1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("createdChannel", created), zap.Error(err))
@@ -303,7 +309,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 		return nil, err
 	}
 	logging.FromContext(ctx).Debugw(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name))
-	channelable, ok := c.(*duckv1alpha1.Channelable)
+	channelable, ok := c.(*duckv1beta1.Channelable)
 	if !ok {
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
@@ -322,12 +328,6 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 
 // reconcileTriggers reconciles the Triggers that are pointed to this broker
 func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) error {
-
-	// TODO: Figure out the labels stuff... If webhook does it, we can filter like this...
-	// Find all the Triggers that have been labeled as belonging to me
-	/*
-		triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.SelectorFromSet(brokerLabels(b.brokerClass)))
-	*/
 	triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.Everything())
 	if err != nil {
 		return err
@@ -352,14 +352,6 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) 
 	return nil
 }
 
-/* TODO: Enable once we start filtering by classes of brokers
-func brokerLabels(name string) map[string]string {
-	return map[string]string{
-		brokerAnnotationKey: name,
-	}
-}
-*/
-
 func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namespace, name string, bs *v1alpha1.BrokerStatus) error {
 	triggers, err := r.triggerLister.Triggers(namespace).List(labels.Everything())
 	if err != nil {
@@ -373,7 +365,7 @@ func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namesp
 			if bs == nil {
 				trigger.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", name)
 			} else {
-				trigger.Status.PropagateBrokerStatus(bs)
+				trigger.Status.PropagateBrokerCondition(bs.GetTopLevelCondition())
 			}
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Errorw("Failed to update Trigger status", zap.Error(updateStatusErr))

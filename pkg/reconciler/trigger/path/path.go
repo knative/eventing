@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 )
 
 // Generate generates the Path portion of a URI to send events to the given Trigger.
-func Generate(t *v1alpha1.Trigger) string {
+func Generate(t *v1beta1.Trigger) string {
 	return fmt.Sprintf("/%s/%s/%s/%s", prefix, t.Namespace, t.Name, t.UID)
 }
 

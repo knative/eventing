@@ -26,15 +26,15 @@ import (
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *duckv1beta1.DeliverySpec) *messagingv1alpha1.Subscription {
-	return &messagingv1alpha1.Subscription{
+func NewSubscription(t *v1beta1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *duckv1beta1.DeliverySpec) *messagingv1beta1.Subscription {
+	return &messagingv1beta1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
 			Name:      kmeta.ChildName(fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name), string(t.GetUID())),
@@ -43,7 +43,7 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 			},
 			Labels: SubscriptionLabels(t),
 		},
-		Spec: messagingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1beta1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: brokerTrigger.APIVersion,
 				Kind:       brokerTrigger.Kind,
@@ -67,7 +67,7 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 
 // SubscriptionLabels generates the labels present on the Subscription linking this Trigger to the
 // Broker's Channels.
-func SubscriptionLabels(t *v1alpha1.Trigger) map[string]string {
+func SubscriptionLabels(t *v1beta1.Trigger) map[string]string {
 	return map[string]string{
 		eventing.BrokerLabelKey:        t.Spec.Broker,
 		"eventing.knative.dev/trigger": t.Name,
