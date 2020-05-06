@@ -20,10 +20,10 @@ import (
 
 	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/pkg/test"
+	pkgTest "knative.dev/pkg/test"
 )
 
 var (
@@ -44,7 +44,7 @@ func (p *prober) removeReceiver() {
 func (p *prober) deployReceiverPod() {
 	p.log.Infof("Deploy of receiver pod: %v", receiverName)
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      receiverName,
 			Namespace: p.config.Namespace,
 			Labels: map[string]string{
@@ -65,7 +65,7 @@ func (p *prober) deployReceiverPod() {
 			Containers: []corev1.Container{
 				{
 					Name:  "receiver",
-					Image: fmt.Sprintf("quay.io/cardil/wathola-receiver:%v", Version),
+					Image: pkgTest.ImagePath(receiverName),
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      configName,
@@ -89,14 +89,14 @@ func (p *prober) deployReceiverPod() {
 	ensure.NoError(err)
 
 	lib.WaitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
-		return test.WaitForPodRunning(p.client.Kube, receiverName, p.client.Namespace)
+		return pkgTest.WaitForPodRunning(p.client.Kube, receiverName, p.client.Namespace)
 	})
 }
 
 func (p *prober) deployReceiverService() {
 	p.log.Infof("Deploy of receiver service: %v", receiverName)
 	service := &corev1.Service{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      receiverName,
 			Namespace: p.config.Namespace,
 		},
@@ -136,13 +136,13 @@ func (p *prober) deployReceiverService() {
 func (p *prober) removeReceiverPod() {
 	p.log.Infof("Remove of receiver pod: %v", receiverName)
 	err := p.client.Kube.Kube.CoreV1().Pods(p.config.Namespace).
-		Delete(receiverName, &v1.DeleteOptions{})
+		Delete(receiverName, &metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
 
 func (p *prober) removeReceiverService() {
 	p.log.Infof("Remove of receiver service: %v", receiverName)
 	err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
-		Delete(receiverName, &v1.DeleteOptions{})
+		Delete(receiverName, &metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
