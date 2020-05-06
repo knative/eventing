@@ -24,8 +24,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // +genduck
@@ -66,7 +64,7 @@ type ChannelableCombinedStatus struct {
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1.Status `json:",inline"`
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
-	v1alpha1.AddressStatus `json:",inline"`
+	duckv1.AddressStatus `json:",inline"`
 	// SubscribableTypeStatus is the v1alpha1 part of the Subscribers status
 	SubscribableTypeStatus `json:",inline"`
 	// SubscribableStatus is the v1beta1 part of the Subscribers status.
@@ -131,16 +129,16 @@ func (c *ChannelableCombined) Populate() {
 		BackoffDelay:  &delay,
 	}
 	c.Status = ChannelableCombinedStatus{
-		AddressStatus: v1alpha1.AddressStatus{
-			Address: &v1alpha1.Addressable{
+		AddressStatus: duckv1.AddressStatus{
+			Address: &duckv1.Addressable{
 				// Populate ALL fields
-				Addressable: duckv1beta1.Addressable{
-					URL: &apis.URL{
-						Scheme: "http",
-						Host:   "test-domain",
-					},
+				//				Addressable: duckv1.Addressable{
+				URL: &apis.URL{
+					Scheme: "http",
+					Host:   "test-domain",
 				},
-				Hostname: "test-domain",
+				//				},
+				//				Hostname: "test-domain",
 			},
 		},
 		SubscribableStatus: eventingduckv1beta1.SubscribableStatus{

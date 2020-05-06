@@ -36,6 +36,7 @@ require (
 	k8s.io/utils v0.0.0-20200124190032-861946025e34
 	knative.dev/pkg v0.0.0-20200507011344-2581370e4a37
 	knative.dev/test-infra v0.0.0-20200506231144-c8dd15bb7f0b
+
 	sigs.k8s.io/yaml v1.2.0
 )
 

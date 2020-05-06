@@ -26,7 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/channel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
@@ -90,13 +92,40 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgr
 	}
 
 	c.Status.Channel = &backingChannelObjRef
-	c.Status.PropagateStatuses(&backingChannel.Status)
+	bCS := r.getChannelableStatus(&backingChannel.Status, backingChannel.Annotations) // this needs to decide what api version to draw from before we propogate)
+	c.Status.PropagateStatuses(&bCS)
 
 	return newReconciledNormal(c.Namespace, c.Name)
 }
 
+func (r *Reconciler) getChannelableStatus(bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) duckv1beta1.ChannelableStatus {
+
+	if cAnnotations != nil {
+		if cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
+			return duckv1beta1.ChannelableStatus{
+				Status:             bc.Status,
+				AddressStatus:      bc.AddressStatus,
+				SubscribableStatus: bc.SubscribableStatus,
+			}
+		} else { //v1alpha1
+			return duckv1beta1.ChannelableStatus{
+				Status:        bc.Status,
+				AddressStatus: bc.AddressStatus,
+				SubscribableStatus: duckv1beta1.SubscribableStatus{
+					Subscribers: bc.SubscribableTypeStatus.SubscribableStatus.Subscribers,
+				},
+			}
+		}
+	}
+	return duckv1beta1.ChannelableStatus{
+		Status:             bc.Status,
+		AddressStatus:      bc.AddressStatus,
+		SubscribableStatus: bc.SubscribableStatus,
+	}
+}
+
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1beta1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1beta1.Channelable, error) {
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1beta1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1alpha1.ChannelableCombined, error) {
 	lister, err := r.channelableTracker.ListerForKReference(backingChannelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
@@ -118,7 +147,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 				return nil, err
 			}
 			logging.FromContext(ctx).Debug("Created backing Channel", zap.Any("backingChannel", newBackingChannel))
-			channelable := &duckv1beta1.Channelable{}
+			channelable := &duckv1alpha1.ChannelableCombined{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannelObjRef), zap.Any("createdChannel", created), zap.Error(err))
@@ -131,7 +160,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		return nil, err
 	}
 	logging.FromContext(ctx).Debug("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
-	channelable, ok := backingChannel.(*duckv1beta1.Channelable)
+	channelable, ok := backingChannel.(*duckv1alpha1.ChannelableCombined)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannel), zap.Error(err))
 		return nil, err
