@@ -37,6 +37,7 @@ mkdir -p "${TMP_DIFFROOT}"
 
 cp -aR \
   "${REPO_ROOT_DIR}/go.sum" \
+  "${REPO_ROOT_DIR}/go.mod" \
   "${REPO_ROOT_DIR}/pkg" \
   "${REPO_ROOT_DIR}/third_party" \
   "${REPO_ROOT_DIR}/vendor" \
@@ -48,6 +49,9 @@ ret=0
 
 diff -Naupr --no-dereference \
   "${REPO_ROOT_DIR}/go.sum" "${TMP_DIFFROOT}/go.sum" || ret=1
+
+diff -Naupr --no-dereference \
+  "${REPO_ROOT_DIR}/go.mod" "${TMP_DIFFROOT}/go.mod" || ret=1
 
 diff -Naupr --no-dereference \
   "${REPO_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=1
