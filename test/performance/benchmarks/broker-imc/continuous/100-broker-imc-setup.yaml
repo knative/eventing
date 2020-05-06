@@ -17,7 +17,7 @@ kind: ConfigMap
 metadata:
   name: config-broker
 data:
-  channelTemplateSpec:
+  channelTemplateSpec: |
     apiVersion: messaging.knative.dev/v1beta1
     kind: InMemoryChannel
 
@@ -28,8 +28,9 @@ kind: Broker
 metadata:
   name: imc
   namespace: default
-annotations:
-  eventing.knative.dev/broker.class: ChannelBasedBroker
+  annotations:
+    eventing.knative.dev/broker.class: ChannelBasedBroker
+
 spec:
   config:
     apiVersion: v1
