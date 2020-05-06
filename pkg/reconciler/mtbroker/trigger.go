@@ -61,7 +61,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 		return nil
 	}
 
-	t.Status.PropagateBrokerStatus(&b.Status)
+	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
 
 	brokerTrigger := b.Status.TriggerChannel
 	if brokerTrigger == nil {
@@ -91,7 +91,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
 		return err
 	}
-	t.Status.PropagateSubscriptionStatus(&sub.Status)
+	t.Status.PropagateSubscriptionCondition(sub.Status.GetTopLevelCondition())
 
 	if err := r.checkDependencyAnnotation(ctx, t, b); err != nil {
 		return err
@@ -142,7 +142,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 		r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionGetFailed, "Getting the Trigger's Subscription failed: %v", err)
 		return nil, err
 	} else if !metav1.IsControlledBy(sub, t) {
-		t.Status.MarkSubscriptionNotOwned(sub)
+		t.Status.MarkNotSubscribed("SubscriptionNotOwnedByTrigger", "trigger %q does not own subscription %q", t.Name, sub.Name)
 		return nil, fmt.Errorf("trigger %q does not own subscription %q", t.Name, sub.Name)
 	} else if sub, err = r.reconcileSubscription(ctx, t, expected, sub); err != nil {
 		logging.FromContext(ctx).Errorw("Failed to reconcile subscription", zap.Error(err))
@@ -153,8 +153,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 }
 
 func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1beta1.Trigger, expected, actual *messagingv1beta1.Subscription) (*messagingv1beta1.Subscription, error) {
-	// Update Subscription if it has changed. Ignore the generation.
-	expected.Spec.DeprecatedGeneration = actual.Spec.DeprecatedGeneration
+	// Update Subscription if it has changed.
 	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
 		return actual, nil
 	}

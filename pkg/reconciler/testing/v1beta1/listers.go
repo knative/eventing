@@ -132,6 +132,10 @@ func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
 	return eventinglisters.NewTriggerLister(l.indexerFor(&eventingv1alpha1.Trigger{}))
 }
 
+func (l *Listers) GetV1Beta1TriggerLister() eventingv1beta1listers.TriggerLister {
+	return eventingv1beta1listers.NewTriggerLister(l.indexerFor(&eventingv1beta1.Trigger{}))
+}
+
 func (l *Listers) GetBrokerLister() eventinglisters.BrokerLister {
 	return eventinglisters.NewBrokerLister(l.indexerFor(&eventingv1alpha1.Broker{}))
 }

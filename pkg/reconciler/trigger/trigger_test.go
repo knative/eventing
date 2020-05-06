@@ -18,7 +18,6 @@ package trigger
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,13 +28,13 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -53,7 +52,7 @@ const (
 func init() {
 	// Add types to scheme
 	_ = v1beta1.AddToScheme(scheme.Scheme)
-	_ = duckv1beta1.AddToScheme(scheme.Scheme)
+	//	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
@@ -164,11 +163,11 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			kubeClientSet:     fakekubeclient.Get(ctx),
-			brokerLister:      listers.GetBrokerLister(),
+			brokerLister:      listers.GetV1Beta1BrokerLister(),
 			namespaceLister:   listers.GetNamespaceLister(),
 		}
 		return trigger.NewReconciler(ctx, logger,
-			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
+			fakeeventingclient.Get(ctx), listers.GetV1Beta1TriggerLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
@@ -190,7 +189,6 @@ func makeBroker() *v1beta1.Broker {
 func makeReadyBroker() *v1beta1.Broker {
 	b := makeBroker()
 	b.Status = *v1beta1.TestHelper.ReadyBrokerStatus()
-	b.Status.TriggerChannel = makeTriggerChannelRef()
 	return b
 }
 
@@ -198,13 +196,4 @@ func makeReadyDefaultBroker() *v1beta1.Broker {
 	b := makeReadyBroker()
 	b.Name = "default"
 	return b
-}
-
-func makeTriggerChannelRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1beta1",
-		Kind:       "Channel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
-	}
 }

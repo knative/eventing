@@ -59,6 +59,14 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	return bs
 }
 
+func (t testHelper) ReadyBrokerCondition() *apis.Condition {
+	return &apis.Condition{
+		Type:     apis.ConditionReady,
+		Status:   corev1.ConditionTrue,
+		Severity: apis.ConditionSeverityError,
+	}
+}
+
 func (t testHelper) UnknownBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	return bs
