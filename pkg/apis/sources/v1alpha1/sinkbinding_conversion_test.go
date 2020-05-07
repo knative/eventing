@@ -18,10 +18,11 @@ package v1alpha1
 
 import (
 	"context"
-	"knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/tracker"
 	"reflect"
 	"testing"
+
+	"knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 

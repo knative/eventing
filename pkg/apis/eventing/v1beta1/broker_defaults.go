@@ -20,13 +20,15 @@ import (
 	"context"
 
 	"knative.dev/eventing/pkg/apis/config"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
 )
 
 func (b *Broker) SetDefaults(ctx context.Context) {
-	// TODO(vaikas): Set the default class annotation if not specified
+	// Default Spec fields.
 	withNS := apis.WithinParent(ctx, b.ObjectMeta)
 	b.Spec.SetDefaults(withNS)
+	eventing.DefaultBrokerClassIfUnset(withNS, &b.ObjectMeta)
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {

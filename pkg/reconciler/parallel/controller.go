@@ -20,22 +20,18 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/logging"
 
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	"knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/parallel"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
-	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
-)
-
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "parallel-controller"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
+	"knative.dev/eventing/pkg/client/injection/informers/flows/v1beta1/parallel"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
+	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/parallel"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -49,13 +45,14 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 		parallelLister:     parallelInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
+		dynamicClientSet:   dynamicclient.Get(ctx),
+		eventingClientSet:  eventingclient.Get(ctx),
 	}
 	impl := parallelreconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -63,7 +60,7 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Parallel")),
+		FilterFunc: controller.FilterGroupKind(v1beta1.Kind("Parallel")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

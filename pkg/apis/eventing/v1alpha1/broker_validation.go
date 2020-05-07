@@ -31,16 +31,16 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	// Validate the new channelTemplate.
-	// TODO: As part of https://github.com/knative/eventing/issues/2128
-	// Also make sure this gets rejected. It would break our tests
-	// and assumptions to do this right now.
-	//	if bs.ChannelTemplate == nil {
-	//		errs = errs.Also(apis.ErrMissingField("channelTemplateSpec"))
-	//	} else
-	if bs.ChannelTemplate != nil {
-		if cte := messagingv1beta1.IsValidChannelTemplate(bs.ChannelTemplate); cte != nil {
-			errs = errs.Also(cte.ViaField("channelTemplateSpec"))
+	// As of v0.15 do not allow creation of new Brokers with the channel template.
+	if apis.IsInCreate(ctx) {
+		if bs.ChannelTemplate != nil {
+			errs = errs.Also(apis.ErrDisallowedFields("channelTemplate"))
+		}
+	} else {
+		if bs.ChannelTemplate != nil {
+			if cte := messagingv1beta1.IsValidChannelTemplate(bs.ChannelTemplate); cte != nil {
+				errs = errs.Also(cte.ViaField("channelTemplateSpec"))
+			}
 		}
 	}
 

@@ -38,18 +38,6 @@ const (
 	reportUnmarshal
 )
 
-// TraceName implements Observable.TraceName
-func (o observed) TraceName() string {
-	switch o {
-	case reportMarshal:
-		return "cloudevents/event/marshaljson"
-	case reportUnmarshal:
-		return "cloudevents/event/unmarshaljson"
-	default:
-		return "cloudevents/event/unknwown"
-	}
-}
-
 // MethodName implements Observable.MethodName
 func (o observed) MethodName() string {
 	switch o {
@@ -77,11 +65,6 @@ type eventJSONObserved struct {
 
 // Adheres to Observable
 var _ observability.Observable = (*eventJSONObserved)(nil)
-
-// TraceName implements Observable.TraceName
-func (c eventJSONObserved) TraceName() string {
-	return fmt.Sprintf("%s/%s", c.o.TraceName(), c.v)
-}
 
 // MethodName implements Observable.MethodName
 func (c eventJSONObserved) MethodName() string {

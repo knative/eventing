@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: recordevents
+spec:
+  containers:
+    - name: recordevents
+      image: ko://knative.dev/eventing/test/test_images/recordevents
+

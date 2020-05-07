@@ -20,7 +20,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/duck"
@@ -38,9 +37,6 @@ const (
 
 	// ApiServerConditionSufficientPermissions has status True when the ApiServerSource has sufficient permissions to access resources.
 	ApiServerConditionSufficientPermissions apis.ConditionType = "SufficientPermissions"
-
-	// ApiServerConditionEventTypeProvided has status True when the ApiServerSource has been configured with its event types.
-	ApiServerConditionEventTypeProvided apis.ConditionType = "EventTypesProvided"
 )
 
 var apiserverCondSet = apis.NewLivingConditionSet(
@@ -71,17 +67,27 @@ func (s *ApiServerSourceStatus) InitializeConditions() {
 
 // MarkSink sets the condition that the source has a sink configured.
 func (s *ApiServerSourceStatus) MarkSink(uri string) {
-	s.SinkURI = uri
+	s.SinkURI = nil
 	if len(uri) > 0 {
-		apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
+		if u, err := apis.ParseURL(uri); err != nil {
+			apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkInvalid", "Failed to parse sink: %v", err)
+		} else {
+			s.SinkURI = u
+			apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
+		}
+
 	} else {
-		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")
 	}
 }
 
 // MarkSinkWarnDeprecated sets the condition that the source has a sink configured and warns ref is deprecated.
 func (s *ApiServerSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
-	s.SinkURI = uri
+	if u, err := apis.ParseURL(uri); err != nil {
+		s.SinkURI = nil
+	} else {
+		s.SinkURI = u
+	}
 	if len(uri) > 0 {
 		c := apis.Condition{
 			Type:     ApiServerConditionSinkProvided,
@@ -110,16 +116,6 @@ func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deploy
 		// for now.
 		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
-}
-
-// MarkEventTypes sets the condition that the source has set its event type.
-func (s *ApiServerSourceStatus) MarkEventTypes() {
-	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionEventTypeProvided)
-}
-
-// MarkNoEventTypes sets the condition that the source does not its event type configured.
-func (s *ApiServerSourceStatus) MarkNoEventTypes(reason, messageFormat string, messageA ...interface{}) {
-	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionEventTypeProvided, reason, messageFormat, messageA...)
 }
 
 // MarkSufficientPermissions sets the condition that the source has enough permissions to access the resources.

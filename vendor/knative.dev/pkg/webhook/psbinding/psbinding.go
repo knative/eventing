@@ -28,6 +28,7 @@ import (
 	"github.com/markbates/inflect"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,7 +39,6 @@ import (
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/kmp"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
@@ -302,7 +302,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		ac.inexact = inexact
 	}()
 
-	var rules []admissionregistrationv1beta1.RuleWithOperations
+	rules := make([]admissionregistrationv1beta1.RuleWithOperations, 0, len(gks))
 	for gk, versions := range gks {
 		plural := strings.ToLower(inflect.Pluralize(gk.Kind))
 
@@ -333,7 +333,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 
 	configuredWebhook, err := ac.MWHLister.Get(ac.Name)
 	if err != nil {
-		return fmt.Errorf("error retrieving webhook: %v", err)
+		return fmt.Errorf("error retrieving webhook: %w", err)
 	}
 	webhook := configuredWebhook.DeepCopy()
 
@@ -356,13 +356,11 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		webhook.Webhooks[i].ClientConfig.Service.Path = ptr.String(ac.Path())
 	}
 
-	if ok, err := kmp.SafeEqual(configuredWebhook, webhook); err != nil {
-		return fmt.Errorf("error diffing webhooks: %v", err)
-	} else if !ok {
+	if ok := equality.Semantic.DeepEqual(configuredWebhook, webhook); !ok {
 		logging.FromContext(ctx).Info("Updating webhook")
 		mwhclient := ac.Client.AdmissionregistrationV1beta1().MutatingWebhookConfigurations()
 		if _, err := mwhclient.Update(webhook); err != nil {
-			return fmt.Errorf("failed to update webhook: %v", err)
+			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {
 		logging.FromContext(ctx).Info("Webhook is valid")

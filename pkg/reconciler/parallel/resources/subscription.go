@@ -24,8 +24,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 func ParallelFilterSubscriptionName(parallelName string, branchNumber int) string {
@@ -36,11 +36,11 @@ func ParallelSubscriptionName(parallelName string, branchNumber int) string {
 	return fmt.Sprintf("%s-kn-parallel-%d", parallelName, branchNumber)
 }
 
-func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.Subscription {
-	r := &messagingv1alpha1.Subscription{
+func NewFilterSubscription(branchNumber int, p *v1beta1.Parallel) *messagingv1beta1.Subscription {
+	r := &messagingv1beta1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
@@ -50,7 +50,7 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1a
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: messagingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1beta1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -75,11 +75,11 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1a
 	return r
 }
 
-func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.Subscription {
-	r := &messagingv1alpha1.Subscription{
+func NewSubscription(branchNumber int, p *v1beta1.Parallel) *messagingv1beta1.Subscription {
+	r := &messagingv1beta1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
@@ -89,7 +89,7 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: messagingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1beta1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,

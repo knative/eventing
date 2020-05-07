@@ -31,7 +31,7 @@ func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
 	// Validate annotations
 	if imc.Annotations != nil {
 		if scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]; ok {
-			if scope != "namespace" && scope != "cluster" {
+			if scope != eventing.ScopeNamespace && scope != eventing.ScopeCluster {
 				iv := apis.ErrInvalidValue(scope, "")
 				iv.Details = "expected either 'cluster' or 'namespace'"
 				errs = errs.Also(iv.ViaFieldKey("annotations", eventing.ScopeAnnotationKey).ViaField("metadata"))

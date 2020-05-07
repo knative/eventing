@@ -22,7 +22,7 @@ import (
 	// Injection stuff
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	mwhinformer "knative.dev/pkg/client/injection/kube/informers/admissionregistration/v1beta1/mutatingwebhookconfiguration"
-	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
@@ -62,7 +62,7 @@ func NewAdmissionController(
 	}
 
 	logger := logging.FromContext(ctx)
-	c := controller.NewImpl(wh, logger, "ConfigMapWebhook")
+	c := controller.NewImpl(wh, logger, "DefaultingWebhook")
 
 	// Reconcile when the named MutatingWebhookConfiguration changes.
 	mwhInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

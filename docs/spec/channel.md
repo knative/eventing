@@ -36,7 +36,7 @@ Each Channel implementation is backed by its own CRD, like the
 `InMemoryChannel`. Below is an example for the `InMemoryChannel`:
 
 ```
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1beta1
 kind: InMemoryChannel
 metadata:
   name: my-channel
@@ -124,7 +124,7 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
-  version: v1alpha1
+  version: v1beta1
   names:
     kind: InMemoryChannel
     plural: inmemorychannels
@@ -146,38 +146,101 @@ Each channel is _namespaced_ and MUST have the following:
 - label of `duck.knative.dev/addressable: "true"`
 - The category `channel`
 
+#### Annotation Requirements
+
+Each instantiated Channel (ie, Custom Object) SHOULD have an annotation
+indicating which version of the `Channelable` duck type it conforms to. We
+currently have two versions:
+
+1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
+1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
+
+So, for example to indicate that the Channel supports v1beta1 duck type, you
+should annotate it like so (only showing the annotations):
+
+```
+- apiVersion: messaging.knative.dev/v1beta1
+  kind: YourChannelType
+  metadata:
+    annotations: messaging.knative.dev/subscribable: v1beta1
+```
+
+Unfortunately, we had to make breaking changes between the two versions, and to
+ensure functionality, the channel implementer must indicate which version they
+support. To ensure backwards compatibility with old channels, if no annotation
+is given, we assume it's `v1alpha1`.
+
 #### Spec Requirements
 
-Each channel CRD MUST contain an array
+##### v1alpha1 Spec
+
+Each channel CRD MUST contain an array of subscribers:
 [`spec.subscribable.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/subscribable_types.go)
+
+##### v1beta1 Spec
+
+Each channel CRD MUST contain an array of subscribers:
+[`spec.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/subscribable_types.go)
 
 #### Status Requirements
 
+##### v1alpha1 Status
+
 Each channel CRD MUST have a `status` subresource which contains
 
-- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/addressable_types.go)
+- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1alpha1/addressable_types.go)
 - [`subscribableStatus.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/subscribable_types.go)
   (as an array)
 
 Each channel CRD SHOULD have the following fields in `Status`
 
-- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go)
+- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
   MUST be populated if present
-- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go)
+- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+  (as an array) SHOULD indicate status transitions and error reasons if present
+
+##### v1beta1 Status
+
+Each channel CRD MUST have a `status` subresource which contains
+
+- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1/addressable_types.go)
+- [`subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/subscribable_types.go)
+  (as an array)
+
+Each channel CRD SHOULD have the following fields in `Status`
+
+- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+  MUST be populated if present
+- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
   (as an array) SHOULD indicate status transitions and error reasons if present
 
 #### Channel Status
+
+##### v1alpha1
 
 When the channel instance is ready to receive events `status.address.hostname`
 and `status.address.url` MUST be populated and `status.addressable` MUST be set
 to `True`.
 
+##### v1beta1
+
+When the channel instance is ready to receive events `status.address.url` MUST
+be populated and `status.addressable` MUST be set to `True`.
+
 #### Channel Subscriber Status
+
+##### v1alpha1
 
 Each subscription to a channel is added to the channel
 `status.subscribableStatus.subscribers` automatically. The `ready` field of the
 subscriber identified by its `uid` MUST be set to `True` when the subscription
 is ready to be processed.
+
+##### v1beta1
+
+Each subscription to a channel is added to the channel `status.subscribers`
+automatically. The `ready` field of the subscriber identified by its `uid` MUST
+be set to `True` when the subscription is ready to be processed.
 
 ### Data Plane
 
@@ -209,10 +272,10 @@ If a Channel receives an event queueing request and is unable to parse a valid
 CloudEvent, then it MUST reject the request.
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
-In particular, it MUST translate any incoming OpenTracing or B3 headers to the
+In particular, it MUST translate any incoming W3C Tracecontext headers to the
 [Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 The Channel SHOULD sample and write traces to the location specified in
-[`config-tracing`](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
+[`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
 
 ##### HTTP
 
@@ -247,9 +310,10 @@ Every Channel SHOULD support sending events via _Binary Content Mode_ or
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
 
 Channels MUST send events to all subscribers which are marked with a status of
-`ready: "True"` in the channel's `status.subscribableStatus.subscribers`. The
-events must be sent to the `subscriberURI` field of
-`spec.subscribable.subscribers`. Each channel implementation will have its own
+`ready: "True"` in the channel's `status.subscribableStatus.subscribers`
+(v1alpha1) or `status.subscribers` (v1beta1). The events must be sent to the
+`subscriberURI` field of `spec.subscribable.subscribers` (v1alpha1) or
+`spec.subscribers` (v1beta1). Each channel implementation will have its own
 quality of service guarantees (e.g. at least once, at most once, etc) which
 SHOULD be documented.
 
@@ -282,4 +346,6 @@ disable them if desired.
 
 - `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
 - `0.13.x release`: Types in the API group `messaging.knative.dev` will be
-  promoted from `v1alpha1`to `v1beta1`.
+  promoted from `v1alpha1`to `v1beta1`. Add requirement for labeling Custom
+  Objects to indicate which duck type they support as well as document
+  differences.

@@ -29,7 +29,7 @@ const (
 	SubscriptionConditionReady = apis.ConditionReady
 	// SubscriptionConditionReferencesResolved has status True when all the specified references have been successfully
 	// resolved.
-	SubscriptionConditionReferencesResolved apis.ConditionType = "Resolved"
+	SubscriptionConditionReferencesResolved apis.ConditionType = "ReferencesResolved"
 
 	// SubscriptionConditionAddedToChannel has status True when controller has successfully added a
 	// subscription to the spec.channel resource.
@@ -91,15 +91,15 @@ func (ss *SubscriptionStatus) MarkReferencesResolvedUnknown(reason, messageForma
 
 // MarkChannelFailed sets the ChannelReady condition to False state.
 func (ss *SubscriptionStatus) MarkChannelFailed(reason, messageFormat string, messageA ...interface{}) {
-	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA...)
 }
 
 // MarkChannelUnknown sets the ChannelReady condition to Unknown state.
 func (ss *SubscriptionStatus) MarkChannelUnknown(reason, messageFormat string, messageA ...interface{}) {
-	SubCondSet.Manage(ss).MarkUnknown(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
+	SubCondSet.Manage(ss).MarkUnknown(SubscriptionConditionChannelReady, reason, messageFormat, messageA...)
 }
 
 // MarkNotAddedToChannel sets the AddedToChannel condition to False state.
 func (ss *SubscriptionStatus) MarkNotAddedToChannel(reason, messageFormat string, messageA ...interface{}) {
-	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionAddedToChannel, reason, messageFormat, messageA)
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionAddedToChannel, reason, messageFormat, messageA...)
 }

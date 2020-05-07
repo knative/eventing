@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	v1 "knative.dev/pkg/apis/duck/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,6 +104,11 @@ func EventLoggerPod(name string) *corev1.Pod {
 // EventDetailsPod creates a Pod that validates events received and log details about events.
 func EventDetailsPod(name string) *corev1.Pod {
 	return eventLoggerPod("eventdetails", name)
+}
+
+// EventRecordPod creates a Pod that stores received events for test retrieval.
+func EventRecordPod(name string) *corev1.Pod {
+	return eventLoggerPod("recordevents", name)
 }
 
 func eventLoggerPod(imageName string, name string) *corev1.Pod {
@@ -374,6 +381,17 @@ func ServiceDefaultHTTP(name string, selector map[string]string) *corev1.Service
 // ServiceRef returns a Service ObjectReference for a given Service name.
 func ServiceRef(name string) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
+}
+
+// ServiceKRef returns a Service ObjectReference for a given Service name.
+func ServiceKRef(name string) *v1.KReference {
+	ref := pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
+	return &v1.KReference{
+		Kind:       ref.Kind,
+		Namespace:  ref.Namespace,
+		Name:       ref.Name,
+		APIVersion: ref.APIVersion,
+	}
 }
 
 // ServiceAccount creates a Kubernetes ServiceAccount with the given name and namespace.

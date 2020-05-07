@@ -80,7 +80,7 @@ roleRef:
 
 ---
 
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1beta1
 kind: InMemoryChannel
 metadata:
   name: channel-imc
@@ -89,14 +89,14 @@ metadata:
 ---
 
 
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1beta1
 kind: Subscription
 metadata:
   name: channel-imc-sub
   namespace: default
 spec:
   channel:
-    apiVersion: messaging.knative.dev/v1alpha1
+    apiVersion: messaging.knative.dev/v1beta1
     kind: InMemoryChannel
     name: channel-imc
   subscriber:

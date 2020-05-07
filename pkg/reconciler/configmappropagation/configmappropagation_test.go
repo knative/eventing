@@ -21,15 +21,17 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
-	"knative.dev/eventing/pkg/reconciler"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/configs/v1alpha1/configmappropagation"
 	"knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -133,9 +135,6 @@ func TestAllCase(t *testing.T) {
 						"Delete", "True", ""),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
-			},
 		}, {
 			Name: "Original ConfigMap no longer exists, delete copy configMap succeeded",
 			Key:  testKey,
@@ -166,9 +165,6 @@ func TestAllCase(t *testing.T) {
 						"Delete", "True", ""),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
-			},
 		}, {
 			Name: "Original ConfigMap no longer exists, delete copy configMap failed",
 			Key:  testKey,
@@ -206,8 +202,8 @@ func TestAllCase(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, configMapPropagationPropagateSingleConfigMapFailed,
 					"Failed to propagate ConfigMap %v: inducing failure for delete configmaps", originalConfigMapName),
-				Eventf(corev1.EventTypeWarning, configMapPropagationReconcileError,
-					"ConfigMapPropagation reconcile error: one or more ConfigMap propagation failed"),
+				Eventf(corev1.EventTypeWarning, "InternalError",
+					"one or more ConfigMap propagation failed"),
 			},
 		}, {
 			Name: "Original ConfigMap has changed, update copy ConfigMap failed",
@@ -257,8 +253,8 @@ func TestAllCase(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, configMapPropagationPropagateSingleConfigMapFailed,
 					"Failed to propagate ConfigMap %v: error updating ConfigMap in current namespace: inducing failure for update configmaps", originalConfigMapName),
-				Eventf(corev1.EventTypeWarning, configMapPropagationReconcileError,
-					"ConfigMapPropagation reconcile error: one or more ConfigMap propagation failed"),
+				Eventf(corev1.EventTypeWarning, "InternalError",
+					"one or more ConfigMap propagation failed"),
 			},
 		}, {
 			Name: "Original ConfigMap has changed, update copy ConfigMap succeeded",
@@ -303,7 +299,6 @@ func TestAllCase(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed, "Propagate ConfigMap test-original-cm succeed"),
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
 			},
 		}, {
 			Name: "Copy ConfigMap has changed",
@@ -349,7 +344,6 @@ func TestAllCase(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed, "Propagate ConfigMap test-original-cm succeed"),
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
 			},
 		}, {
 			Name: "Copy ConfigMap no longer has required labels, with only one owner reference",
@@ -393,7 +387,6 @@ func TestAllCase(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed,
 					`Stop propagating ConfigMap: test-original-cm`),
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
 			},
 		}, {
 			Name: "Copy ConfigMap no longer has required labels, with multiple owner references",
@@ -443,7 +436,6 @@ func TestAllCase(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed,
 					`Stop propagating ConfigMap: test-original-cm`),
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
 			},
 		}, {
 			Name: "Create new ConfigMap failed",
@@ -484,8 +476,8 @@ func TestAllCase(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, configMapPropagationPropagateSingleConfigMapFailed,
 					"Failed to propagate ConfigMap %v: error creating ConfigMap in current namespace: inducing failure for create configmaps", originalConfigMapName),
-				Eventf(corev1.EventTypeWarning, configMapPropagationReconcileError,
-					"ConfigMapPropagation reconcile error: one or more ConfigMap propagation failed"),
+				Eventf(corev1.EventTypeWarning, "InternalError",
+					"one or more ConfigMap propagation failed"),
 			},
 		}, {
 			Name: "Successfully reconcile, became ready",
@@ -524,18 +516,20 @@ func TestAllCase(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed, "Propagate ConfigMap test-original-cm succeed"),
-				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
 			},
 		},
 	}
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
-			Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
+		r := &Reconciler{
+			kubeClientSet:              fakekubeclient.Get(ctx),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
 			configMapLister:            listers.GetConfigMapLister(),
 			tracker:                    tracker.New(func(types.NamespacedName) {}, 0),
 		}
+		return configmappropagation.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetConfigMapPropagationLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		false,
 		logger,

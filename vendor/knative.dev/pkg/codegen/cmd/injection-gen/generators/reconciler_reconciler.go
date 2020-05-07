@@ -39,6 +39,7 @@ type reconcilerReconcilerGenerator struct {
 
 	reconcilerClass    string
 	hasReconcilerClass bool
+	nonNamespaced      bool
 
 	groupGoName  string
 	groupVersion clientgentypes.GroupVersion
@@ -68,11 +69,12 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 	klog.V(5).Infof("processing type %v", t)
 
 	m := map[string]interface{}{
-		"type":     t,
-		"group":    namer.IC(g.groupGoName),
-		"version":  namer.IC(g.groupVersion.Version.String()),
-		"class":    g.reconcilerClass,
-		"hasClass": g.hasReconcilerClass,
+		"type":          t,
+		"group":         namer.IC(g.groupGoName),
+		"version":       namer.IC(g.groupVersion.Version.String()),
+		"class":         g.reconcilerClass,
+		"hasClass":      g.hasReconcilerClass,
+		"nonNamespaced": g.nonNamespaced,
 		"controllerImpl": c.Universe.Type(types.Name{
 			Package: "knative.dev/pkg/controller",
 			Name:    "Impl",
@@ -197,6 +199,9 @@ type reconcilerImpl struct {
 	// reconciler is the implementation of the business logic of the resource.
 	reconciler Interface
 
+	// finalizerName is the name of the finalizer to reconcile.
+	finalizerName string
+
 	{{if .hasClass}}
 	// classValue is the resource annotation[{{ .class }}] instance value this reconciler instance filters on.
 	classValue string
@@ -220,12 +225,16 @@ func NewReconciler(ctx {{.contextContext|raw}}, logger *{{.zapSugaredLogger|raw}
 		Lister: lister,
 		Recorder: recorder,
 		reconciler:    r,
+		finalizerName: defaultFinalizerName,
 		{{if .hasClass}}classValue: classValue,{{end}}
 	}
 
 	for _, opts := range options {
 		if opts.ConfigStore != nil {
 			rec.configStore = opts.ConfigStore
+		}
+		if opts.FinalizerName != "" {
+			rec.finalizerName = opts.FinalizerName
 		}
 	}
 
@@ -247,25 +256,36 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 	ctx = {{.controllerWithEventRecorder|raw}}(ctx, r.Recorder)
 
 	// Convert the namespace/name string into a distinct namespace and name
+	{{if .nonNamespaced}}
+	_, name, err := {{.cacheSplitMetaNamespaceKey|raw}}(key)
+	{{else}}
 	namespace, name, err := {{.cacheSplitMetaNamespaceKey|raw}}(key)
+	{{end}}
 	if err != nil {
 		logger.Errorf("invalid resource key: %s", key)
 		return nil
 	}
 
 	// Get the resource with this namespace/name.
-	original, err := r.Lister.{{.type|apiGroup}}(namespace).Get(name)
+
+	{{if .nonNamespaced}}
+	getter := r.Lister
+	{{else}}
+	getter := r.Lister.{{.type|apiGroup}}(namespace)
+	{{end}}
+	original, err := getter.Get(name)
+
 	if {{.apierrsIsNotFound|raw}}(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logger.Errorf("resource %q no longer exists", key)
+		logger.Debugf("resource %q no longer exists", key)
 		return nil
 	} else if err != nil {
 		return err
 	}
 	{{if .hasClass}}
-	if classValue, found := original.GetAnnotations()[classAnnotationKey]; !found || classValue != r.classValue {
+	if classValue, found := original.GetAnnotations()[ClassAnnotationKey]; !found || classValue != r.classValue {
 		logger.Debugw("Skip reconciling resource, class annotation value does not match reconciler instance value.",
-			zap.String("classKey", classAnnotationKey),
+			zap.String("classKey", ClassAnnotationKey),
 			zap.String("issue", classValue+"!="+r.classValue))
 		return nil
 	}
@@ -317,11 +337,11 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 	if reconcileEvent != nil {
 		var event *{{.reconcilerReconcilerEvent|raw}}
 		if reconciler.EventAs(reconcileEvent, &event) {
-			logger.Infow("returned an event", zap.Any("event", reconcileEvent))
+			logger.Infow("Returned an event", zap.Any("event", reconcileEvent))
 			r.Recorder.Eventf(resource, event.EventType, event.Reason, event.Format, event.Args...)
 			return nil
 		} else {
-			logger.Errorw("returned an error", zap.Error(reconcileEvent))
+			logger.Errorw("Returned an error", zap.Error(reconcileEvent))
 			r.Recorder.Event(resource, {{.corev1EventTypeWarning|raw}}, "InternalError", reconcileEvent.Error())
 			return reconcileEvent
 		}
@@ -336,7 +356,12 @@ func (r *reconcilerImpl) updateStatus(existing *{{.type|raw}}, desired *{{.type|
 	return {{.reconcilerRetryUpdateConflicts|raw}}(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
 		if attempts > 0 {
-			existing, err = r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(desired.Namespace).Get(desired.Name, {{.metav1GetOptions|raw}}{})
+			{{if .nonNamespaced}}
+			getter := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}()
+			{{else}}
+			getter := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(desired.Namespace)
+			{{end}}
+			existing, err = getter.Get(desired.Name, {{.metav1GetOptions|raw}}{})
 			if err != nil {
 				return err
 			}
@@ -348,7 +373,13 @@ func (r *reconcilerImpl) updateStatus(existing *{{.type|raw}}, desired *{{.type|
 		}
 
 		existing.Status = desired.Status
-		_, err = r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(existing.Namespace).UpdateStatus(existing)
+
+		{{if .nonNamespaced}}
+		updater := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}()
+		{{else}}
+		updater := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(existing.Namespace)
+		{{end}}
+		_, err = updater.UpdateStatus(existing)
 		return err
 	})
 }
@@ -357,11 +388,14 @@ func (r *reconcilerImpl) updateStatus(existing *{{.type|raw}}, desired *{{.type|
 var reconcilerFinalizerFactory = `
 // updateFinalizersFiltered will update the Finalizers of the resource.
 // TODO: this method could be generic and sync all finalizers. For now it only
-// updates defaultFinalizerName.
+// updates defaultFinalizerName or its override.
 func (r *reconcilerImpl) updateFinalizersFiltered(ctx {{.contextContext|raw}}, resource *{{.type|raw}}) (*{{.type|raw}}, error) {
-	finalizerName := defaultFinalizerName
-
-	actual, err := r.Lister.{{.type|apiGroup}}(resource.Namespace).Get(resource.Name)
+	{{if .nonNamespaced}}
+	getter := r.Lister
+	{{else}}
+	getter := r.Lister.{{.type|apiGroup}}(resource.Namespace)
+	{{end}}
+	actual, err := getter.Get(resource.Name)
 	if err != nil {
 		return resource, err
 	}
@@ -375,20 +409,20 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx {{.contextContext|raw}}, r
 	existingFinalizers := {{.setsNewString|raw}}(existing.Finalizers...)
 	desiredFinalizers := {{.setsNewString|raw}}(resource.Finalizers...)
 
-	if desiredFinalizers.Has(finalizerName) {
-		if existingFinalizers.Has(finalizerName) {
+	if desiredFinalizers.Has(r.finalizerName) {
+		if existingFinalizers.Has(r.finalizerName) {
 			// Nothing to do.
 			return resource, nil
 		}
 		// Add the finalizer.
-		finalizers = append(existing.Finalizers, finalizerName)
+		finalizers = append(existing.Finalizers, r.finalizerName)
 	} else {
-		if !existingFinalizers.Has(finalizerName) {
+		if !existingFinalizers.Has(r.finalizerName) {
 			// Nothing to do.
 			return resource, nil
 		}
 		// Remove the finalizer.
-		existingFinalizers.Delete(finalizerName)
+		existingFinalizers.Delete(r.finalizerName)
 		finalizers = existingFinalizers.List()
 	}
 
@@ -404,7 +438,12 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx {{.contextContext|raw}}, r
 		return resource, err
 	}
 
-	resource, err = r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(resource.Namespace).Patch(resource.Name, types.MergePatchType, patch)
+	{{if .nonNamespaced}}
+	patcher := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}()
+	{{else}}
+	patcher := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(resource.Namespace)
+	{{end}}
+	resource, err = patcher.Patch(resource.Name, types.MergePatchType, patch)
 	if err != nil {
 		r.Recorder.Eventf(resource, {{.corev1EventTypeWarning|raw}}, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resource.Name, err)
@@ -424,12 +463,12 @@ func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx {{.contextContext|raw}}, re
 
 	// If this resource is not being deleted, mark the finalizer.
 	if resource.GetDeletionTimestamp().IsZero() {
-		finalizers.Insert(defaultFinalizerName)
+		finalizers.Insert(r.finalizerName)
 	}
 
 	resource.Finalizers = finalizers.List()
 
-	// Synchronize the finalizers filtered by defaultFinalizerName.
+	// Synchronize the finalizers filtered by r.finalizerName.
 	return r.updateFinalizersFiltered(ctx, resource)
 }
 
@@ -447,16 +486,16 @@ func (r *reconcilerImpl) clearFinalizer(ctx {{.contextContext|raw}}, resource *{
 		var event *{{.reconcilerReconcilerEvent|raw}}
 		if reconciler.EventAs(reconcileEvent, &event) {
 			if event.EventType == {{.corev1EventTypeNormal|raw}} {
-				finalizers.Delete(defaultFinalizerName)
+				finalizers.Delete(r.finalizerName)
 			}
 		}
 	} else {
-		finalizers.Delete(defaultFinalizerName)
+		finalizers.Delete(r.finalizerName)
 	}
 
 	resource.Finalizers = finalizers.List()
 
-	// Synchronize the finalizers filtered by defaultFinalizerName.
+	// Synchronize the finalizers filtered by r.finalizerName.
 	return r.updateFinalizersFiltered(ctx, resource)
 }
 `

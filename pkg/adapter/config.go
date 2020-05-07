@@ -40,6 +40,12 @@ type EnvConfig struct {
 	// This is used to configure the logging config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
 	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" required:"true"`
+
+	// TracingConfigJson is a json string of tracing.Config.
+	// This is used to configure the tracing config, the config is stored in
+	// a config map inside the controllers namespace and copied here.
+	// Default is no-op.
+	TracingConfigJson string `envconfig:"K_TRACING_CONFIG"`
 }
 
 // EnvConfigAccessor defines accessors for the minimal
@@ -56,6 +62,9 @@ type EnvConfigAccessor interface {
 
 	// Get the json string of logging.Config.
 	GetLoggingConfigJson() string
+
+	// Get the json string of tracubg.Config.
+	GetTracingConfigJson() string
 }
 
 func (e *EnvConfig) GetMetricsConfigJson() string {
@@ -64,6 +73,10 @@ func (e *EnvConfig) GetMetricsConfigJson() string {
 
 func (e *EnvConfig) GetLoggingConfigJson() string {
 	return e.LoggingConfigJson
+}
+
+func (e *EnvConfig) GetTracingConfigJson() string {
+	return e.TracingConfigJson
 }
 
 func (e *EnvConfig) GetSinkURI() string {

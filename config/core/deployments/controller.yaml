@@ -35,7 +35,7 @@ spec:
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: knative.dev/eventing/cmd/controller
+        image: ko://knative.dev/eventing/cmd/controller
 
         resources:
           requests:
@@ -47,21 +47,28 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          - name: CONTROLLER_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: CONTROLLER_UID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.uid
           - name: CONFIG_LOGGING_NAME
             value: config-logging
           - name: CONFIG_OBSERVABILITY_NAME
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
-          # Legacy CronJobSource
-          - name: CRONJOB_RA_IMAGE
-            value: knative.dev/eventing/cmd/cronjob_receive_adapter
           # PingSource
           - name: PING_IMAGE
-            value: knative.dev/eventing/cmd/ping
+            value: ko://knative.dev/eventing/cmd/ping
+          - name: MT_PING_IMAGE
+            value: ko://knative.dev/eventing/cmd/mtping
           # APIServerSource
           - name: APISERVER_RA_IMAGE
-            value: knative.dev/eventing/cmd/apiserver_receive_adapter
+            value: ko://knative.dev/eventing/cmd/apiserver_receive_adapter
 
         securityContext:
           allowPrivilegeEscalation: false

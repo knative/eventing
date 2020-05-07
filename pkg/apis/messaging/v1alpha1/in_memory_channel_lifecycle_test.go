@@ -34,29 +34,9 @@ var condReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
-var condDispatcherReady = apis.Condition{
-	Type:   InMemoryChannelConditionDispatcherReady,
-	Status: corev1.ConditionTrue,
-}
-
 var condDispatcherNotReady = apis.Condition{
 	Type:   InMemoryChannelConditionDispatcherReady,
 	Status: corev1.ConditionFalse,
-}
-
-var condDispatcherServiceReady = apis.Condition{
-	Type:   InMemoryChannelConditionServiceReady,
-	Status: corev1.ConditionTrue,
-}
-
-var condDispatcherEndpointsReady = apis.Condition{
-	Type:   InMemoryChannelConditionEndpointsReady,
-	Status: corev1.ConditionTrue,
-}
-
-var condDispatcherAddressable = apis.Condition{
-	Type:   InMemoryChannelConditionAddressable,
-	Status: corev1.ConditionTrue,
 }
 
 var deploymentConditionReady = appsv1.DeploymentCondition{
@@ -75,8 +55,6 @@ var deploymentStatusNotReady = &appsv1.DeploymentStatus{Conditions: []appsv1.Dep
 var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 	apis.Condition{},
 	"LastTransitionTime", "Message", "Reason", "Severity")
-
-var ignoreLastTransitionTime = cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime")
 
 func TestInMemoryChannelGetCondition(t *testing.T) {
 	tests := []struct {

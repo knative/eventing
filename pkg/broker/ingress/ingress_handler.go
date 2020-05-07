@@ -26,6 +26,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"go.uber.org/zap"
+
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/utils"
 )
@@ -89,9 +90,9 @@ func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cl
 	}
 
 	reporterArgs := &ReportArgs{
-		ns:        h.Namespace,
-		broker:    h.BrokerName,
-		eventType: event.Type(),
+		Namespace: h.Namespace,
+		Broker:    h.BrokerName,
+		EventType: event.Type(),
 	}
 
 	if h.Defaulter != nil {

@@ -21,24 +21,20 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
-	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
-)
 
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "apiserver-source-controller"
+	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -57,19 +53,17 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
-	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
+		kubeClientSet:         kubeclient.Get(ctx),
 		apiserversourceLister: apiServerSourceInformer.Lister(),
-		eventTypeLister:       eventTypeInformer.Lister(),
 		source:                GetCfgHost(ctx),
 		loggingContext:        ctx,
 	}
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
-		r.Logger.Panicf("unable to process APIServerSource's required environment variables: %v", err)
+		logging.FromContext(ctx).Panicf("unable to process APIServerSource's required environment variables: %v", err)
 	}
 	r.receiveAdapterImage = env.Image
 
@@ -77,21 +71,17 @@ func NewController(
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
+		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("ApiServerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
+	cmw.Watch(tracingconfig.ConfigName, r.UpdateFromTracingConfigMap)
 
 	return impl
 }

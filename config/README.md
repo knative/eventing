@@ -4,6 +4,7 @@ The files in this directory are organized as follows:
 
 - `core/`: the elements that are required for knative/eventing to function,
 - `channels/`: reference implementations of the Channel abstraction,
+- `brokers/`: reference implementations of Broker abstraction,
 - `monitoring/`: an installable bundle of tooling for assorted observability
   functions,
 - `*.yaml`: symlinks that form a particular "rendered view" of the

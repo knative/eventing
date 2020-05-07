@@ -8,5 +8,5 @@ metadata:
 spec:
   containers:
     - name: performance
-      image: knative.dev/eventing/test/test_images/performance
+      image: ko://knative.dev/eventing/test/test_images/performance
 

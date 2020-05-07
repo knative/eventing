@@ -39,9 +39,6 @@ import (
 )
 
 const (
-	requestInterval = 1 * time.Second
-	// RequestTimeout is the default timeout for the polling requests.
-	RequestTimeout = 5 * time.Minute
 	// Name of the temporary HTTP header that is added to http.Request to indicate that
 	// it is a SpoofClient.Poll request. This header is removed before making call to backend.
 	pollReqHeader = "X-Kn-Poll-Request-Do-Not-Trace"
@@ -107,10 +104,12 @@ func New(
 	domain string,
 	resolvable bool,
 	endpointOverride string,
+	requestInterval time.Duration,
+	requestTimeout time.Duration,
 	opts ...TransportOption) (*SpoofingClient, error) {
 	endpoint, err := ResolveEndpoint(kubeClientset, domain, resolvable, endpointOverride)
 	if err != nil {
-		return nil, fmt.Errorf("failed get the cluster endpoint: %v", err)
+		return nil, fmt.Errorf("failed get the cluster endpoint: %w", err)
 	}
 
 	// Spoof the hostname at the resolver level
@@ -140,7 +139,7 @@ func New(
 	sc := SpoofingClient{
 		Client:          &http.Client{Transport: roundTripper},
 		RequestInterval: requestInterval,
-		RequestTimeout:  RequestTimeout,
+		RequestTimeout:  requestTimeout,
 		Logf:            logf,
 	}
 	return &sc, nil
@@ -245,18 +244,18 @@ func (sc *SpoofingClient) Poll(req *http.Request, inState ResponseChecker, error
 // DefaultErrorRetryChecker implements the defaults for retrying on error.
 func DefaultErrorRetryChecker(err error) (bool, error) {
 	if isTCPTimeout(err) {
-		return true, fmt.Errorf("Retrying for TCP timeout: %v", err)
+		return true, fmt.Errorf("Retrying for TCP timeout: %w", err)
 	}
 	// Retrying on DNS error, since we may be using xip.io or nip.io in tests.
 	if isDNSError(err) {
-		return true, fmt.Errorf("Retrying for DNS error: %v", err)
+		return true, fmt.Errorf("Retrying for DNS error: %w", err)
 	}
 	// Repeat the poll on `connection refused` errors, which are usually transient Istio errors.
 	if isConnectionRefused(err) {
-		return true, fmt.Errorf("Retrying for connection refused: %v", err)
+		return true, fmt.Errorf("Retrying for connection refused: %w", err)
 	}
 	if isConnectionReset(err) {
-		return true, fmt.Errorf("Retrying for connection reset: %v", err)
+		return true, fmt.Errorf("Retrying for connection reset: %w", err)
 	}
 	return false, err
 }

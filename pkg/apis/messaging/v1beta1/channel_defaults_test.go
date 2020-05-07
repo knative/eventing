@@ -21,12 +21,19 @@ import (
 	"testing"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/messaging/config"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 var (
-	defaultChannelTemplate = &ChannelTemplateSpec{
+	defaultChannelTemplate = &config.ChannelTemplateSpec{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: SchemeGroupVersion.String(),
+			Kind:       "InMemoryChannel",
+		},
+	}
+	ourDefaultChannelTemplate = &ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
 			Kind:       "InMemoryChannel",
@@ -37,7 +44,7 @@ var (
 func TestChannelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *ChannelTemplateSpec
+		channelTemplate     *config.ChannelTemplateSpec
 		initial             Channel
 		expected            Channel
 	}{
@@ -52,7 +59,7 @@ func TestChannelSetDefaults(t *testing.T) {
 			channelTemplate: defaultChannelTemplate,
 			expected: Channel{
 				Spec: ChannelSpec{
-					ChannelTemplate: defaultChannelTemplate,
+					ChannelTemplate: ourDefaultChannelTemplate,
 				},
 			},
 		},
@@ -82,24 +89,18 @@ func TestChannelSetDefaults(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx := context.Background()
 			if !tc.nilChannelDefaulter {
-				ChannelDefaulterSingleton = &channelDefaulter{
-					channelTemplate: tc.channelTemplate,
-				}
-				defer func() { ChannelDefaulterSingleton = nil }()
+				ctx = config.ToContext(ctx, &config.Config{
+					ChannelDefaults: &config.ChannelDefaults{
+						ClusterDefault: tc.channelTemplate,
+					},
+				})
 			}
-			tc.initial.SetDefaults(context.TODO())
+			tc.initial.SetDefaults(ctx)
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}
 		})
 	}
-}
-
-type channelDefaulter struct {
-	channelTemplate *ChannelTemplateSpec
-}
-
-func (cd *channelDefaulter) GetDefault(_ string) *ChannelTemplateSpec {
-	return cd.channelTemplate
 }

@@ -33,18 +33,6 @@ const (
 	reportDecode
 )
 
-// TraceName implements Observable.TraceName
-func (o observed) TraceName() string {
-	switch o {
-	case reportEncode:
-		return "datacodec/xml/encode"
-	case reportDecode:
-		return "datacodec/xml/decode"
-	default:
-		return "datacodec/xml/unknown"
-	}
-}
-
 // MethodName implements Observable.MethodName
 func (o observed) MethodName() string {
 	switch o {

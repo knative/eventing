@@ -24,6 +24,8 @@ import (
 	"knative.dev/pkg/test/zipkin"
 
 	"knative.dev/eventing/test/lib"
+
+	pkgtesting "knative.dev/pkg/configmap/testing"
 )
 
 // Setup sets up port forwarding to Zipkin and sets the knative-eventing tracing config to debug
@@ -47,14 +49,19 @@ var setTracingConfigOnce = sync.Once{}
 // TODO Do we need a tear down method to revert the config map to its original state?
 func setTracingConfigToZipkin(t *testing.T, client *lib.Client) {
 	setTracingConfigOnce.Do(func() {
-		err := client.Kube.UpdateConfigMap("knative-eventing", "config-tracing", map[string]string{
-			"backend":         "zipkin",
-			"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
-		})
+		tracingConfig, exampleTracingConfig := pkgtesting.ConfigMapsFromTestFile(t, "config-tracing")
+		_, backendOk := tracingConfig.Data["backend"]
+		_, endpointOk := tracingConfig.Data["endpoint"]
+		var err error
+		if backendOk && endpointOk {
+			_, err = client.Kube.GetConfigMap(tracingConfig.GetNamespace()).Update(tracingConfig)
+		} else {
+			_, err = client.Kube.GetConfigMap(exampleTracingConfig.GetNamespace()).Update(exampleTracingConfig)
+		}
 		if err != nil {
 			t.Fatalf("Unable to set the ConfigMap: %v", err)
 		}
-		// Wait for 1 minute to let the ConfigMap be synced up.
-		time.Sleep(1 * time.Minute)
+		// Wait for 5 seconds to let the ConfigMap be synced up.
+		time.Sleep(5 * time.Second)
 	})
 }

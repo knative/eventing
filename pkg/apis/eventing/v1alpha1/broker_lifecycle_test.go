@@ -17,13 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -311,18 +309,16 @@ func TestBrokerIsReady(t *testing.T) {
 	}}
 
 	for _, test := range tests {
-		testName := fmt.Sprintf("%s", test.name)
-		//			t.Run(test.name, func(t *testing.T) {
-		t.Run(testName, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			bs := &BrokerStatus{}
 			if test.markIngressReady != nil {
-				var d *v1.Deployment
+				var ep *corev1.Endpoints
 				if *test.markIngressReady {
-					d = TestHelper.AvailableDeployment()
+					ep = TestHelper.AvailableEndpoints()
 				} else {
-					d = TestHelper.UnavailableDeployment()
+					ep = TestHelper.UnavailableEndpoints()
 				}
-				bs.PropagateIngressDeploymentAvailability(d)
+				bs.PropagateIngressAvailability(ep)
 			}
 			if test.markTriggerChannelReady != nil {
 				var c *duckv1alpha1.ChannelableStatus
@@ -334,13 +330,13 @@ func TestBrokerIsReady(t *testing.T) {
 				bs.PropagateTriggerChannelReadiness(c)
 			}
 			if test.markFilterReady != nil {
-				var d *v1.Deployment
+				var ep *corev1.Endpoints
 				if *test.markFilterReady {
-					d = TestHelper.AvailableDeployment()
+					ep = TestHelper.AvailableEndpoints()
 				} else {
-					d = TestHelper.UnavailableDeployment()
+					ep = TestHelper.UnavailableEndpoints()
 				}
-				bs.PropagateFilterDeploymentAvailability(d)
+				bs.PropagateFilterAvailability(ep)
 			}
 			bs.SetAddress(test.address)
 

@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -25,13 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
@@ -67,8 +67,8 @@ func TestContainerSource(t *testing.T) {
 	containerSource := eventingtesting.NewContainerSource(
 		containerSourceName,
 		client.Namespace,
-		eventingtesting.WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-			Template: &corev1.PodTemplateSpec{
+		eventingtesting.WithContainerSourceSpec(sourcesv1alpha2.ContainerSourceSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: templateName,
 				},
@@ -82,10 +82,12 @@ func TestContainerSource(t *testing.T) {
 					}},
 				},
 			},
-			Sink: &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)},
+			},
 		}),
 	)
-	client.CreateLegacyContainerSourceOrFail(containerSource)
+	client.CreateContainerSourceV1Alpha2OrFail(containerSource)
 
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()

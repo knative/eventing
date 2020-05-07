@@ -72,6 +72,15 @@ func KnativeRefForService(name, namespace string) *duckv1.KReference {
 	}
 }
 
+func KnativeRefForBroker(name, namespace string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Broker",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Name:       name,
+		Namespace:  namespace,
+	}
+}
+
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
 func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
@@ -178,10 +187,39 @@ func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption
 	}
 }
 
-// WithChannelTemplateForBrokerV1Beta1 returns a function that adds a Config to the given Broker.
-func WithChannelTemplateForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta1Option {
+// WithConfigMapForBrokerConfig returns a function that configures the ConfigMap
+// for the Spec.Config for a given Broker. Note that the CM must exist and has
+// to be in the same namespace as the Broker and have the same Name. Typically
+// you'd do this by calling client.CreateBrokerConfigMapOrFail and then call this
+// method.
+// If those don't apply to your ConfigMap, look at WithConfigForBrokerV1Beta1
+func WithConfigMapForBrokerConfig() BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		b.Spec.Config = &duckv1.KReference{
+			Name:       b.Name,
+			Namespace:  b.Namespace,
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		}
+	}
+}
+
+func WithConfigForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta1Option {
 	return func(b *eventingv1beta1.Broker) {
 		b.Spec.Config = config
+	}
+}
+
+// WithBrokerClassForBrokerV1Beta1 returns a function that adds a brokerClass
+// annotation to the given Broker.
+func WithBrokerClassForBrokerV1Beta1(brokerClass string) BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations["eventing.knative.dev/broker.class"] = brokerClass
+		b.SetAnnotations(annotations)
 	}
 }
 
@@ -189,6 +227,27 @@ func WithChannelTemplateForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta
 func WithDeliveryForBroker(delivery *eventingduckv1beta1.DeliverySpec) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
 		b.Spec.Delivery = delivery
+	}
+}
+
+// WithDeliveryForBrokerV1Beta1 returns a function that adds a Delivery for the given
+// v1beta1 Broker.
+func WithDeliveryForBrokerV1Beta1(delivery *eventingduckv1beta1.DeliverySpec) BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		b.Spec.Delivery = delivery
+	}
+}
+
+// WithBrokerClassForBroker returns a function that adds a brokerClass
+// annotation to the given Broker.
+func WithBrokerClassForBroker(brokerClass string) BrokerOption {
+	return func(b *eventingv1alpha1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations["eventing.knative.dev/broker.class"] = brokerClass
+		b.SetAnnotations(annotations)
 	}
 }
 
@@ -294,13 +353,13 @@ func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extension
 	}
 }
 
-// WithDependencyAnnotaionTrigger returns an option that adds a dependency annotation to the given Trigger.
-func WithDependencyAnnotaionTrigger(dependencyAnnotation string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
+// WithDependencyAnnotationTrigger returns an option that adds a dependency annotation to the given Trigger.
+func WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation string) TriggerOptionV1Beta1 {
+	return func(t *eventingv1beta1.Trigger) {
 		if t.Annotations == nil {
 			t.Annotations = make(map[string]string)
 		}
-		t.Annotations[eventingv1alpha1.DependencyAnnotation] = dependencyAnnotation
+		t.Annotations[eventingv1beta1.DependencyAnnotation] = dependencyAnnotation
 	}
 }
 
@@ -308,17 +367,6 @@ func WithDependencyAnnotaionTrigger(dependencyAnnotation string) TriggerOption {
 func WithBroker(brokerName string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Broker = brokerName
-	}
-}
-
-// WithSubscriberKServiceRefForTrigger returns an option that adds a Subscriber Knative Service Ref for the given Trigger.
-func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
-		if name != "" {
-			t.Spec.Subscriber = duckv1.Destination{
-				Ref: KnativeRefForService(name, t.Namespace),
-			}
-		}
 	}
 }
 

@@ -96,14 +96,14 @@ type PingSourceSpec struct {
 
 // PingSourceStatus defines the observed state of PingSource.
 type PingSourceStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
-
-	// SinkURI is the current active sink URI that has been configured for the PingSource.
-	// +optional
-	SinkURI *apis.URL `json:"sinkUri,omitempty"`
+	// inherits duck/v1 SourceStatus, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last
+	//   processed by the controller.
+	// * Conditions - the latest available observations of a resource's current
+	//   state.
+	// * SinkURI - the current active sink URI that has been configured for the
+	//   Source.
+	duckv1.SourceStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -22,21 +22,21 @@ package lib
 import (
 	"testing"
 
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/test"
 
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
-	legacy "knative.dev/eventing/pkg/legacyclient/clientset/versioned"
 )
 
 // Client holds instances of interfaces for making requests to Knative.
 type Client struct {
-	Kube     *test.KubeClient
-	Eventing *eventing.Clientset
-	Legacy   *legacy.Clientset
-	Dynamic  dynamic.Interface
-	Config   *rest.Config
+	Kube          *test.KubeClient
+	Eventing      *eventing.Clientset
+	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
+	Dynamic       dynamic.Interface
+	Config        *rest.Config
 
 	Namespace string
 	T         *testing.T
@@ -65,7 +65,7 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
-	client.Legacy, err = legacy.NewForConfig(client.Config)
+	client.Apiextensions, err = apiextensionsv1beta1.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}

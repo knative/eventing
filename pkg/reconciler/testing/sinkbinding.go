@@ -18,10 +18,9 @@ package testing
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
-	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracker"
 )
@@ -31,24 +30,6 @@ type SinkBindingV1Alpha1Option func(*sourcesv1alpha1.SinkBinding)
 
 // SinkBindingV1Alpha2Option enables further configuration of a SinkBinding.
 type SinkBindingV1Alpha2Option func(*sourcesv1alpha2.SinkBinding)
-
-// LegacySinkBindingOption enables further configuration of a SinkBinding.
-type LegacySinkBindingOption func(*legacysourcesv1alpha1.SinkBinding)
-
-// NewLegacySinkBinding creates a SinkBinding with SinkBindingOptions
-func NewLegacySinkBinding(name, namespace string, o ...LegacySinkBindingOption) *legacysourcesv1alpha1.SinkBinding {
-	c := &legacysourcesv1alpha1.SinkBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	for _, opt := range o {
-		opt(c)
-	}
-	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
-	return c
-}
 
 // NewSinkBindingV1Alpha1 creates a SinkBinding with SinkBindingOptions
 func NewSinkBindingV1Alpha1(name, namespace string, o ...SinkBindingV1Alpha1Option) *sourcesv1alpha1.SinkBinding {
@@ -78,20 +59,6 @@ func NewSinkBindingV1Alpha2(name, namespace string, o ...SinkBindingV1Alpha2Opti
 	}
 	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
 	return c
-}
-
-// WithLegacySubject assigns the subject of the SinkBinding.
-func WithLegacySubject(subject tracker.Reference) LegacySinkBindingOption {
-	return func(sb *legacysourcesv1alpha1.SinkBinding) {
-		sb.Spec.Subject = subject
-	}
-}
-
-// WithLegacySink assigns the sink of the SinkBinding.
-func WithLegacySink(sink duckv1.Destination) LegacySinkBindingOption {
-	return func(sb *legacysourcesv1alpha1.SinkBinding) {
-		sb.Spec.Sink = sink
-	}
 }
 
 // WithSubjectV1A1 assigns the subject of the SinkBinding.

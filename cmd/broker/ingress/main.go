@@ -32,13 +32,6 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
-	cmdbroker "knative.dev/eventing/cmd/broker"
-	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/broker/ingress"
-	"knative.dev/eventing/pkg/kncloudevents"
-	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
-	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
-	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -48,8 +41,15 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
-	pkgtracing "knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
+
+	cmdbroker "knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker/ingress"
+	"knative.dev/eventing/pkg/kncloudevents"
+	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
+	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	"knative.dev/eventing/pkg/tracing"
 )
 
 var (
@@ -151,7 +151,14 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
+	)
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
@@ -162,13 +169,7 @@ func main() {
 		writer.WriteHeader(http.StatusOK)
 	})
 
-	connectionArgs := kncloudevents.ConnectionArgs{
-		MaxIdleConns:        defaultMaxIdleConnections,
-		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(
-		httpTransport,
-		&connectionArgs)
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}

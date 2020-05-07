@@ -20,48 +20,29 @@ import (
 	"context"
 	"testing"
 
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/system"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/reconciler/namespace/resources"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/reconciler/namespace/resources"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/system"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
 	testNS                    = "test-namespace"
 	brokerImagePullSecretName = "broker-image-pull-secret"
-)
-
-var (
-	brokerGVR = schema.GroupVersionResource{
-		Group:    "eventing.knative.dev",
-		Version:  "v1alpha1",
-		Resource: "brokers",
-	}
-
-	roleBindingGVR = schema.GroupVersionResource{
-		Group:    "rbac.authorization.k8s.io",
-		Version:  "v1",
-		Resource: "rolebindings",
-	}
-
-	serviceAccountGVR = schema.GroupVersionResource{
-		Version:  "v1",
-		Resource: "serviceaccounts",
-	}
 )
 
 func init() {
@@ -77,8 +58,7 @@ func TestAllCases(t *testing.T) {
 	saFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "ServiceAccount 'eventing-broker-filter' created for the Broker")
 	rbFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'test-namespace/eventing-broker-filter' created for the Broker")
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
-	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
-	nsEventFailure := Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: broker ingress: Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
+	nsEventFailure := Eventf(corev1.EventTypeWarning, "InternalError", "broker ingress: Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
 
 	secretEventFilter := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-filter")
 	secretEventIngress := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress")
@@ -130,9 +110,6 @@ func TestAllCases(t *testing.T) {
 			),
 		},
 		Key: testNS,
-		WantEvents: []string{
-			nsEvent,
-		},
 	}, {
 		Name: "Namespace enabled",
 		Objects: []runtime.Object{
@@ -152,7 +129,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -208,7 +184,7 @@ func TestAllCases(t *testing.T) {
 			InduceFailure("create", "configmappropagations"),
 		},
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: configMapPropagation: inducing failure for create configmappropagations"),
+			Eventf(corev1.EventTypeWarning, "InternalError", "configMapPropagation: inducing failure for create configmappropagations"),
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -234,7 +210,6 @@ func TestAllCases(t *testing.T) {
 			saFilterEvent,
 			rbFilterEvent,
 			secretEventFilter,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -285,7 +260,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -320,7 +294,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -355,7 +328,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -390,7 +362,6 @@ func TestAllCases(t *testing.T) {
 			saFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -416,9 +387,10 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 
 		r := &Reconciler{
-			Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
+			eventingClientSet:          fakeeventingclient.Get(ctx),
+			kubeClientSet:              fakekubeclient.Get(ctx),
 			namespaceLister:            listers.GetNamespaceLister(),
-			brokerLister:               listers.GetBrokerLister(),
+			brokerLister:               listers.GetV1Beta1BrokerLister(),
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
@@ -433,13 +405,15 @@ func TestAllCases(t *testing.T) {
 		for _, theTest := range createSecretTests {
 			if theTest == table[testNum].Name {
 				// create the required secret in knative-eventing to be copied into required namespaces
-				tgtNSSecrets := r.KubeClientSet.CoreV1().Secrets(system.Namespace())
+				tgtNSSecrets := fakekubeclient.Get(ctx).CoreV1().Secrets(system.Namespace())
 				tgtNSSecrets.Create(resources.MakeSecret(brokerImagePullSecretName))
 				break
 			}
 		}
 		testNum++
-		return r
+		return namespacereconciler.NewReconciler(ctx, logger,
+			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
+			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
 

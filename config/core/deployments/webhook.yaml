@@ -37,7 +37,7 @@ spec:
 
         # This is the Go import path for the binary that is containerized
         # and substituted here.
-        image: knative.dev/eventing/cmd/webhook
+        image: ko://knative.dev/eventing/cmd/webhook
 
         resources:
           requests:

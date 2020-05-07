@@ -351,7 +351,6 @@ documentation.
 Sources SHOULD produce CloudEvents. The output SHOULD be via the HTTP binding
 specified in one of the following versions of the specification:
 
-- [CloudEvents 0.2 specification](https://github.com/cloudevents/spec/blob/v0.2/http-transport-binding.md)
 - [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
 - [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
 

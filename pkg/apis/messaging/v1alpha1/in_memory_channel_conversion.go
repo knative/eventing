@@ -20,13 +20,15 @@ import (
 	"context"
 	"fmt"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // ConvertTo implements apis.Convertible
@@ -35,6 +37,10 @@ func (source *InMemoryChannel) ConvertTo(ctx context.Context, obj apis.Convertib
 	switch sink := obj.(type) {
 	case *v1beta1.InMemoryChannel:
 		sink.ObjectMeta = source.ObjectMeta
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 		source.Status.ConvertTo(ctx, &sink.Status)
 		return source.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
@@ -48,24 +54,7 @@ func (source *InMemoryChannelSpec) ConvertTo(ctx context.Context, sink *v1beta1.
 	if source.Subscribable != nil {
 		sink.Subscribers = make([]duckv1beta1.SubscriberSpec, len(source.Subscribable.Subscribers))
 		for i, s := range source.Subscribable.Subscribers {
-			sink.Subscribers[i] = duckv1beta1.SubscriberSpec{
-				UID:           s.UID,
-				Generation:    s.Generation,
-				SubscriberURI: s.SubscriberURI,
-				ReplyURI:      s.ReplyURI,
-			}
-			// If the source has delivery, use it.
-			if s.Delivery != nil {
-				sink.Subscribers[i].Delivery = s.Delivery
-			} else {
-				// If however, there's a Deprecated DeadLetterSinkURI, convert that up
-				// to DeliverySpec.
-				sink.Subscribers[i].Delivery = &duckv1beta1.DeliverySpec{
-					DeadLetterSink: &duckv1.Destination{
-						URI: s.DeadLetterSinkURI,
-					},
-				}
-			}
+			s.ConvertTo(ctx, &sink.Subscribers[i])
 		}
 	}
 	return nil
@@ -100,6 +89,10 @@ func (sink *InMemoryChannel) ConvertFrom(ctx context.Context, obj apis.Convertib
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
 		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
@@ -114,13 +107,7 @@ func (sink *InMemoryChannelSpec) ConvertFrom(ctx context.Context, source v1beta1
 			Subscribers: make([]eventingduck.SubscriberSpec, len(source.Subscribers)),
 		}
 		for i, s := range source.Subscribers {
-			sink.Subscribable.Subscribers[i] = eventingduck.SubscriberSpec{
-				UID:           s.UID,
-				Generation:    s.Generation,
-				SubscriberURI: s.SubscriberURI,
-				ReplyURI:      s.ReplyURI,
-				Delivery:      s.Delivery,
-			}
+			sink.Subscribable.Subscribers[i].ConvertFrom(ctx, s)
 		}
 	}
 }
@@ -136,15 +123,10 @@ func (sink *InMemoryChannelStatus) ConvertFrom(ctx context.Context, source v1bet
 	}
 	if len(source.SubscribableStatus.Subscribers) > 0 {
 		sink.SubscribableTypeStatus.SubscribableStatus = &duckv1alpha1.SubscribableStatus{
-			Subscribers: make([]duckv1alpha1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
+			Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
 		}
 		for i, ss := range source.SubscribableStatus.Subscribers {
-			sink.SubscribableTypeStatus.SubscribableStatus.Subscribers[i] = duckv1alpha1.SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
-			}
+			sink.SubscribableTypeStatus.SubscribableStatus.Subscribers[i] = ss
 		}
 	}
 	return nil

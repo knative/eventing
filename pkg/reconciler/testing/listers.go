@@ -33,18 +33,22 @@ import (
 	"k8s.io/client-go/tools/cache"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	fakelegacyclientset "knative.dev/eventing/pkg/legacyclient/clientset/versioned/fake"
-	legacysourcelisters "knative.dev/eventing/pkg/legacyclient/listers/legacysources/v1alpha1"
+	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
 )
 
@@ -53,12 +57,17 @@ var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
 	return nil
 }
 
+var sourceAddToScheme = func(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.sources.knative.dev", Version: "v1alpha1", Kind: "TestSource"}, &duckv1.Source{})
+	return nil
+}
+
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
-	fakelegacyclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
+	sourceAddToScheme,
 }
 
 type Listers struct {
@@ -102,10 +111,6 @@ func (l *Listers) GetEventingObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakeeventingclientset.AddToScheme)
 }
 
-func (l *Listers) GetLegacyObjects() []runtime.Object {
-	return l.sorter.ObjectsForSchemeFunc(fakelegacyclientset.AddToScheme)
-}
-
 func (l *Listers) GetSubscriberObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(subscriberAddToScheme)
 }
@@ -113,9 +118,12 @@ func (l *Listers) GetSubscriberObjects() []runtime.Object {
 func (l *Listers) GetAllObjects() []runtime.Object {
 	all := l.GetSubscriberObjects()
 	all = append(all, l.GetEventingObjects()...)
-	all = append(all, l.GetLegacyObjects()...)
 	all = append(all, l.GetKubeObjects()...)
 	return all
+}
+
+func (l *Listers) GetV1Beta1SubscriptionLister() messaginglistersv1beta1.SubscriptionLister {
+	return messaginglistersv1beta1.NewSubscriptionLister(l.indexerFor(&messagingv1beta1.Subscription{}))
 }
 
 func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
@@ -130,8 +138,16 @@ func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
 	return eventinglisters.NewTriggerLister(l.indexerFor(&eventingv1alpha1.Trigger{}))
 }
 
+func (l *Listers) GetV1Beta1TriggerLister() eventingv1beta1listers.TriggerLister {
+	return eventingv1beta1listers.NewTriggerLister(l.indexerFor(&eventingv1beta1.Trigger{}))
+}
+
 func (l *Listers) GetBrokerLister() eventinglisters.BrokerLister {
 	return eventinglisters.NewBrokerLister(l.indexerFor(&eventingv1alpha1.Broker{}))
+}
+
+func (l *Listers) GetV1Beta1BrokerLister() eventingv1beta1listers.BrokerLister {
+	return eventingv1beta1listers.NewBrokerLister(l.indexerFor(&eventingv1beta1.Broker{}))
 }
 
 func (l *Listers) GetEventTypeLister() eventinglisters.EventTypeLister {
@@ -142,8 +158,16 @@ func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLis
 	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
 }
 
+func (l *Listers) GetV1Beta1InMemoryChannelLister() messaginglistersv1beta1.InMemoryChannelLister {
+	return messaginglistersv1beta1.NewInMemoryChannelLister(l.indexerFor(&messagingv1beta1.InMemoryChannel{}))
+}
+
 func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
 	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
+}
+
+func (l *Listers) GetV1Beta1MessagingChannelLister() messaginglistersv1beta1.ChannelLister {
+	return messaginglistersv1beta1.NewChannelLister(l.indexerFor(&messagingv1beta1.Channel{}))
 }
 
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
@@ -158,16 +182,24 @@ func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
 	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1alpha1.PingSource{}))
 }
 
-func (l *Listers) GetLegacyCronJobSourceLister() legacysourcelisters.CronJobSourceLister {
-	return legacysourcelisters.NewCronJobSourceLister(l.indexerFor(&legacysourcesv1alpha1.CronJobSource{}))
+func (l *Listers) GetSinkBindingLister() sourcelisters.SinkBindingLister {
+	return sourcelisters.NewSinkBindingLister(l.indexerFor(&sourcesv1alpha1.SinkBinding{}))
 }
 
-func (l *Listers) GetLegacyApiServerSourceLister() legacysourcelisters.ApiServerSourceLister {
-	return legacysourcelisters.NewApiServerSourceLister(l.indexerFor(&legacysourcesv1alpha1.ApiServerSource{}))
+func (l *Listers) GetPingSourceV1alpha2Lister() sourcev1alpha2listers.PingSourceLister {
+	return sourcev1alpha2listers.NewPingSourceLister(l.indexerFor(&sourcesv1alpha2.PingSource{}))
 }
 
-func (l *Listers) GetLegacyContainerSourceLister() legacysourcelisters.ContainerSourceLister {
-	return legacysourcelisters.NewContainerSourceLister(l.indexerFor(&legacysourcesv1alpha1.ContainerSource{}))
+func (l *Listers) GetContainerSourceLister() sourcev1alpha2listers.ContainerSourceLister {
+	return sourcev1alpha2listers.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha2.ContainerSource{}))
+}
+
+func (l *Listers) GetSinkBindingV1alpha2Lister() sourcev1alpha2listers.SinkBindingLister {
+	return sourcev1alpha2listers.NewSinkBindingLister(l.indexerFor(&sourcesv1alpha2.SinkBinding{}))
+}
+
+func (l *Listers) GetApiServerSourceV1alpha2Lister() sourcev1alpha2listers.ApiServerSourceLister {
+	return sourcev1alpha2listers.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha2.ApiServerSource{}))
 }
 
 func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {

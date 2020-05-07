@@ -20,6 +20,10 @@ import (
 	"context"
 	"time"
 
+	"knative.dev/pkg/logging"
+
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
+
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
@@ -31,20 +35,12 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/swappable"
-	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
+	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/tracing"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler.
-	ReconcilerName = "InMemoryChannels"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "in-memory-channel-dispatcher"
-
 	readTimeout  = 15 * time.Minute
 	writeTimeout = 15 * time.Minute
 	port         = 8080
@@ -56,72 +52,71 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-	base := reconciler.NewBase(ctx, controllerAgentName, cmw)
+	logger := logging.FromContext(ctx)
 
 	// Setup trace publishing.
 	iw := cmw.(*configmap.InformedWatcher)
-	if err := tracing.SetupDynamicPublishing(base.Logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
-		base.Logger.Fatalw("Error setting up trace publishing", zap.Error(err))
+	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
+		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
-	sh, err := swappable.NewEmptyHandler(base.Logger.Desugar())
+	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()))
 	if err != nil {
-		base.Logger.Fatal("Error creating swappable.Handler", zap.Error(err))
+		logger.Fatalw("Error creating swappable.MessageHandler", zap.Error(err))
 	}
 
-	args := &inmemorychannel.InMemoryDispatcherArgs{
+	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
-		Logger:       base.Logger.Desugar(),
+		Logger:       logger.Desugar(),
 	}
-	inMemoryDispatcher := inmemorychannel.NewDispatcher(args)
+	inMemoryDispatcher := inmemorychannel.NewMessageDispatcher(args)
 
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
 	informer := inmemorychannelInformer.Informer()
 
 	r := &Reconciler{
-		Base:                    base,
 		dispatcher:              inMemoryDispatcher,
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: informer,
 	}
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
 	// Nothing to filer, enqueue all imcs if configmap updates.
 	noopFilter := func(interface{}) bool { return true }
 	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(string, interface{}) {
-		r.impl.FilteredGlobalResync(noopFilter, informer)
+		impl.FilteredGlobalResync(noopFilter, informer)
 	})
 	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
-	configStore := channel.NewEventDispatcherConfigStore(base.Logger, resyncIMCs)
+	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), resyncIMCs)
 	configStore.WatchConfigs(cmw)
-	r.configStore = configStore
+	r.eventDispatcherConfigStore = configStore
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	// Watch for inmemory channels.
 	r.inmemorychannelInformer.AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
-			Handler:    controller.HandleAll(r.impl.Enqueue),
+			Handler:    controller.HandleAll(impl.Enqueue),
 		})
 
 	// Start the dispatcher.
 	go func() {
 		err := inMemoryDispatcher.Start(ctx)
 		if err != nil {
-			r.Logger.Error("Failed stopping inMemoryDispatcher.", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}
 	}()
 
-	return r.impl
+	return impl
 }
 
 func filterWithAnnotation(namespaced bool) func(obj interface{}) bool {
 	if namespaced {
-		return pkgreconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, "namespace", false)
+		return pkgreconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, eventing.ScopeNamespace, false)
 	}
-	return pkgreconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, "cluster", true)
+	return pkgreconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, eventing.ScopeCluster, true)
 }

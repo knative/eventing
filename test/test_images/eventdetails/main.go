@@ -26,6 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/test/lib"
 )
 
 func handler(ctx context.Context, event cloudevents.Event) {
@@ -34,7 +35,7 @@ func handler(ctx context.Context, event cloudevents.Event) {
 	fmt.Printf("Got Transport Context: %+v\n", tx)
 	fmt.Printf("----------------------------\n")
 	header := tx.Header
-	headerNameList := []string{"X-B3-Sampled", "X-B3-Traceid", "X-B3-Spanid", "X-B3-ParentSpanId", "X-Custom-Header"}
+	headerNameList := lib.InterestingHeaders()
 	for _, headerName := range headerNameList {
 		if headerValue := header.Get(headerName); headerValue != "" {
 			fmt.Printf("Got Header %s: %s\n", headerName, headerValue)

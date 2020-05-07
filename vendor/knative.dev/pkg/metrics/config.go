@@ -29,6 +29,7 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/metrics/metricskey"
 )
 
@@ -60,6 +61,8 @@ const (
 	// OpenCensus is used to export to the OpenCensus Agent / Collector,
 	// which can send to many other services.
 	OpenCensus metricsBackend = "opencensus"
+	// None is used to export, well, nothing.
+	None metricsBackend = "none"
 
 	defaultBackendEnvName = "DEFAULT_METRICS_BACKEND"
 
@@ -85,6 +88,9 @@ type metricsConfig struct {
 	// recorder provides a hook for performing custom transformations before
 	// writing the metrics to the stats.RecordWithOptions interface.
 	recorder func(context.Context, []stats.Measurement, ...stats.Options) error
+
+	// secret contains credentials for an exporter to use for authentication.
+	secret *corev1.Secret
 
 	// ---- OpenCensus specific below ----
 	// collectorAddress is the address of the collector, if not `localhost:55678`
@@ -195,6 +201,13 @@ func createMetricsConfig(ops ExporterOptions, logger *zap.SugaredLogger) (*metri
 			if mc.requireSecure, err = strconv.ParseBool(isSecure); err != nil {
 				return nil, fmt.Errorf("invalid %s value %q", CollectorSecureKey, isSecure)
 			}
+
+			if mc.requireSecure {
+				mc.secret, err = getOpenCensusSecret(ops.Component, ops.Secrets)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
@@ -254,6 +267,15 @@ func createMetricsConfig(ops ExporterOptions, logger *zap.SugaredLogger) (*metri
 				mss = mss[:wIdx]
 				return stats.RecordWithOptions(ctx, append(ros, stats.WithMeasurements(mss...))...)
 			}
+		}
+
+		if scc.UseSecret {
+			secret, err := getStackdriverSecret(ops.Secrets)
+			if err != nil {
+				return nil, err
+			}
+
+			mc.secret = secret
 		}
 	}
 

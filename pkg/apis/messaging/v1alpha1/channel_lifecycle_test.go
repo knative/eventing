@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -371,7 +372,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 				SubscribableTypeStatus: v1alpha1.SubscribableTypeStatus{
 					SubscribableStatus: &v1alpha1.SubscribableStatus{
 						// Populate ALL fields
-						Subscribers: []v1alpha1.SubscriberStatus{{
+						Subscribers: []eventingduckv1beta1.SubscriberStatus{{
 							UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 							ObservedGeneration: 1,
 							Ready:              corev1.ConditionTrue,

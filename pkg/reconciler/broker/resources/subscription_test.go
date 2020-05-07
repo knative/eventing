@@ -17,28 +17,30 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 )
 
 func TestMakeSubscription(t *testing.T) {
 	testCases := map[string]struct {
-		channelable duckv1alpha1.Channelable
+		channelable duckv1beta1.Channelable
 	}{
 		"InMemoryChannel": {
-			channelable: duckv1alpha1.Channelable{
+			channelable: duckv1beta1.Channelable{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "messaging.knative.dev/v1alpha1",
+					APIVersion: "messaging.knative.dev/v1beta1",
 					Kind:       "InMemoryChannel",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -47,9 +49,9 @@ func TestMakeSubscription(t *testing.T) {
 			},
 		},
 		"KafkaChannel": {
-			channelable: duckv1alpha1.Channelable{
+			channelable: duckv1beta1.Channelable{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "messaging.knative.dev/v1alpha1",
+					APIVersion: "messaging.knative.dev/v1beta1",
 					Kind:       "KafkaChannel",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -103,12 +105,13 @@ func TestMakeSubscription(t *testing.T) {
 
 func TestNewSubscription(t *testing.T) {
 	var TrueValue = true
-	trigger := &v1alpha1.Trigger{
+	trigger := &v1beta1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
-			Name:      "t-name",
+			Name:      "t-name-is-a-long-name",
+			UID:       "cafed00d-cafed00d-cafed00d-cafed00d",
 		},
-		Spec: v1alpha1.TriggerSpec{
+		Spec: v1beta1.TriggerSpec{
 			Broker: "broker-name",
 		},
 	}
@@ -129,23 +132,24 @@ func TestNewSubscription(t *testing.T) {
 		},
 	}
 	got := NewSubscription(trigger, triggerChannelRef, brokerRef, apis.HTTP("example.com"), delivery)
-	want := &messagingv1alpha1.Subscription{
+	want := &messagingv1beta1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "t-namespace",
-			Name:      "broker-name-t-name-",
+			Name:      kmeta.ChildName(fmt.Sprintf("%s-%s-", "broker-name", "t-name-is-a-long-name"), "cafed00d-cafed00d-cafed00d-cafed00d"),
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "eventing.knative.dev/v1alpha1",
+				APIVersion:         "eventing.knative.dev/v1beta1",
 				Kind:               "Trigger",
-				Name:               "t-name",
+				Name:               "t-name-is-a-long-name",
+				UID:                "cafed00d-cafed00d-cafed00d-cafed00d",
 				Controller:         &TrueValue,
 				BlockOwnerDeletion: &TrueValue,
 			}},
 			Labels: map[string]string{
 				eventing.BrokerLabelKey:        "broker-name",
-				"eventing.knative.dev/trigger": "t-name",
+				"eventing.knative.dev/trigger": "t-name-is-a-long-name",
 			},
 		},
-		Spec: messagingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1beta1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				Name:       "tc-name",
 				Kind:       "tc-kind",

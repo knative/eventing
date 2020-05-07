@@ -20,6 +20,10 @@ import (
 	"context"
 	"log"
 
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,29 +31,23 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "broker-controller"
 )
 
 type envConfig struct {
@@ -57,7 +55,8 @@ type envConfig struct {
 	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
 	FilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
 	FilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
-	BrokerClass           string `envconfig:"BROKER_CLASS"`
+	// The default value should match the cluster default in config/core/configmaps/default-broker.yaml
+	BrokerClass string `envconfig:"BROKER_CLASS" default:"ChannelBasedBroker"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -77,11 +76,15 @@ func NewController(
 	triggerInformer := triggerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
+	endpointsInformer := endpointsinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
+		eventingClientSet:         eventingclient.Get(ctx),
+		dynamicClientSet:          dynamicclient.Get(ctx),
+		kubeClientSet:             kubeclient.Get(ctx),
 		brokerLister:              brokerInformer.Lister(),
 		serviceLister:             serviceInformer.Lister(),
+		endpointsLister:           endpointsInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
 		triggerLister:             triggerInformer.Lister(),
@@ -91,31 +94,40 @@ func NewController(
 		filterServiceAccountName:  env.FilterServiceAccount,
 		brokerClass:               env.BrokerClass,
 	}
-	impl := brokerreconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass)
+
+	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, env.BrokerClass, false /*allowUnset*/),
+		Handler:    controller.HandleAll(impl.Enqueue),
+	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
+	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.LabelExistsFilterFunc(eventing.BrokerLabelKey),
+		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("" /*any namespace*/, eventing.BrokerLabelKey)),
+	})
+
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
 	// that I own are changed.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
@@ -128,7 +140,7 @@ func NewController(
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
 		func(obj interface{}) {
-			if trigger, ok := obj.(*v1alpha1.Trigger); ok {
+			if trigger, ok := obj.(*v1beta1.Trigger); ok {
 				impl.EnqueueKey(types.NamespacedName{Namespace: trigger.Namespace, Name: trigger.Spec.Broker})
 			}
 		},

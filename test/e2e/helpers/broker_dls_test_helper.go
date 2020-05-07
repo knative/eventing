@@ -21,6 +21,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -28,6 +29,7 @@ import (
 
 // BrokerDeadLetterSinkTestHelper is the helper function for broker_dls_test
 func BrokerDeadLetterSinkTestHelper(t *testing.T,
+	brokerClass string,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
@@ -47,8 +49,11 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
-		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-		client.CreateRBACResourcesForBrokers()
+		if brokerClass == eventing.ChannelBrokerClassValue {
+			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+			client.CreateRBACResourcesForBrokers()
+		}
 
 		// create logger pod and service for deadlettersink
 		loggerPod := resources.EventLoggerPod(loggerPodName)
@@ -56,10 +61,14 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 
 		delivery := resources.Delivery(resources.WithDeadLetterSinkForDelivery(loggerPodName))
 
+		// Create a configmap used by the broker.
+		client.CreateBrokerConfigMapOrFail(brokerName, &channel)
+
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName,
-			resources.WithChannelTemplateForBroker(&channel),
-			resources.WithDeliveryForBroker(delivery))
+		client.CreateBrokerV1Beta1OrFail(brokerName,
+			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+			resources.WithConfigMapForBrokerConfig(),
+			resources.WithDeliveryForBrokerV1Beta1(delivery))
 
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 

@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
@@ -66,7 +67,7 @@ func TestSubscribablePopulate(t *testing.T) {
 		Status: SubscribableTypeStatus{
 			SubscribableStatus: &SubscribableStatus{
 				// Populate ALL fields
-				Subscribers: []SubscriberStatus{{
+				Subscribers: []eventingduckv1beta1.SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					ObservedGeneration: 1,
 					Ready:              corev1.ConditionTrue,
@@ -92,7 +93,7 @@ func TestSubscribablePopulate(t *testing.T) {
 func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	s := &SubscribableStatus{
 		// Populate ALL fields
-		Subscribers: []SubscriberStatus{{
+		Subscribers: []eventingduckv1beta1.SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
@@ -126,7 +127,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	}
 
 	/* Test AddSubscriberToSubscribableStatus */
-	subscribableTypeStatus.AddSubscriberToSubscribableStatus(SubscriberStatus{
+	subscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1beta1.SubscriberStatus{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              corev1.ConditionTrue,

@@ -27,7 +27,7 @@ characterics:
 
    ```shell
    kubectl apply --filename - << END
-   apiVersion: messaging.knative.dev/v1alpha1
+   apiVersion: messaging.knative.dev/v1beta1
    kind: InMemoryChannel
    metadata:
      name: foo
@@ -61,7 +61,7 @@ by adding the `eventing.knative.dev/scope: namespace` annotation. For instance:
 
 ```shell
 kubectl apply --filename - << END
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1beta1
 kind: InMemoryChannel
 metadata:
   name: foo-ns

@@ -20,17 +20,19 @@ import (
 	"os"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing"
+
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	os.Setenv("SCOPE", "cluster")
+	os.Setenv("SCOPE", eventing.ScopeCluster)
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
@@ -41,7 +43,7 @@ func TestNew(t *testing.T) {
 func TestNewInNamespace(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	os.Setenv("SCOPE", "namespace")
+	os.Setenv("SCOPE", eventing.ScopeNamespace)
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {

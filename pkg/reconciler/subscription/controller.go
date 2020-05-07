@@ -21,22 +21,17 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
-	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
+	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
-)
-
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "subscription-controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -50,18 +45,18 @@ func NewController(
 	channelInformer := channel.Get(ctx)
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		dynamicClientSet:   dynamicclient.Get(ctx),
 		subscriptionLister: subscriptionInformer.Lister(),
 		channelLister:      channelInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, channelablecombined.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.destinationResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	// Track changes to Channels.
@@ -72,7 +67,7 @@ func NewController(
 		// populated.
 		controller.EnsureTypeMeta(
 			r.tracker.OnChanged,
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"),
+			messagingv1beta1.SchemeGroupVersion.WithKind("Channel"),
 		),
 	))
 

@@ -20,6 +20,8 @@ limitations under the License.
 package duck
 
 import (
+	"time"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -28,6 +30,11 @@ import (
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	"knative.dev/eventing/test/lib/resources"
+)
+
+const (
+	interval = 1 * time.Second
+	timeout  = 2 * time.Minute
 )
 
 // WaitForResourceReady polls the status of the MetaResource from client

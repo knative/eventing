@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2018 The Knative Authors
+# Copyright 2020 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,22 +21,43 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+export GO111MODULE=on
+
+# This controls the release branch we track.
+VERSION="master"
+
 cd "${ROOT_DIR}"
 
-# Ensure we have everything we need under vendor/
-dep ensure
+# The list of dependencies that we track at HEAD and periodically
+# float forward in this repository.
+FLOATING_DEPS=(
+  "knative.dev/test-infra@${VERSION}"
+  "knative.dev/pkg@${VERSION}"
+)
+
+# Parse flags to determine any we should pass to dep.
+GO_GET=0
+while [[ $# -ne 0 ]]; do
+  parameter=$1
+  case ${parameter} in
+    --upgrade) GO_GET=1 ;;
+    *) abort "unknown option ${parameter}" ;;
+  esac
+  shift
+done
+readonly GO_GET
+
+if (( GO_GET )); then
+  go get -d ${FLOATING_DEPS[@]}
+fi
+
+# Prune modules.
+go mod tidy
+go mod vendor
 
 find vendor/ -name 'OWNERS' -delete
-find vendor/ -name 'OWNERS_ALIASES' -delete
-find vendor/ -name 'BUILD' -delete
-find vendor/ -name 'BUILD.bazel' -delete
+find vendor/ -name '*_test.go'-delete
 
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+export GOFLAGS=-mod=vendor
 
-# HACK HACK HACK
-# The only way we found to create a consistent Trace tree without any missing Spans is to
-# artificially set the SpanId. See pkg/tracing/traceparent.go for more details.
-# Produced with:
-# git diff origin/master HEAD -- vendor/go.opencensus.io/trace/trace.go > ./hack/set-span-id.patch
-git apply ${REPO_ROOT_DIR}/hack/set-span-id.patch
+update_licenses third_party/VENDOR-LICENSE "./..."

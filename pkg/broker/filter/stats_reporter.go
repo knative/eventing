@@ -74,10 +74,10 @@ var (
 )
 
 type ReportArgs struct {
-	ns         string
-	trigger    string
-	broker     string
-	filterType string
+	Namespace  string
+	Trigger    string
+	Broker     string
+	FilterType string
 }
 
 func init() {
@@ -173,15 +173,15 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 }
 
 func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
-	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
+	// Note that FilterType and filterSource can be empty strings, so they need a special treatment.
 	ctx, err := tag.New(
 		emptyContext,
 		tag.Insert(broker.ContainerTagKey, r.container),
 		tag.Insert(broker.UniqueTagKey, r.uniqueName),
-		tag.Insert(namespaceKey, args.ns),
-		tag.Insert(triggerKey, args.trigger),
-		tag.Insert(brokerKey, args.broker),
-		tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)))
+		tag.Insert(namespaceKey, args.Namespace),
+		tag.Insert(triggerKey, args.Trigger),
+		tag.Insert(brokerKey, args.Broker),
+		tag.Insert(triggerFilterTypeKey, valueOrAny(args.FilterType)))
 	if err != nil {
 		return nil, err
 	}

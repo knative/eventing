@@ -22,13 +22,15 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 
-	"knative.dev/eventing/pkg/reconciler"
-
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation"
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
@@ -38,22 +40,13 @@ type envConfig struct {
 	BrokerPullSecretName string `envconfig:"BROKER_IMAGE_PULL_SECRET_NAME" required:"false"`
 }
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "knative-eventing-namespace-controller"
-)
-
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-
+	logger := logging.FromContext(ctx)
 	namespaceInformer := namespace.Get(ctx)
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
@@ -61,20 +54,26 @@ func NewController(
 	configMapPropagationInformer := configmappropagation.Get(ctx)
 
 	r := &Reconciler{
-		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-		namespaceLister: namespaceInformer.Lister(),
+		eventingClientSet:          eventingclient.Get(ctx),
+		kubeClientSet:              kubeclient.Get(ctx),
+		namespaceLister:            namespaceInformer.Lister(),
+		serviceAccountLister:       serviceAccountInformer.Lister(),
+		roleBindingLister:          roleBindingInformer.Lister(),
+		brokerLister:               brokerInformer.Lister(),
+		configMapPropagationLister: configMapPropagationInformer.Lister(),
 	}
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		r.Logger.Info("no broker image pull secret name defined")
+		logger.Info("no broker image pull secret name defined")
 	}
 	r.brokerPullSecretName = env.BrokerPullSecretName
 
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := namespacereconciler.NewImpl(ctx, r)
+
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
-	r.Logger.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Watch all the resources that this reconciler reconciles.

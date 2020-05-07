@@ -41,16 +41,8 @@ rules:
     resources:
       - apiserversources
       - pingsources
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - sources.eventing.knative.dev
-    resources:
+      - sinkbindings
       - containersources
-      - cronjobsources
-      - apiserversources
     verbs:
       - get
       - list

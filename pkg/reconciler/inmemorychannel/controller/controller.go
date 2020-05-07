@@ -19,15 +19,17 @@ package controller
 import (
 	"context"
 
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/logging"
+
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
-	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
@@ -35,17 +37,8 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "InMemoryChannels"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "in-memory-channel-controller"
-
-	// TODO: this should be passed in on the env.
-	dispatcherName = "imc-dispatcher"
-)
+// TODO: this should be passed in on the env.
+const dispatcherName = "imc-dispatcher"
 
 type envConfig struct {
 	Image string `envconfig:"DISPATCHER_IMAGE" required:"true"`
@@ -57,7 +50,7 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-
+	logger := logging.FromContext(ctx)
 	inmemorychannelInformer := inmemorychannel.Get(ctx)
 	deploymentInformer := deployment.Get(ctx)
 	serviceInformer := service.Get(ctx)
@@ -66,8 +59,7 @@ func NewController(
 	roleBindingInformer := rolebinding.Get(ctx)
 
 	r := &Reconciler{
-		Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
-
+		kubeClientSet:           kubeclient.Get(ctx),
 		systemNamespace:         system.Namespace(),
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: inmemorychannelInformer.Informer(),
@@ -80,18 +72,18 @@ func NewController(
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
-		r.Logger.Panicf("unable to process in-memory channel's required environment variables: %v", err)
+		logger.Panicf("unable to process in-memory channel's required environment variables: %v", err)
 	}
 
 	if env.Image == "" {
-		r.Logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
+		logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
 	}
 
 	r.dispatcherImage = env.Image
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Set up watches for dispatcher resources we care about, since any changes to these

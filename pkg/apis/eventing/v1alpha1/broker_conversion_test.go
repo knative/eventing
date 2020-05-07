@@ -112,6 +112,7 @@ func TestBrokerConversion(t *testing.T) {
 					Addressable: duckv1beta1.Addressable{
 						URL: apis.HTTP("address"),
 					},
+					Hostname: "address",
 				},
 				TriggerChannel: &corev1.ObjectReference{
 					Kind:            "k",

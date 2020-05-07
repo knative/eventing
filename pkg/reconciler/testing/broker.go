@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/pkg/apis"
 )
 
@@ -98,6 +99,13 @@ func WithBrokerAddress(address string) BrokerOption {
 	}
 }
 
+// WithBrokerAddressURI sets the Broker's address as URI.
+func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.SetAddress(uri)
+	}
+}
+
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1alpha1.Broker) {
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
@@ -131,20 +139,31 @@ func WithTriggerChannelReady() BrokerOption {
 	}
 }
 
-func WithFilterDeploymentAvailable() BrokerOption {
+func WithFilterAvailable() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateFilterDeploymentAvailability(v1alpha1.TestHelper.AvailableDeployment())
+		b.Status.PropagateFilterAvailability(v1alpha1.TestHelper.AvailableEndpoints())
 	}
 }
 
-func WithIngressDeploymentAvailable() BrokerOption {
+func WithIngressAvailable() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressDeploymentAvailability(v1alpha1.TestHelper.AvailableDeployment())
+		b.Status.PropagateIngressAvailability(v1alpha1.TestHelper.AvailableEndpoints())
 	}
 }
 
 func WithBrokerTriggerChannel(c *corev1.ObjectReference) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.TriggerChannel = c
+	}
+}
+
+func WithBrokerClass(bc string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations[broker.ClassAnnotationKey] = bc
+		b.SetAnnotations(annotations)
 	}
 }

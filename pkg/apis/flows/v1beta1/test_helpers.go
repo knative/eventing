@@ -31,7 +31,6 @@ var (
 			Kind:       "InMemoryChannel",
 		},
 	}
-
 	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 		apis.Condition{},
 		"LastTransitionTime", "Message", "Reason", "Severity")

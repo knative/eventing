@@ -18,12 +18,15 @@
 
 # Script entry point.
 
+export GO111MODULE=on
+
 source "$(dirname "$0")/e2e-common.sh"
 
 # Overrides
 
 function knative_setup {
   install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
+  install_broker || fail_test 'Could not install Channel Based Broker'
 }
 
 function install_test_resources {

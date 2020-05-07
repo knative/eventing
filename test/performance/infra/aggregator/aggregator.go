@@ -141,7 +141,8 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	if ag.publishResults {
 		log.Printf("Configuring Mako")
 
-		makoClientCtx, _ := context.WithTimeout(ctx, time.Minute*10)
+		makoClientCtx, cancel := context.WithTimeout(ctx, time.Minute*10)
+		defer cancel()
 
 		client, err = mako.Setup(makoClientCtx, ag.makoTags...)
 		if err != nil {

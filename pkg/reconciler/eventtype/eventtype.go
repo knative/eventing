@@ -51,6 +51,7 @@ var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 // ReconcileKind implements Interface.ReconcileKind.
 // 1. Verify the Broker exists.
 // 2. Verify the Broker is ready.
+// TODO remove https://github.com/knative/eventing/issues/2750
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1alpha1.EventType) pkgreconciler.Event {
 	et.Status.InitializeConditions()
 	et.Status.ObservedGeneration = et.Generation

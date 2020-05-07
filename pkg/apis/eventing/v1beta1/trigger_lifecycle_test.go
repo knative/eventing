@@ -146,10 +146,10 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionSubscribed,
+					Type:   TriggerConditionSubscriberResolved,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionSubscriberResolved,
+					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionUnknown,
 				},
 				},
@@ -178,10 +178,10 @@ func TestTriggerInitializeConditions(t *testing.T) {
 						Type:   TriggerConditionReady,
 						Status: corev1.ConditionUnknown,
 					}, {
-						Type:   TriggerConditionSubscribed,
+						Type:   TriggerConditionSubscriberResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
-						Type:   TriggerConditionSubscriberResolved,
+						Type:   TriggerConditionSubscribed,
 						Status: corev1.ConditionUnknown,
 					},
 				},
@@ -209,11 +209,11 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionSubscribed,
-					Status: corev1.ConditionTrue,
-				}, {
 					Type:   TriggerConditionSubscriberResolved,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionSubscribed,
+					Status: corev1.ConditionTrue,
 				},
 				},
 			},
@@ -322,7 +322,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
 			if test.brokerStatus != nil {
-				ts.PropagateBrokerStatus(test.brokerStatus)
+				ts.PropagateBrokerCondition(test.brokerStatus.GetTopLevelCondition())
 			}
 			if test.subscriptionCondition != nil {
 				ts.PropagateSubscriptionCondition(test.subscriptionCondition)

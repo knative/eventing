@@ -95,7 +95,7 @@ func Packages(context *generator.Context, arguments *args.GeneratorArgs) generat
 			if tags.NeedsDuckInjection() {
 				duckTypes = append(duckTypes, t)
 			}
-			if tags.NeedsReconciler() {
+			if tags.NeedsReconciler(t, customArgs) {
 				reconcilerTypes = append(reconcilerTypes, t)
 			}
 		}
@@ -154,7 +154,16 @@ func (t Tags) NeedsDuckInjection() bool {
 	return t.GenerateDuck
 }
 
-func (t Tags) NeedsReconciler() bool {
+func (t Tags) NeedsReconciler(kind *types.Type, args *informergenargs.CustomArgs) bool {
+	// Overrides
+	kinds := strings.Split(args.ForceKinds, ",")
+	for _, k := range kinds {
+		if kind.Name.Name == k {
+			klog.V(5).Infof("Kind %s was forced to generate reconciler.", k)
+			return true
+		}
+	}
+	// Normal
 	return t.GenerateReconciler
 }
 
@@ -170,6 +179,7 @@ func MustParseClientGenTags(lines []string) Tags {
 
 	_, genRec := values["genreconciler"]
 	_, genRecClass := values["genreconciler:class"]
+
 	// Generate Reconciler code if genreconciler OR genreconciler:class exist.
 	if genRec || genRecClass {
 		ret.GenerateReconciler = true
@@ -178,21 +188,27 @@ func MustParseClientGenTags(lines []string) Tags {
 	return ret
 }
 
-func extractReconcilerClassTag(t *types.Type) (string, bool) {
+func extractCommentTags(t *types.Type) map[string]map[string]string {
 	comments := append(append([]string{}, t.SecondClosestCommentLines...), t.CommentLines...)
-	values := types.ExtractCommentTags("+", comments)["genreconciler:class"]
-	for _, v := range values {
-		if len(v) == 0 {
-			continue
-		}
-		return v, true
-	}
-	return "", false
+	return ExtractCommentTags("+", comments)
 }
 
-// isInternal returns true if the tags for a member do not contain a json tag
-func isInternal(m types.Member) bool {
-	return !strings.Contains(m.Tags, "json")
+func extractReconcilerClassTag(tags map[string]map[string]string) (string, bool) {
+	vals, ok := tags["genreconciler"]
+	if !ok {
+		return "", false
+	}
+	classname, has := vals["class"]
+	return classname, has
+}
+
+func isNonNamespaced(tags map[string]map[string]string) bool {
+	vals, has := tags["genclient"]
+	if !has {
+		return false
+	}
+	_, has = vals["nonNamespaced"]
+	return has
 }
 
 func vendorless(p string) string {
@@ -405,7 +421,9 @@ func reconcilerPackages(basePackage string, groupPkgName string, gv clientgentyp
 		// Fix for golang iterator bug.
 		t := t
 
-		reconcilerClass, hasReconcilerClass := extractReconcilerClassTag(t)
+		extracted := extractCommentTags(t)
+		reconcilerClass, hasReconcilerClass := extractReconcilerClassTag(extracted)
+		nonNamespaced := isNonNamespaced(extracted)
 
 		packagePath := filepath.Join(packagePath, strings.ToLower(t.Name.Name))
 
@@ -440,7 +458,7 @@ func reconcilerPackages(basePackage string, groupPkgName string, gv clientgentyp
 			},
 			FilterFunc: func(c *generator.Context, t *types.Type) bool {
 				tags := MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
-				return tags.NeedsReconciler()
+				return tags.NeedsReconciler(t, customArgs)
 			},
 		})
 
@@ -468,7 +486,7 @@ func reconcilerPackages(basePackage string, groupPkgName string, gv clientgentyp
 			},
 			FilterFunc: func(c *generator.Context, t *types.Type) bool {
 				tags := MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
-				return tags.NeedsReconciler()
+				return tags.NeedsReconciler(t, customArgs)
 			},
 		})
 
@@ -493,13 +511,14 @@ func reconcilerPackages(basePackage string, groupPkgName string, gv clientgentyp
 					groupVersion:       gv,
 					reconcilerClass:    reconcilerClass,
 					hasReconcilerClass: hasReconcilerClass,
+					nonNamespaced:      nonNamespaced,
 				})
 
 				return generators
 			},
 			FilterFunc: func(c *generator.Context, t *types.Type) bool {
 				tags := MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
-				return tags.NeedsReconciler()
+				return tags.NeedsReconciler(t, customArgs)
 			},
 		})
 
@@ -524,7 +543,7 @@ func reconcilerPackages(basePackage string, groupPkgName string, gv clientgentyp
 			},
 			FilterFunc: func(c *generator.Context, t *types.Type) bool {
 				tags := MustParseClientGenTags(append(t.SecondClosestCommentLines, t.CommentLines...))
-				return tags.NeedsReconciler()
+				return tags.NeedsReconciler(t, customArgs)
 			},
 		})
 	}

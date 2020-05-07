@@ -35,6 +35,13 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
 # Updates the status to reflect subscribable status.
   - apiGroups:
       - messaging.knative.dev

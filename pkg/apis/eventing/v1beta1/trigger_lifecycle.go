@@ -31,7 +31,7 @@ const (
 
 	TriggerConditionBroker apis.ConditionType = "BrokerReady"
 
-	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
+	TriggerConditionSubscribed apis.ConditionType = "SubscriptionReady"
 
 	TriggerConditionDependency apis.ConditionType = "DependencyReady"
 
@@ -71,8 +71,7 @@ func (ts *TriggerStatus) InitializeConditions() {
 	triggerCondSet.Manage(ts).InitializeConditions()
 }
 
-func (ts *TriggerStatus) PropagateBrokerStatus(bs *BrokerStatus) {
-	bc := bs.GetTopLevelCondition()
+func (ts *TriggerStatus) PropagateBrokerCondition(bc *apis.Condition) {
 	if bc == nil {
 		ts.MarkBrokerNotConfigured()
 		return

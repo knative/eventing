@@ -24,11 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/apis"
 )
 
 // This test is for avoiding regressions on the trigger dependency annotation functionality.
@@ -40,7 +42,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		defaultBrokerName    = pkgResources.DefaultBrokerName
 		triggerName          = "trigger-annotation"
 		subscriberName       = "subscriber-annotation"
-		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1alpha1"}`
+		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1alpha2"}`
 		pingSourceName       = "test-ping-source-annotation"
 		// Every 1 minute starting from now
 		schedule = "*/1 * * * *"
@@ -59,28 +61,44 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	pod := resources.EventLoggerPod(subscriberName)
 	client.CreatePodOrFail(pod, lib.WithService(subscriberName))
 
+	// Wait for subscriber to become ready
+	client.WaitForAllTestResourcesReadyOrFail()
+
 	// Create triggers.
-	client.CreateTriggerOrFail(triggerName,
-		resources.WithSubscriberServiceRefForTrigger(subscriberName),
-		resources.WithDependencyAnnotaionTrigger(dependencyAnnotation),
+	client.CreateTriggerOrFailV1Beta1(triggerName,
+		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
+		resources.WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation),
 	)
 
-	data := fmt.Sprintf("Test trigger-annotation %s", uuid.NewUUID())
-	pingSource := eventingtesting.NewPingSourceV1Alpha1(
+	jsonData := fmt.Sprintf("Test trigger-annotation %s", uuid.NewUUID())
+	pingSource := eventingtesting.NewPingSourceV1Alpha2(
 		pingSourceName,
 		client.Namespace,
-		eventingtesting.WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+		eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
 			Schedule: schedule,
-			Data:     data,
-			Sink:     &duckv1.Destination{Ref: resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace)},
+			JsonData: jsonData,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{},
+			},
 		}),
 	)
-	client.CreatePingSourceV1Alpha1OrFail(pingSource)
+	if brokerClass == eventing.ChannelBrokerClassValue {
+		pingSource.Spec.SourceSpec.Sink.Ref = resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace)
+	}
+	if brokerClass == eventing.MTChannelBrokerClassValue {
+		pingSource.Spec.SourceSpec.Sink.URI = &apis.URL{
+			Scheme: "http",
+			Host:   "broker-ingress.knative-eventing.svc.cluster.local",
+			Path:   fmt.Sprintf("/%s/%s", client.Namespace, defaultBrokerName),
+		}
+	}
+
+	client.CreatePingSourceV1Alpha2OrFail(pingSource)
 
 	// Trigger should become ready after pingSource was created
 	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)
 
-	if err := client.CheckLog(subscriberName, lib.CheckerContains(data)); err != nil {
+	if err := client.CheckLog(subscriberName, lib.CheckerContains(jsonData)); err != nil {
 		t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/apis/duck"
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 // +genduck
@@ -69,23 +70,7 @@ type SubscribableStatus struct {
 	// This is the list of subscription's statuses for this channel.
 	// +patchMergeKey=uid
 	// +patchStrategy=merge
-	Subscribers []SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
-}
-
-// SubscriberStatus defines the status of a single subscriber to a Channel.
-type SubscriberStatus struct {
-	// UID is used to understand the origin of the subscriber.
-	// +optional
-	UID types.UID `json:"uid,omitempty"`
-	// Generation of the origin of the subscriber with uid:UID.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Status of the subscriber.
-	// +optional
-	Ready corev1.ConditionStatus `json:"ready,omitempty"`
-	// A human readable message indicating details of Ready status.
-	// +optional
-	Message string `json:"message,omitempty"`
+	Subscribers []duckv1beta1.SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -120,6 +105,8 @@ var (
 	// Verify SubscribableType resources meet duck contracts.
 	_ duck.Populatable = (*SubscribableType)(nil)
 	_ apis.Listable    = (*SubscribableType)(nil)
+
+	_ apis.Convertible = (*SubscribableType)(nil)
 )
 
 // GetSubscribableTypeStatus method Returns the Default SubscribableStatus in this case it's SubscribableStatus
@@ -140,7 +127,7 @@ func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus Subs
 // AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
 // with Subscribers, use this function, so that the value is reflected in both the duplicate fields residing
 // in SubscribableTypeStatus
-func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
+func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus eventingduckv1beta1.SubscriberStatus) {
 	subscribers := append(s.GetSubscribableTypeStatus().Subscribers, subscriberStatus)
 	s.SubscribableStatus.Subscribers = subscribers
 }
@@ -168,7 +155,7 @@ func (c *SubscribableType) Populate() {
 	}
 	c.Status.SetSubscribableTypeStatus(SubscribableStatus{
 		// Populate ALL fields
-		Subscribers: []SubscriberStatus{{
+		Subscribers: []eventingduckv1beta1.SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,

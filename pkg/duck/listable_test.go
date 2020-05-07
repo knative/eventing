@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -106,6 +107,64 @@ func TestResourceTracker(t *testing.T) {
 			})
 			for i := 0; i <= tc.repeatedTracks; i++ {
 				ref := corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Pod",
+					Name:       fmt.Sprintf("ref-%d", i),
+				}
+				err := track(ref)
+				if tc.expectedError != nil {
+					if err != tc.expectedError {
+						t.Fatalf("Incorrect error from returned track function. Expected '%v'. Actual '%v'", tc.expectedError, err)
+					}
+					return
+				}
+			}
+			gvr := schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "pods",
+			}
+			if fif.gvr[gvr] != 1 {
+				t.Fatalf("Unexpected number of calls to the Informer factory. Expected 1. Actual %d.", fif.gvr[gvr])
+			}
+		})
+	}
+}
+
+func TestResourceTrackerForKReference(t *testing.T) {
+	testCases := map[string]struct {
+		informerFactoryError error
+		repeatedTracks       int
+		expectedError        error
+	}{
+		"informerFactory error": {
+			informerFactoryError: errTest,
+			expectedError:        errTest,
+		},
+		"Only one informer created per GVR": {
+			repeatedTracks: 1,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			fif := newFakeInformerFactory()
+			if tc.informerFactoryError != nil {
+				fif.err = tc.informerFactoryError
+			}
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
+			ctx = addressable.WithDuck(ctx)
+			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			rt, _ := tr.(*listableTracker)
+			rt.informerFactory = fif
+			track := rt.TrackInNamespaceKReference(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "svc",
+				},
+			})
+			for i := 0; i <= tc.repeatedTracks; i++ {
+				ref := duckv1.KReference{
 					APIVersion: "v1",
 					Kind:       "Pod",
 					Name:       fmt.Sprintf("ref-%d", i),

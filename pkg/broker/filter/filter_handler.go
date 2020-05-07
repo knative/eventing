@@ -26,6 +26,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
+
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -33,7 +34,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/utils"
-	pkgtracing "knative.dev/pkg/tracing"
 )
 
 const (
@@ -84,16 +84,19 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
-	if err != nil {
-		return nil, err
-	}
-
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, &connectionArgs)
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +137,7 @@ func (r *Handler) readyZ(writer http.ResponseWriter, _ *http.Request) {
 //
 // This method will block until a message is received on the stop channel.
 func (r *Handler) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	errCh := make(chan error, 1)
@@ -236,10 +239,10 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	}
 
 	reportArgs := &ReportArgs{
-		ns:         t.Namespace,
-		trigger:    t.Name,
-		broker:     t.Spec.Broker,
-		filterType: triggerFilterAttribute(t.Spec.Filter, "type"),
+		Namespace:  t.Namespace,
+		Trigger:    t.Name,
+		Broker:     t.Spec.Broker,
+		FilterType: triggerFilterAttribute(t.Spec.Filter, "type"),
 	}
 
 	subscriberURI := t.Status.SubscriberURI
@@ -337,10 +340,8 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 		"datacontentencoding": event.DeprecatedDataContentEncoding(),
 	}
 	ext := event.Extensions()
-	if ext != nil {
-		for k, v := range ext {
-			ce[k] = v
-		}
+	for k, v := range ext {
+		ce[k] = v
 	}
 
 	for k, v := range attrs {

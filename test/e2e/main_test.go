@@ -26,6 +26,7 @@ import (
 var setup = lib.Setup
 var tearDown = lib.TearDown
 var channelTestRunner lib.ChannelTestRunner
+var brokerClass string
 
 func TestMain(m *testing.M) {
 	test.InitializeEventingFlags()
@@ -33,5 +34,6 @@ func TestMain(m *testing.M) {
 		ChannelFeatureMap: lib.ChannelFeatureMap,
 		ChannelsToTest:    test.EventingFlags.Channels,
 	}
+	brokerClass = test.EventingFlags.BrokerClass
 	os.Exit(m.Run())
 }

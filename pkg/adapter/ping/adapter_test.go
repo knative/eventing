@@ -23,18 +23,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
-	"knative.dev/pkg/source"
+	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 )
-
-type mockReporter struct {
-	eventCount int
-}
-
-func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount++
-	return nil
-}
 
 func TestStart_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
@@ -57,13 +47,11 @@ func TestStart_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ce := kncetesting.NewTestClient()
+			ce := adaptertest.NewTestClient()
 
-			r := &mockReporter{}
 			a := &pingAdapter{
 				Schedule: tc.schedule,
 				Data:     "data",
-				Reporter: r,
 				Client:   ce,
 			}
 
@@ -79,7 +67,6 @@ func TestStart_ServeHTTP(t *testing.T) {
 			}()
 
 			a.cronTick() // force a tick.
-			validateMetric(t, a.Reporter, 1)
 			validateSent(t, ce, tc.data)
 
 			log.Print("test done")
@@ -90,10 +77,8 @@ func TestStart_ServeHTTP(t *testing.T) {
 func TestStartBadCron(t *testing.T) {
 	schedule := "bad"
 
-	r := &mockReporter{}
 	a := &pingAdapter{
 		Schedule: schedule,
-		Reporter: r,
 	}
 
 	stop := make(chan struct{})
@@ -102,8 +87,6 @@ func TestStartBadCron(t *testing.T) {
 		t.Errorf("failed to fail, %v", err)
 
 	}
-
-	validateMetric(t, a.Reporter, 0)
 }
 
 func TestPostMessage_ServeHTTP(t *testing.T) {
@@ -125,18 +108,15 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 
-			ce := kncetesting.NewTestClient()
+			ce := adaptertest.NewTestClient()
 
-			r := &mockReporter{}
 			a := &pingAdapter{
-				Data:     "data",
-				Reporter: r,
-				Client:   ce,
+				Data:   "data",
+				Client: ce,
 			}
 
 			a.cronTick()
 			validateSent(t, ce, tc.data)
-			validateMetric(t, a.Reporter, 1)
 		})
 	}
 }
@@ -185,20 +165,12 @@ func sinkRejected(writer http.ResponseWriter, _ *http.Request) {
 	writer.WriteHeader(http.StatusRequestTimeout)
 }
 
-func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
-	if mockReporter, ok := reporter.(*mockReporter); !ok {
-		t.Errorf("reporter is not a mockReporter")
-	} else if mockReporter.eventCount != want {
-		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
-	}
-}
-
-func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, wantData string) {
+func validateSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, wantData string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
 
-	if got := ce.Sent()[0].Data; string(got.([]byte)) != wantData {
-		t.Errorf("Expected %q event to be sent, got %q", wantData, string(got.([]byte)))
+	if got := ce.Sent()[0].Data(); string(got) != wantData {
+		t.Errorf("Expected %q event to be sent, got %q", wantData, string(got))
 	}
 }

@@ -25,19 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"k8s.io/client-go/kubernetes/scheme"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-)
-
-var (
-	uri = "http://example.com"
-
-	channelAddress = "test-channel.hostname"
-	channelURL     = fmt.Sprintf("http://%s", channelAddress)
 )
 
 func init() {
@@ -79,49 +70,5 @@ func TestObjectReference_BadDynamicInterface(t *testing.T) {
 	}
 	if actual != nil {
 		t.Fatalf("Unexpected actual. Expected nil. Actual '%v'", actual)
-	}
-}
-
-func k8sService(name string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Service",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      name,
-			},
-		},
-	}
-}
-
-func channel(name string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "eventing.knative.dev/v1alpha1",
-			"kind":       "Channel",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      name,
-			},
-			"status": map[string]interface{}{
-				"address": map[string]interface{}{
-					"hostname": channelAddress,
-				},
-			},
-		},
-	}
-}
-
-func configMap(name string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      name,
-			},
-		},
 	}
 }

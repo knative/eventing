@@ -5,5 +5,5 @@ metadata:
 spec:
   containers:
     - name: heartbeats
-      image: knative.dev/eventing/test/test_images/heartbeats
+      image: ko://knative.dev/eventing/test/test_images/heartbeats
 
