@@ -92,36 +92,40 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgr
 	}
 
 	c.Status.Channel = &backingChannelObjRef
-	bCS := r.getChannelableStatus(&backingChannel.Status, backingChannel.Annotations) // this needs to decide what api version to draw from before we propogate)
-	c.Status.PropagateStatuses(&bCS)
+	bCS := r.getChannelableStatus(ctx, &backingChannel.Status, backingChannel.Annotations)
+	c.Status.PropagateStatuses(bCS)
 
 	return newReconciledNormal(c.Namespace, c.Name)
 }
 
-func (r *Reconciler) getChannelableStatus(bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) duckv1beta1.ChannelableStatus {
+func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) *duckv1beta1.ChannelableStatus {
 
+	channelableStatus := &duckv1beta1.ChannelableStatus{}
+	if bc.AddressStatus.Address != nil {
+		channelableStatus.AddressStatus.Address = &duckv1.Addressable{}
+		bc.AddressStatus.Address.ConvertTo(ctx, channelableStatus.AddressStatus.Address)
+	}
+	channelableStatus.Status = bc.Status
 	if cAnnotations != nil {
 		if cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
-			return duckv1beta1.ChannelableStatus{
-				Status:             bc.Status,
-				AddressStatus:      bc.AddressStatus,
-				SubscribableStatus: bc.SubscribableStatus,
+			if len(bc.SubscribableStatus.Subscribers) > 0 {
+				channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableStatus.Subscribers
 			}
 		} else { //v1alpha1
-			return duckv1beta1.ChannelableStatus{
-				Status:        bc.Status,
-				AddressStatus: bc.AddressStatus,
-				SubscribableStatus: duckv1beta1.SubscribableStatus{
-					Subscribers: bc.SubscribableTypeStatus.SubscribableStatus.Subscribers,
-				},
+			if len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
+				channelableStatus.SubscribableStatus.Subscribers = make([]duckv1beta1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
+				for i, ss := range bc.SubscribableTypeStatus.SubscribableStatus.Subscribers {
+					channelableStatus.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
+						UID:                ss.UID,
+						ObservedGeneration: ss.ObservedGeneration,
+						Ready:              ss.Ready,
+						Message:            ss.Message,
+					}
+				}
 			}
 		}
 	}
-	return duckv1beta1.ChannelableStatus{
-		Status:             bc.Status,
-		AddressStatus:      bc.AddressStatus,
-		SubscribableStatus: bc.SubscribableStatus,
-	}
+	return channelableStatus
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
