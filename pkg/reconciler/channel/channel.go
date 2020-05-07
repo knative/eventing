@@ -112,7 +112,8 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 				channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableStatus.Subscribers
 			}
 		} else { //v1alpha1
-			if len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
+			if bc.SubscribableTypeStatus.SubscribableStatus != nil &&
+				len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
 				channelableStatus.SubscribableStatus.Subscribers = make([]duckv1beta1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
 				for i, ss := range bc.SubscribableTypeStatus.SubscribableStatus.Subscribers {
 					channelableStatus.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
