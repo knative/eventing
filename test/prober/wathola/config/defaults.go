@@ -25,11 +25,19 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// DefaultReceiverPort point to a default port of receiver component, and is
+	// unique so that components can be easily run on localhost for easy debugging
+	DefaultReceiverPort  = 22111
+	// DefaultForwarderPort point to a default port of forwarder component
+	DefaultForwarderPort = 22110
+)
+
 // Instance holds configuration values
 var Instance = defaultValues()
 
-var port = envint("PORT", 22111)
-var forwarderPort = envint("PORT", 22110)
+var port = envint("PORT", DefaultReceiverPort)
+var forwarderPort = envint("PORT", DefaultForwarderPort)
 
 func envint(envKey string, defaultValue int) int {
 	val, ok := os.LookupEnv(envKey)

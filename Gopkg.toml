@@ -125,3 +125,8 @@ required = [
 [[constraint]]
   name = "contrib.go.opencensus.io/exporter/ocagent"
   version = "0.6.0"
+
+# TODO(ksuszyns): Unpin when https://github.com/pelletier/go-toml/issues/406 is fixed
+[[constraint]]
+  name = "github.com/pelletier/go-toml"
+  version = "~v1.6.0"

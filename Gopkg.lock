@@ -464,12 +464,12 @@
   version = "v0.2.2"
 
 [[projects]]
-  digest = "1:a9f0e3995b962f3e8db041c2475491661f33d7f873bcfc517bacd4b709039d9c"
+  digest = "1:efec7b15c9f6f20c96a5710fea5d946aabf13018d9e2d2c50a4746f850514f9d"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "8e8d2a6aad23fcaa64716c5fa6975ec3abbf8281"
-  version = "v1.7.0"
+  revision = "903d9455db9ff1d7ac1ab199062eca7266dd11a3"
+  version = "v1.6.0"
 
 [[projects]]
   digest = "1:d3ed3beb4c8434d4b8a8ac7696128c2c1e5ca96c720df78447b7b1ccbd7b0f92"

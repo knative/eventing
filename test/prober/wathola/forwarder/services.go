@@ -40,18 +40,27 @@ func New() Forwarder {
 
 // Stop will stop running forwarder if there is one
 func Stop() {
-	if cancel != nil {
+	if IsRunning() {
 		log.Info("stopping forwarder")
-		cancel()
+		cf := *cancel
+		cf()
 		cancel = nil
 	}
 }
 
-var cancel context.CancelFunc
+// IsRunning checks if receiver is operating and can be stopped
+func IsRunning() bool {
+	return cancel != nil
+}
+
+var cancel *context.CancelFunc
 
 func (f *forwarder) Forward() {
 	port := config.Instance.Forwarder.Port
-	client.Receive(port, &cancel, f.forwardEvent)
+	cancelRegistrar := func(cc *context.CancelFunc) {
+		cancel = cc
+	}
+	client.Receive(port, cancelRegistrar, f.forwardEvent)
 }
 
 func (f *forwarder) forwardEvent(e cloudevents.Event) {

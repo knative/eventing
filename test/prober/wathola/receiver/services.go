@@ -30,7 +30,7 @@ import (
 )
 
 var log = config.Log
-var cancel context.CancelFunc
+var cancel *context.CancelFunc
 
 // New creates new Receiver
 func New() Receiver {
@@ -44,16 +44,25 @@ func New() Receiver {
 
 // Stop will stop running receiver if there is one
 func Stop() {
-	if cancel != nil {
+	if IsRunning() {
 		log.Info("stopping receiver")
-		cancel()
+		cancelFunc := *cancel
+		cancelFunc()
 		cancel = nil
 	}
 }
 
+// IsRunning checks if receiver is operating and can be stopped
+func IsRunning() bool {
+	return cancel != nil
+}
+
 func (r receiver) Receive() {
 	port := config.Instance.Receiver.Port
-	client.Receive(port, &cancel, r.receiveEvent, r.reportMiddleware)
+	cancelRegistrar := func(cc *context.CancelFunc) {
+		cancel = cc
+	}
+	client.Receive(port, cancelRegistrar, r.receiveEvent, r.reportMiddleware)
 }
 
 func (r receiver) receiveEvent(e cloudevents.Event) {
