@@ -167,8 +167,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 	logging.FromContext(ctx).Debug("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
 	channelable, ok := backingChannel.(*duckv1alpha1.ChannelableCombined)
 	if !ok {
-		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannel), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("Failed to convert to Channelable Object %+v", backingChannel)
 	}
 	return channelable, nil
 }
