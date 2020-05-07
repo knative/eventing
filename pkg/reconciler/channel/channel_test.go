@@ -226,6 +226,7 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddressV1Beta1(backingChannelHostname)),
 			NewInMemoryChannelV1Beta1(channelName, testNS,
 				WithInitInMemoryChannelConditionsV1Beta1,
+				WithInMemoryChannelDuckAnnotationV1Beta1,
 				WithInMemoryChannelDeploymentReadyV1Beta1(),
 				WithInMemoryChannelServiceReadyV1Beta1(),
 				WithInMemoryChannelEndpointsReadyV1Beta1(),

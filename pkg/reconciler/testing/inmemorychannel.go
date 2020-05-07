@@ -28,6 +28,7 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
@@ -54,6 +55,14 @@ func NewInMemoryChannelV1Beta1(name, namespace string, imcopt ...InMemoryChannel
 
 func WithInitInMemoryChannelConditionsV1Beta1(imc *v1beta1.InMemoryChannel) {
 	imc.Status.InitializeConditions()
+}
+
+func WithInMemoryChannelDuckAnnotationV1Beta1(imc *v1beta1.InMemoryChannel) {
+	annotations := map[string]string{
+		messaging.SubscribableDuckVersionAnnotation: "v1beta1",
+	}
+	imc.ObjectMeta.SetAnnotations(annotations)
+
 }
 
 func WithInMemoryChannelGenerationV1Beta1(gen int64) InMemoryChannelOptionV1Beta1 {
