@@ -11,6 +11,7 @@ require (
 	github.com/google/go-cmp v0.4.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
 	github.com/google/uuid v1.1.1
+	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -27,6 +28,7 @@ require (
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.14.1
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
+	google.golang.org/api v0.20.0
 	google.golang.org/grpc v1.28.0
 	k8s.io/api v0.17.3
 	k8s.io/apiextensions-apiserver v0.17.2
