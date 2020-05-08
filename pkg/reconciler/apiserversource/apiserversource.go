@@ -34,11 +34,8 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
-	pkgLogging "knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
@@ -141,29 +138,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Api
 	// 	return nil, err
 	// }
 
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to json", zap.Any("receiveAdapter", err))
-	}
-
-	metricsConfig, err := metrics.MetricsOptionsToJson(r.configs.MetricsConfig())
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting metrics config to json", zap.Any("receiveAdapter", err))
-	}
-
-	tracingCfg, err := tracingconfig.TracingConfigToJson(r.configs.TracingConfig())
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting tracing config to json", zap.Any("receiveAdapter", err))
-	}
-
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.receiveAdapterImage,
-		Source:        src,
-		Labels:        resources.Labels(src.Name),
-		SinkURI:       sinkURI,
-		LoggingConfig: loggingConfig,
-		MetricsConfig: metricsConfig,
-		TracingConfig: tracingCfg,
+		Image:   r.receiveAdapterImage,
+		Source:  src,
+		Labels:  resources.Labels(src.Name),
+		SinkURI: sinkURI,
+		Configs: r.configs,
 	}
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {

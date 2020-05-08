@@ -130,3 +130,33 @@ func (r *ConfigWatcher) TracingConfig() *tracingconfig.Config {
 	}
 	return r.tracingCfg
 }
+
+func (r *ConfigWatcher) ToEnvVars() []corev1.EnvVar {
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.LoggingConfig())
+	if err != nil {
+		r.logger.Warn("Error while serializing logging config", zap.Error(err))
+	}
+
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.MetricsConfig())
+	if err != nil {
+		r.logger.Warn("Error while serializing metrics config", zap.Error(err))
+	}
+
+	tracingConfig, err := tracingconfig.TracingConfigToJson(r.TracingConfig())
+	if err != nil {
+		r.logger.Warn("Error while serializing tracing config", zap.Error(err))
+	}
+
+	return []corev1.EnvVar{
+		{
+			Name:  "K_METRICS_CONFIG",
+			Value: metricsConfig,
+		}, {
+			Name:  "K_LOGGING_CONFIG",
+			Value: loggingConfig,
+		}, {
+			Name:  "K_TRACING_CONFIG",
+			Value: tracingConfig,
+		},
+	}
+}
