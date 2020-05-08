@@ -24,11 +24,7 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
-const (
-	SubscribableAnnotationKey = "messaging.knative.dev/subscribable"
-)
-
-// ChannelStatusTestHelperWithChannelTestRunner runs the Channel metadata tests for all Channels in
+// ChannelStatusTestHelperWithChannelTestRunner runs the Channel status tests for all Channels in
 // the ChannelTestRunner.
 func ChannelStatusTestHelperWithChannelTestRunner(
 	t *testing.T,
@@ -49,7 +45,7 @@ func ChannelStatusTestHelperWithChannelTestRunner(
 func channelHasRequiredStatus(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
 	st.Logf("Running channel status conformance test with channel %q", channel)
 
-	channelName := "channel-req-labels"
+	channelName := "channel-req-status"
 
 	client.T.Logf("Creating channel %+v-%s", channel, channelName)
 	client.CreateChannelOrFail(channelName, &channel)

@@ -27,6 +27,10 @@ import (
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
+const (
+	SubscribableAnnotationKey = "messaging.knative.dev/subscribable"
+)
+
 func getChannelDuckTypeSupportVersion(channelName string, client *lib.Client, channel *metav1.TypeMeta) (string, error) {
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1beta1.Channelable{})
