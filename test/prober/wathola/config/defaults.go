@@ -28,7 +28,7 @@ import (
 const (
 	// DefaultReceiverPort point to a default port of receiver component, and is
 	// unique so that components can be easily run on localhost for easy debugging
-	DefaultReceiverPort  = 22111
+	DefaultReceiverPort = 22111
 	// DefaultForwarderPort point to a default port of forwarder component
 	DefaultForwarderPort = 22110
 )

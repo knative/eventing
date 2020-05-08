@@ -53,7 +53,7 @@ address = 'http://default-broker.event-example.svc.cluster.local/'
 func TestReadIfPresentAndInvalid(t *testing.T) {
 	// given
 	origLogFatal := logFatal
-	defer func() { logFatal = origLogFatal } ()
+	defer func() { logFatal = origLogFatal }()
 	expanded := ensureConfigFileNotPresent()
 	data := []byte(`[sender]
 address = 'http://default-broker.event-example.svc.cluster.local/

@@ -15,7 +15,7 @@ func TestForwarderMain(t *testing.T) {
 	config.Instance.Forwarder.Port = freeport.GetPort()
 	go main()
 	defer forwarder.Stop()
-	err := lib.WaitUntil(forwarder.IsRunning, 10 * time.Minute)
+	err := lib.WaitUntil(forwarder.IsRunning, 10*time.Minute)
 	if err != nil {
 		t.Error(err)
 	}

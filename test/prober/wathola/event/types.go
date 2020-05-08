@@ -19,7 +19,7 @@ import "knative.dev/eventing/test/prober/wathola/config"
 
 const (
 	// StepType is a string type representation of step event
-	StepType     = "com.github.cardil.wathola.step"
+	StepType = "com.github.cardil.wathola.step"
 	// FinishedType os a string type representation of finished event
 	FinishedType = "com.github.cardil.wathola.finished"
 )
@@ -49,11 +49,11 @@ type State int
 
 const (
 	// Active == 1 (iota has been reset)
-	Active  State = 1 << iota
+	Active State = 1 << iota
 	// Success == 2
 	Success State = 1 << iota
 	// Failed == 4
-	Failed  State = 1 << iota
+	Failed State = 1 << iota
 )
 
 var log = config.Log

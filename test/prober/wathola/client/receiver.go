@@ -36,7 +36,7 @@ func Receive(
 	port int,
 	cancelRegistrar func(*context.CancelFunc),
 	receiveEvent ReceiveEvent,
-	middlewares ... cloudeventshttp.Middleware) {
+	middlewares ...cloudeventshttp.Middleware) {
 	portOpt := cloudevents.WithPort(port)
 	opts := make([]cloudeventshttp.Option, 0)
 	opts = append(opts, portOpt)

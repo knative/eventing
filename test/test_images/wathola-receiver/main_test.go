@@ -16,7 +16,7 @@ func TestReceiverMain(t *testing.T) {
 	config.Instance.Receiver.Port = freeport.GetPort()
 	go main()
 	defer receiver.Stop()
-	err := lib.WaitUntil(receiver.IsRunning, 10 * time.Minute)
+	err := lib.WaitUntil(receiver.IsRunning, 10*time.Minute)
 	if err != nil {
 		t.Error(err)
 	}
