@@ -27,12 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
-	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -43,9 +37,16 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/resolver"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
+	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	"knative.dev/eventing/pkg/utils"
+
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 var (
@@ -532,9 +533,10 @@ func TestReconcile(t *testing.T) {
 		r := &Reconciler{
 			kubeClientSet:         fakekubeclient.Get(ctx),
 			apiserversourceLister: listers.GetApiServerSourceV1alpha2Lister(),
-			source:                source,
+			ceSource:              source,
 			receiveAdapterImage:   image,
 			sinkResolver:          resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			loggingContext:        ctx,
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceV1alpha2Lister(),

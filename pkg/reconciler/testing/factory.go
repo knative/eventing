@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 
@@ -34,10 +35,12 @@ import (
 	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
 
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+
+	_ "knative.dev/pkg/metrics/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -79,8 +82,17 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
 		ctx = controller.WithEventRecorder(ctx, eventRecorder)
 
+		// Configure the ConfigMap static watcher
+		configMaps := []*corev1.ConfigMap{}
+		for _, obj := range r.Objects {
+			if cm, ok := obj.(*corev1.ConfigMap); ok {
+				configMaps = append(configMaps, cm)
+			}
+		}
+		cmw := configmap.NewStaticWatcher(configMaps...)
+
 		// Set up our Controller from the fakes.
-		c := ctor(ctx, &ls, configmap.NewStaticWatcher())
+		c := ctor(ctx, &ls, cmw)
 
 		for _, reactor := range r.WithReactors {
 			kubeClient.PrependReactor("*", "*", reactor)
