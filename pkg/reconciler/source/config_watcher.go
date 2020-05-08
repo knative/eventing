@@ -137,12 +137,12 @@ func (r *ConfigWatcher) ToEnvVars() []corev1.EnvVar {
 		r.logger.Warn("Error while serializing logging config", zap.Error(err))
 	}
 
-	metricsConfig, _ := metrics.MetricsOptionsToJson(r.MetricsConfig())
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.MetricsConfig())
 	if err != nil {
 		r.logger.Warn("Error while serializing metrics config", zap.Error(err))
 	}
 
-	tracingConfig, _ := tracingconfig.TracingConfigToJson(r.TracingConfig())
+	tracingConfig, err := tracingconfig.TracingConfigToJson(r.TracingConfig())
 	if err != nil {
 		r.logger.Warn("Error while serializing tracing config", zap.Error(err))
 	}
