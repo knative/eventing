@@ -24,11 +24,10 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -57,8 +56,9 @@ func NewController(
 	r := &Reconciler{
 		kubeClientSet:         kubeclient.Get(ctx),
 		apiserversourceLister: apiServerSourceInformer.Lister(),
-		source:                GetCfgHost(ctx),
+		ceSource:              GetCfgHost(ctx),
 		loggingContext:        ctx,
+		configs:               reconcilersource.StartWatchingSourceConfigurations(ctx, component, cmw),
 	}
 
 	env := &envConfig{}
@@ -78,10 +78,6 @@ func NewController(
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("ApiServerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
-
-	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
-	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
-	cmw.Watch(tracingconfig.ConfigName, r.UpdateFromTracingConfigMap)
 
 	return impl
 }
