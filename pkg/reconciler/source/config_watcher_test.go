@@ -64,4 +64,10 @@ func TestConfigWatcher_defaults(t *testing.T) {
 	if cw.TracingConfig() == nil {
 		t.Error("Expecting tracing config to be non nil")
 	}
+
+	envs := cw.ToEnvVars()
+
+	if len(envs) != 3 {
+		t.Errorf("There should be three env variables, found %d", len(envs))
+	}
 }
