@@ -23,11 +23,15 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	discoveryfake "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	kubetesting "k8s.io/client-go/testing"
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/logging"
@@ -53,9 +57,11 @@ func TestAdapter_StartRef(t *testing.T) {
 		ce:     ce,
 		logger: logging.FromContext(ctx),
 		config: config,
-		k8s:    makeDynamicClient(simplePod("foo", "default")),
-		source: "unit-test",
-		name:   "unittest",
+
+		discover: makeDiscoveryClient(),
+		k8s:      makeDynamicClient(simplePod("foo", "default")),
+		source:   "unit-test",
+		name:     "unittest",
 	}
 
 	err := errors.New("test never ran")
@@ -98,9 +104,58 @@ func TestAdapter_StartResource(t *testing.T) {
 		ce:     ce,
 		logger: logging.FromContext(ctx),
 		config: config,
-		k8s:    makeDynamicClient(simplePod("foo", "default")),
-		source: "unit-test",
-		name:   "unittest",
+
+		discover: makeDiscoveryClient(),
+		k8s:      makeDynamicClient(simplePod("foo", "default")),
+		source:   "unit-test",
+		name:     "unittest",
+	}
+
+	err := errors.New("test never ran")
+	stopCh := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		err = a.Start(stopCh)
+		done <- struct{}{}
+	}()
+
+	// Wait for the reflector to be fully initialized.
+	// Ideally we want to check LastSyncResourceVersion is not empty but we
+	// don't have access to it.
+	time.Sleep(1 * time.Second)
+
+	stopCh <- struct{}{}
+	<-done
+
+	if err != nil {
+		t.Errorf("did not expect an error, but got %v", err)
+	}
+}
+
+func TestAdapter_StartNonNamespacedResource(t *testing.T) {
+	ce := adaptertest.NewTestClient()
+
+	config := Config{
+		Namespace: "default",
+		Resources: []ResourceWatch{{
+			GVR: schema.GroupVersionResource{
+				Version:  "v1",
+				Resource: "namespaces",
+			},
+		}},
+		EventMode: "Resource",
+	}
+	ctx, _ := pkgtesting.SetupFakeContext(t)
+
+	a := &apiServerAdapter{
+		ce:     ce,
+		logger: logging.FromContext(ctx),
+		config: config,
+
+		discover: makeDiscoveryClient(),
+		k8s:      makeDynamicClient(simpleNamespace("foo")),
+		source:   "unit-test",
+		name:     "unittest",
 	}
 
 	err := errors.New("test never ran")
@@ -135,6 +190,35 @@ func makeDynamicClient(objects ...runtime.Object) dynamic.Interface {
 	return rectesting.NewMockDynamicInterface(realInterface, dynamicMocks)
 }
 
+func makeDiscoveryClient() discovery.DiscoveryInterface {
+	return &discoveryfake.FakeDiscovery{
+		Fake: &kubetesting.Fake{
+			Resources: []*metav1.APIResourceList{
+				{
+					GroupVersion: "v1",
+					APIResources: []metav1.APIResource{
+						// All resources used at tests need to be listed here
+						{
+							Name:       "pods",
+							Namespaced: true,
+							Group:      "",
+							Version:    "v1",
+							Kind:       "Pod",
+						},
+						{
+							Name:       "namespaces",
+							Namespaced: false,
+							Group:      "",
+							Version:    "v1",
+							Kind:       "Namespace",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func simplePod(name, namespace string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -143,6 +227,18 @@ func simplePod(name, namespace string) *unstructured.Unstructured {
 			"metadata": map[string]interface{}{
 				"namespace": namespace,
 				"name":      name,
+			},
+		},
+	}
+}
+
+func simpleNamespace(name string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Namespace",
+			"metadata": map[string]interface{}{
+				"name": name,
 			},
 		},
 	}
