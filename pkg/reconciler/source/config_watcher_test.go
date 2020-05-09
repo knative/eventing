@@ -19,55 +19,98 @@ package source
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/pkg/configmap"
-	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/pkg/logging"
+	loggingtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/metrics"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	_ "knative.dev/pkg/metrics/testing"
 )
 
-func TestConfigWatcher_defaults(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
-	cw := StartWatchingSourceConfigurations(ctx, "name", configmap.NewStaticWatcher(&corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "config-observability",
-			Namespace: "knative-eventing",
-		},
-		Data: map[string]string{
-			"_example": "test-config",
-		},
-	}, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "config-logging",
-			Namespace: "knative-eventing",
-		},
-		Data: map[string]string{
-			"_example": "test-config",
-		},
-	}, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "config-tracing",
-			Namespace: "knative-eventing",
-		},
-		Data: map[string]string{
-			"_example": "test-config",
-		},
-	}))
+const testComponent = "test_component"
 
-	if cw.MetricsConfig() == nil {
-		t.Error("Expecting metrics config to be non nil")
-	}
-	if cw.LoggingConfig() == nil {
-		t.Error("Expecting logging config to be non nil")
-	}
-	if cw.TracingConfig() == nil {
-		t.Error("Expecting tracing config to be non nil")
-	}
+func TestNewConfigWatcher_defaults(t *testing.T) {
+	ctx := loggingtesting.TestContextWithLogger(t)
+	cw := WatchConfigurations(ctx, testComponent, newTestConfigMapWatcher())
+
+	assert.NotNil(t, cw.LoggingConfig(), "logging config should not be nil")
+	assert.NotNil(t, cw.MetricsConfig(), "metrics config should not be nil")
+	assert.NotNil(t, cw.TracingConfig(), "tracing config should not be nil")
 
 	envs := cw.ToEnvVars()
 
-	if len(envs) != 3 {
-		t.Errorf("There should be three env variables, found %d", len(envs))
+	const expectEnvs = 3
+	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+
+	assert.Equal(t, EnvLoggingCfg, envs[0].Name, "first env var is logging config")
+	assert.Contains(t, envs[0].Value, "zap-logger-config")
+
+	assert.Equal(t, EnvMetricsCfg, envs[1].Name, "second env var is metrics config")
+	assert.Contains(t, envs[1].Value, `"metrics.backend":"prometheus"`)
+
+	assert.Equal(t, EnvTracingCfg, envs[2].Name, "third env var is tracing config")
+	assert.Contains(t, envs[2].Value, `"backend":"zipkin"`)
+}
+
+func TestNewConfigWatcher_withOptions(t *testing.T) {
+	ctx := loggingtesting.TestContextWithLogger(t)
+	cw := WatchConfigurations(ctx, testComponent, newTestConfigMapWatcher(),
+		WithMetrics,
+	)
+
+	assert.Nil(t, cw.LoggingConfig(), "logging config should be nil")
+	assert.Nil(t, cw.TracingConfig(), "tracing config should be nil")
+	assert.NotNil(t, cw.MetricsConfig(), "metrics config should not be nil")
+
+	envs := cw.ToEnvVars()
+
+	const expectEnvs = 1
+	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+
+	assert.Equal(t, EnvMetricsCfg, envs[0].Name, "env var is metrics config")
+	assert.Contains(t, envs[0].Value, `"metrics.backend":"prometheus"`)
+}
+
+func newTestConfigMapWatcher() configmap.Watcher {
+	return configmap.NewStaticWatcher(
+		newTestConfigMap(logging.ConfigMapName(), loggingConfigMapData()),
+		newTestConfigMap(metrics.ConfigMapName(), metricsConfigMapData()),
+		newTestConfigMap(tracingconfig.ConfigName, tracingConfigMapData()),
+	)
+}
+
+func newTestConfigMap(name string, data map[string]string) *corev1.ConfigMap {
+	data["_example"] = "test-config"
+
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Data: data,
+	}
+}
+
+// ConfigMap data generators
+func loggingConfigMapData() map[string]string {
+	return map[string]string{
+		"zap-logger-config": `{"level": "info"}`,
+	}
+}
+func metricsConfigMapData() map[string]string {
+	return map[string]string{
+		"metrics.backend": "prometheus",
+	}
+}
+func tracingConfigMapData() map[string]string {
+	return map[string]string{
+		"backend":         "zipkin",
+		"zipkin-endpoint": "zipkin.test",
 	}
 }
