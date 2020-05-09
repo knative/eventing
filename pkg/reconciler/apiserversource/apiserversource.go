@@ -79,7 +79,7 @@ type Reconciler struct {
 	sinkResolver   *resolver.URIResolver
 	loggingContext context.Context
 
-	configs *reconcilersource.ConfigWatcher
+	configs reconcilersource.EnvVarsGenerator
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)

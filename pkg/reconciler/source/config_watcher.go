@@ -37,6 +37,12 @@ const (
 	EnvTracingCfg = "K_TRACING_CONFIG"
 )
 
+type EnvVarsGenerator interface {
+	ToEnvVars() []corev1.EnvVar
+}
+
+var _ EnvVarsGenerator = (*ConfigWatcher)(nil)
+
 // ConfigWatcher keeps track of logging, metrics and tracing configurations by
 // watching corresponding ConfigMaps.
 type ConfigWatcher struct {
@@ -228,4 +234,18 @@ func maybeAppendEnvVar(envs []corev1.EnvVar, name, val string, cond bool) []core
 		Name:  name,
 		Value: val,
 	})
+}
+
+// EmptyVarsGenerator generates empty env vars. Intended to be used in tests.
+type EmptyVarsGenerator struct{}
+
+var _ EnvVarsGenerator = (*EmptyVarsGenerator)(nil)
+
+// ToEnvVars implements EnvVarsGenerator.
+func (*EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: EnvLoggingCfg},
+		{Name: EnvMetricsCfg},
+		{Name: EnvTracingCfg},
+	}
 }

@@ -21,7 +21,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "k8s.io/api/apps/v1"
+
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -72,12 +73,13 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			"test-key2": "test-value2",
 		},
 		SinkURI: "sink-uri",
+		Configs: &source.EmptyVarsGenerator{},
 	})
 
 	one := int32(1)
 	trueValue := true
 
-	want := &v1.Deployment{
+	want := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
 			Name:      kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", name), string(src.UID)),
@@ -96,7 +98,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				},
 			},
 		},
-		Spec: v1.DeploymentSpec{
+		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"test-key1": "test-value1",

@@ -41,7 +41,7 @@ type ReceiveAdapterArgs struct {
 	Source  *v1alpha2.ApiServerSource
 	Labels  map[string]string
 	SinkURI string
-	Configs *source.ConfigWatcher
+	Configs source.EnvVarsGenerator
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -51,7 +51,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*v1.Deployment, error) {
 
 	env, err := makeEnv(args)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error generating env vars: %w", err)
 	}
 
 	return &v1.Deployment{
@@ -105,7 +105,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	for _, r := range args.Source.Spec.Resources {
 		gv, err := schema.ParseGroupVersion(r.APIVersion)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse APIVersion, %s", err)
+			return nil, fmt.Errorf("failed to parse APIVersion: %w", err)
 		}
 		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(r.Kind))
 

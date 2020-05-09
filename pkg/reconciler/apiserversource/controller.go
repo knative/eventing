@@ -58,7 +58,7 @@ func NewController(
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		ceSource:              GetCfgHost(ctx),
 		loggingContext:        ctx,
-		configs:               reconcilersource.StartWatchingSourceConfigurations(ctx, component, cmw),
+		configs:               reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
 	env := &envConfig{}
