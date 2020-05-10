@@ -432,7 +432,7 @@ func (c *Client) CreateServiceAccountOrFail(saName string) {
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the new ServiceAccount we just created.
 	// This is needed for cases where the images are in a private registry.
-	_, err := utils.CopySecret(c.Kube.Kube.CoreV1(), "default", TestPullSecretName, namespace, saName)
+	_, err := utils.CopySecret(c.Kube.Kube.CoreV1(), "default", testPullSecretName, namespace, saName)
 	if err != nil && !errors.IsNotFound(err) {
 		c.T.Fatalf("Error copying the secret: %s", err)
 	}

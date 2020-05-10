@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -39,7 +40,10 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
-const TestPullSecretName = "kn-eventing-test-pull-secret"
+const (
+	podLogsDir         = "pod-logs"
+	testPullSecretName = "kn-eventing-test-pull-secret"
+)
 
 // ChannelTestRunner is used to run tests against channels.
 type ChannelTestRunner struct {
@@ -141,9 +145,9 @@ func TearDown(client *Client) {
 	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
 	// which will be then uploaded to GCS after the test job finishes.
 	if prow.IsCI() {
-		artifacts := prow.GetLocalArtifactsDir()
-		client.T.Logf("Export logs in %q to %q", client.Namespace, artifacts)
-		if err := client.ExportLogs(artifacts); err != nil {
+		dir := filepath.Join(prow.GetLocalArtifactsDir(), podLogsDir)
+		client.T.Logf("Export logs in %q to %q", client.Namespace, dir)
+		if err := client.ExportLogs(dir); err != nil {
 			client.T.Logf("Error in exporting logs: %v", err)
 		}
 	}
@@ -177,7 +181,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 		// on the "default" ServiceAccount in this new Namespace.
 		// This is needed for cases where the images are in a private registry.
-		_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", TestPullSecretName, namespace, "default")
+		_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", testPullSecretName, namespace, "default")
 		if err != nil && !apierrs.IsNotFound(err) {
 			t.Fatalf("error copying the secret into ns %q: %s", namespace, err)
 		}
