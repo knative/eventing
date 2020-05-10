@@ -66,7 +66,7 @@ func (tr *ChannelTestRunner) RunTests(
 		// it supports all features.
 		features, present := tr.ChannelFeatureMap[channel]
 		if !present || contains(features, feature) {
-			t.Run(fmt.Sprintf("%s-%s", t.Name(), channel), func(st *testing.T) {
+			t.Run(fmt.Sprintf("%s-%s", channel.Kind, channel.APIVersion), func(st *testing.T) {
 				testFunc(st, channel)
 			})
 		}
@@ -95,8 +95,7 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 // and does other setups, like creating namespaces, set the test case to run in parallel, etc.
 func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
 	// Create a new namespace to run this test case.
-	baseFuncName := helpers.GetBaseFuncName(t.Name())
-	namespace := makeK8sNamespace(baseFuncName)
+	namespace := makeK8sNamespace(t.Name())
 	t.Logf("namespace is : %q", namespace)
 	client, err := NewClient(
 		pkgTest.Flags.Kubeconfig,
@@ -143,7 +142,7 @@ func TearDown(client *Client) {
 	}
 
 	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
-	// which will be then uploaded to GCS after the test job finishes.
+	// which will then be uploaded to GCS after the test job finishes.
 	if prow.IsCI() {
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), podLogsDir)
 		client.T.Logf("Export logs in %q to %q", client.Namespace, dir)
