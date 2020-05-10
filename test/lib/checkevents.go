@@ -76,8 +76,8 @@ func newTestableEventInfoStore(egi eventGetterInterface, retryInterval time.Dura
 // recordevents pod.  Calling this forwards the recordevents port to the local machine
 // and blocks waiting to connect to that pod.  Fails if it cannot connect within
 // the expected timeout (4 minutes currently)
-func (client *Client) NewEventInfoStore(podName string, logf logging.FormatLogger) (*EventInfoStore, error) {
-	egi, err := newEventGetter(podName, client, logf)
+func (c *Client) NewEventInfoStore(podName string, logf logging.FormatLogger) (*EventInfoStore, error) {
+	egi, err := newEventGetter(podName, c, logf)
 	if err != nil {
 		return nil, err
 	}

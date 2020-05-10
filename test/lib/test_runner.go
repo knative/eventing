@@ -30,6 +30,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
+	"knative.dev/pkg/test/prow"
 
 	// Mysteriously required to support GCP auth (required by k8s libs).
 	// Apparently just importing it is enough. @_@ side effects @_@.
@@ -136,6 +137,17 @@ func TearDown(client *Client) {
 			client.T.Logf("EVENT: %v", e)
 		}
 	}
+
+	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
+	// which will be then uploaded to GCS after the test job finishes.
+	if prow.IsCI() {
+		artifacts := prow.GetLocalArtifactsDir()
+		client.T.Logf("Export logs in %q to %q", client.Namespace, artifacts)
+		if err := client.ExportLogs(artifacts); err != nil {
+			client.T.Logf("Error in exporting logs: %v", err)
+		}
+	}
+
 	client.Tracker.Clean(true)
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
