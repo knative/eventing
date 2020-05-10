@@ -27,7 +27,8 @@ import (
 
 func (c *Client) ExportLogs(dir string) error {
 	// Create a directory for the namespace.
-	if err := helpers.CreateDir(filepath.Join(dir, c.Namespace)); err != nil {
+	logPath := filepath.Join(dir, c.Namespace)
+	if err := helpers.CreateDir(logPath); err != nil {
 		return fmt.Errorf("error creating directory %q: %w", c.Namespace, err)
 	}
 
@@ -39,7 +40,8 @@ func (c *Client) ExportLogs(dir string) error {
 	var errs []error
 	for _, pod := range pods.Items {
 		for _, ct := range pod.Spec.Containers {
-			fn := fmt.Sprintf("%s-%s.log", pod.Name, ct.Name)
+			fn := filepath.Join(logPath, fmt.Sprintf("%s-%s.log", pod.Name, ct.Name))
+			c.T.Logf("Exporting logs in pod %q container %q to %q", pod.Name, ct.Name, fn)
 			f, err := os.Create(fn)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error creating file %q: %w", fn, err))
