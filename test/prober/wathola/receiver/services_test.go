@@ -40,7 +40,8 @@ func TestReceiverReceive(t *testing.T) {
 	config.Instance.Receiver.Port = port
 	go instance.Receive()
 	time.Sleep(time.Second)
-	defer Stop()
+	cancel := <-Starting
+	defer cancel()
 
 	// when
 	sendEvent(e, port)

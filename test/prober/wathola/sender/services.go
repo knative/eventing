@@ -35,21 +35,27 @@ var senderConfig = &config.Instance.Sender
 
 type sender struct {
 	counter int
-	active  bool
 }
 
 func (s *sender) SendContinually() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	var shutdownCh = make(chan struct{})
+	defer s.sendFinished()
+
 	go func() {
-		for sig := range c {
-			// sig is a ^C or term, handle it
-			log.Infof("Received: %v, closing", sig.String())
-			s.active = false
-			s.sendFinished()
-		}
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		sig := <-c
+		// sig is a ^C or term, handle it
+		log.Infof("%v signal received, closing", sig.String())
+		close(shutdownCh)
 	}()
-	for s.active {
+
+	for {
+		select {
+		case <-shutdownCh:
+			return
+		default:
+		}
 		err := s.sendStep()
 		if err != nil {
 			log.Warnf("Could not send step event, retry in %v", senderConfig.Cooldown)

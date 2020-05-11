@@ -34,9 +34,10 @@ type ReceiveEvent func(e cloudevents.Event)
 // Receive events and push then to passed fn
 func Receive(
 	port int,
-	cancelRegistrar func(*context.CancelFunc),
+	starting chan context.CancelFunc,
 	receiveEvent ReceiveEvent,
 	middlewares ...cloudeventshttp.Middleware) {
+
 	portOpt := cloudevents.WithPort(port)
 	opts := make([]cloudeventshttp.Option, 0)
 	opts = append(opts, portOpt)
@@ -57,8 +58,12 @@ func Receive(
 		log.Fatalf("failed to create client, %v", err)
 	}
 	log.Infof("listening for events on port %v", port)
-	ctx, ccancel := context.WithCancel(context.Background())
-	cancelRegistrar(&ccancel)
+	ctx, cancel := context.WithCancel(context.Background())
+	starting <- func() {
+		log.Infof("stopping event receiver on port %v", port)
+		cancel()
+	}
+	close(starting)
 	err = c.StartReceiver(ctx, receiveEvent)
 	if err != nil {
 		log.Fatal(err)

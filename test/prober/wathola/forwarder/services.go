@@ -18,7 +18,7 @@ package forwarder
 import (
 	"context"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"knative.dev/eventing/test/prober/wathola/client"
 	"knative.dev/eventing/test/prober/wathola/config"
 	"knative.dev/eventing/test/prober/wathola/sender"
@@ -26,8 +26,11 @@ import (
 	"time"
 )
 
-var log = config.Log
-var lastProgressReport = time.Now()
+var (
+	log                = config.Log
+	lastProgressReport = time.Now()
+	Starting           = make(chan context.CancelFunc)
+)
 
 // New creates new forwarder
 func New() Forwarder {
@@ -38,29 +41,9 @@ func New() Forwarder {
 	return f
 }
 
-// Stop will stop running forwarder if there is one
-func Stop() {
-	if IsRunning() {
-		log.Info("stopping forwarder")
-		cf := *cancel
-		cf()
-		cancel = nil
-	}
-}
-
-// IsRunning checks if receiver is operating and can be stopped
-func IsRunning() bool {
-	return cancel != nil
-}
-
-var cancel *context.CancelFunc
-
 func (f *forwarder) Forward() {
 	port := config.Instance.Forwarder.Port
-	cancelRegistrar := func(cc *context.CancelFunc) {
-		cancel = cc
-	}
-	client.Receive(port, cancelRegistrar, f.forwardEvent)
+	client.Receive(port, Starting, f.forwardEvent)
 }
 
 func (f *forwarder) forwardEvent(e cloudevents.Event) {

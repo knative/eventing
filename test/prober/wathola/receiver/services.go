@@ -29,8 +29,10 @@ import (
 	"net/http"
 )
 
-var log = config.Log
-var cancel *context.CancelFunc
+var (
+	log      = config.Log
+	Starting = make(chan context.CancelFunc)
+)
 
 // New creates new Receiver
 func New() Receiver {
@@ -42,27 +44,9 @@ func New() Receiver {
 	return r
 }
 
-// Stop will stop running receiver if there is one
-func Stop() {
-	if IsRunning() {
-		log.Info("stopping receiver")
-		cancelFunc := *cancel
-		cancelFunc()
-		cancel = nil
-	}
-}
-
-// IsRunning checks if receiver is operating and can be stopped
-func IsRunning() bool {
-	return cancel != nil
-}
-
 func (r receiver) Receive() {
 	port := config.Instance.Receiver.Port
-	cancelRegistrar := func(cc *context.CancelFunc) {
-		cancel = cc
-	}
-	client.Receive(port, cancelRegistrar, r.receiveEvent, r.reportMiddleware)
+	client.Receive(port, Starting, r.receiveEvent, r.reportMiddleware)
 }
 
 func (r receiver) receiveEvent(e cloudevents.Event) {

@@ -26,7 +26,6 @@ import (
 func New() Sender {
 	config.ReadIfPresent()
 	return &sender{
-		active:  true,
 		counter: 0,
 	}
 }

@@ -17,6 +17,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
