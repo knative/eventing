@@ -37,48 +37,101 @@ import (
 const testComponent = "test_component"
 
 func TestNewConfigWatcher_defaults(t *testing.T) {
-	ctx := loggingtesting.TestContextWithLogger(t)
-	cw := WatchConfigurations(ctx, testComponent, newTestConfigMapWatcher())
+	testCases := []struct {
+		name                  string
+		cmw                   configmap.Watcher
+		expectLoggingContains string
+		expectMetricsContains string
+		expectTracingContains string
+	}{
+		{
+			name:                  "With pre-filled sample data",
+			cmw:                   configMapWatcherWithSampleData(),
+			expectLoggingContains: `"zap-logger-config":"{\"level\": \"fatal\"}"`,
+			expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
+			expectTracingContains: `"zipkin-endpoint":"zipkin.test"`,
+		},
+		{
+			name: "With empty data",
+			cmw:  configMapWatcherWithEmptyData(),
+			// logging defaults to Knative's defaults
+			expectLoggingContains: `{"zap-logger-config":"{\n  \"level\": \"info\"`,
+			// metrics defaults to empty ConfigMap
+			expectMetricsContains: `"ConfigMap":{}`,
+			// tracing defaults to None backend
+			expectTracingContains: `"backend":"none"`,
+		},
+	}
 
-	assert.NotNil(t, cw.LoggingConfig(), "logging config should not be nil")
-	assert.NotNil(t, cw.MetricsConfig(), "metrics config should not be nil")
-	assert.NotNil(t, cw.TracingConfig(), "tracing config should not be nil")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := loggingtesting.TestContextWithLogger(t)
+			cw := WatchConfigurations(ctx, testComponent, tc.cmw)
 
-	envs := cw.ToEnvVars()
+			assert.NotNil(t, cw.LoggingConfig(), "logging config should be enabled")
+			assert.NotNil(t, cw.MetricsConfig(), "metrics config should be enabled")
+			assert.NotNil(t, cw.TracingConfig(), "tracing config should be enabled")
 
-	const expectEnvs = 3
-	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+			envs := cw.ToEnvVars()
 
-	assert.Equal(t, EnvLoggingCfg, envs[0].Name, "first env var is logging config")
-	assert.Contains(t, envs[0].Value, "zap-logger-config")
+			const expectEnvs = 3
+			require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
 
-	assert.Equal(t, EnvMetricsCfg, envs[1].Name, "second env var is metrics config")
-	assert.Contains(t, envs[1].Value, `"metrics.backend":"prometheus"`)
+			assert.Equal(t, EnvLoggingCfg, envs[0].Name, "first env var is logging config")
+			assert.Contains(t, envs[0].Value, tc.expectLoggingContains)
 
-	assert.Equal(t, EnvTracingCfg, envs[2].Name, "third env var is tracing config")
-	assert.Contains(t, envs[2].Value, `"backend":"zipkin"`)
+			assert.Equal(t, EnvMetricsCfg, envs[1].Name, "second env var is metrics config")
+			assert.Contains(t, envs[1].Value, tc.expectMetricsContains)
+
+			assert.Equal(t, EnvTracingCfg, envs[2].Name, "third env var is tracing config")
+			assert.Contains(t, envs[2].Value, tc.expectTracingContains)
+		})
+	}
 }
 
 func TestNewConfigWatcher_withOptions(t *testing.T) {
-	ctx := loggingtesting.TestContextWithLogger(t)
-	cw := WatchConfigurations(ctx, testComponent, newTestConfigMapWatcher(),
-		WithMetrics,
-	)
+	testCases := []struct {
+		name                  string
+		cmw                   configmap.Watcher
+		expectMetricsContains string
+	}{
+		{
+			name:                  "With pre-filled sample data",
+			cmw:                   configMapWatcherWithSampleData(),
+			expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
+		},
+		{
+			name: "With empty data",
+			cmw:  configMapWatcherWithEmptyData(),
+			// metrics defaults to empty ConfigMap
+			expectMetricsContains: `"ConfigMap":{}`,
+		},
+	}
 
-	assert.Nil(t, cw.LoggingConfig(), "logging config should be nil")
-	assert.Nil(t, cw.TracingConfig(), "tracing config should be nil")
-	assert.NotNil(t, cw.MetricsConfig(), "metrics config should not be nil")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := loggingtesting.TestContextWithLogger(t)
+			cw := WatchConfigurations(ctx, testComponent, tc.cmw,
+				WithMetrics,
+			)
 
-	envs := cw.ToEnvVars()
+			assert.Nil(t, cw.LoggingConfig(), "logging config should be disabled")
+			assert.Nil(t, cw.TracingConfig(), "tracing config should be disabled")
+			assert.NotNil(t, cw.MetricsConfig(), "metrics config should be enabled")
 
-	const expectEnvs = 1
-	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+			envs := cw.ToEnvVars()
 
-	assert.Equal(t, EnvMetricsCfg, envs[0].Name, "env var is metrics config")
-	assert.Contains(t, envs[0].Value, `"metrics.backend":"prometheus"`)
+			const expectEnvs = 1
+			require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+
+			assert.Equal(t, EnvMetricsCfg, envs[0].Name, "env var is metrics config")
+			assert.Contains(t, envs[0].Value, tc.expectMetricsContains)
+		})
+	}
 }
 
-func newTestConfigMapWatcher() configmap.Watcher {
+// configMapWatcherWithSampleData constructs a Watcher for static sample data.
+func configMapWatcherWithSampleData() configmap.Watcher {
 	return configmap.NewStaticWatcher(
 		newTestConfigMap(logging.ConfigMapName(), loggingConfigMapData()),
 		newTestConfigMap(metrics.ConfigMapName(), metricsConfigMapData()),
@@ -86,7 +139,21 @@ func newTestConfigMapWatcher() configmap.Watcher {
 	)
 }
 
+// configMapWatcherWithEmptyData constructs a Watcher for empty data.
+func configMapWatcherWithEmptyData() configmap.Watcher {
+	return configmap.NewStaticWatcher(
+		newTestConfigMap(logging.ConfigMapName(), nil),
+		newTestConfigMap(metrics.ConfigMapName(), nil),
+		newTestConfigMap(tracingconfig.ConfigName, nil),
+	)
+}
+
 func newTestConfigMap(name string, data map[string]string) *corev1.ConfigMap {
+	if data == nil {
+		data = make(map[string]string, 1)
+	}
+
+	// _example key is always appended to mimic Knative's release manifests
 	data["_example"] = "test-config"
 
 	return &corev1.ConfigMap{
@@ -100,12 +167,12 @@ func newTestConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 // ConfigMap data generators
 func loggingConfigMapData() map[string]string {
 	return map[string]string{
-		"zap-logger-config": `{"level": "info"}`,
+		"zap-logger-config": `{"level": "fatal"}`,
 	}
 }
 func metricsConfigMapData() map[string]string {
 	return map[string]string{
-		"metrics.backend": "prometheus",
+		"metrics.backend": "test",
 	}
 }
 func tracingConfigMapData() map[string]string {

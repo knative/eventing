@@ -37,11 +37,14 @@ const (
 	EnvTracingCfg = "K_TRACING_CONFIG"
 )
 
-type EnvVarsGenerator interface {
+type ConfigAccessor interface {
 	ToEnvVars() []corev1.EnvVar
+	LoggingConfig() *pkglogging.Config
+	MetricsConfig() *metrics.ExporterOptions
+	TracingConfig() *tracingconfig.Config
 }
 
-var _ EnvVarsGenerator = (*ConfigWatcher)(nil)
+var _ ConfigAccessor = (*ConfigWatcher)(nil)
 
 // ConfigWatcher keeps track of logging, metrics and tracing configurations by
 // watching corresponding ConfigMaps.
@@ -50,6 +53,7 @@ type ConfigWatcher struct {
 
 	component string
 
+	// configurations remain nil if disabled
 	loggingCfg *pkglogging.Config
 	metricsCfg *metrics.ExporterOptions
 	tracingCfg *tracingconfig.Config
@@ -83,28 +87,21 @@ func WatchConfigurations(loggingCtx context.Context, component string,
 	return cw
 }
 
-// StartWatchingSourceConfigurations runs WatchConfigurations with all configurations.
-// For backwards compatibility only.
-func StartWatchingSourceConfigurations(loggingCtx context.Context, component string, cmw configmap.Watcher) *ConfigWatcher {
-	return WatchConfigurations(loggingCtx, component, cmw,
-		WithLogging,
-		WithMetrics,
-		WithTracing,
-	)
-}
-
 // WithLogging observes a logging ConfigMap.
 func WithLogging(cw *ConfigWatcher, cmw configmap.Watcher) {
+	cw.loggingCfg = &pkglogging.Config{}
 	watchConfigMap(cmw, pkglogging.ConfigMapName(), cw.updateFromLoggingConfigMap)
 }
 
 // WithMetrics observes a metrics ConfigMap.
 func WithMetrics(cw *ConfigWatcher, cmw configmap.Watcher) {
+	cw.metricsCfg = &metrics.ExporterOptions{}
 	watchConfigMap(cmw, metrics.ConfigMapName(), cw.updateFromMetricsConfigMap)
 }
 
 // WithTracing observes a tracing ConfigMap.
 func WithTracing(cw *ConfigWatcher, cmw configmap.Watcher) {
+	cw.tracingCfg = &tracingconfig.Config{}
 	watchConfigMap(cmw, tracingconfig.ConfigName, cw.updateFromTracingConfigMap)
 }
 
@@ -198,54 +195,88 @@ func (cw *ConfigWatcher) updateFromTracingConfigMap(cfg *corev1.ConfigMap) {
 
 // ToEnvVars serializes the contents of the ConfigWatcher to individual
 // environment variables.
-func (r *ConfigWatcher) ToEnvVars() []corev1.EnvVar {
+func (cw *ConfigWatcher) ToEnvVars() []corev1.EnvVar {
 	envs := make([]corev1.EnvVar, 0, 3)
 
-	loggingCfg, err := pkglogging.LoggingConfigToJson(r.LoggingConfig())
-	if err != nil {
-		r.logger.Warn("Error while serializing logging config", zap.Error(err))
-	}
-
-	metricsCfg, err := metrics.MetricsOptionsToJson(r.MetricsConfig())
-	if err != nil {
-		r.logger.Warn("Error while serializing metrics config", zap.Error(err))
-	}
-
-	tracingCfg, err := tracingconfig.TracingConfigToJson(r.TracingConfig())
-	if err != nil {
-		r.logger.Warn("Error while serializing tracing config", zap.Error(err))
-	}
-
-	envs = maybeAppendEnvVar(envs, EnvLoggingCfg, loggingCfg, r.LoggingConfig() != nil)
-	envs = maybeAppendEnvVar(envs, EnvMetricsCfg, metricsCfg, r.MetricsConfig() != nil)
-	envs = maybeAppendEnvVar(envs, EnvTracingCfg, tracingCfg, r.TracingConfig() != nil)
+	envs = maybeAppendEnvVar(envs, cw.loggingConfigEnvVar(), cw.LoggingConfig() != nil)
+	envs = maybeAppendEnvVar(envs, cw.metricsConfigEnvVar(), cw.MetricsConfig() != nil)
+	envs = maybeAppendEnvVar(envs, cw.tracingConfigEnvVar(), cw.TracingConfig() != nil)
 
 	return envs
 }
 
-// maybeAppendEnvVar appends an EnvVar with the given name and value only if
-// the condition boolean is true.
-func maybeAppendEnvVar(envs []corev1.EnvVar, name, val string, cond bool) []corev1.EnvVar {
+// maybeAppendEnvVar appends an EnvVar only if the condition boolean is true.
+func maybeAppendEnvVar(envs []corev1.EnvVar, env corev1.EnvVar, cond bool) []corev1.EnvVar {
 	if !cond {
 		return envs
 	}
 
-	return append(envs, corev1.EnvVar{
-		Name:  name,
-		Value: val,
-	})
+	return append(envs, env)
+}
+
+// loggingConfigEnvVar returns an EnvVar containing the serialized logging
+// configuration from the ConfigWatcher.
+func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
+	cfg, err := pkglogging.LoggingConfigToJson(cw.LoggingConfig())
+	if err != nil {
+		cw.logger.Warn("Error while serializing logging config", zap.Error(err))
+	}
+
+	return corev1.EnvVar{
+		Name:  EnvLoggingCfg,
+		Value: cfg,
+	}
+}
+
+// metricsConfigEnvVar returns an EnvVar containing the serialized metrics
+// configuration from the ConfigWatcher.
+func (cw *ConfigWatcher) metricsConfigEnvVar() corev1.EnvVar {
+	cfg, err := metrics.MetricsOptionsToJson(cw.MetricsConfig())
+	if err != nil {
+		cw.logger.Warn("Error while serializing metrics config", zap.Error(err))
+	}
+
+	return corev1.EnvVar{
+		Name:  EnvMetricsCfg,
+		Value: cfg,
+	}
+}
+
+// tracingConfigEnvVar returns an EnvVar containing the serialized tracing
+// configuration from the ConfigWatcher.
+func (cw *ConfigWatcher) tracingConfigEnvVar() corev1.EnvVar {
+	cfg, err := tracingconfig.TracingConfigToJson(cw.TracingConfig())
+	if err != nil {
+		cw.logger.Warn("Error while serializing tracing config", zap.Error(err))
+	}
+
+	return corev1.EnvVar{
+		Name:  EnvTracingCfg,
+		Value: cfg,
+	}
 }
 
 // EmptyVarsGenerator generates empty env vars. Intended to be used in tests.
 type EmptyVarsGenerator struct{}
 
-var _ EnvVarsGenerator = (*EmptyVarsGenerator)(nil)
+var _ ConfigAccessor = (*EmptyVarsGenerator)(nil)
 
-// ToEnvVars implements EnvVarsGenerator.
-func (*EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
+func (g *EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: EnvLoggingCfg},
 		{Name: EnvMetricsCfg},
 		{Name: EnvTracingCfg},
 	}
+}
+
+func (*EmptyVarsGenerator) LoggingConfig() *pkglogging.Config {
+	return nil
+}
+
+func (*EmptyVarsGenerator) MetricsConfig() *metrics.ExporterOptions {
+	return nil
+}
+
+func (*EmptyVarsGenerator) TracingConfig() *tracingconfig.Config {
+	return nil
 }
