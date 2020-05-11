@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	cloudeventsv2 "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +35,6 @@ func TestTTLDefaulter(t *testing.T) {
 		event cloudevents.Event
 		want  int32
 	}{
-		// TODO: Add test cases.
 		"happy empty": {
 			event: cloudevents.NewEvent(),
 			want:  defaultTTL,
@@ -76,6 +76,68 @@ func TestTTLDefaulter(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			event := defaulter(ctx, tc.event)
 			got, err := GetTTL(event.Context)
+			if err != nil {
+				t.Error(err)
+			}
+			if got != tc.want {
+				t.Errorf("Unexpected TTL, wanted %d, got %d", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestTTLDefaulterV2(t *testing.T) {
+	defaultTTL := int32(10)
+
+	defaulter := TTLDefaulterV2(zap.NewNop(), defaultTTL)
+	ctx := context.TODO()
+
+	tests := map[string]struct {
+		event cloudeventsv2.Event
+		want  int32
+	}{
+		// TODO: Add test cases.
+		"happy empty": {
+			event: cloudeventsv2.NewEvent(),
+			want:  defaultTTL,
+		},
+		"existing ttl of 10": {
+			event: func() cloudeventsv2.Event {
+				event := cloudeventsv2.NewEvent()
+				_ = SetTTLv2(event.Context, 10)
+				return event
+			}(),
+			want: 9,
+		},
+		"existing ttl of 1": {
+			event: func() cloudeventsv2.Event {
+				event := cloudeventsv2.NewEvent()
+				_ = SetTTLv2(event.Context, 1)
+				return event
+			}(),
+			want: 0,
+		},
+		"existing invalid ttl of 'XYZ'": {
+			event: func() cloudeventsv2.Event {
+				event := cloudeventsv2.NewEvent()
+				event.SetExtension(TTLAttribute, "XYZ")
+				return event
+			}(),
+			want: defaultTTL,
+		},
+		"existing ttl of 0": {
+			event: func() cloudeventsv2.Event {
+				event := cloudeventsv2.NewEvent()
+				_ = SetTTLv2(event.Context, 0)
+				return event
+			}(),
+			want: 0,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			event := defaulter(ctx, tc.event)
+			got, err := GetTTLv2(event.Context)
 			if err != nil {
 				t.Error(err)
 			}

@@ -19,8 +19,10 @@ package broker
 import (
 	"context"
 
+	cloudeventsv2 "github.com/cloudevents/sdk-go/v2"
+	clientv2 "github.com/cloudevents/sdk-go/v2/client"
+
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	cetypes "github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"go.uber.org/zap"
 )
@@ -35,7 +37,7 @@ const (
 // GetTTL finds the TTL in the EventContext using a case insensitive comparison
 // for the key. The second return param, is the case preserved key that matched.
 // Depending on the encoding/transport, the extension case could be changed.
-func GetTTL(ctx cloudevents.EventContext) (int32, error) {
+func GetTTL(ctx cloudeventsv2.EventContext) (int32, error) {
 	ttl, err := ctx.GetExtension(TTLAttribute)
 	if err != nil {
 		return 0, err
@@ -44,7 +46,13 @@ func GetTTL(ctx cloudevents.EventContext) (int32, error) {
 }
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
+// Deprecated: use SettTTLv2
 func SetTTL(ctx cloudevents.EventContext, ttl int32) error {
+	return ctx.SetExtension(TTLAttribute, ttl)
+}
+
+// SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
+func SetTTLv2(ctx cloudeventsv2.EventContext, ttl int32) error {
 	return ctx.SetExtension(TTLAttribute, ttl)
 }
 
@@ -58,8 +66,8 @@ func DeleteTTL(ctx cloudevents.EventContext) error {
 //   If TTL is not found, it will set it to the default passed in.
 //   If TTL is <= 0, it will remain 0.
 //   If TTL is > 1, it will be reduced by one.
-func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
-	return func(ctx context.Context, event cloudevents.Event) cloudevents.Event {
+func TTLDefaulter(logger *zap.Logger, defaultTTL int32) clientv2.EventDefaulter {
+	return func(ctx context.Context, event cloudeventsv2.Event) cloudeventsv2.Event {
 		// Get the current or default TTL from the event.
 		var ttl int32
 		if ttlraw, err := event.Context.GetExtension(TTLAttribute); err != nil {

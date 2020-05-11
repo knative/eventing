@@ -17,210 +17,200 @@
 package ingress
 
 import (
+	"bytes"
 	"context"
+	"io"
 	nethttp "net/http"
-	"reflect"
-	"sync"
+	"net/http/httptest"
 	"testing"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go/v2/client"
+	"github.com/cloudevents/sdk-go/v2/event"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
 	broker "knative.dev/eventing/pkg/mtbroker"
 )
 
 const (
-	validURI        = "/testNamespace/testBroker"
-	validHTTPMethod = nethttp.MethodPost
+	senderResponseStatusCode = nethttp.StatusAccepted
 )
 
-type mockReporter struct {
-	eventCountReported        bool
-	eventDispatchTimeReported bool
-}
+func TestHandler_ServeHTTP(t *testing.T) {
+	t.Parallel()
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
-	r.eventCountReported = true
-	return nil
-}
+	logger := zap.NewNop()
 
-func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
-	r.eventDispatchTimeReported = true
-	return nil
-}
-
-type fakeClient struct {
-	sent bool
-	fn   interface{}
-	mux  sync.Mutex
-}
-
-func (f *fakeClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
-	f.sent = true
-	return ctx, &event, nil
-}
-
-func (f *fakeClient) StartReceiver(ctx context.Context, fn interface{}) error {
-	f.mux.Lock()
-	f.fn = fn
-	f.mux.Unlock()
-	<-ctx.Done()
-	return nil
-}
-
-func (f *fakeClient) ready() bool {
-	f.mux.Lock()
-	ready := f.fn != nil
-	f.mux.Unlock()
-	return ready
-}
-
-func (f *fakeClient) fakeReceive(t *testing.T, event cloudevents.Event) {
-	// receive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error
-
-	resp := new(cloudevents.EventResponse)
-	tctx := http.TransportContext{Header: nethttp.Header{}, Method: validHTTPMethod, URI: validURI}
-	ctx := http.WithTransportContext(context.Background(), tctx)
-
-	fnType := reflect.TypeOf(f.fn)
-	if fnType.Kind() != reflect.Func {
-		t.Fatal("wrong method type.", fnType.Kind())
-	}
-
-	fn := reflect.ValueOf(f.fn)
-	_ = fn.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(event), reflect.ValueOf(resp)})
-}
-
-func TestIngressHandler_Receive_FAIL(t *testing.T) {
-	testCases := map[string]struct {
-		httpmethod                string
-		URI                       string
-		expectedStatus            int
-		expectedEventCount        bool
-		expectedEventDispatchTime bool
+	tt := []struct {
+		name       string
+		method     string
+		uri        string
+		body       io.Reader
+		statusCode int
+		sender     sender
+		reporter   StatsReporter
+		defaulter  client.EventDefaulter
 	}{
-		"method not allowed": {
-			httpmethod:     nethttp.MethodGet,
-			URI:            validURI,
-			expectedStatus: nethttp.StatusMethodNotAllowed,
+		{
+			name:       "invalid method PATCH",
+			method:     nethttp.MethodPatch,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusMethodNotAllowed,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
+			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
-		"invalid url": {
-			httpmethod:     validHTTPMethod,
-			URI:            "invalidURI",
-			expectedStatus: nethttp.StatusNotFound,
+		{
+			name:       "invalid method PUT",
+			method:     nethttp.MethodPut,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusMethodNotAllowed,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
+			defaulter:  broker.TTLDefaulter(logger, 100),
+		},
+		{
+			name:       "invalid method DELETE",
+			method:     nethttp.MethodDelete,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusMethodNotAllowed,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
+			defaulter:  broker.TTLDefaulter(logger, 100),
+		},
+		{
+			name:       "invalid method GET",
+			method:     nethttp.MethodGet,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusMethodNotAllowed,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
+			defaulter:  broker.TTLDefaulter(logger, 100),
+		},
+		{
+			name:       "invalid method OPTIONS",
+			method:     nethttp.MethodOptions,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusMethodNotAllowed,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
+			defaulter:  broker.TTLDefaulter(logger, 100),
+		},
+		{
+			name:       "valid (happy path)",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: senderResponseStatusCode,
+			sender: &mockSender{
+				NewCloudEventRequestWithTargetCalled: true,
+				SendCalled:                           true,
+			},
+			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
+			defaulter: broker.TTLDefaulter(logger, 100),
+		},
+		{
+			name:       "no TTL drop event",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusBadRequest,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest},
+		},
+		{
+			name:       "malformed request URI",
+			method:     nethttp.MethodPost,
+			uri:        "/knative/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusBadRequest,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
+		},
+		{
+			name:       "root request URI",
+			method:     nethttp.MethodPost,
+			uri:        "/",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusNotFound,
+			sender:     &mockSender{},
+			reporter:   &mockReporter{},
 		},
 	}
 
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			client, _ := cloudevents.NewDefaultClient()
-			reporter := &mockReporter{}
-			handler := Handler{
-				Logger:    zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-				CeClient:  client,
-				Reporter:  reporter,
-				Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(tc.method, tc.uri, tc.body)
+			request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
+
+			h := &Handler{
+				Sender:    &mockSender{},
+				Defaulter: tc.defaulter,
+				Reporter:  &mockReporter{},
+				Logger:    logger,
 			}
-			event := cloudevents.NewEvent(cloudevents.VersionV1)
-			resp := new(cloudevents.EventResponse)
-			tctx := http.TransportContext{Header: nethttp.Header{}, Method: tc.httpmethod, URI: tc.URI}
-			ctx := http.WithTransportContext(context.Background(), tctx)
-			_ = handler.receive(ctx, event, resp)
-			if resp.Status != tc.expectedStatus {
-				t.Errorf("Unexpected status code. Expected %v, Actual %v", tc.expectedStatus, resp.Status)
+
+			h.ServeHTTP(recorder, request)
+
+			result := recorder.Result()
+			if result.StatusCode != tc.statusCode {
+				t.Errorf("expected status code %d got %d", tc.statusCode, result.StatusCode)
 			}
-			if reporter.eventCountReported != tc.expectedEventCount {
-				t.Errorf("Unexpected event count reported. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+
+			if diff := cmp.Diff(tc.sender, h.Sender); diff != "" {
+				t.Errorf("expected sender state %+v got %+v - diff %s", tc.sender, h.Sender, diff)
 			}
-			if reporter.eventDispatchTimeReported != tc.expectedEventDispatchTime {
-				t.Errorf("Unexpected event dispatch time reported. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+
+			if diff := cmp.Diff(tc.reporter, h.Reporter); diff != "" {
+				t.Errorf("expected reporter state %+v got %+v - diff %s", tc.reporter, h.Reporter, diff)
 			}
 		})
 	}
 }
 
-func TestIngressHandler_Receive_Succeed(t *testing.T) {
-	client := &fakeClient{}
-	reporter := &mockReporter{}
-	handler := Handler{
-		Logger:    zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-		CeClient:  client,
-		Reporter:  reporter,
-		Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
-	}
-
-	event := cloudevents.NewEvent()
-	resp := new(cloudevents.EventResponse)
-	tctx := http.TransportContext{Header: nethttp.Header{}, Method: validHTTPMethod, URI: validURI}
-	ctx := http.WithTransportContext(context.Background(), tctx)
-	_ = handler.receive(ctx, event, resp)
-
-	if !client.sent {
-		t.Errorf("client should invoke send function")
-	}
-	if !reporter.eventCountReported {
-		t.Errorf("event count should have been reported")
-	}
-	if !reporter.eventDispatchTimeReported {
-		t.Errorf("event dispatch time should have been reported")
-	}
+type mockSender struct {
+	NewCloudEventRequestWithTargetCalled bool
+	SendCalled                           bool
 }
 
-func TestIngressHandler_Receive_NoTTL(t *testing.T) {
-	client := &fakeClient{}
-	reporter := &mockReporter{}
-	handler := Handler{
-		Logger:   zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-		CeClient: client,
-		Reporter: reporter,
-	}
-	event := cloudevents.NewEvent(cloudevents.VersionV1)
-	resp := new(cloudevents.EventResponse)
-	tctx := http.TransportContext{Header: nethttp.Header{}, Method: validHTTPMethod, URI: validURI}
-	ctx := http.WithTransportContext(context.Background(), tctx)
-	_ = handler.receive(ctx, event, resp)
-	if client.sent {
-		t.Errorf("client should NOT invoke send function")
-	}
-	if !reporter.eventCountReported {
-		t.Errorf("event count should have been reported")
-	}
+func (s *mockSender) NewCloudEventRequestWithTarget(_ context.Context, _ string) (*nethttp.Request, error) {
+	s.NewCloudEventRequestWithTargetCalled = true
+	return httptest.NewRequest("POST", "/ns/broker", nil), nil
 }
 
-func TestIngressHandler_Start(t *testing.T) {
-	client := &fakeClient{}
-	reporter := &mockReporter{}
-	handler := Handler{
-		Logger:    zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-		CeClient:  client,
-		Reporter:  reporter,
-		Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
-	}
+func (s *mockSender) Send(_ *nethttp.Request) (*nethttp.Response, error) {
+	s.SendCalled = true
+	return &nethttp.Response{StatusCode: senderResponseStatusCode}, nil
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		if err := handler.Start(ctx); err != nil {
-			t.Error(err)
-		}
-	}()
-	// Need time for the handler to start up. Wait.
-	for !client.ready() {
-		time.Sleep(1 * time.Millisecond)
-	}
+type mockReporter struct {
+	StatusCode                int
+	EventDispatchTimeReported bool
+}
 
-	event := cloudevents.NewEvent()
-	client.fakeReceive(t, event)
-	cancel()
+func (r *mockReporter) ReportEventCount(_ *ReportArgs, responseCode int) error {
+	r.StatusCode = responseCode
+	return nil
+}
 
-	if !client.sent {
-		t.Errorf("client should invoke send function")
-	}
-	if !reporter.eventCountReported {
-		t.Errorf("event count should have been reported")
-	}
-	if !reporter.eventDispatchTimeReported {
-		t.Errorf("event dispatch time should have been reported")
-	}
+func (r *mockReporter) ReportEventDispatchTime(_ *ReportArgs, _ int, _ time.Duration) error {
+	r.EventDispatchTimeReported = true
+	return nil
+}
+
+func getValidEvent() io.Reader {
+	e := event.New(event.CloudEventsVersionV1)
+	e.SetType("type")
+	e.SetSource("source")
+	e.SetID("aaaa1234")
+	b, _ := e.MarshalJSON()
+	return bytes.NewBuffer(b)
 }
