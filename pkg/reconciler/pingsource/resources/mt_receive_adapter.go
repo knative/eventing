@@ -17,13 +17,11 @@ limitations under the License.
 package resources
 
 import (
-	"os"
-
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+
 	"knative.dev/pkg/system"
 )
 
@@ -43,8 +41,6 @@ type MTArgs struct {
 // MakeMTReceiveAdapter generates the mtping deployment for pingsources
 func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 	replicas := int32(1)
-	blockOwnerDeletion := true
-	isController := true
 
 	return &v1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -54,16 +50,6 @@ func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
 			Name:      args.MTAdapterName,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         v1.SchemeGroupVersion.String(),
-					Kind:               "Deployment",
-					Name:               os.Getenv("CONTROLLER_NAME"),           // guarantee to be non-empty
-					UID:                types.UID(os.Getenv("CONTROLLER_UID")), // guarantee to be non-empty
-					Controller:         &isController,
-					BlockOwnerDeletion: &blockOwnerDeletion,
-				},
-			},
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,

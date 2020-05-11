@@ -43,10 +43,6 @@ import (
 type envConfig struct {
 	Image   string `envconfig:"PING_IMAGE" required:"true"`
 	MTImage string `envconfig:"MT_PING_IMAGE" required:"true"`
-
-	// Add this for validation purpose only of validation.
-	ControllerName string `envconfig:"CONTROLLER_NAME" required:"true"`
-	ControllerUID  string `envconfig:"CONTROLLER_UID" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code
