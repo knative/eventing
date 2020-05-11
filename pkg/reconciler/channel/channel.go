@@ -106,22 +106,21 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 		bc.AddressStatus.Address.ConvertTo(ctx, channelableStatus.AddressStatus.Address)
 	}
 	channelableStatus.Status = bc.Status
-	if cAnnotations != nil {
-		if cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
-			if len(bc.SubscribableStatus.Subscribers) > 0 {
-				channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableStatus.Subscribers
-			}
-		} else { //v1alpha1
-			if bc.SubscribableTypeStatus.SubscribableStatus != nil &&
-				len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
-				channelableStatus.SubscribableStatus.Subscribers = make([]duckv1beta1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
-				for i, ss := range bc.SubscribableTypeStatus.SubscribableStatus.Subscribers {
-					channelableStatus.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
-						UID:                ss.UID,
-						ObservedGeneration: ss.ObservedGeneration,
-						Ready:              ss.Ready,
-						Message:            ss.Message,
-					}
+	if cAnnotations != nil &&
+		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
+		if len(bc.SubscribableStatus.Subscribers) > 0 {
+			channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableStatus.Subscribers
+		}
+	} else { //we assume v1alpha1 if no tag according to the spec
+		if bc.SubscribableTypeStatus.SubscribableStatus != nil &&
+			len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
+			channelableStatus.SubscribableStatus.Subscribers = make([]duckv1beta1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
+			for i, ss := range bc.SubscribableTypeStatus.SubscribableStatus.Subscribers {
+				channelableStatus.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
 				}
 			}
 		}
