@@ -65,6 +65,14 @@ func WithInMemoryChannelDuckAnnotationV1Beta1(imc *v1beta1.InMemoryChannel) {
 
 }
 
+func WithInMemoryChannelDuckAnnotationV1Alpha1(imc *v1alpha1.InMemoryChannel) {
+	annotations := map[string]string{
+		messaging.SubscribableDuckVersionAnnotation: "v1alpha1",
+	}
+	imc.ObjectMeta.SetAnnotations(annotations)
+
+}
+
 func WithInMemoryChannelGenerationV1Beta1(gen int64) InMemoryChannelOptionV1Beta1 {
 	return func(s *v1beta1.InMemoryChannel) {
 		s.Generation = gen
