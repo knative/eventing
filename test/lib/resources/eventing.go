@@ -402,6 +402,13 @@ func WithSubscriberServiceRefForTriggerV1Beta1(name string) TriggerOptionV1Beta1
 	}
 }
 
+// WithBrokerV1Beta1 returns an option that adds a broker for the given Trigger.
+func WithBrokerV1Beta1(name string) TriggerOptionV1Beta1 {
+	return func(trigger *eventingv1beta1.Trigger) {
+		trigger.Spec.Broker = name
+	}
+}
+
 // Trigger returns a Trigger.
 func Trigger(name string, options ...TriggerOption) *eventingv1alpha1.Trigger {
 	trigger := &eventingv1alpha1.Trigger{
