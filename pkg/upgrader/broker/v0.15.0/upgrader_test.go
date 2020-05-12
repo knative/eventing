@@ -58,8 +58,9 @@ const (
 	kafkaSpec = `
       apiVersion: "messaging.knative.dev/v1alpha1"
       kind: "Kafka"
-      spec: |
-        "foo: baz"
+      spec:
+        numPartitions: 3
+        replicationFactory: 1
 `
 
 	patchbytesFmt = "{\"spec\":{\"channelTemplateSpec\":null,\"config\":{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"broker-auto-gen-config-%s\",\"namespace\":\"%s\"}}}"
@@ -80,7 +81,7 @@ var (
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 		Spec: &runtime.RawExtension{
-			Raw: []byte(`"foo: baz"`),
+			Raw: []byte(`{"numPartitions": 3, "replicationFactory": 1}`),
 		},
 	}
 	ignoreLastTransitionTime = cmp.FilterPath(func(p cmp.Path) bool {

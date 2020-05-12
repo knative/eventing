@@ -19,7 +19,10 @@ package broker
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/ghodss/yaml"
+	//	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -127,14 +130,21 @@ func processBroker(ctx context.Context, broker v1alpha1.Broker) ([]byte, error) 
 }
 
 func createConfigMap(ctx context.Context, broker v1alpha1.Broker) (*duckv1.KReference, error) {
+	// Generating the spec portion is a bit goofy cause we have turn the runtime raw into
+	// a yaml blob that we stick into the configmap (with proper indentation).
 	data := ""
 	if broker.Spec.ChannelTemplate.Spec != nil {
+		bytes, err := yaml.JSONToYAML(broker.Spec.ChannelTemplate.Spec.Raw)
+		if err != nil {
+			return nil, err
+		}
+		logging.FromContext(ctx).Infof("BYTES: %q", string(bytes))
 		data = fmt.Sprintf(`
       apiVersion: %q
       kind: %q
-      spec: |
+      spec:
         %s
-`, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind, string(broker.Spec.ChannelTemplate.Spec.Raw))
+`, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind, strings.ReplaceAll(strings.TrimSpace(string(bytes)), "\n", "\n        "))
 	} else {
 		data = fmt.Sprintf(`
       apiVersion: %q
@@ -157,7 +167,8 @@ func createConfigMap(ctx context.Context, broker v1alpha1.Broker) (*duckv1.KRefe
 		Data: map[string]string{"channelTemplateSpec": data},
 	}
 
-	cm, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(broker.Namespace).Create(cm)
+	logging.FromContext(ctx).Infof("Creating configmap: %+v", cm)
+	_, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(broker.Namespace).Create(cm)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create broker config map \"%s/%s\": %v", broker.Namespace, broker.Name, err)
 		return nil, err

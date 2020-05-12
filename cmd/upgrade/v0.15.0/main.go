@@ -31,7 +31,7 @@ import (
 
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	broker "knative.dev/eventing/pkg/upgrader/broker/v0.14.0"
+	broker "knative.dev/eventing/pkg/upgrader/broker/v0.15.0"
 )
 
 func main() {
