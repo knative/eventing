@@ -7,7 +7,7 @@ manually update them yourself, or run the tool that will do the following for
 any Broker that is using Spec.ChannelTemplate:
 
 1. Create a ConfigMap in the same namespace as the Broker named:
-`broker-auto-gen-config-<brokername>` with the content from Spec.ChannelTemplate.
+   `broker-auto-gen-config-<brokername>` with the content from Spec.ChannelTemplate.
 1. Set Broker Spec.Config to point to this ConfigMap
 1. Set Broker Spec.ChannelTemplate to nil
 
@@ -22,4 +22,4 @@ If you installed to different namespace, you need to modify the upgrade.yaml
 appropriately. Also the job by default runs as `eventing-controller` service
 account, you can also modify that but the service account will need to have
 permissions to list `Namespace`s, list and patch `Broker`s, and create
-`ConfigMap`s. 
+`ConfigMap`s.
