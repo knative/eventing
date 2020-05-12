@@ -140,15 +140,15 @@ func createConfigMap(ctx context.Context, broker v1alpha1.Broker) (*duckv1.KRefe
 		}
 		logging.FromContext(ctx).Infof("BYTES: %q", string(bytes))
 		data = fmt.Sprintf(`
-      apiVersion: %q
-      kind: %q
-      spec:
-        %s
-`, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind, strings.ReplaceAll(strings.TrimSpace(string(bytes)), "\n", "\n        "))
+  apiVersion: %q
+  kind: %q
+  spec:
+    %s
+`, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind, strings.ReplaceAll(strings.TrimSpace(string(bytes)), "\n", "\n    "))
 	} else {
 		data = fmt.Sprintf(`
-      apiVersion: %q
-      kind: %q
+  apiVersion: %q
+  kind: %q
 `, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind)
 	}
 

@@ -52,15 +52,15 @@ const (
 	testns2    = "testnamespace2"
 	testbroker = "testbroker"
 	imcSpec    = `
-      apiVersion: "messaging.knative.dev/v1alpha1"
-      kind: "InMemoryChannel"
+  apiVersion: "messaging.knative.dev/v1alpha1"
+  kind: "InMemoryChannel"
 `
 	kafkaSpec = `
-      apiVersion: "messaging.knative.dev/v1alpha1"
-      kind: "Kafka"
-      spec:
-        numPartitions: 3
-        replicationFactory: 1
+  apiVersion: "messaging.knative.dev/v1alpha1"
+  kind: "Kafka"
+  spec:
+    numPartitions: 3
+    replicationFactory: 1
 `
 
 	patchbytesFmt = "{\"spec\":{\"channelTemplateSpec\":null,\"config\":{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"broker-auto-gen-config-%s\",\"namespace\":\"%s\"}}}"
