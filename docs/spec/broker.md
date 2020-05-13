@@ -133,9 +133,8 @@ The Broker SHOULD expose a variety of metrics, including, but not limited to:
 Metrics SHOULD be enabled by default, with a configuration parameter included to
 disable them if desired.
 
-Upon receiving an event with context attributes defined in the [CloudEvents
-Distributed Tracing
-extension](https://github.com/cloudevents/spec/blob/master/extensions/distributed-tracing.md),
+Upon receiving an event with context attributes defined in the
+[CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/master/extensions/distributed-tracing.md),
 the Broker SHOULD preserve that trace header on delivery to subscribers and on
 reply events, unless the reply is sent with a different set of tracing
 attributes. Forwarded trace headers SHOULD be updated with any intermediate
