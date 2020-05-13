@@ -25,6 +25,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -33,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -182,6 +184,18 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	if err != nil {
 		r.logger.Info("Unable to parse path as a trigger", zap.Error(err), zap.String("path", tctx.URI))
 		return errors.New("unable to parse path as a Trigger")
+	}
+
+	ctx, span := trace.StartSpan(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
+	defer span.End()
+
+	if span.IsRecordingEvents() {
+		span.AddAttributes(
+			tracing.MessagingSystemAttribute,
+			tracing.MessagingProtocolHTTP,
+			tracing.TriggerMessagingDestinationAttribute(triggerRef.NamespacedName),
+			tracing.MessagingMessageIDAttribute(event.ID()),
+		)
 	}
 
 	// Remove the TTL attribute that is used by the Broker.
