@@ -22,8 +22,6 @@ require (
 	go.opencensus.io v0.22.0
 	go.uber.org/zap v1.10.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	google.golang.org/api v0.15.0
-	google.golang.org/grpc v1.26.0
 )
 
 go 1.13

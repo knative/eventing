@@ -3,7 +3,6 @@ package event
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -31,7 +30,7 @@ func (e Event) MarshalJSON() ([]byte, error) {
 	case CloudEventsVersionV1:
 		b, err = JsonEncode(e)
 	default:
-		return nil, fmt.Errorf("unknown spec version: %q", e.SpecVersion())
+		return nil, ValidationError{"specversion": fmt.Errorf("unknown : %q", e.SpecVersion())}
 	}
 
 	// Report the observable
@@ -64,7 +63,7 @@ func (e *Event) UnmarshalJSON(b []byte) error {
 	case CloudEventsVersionV1:
 		err = e.JsonDecodeV1(b, raw)
 	default:
-		return fmt.Errorf("unknown spec version: %q", version)
+		return ValidationError{"specversion": fmt.Errorf("unknown : %q", version)}
 	}
 
 	// Report the observable
@@ -263,7 +262,7 @@ func (e *Event) JsonDecodeV1(body []byte, raw map[string]json.RawMessage) error 
 	delete(raw, "data_base64")
 
 	if data != nil && dataBase64 != nil {
-		return errors.New("parsing error: JSON decoder found both 'data', and 'data_base64' in JSON payload")
+		return ValidationError{"data": fmt.Errorf("found both 'data', and 'data_base64' in JSON payload")}
 	}
 	if data != nil {
 		e.DataEncoded = data

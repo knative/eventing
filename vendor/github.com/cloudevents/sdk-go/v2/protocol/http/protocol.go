@@ -2,16 +2,18 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cecontext "github.com/cloudevents/sdk-go/v2/context"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 )
 
@@ -19,6 +21,12 @@ const (
 	// DefaultShutdownTimeout defines the default timeout given to the http.Server when calling Shutdown.
 	DefaultShutdownTimeout = time.Minute * 1
 )
+
+type msgErr struct {
+	msg    *Message
+	respFn protocol.ResponseFn
+	err    error
+}
 
 // Protocol acts as both a http client and a http handler.
 type Protocol struct {
@@ -33,8 +41,9 @@ type Protocol struct {
 	// If nil, DefaultShutdownTimeout is used.
 	ShutdownTimeout time.Duration
 
-	// Port is the port to bind the receiver to. Defaults to 8080.
-	Port *int
+	// Port is the port configured to bind the receiver to. Defaults to 8080.
+	// If you want to know the effective port you're listening to, use GetListeningPort()
+	Port int
 	// Path is the path to bind the receiver to. Defaults to "/".
 	Path string
 
@@ -42,8 +51,9 @@ type Protocol struct {
 	reMu sync.Mutex
 	// Handler is the handler the http Server will use. Use this to reuse the
 	// http server. If nil, the Protocol will create a one.
-	Handler           *http.ServeMux
-	listener          net.Listener
+	Handler *http.ServeMux
+
+	listener          atomic.Value
 	roundTripper      http.RoundTripper
 	server            *http.Server
 	handlerRegistered bool
@@ -53,6 +63,7 @@ type Protocol struct {
 func New(opts ...Option) (*Protocol, error) {
 	p := &Protocol{
 		incoming: make(chan msgErr),
+		Port:     -1,
 	}
 	if err := p.applyOptions(opts...); err != nil {
 		return nil, err
@@ -201,56 +212,74 @@ func (p *Protocol) Respond(ctx context.Context) (binding.Message, protocol.Respo
 		if !ok {
 			return nil, nil, io.EOF
 		}
+
+		if in.msg == nil {
+			return nil, in.respFn, in.err
+		}
 		return in.msg, in.respFn, in.err
+
 	case <-ctx.Done():
 		return nil, nil, io.EOF
 	}
-}
-
-type msgErr struct {
-	msg    *Message
-	respFn protocol.ResponseFn
-	err    error
 }
 
 // ServeHTTP implements http.Handler.
 // Blocks until ResponseFn is invoked.
 func (p *Protocol) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	m := NewMessageFromHttpRequest(req)
-	if m == nil || m.ReadEncoding() == binding.EncodingUnknown {
+	if m == nil {
 		p.incoming <- msgErr{msg: nil, err: binding.ErrUnknownEncoding}
 		return // if there was no message, return.
 	}
 
 	done := make(chan struct{})
-	var finishErr error
 
+	var finishErr error
 	m.OnFinish = func(err error) error {
 		finishErr = err
 		return nil
 	}
 
-	var fn protocol.ResponseFn = func(ctx context.Context, resp binding.Message, er protocol.Result, transformers ...binding.Transformer) error {
+	var fn protocol.ResponseFn = func(ctx context.Context, respMsg binding.Message, res protocol.Result, transformers ...binding.Transformer) error {
 		// Unblock the ServeHTTP after the reply is written
 		defer func() {
 			done <- struct{}{}
 		}()
-		status := http.StatusOK
+
 		if finishErr != nil {
-			http.Error(rw, fmt.Sprintf("cannot forward CloudEvent: %v", finishErr), http.StatusInternalServerError)
+			http.Error(rw, fmt.Sprintf("Cannot forward CloudEvent: %s", finishErr), http.StatusInternalServerError)
 		}
-		if er != nil {
+
+		status := http.StatusOK
+		if res != nil {
 			var result *Result
-			if protocol.ResultAs(er, &result) {
+			switch {
+			case protocol.ResultAs(res, &result):
 				if result.StatusCode > 100 && result.StatusCode < 600 {
 					status = result.StatusCode
 				}
+
+			case !protocol.IsACK(res):
+				// Map client errors to http status code
+				validationError := event.ValidationError{}
+				if errors.As(res, &validationError) {
+					status = http.StatusBadRequest
+					rw.Header().Set("content-type", "text/plain")
+					rw.WriteHeader(status)
+					_, _ = rw.Write([]byte(validationError.Error()))
+				} else if errors.Is(res, binding.ErrUnknownEncoding) {
+					status = http.StatusUnsupportedMediaType
+				} else {
+					status = http.StatusInternalServerError
+				}
 			}
 		}
-		if resp != nil {
-			err := WriteResponseWriter(ctx, resp, status, rw, transformers...)
-			return resp.Finish(err)
+
+		if respMsg != nil {
+			err := WriteResponseWriter(ctx, respMsg, status, rw, transformers...)
+			return respMsg.Finish(err)
 		}
+
 		rw.WriteHeader(status)
 		return nil
 	}
