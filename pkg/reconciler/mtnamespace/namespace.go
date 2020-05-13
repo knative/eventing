@@ -38,12 +38,8 @@ const (
 	brokerCreated = "BrokerCreated"
 )
 
-type labelFilter func(labels map[string]string) bool
-
 type Reconciler struct {
 	eventingClientSet clientset.Interface
-
-	filter labelFilter
 
 	// listers index properties about resources
 	brokerLister eventinglisters.BrokerLister
@@ -53,7 +49,8 @@ type Reconciler struct {
 var _ namespacereconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) pkgreconciler.Event {
-	if r.filter(ns.Labels) {
+
+	if ns.Labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
 		return nil
 	}
