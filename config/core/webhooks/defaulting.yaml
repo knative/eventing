@@ -28,3 +28,4 @@ webhooks:
   sideEffects: None
   failurePolicy: Fail
   name: webhook.eventing.knative.dev
+  timeoutSeconds: 2
