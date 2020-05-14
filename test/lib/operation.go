@@ -130,8 +130,8 @@ func (c *Client) sendFakeEventWithTracingToAddress(
 func (c *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMeta) {
 	namespace := c.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, typemeta)
-	if err := duck.WaitForResourceReady(c.Dynamic, metaResource); err != nil {
-		c.T.Fatalf("Failed to get %v-%s ready: %v", *typemeta, name, err)
+	if untyped, err := duck.WaitForResourceReady(c.Dynamic, metaResource); err != nil {
+		c.T.Fatalf("Failed to get %v-%s ready (%v): %v", *typemeta, name, untyped, err)
 	}
 }
 
@@ -140,8 +140,8 @@ func (c *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMe
 func (c *Client) WaitForResourcesReadyOrFail(typemeta *metav1.TypeMeta) {
 	namespace := c.Namespace
 	metaResourceList := resources.NewMetaResourceList(namespace, typemeta)
-	if err := duck.WaitForResourcesReady(c.Dynamic, metaResourceList); err != nil {
-		c.T.Fatalf("Failed to get all %v resources ready: %v", *typemeta, err)
+	if untypeds, err := duck.WaitForResourcesReady(c.Dynamic, metaResourceList); err != nil {
+		c.T.Fatalf("Failed to get all %v resources ready (%v): %v", *typemeta, untypeds, err)
 	}
 }
 

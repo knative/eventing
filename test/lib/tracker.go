@@ -151,8 +151,8 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 func (t *Tracker) WaitForKResourcesReady() error {
 	t.tc.Logf("Waiting for all KResources to become ready")
 	for _, metaResource := range t.resourcesToCheckStatus {
-		if err := duck.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
-			return fmt.Errorf("failed waiting for %+v to become ready: %v", metaResource, err)
+		if untyped, err := duck.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
+			return fmt.Errorf("failed waiting for %+v to become ready (%v): %v", metaResource, untyped, err)
 		}
 	}
 	return nil

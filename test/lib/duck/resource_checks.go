@@ -41,24 +41,30 @@ const (
 // WaitForResourceReady polls the status of the MetaResource from client
 // every interval until isResourceReady returns `true` indicating
 // it is done, returns an error or timeout.
-func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
-		return isResourceReady(untyped, err)
+func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) (runtime.Object, error) {
+	var untyped runtime.Object
+	pollErr := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		var innerErr error
+		untyped, innerErr = GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
+		return isResourceReady(untyped, innerErr)
 	})
+	return untyped, pollErr
 }
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
-func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		untypeds, err := GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
+func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) ([]runtime.Object, error) {
+	var untypeds []runtime.Object
+	pollErr := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		var innerErr error
+		untypeds, innerErr = GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
 		for _, untyped := range untypeds {
-			if isReady, err := isResourceReady(untyped, err); !isReady {
-				return isReady, err
+			if isReady, err := isResourceReady(untyped, innerErr); !isReady {
+				return false, err
 			}
 		}
 		return true, nil
 	})
+	return untypeds, pollErr
 }
 
 // isResourceReady leverage duck-type to check if the given MetaResource is in ready state
