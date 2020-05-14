@@ -171,6 +171,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 		})
 	}
 
+	// DO NOT SUBMIT - This is to view the failing error messages. It should not be submitted!
+	imc.Status.MarkChannelServiceFailed("testForced", "This should not be submitted, it makes the IMC always fail to become ready.")
+
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
 	return newReconciledNormal(imc.Namespace, imc.Name)
