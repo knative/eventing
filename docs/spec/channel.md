@@ -182,9 +182,8 @@ Each channel CRD MUST contain an array of subscribers:
 Each channel CRD MUST contain an array of subscribers:
 [`spec.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/subscribable_types.go)
 
-Note: The array of subscribers MUST NOT be set directly on the generic
-Channel CR, but rather appended to the backing channel by the
-subscription itself.
+Note: The array of subscribers MUST NOT be set directly on the generic Channel
+CR, but rather appended to the backing channel by the subscription itself.
 
 #### Status Requirements
 
