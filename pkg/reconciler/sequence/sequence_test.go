@@ -32,6 +32,7 @@ import (
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1beta1/sequence"
 	"knative.dev/eventing/pkg/duck"
@@ -55,6 +56,14 @@ const (
 	sequenceName       = "test-sequence"
 	replyChannelName   = "reply-channel"
 	sequenceGeneration = 7
+)
+
+var (
+	subscriberGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Subscriber",
+	}
 )
 
 func init() {
@@ -106,6 +115,27 @@ func createDestination(stepNumber int) duckv1.Destination {
 	uri.Path = fmt.Sprintf("%d", stepNumber)
 	return duckv1.Destination{
 		URI: uri,
+	}
+}
+
+func apiVersion(gvk metav1.GroupVersionKind) string {
+	groupVersion := gvk.Version
+	if gvk.Group != "" {
+		groupVersion = gvk.Group + "/" + gvk.Version
+	}
+	return groupVersion
+}
+
+func createDelivery(gvk metav1.GroupVersionKind, name, namespace string) *eventingduckv1beta1.DeliverySpec {
+	return &eventingduckv1beta1.DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+				Namespace:  namespace,
+			},
+		},
 	}
 }
 
@@ -185,6 +215,78 @@ func TestAllCases(t *testing.T) {
 							Kind:       "Subscription",
 							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 							Namespace:  testNS,
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "singlestep-channelcreatefails",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			rt.NewSequence(sequenceName, testNS,
+				rt.WithInitSequenceConditions,
+				rt.WithSequenceChannelTemplateSpec(imc),
+				rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}))},
+		WantErr: true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "inmemorychannels"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile channel resource for step: 0 : inducing failure for create inmemorychannels"),
+		},
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rt.NewSequence(sequenceName, testNS,
+				rt.WithInitSequenceConditions,
+				rt.WithSequenceChannelTemplateSpec(imc),
+				rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}),
+				rt.WithSequenceChannelsNotReady("ChannelsNotReady", "Failed to reconcile channels, step: 0")),
+		}},
+	}, {
+		Name: "singlestep-subscriptioncreatefails",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			rt.NewSequence(sequenceName, testNS,
+				rt.WithInitSequenceConditions,
+				rt.WithSequenceChannelTemplateSpec(imc),
+				rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}))},
+		WantErr: true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "subscriptions"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile subscription resource for step: 0 : inducing failure for create subscriptions"),
+		},
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0,
+				rt.NewSequence(sequenceName, testNS,
+					rt.WithSequenceChannelTemplateSpec(imc),
+					rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rt.NewSequence(sequenceName, testNS,
+				rt.WithInitSequenceConditions,
+				rt.WithSequenceChannelTemplateSpec(imc),
+				rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}),
+				rt.WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				rt.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				rt.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: 0"),
+				rt.WithSequenceChannelStatuses([]v1beta1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionFalse,
+							Reason:  "NotAddressable",
+							Message: "Channel is not addressable",
 						},
 					},
 				})),
@@ -292,6 +394,127 @@ func TestAllCases(t *testing.T) {
 					{Destination: createDestination(0)},
 					{Destination: createDestination(1)},
 					{Destination: createDestination(2)}}),
+				rt.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				rt.WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				rt.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				rt.WithSequenceChannelStatuses([]v1beta1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionFalse,
+							Reason:  "NotAddressable",
+							Message: "Channel is not addressable",
+						},
+					},
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionFalse,
+							Reason:  "NotAddressable",
+							Message: "Channel is not addressable",
+						},
+					},
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 2),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionFalse,
+							Reason:  "NotAddressable",
+							Message: "Channel is not addressable",
+						},
+					},
+				}),
+				rt.WithSequenceSubscriptionStatuses([]v1beta1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+					},
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+					},
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1beta1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 2),
+							Namespace:  testNS,
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "threestepwithdeliveryontwo",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			rt.NewSequence(sequenceName, testNS,
+				rt.WithInitSequenceConditions,
+				rt.WithSequenceGeneration(sequenceGeneration),
+				rt.WithSequenceChannelTemplateSpec(imc),
+				rt.WithSequenceSteps([]v1beta1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1), Delivery: createDelivery(subscriberGVK, "dlc1", testNS)},
+					{Destination: createDestination(2), Delivery: createDelivery(subscriberGVK, "dlc2", testNS)}}))},
+		WantErr: false,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
+		},
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			createChannel(sequenceName, 1),
+			createChannel(sequenceName, 2),
+			resources.NewSubscription(0,
+				rt.NewSequence(sequenceName, testNS,
+					rt.WithSequenceChannelTemplateSpec(imc),
+					rt.WithSequenceSteps([]v1beta1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+						{Destination: createDestination(2)}}))),
+			resources.NewSubscription(1,
+				rt.NewSequence(sequenceName, testNS,
+					rt.WithSequenceChannelTemplateSpec(imc),
+					rt.WithSequenceSteps([]v1beta1.SequenceStep{
+						{Destination: createDestination(0)}, {Destination: createDestination(1), Delivery: createDelivery(subscriberGVK, "dlc1", testNS)}, {Destination: createDestination(2)}}))),
+			resources.NewSubscription(2,
+				rt.NewSequence(sequenceName, testNS,
+					rt.WithSequenceChannelTemplateSpec(imc),
+					rt.WithSequenceSteps([]v1beta1.SequenceStep{
+						{Destination: createDestination(0)}, {Destination: createDestination(1)}, {Destination: createDestination(2), Delivery: createDelivery(subscriberGVK, "dlc2", testNS)}})))},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rt.NewSequence(sequenceName, testNS,
+				rt.WithInitSequenceConditions,
+				rt.WithSequenceGeneration(sequenceGeneration),
+				rt.WithSequenceStatusObservedGeneration(sequenceGeneration),
+				rt.WithSequenceChannelTemplateSpec(imc),
+				rt.WithSequenceSteps([]v1beta1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1), Delivery: createDelivery(subscriberGVK, "dlc1", testNS)},
+					{Destination: createDestination(2), Delivery: createDelivery(subscriberGVK, "dlc2", testNS)}}),
 				rt.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				rt.WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				rt.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),

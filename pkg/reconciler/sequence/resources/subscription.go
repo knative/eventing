@@ -56,6 +56,7 @@ func NewSubscription(stepNumber int, s *v1beta1.Sequence) *messagingv1beta1.Subs
 				Ref: s.Spec.Steps[stepNumber].Destination.Ref,
 				URI: s.Spec.Steps[stepNumber].Destination.URI,
 			},
+			Delivery: s.Spec.Steps[stepNumber].Delivery,
 		},
 	}
 	// If it's not the last step, use the next channel as the reply to, if it's the very
