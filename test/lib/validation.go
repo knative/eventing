@@ -43,12 +43,12 @@ func InterestingHeaders() []string {
 
 // GetLog gets the logs from the given Pod in the namespace of this client. It will get the logs
 // from the first container, whichever it is.
-func (client *Client) GetLog(podName string) (string, error) {
-	containerName, err := client.getContainerName(podName, client.Namespace)
+func (c *Client) GetLog(podName string) (string, error) {
+	containerName, err := c.getContainerName(podName, c.Namespace)
 	if err != nil {
 		return "", err
 	}
-	logs, err := client.Kube.PodLogs(podName, containerName, client.Namespace)
+	logs, err := c.Kube.PodLogs(podName, containerName, c.Namespace)
 	if err != nil {
 		return "", err
 	}
@@ -57,9 +57,9 @@ func (client *Client) GetLog(podName string) (string, error) {
 
 // CheckLog waits until logs for the logger Pod satisfy the checker.
 // If the checker does not pass within timeout it returns error.
-func (client *Client) CheckLog(podName string, checker func(string) bool) error {
+func (c *Client) CheckLog(podName string, checker func(string) bool) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := client.GetLog(podName)
+		logs, err := c.GetLog(podName)
 		if err != nil {
 			return true, err
 		}
@@ -68,9 +68,9 @@ func (client *Client) CheckLog(podName string, checker func(string) bool) error 
 }
 
 // CheckLogEmpty waits the given amount of time and check the log is empty
-func (client *Client) CheckLogEmpty(podName string, timeout time.Duration) error {
+func (c *Client) CheckLogEmpty(podName string, timeout time.Duration) error {
 	time.Sleep(timeout)
-	logs, err := client.GetLog(podName)
+	logs, err := c.GetLog(podName)
 	if err != nil {
 		return err
 	}
@@ -115,8 +115,8 @@ func CheckerContainsAtLeast(content string, count int) func(string) bool {
 
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
-func (client *Client) FindAnyLogContents(podName string, contents []string) (bool, error) {
-	logs, err := client.GetLog(podName)
+func (c *Client) FindAnyLogContents(podName string, contents []string) (bool, error) {
+	logs, err := c.GetLog(podName)
 	if err != nil {
 		return false, err
 	}
@@ -156,8 +156,8 @@ func parseEventContentsFromPodLogs(logs string) (sets.String, error) {
 
 // getContainerName gets name of the first container of the given pod.
 // Now our logger pod only contains one single container, and is only used for receiving events and validation.
-func (client *Client) getContainerName(podName, namespace string) (string, error) {
-	pod, err := client.Kube.Kube.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+func (c *Client) getContainerName(podName, namespace string) (string, error) {
+	pod, err := c.Kube.Kube.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -166,10 +166,10 @@ func (client *Client) getContainerName(podName, namespace string) (string, error
 }
 
 // CheckConfigMapsExist will check if copy configmaps exist.
-func (client *Client) CheckConfigMapsExist(namespace string, names ...string) error {
+func (c *Client) CheckConfigMapsExist(namespace string, names ...string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		for _, name := range names {
-			_, err := client.Kube.Kube.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+			_, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 			if k8serrors.IsNotFound(err) {
 				return false, nil
 			} else if err != nil {
@@ -181,16 +181,16 @@ func (client *Client) CheckConfigMapsExist(namespace string, names ...string) er
 }
 
 // CheckConfigMapsEqual will check if configmaps have the same data as the original one.
-func (client *Client) CheckConfigMapsEqual(originalNamespace, cmp string, names ...string) error {
+func (c *Client) CheckConfigMapsEqual(originalNamespace, cmp string, names ...string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		for _, name := range names {
 			// Get original configmap
-			origianlCM, err := client.Kube.Kube.CoreV1().ConfigMaps(originalNamespace).Get(name, metav1.GetOptions{})
+			origianlCM, err := c.Kube.Kube.CoreV1().ConfigMaps(originalNamespace).Get(name, metav1.GetOptions{})
 			if err != nil {
 				return false, err
 			}
 			// Get copy configmap
-			copyCM, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Get(cmp+"-"+name, metav1.GetOptions{})
+			copyCM, err := c.Kube.Kube.CoreV1().ConfigMaps(c.Namespace).Get(cmp+"-"+name, metav1.GetOptions{})
 			if err != nil {
 				return false, err
 			}

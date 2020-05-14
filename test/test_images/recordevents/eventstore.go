@@ -86,7 +86,7 @@ func (es *eventStore) StoreEvent(event cloudevents.Event, httpHeaders map[string
 		}
 		evInfoBytes, err = json.Marshal(&evInfo)
 		if err != nil {
-			panic(fmt.Errorf("Unexpected marshal error (%v) (%+v)", err, evInfo))
+			panic(fmt.Errorf("unexpected marshal error (%v) (%+v)", err, evInfo))
 		}
 	}
 

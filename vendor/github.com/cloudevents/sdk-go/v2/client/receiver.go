@@ -72,7 +72,7 @@ func receiver(fn interface{}) (*receiverFn, error) {
 	return r, nil
 }
 
-func (r *receiverFn) invoke(ctx context.Context, e event.Event) (*event.Event, protocol.Result) {
+func (r *receiverFn) invoke(ctx context.Context, e *event.Event) (*event.Event, protocol.Result) {
 	args := make([]reflect.Value, 0, r.numIn)
 
 	if r.numIn > 0 {
@@ -80,7 +80,7 @@ func (r *receiverFn) invoke(ctx context.Context, e event.Event) (*event.Event, p
 			args = append(args, reflect.ValueOf(ctx))
 		}
 		if r.hasEventIn {
-			args = append(args, reflect.ValueOf(e))
+			args = append(args, reflect.ValueOf(*e))
 		}
 	}
 	v := r.fnValue.Call(args)

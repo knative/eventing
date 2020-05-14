@@ -24,7 +24,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable/fake"
+	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel/fake"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/injection/clients/dynamicclient/fake"

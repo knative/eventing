@@ -2,10 +2,10 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cecontext "github.com/cloudevents/sdk-go/v2/context"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 )
 
@@ -37,22 +37,32 @@ type receiveInvoker struct {
 }
 
 func (r *receiveInvoker) Invoke(ctx context.Context, m binding.Message, respFn protocol.ResponseFn) (err error) {
-	var isFinished bool
 	defer func() {
-		if !isFinished {
-			if err2 := m.Finish(err); err2 == nil {
-				err = err2
-			}
-		}
+		err = m.Finish(err)
 	}()
 
-	e, err := binding.ToEvent(ctx, m)
-	if err != nil {
-		return err
-	}
+	var respMsg binding.Message
+	var result protocol.Result
 
-	if e != nil && r.fn != nil {
-		resp, result := r.fn.invoke(ctx, *e)
+	e, eventErr := binding.ToEvent(ctx, m)
+	switch {
+	case eventErr != nil && r.fn.hasEventIn:
+		return respFn(ctx, nil, protocol.NewReceipt(false, "failed to convert Message to Event: %w", eventErr))
+	case r.fn != nil:
+		// Check if event is valid before invoking the receiver function
+		if e != nil {
+			if validationErr := e.Validate(); validationErr != nil {
+				return respFn(ctx, nil, protocol.NewReceipt(false, "validation error in incoming event: %w", validationErr))
+			}
+		}
+
+		// Let's invoke the receiver fn
+		var resp *event.Event
+		resp, result = r.fn.invoke(ctx, e)
+
+		if respFn == nil {
+			break
+		}
 
 		// Apply the defaulter chain to the outgoing event.
 		if resp != nil && len(r.eventDefaulterFns) > 0 {
@@ -60,29 +70,24 @@ func (r *receiveInvoker) Invoke(ctx context.Context, m binding.Message, respFn p
 				*resp = fn(ctx, *resp)
 			}
 			// Validate the event conforms to the CloudEvents Spec.
-			if verr := resp.Validate(); verr != nil {
-				cecontext.LoggerFrom(ctx).Error(fmt.Errorf("cloudevent validation failed on response event: %v, %w", verr, err))
+			if vErr := resp.Validate(); vErr != nil {
+				cecontext.LoggerFrom(ctx).Errorf("cloudevent validation failed on response event: %w", vErr)
 			}
 		}
 
-		// protocol can manual ack by the result
-		if respFn == nil {
-			if !protocol.IsACK(result) {
-				err = m.Finish(result)
-				isFinished = true
-			}
-			return
-		}
-
-		var rm binding.Message
+		// because binding.Message is an interface, casting a nil resp
+		// here would make future comparisons to nil false
 		if resp != nil {
-			rm = (*binding.EventMessage)(resp)
+			respMsg = (*binding.EventMessage)(resp)
 		}
-
-		return respFn(ctx, rm, result)
 	}
 
-	return nil
+	if respFn == nil {
+		// let the protocol ACK based on the result
+		return result
+	}
+
+	return respFn(ctx, respMsg, result)
 }
 
 func (r *receiveInvoker) IsReceiver() bool {

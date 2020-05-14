@@ -29,9 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/channel"
 	"knative.dev/eventing/pkg/duck"
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -226,6 +227,7 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddressV1Beta1(backingChannelHostname)),
 			NewInMemoryChannelV1Beta1(channelName, testNS,
 				WithInitInMemoryChannelConditionsV1Beta1,
+				WithInMemoryChannelDuckAnnotationV1Beta1,
 				WithInMemoryChannelDeploymentReadyV1Beta1(),
 				WithInMemoryChannelServiceReadyV1Beta1(),
 				WithInMemoryChannelEndpointsReadyV1Beta1(),
@@ -246,15 +248,47 @@ func TestReconcile(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 		},
+	}, {
+		Name: "Updating v1alpha1 imc subscribers statuses",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannelV1Beta1(channelName, testNS,
+				WithChannelTemplateV1Beta1(channelV1Alpha1CRD()),
+				WithInitChannelConditionsV1Beta1,
+				WithBackingChannelObjRefV1Beta1(backingChannelObjRefV1Alpha1()),
+				WithBackingChannelReadyV1Beta1,
+				WithChannelAddressV1Beta1(backingChannelHostname)),
+			NewInMemoryChannel(channelName, testNS,
+				WithInMemoryChannelDuckAnnotationV1Alpha1,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelSubscribers(subscribersV1Alpha1()),
+				WithInMemoryChannelStatusSubscribers(subscriberStatuses())),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannelV1Beta1(channelName, testNS,
+				WithChannelTemplateV1Beta1(channelV1Alpha1CRD()),
+				WithInitChannelConditionsV1Beta1,
+				WithBackingChannelObjRefV1Beta1(backingChannelObjRefV1Alpha1()),
+				WithBackingChannelReadyV1Beta1,
+				WithChannelAddressV1Beta1(backingChannelHostname),
+				WithChannelSubscriberStatusesV1Beta1(subscriberStatuses())),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
 	}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = channelable.WithDuck(ctx)
+		ctx = channelablecombined.WithDuck(ctx)
 		r := &Reconciler{
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetV1Beta1MessagingChannelLister(),
-			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTracker(ctx, channelablecombined.Get, func(types.NamespacedName) {}, 0),
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetV1Beta1MessagingChannelLister(),
@@ -272,8 +306,29 @@ func channelCRD() metav1.TypeMeta {
 	}
 }
 
+func channelV1Alpha1CRD() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "InMemoryChannel",
+	}
+}
+
 func subscribers() []eventingduckv1beta1.SubscriberSpec {
 	return []eventingduckv1beta1.SubscriberSpec{{
+		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: apis.HTTP("call1"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}, {
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    2,
+		SubscriberURI: apis.HTTP("call2"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}}
+}
+
+func subscribersV1Alpha1() []eventingduckv1alpha1.SubscriberSpec {
+	return []eventingduckv1alpha1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
@@ -334,6 +389,15 @@ func createChannelCRD(namespace, name string, ready bool) *unstructured.Unstruct
 func backingChannelObjRef() *duckv1.KReference {
 	return &duckv1.KReference{
 		APIVersion: "messaging.knative.dev/v1beta1",
+		Kind:       "InMemoryChannel",
+		Namespace:  testNS,
+		Name:       channelName,
+	}
+}
+
+func backingChannelObjRefV1Alpha1() *duckv1.KReference {
+	return &duckv1.KReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       channelName,

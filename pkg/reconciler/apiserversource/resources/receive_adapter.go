@@ -20,42 +20,40 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/system"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 )
 
 // ReceiveAdapterArgs are the arguments needed to create a ApiServer Receive Adapter.
 // Every field is required.
 type ReceiveAdapterArgs struct {
-	Image         string
-	Source        *v1alpha2.ApiServerSource
-	Labels        map[string]string
-	SinkURI       string
-	MetricsConfig string
-	LoggingConfig string
-	TracingConfig string
+	Image   string
+	Source  *v1alpha2.ApiServerSource
+	Labels  map[string]string
+	SinkURI string
+	Configs reconcilersource.ConfigAccessor
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
 // ApiServer Sources.
-func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*v1.Deployment, error) {
+func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 
 	env, err := makeEnv(args)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error generating env vars: %w", err)
 	}
 
-	return &v1.Deployment{
+	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
 			Name:      kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", args.Source.Name), string(args.Source.GetUID())),
@@ -64,7 +62,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*v1.Deployment, error) {
 				*kmeta.NewControllerRef(args.Source),
 			},
 		},
-		Spec: v1.DeploymentSpec{
+		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: args.Labels,
 			},
@@ -106,7 +104,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	for _, r := range args.Source.Spec.Resources {
 		gv, err := schema.ParseGroupVersion(r.APIVersion)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse APIVersion, %s", err)
+			return nil, fmt.Errorf("failed to parse APIVersion: %w", err)
 		}
 		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(r.Kind))
 
@@ -125,7 +123,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		config = string(b)
 	}
 
-	return []corev1.EnvVar{{
+	envs := []corev1.EnvVar{{
 		Name:  "K_SINK",
 		Value: args.SinkURI,
 	}, {
@@ -147,15 +145,6 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
-	}, {
-		Name:  "K_METRICS_CONFIG",
-		Value: args.MetricsConfig,
-	}, {
-		Name:  "K_LOGGING_CONFIG",
-		Value: args.LoggingConfig,
-	}, {
-		Name:  "K_TRACING_CONFIG",
-		Value: args.TracingConfig,
-	},
-	}, nil
+	}}
+	return append(envs, args.Configs.ToEnvVars()...), nil
 }
