@@ -84,7 +84,10 @@ func (d *DistributedTracingExtension) WriteTransformer() binding.TransformerFunc
 		if err != nil {
 			return nil
 		}
-		return writer.SetExtension(TraceStateExtension, d.TraceState)
+		if d.TraceState != "" {
+			return writer.SetExtension(TraceStateExtension, d.TraceState)
+		}
+		return nil
 	}
 }
 

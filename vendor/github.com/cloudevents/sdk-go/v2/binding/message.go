@@ -126,3 +126,16 @@ type MessageWrapper interface {
 	// Method to get the wrapped message
 	GetWrappedMessage() Message
 }
+
+func UnwrapMessage(message Message) Message {
+	m := message
+	for m != nil {
+		switch mt := m.(type) {
+		case MessageWrapper:
+			m = mt.GetWrappedMessage()
+		default:
+			return m
+		}
+	}
+	return m
+}
