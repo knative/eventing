@@ -31,6 +31,18 @@ const (
 	SubscribableAnnotationKey = "messaging.knative.dev/subscribable"
 )
 
+var (
+	channelv1alpha1 = metav1.TypeMeta{
+		Kind:       "Channel",
+		APIVersion: "messaging.knative.dev/v1alpha1",
+	}
+
+	channelv1beta1 = metav1.TypeMeta{
+		Kind:       "Channel",
+		APIVersion: "messaging.knative.dev/v1beta1",
+	}
+)
+
 func getChannelDuckTypeSupportVersion(channelName string, client *lib.Client, channel *metav1.TypeMeta) (string, error) {
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1beta1.Channelable{})

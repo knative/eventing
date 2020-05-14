@@ -43,12 +43,15 @@ func ChannelSpecTestHelperWithChannelTestRunner(
 		defer lib.TearDown(client)
 
 		t.Run("Channel spec allows subscribers", func(t *testing.T) {
-			channelSpecAllowsRequiredFields(st, client, channel)
+			if channel == channelv1alpha1 || channel == channelv1beta1 {
+				t.Skip("Not running spec.subscribers array test for generic Channel")
+			}
+			channelSpecAllowsSubscribersArray(st, client, channel)
 		})
 	})
 }
 
-func channelSpecAllowsRequiredFields(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
+func channelSpecAllowsSubscribersArray(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
 	st.Logf("Running channel spec conformance test with channel %q", channel)
 
 	dtsv, err := getChannelDuckTypeSupportVersionFromTypeMeta(client, channel)
@@ -56,7 +59,7 @@ func channelSpecAllowsRequiredFields(st *testing.T, client *lib.Client, channel 
 		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
 
-	channelName := names.SimpleNameGenerator.GenerateName("channel-spec-req-fields-")
+	channelName := names.SimpleNameGenerator.GenerateName("channel-spec-subscribers-")
 	client.T.Logf("Creating channel %+v-%s", channel, channelName)
 	client.CreateChannelOrFail(channelName, &channel)
 	client.WaitForResourceReadyOrFail(channelName, &channel)
