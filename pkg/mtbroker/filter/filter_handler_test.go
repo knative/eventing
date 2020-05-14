@@ -26,9 +26,12 @@ import (
 	"testing"
 	"time"
 
+	cloudeventsv2 "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -38,8 +41,7 @@ import (
 
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	broker "knative.dev/eventing/pkg/mtbroker"
-	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
-	"knative.dev/eventing/pkg/utils"
+	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
 )
 
@@ -49,7 +51,7 @@ const (
 	triggerUID     = "test-trigger-uid"
 	eventType      = `com.example.someevent`
 	eventSource    = `/mycontext`
-	extensionName  = `my-extension`
+	extensionName  = `myextension`
 	extensionValue = `my-extension-value`
 
 	// Because it's a URL we're comparing to, without protocol it looks like this.
@@ -57,7 +59,6 @@ const (
 )
 
 var (
-	host      = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
 	validPath = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
 )
 
@@ -69,11 +70,11 @@ func init() {
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers                    []*eventingv1beta1.Trigger
-		tctx                        *cloudevents.HTTPTransportContext
-		event                       *cloudevents.Event
+		request                     *http.Request
+		event                       *cloudeventsv2.Event
 		requestFails                bool
 		failureStatus               int
-		returnedEvent               *cloudevents.Event
+		returnedEvent               *cloudeventsv2.Event
 		expectNewToFail             bool
 		expectedErr                 bool
 		expectedDispatch            bool
@@ -84,43 +85,19 @@ func TestReceiver(t *testing.T) {
 		expectedEventProcessingTime bool
 	}{
 		"Not POST": {
-			tctx: &cloudevents.HTTPTransportContext{
-				Method: "GET",
-				Host:   host,
-				URI:    validPath,
-			},
+			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
 		"Path too short": {
-			tctx: &cloudevents.HTTPTransportContext{
-				Method: "POST",
-				Host:   host,
-				URI:    "/test-namespace/test-trigger",
-			},
+			request:     httptest.NewRequest(http.MethodPost, "/test-namespace/test-trigger", nil),
 			expectedErr: true,
 		},
 		"Path too long": {
-			tctx: &cloudevents.HTTPTransportContext{
-				Method: "POST",
-				Host:   host,
-				URI:    "/triggers/test-namespace/test-trigger/extra",
-			},
+			request:     httptest.NewRequest(http.MethodPost, "/triggers/test-namespace/test-trigger/extra", nil),
 			expectedErr: true,
 		},
 		"Path without prefix": {
-			tctx: &cloudevents.HTTPTransportContext{
-				Method: "POST",
-				Host:   host,
-				URI:    "/something/test-namespace/test-trigger",
-			},
-			expectedErr: true,
-		},
-		"Bad host": {
-			tctx: &cloudevents.HTTPTransportContext{
-				Method: "POST",
-				Host:   "badhost-cant-be-parsed-as-a-trigger-name-plus-namespace",
-				URI:    validPath,
-			},
+			request:     httptest.NewRequest(http.MethodPost, "/something/test-namespace/test-trigger", nil),
 			expectedErr: true,
 		},
 		"Trigger.Get fails": {
@@ -259,12 +236,7 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
-			tctx: &cloudevents.HTTPTransportContext{
-				Method:     "POST",
-				Host:       host,
-				URI:        validPath,
-				StatusCode: http.StatusTooManyRequests,
-			},
+			event:                     makeEvent(),
 			requestFails:              true,
 			failureStatus:             http.StatusTooManyRequests,
 			expectedDispatch:          true,
@@ -277,26 +249,26 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
-			tctx: &cloudevents.HTTPTransportContext{
-				Method: "POST",
-				Host:   host,
-				URI:    validPath,
-				Header: http.Header{
-					// foo won't pass filtering.
-					"foo": []string{"bar"},
-					// Traceparent will not pass filtering.
-					"Traceparent": []string{"0"},
-					// Knative-Foo will pass as a prefix match.
-					"Knative-Foo": []string{"baz", "qux"},
-					// X-Request-Id will pass as an exact header match.
-					"X-Request-Id": []string{"123"},
-				},
-			},
+			request: func() *http.Request {
+				request := httptest.NewRequest(http.MethodPost, validPath, nil)
+				_ = cehttp.WriteRequest(context.Background(), binding.ToMessage(makeEvent()), request)
+
+				// foo won't pass filtering.
+				request.Header.Set("foo", "bar")
+				// Traceparent will not pass filtering.
+				request.Header.Set("Traceparent", "0")
+				// Knative-Foo will pass as a prefix match.
+				request.Header.Set("Knative-Foo", "baz")
+				// X-Request-Id will pass as an exact header match.
+				request.Header.Set("X-Request-Id", "123")
+
+				return request
+			}(),
 			expectedHeaders: http.Header{
 				// X-Request-Id will pass as an exact header match.
 				"X-Request-Id": []string{"123"},
 				// Knative-Foo will pass as a prefix match.
-				"Knative-Foo": []string{"baz", "qux"},
+				"Knative-Foo": []string{"baz"},
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -315,7 +287,7 @@ func TestReceiver(t *testing.T) {
 				t:             t,
 			}
 			s := httptest.NewServer(&fh)
-			defer s.Client()
+			defer s.Close()
 
 			// Replace the SubscriberURI to point at our fake server.
 			correctURI := make([]runtime.Object, 0, len(tc.triggers))
@@ -334,7 +306,7 @@ func TestReceiver(t *testing.T) {
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
-				listers.GetTriggerLister(),
+				listers.GetV1Beta1TriggerLister(),
 				reporter,
 				8080)
 			if tc.expectNewToFail {
@@ -346,30 +318,21 @@ func TestReceiver(t *testing.T) {
 				t.Fatalf("Unable to create receiver: %v", err)
 			}
 
-			tctx := tc.tctx
-			if tctx == nil {
-				tctx = &cloudevents.HTTPTransportContext{
-					Method: http.MethodPost,
-					Host:   host,
-					URI:    validPath,
-				}
-			}
-			ctx := cehttp.WithTransportContext(context.Background(), *tctx)
-			resp := &cloudevents.EventResponse{}
 			event := tc.event
 			if event == nil {
 				event = makeEvent()
 			}
-			err = r.serveHTTP(ctx, *event, resp)
-
-			if tc.expectedErr && err == nil {
-				t.Errorf("Expected an error, received nil")
-			} else if !tc.expectedErr && err != nil {
-				t.Errorf("Expected no error, received %v", err)
+			if tc.request == nil {
+				tc.request = httptest.NewRequest(http.MethodPost, validPath, nil)
+				_ = cehttp.WriteRequest(context.Background(), binding.ToMessage(event), tc.request)
 			}
+			responseWriter := httptest.NewRecorder()
+			r.ServeHTTP(responseWriter, tc.request)
 
-			if tc.expectedStatus != 0 && tc.expectedStatus != resp.Status {
-				t.Errorf("Unexpected status. Expected %v. Actual %v.", tc.expectedStatus, resp.Status)
+			response := responseWriter.Result()
+
+			if tc.expectedStatus != 0 && tc.expectedStatus != response.StatusCode {
+				t.Errorf("Unexpected status. Expected %v. Actual %v.", tc.expectedStatus, response.StatusCode)
 			}
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
@@ -389,21 +352,36 @@ func TestReceiver(t *testing.T) {
 				}
 			}
 			// Compare the returned event.
+			message := cehttp.NewMessageFromHttpResponse(response)
+			event, err = binding.ToEvent(context.Background(), message)
 			if tc.returnedEvent == nil {
-				if resp.Event != nil {
-					t.Fatalf("Unexpected response event: %v", resp.Event)
+				if err == nil || event != nil {
+					t.Fatalf("Unexpected response event: %v", event)
 				}
 				return
-			} else if resp.Event == nil {
+			}
+			if err != nil || event == nil {
 				t.Fatalf("Expected response event, actually nil")
 			}
 
 			// The TTL will be added again.
 			expectedResponseEvent := addTTLToEvent(*tc.returnedEvent)
-			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), resp.Event.Context.AsV1()); diff != "" {
+
+			// cloudevents/sdk-go doesn't preserve the extension type, so get TTL and set it back again.
+			// https://github.com/cloudevents/sdk-go/blob/97abfeb3da0bed09e395bff2c5bcf35b6435cb5f/v2/types/value.go#L57
+			ttl, err := broker.GetTTL(event.Context)
+			if err != nil {
+				t.Error("failed to get TTL", err)
+			}
+			err = broker.SetTTLv2(event.Context, ttl)
+			if err != nil {
+				t.Error("failed to set TTL", err)
+			}
+
+			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), event.Context.AsV1()); diff != "" {
 				t.Errorf("Incorrect response event context (-want +got): %s", diff)
 			}
-			if diff := cmp.Diff(expectedResponseEvent.Data, resp.Event.Data); diff != "" {
+			if diff := cmp.Diff(expectedResponseEvent.Data(), event.Data()); diff != "" {
 				t.Errorf("Incorrect response event data (-want +got): %s", diff)
 			}
 		})
@@ -436,7 +414,7 @@ type fakeHandler struct {
 	failStatus      int
 	requestReceived bool
 	headers         http.Header
-	returnedEvent   *cloudevents.Event
+	returnedEvent   *cloudeventsv2.Event
 	t               *testing.T
 }
 
@@ -465,19 +443,8 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	c := &cehttp.CodecV1{}
-	m, err := c.Encode(context.Background(), *h.returnedEvent)
-	if err != nil {
-		h.t.Fatalf("Could not encode message: %v", err)
-	}
-	msg := m.(*cehttp.Message)
-	for k, vs := range msg.Header {
-		resp.Header().Del(k)
-		for _, v := range vs {
-			resp.Header().Set(k, v)
-		}
-	}
-	_, err = resp.Write(msg.Body)
+	message := binding.ToMessage(h.returnedEvent)
+	err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
 	if err != nil {
 		h.t.Fatalf("Unable to write body: %v", err)
 	}
@@ -534,55 +501,55 @@ func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
 	return t
 }
 
-func makeEventWithoutTTL() *cloudevents.Event {
-	return &cloudevents.Event{
-		Context: cloudevents.EventContextV02{
+func makeEventWithoutTTL() *cloudeventsv2.Event {
+	return &cloudeventsv2.Event{
+		Context: cloudeventsv2.EventContextV1{
 			Type: eventType,
-			Source: cloudevents.URLRef{
+			Source: cloudeventsv2.URIRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
 			},
-			ContentType: cloudevents.StringOfApplicationJSON(),
+			DataContentType: cloudeventsv2.StringOfApplicationJSON(),
 		}.AsV1(),
 	}
 }
 
-func makeEvent() *cloudevents.Event {
+func makeEvent() *cloudeventsv2.Event {
 	noTTL := makeEventWithoutTTL()
 	e := addTTLToEvent(*noTTL)
 	return &e
 }
 
-func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	broker.SetTTL(e.Context, 1)
+func addTTLToEvent(e cloudeventsv2.Event) cloudeventsv2.Event {
+	_ = broker.SetTTLv2(e.Context, 1)
 	return e
 }
 
-func makeDifferentEvent() *cloudevents.Event {
-	return &cloudevents.Event{
-		Context: cloudevents.EventContextV02{
+func makeDifferentEvent() *cloudeventsv2.Event {
+	return &cloudeventsv2.Event{
+		Context: cloudeventsv2.EventContextV1{
 			Type: "some-other-type",
-			Source: cloudevents.URLRef{
+			Source: cloudeventsv2.URIRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
 			},
-			ContentType: cloudevents.StringOfApplicationJSON(),
+			DataContentType: cloudevents.StringOfApplicationJSON(),
 		}.AsV1(),
 	}
 }
 
-func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
-	noTTL := &cloudevents.Event{
-		Context: cloudevents.EventContextV02{
+func makeEventWithExtension(extName, extValue string) *cloudeventsv2.Event {
+	noTTL := &cloudeventsv2.Event{
+		Context: cloudeventsv2.EventContextV1{
 			Type: eventType,
-			Source: cloudevents.URLRef{
+			Source: cloudeventsv2.URIRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
 			},
-			ContentType: cloudevents.StringOfApplicationJSON(),
+			DataContentType: cloudeventsv2.StringOfApplicationJSON(),
 			Extensions: map[string]interface{}{
 				extName: extValue,
 			},

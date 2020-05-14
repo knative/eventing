@@ -40,20 +40,13 @@ import (
 const (
 	// noDuration signals that the dispatch step hasn't started
 	noDuration = -1
-
-	livenessURI = "/healthz"
 )
-
-type sender interface {
-	NewCloudEventRequestWithTarget(ctx context.Context, target string) (*http.Request, error)
-	Send(req *http.Request) (*http.Response, error)
-}
 
 type Handler struct {
 	// Receiver receives incoming HTTP requests
 	Receiver *kncloudevents.HttpMessageReceiver
 	// Sender sends requests to the broker
-	Sender sender
+	Sender broker.Sender
 	// Defaults sets default values to incoming events
 	Defaulter client.EventDefaulter
 	// Reporter reports stats of status code and dispatch time
@@ -63,7 +56,7 @@ type Handler struct {
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, withLivenessCheck(h))
+	return h.Receiver.StartListen(ctx, broker.WithLivenessCheck(h))
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -116,7 +109,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		eventType: event.Type(),
 	}
 
-	statusCode, dispatchTime := h.receive(request.Context(), event, brokerNamespace, brokerName)
+	statusCode, dispatchTime := h.receive(request.Context(), request.Header, event, brokerNamespace, brokerName)
 	if dispatchTime > noDuration {
 		_ = h.Reporter.ReportEventDispatchTime(reporterArgs, statusCode, dispatchTime)
 	}
@@ -125,7 +118,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(statusCode)
 }
 
-func (h *Handler) receive(ctx context.Context, event *cloudevents.Event, brokerNamespace, brokerName string) (int, time.Duration) {
+func (h *Handler) receive(
+	ctx context.Context,
+	headers http.Header,
+	event *cloudevents.Event,
+	brokerNamespace,
+	brokerName string,
+) (int, time.Duration) {
+
 	// Setting the extension as a string as the CloudEvents sdk does not support non-string extensions.
 	event.SetExtension(broker.EventArrivalTime, cloudevents.Timestamp{Time: time.Now()})
 	if h.Defaulter != nil {
@@ -150,6 +150,7 @@ func (h *Handler) receive(ctx context.Context, event *cloudevents.Event, brokerN
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}
+	request.Header = utils.PassThroughHeaders(headers) // TODO add unit test
 	err = cehttp.WriteRequest(ctx, binding.ToMessage(event), request)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
@@ -163,14 +164,4 @@ func (h *Handler) receive(ctx context.Context, event *cloudevents.Event, brokerN
 	}
 
 	return resp.StatusCode, dispatchTime
-}
-
-func withLivenessCheck(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.RequestURI == livenessURI {
-			writer.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(writer, request)
-	})
 }

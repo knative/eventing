@@ -48,7 +48,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		uri        string
 		body       io.Reader
 		statusCode int
-		sender     sender
+		sender     broker.Sender
 		reporter   StatsReporter
 		defaulter  client.EventDefaulter
 	}{

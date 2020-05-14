@@ -57,7 +57,13 @@ func SetTTLv2(ctx cloudeventsv2.EventContext, ttl int32) error {
 }
 
 // DeleteTTL removes the TTL CE extension attribute
+// Deprecated: SetTTLv2
 func DeleteTTL(ctx cloudevents.EventContext) error {
+	return ctx.SetExtension(TTLAttribute, nil)
+}
+
+// DeleteTTL removes the TTL CE extension attribute
+func DeleteTTLv2(ctx cloudeventsv2.EventContext) error {
 	return ctx.SetExtension(TTLAttribute, nil)
 }
 
