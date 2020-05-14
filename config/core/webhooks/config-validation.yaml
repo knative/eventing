@@ -32,3 +32,4 @@ webhooks:
     matchExpressions:
     - key: eventing.knative.dev/release
       operator: Exists
+  timeoutSeconds: 2
