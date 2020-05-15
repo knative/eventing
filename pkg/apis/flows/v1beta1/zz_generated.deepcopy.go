@@ -69,6 +69,11 @@ func (in *ParallelBranch) DeepCopyInto(out *ParallelBranch) {
 		*out = new(v1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Delivery != nil {
+		in, out := &in.Delivery, &out.Delivery
+		*out = new(duckv1beta1.DeliverySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
