@@ -43,26 +43,39 @@ readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/mt-channel-broker.y
 # Channel Based Broker Controller.
 readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 
+# Should deploy a Knative Monitoring as well
+readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
+
 # Latest release. If user does not supply this as a flag, the latest
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(git describe --match "v[0-9]*" --abbrev=0)
 
 UNINSTALL_LIST=()
 
-# Setup the Knative environment for running tests. This installs
-# Everything from the config dir but then removes the Channel Based Broker.
-function knative_setup {
+# Setup the Knative environment for running tests.
+function knative_setup() {
   install_knative_eventing
 }
 
+# This installs everything from the config dir but then removes the Channel Based Broker.
 # TODO: This should only install the core.
+# Args:
+#  - $1 - if passed, it will be used as eventing config directory
 function install_knative_eventing() {
-  # Install the latest Knative/eventing in the current cluster.
-  echo ">> Starting Knative Eventing"
-  echo "Installing Knative Eventing"
-  ko apply --strict -f ${EVENTING_CONFIG} || return 1
+  local kne_config
+  kne_config="${1:-${EVENTING_CONFIG}}"
+  # Install Knative Eventing in the current cluster.
+  echo "Installing Knative Eventing from: ${kne_config}"
+  if [ -f "${kne_config}" ] || [ -d "${kne_config}" ]; then
+    ko apply --strict -f "${kne_config}" || return $?
+  else
+    kubectl apply -f "${kne_config}" || return $?
+    UNINSTALL_LIST+=( "${kne_config}" )
+  fi
 
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
+
+  if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
 
   # Ensure knative monitoring is installed only once
   knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
@@ -77,19 +90,20 @@ function install_knative_eventing() {
 }
 
 function install_head {
-  ko apply -f ${EVENTING_CONFIG} || return $?
-  wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
+  # Install Knative Eventing from HEAD in the current cluster.
+  echo ">> Installing Knative Eventing from HEAD"
+  install_knative_eventing || \
+    fail_test "Knative HEAD installation failed"
 }
 
-function install_latest_release {
-  header "Installing Knative latest public release"
+function install_latest_release() {
+  header ">> Installing Knative Eventing latest public release"
   local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
   local yaml="eventing.yaml"
 
   install_knative_eventing \
-    "${url}/${yaml}" \
-    || fail_test "Knative latest release installation failed"
-  wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
+    "${url}/${yaml}" || \
+    fail_test "Knative latest release installation failed"
 }
 
 function install_broker() {
@@ -144,12 +158,12 @@ function test_setup() {
   echo ">> Setting up logging..."
 
   # Install kail if needed.
-  if ! which kail > /dev/null; then
-    bash <( curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
+  if ! which kail >/dev/null; then
+    bash <(curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
   fi
 
   # Capture all logs.
-  kail > ${ARTIFACTS}/k8s.log.txt &
+  kail >${ARTIFACTS}/k8s.log.txt &
   local kail_pid=$!
   # Clean up kail so it doesn't interfere with job shutting down
   add_trap "kill $kail_pid || true" EXIT
@@ -200,7 +214,7 @@ function dump_extra_cluster_state() {
   done
 }
 
-function wait_for_file {
+function wait_for_file() {
   local file timeout waits
   file="$1"
   waits=300

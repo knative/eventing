@@ -82,7 +82,7 @@ func TestReadIfNotPresent(t *testing.T) {
 
 	// then
 	assert.Equal(t,
-		"http://localhost:22110/",
+		fmt.Sprintf("http://localhost:%d/", DefaultForwarderPort),
 		Instance.Sender.Address)
 	assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
 	assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)

@@ -26,7 +26,6 @@ source "$(dirname "$0")/e2e-common.sh"
 
 function knative_setup {
   install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
-  install_broker || fail_test 'Could not install Channel Based Broker'
 }
 
 function install_test_resources {
@@ -58,6 +57,7 @@ wait_for_file /tmp/prober-ready || fail_test
 header "Performing upgrade to HEAD"
 install_head || fail_test 'Installing HEAD version of eventing failed'
 install_channel_crds || fail_test 'Installing HEAD channel CRDs failed'
+install_mt_broker || fail_test 'Installing HEAD MT Broker failed'
 
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test

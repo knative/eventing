@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/test/lib"
+	watholaconfig "knative.dev/eventing/test/prober/wathola/config"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -77,7 +78,7 @@ func (p *prober) deployReceiverPod() {
 						Handler: corev1.Handler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path: healthEndpoint,
-								Port: intstr.FromInt(22111),
+								Port: intstr.FromInt(watholaconfig.DefaultReceiverPort),
 							},
 						},
 					},
@@ -108,7 +109,7 @@ func (p *prober) deployReceiverService() {
 					Port:     80,
 					TargetPort: intstr.IntOrString{
 						Type:   intstr.Int,
-						IntVal: 22111,
+						IntVal: watholaconfig.DefaultReceiverPort,
 					},
 				},
 			},
