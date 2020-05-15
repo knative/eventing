@@ -52,11 +52,11 @@ func ChannelSpecTestHelperWithChannelTestRunner(
 }
 
 func channelSpecAllowsSubscribersArray(st *testing.T, client *lib.Client, channel metav1.TypeMeta, options ...lib.SetupClientOption) {
-	st.Logf("Running channel spec conformance test with channel %q", channel)
+	st.Logf("Running channel spec conformance test with channel %s", channel)
 
 	dtsv, err := getChannelDuckTypeSupportVersionFromTypeMeta(client, channel)
 	if err != nil {
-		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
+		st.Fatalf("Unable to check Channel duck type support version for %s: %s", channel, err)
 	}
 
 	channelName := names.SimpleNameGenerator.GenerateName("channel-spec-subscribers-")
@@ -73,7 +73,7 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *lib.Client, channe
 		// treat missing annotation value as v1alpha1, as written in the spec
 		channelable, err := getChannelAsV1Alpha1Channelable(channelName, client, channel)
 		if err != nil {
-			st.Fatalf("Unable to get channel %q to v1alpha1 duck type: %q", channel, err)
+			st.Fatalf("Unable to get channel %s to v1alpha1 duck type: %s", channel, err)
 		}
 
 		// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribable.subscribers
@@ -91,7 +91,7 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *lib.Client, channe
 	} else if dtsv == "v1beta1" {
 		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
 		if err != nil {
-			st.Fatalf("Unable to get channel %q to v1beta1 duck type: %q", channel, err)
+			st.Fatalf("Unable to get channel %s to v1beta1 duck type: %s", channel, err)
 		}
 
 		// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribers
@@ -104,22 +104,22 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *lib.Client, channe
 
 		ch = channelable
 	} else {
-		st.Fatalf("Channel doesn't support v1alpha1 nor v1beta1 Channel duck types: %q", channel)
+		st.Fatalf("Channel doesn't support v1alpha1 nor v1beta1 Channel duck types: %s", channel)
 	}
 
 	raw, err := json.Marshal(ch)
 	if err != nil {
-		st.Fatalf("Error marshaling %q: %q", channel, err)
+		st.Fatalf("Error marshaling %s: %s", channel, err)
 	}
 	u := &unstructured.Unstructured{}
 	err = json.Unmarshal(raw, u)
 	if err != nil {
-		st.Fatalf("Error unmarshaling %q: %q", u, err)
+		st.Fatalf("Error unmarshaling %s: %s", u, err)
 	}
 
 	_, err = client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(u, metav1.UpdateOptions{})
 	if err != nil {
-		st.Fatalf("Error updating %q with subscribers in spec: %q", channel, err)
+		st.Fatalf("Error updating %s with subscribers in spec: %s", channel, err)
 	}
 }
 
