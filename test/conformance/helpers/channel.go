@@ -25,10 +25,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 const (
 	SubscribableAnnotationKey = "messaging.knative.dev/subscribable"
+)
+
+var (
+	channelv1alpha1GVK = (&messagingv1alpha1.Channel{}).GetGroupVersionKind()
+	channelv1beta1GVK  = (&messagingv1beta1.Channel{}).GetGroupVersionKind()
+
+	channelv1alpha1 = metav1.TypeMeta{
+		Kind:       channelv1alpha1GVK.Kind,
+		APIVersion: channelv1alpha1GVK.GroupVersion().String(),
+	}
+
+	channelv1beta1 = metav1.TypeMeta{
+		Kind:       channelv1beta1GVK.Kind,
+		APIVersion: channelv1beta1GVK.GroupVersion().String(),
+	}
 )
 
 func getChannelDuckTypeSupportVersion(channelName string, client *lib.Client, channel *metav1.TypeMeta) (string, error) {
