@@ -11,5 +11,5 @@ fi
 echo "Output will be at $OUTPUT_FILE"
 
 go clean
-go test -bench=. -benchmem -run="^$" -v ./...   >> "$OUTPUT_FILE" 2>&1 || exit
+go test -bench=. -benchmem -run="^$" -v ./...   >> "$OUTPUT_FILE" || exit
 
