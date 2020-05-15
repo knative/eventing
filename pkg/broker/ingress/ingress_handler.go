@@ -32,10 +32,7 @@ import (
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
-)
-
-var (
-	shutdownTimeout = 1 * time.Minute
+	"knative.dev/pkg/network"
 )
 
 type Handler struct {
@@ -72,7 +69,7 @@ func (h *Handler) Start(ctx context.Context) error {
 	select {
 	case err := <-errCh:
 		return err
-	case <-time.After(shutdownTimeout):
+	case <-time.After(network.DefaultDrainTimeout):
 		return errors.New("timeout shutting down ceClient")
 	}
 }

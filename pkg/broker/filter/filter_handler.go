@@ -36,11 +36,10 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/network"
 )
 
 const (
-	writeTimeout = 15 * time.Minute
-
 	passFilter FilterResult = "pass"
 	failFilter FilterResult = "fail"
 	noFilter   FilterResult = "no_filter"
@@ -167,7 +166,7 @@ func (r *Handler) Start(ctx context.Context) error {
 	select {
 	case err := <-errCh:
 		return err
-	case <-time.After(writeTimeout):
+	case <-time.After(network.DefaultDrainTimeout):
 		return errors.New("timeout shutting down ceClient")
 	}
 }
