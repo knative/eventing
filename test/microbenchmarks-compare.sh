@@ -11,6 +11,8 @@ go get golang.org/x/perf/cmd/benchstat
 REVISION="$1"
 OUTPUT_DIR=${ARTIFACTS:-$(mktemp -d)}
 
+echo "Outputs will be at $OUTPUT_DIR"
+
 ./microbenchmarks-run.sh "$OUTPUT_DIR/new.txt"
 
 git checkout "$REVISION"
