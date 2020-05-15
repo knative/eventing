@@ -13,10 +13,10 @@ OUTPUT_DIR=${ARTIFACTS:-$(mktemp -d)}
 
 echo "Outputs will be at $OUTPUT_DIR"
 
-./microbenchmarks-run.sh "$OUTPUT_DIR/new.txt"
+$(dirname $0)/microbenchmarks-run.sh "$OUTPUT_DIR/new.txt"
 
 git checkout "$REVISION"
 
-./microbenchmarks-run.sh "$OUTPUT_DIR/old.txt"
+$(dirname $0)/microbenchmarks-run.sh "$OUTPUT_DIR/old.txt"
 
-benchstat -html "$OUTPUT_DIR/old.txt" "$OUTPUT_DIR/new.txt" > "OUTPUT_DIR/results.html"
+benchstat -html "$OUTPUT_DIR/old.txt" "$OUTPUT_DIR/new.txt" >> "$OUTPUT_DIR/results.html"
