@@ -6,7 +6,7 @@ if [ "$1" == "" ] || [ $# -gt 1 ]; then
     exit 1
 fi
 
-go get golang.org/x/perf/cmd/benchstat
+GO111MODULE=off go get golang.org/x/perf/cmd/benchstat
 
 REVISION="$1"
 OUTPUT_DIR=${ARTIFACTS:-$(mktemp -d)}
