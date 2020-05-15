@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
@@ -57,6 +58,14 @@ const (
 	parallelName       = "test-parallel"
 	replyChannelName   = "reply-channel"
 	parallelGeneration = 79
+)
+
+var (
+	subscriberGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Subscriber",
+	}
 )
 
 func init() {
@@ -174,6 +183,45 @@ func TestAllBranches(t *testing.T) {
 					rt.WithInitFlowsParallelConditions,
 					rt.WithFlowsParallelChannelTemplateSpec(imc),
 					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					rt.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					rt.WithFlowsParallelBranchStatuses([]v1beta1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		}, {
+			Name: "single branch, with filter, with delivery",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0), Delivery: createDelivery(subscriberGVK, "dlc", testNS)},
+					}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				resources.NewFilterSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, rt.NewFlowsParallel(parallelName, testNS, rt.WithFlowsParallelChannelTemplateSpec(imc), rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0), Delivery: createDelivery(subscriberGVK, "dlc", testNS)},
+				}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rt.NewFlowsParallel(parallelName, testNS,
+					rt.WithInitFlowsParallelConditions,
+					rt.WithFlowsParallelChannelTemplateSpec(imc),
+					rt.WithFlowsParallelBranches([]v1beta1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0), Delivery: createDelivery(subscriberGVK, "dlc", testNS)}}),
 					rt.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					rt.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					rt.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -597,5 +645,26 @@ func createFilter(caseNumber int) *duckv1.Destination {
 	uri := apis.HTTP(fmt.Sprintf("example.com/filter-%d", caseNumber))
 	return &duckv1.Destination{
 		URI: uri,
+	}
+}
+
+func apiVersion(gvk metav1.GroupVersionKind) string {
+	groupVersion := gvk.Version
+	if gvk.Group != "" {
+		groupVersion = gvk.Group + "/" + gvk.Version
+	}
+	return groupVersion
+}
+
+func createDelivery(gvk metav1.GroupVersionKind, name, namespace string) *eventingduckv1beta1.DeliverySpec {
+	return &eventingduckv1beta1.DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{
+			Ref: &duckv1.KReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+				Namespace:  namespace,
+			},
+		},
 	}
 }
