@@ -902,7 +902,7 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/pkg v0.0.0-20200515002500-16d7b963416f
+# knative.dev/pkg v0.0.0-20200515175802-f6cfa4c47cda
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
 knative.dev/pkg/apis/duck/v1

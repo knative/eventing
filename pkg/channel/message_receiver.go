@@ -30,15 +30,12 @@ import (
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/network"
 )
 
 var defaultTransformers = []binding.Transformer{
 	transformer.AddTimeNow,
 }
-
-var (
-	shutdownTimeout = 1 * time.Minute
-)
 
 // UnknownChannelError represents the error when an event is received by a channel dispatcher for a
 // channel that does not exist.
@@ -135,7 +132,7 @@ func (r *MessageReceiver) Start(ctx context.Context) error {
 	select {
 	case err := <-errCh:
 		return err
-	case <-time.After(shutdownTimeout):
+	case <-time.After(network.DefaultDrainTimeout):
 		return errors.New("timeout shutting down http bindings receiver")
 	}
 }
