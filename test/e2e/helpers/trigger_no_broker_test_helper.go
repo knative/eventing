@@ -32,10 +32,9 @@ const (
 	brokerName = "notdefaultbroker"
 )
 
-// If shouldLabelNamespace is set to true this test annotates the testing namespace so that a default broker is created.
-// It then binds many triggers with different filtering patterns to the broker created by brokerCreator, and sends
-// different events to the broker's address.
-// Finally, it verifies that only the appropriate events are routed to the subscribers.
+// TestTriggerNoBroker will create a Trigger with a non-existent broker, then it will ensure
+// the Status is correctly reflected as failed with BrokerDoesNotExist. Then it will create
+// the broker and ensure that Trigger / Broker will get to Ready state.
 func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreator) {
 	client := lib.Setup(t, true)
 	defer lib.TearDown(client)
