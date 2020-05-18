@@ -53,6 +53,14 @@ var _ triggerreconciler.Interface = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reconciler.Event {
 	_, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil && apierrs.IsNotFound(err) {
+		// https://github.com/knative/eventing/issues/2996
+		// Ideally we'd default the Status of the Trigger during creation but we currently
+		// can't, so watch for Triggers that do not have Broker for them and set their status.
+		// This only addresses one part of the problem (missing the Broker outright, but
+		// not the problem where the broker is misconfigured (wrong BrokerClass)), and hence
+		// it still would not get reconciled.
+		t.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist or there is no matching BrokerClass for it", t.Spec.Broker)
+
 		_, needDefaultBroker := t.GetAnnotations()[v1beta1.InjectionAnnotation]
 		if t.Spec.Broker == "default" && needDefaultBroker {
 			if e := r.labelNamespace(ctx, t); e != nil {

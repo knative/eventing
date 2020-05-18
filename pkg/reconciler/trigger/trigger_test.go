@@ -82,6 +82,12 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
 			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist or there is no matching BrokerClass for it`)),
+			}},
 			WantErr: false,
 		}, {
 			Name: "Default broker not found, with injection annotation enabled",
@@ -96,6 +102,14 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithNamespaceLabeled(map[string]string{})),
 			},
 			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "default" does not exist or there is no matching BrokerClass for it`)),
+			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNamespace(testNS,
 					reconciletesting.WithNamespaceLabeled(map[string]string{v1beta1.InjectionAnnotation: injectionAnnotation})),
@@ -120,6 +134,14 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "namespace \"test-namespace\" not found"),
 			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "default" does not exist or there is no matching BrokerClass for it`)),
+			}},
 		}, {
 			Name: "Default broker not found, with injection annotation enabled, namespace label fail",
 			Key:  triggerKey,
@@ -142,6 +164,45 @@ func TestAllCases(t *testing.T) {
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNamespace(testNS,
 					reconciletesting.WithNamespaceLabeled(map[string]string{v1beta1.InjectionAnnotation: injectionAnnotation})),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "default" does not exist or there is no matching BrokerClass for it`)),
+			}},
+		}, {
+			Name: "Default broker not found, with injection annotation enabled, trigger status update fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation)),
+				reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{})),
+			},
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "triggers"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "UpdateFailed", "Failed to update status for \"test-trigger\": inducing failure for update triggers"),
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{v1beta1.InjectionAnnotation: injectionAnnotation})),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "default" does not exist or there is no matching BrokerClass for it`)),
 			}},
 		}, {
 			Name: "Default broker found, with injection annotation enabled",
