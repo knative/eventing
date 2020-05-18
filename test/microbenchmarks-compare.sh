@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ "$1" == "" ] || [ $# -gt 1 ]; then
     echo "Error: Expecting an argument" >&2
