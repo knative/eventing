@@ -97,8 +97,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, s, channelObjRef)
 		if err != nil {
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", s.Namespace, ingressChannelName), zap.Error(err))
-			return err
-
+			s.Status.MarkChannelsNotReady("ChannelsNotReady", "Failed to reconcile channels, step: %d", i)
+			return fmt.Errorf("failed to reconcile channel resource for step: %d : %s", i, err)
 		}
 		channels = append(channels, channelable)
 		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", s.Namespace, ingressChannelName, channelable))
@@ -109,10 +109,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 	for i := 0; i < len(s.Spec.Steps); i++ {
 		sub, err := r.reconcileSubscription(ctx, i, s)
 		if err != nil {
-			return fmt.Errorf("failed to reconcile Subscription Object for step: %d : %s", i, err)
+			s.Status.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: %d", i)
+			return fmt.Errorf("failed to reconcile subscription resource for step: %d : %s", i, err)
 		}
 		subs = append(subs, sub)
-		logging.FromContext(ctx).Debug(fmt.Sprintf("Reconciled Subscription Object for step: %d: %+v", i, sub))
+		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Subscription Object for step: %d: %+v", i, sub))
 	}
 	s.Status.PropagateSubscriptionStatuses(subs)
 
@@ -170,7 +171,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1b
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequence's subscription failed: %v", err)
-			return nil, fmt.Errorf("failed to create Subscription Object for step: %d : %s", step, err)
+			return nil, err
 		}
 		return newSub, nil
 	} else if err != nil {
