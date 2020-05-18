@@ -63,7 +63,7 @@ func AwaitForAll(log *zap.SugaredLogger) error {
 
 // WaitForReadiness will wait until readiness endpoint reports OK
 func WaitForReadiness(port int) error {
-	return wait.Poll(25 * time.Millisecond, 5 * time.Minute, func() (done bool, err error) {
+	return wait.Poll(25*time.Millisecond, 5*time.Minute, func() (done bool, err error) {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", port))
 		if err != nil {
 			return false, err

@@ -18,7 +18,7 @@ package receiver
 import (
 	"fmt"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
 	"knative.dev/eventing/test/prober/wathola/config"
@@ -39,13 +39,12 @@ func TestReceiverReceive(t *testing.T) {
 	port := freeport.GetPort()
 	config.Instance.Receiver.Port = port
 	go instance.Receive()
-	time.Sleep(time.Second)
 	cancel := <-Canceling
 	defer cancel()
 
 	// when
-	sendEvent(e, port)
-	sendEvent(f, port)
+	sendEvent(t, e, port)
+	sendEvent(t, f, port)
 
 	// then
 	rr := instance.(*receiver)
@@ -59,7 +58,8 @@ func TestMain(m *testing.M) {
 	os.Exit(exitcode)
 }
 
-func sendEvent(e cloudevents.Event, port int) {
+func sendEvent(t *testing.T, e cloudevents.Event, port int) {
 	url := fmt.Sprintf("http://localhost:%v/", port)
-	sender.SendEvent(e, url)
+	err := sender.SendEvent(e, url)
+	assert.NoError(t, err)
 }

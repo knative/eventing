@@ -20,8 +20,8 @@ import (
 	nethttp "net/http"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cloudeventshttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/wavesoftware/go-ensure"
 	"knative.dev/eventing/test/prober/wathola/config"
 )
@@ -49,7 +49,7 @@ func Receive(
 		opt := cloudevents.WithMiddleware(m)
 		opts = append(opts, opt)
 	}
-	http, err := cloudevents.NewHTTPTransport(opts...)
+	http, err := cloudevents.NewHTTP(opts...)
 	if err != nil {
 		log.Fatalf("failed to create http transport, %v", err)
 	}

@@ -5,4 +5,4 @@ metadata:
 spec:
   containers:
     - name: wathola-sender
-      image: knative.dev/eventing/test/test_images/wathola-sender
+      image: ko://knative.dev/eventing/test/test_images/wathola-sender

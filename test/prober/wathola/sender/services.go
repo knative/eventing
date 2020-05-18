@@ -19,7 +19,7 @@ import (
 	"context"
 	"fmt"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/wavesoftware/go-ensure"
 	"knative.dev/eventing/test/prober/wathola/config"
 	"knative.dev/eventing/test/prober/wathola/event"
@@ -76,24 +76,28 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 	e.SetSource(fmt.Sprintf("knative://%s/wathola/sender", host))
 	e.SetID(NewEventID())
 	e.SetTime(time.Now())
-	err = e.SetData(data)
+	err = e.SetData(cloudevents.ApplicationJSON, data)
 	ensure.NoError(err)
-	ensure.NoError(e.Validate())
+	errs := e.Validate()
+	if errs != nil {
+		ensure.NoError(errs)
+	}
 	return e
 }
 
 // SendEvent will send cloud event to given url
 func SendEvent(e cloudevents.Event, url string) error {
-	ht, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithTarget(url),
-		cloudevents.WithEncoding(cloudevents.HTTPBinaryV02),
-	)
-	ensure.NoError(err)
-	c, err := cloudevents.NewClient(ht)
-	ensure.NoError(err)
-	ctx := context.Background()
-	_, _, err = c.Send(ctx, e)
-	return err
+	c, err := cloudevents.NewDefaultClient()
+	if err != nil {
+		return err
+	}
+	ctx := cloudevents.ContextWithTarget(context.Background(), url)
+
+	result := c.Send(ctx, e)
+	if cloudevents.IsACK(result) {
+		return nil
+	}
+	return result
 }
 
 func (s *sender) sendStep() error {
