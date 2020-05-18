@@ -16,10 +16,14 @@
 package lib
 
 import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // WaitFor will register a wait routine to be resolved later
@@ -55,6 +59,24 @@ func AwaitForAll(log *zap.SugaredLogger) error {
 		return err
 	}
 	return nil
+}
+
+// WaitForReadiness will wait until readiness endpoint reports OK
+func WaitForReadiness(port int) error {
+	return wait.Poll(25 * time.Millisecond, 5 * time.Minute, func() (done bool, err error) {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", port))
+		if err != nil {
+			return false, err
+		}
+		defer func() {
+			_ = resp.Body.Close()
+		}()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return false, err
+		}
+		return resp.StatusCode == 200 && string(body) == "OK", nil
+	})
 }
 
 type AwaitRoutine func() error

@@ -29,7 +29,7 @@ import (
 var (
 	log                = config.Log
 	lastProgressReport = time.Now()
-	Starting           = make(chan context.CancelFunc)
+	Canceling          = make(chan context.CancelFunc)
 )
 
 // New creates new forwarder
@@ -43,7 +43,7 @@ func New() Forwarder {
 
 func (f *forwarder) Forward() {
 	port := config.Instance.Forwarder.Port
-	client.Receive(port, Starting, f.forwardEvent)
+	client.Receive(port, Canceling, f.forwardEvent)
 }
 
 func (f *forwarder) forwardEvent(e cloudevents.Event) {

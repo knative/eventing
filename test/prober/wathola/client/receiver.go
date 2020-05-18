@@ -34,10 +34,10 @@ type ReceiveEvent func(e cloudevents.Event)
 // Receive events and push then to passed fn
 func Receive(
 	port int,
-	starting chan context.CancelFunc,
+	canceling chan context.CancelFunc,
 	receiveEvent ReceiveEvent,
-	middlewares ...cloudeventshttp.Middleware) {
-
+	middlewares ...cloudeventshttp.Middleware,
+) {
 	portOpt := cloudevents.WithPort(port)
 	opts := make([]cloudeventshttp.Option, 0)
 	opts = append(opts, portOpt)
@@ -57,13 +57,17 @@ func Receive(
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}
-	log.Infof("listening for events on port %v", port)
+	log.Infof("Listening for events on port %v", port)
 	ctx, cancel := context.WithCancel(context.Background())
-	starting <- func() {
-		log.Infof("stopping event receiver on port %v", port)
+	cancelFunc := func() {
+		log.Infof("Stopping event receiver on port %v", port)
 		cancel()
 	}
-	close(starting)
+	// https://gobyexample.com/non-blocking-channel-operations
+	select {
+	case canceling <- cancelFunc:
+	default:
+	}
 	err = c.StartReceiver(ctx, receiveEvent)
 	if err != nil {
 		log.Fatal(err)

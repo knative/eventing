@@ -17,9 +17,10 @@ package main
 
 import (
 	"testing"
-	"time"
 
 	"github.com/phayes/freeport"
+	"go.uber.org/zap/zapcore"
+	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/prober/wathola/config"
 	"knative.dev/eventing/test/prober/wathola/receiver"
 
@@ -27,10 +28,14 @@ import (
 )
 
 func TestReceiverMain(t *testing.T) {
-	config.Instance.Receiver.Port = freeport.GetPort()
+	port := freeport.GetPort()
+	config.Instance.LogLevel = zapcore.DebugLevel
+	config.Instance.Receiver.Port = port
 	go main()
-	cancel := <-receiver.Starting
-	time.Sleep(100 * time.Millisecond)
+	cancel := <-receiver.Canceling
+	err := lib.WaitForReadiness(port)
+	assert.NoError(t, err)
 	assert.NotNil(t, instance)
+
 	cancel()
 }

@@ -17,19 +17,23 @@ package main
 
 import (
 	"testing"
-	"time"
 
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap/zapcore"
+	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/prober/wathola/config"
 	"knative.dev/eventing/test/prober/wathola/forwarder"
 )
 
 func TestForwarderMain(t *testing.T) {
-	config.Instance.Forwarder.Port = freeport.GetPort()
+	port := freeport.GetPort()
+	config.Instance.LogLevel = zapcore.DebugLevel
+	config.Instance.Forwarder.Port = port
 	go main()
-	cancel := <-forwarder.Starting
-	time.Sleep(100 * time.Millisecond)
+	cancel := <-forwarder.Canceling
+	err := lib.WaitForReadiness(port)
+	assert.NoError(t, err)
 	assert.NotNil(t, instance)
 	cancel()
 }

@@ -30,8 +30,8 @@ import (
 )
 
 var (
-	log      = config.Log
-	Starting = make(chan context.CancelFunc)
+	log       = config.Log
+	Canceling = make(chan context.CancelFunc)
 )
 
 // New creates new Receiver
@@ -46,7 +46,7 @@ func New() Receiver {
 
 func (r receiver) Receive() {
 	port := config.Instance.Receiver.Port
-	client.Receive(port, Starting, r.receiveEvent, r.reportMiddleware)
+	client.Receive(port, Canceling, r.receiveEvent, r.reportMiddleware)
 }
 
 func (r receiver) receiveEvent(e cloudevents.Event) {
