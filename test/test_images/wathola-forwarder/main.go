@@ -15,7 +15,7 @@
 
 package main
 
-import "knative.dev/eventing/test/prober/wathola/forwarder"
+import "knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 
 var instance forwarder.Forwarder
 

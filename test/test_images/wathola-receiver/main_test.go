@@ -21,8 +21,8 @@ import (
 	"github.com/phayes/freeport"
 	"go.uber.org/zap/zapcore"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/prober/wathola/config"
-	"knative.dev/eventing/test/prober/wathola/receiver"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 
 	"github.com/stretchr/testify/assert"
 )

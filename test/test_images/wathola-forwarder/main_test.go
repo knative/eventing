@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/prober/wathola/config"
-	"knative.dev/eventing/test/prober/wathola/forwarder"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 )
 
 func TestForwarderMain(t *testing.T) {

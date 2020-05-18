@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"knative.dev/eventing/test/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
 var mutex = sync.RWMutex{}

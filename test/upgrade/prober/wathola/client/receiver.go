@@ -23,7 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/wavesoftware/go-ensure"
-	"knative.dev/eventing/test/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
 var log = config.Log

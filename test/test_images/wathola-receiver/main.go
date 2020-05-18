@@ -15,7 +15,7 @@
 
 package main
 
-import "knative.dev/eventing/test/prober/wathola/receiver"
+import "knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 
 var instance receiver.Receiver
 

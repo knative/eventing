@@ -21,8 +21,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/wavesoftware/go-ensure"
-	"knative.dev/eventing/test/prober/wathola/config"
-	"knative.dev/eventing/test/prober/wathola/event"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 
 	"os"
 	"os/signal"

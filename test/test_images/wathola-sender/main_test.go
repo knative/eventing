@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/wavesoftware/go-ensure"
-	"knative.dev/eventing/test/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
 func TestSenderMain(t *testing.T) {

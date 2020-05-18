@@ -25,7 +25,7 @@ import (
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
-	"knative.dev/eventing/test/prober"
+	"knative.dev/eventing/test/upgrade/prober"
 )
 
 const (

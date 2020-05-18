@@ -15,7 +15,7 @@
 
 package main
 
-import "knative.dev/eventing/test/prober/wathola/sender"
+import "knative.dev/eventing/test/upgrade/prober/wathola/sender"
 
 func main() {
 	sender.New().SendContinually()

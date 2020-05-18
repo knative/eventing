@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"knative.dev/eventing/test/lib"
-	watholaconfig "knative.dev/eventing/test/prober/wathola/config"
+	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	pkgTest "knative.dev/pkg/test"
 )
 

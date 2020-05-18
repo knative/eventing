@@ -21,9 +21,9 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
-	"knative.dev/eventing/test/prober/wathola/config"
-	"knative.dev/eventing/test/prober/wathola/event"
-	"knative.dev/eventing/test/prober/wathola/sender"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/event"
+	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 
 	"os"
 	"testing"

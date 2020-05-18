@@ -15,7 +15,7 @@
 
 package event
 
-import "knative.dev/eventing/test/prober/wathola/config"
+import "knative.dev/eventing/test/upgrade/prober/wathola/config"
 
 const (
 	// StepType is a string type representation of step event

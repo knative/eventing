@@ -19,9 +19,9 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"knative.dev/eventing/test/prober/wathola/client"
-	"knative.dev/eventing/test/prober/wathola/config"
-	"knative.dev/eventing/test/prober/wathola/sender"
+	"knative.dev/eventing/test/upgrade/prober/wathola/client"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 
 	"time"
 )

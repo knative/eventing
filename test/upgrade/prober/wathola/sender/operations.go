@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"time"
 
-	"knative.dev/eventing/test/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
 // New creates new Sender
