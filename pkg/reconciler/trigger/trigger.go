@@ -59,13 +59,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reco
 		// This only addresses one part of the problem (missing the Broker outright, but
 		// not the problem where the broker is misconfigured (wrong BrokerClass)), and hence
 		// it still would not get reconciled.
-		tt := t.DeepCopy()
-		tt.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist or there is no matching BrokerClass for it", tt.Spec.Broker)
-		_, te := r.eventingClientSet.EventingV1beta1().Triggers(tt.Namespace).UpdateStatus(tt)
-		if te != nil {
-			logging.FromContext(ctx).Errorw("Unable to update status for Trigger with missing broker", zap.Error(te))
-			return te
-		}
+		t.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist or there is no matching BrokerClass for it", t.Spec.Broker)
 
 		_, needDefaultBroker := t.GetAnnotations()[v1beta1.InjectionAnnotation]
 		if t.Spec.Broker == "default" && needDefaultBroker {

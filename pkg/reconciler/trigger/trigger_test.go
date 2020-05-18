@@ -190,8 +190,12 @@ func TestAllCases(t *testing.T) {
 				InduceFailure("update", "triggers"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update triggers"),
+				Eventf(corev1.EventTypeWarning, "UpdateFailed", "Failed to update status for \"test-trigger\": inducing failure for update triggers"),
 			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{v1beta1.InjectionAnnotation: injectionAnnotation})),
+			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
 					reconciletesting.WithTriggerUID(triggerUID),
