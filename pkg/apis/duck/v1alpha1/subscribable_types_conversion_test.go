@@ -28,6 +28,7 @@ import (
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 func TestSubscribableTypeConversionBadType(t *testing.T) {
@@ -100,7 +101,7 @@ func TestSubscribableTypeConversion(t *testing.T) {
 			},
 			Status: SubscribableTypeStatus{
 				SubscribableStatus: &SubscribableStatus{
-					Subscribers: []SubscriberStatus{
+					Subscribers: []eventingduckv1beta1.SubscriberStatus{
 						{
 							UID:                "status-uid-1",
 							ObservedGeneration: 99,

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cloudevents "github.com/cloudevents/sdk-go"
 
 	"knative.dev/eventing/test/lib"
 )
@@ -86,7 +86,7 @@ func (es *eventStore) StoreEvent(event cloudevents.Event, httpHeaders map[string
 		}
 		evInfoBytes, err = json.Marshal(&evInfo)
 		if err != nil {
-			panic(fmt.Errorf("Unexpected marshal error (%v) (%+v)", err, evInfo))
+			panic(fmt.Errorf("unexpected marshal error (%v) (%+v)", err, evInfo))
 		}
 	}
 

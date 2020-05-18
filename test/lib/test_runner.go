@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
+	"knative.dev/pkg/test/prow"
 
 	// Mysteriously required to support GCP auth (required by k8s libs).
 	// Apparently just importing it is enough. @_@ side effects @_@.
@@ -38,7 +40,10 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
-const TestPullSecretName = "kn-eventing-test-pull-secret"
+const (
+	podLogsDir         = "pod-logs"
+	testPullSecretName = "kn-eventing-test-pull-secret"
+)
 
 // ChannelTestRunner is used to run tests against channels.
 type ChannelTestRunner struct {
@@ -61,7 +66,7 @@ func (tr *ChannelTestRunner) RunTests(
 		// it supports all features.
 		features, present := tr.ChannelFeatureMap[channel]
 		if !present || contains(features, feature) {
-			t.Run(fmt.Sprintf("%s-%s", t.Name(), channel), func(st *testing.T) {
+			t.Run(fmt.Sprintf("%s-%s", channel.Kind, channel.APIVersion), func(st *testing.T) {
 				testFunc(st, channel)
 			})
 		}
@@ -90,8 +95,7 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 // and does other setups, like creating namespaces, set the test case to run in parallel, etc.
 func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
 	// Create a new namespace to run this test case.
-	baseFuncName := helpers.GetBaseFuncName(t.Name())
-	namespace := makeK8sNamespace(baseFuncName)
+	namespace := makeK8sNamespace(t.Name())
 	t.Logf("namespace is : %q", namespace)
 	client, err := NewClient(
 		pkgTest.Flags.Kubeconfig,
@@ -136,6 +140,17 @@ func TearDown(client *Client) {
 			client.T.Logf("EVENT: %v", e)
 		}
 	}
+
+	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
+	// which will then be uploaded to GCS after the test job finishes.
+	if prow.IsCI() {
+		dir := filepath.Join(prow.GetLocalArtifactsDir(), podLogsDir)
+		client.T.Logf("Export logs in %q to %q", client.Namespace, dir)
+		if err := client.ExportLogs(dir); err != nil {
+			client.T.Logf("Error in exporting logs: %v", err)
+		}
+	}
+
 	client.Tracker.Clean(true)
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
@@ -165,7 +180,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 		// on the "default" ServiceAccount in this new Namespace.
 		// This is needed for cases where the images are in a private registry.
-		_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", TestPullSecretName, namespace, "default")
+		_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", testPullSecretName, namespace, "default")
 		if err != nil && !apierrs.IsNotFound(err) {
 			t.Fatalf("error copying the secret into ns %q: %s", namespace, err)
 		}

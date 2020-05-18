@@ -24,6 +24,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 // ConvertTo implements apis.Convertible
@@ -129,10 +130,10 @@ func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source duckv1beta1.
 func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, source duckv1beta1.SubscribableStatus) error {
 	if len(source.Subscribers) > 0 {
 		sink.SubscribableStatus = &SubscribableStatus{
-			Subscribers: make([]SubscriberStatus, len(source.Subscribers)),
+			Subscribers: make([]eventingduckv1beta1.SubscriberStatus, len(source.Subscribers)),
 		}
 		for i, ss := range source.Subscribers {
-			sink.SubscribableStatus.Subscribers[i] = SubscriberStatus{
+			sink.SubscribableStatus.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{
 				UID:                ss.UID,
 				ObservedGeneration: ss.ObservedGeneration,
 				Ready:              ss.Ready,

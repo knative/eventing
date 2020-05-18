@@ -22,7 +22,7 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/v2"
 
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"

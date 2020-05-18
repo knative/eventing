@@ -20,6 +20,9 @@ package broker
 
 import (
 	context "context"
+	fmt "fmt"
+	reflect "reflect"
+	strings "strings"
 
 	corev1 "k8s.io/api/core/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -27,9 +30,9 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	record "k8s.io/client-go/tools/record"
 	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
-	injectionclient "knative.dev/eventing/pkg/client/injection/client"
+	client "knative.dev/eventing/pkg/client/injection/client"
 	broker "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	client "knative.dev/pkg/client/injection/kube/client"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )
@@ -37,7 +40,6 @@ import (
 const (
 	defaultControllerAgentName = "broker-controller"
 	defaultFinalizerName       = "brokers.eventing.knative.dev"
-	defaultQueueName           = "brokers"
 
 	// ClassAnnotationKey points to the annotation for the class of this resource.
 	ClassAnnotationKey = "eventing.knative.dev/broker.class"
@@ -57,6 +59,42 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 
 	brokerInformer := broker.Get(ctx)
 
+	rec := &reconcilerImpl{
+		Client:        client.Get(ctx),
+		Lister:        brokerInformer.Lister(),
+		reconciler:    r,
+		finalizerName: defaultFinalizerName,
+		classValue:    classValue,
+	}
+
+	t := reflect.TypeOf(r).Elem()
+	queueName := fmt.Sprintf("%s.%s", strings.ReplaceAll(t.PkgPath(), "/", "-"), t.Name())
+
+	impl := controller.NewImpl(rec, logger, queueName)
+	agentName := defaultControllerAgentName
+
+	// Pass impl to the options. Save any optional results.
+	for _, fn := range optionsFns {
+		opts := fn(impl)
+		if opts.ConfigStore != nil {
+			rec.configStore = opts.ConfigStore
+		}
+		if opts.FinalizerName != "" {
+			rec.finalizerName = opts.FinalizerName
+		}
+		if opts.AgentName != "" {
+			agentName = opts.AgentName
+		}
+	}
+
+	rec.Recorder = createRecorder(ctx, agentName)
+
+	return impl
+}
+
+func createRecorder(ctx context.Context, agentName string) record.EventRecorder {
+	logger := logging.FromContext(ctx)
+
 	recorder := controller.GetEventRecorder(ctx)
 	if recorder == nil {
 		// Create event broadcaster
@@ -65,9 +103,9 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
 			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: client.Get(ctx).CoreV1().Events("")}),
+				&v1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events("")}),
 		}
-		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: defaultControllerAgentName})
+		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: agentName})
 		go func() {
 			<-ctx.Done()
 			for _, w := range watches {
@@ -76,24 +114,7 @@ func NewImpl(ctx context.Context, r Interface, classValue string, optionsFns ...
 		}()
 	}
 
-	rec := &reconcilerImpl{
-		Client:     injectionclient.Get(ctx),
-		Lister:     brokerInformer.Lister(),
-		Recorder:   recorder,
-		reconciler: r,
-		classValue: classValue,
-	}
-	impl := controller.NewImpl(rec, logger, defaultQueueName)
-
-	// Pass impl to the options. Save any optional results.
-	for _, fn := range optionsFns {
-		opts := fn(impl)
-		if opts.ConfigStore != nil {
-			rec.configStore = opts.ConfigStore
-		}
-	}
-
-	return impl
+	return recorder
 }
 
 func init() {

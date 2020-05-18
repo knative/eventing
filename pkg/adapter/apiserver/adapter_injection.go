@@ -23,6 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"k8s.io/client-go/rest"
 	"knative.dev/eventing/pkg/adapter/v2"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
@@ -66,11 +67,12 @@ func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClie
 	}
 
 	return &apiServerAdapter{
-		k8s:    dynamicclient.Get(ctx),
-		ce:     ceClient,
-		source: Get(ctx),
-		name:   env.Name,
-		config: config,
+		discover: kubeclient.Get(ctx).Discovery(),
+		k8s:      dynamicclient.Get(ctx),
+		ce:       ceClient,
+		source:   Get(ctx),
+		name:     env.Name,
+		config:   config,
 
 		logger: logger,
 	}

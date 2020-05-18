@@ -23,12 +23,11 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec for a given Channel.
-func NewChannel(c *v1alpha1.Channel) (*unstructured.Unstructured, error) {
+func NewChannel(c *v1beta1.Channel) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := v1beta1.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{

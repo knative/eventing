@@ -25,10 +25,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
-	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
+	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 )
@@ -50,10 +50,18 @@ type Reconciler struct {
 // Check that our Reconciler implements triggerreconciler.Interface
 var _ triggerreconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1alpha1.Trigger) reconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reconciler.Event {
 	_, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil && apierrs.IsNotFound(err) {
-		_, needDefaultBroker := t.GetAnnotations()[v1alpha1.InjectionAnnotation]
+		// https://github.com/knative/eventing/issues/2996
+		// Ideally we'd default the Status of the Trigger during creation but we currently
+		// can't, so watch for Triggers that do not have Broker for them and set their status.
+		// This only addresses one part of the problem (missing the Broker outright, but
+		// not the problem where the broker is misconfigured (wrong BrokerClass)), and hence
+		// it still would not get reconciled.
+		t.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist or there is no matching BrokerClass for it", t.Spec.Broker)
+
+		_, needDefaultBroker := t.GetAnnotations()[v1beta1.InjectionAnnotation]
 		if t.Spec.Broker == "default" && needDefaultBroker {
 			if e := r.labelNamespace(ctx, t); e != nil {
 				logging.FromContext(ctx).Errorw("Unable to label the namespace", zap.Error(e))
@@ -66,7 +74,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1alpha1.Trigger) rec
 }
 
 // labelNamespace will label namespace with knative-eventing-injection=enabled
-func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) reconciler.Event {
+func (r *Reconciler) labelNamespace(ctx context.Context, t *v1beta1.Trigger) reconciler.Event {
 	current, err := r.namespaceLister.Get(t.Namespace)
 	if err != nil {
 		return err

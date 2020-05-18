@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/pointer"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -132,11 +133,12 @@ func TestInMemoryChannelConversion(t *testing.T) {
 						Addressable: duckv1beta1.Addressable{
 							URL: apis.HTTP("addressstatus.example.com"),
 						},
+						Hostname: "addressstatus.example.com",
 					},
 				},
 				SubscribableTypeStatus: eventingduck.SubscribableTypeStatus{
 					SubscribableStatus: &eventingduck.SubscribableStatus{
-						Subscribers: []eventingduck.SubscriberStatus{
+						Subscribers: []eventingduckv1beta1.SubscriberStatus{
 							{
 								UID:                "status-uid-1",
 								ObservedGeneration: 99,
@@ -160,6 +162,12 @@ func TestInMemoryChannelConversion(t *testing.T) {
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
+				// Make sure the annotation specifies the correct duck.
+				if test.in.Annotations == nil {
+					test.in.Annotations = make(map[string]string)
+				}
+				test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
+
 				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
@@ -285,6 +293,12 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 				if err := ver.ConvertTo(context.Background(), got); err != nil {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
+				// Make sure the annotation specifies the correct duck.
+				if test.in.Annotations == nil {
+					test.in.Annotations = make(map[string]string)
+				}
+				test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
+
 				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}

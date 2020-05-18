@@ -63,14 +63,16 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 
 		if brokerClass == eventing.ChannelBrokerClassValue {
 			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 			client.CreateRBACResourcesForBrokers()
 		}
 
+		// Create a configmap used by the broker.
+		client.CreateBrokerConfigMapOrFail(brokerName, &channel)
+
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName,
-			resources.WithBrokerClassForBroker(brokerClass),
-			resources.WithChannelTemplateForBroker(&channel))
+		client.CreateBrokerV1Beta1OrFail(brokerName,
+			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+			resources.WithConfigMapForBrokerConfig())
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create the event we want to transform to

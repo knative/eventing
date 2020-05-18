@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	ce "github.com/cloudevents/sdk-go/v1"
+	ce "github.com/cloudevents/sdk-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"go.opentelemetry.io/otel/api/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -33,6 +33,7 @@ func TestEnvConfig(t *testing.T) {
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", "metrics")
 	os.Setenv("K_LOGGING_CONFIG", "logging")
+	os.Setenv("K_TRACING_CONFIG", "tracing")
 	os.Setenv("MODE", "mymode")
 
 	var env myEnvConfig

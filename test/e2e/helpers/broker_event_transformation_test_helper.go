@@ -61,8 +61,11 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 			client.CreateRBACResourcesForBrokers()
 		}
 
+		// Create a configmap used by the broker.
+		config := client.CreateBrokerConfigMapOrFail(brokerName, &channel)
+
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName, resources.WithBrokerClassForBroker(brokerClass), resources.WithChannelTemplateForBroker(&channel))
+		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create the event we want to transform to

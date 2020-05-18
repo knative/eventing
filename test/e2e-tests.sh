@@ -24,6 +24,8 @@
 # project $PROJECT_ID, start Knative eventing system, run the tests and
 # delete the cluster.
 
+export GO111MODULE=on
+
 source $(dirname $0)/e2e-common.sh
 
 # Script entry point.

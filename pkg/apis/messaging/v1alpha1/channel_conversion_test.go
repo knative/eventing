@@ -139,11 +139,12 @@ func TestChannelConversion(t *testing.T) {
 						Addressable: duckv1beta1.Addressable{
 							URL: apis.HTTP("addressstatus.example.com"),
 						},
+						Hostname: "addressstatus.example.com",
 					},
 				},
 				SubscribableTypeStatus: eventingduck.SubscribableTypeStatus{
 					SubscribableStatus: &eventingduck.SubscribableStatus{
-						Subscribers: []eventingduck.SubscriberStatus{
+						Subscribers: []eventingduckv1beta1.SubscriberStatus{
 							{
 								UID:                "status-uid-1",
 								ObservedGeneration: 99,

@@ -32,18 +32,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
+
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/eventing/pkg/utils"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/controller"
-	pkgLogging "knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -75,11 +75,11 @@ type Reconciler struct {
 	// listers index properties about resources
 	apiserversourceLister listers.ApiServerSourceLister
 
-	source         string
+	ceSource       string
 	sinkResolver   *resolver.URIResolver
 	loggingContext context.Context
-	loggingConfig  *pkgLogging.Config
-	metricsConfig  *metrics.ExporterOptions
+
+	configs reconcilersource.ConfigAccessor
 }
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
@@ -138,23 +138,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Api
 	// 	return nil, err
 	// }
 
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to json", zap.Any("receiveAdapter", err))
-	}
-
-	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
-	if err != nil {
-		logging.FromContext(ctx).Error("error while converting metrics config to json", zap.Any("receiveAdapter", err))
-	}
-
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.receiveAdapterImage,
-		Source:        src,
-		Labels:        resources.Labels(src.Name),
-		SinkURI:       sinkURI,
-		LoggingConfig: loggingConfig,
-		MetricsConfig: metricsConfig,
+		Image:   r.receiveAdapterImage,
+		Source:  src,
+		Labels:  resources.Labels(src.Name),
+		SinkURI: sinkURI,
+		Configs: r.configs,
 	}
 	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
 	if err != nil {
@@ -209,35 +198,6 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 		}
 	}
 	return false
-}
-
-// TODO determine how to push the updated logging config to existing data plane Pods.
-func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
-	if cfg != nil {
-		delete(cfg.Data, "_example")
-	}
-
-	logcfg, err := pkgLogging.NewConfigFromConfigMap(cfg)
-	if err != nil {
-		logging.FromContext(r.loggingContext).Warn("failed to create logging config from configmap", zap.String("cfg.Name", cfg.Name))
-		return
-	}
-	r.loggingConfig = logcfg
-	logging.FromContext(r.loggingContext).Debug("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
-}
-
-// TODO determine how to push the updated metrics config to existing data plane Pods.
-func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
-	if cfg != nil {
-		delete(cfg.Data, "_example")
-	}
-
-	r.metricsConfig = &metrics.ExporterOptions{
-		Domain:    metrics.Domain(),
-		Component: component,
-		ConfigMap: cfg.Data,
-	}
-	logging.FromContext(r.loggingContext).Debug("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }
 
 func (r *Reconciler) runAccessCheck(src *v1alpha2.ApiServerSource) error {
@@ -311,7 +271,7 @@ func (r *Reconciler) createCloudEventAttributes() []duckv1.CloudEventAttributes 
 	for _, apiServerSourceType := range v1alpha2.ApiServerSourceEventTypes {
 		ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
 			Type:   apiServerSourceType,
-			Source: r.source,
+			Source: r.ceSource,
 		})
 	}
 	return ceAttributes

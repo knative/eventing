@@ -35,7 +35,7 @@ import (
 const (
 	// The interval and timeout used for polling in checking resource states.
 	interval = 1 * time.Second
-	timeout  = 4 * time.Minute
+	timeout  = 2 * time.Minute
 )
 
 // WaitForResourceReady polls the status of the MetaResource from client
