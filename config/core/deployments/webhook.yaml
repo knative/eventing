@@ -60,6 +60,8 @@ spec:
           value: knative.dev/eventing
         - name: WEBHOOK_NAME
           value: eventing-webhook
+        - name: WEBHOOK_PORT
+          value: "8443"
           # SINK_BINDING_SELECTION_MODE specifies the NamespaceSelector and ObjectSelector
           # for the sinkbinding webhook.
           # If `inclusion` is selected, namespaces/objects labled as `bindings.knative.dev/include:true`
