@@ -911,6 +911,8 @@ k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
 # knative.dev/pkg v0.0.0-20200519155757-14eb3ae3a5a7
+knative.dev/pkg/apiextensions/storageversion
+knative.dev/pkg/apiextensions/storageversion/cmd/migrate
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
 knative.dev/pkg/apis/duck/v1
