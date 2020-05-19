@@ -18,7 +18,6 @@ package leaderelection
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -75,13 +74,13 @@ func TestValidateConfig(t *testing.T) {
 		data: kmeta.UnionMaps(okData(), map[string]string{
 			"leaseDuration": "this-is-the-end",
 		}),
-		err: errors.New(`leaseDuration: invalid duration: "this-is-the-end"`),
+		err: errors.New(`failed to parse "leaseDuration": time: invalid duration this-is-the-end`),
 	}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			actualConfig, actualErr := ValidateConfig(&corev1.ConfigMap{Data: tc.data})
-			if !reflect.DeepEqual(tc.err, actualErr) {
+			if tc.err != nil && tc.err.Error() != actualErr.Error() {
 				t.Fatalf("err = %v, want: %v", actualErr, tc.err)
 			}
 
