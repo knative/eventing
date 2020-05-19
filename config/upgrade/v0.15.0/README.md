@@ -7,7 +7,8 @@ manually update them yourself, or run the tool provided here, which will do the
 following for any Broker that is using Spec.ChannelTemplate:
 
 1. Creates a ConfigMap in the same namespace as the Broker named:
-   `broker-upgrade-auto-gen-config-<brokername>` with the content from Spec.ChannelTemplate.
+   `broker-upgrade-auto-gen-config-<brokername>` with the content from
+   Spec.ChannelTemplate.
 1. Set Broker Spec.Config to point to this ConfigMap
 1. Set Broker Spec.ChannelTemplate to nil
 
