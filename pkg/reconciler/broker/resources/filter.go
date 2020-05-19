@@ -117,7 +117,7 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 							ContainerPort: 8080,
 							Name:          "http",
 						}, {
-							ContainerPort: 9090,
+							ContainerPort: 9092,
 							Name:          "metrics",
 						}},
 					}},
