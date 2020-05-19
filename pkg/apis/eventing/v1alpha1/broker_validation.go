@@ -32,15 +32,9 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
 	// As of v0.15 do not allow creation of new Brokers with the channel template.
-	if apis.IsInCreate(ctx) {
-		if bs.ChannelTemplate != nil {
-			errs = errs.Also(apis.ErrDisallowedFields("channelTemplate"))
-		}
-	} else {
-		if bs.ChannelTemplate != nil {
-			if cte := messagingv1beta1.IsValidChannelTemplate(bs.ChannelTemplate); cte != nil {
-				errs = errs.Also(cte.ViaField("channelTemplateSpec"))
-			}
+	if bs.ChannelTemplate != nil {
+		if cte := messagingv1beta1.IsValidChannelTemplate(bs.ChannelTemplate); cte != nil {
+			errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 		}
 	}
 

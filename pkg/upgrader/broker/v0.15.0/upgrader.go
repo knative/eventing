@@ -140,15 +140,15 @@ func createConfigMap(ctx context.Context, broker v1alpha1.Broker) (*duckv1.KRefe
 		}
 		logging.FromContext(ctx).Infof("BYTES: %q", string(bytes))
 		data = fmt.Sprintf(`
-  apiVersion: %q
-  kind: %q
-  spec:
-    %s
-`, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind, strings.ReplaceAll(strings.TrimSpace(string(bytes)), "\n", "\n    "))
+apiVersion: %q
+kind: %q
+spec:
+  %s
+`, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind, strings.ReplaceAll(strings.TrimSpace(string(bytes)), "\n", "\n  "))
 	} else {
 		data = fmt.Sprintf(`
-  apiVersion: %q
-  kind: %q
+apiVersion: %q
+kind: %q
 `, broker.Spec.ChannelTemplate.APIVersion, broker.Spec.ChannelTemplate.Kind)
 	}
 
@@ -158,7 +158,7 @@ func createConfigMap(ctx context.Context, broker v1alpha1.Broker) (*duckv1.KRefe
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "broker-auto-gen-config-" + broker.Name,
+			Name:      "broker-upgrade-auto-gen-config-" + broker.Name,
 			Namespace: broker.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(&broker),
@@ -177,6 +177,6 @@ func createConfigMap(ctx context.Context, broker v1alpha1.Broker) (*duckv1.KRefe
 		APIVersion: "v1",
 		Kind:       "ConfigMap",
 		Namespace:  broker.Namespace,
-		Name:       "broker-auto-gen-config-" + broker.Name,
+		Name:       "broker-upgrade-auto-gen-config-" + broker.Name,
 	}, nil
 }

@@ -52,18 +52,18 @@ const (
 	testns2    = "testnamespace2"
 	testbroker = "testbroker"
 	imcSpec    = `
-  apiVersion: "messaging.knative.dev/v1alpha1"
-  kind: "InMemoryChannel"
+apiVersion: "messaging.knative.dev/v1alpha1"
+kind: "InMemoryChannel"
 `
 	kafkaSpec = `
-  apiVersion: "messaging.knative.dev/v1alpha1"
-  kind: "Kafka"
-  spec:
-    numPartitions: 3
-    replicationFactory: 1
+apiVersion: "messaging.knative.dev/v1alpha1"
+kind: "KafkaChannel"
+spec:
+  numPartitions: 3
+  replicationFactor: 1
 `
 
-	patchbytesFmt = "{\"spec\":{\"channelTemplateSpec\":null,\"config\":{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"broker-auto-gen-config-%s\",\"namespace\":\"%s\"}}}"
+	patchbytesFmt = "{\"spec\":{\"channelTemplateSpec\":null,\"config\":{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"broker-upgrade-auto-gen-config-%s\",\"namespace\":\"%s\"}}}"
 )
 
 var (
@@ -77,11 +77,11 @@ var (
 	}
 	kafka = &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
-			Kind:       "Kafka",
+			Kind:       "KafkaChannel",
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 		Spec: &runtime.RawExtension{
-			Raw: []byte(`{"numPartitions": 3, "replicationFactory": 1}`),
+			Raw: []byte(`{"numPartitions": 3, "replicationFactor": 1}`),
 		},
 	}
 	ignoreLastTransitionTime = cmp.FilterPath(func(p cmp.Path) bool {
@@ -356,7 +356,7 @@ func config(name, namespace string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       "ConfigMap",
 		APIVersion: "v1",
-		Name:       "broker-auto-gen-config-" + name,
+		Name:       "broker-upgrade-auto-gen-config-" + name,
 		Namespace:  namespace,
 	}
 
@@ -369,7 +369,7 @@ func configMap(name, namespace string, spec string) *corev1.ConfigMap {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "broker-auto-gen-config-" + name,
+			Name:      "broker-upgrade-auto-gen-config-" + name,
 			Namespace: namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(&v1alpha1.Broker{
