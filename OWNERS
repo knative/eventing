@@ -10,6 +10,7 @@ approvers:
 - nachocano
 - lionelvillard
 - slinkydeveloper
+- lberk
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -23,10 +24,11 @@ reviewers:
 - nachocano
 - lionelvillard
 - slinkydeveloper
+- lberk
+
 # Add reviewers below
 - liu-cong
 - yolocs
 - aslom
-- lberk
 - nlopezgi
 - aliok
