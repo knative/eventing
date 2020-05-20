@@ -135,6 +135,14 @@ rules:
       - "watch"
 
   # Storage version upgrader needs to be able to patch CRDs 
-  - apiGroups: ["apiextensions.k8s.io"]
-    resources: ["customresourcedefinitions", "customresourcedefinitions/status"]
-    verbs: ["get", "list", "update", "patch", "watch"]
+  - apiGroups:
+      - "apiextensions.k8s.io"
+    resources:
+      = "customresourcedefinitions"
+      - "customresourcedefinitions/status"
+    verbs:
+      - "get"
+      - "list"
+      - "update"
+      - "patch"
+      - "watch"
