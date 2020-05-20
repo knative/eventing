@@ -134,7 +134,7 @@ rules:
       - "list"
       - "watch"
 
-  # Storage version upgrader needs to be able to patch CRDs 
+  # Storage version upgrader needs to be able to patch CRDs.
   - apiGroups:
       - "apiextensions.k8s.io"
     resources:
