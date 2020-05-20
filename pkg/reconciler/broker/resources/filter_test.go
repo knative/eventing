@@ -90,7 +90,7 @@ func TestMakeFilterDeployment(t *testing.T) {
               },
               {
                 "name": "metrics",
-                "containerPort": 9090
+                "containerPort": 9092
               }
             ],
             "env": [
