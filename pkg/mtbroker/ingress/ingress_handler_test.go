@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -43,14 +45,16 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	logger := zap.NewNop()
 
 	tt := []struct {
-		name       string
-		method     string
-		uri        string
-		body       io.Reader
-		statusCode int
-		sender     broker.Sender
-		reporter   StatsReporter
-		defaulter  client.EventDefaulter
+		name                  string
+		method                string
+		uri                   string
+		body                  io.Reader
+		headers               nethttp.Header
+		statusCode            int
+		sender                broker.Sender
+		reporter              StatsReporter
+		defaulter             client.EventDefaulter
+		expectedSenderHeaders nethttp.Header
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -142,6 +146,32 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			sender:     &mockSender{},
 			reporter:   &mockReporter{},
 		},
+		{
+			name:       "pass headers to sender",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: senderResponseStatusCode,
+			headers: nethttp.Header{
+				"foo":              []string{"bar"},
+				"Traceparent":      []string{"0"},
+				"Knative-Foo":      []string{"123"},
+				"X-Request-Id":     []string{"123"},
+				cehttp.ContentType: []string{event.ApplicationCloudEventsJSON},
+			},
+			sender: &mockSender{
+				t: t,
+				expectedHeaders: nethttp.Header{
+					"Knative-Foo":      []string{"123"},
+					"X-Request-Id":     []string{"123"},
+					cehttp.ContentType: []string{event.ApplicationCloudEventsJSON},
+				},
+				NewCloudEventRequestWithTargetCalled: true,
+				SendCalled:                           true,
+			},
+			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
+			defaulter: broker.TTLDefaulter(logger, 100),
+		},
 	}
 
 	for _, tc := range tt {
@@ -149,10 +179,20 @@ func TestHandler_ServeHTTP(t *testing.T) {
 
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tc.method, tc.uri, tc.body)
-			request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
+			if tc.headers != nil {
+				request.Header = tc.headers
+			} else {
+				tc.expectedSenderHeaders = nethttp.Header{
+					cehttp.ContentType: []string{event.ApplicationCloudEventsJSON},
+				}
+				request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
+			}
 
 			h := &Handler{
-				Sender:    &mockSender{},
+				Sender: &mockSender{
+					t:               t,
+					expectedHeaders: tc.expectedSenderHeaders,
+				},
 				Defaulter: tc.defaulter,
 				Reporter:  &mockReporter{},
 				Logger:    logger,
@@ -165,7 +205,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				t.Errorf("expected status code %d got %d", tc.statusCode, result.StatusCode)
 			}
 
-			if diff := cmp.Diff(tc.sender, h.Sender); diff != "" {
+			if diff := cmp.Diff(tc.sender, h.Sender, cmpopts.IgnoreUnexported(mockSender{})); diff != "" {
 				t.Errorf("expected sender state %+v got %+v - diff %s", tc.sender, h.Sender, diff)
 			}
 
@@ -177,6 +217,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 }
 
 type mockSender struct {
+	t               *testing.T
+	expectedHeaders nethttp.Header
+
 	NewCloudEventRequestWithTargetCalled bool
 	SendCalled                           bool
 }
@@ -210,7 +253,7 @@ func getValidEvent() io.Reader {
 	e := event.New(event.CloudEventsVersionV1)
 	e.SetType("type")
 	e.SetSource("source")
-	e.SetID("aaaa1234")
+	e.SetID("1234")
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)
 }

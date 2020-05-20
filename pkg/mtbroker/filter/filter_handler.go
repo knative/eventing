@@ -114,13 +114,18 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	event, err := binding.ToEvent(request.Context(), cehttp.NewMessageFromHttpRequest(request))
+	ctx := request.Context()
+
+	event, err := binding.ToEvent(ctx, cehttp.NewMessageFromHttpRequest(request))
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+<<<<<<< HEAD
 	ctx := request.Context()
+=======
+>>>>>>> Port pkg/mtbroker to cloudevents/sdk-go v2
 	ctx, span := trace.StartSpan(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
 	defer span.End()
 
@@ -226,15 +231,15 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	event, err = binding.ToEvent(ctx, response)
 	if err != nil {
 		h.logger.Error("failed to convert message to event", zap.Error(err))
-		// No event in the response we're golden.
+		// No event in the response.
 		writer.WriteHeader(resp.StatusCode)
 		_ = h.reporter.ReportEventCount(reportArgs, resp.StatusCode)
 		return
 	}
 	if event == nil {
-		// No event in the response we're golden.
-		writer.WriteHeader(http.StatusAccepted)
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusAccepted)
+		// No event in the response.
+		writer.WriteHeader(resp.StatusCode)
+		_ = h.reporter.ReportEventCount(reportArgs, resp.StatusCode)
 		return
 	}
 

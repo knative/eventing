@@ -150,7 +150,7 @@ func (h *Handler) receive(
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}
-	request.Header = utils.PassThroughHeaders(headers) // TODO add unit test
+	request.Header = utils.PassThroughHeaders(headers)
 	err = cehttp.WriteRequest(ctx, binding.ToMessage(event), request)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
