@@ -394,7 +394,7 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 		// Don't modify the informers copy.
 		desired := current.DeepCopy()
 		desired.Spec = svc.Spec
-		current, err = r.kubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
+		_, err = r.kubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
 		if err != nil {
 			return nil, err
 		}

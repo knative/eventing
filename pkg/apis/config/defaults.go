@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// DefaultConfigName is the name of config map for the default
+	// DefaultsConfigName is the name of config map for the default
 	// configs that brokers should use
 	DefaultsConfigName = "config-br-defaults"
 
@@ -58,7 +58,7 @@ func parseEntry(entry string, out interface{}) error {
 	if err != nil {
 		return fmt.Errorf("ConfigMap's value could not be converted to JSON: %s : %v", err, entry)
 	}
-	return json.Unmarshal([]byte(j), &out)
+	return json.Unmarshal(j, &out)
 }
 
 // NewDefaultsConfigFromConfigMap creates a Defaults from the supplied configMap

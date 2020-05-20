@@ -200,7 +200,7 @@ func TestGap(t *testing.T) {
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[11:19]
 	deg.setEv(12, subEv)
-	allData, _, err = ei.Find(func(EventInfo) bool { return true })
+	_, _, err = ei.Find(func(EventInfo) bool { return true })
 	if err == nil {
 		t.Fatalf("Unexpected success from find")
 	}
