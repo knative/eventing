@@ -79,7 +79,7 @@ func NewController(
 
 	// Watch for deployments owned by the source
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("PingSource")),
+		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("PingSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

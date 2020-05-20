@@ -70,7 +70,7 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 		sourceInformer.AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 		eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterGroupVersionKind(gvk),
+			FilterFunc: controller.FilterControllerGVK(gvk),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 
