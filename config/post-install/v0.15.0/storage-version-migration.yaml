@@ -28,7 +28,7 @@ spec:
       labels:
         app: "storage-version-migration"
     spec:
-      serviceAccountName: controller
+      serviceAccountName: knative-eventing-post-install-job
       restartPolicy: OnFailure
       containers:
       - name: migrate
