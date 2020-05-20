@@ -1,6 +1,6 @@
 # Conformance tests
 
-Conformance tests verifies kantive eventing implementation for expected behavior
+Conformance tests verifies knative eventing implementation for expected behavior
 described in
 [specification](https://github.com/knative/eventing/tree/master/docs/spec).
 
