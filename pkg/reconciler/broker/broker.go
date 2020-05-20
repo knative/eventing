@@ -46,6 +46,7 @@ import (
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	pkgduckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
@@ -207,9 +208,28 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (kme
 		Host:   names.ServiceHostName(ingressEndpoints.GetName(), ingressEndpoints.GetNamespace()),
 	})
 
+	markDeprecated(&b.Status.Status, "SingleTenantChannelBrokerDeprecated", "Single Tenant Channel Brokers are deprecated and will be removed in release 0.16. Use Multi Tenant Channel Brokers instead.")
+
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
 	return filterEndpoints, nil
+}
+
+func markDeprecated(s *duckv1.Status, reason, msg string) {
+	dc := apis.Condition{
+		Type:     "Deprecated",
+		Reason:   reason,
+		Status:   corev1.ConditionTrue,
+		Severity: apis.ConditionSeverityWarning,
+		Message:  msg,
+	}
+	for i, c := range s.Conditions {
+		if c.Type == dc.Type {
+			s.Conditions[i] = dc
+			return
+		}
+	}
+	s.Conditions = append(s.Conditions, dc)
 }
 
 type channelTemplate struct {
