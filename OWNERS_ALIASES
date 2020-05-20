@@ -1,4 +1,11 @@
 aliases:
+  toc:
+  - evankanderson
+  - grantr
+  - markusthoemmes
+  - mattmoor
+  - tcnghia
+
   # These aliases are for OWNERS of the various Channel implementations. These
   # Are in addition to the repo level OWNERS.
 
