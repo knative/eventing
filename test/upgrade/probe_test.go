@@ -34,7 +34,7 @@ const (
 	readyMessage = "prober ready"
 )
 
-func TestProbe(t *testing.T) {
+func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	// We run the prober as a golang test because it fits in nicely with
 	// the rest of our integration tests, and AssertProberDefault needs
 	// a *testing.T. Unfortunately, "go test" intercepts signals, so we

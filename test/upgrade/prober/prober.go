@@ -39,8 +39,8 @@ type Prober interface {
 	// Finish send finished event
 	Finish()
 
-	// ReportError will reports found errors in proper way
-	ReportError(t *testing.T, err error)
+	// ReportErrors will reports found errors in proper way
+	ReportErrors(t *testing.T, errors []error)
 
 	// deploy a prober to a cluster
 	deploy()
@@ -92,11 +92,11 @@ func AssertEventProber(t *testing.T, prober Prober) {
 	if len(errors) == 0 {
 		t.Logf("All %d events propagated well", events)
 	} else {
-		t.Logf("There ware %v errors. Listing them below.", len(errors))
+		t.Logf("There were %d events propagated, but %d errors occured. "+
+			"Listing them below.", events, len(errors))
 	}
-	for _, err := range errors {
-		prober.ReportError(t, err)
-	}
+
+	prober.ReportErrors(t, errors)
 
 	prober.remove()
 }
@@ -114,11 +114,19 @@ func (p *prober) servingClient() resources.ServingClient {
 	}
 }
 
-func (p *prober) ReportError(t *testing.T, err error) {
-	if p.config.FailOnMissingEvents {
-		t.Error(err)
-	} else {
-		p.log.Warnf("Silenced FAIL: %v", err)
+func (p *prober) ReportErrors(t *testing.T, errors []error) {
+	for _, err := range errors {
+		if p.config.FailOnMissingEvents {
+			t.Error(err)
+		} else {
+			p.log.Warnf("Silenced FAIL: %v", err)
+		}
+	}
+	if len(errors) > 0 && !p.config.FailOnMissingEvents {
+		t.Skipf(
+			"Found %d errors, but FailOnMissingEvents is false. Skipping test.",
+			len(errors),
+		)
 	}
 }
 
