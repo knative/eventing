@@ -26,11 +26,9 @@ import (
 	"testing"
 	"time"
 
-	cloudeventsv2 "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/binding"
-
-	cloudevents "github.com/cloudevents/sdk-go"
 	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
@@ -38,7 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -71,10 +68,10 @@ func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers                    []*eventingv1beta1.Trigger
 		request                     *http.Request
-		event                       *cloudeventsv2.Event
+		event                       *cloudevents.Event
 		requestFails                bool
 		failureStatus               int
-		returnedEvent               *cloudeventsv2.Event
+		returnedEvent               *cloudevents.Event
 		expectNewToFail             bool
 		expectedErr                 bool
 		expectedDispatch            bool
@@ -414,7 +411,7 @@ type fakeHandler struct {
 	failStatus      int
 	requestReceived bool
 	headers         http.Header
-	returnedEvent   *cloudeventsv2.Event
+	returnedEvent   *cloudevents.Event
 	t               *testing.T
 }
 
@@ -501,36 +498,11 @@ func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
 	return t
 }
 
-func makeEventWithoutTTL() *cloudeventsv2.Event {
-	return &cloudeventsv2.Event{
-		Context: cloudeventsv2.EventContextV1{
+func makeEventWithoutTTL() *cloudevents.Event {
+	return &cloudevents.Event{
+		Context: cloudevents.EventContextV1{
 			Type: eventType,
-			Source: cloudeventsv2.URIRef{
-				URL: url.URL{
-					Path: eventSource,
-				},
-			},
-			DataContentType: cloudeventsv2.StringOfApplicationJSON(),
-		}.AsV1(),
-	}
-}
-
-func makeEvent() *cloudeventsv2.Event {
-	noTTL := makeEventWithoutTTL()
-	e := addTTLToEvent(*noTTL)
-	return &e
-}
-
-func addTTLToEvent(e cloudeventsv2.Event) cloudeventsv2.Event {
-	_ = broker.SetTTLv2(e.Context, 1)
-	return e
-}
-
-func makeDifferentEvent() *cloudeventsv2.Event {
-	return &cloudeventsv2.Event{
-		Context: cloudeventsv2.EventContextV1{
-			Type: "some-other-type",
-			Source: cloudeventsv2.URIRef{
+			Source: cloudevents.URIRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
@@ -540,16 +512,41 @@ func makeDifferentEvent() *cloudeventsv2.Event {
 	}
 }
 
-func makeEventWithExtension(extName, extValue string) *cloudeventsv2.Event {
-	noTTL := &cloudeventsv2.Event{
-		Context: cloudeventsv2.EventContextV1{
-			Type: eventType,
-			Source: cloudeventsv2.URIRef{
+func makeEvent() *cloudevents.Event {
+	noTTL := makeEventWithoutTTL()
+	e := addTTLToEvent(*noTTL)
+	return &e
+}
+
+func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
+	_ = broker.SetTTLv2(e.Context, 1)
+	return e
+}
+
+func makeDifferentEvent() *cloudevents.Event {
+	return &cloudevents.Event{
+		Context: cloudevents.EventContextV1{
+			Type: "some-other-type",
+			Source: cloudevents.URIRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
 			},
-			DataContentType: cloudeventsv2.StringOfApplicationJSON(),
+			DataContentType: cloudevents.StringOfApplicationJSON(),
+		}.AsV1(),
+	}
+}
+
+func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
+	noTTL := &cloudevents.Event{
+		Context: cloudevents.EventContextV1{
+			Type: eventType,
+			Source: cloudevents.URIRef{
+				URL: url.URL{
+					Path: eventSource,
+				},
+			},
+			DataContentType: cloudevents.StringOfApplicationJSON(),
 			Extensions: map[string]interface{}{
 				extName: extValue,
 			},

@@ -19,9 +19,6 @@ package ingress
 import (
 	"context"
 	"fmt"
-	"go.opencensus.io/trace"
-	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/tracing"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,9 +28,12 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/client"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 

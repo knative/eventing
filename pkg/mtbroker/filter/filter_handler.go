@@ -122,11 +122,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
-	ctx := request.Context()
-=======
->>>>>>> Port pkg/mtbroker to cloudevents/sdk-go v2
-	ctx, span := trace.StartSpan(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
+	ctx, span := trace.StartSpan(request.Context(), tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
 	defer span.End()
 
 	if span.IsRecordingEvents() {
@@ -155,7 +151,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	h.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
-	t, err := h.getTrigger(ctx, triggerRef)
+	t, err := h.getTrigger(triggerRef)
 	if err != nil {
 		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
 		writer.WriteHeader(http.StatusBadRequest)
