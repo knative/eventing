@@ -180,7 +180,7 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 `, channel.APIVersion, channel.Kind),
 		},
 	}
-	cm, err := c.Kube.Kube.CoreV1().ConfigMaps(c.Namespace).Create(cm)
+	_, err := c.Kube.Kube.CoreV1().ConfigMaps(c.Namespace).Create(cm)
 	if err != nil {
 		c.T.Fatalf("Failed to create broker config %q: %v", name, err)
 	}

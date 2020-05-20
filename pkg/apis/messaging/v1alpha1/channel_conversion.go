@@ -149,9 +149,7 @@ func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1beta1.Chann
 		sink.SubscribableTypeStatus.SubscribableStatus = &duckv1alpha1.SubscribableStatus{
 			Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
 		}
-		for i, ss := range source.SubscribableStatus.Subscribers {
-			sink.SubscribableTypeStatus.SubscribableStatus.Subscribers[i] = ss
-		}
+		copy(sink.SubscribableTypeStatus.SubscribableStatus.Subscribers, source.SubscribableStatus.Subscribers)
 	}
 	if source.Channel != nil {
 		sink.Channel = &corev1.ObjectReference{

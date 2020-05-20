@@ -142,9 +142,8 @@ func (r *Receiver) processEvents() {
 				return
 			}
 			r.receivedEvents.Events[e.EventId] = e.At
-		case _, _ = <-r.endCh:
+		case <-r.endCh:
 			return
-		default:
 		}
 	}
 }
@@ -182,11 +181,9 @@ func waitForPortAvailable(port string) {
 	var free bool
 	for i := 0; i < 30; i++ {
 		conn, err := net.Dial("tcp", ":"+port)
-		if err != nil {
-			if _, ok := err.(*net.OpError); ok {
-				free = true
-				break
-			}
+		if _, ok := err.(*net.OpError); ok {
+			free = true
+			break
 		}
 		_ = conn.Close()
 		time.Sleep(10 * time.Millisecond)

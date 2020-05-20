@@ -192,7 +192,7 @@ func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 }
 
 func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanModel) ([]SpanTree, error) {
-	var children []SpanTree
+	children := make([]SpanTree, 0, len(current))
 	for _, span := range current {
 		grandchildren, err := getChildren(parents, parents[span.ID])
 		if err != nil {

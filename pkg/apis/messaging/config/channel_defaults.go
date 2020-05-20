@@ -35,7 +35,7 @@ const (
 	ChannelDefaulterKey = "default-ch-config"
 )
 
-// NewDefaultsConfigFromMap creates a Defaults from the supplied Map
+// NewChannelDefaultsConfigFromMap creates a Defaults from the supplied Map
 func NewChannelDefaultsConfigFromMap(data map[string]string) (*ChannelDefaults, error) {
 	nc := &ChannelDefaults{}
 
@@ -55,7 +55,7 @@ func parseEntry(entry string, out interface{}) error {
 	if err != nil {
 		return fmt.Errorf("ConfigMap's value could not be converted to JSON: %s : %v", err, entry)
 	}
-	return json.Unmarshal([]byte(j), &out)
+	return json.Unmarshal(j, &out)
 }
 
 // NewChannelDefaultsConfigFromConfigMap creates a ChannelDefaults from the supplied configMap

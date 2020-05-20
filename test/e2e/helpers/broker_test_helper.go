@@ -25,7 +25,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
@@ -33,8 +32,6 @@ import (
 )
 
 const (
-	selectorKey = "end2end-test-broker-trigger"
-
 	any          = v1alpha1.TriggerAnyFilter
 	eventType1   = "type1"
 	eventType2   = "type2"
@@ -60,8 +57,7 @@ type eventContext struct {
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
-	context  eventContext
-	selector map[string]string
+	context eventContext
 }
 
 // BrokerCreator creates a broker and returns its broker name.
@@ -112,10 +108,10 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 		{
 			name: "test default broker with many deprecated triggers",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any}, newSelector()},
-				{eventContext{Type: eventType1, Source: any}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1}, newSelector()},
-				{eventContext{Type: eventType1, Source: eventSource1}, newSelector()},
+				{eventContext{Type: any, Source: any}},
+				{eventContext{Type: eventType1, Source: any}},
+				{eventContext{Type: any, Source: eventSource1}},
+				{eventContext{Type: eventType1, Source: eventSource1}},
 			},
 			eventsToSend: []eventContext{
 				{Type: eventType1, Source: eventSource1},
@@ -127,10 +123,10 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 		}, {
 			name: "test default broker with many attribute triggers",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any}, newSelector()},
-				{eventContext{Type: eventType1, Source: any}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1}, newSelector()},
-				{eventContext{Type: eventType1, Source: eventSource1}, newSelector()},
+				{eventContext{Type: any, Source: any}},
+				{eventContext{Type: eventType1, Source: any}},
+				{eventContext{Type: any, Source: eventSource1}},
+				{eventContext{Type: eventType1, Source: eventSource1}},
 			},
 			eventsToSend: []eventContext{
 				{Type: eventType1, Source: eventSource1},
@@ -142,10 +138,10 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 		}, {
 			name: "test default broker with many attribute triggers using v1beta1 trigger",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any}, newSelector()},
-				{eventContext{Type: eventType1, Source: any}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1}, newSelector()},
-				{eventContext{Type: eventType1, Source: eventSource1}, newSelector()},
+				{eventContext{Type: any, Source: any}},
+				{eventContext{Type: eventType1, Source: any}},
+				{eventContext{Type: any, Source: eventSource1}},
+				{eventContext{Type: eventType1, Source: eventSource1}},
 			},
 			eventsToSend: []eventContext{
 				{Type: eventType1, Source: eventSource1},
@@ -158,13 +154,13 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 		}, {
 			name: "test default broker with many attribute and extension triggers",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}, newSelector()},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}}, newSelector()},
-				{eventContext{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}}},
+				{eventContext{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}}},
+				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}}},
+				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}},
 			},
 			eventsToSend: []eventContext{
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
@@ -330,11 +326,6 @@ func sortedKeys(m map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-// Returns a new selector with a random uuid.
-func newSelector() map[string]string {
-	return map[string]string{selectorKey: string(uuid.NewUUID())}
 }
 
 // Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.

@@ -28,10 +28,6 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-const (
-	brokerName = "notdefaultbroker"
-)
-
 // TestTriggerNoBroker will create a Trigger with a non-existent broker, then it will ensure
 // the Status is correctly reflected as failed with BrokerDoesNotExist. Then it will create
 // the broker and ensure that Trigger / Broker will get to Ready state.
