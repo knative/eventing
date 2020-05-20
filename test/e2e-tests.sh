@@ -26,7 +26,7 @@
 
 export GO111MODULE=on
 
-source $(dirname $0)/e2e-common.sh
+source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 

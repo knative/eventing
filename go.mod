@@ -15,17 +15,22 @@ require (
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mailru/easyjson v0.7.1-0.20191009090205-6c0755d89d1e // indirect
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/openzipkin/zipkin-go v0.2.2
+	github.com/pelletier/go-toml v1.8.0
+	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
+	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.22.3
 	go.opentelemetry.io/otel v0.2.3
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.14.1
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/grpc v1.28.0
 	k8s.io/api v0.17.3

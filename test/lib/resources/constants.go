@@ -16,6 +16,11 @@ limitations under the License.
 
 package resources
 
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
 // SystemNamespace is the namespace where Eventing is installed, it's default to be knative-eventing.
 const SystemNamespace = "knative-eventing"
 
@@ -31,6 +36,20 @@ const (
 // Kind for Knative resources.
 const (
 	KServiceKind string = "Service"
+)
+
+var (
+	// KServicesGVR is GroupVersionResource for Knative Service
+	KServicesGVR = schema.GroupVersionResource{
+		Group:    "serving.knative.dev",
+		Version:  "v1alpha1",
+		Resource: "services",
+	}
+	// KServiceType is type of Knative Service
+	KServiceType = metav1.TypeMeta{
+		Kind:       "Service",
+		APIVersion: KServicesGVR.GroupVersion().String(),
+	}
 )
 
 // Kind for core Kubernetes resources.

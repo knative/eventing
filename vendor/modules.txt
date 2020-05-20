@@ -218,6 +218,8 @@ github.com/mailru/easyjson/jwriter
 github.com/markbates/inflect
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
+# github.com/mitchellh/go-homedir v1.1.0
+github.com/mitchellh/go-homedir
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
@@ -229,6 +231,10 @@ github.com/openzipkin/zipkin-go/model
 github.com/openzipkin/zipkin-go/propagation
 github.com/openzipkin/zipkin-go/reporter
 github.com/openzipkin/zipkin-go/reporter/http
+# github.com/pelletier/go-toml v1.8.0
+github.com/pelletier/go-toml
+# github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
+github.com/phayes/freeport
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -264,6 +270,8 @@ github.com/stretchr/testify/require
 github.com/tsenart/vegeta/lib
 # github.com/valyala/bytebufferpool v1.0.0
 github.com/valyala/bytebufferpool
+# github.com/wavesoftware/go-ensure v1.0.0
+github.com/wavesoftware/go-ensure
 # go.opencensus.io v0.22.3
 go.opencensus.io
 go.opencensus.io/internal
@@ -497,7 +505,7 @@ google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
-# gopkg.in/yaml.v2 v2.2.8
+# gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2
 # honnef.co/go/tools v0.0.1-2020.1.3
 honnef.co/go/tools/arg

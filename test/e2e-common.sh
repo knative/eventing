@@ -21,7 +21,7 @@ export GO111MODULE=on
 source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/e2e-tests.sh
 
 # If gcloud is not available make it a no-op, not an error.
-which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
+which gcloud &>/dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
 
 # Use GNU tools on macOS. Requires the 'grep' and 'gnu-sed' Homebrew formulae.
 if [ "$(uname)" == "Darwin" ]; then
@@ -45,19 +45,67 @@ readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 # Channel Based Broker config.
 readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
 
-# Setup the Knative environment for running tests. This installs
-# Everything from the config dir but then removes the Channel Based Broker.
-# TODO: This should only install the core.
+# Should deploy a Knative Monitoring as well
+readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
+
+# Latest release. If user does not supply this as a flag, the latest
+# tagged release on the current branch will be used.
+readonly LATEST_RELEASE_VERSION=$(git describe --match "v[0-9]*" --abbrev=0)
+
+UNINSTALL_LIST=()
+
+# Setup the Knative environment for running tests.
 function knative_setup() {
-  # Install the latest Knative/eventing in the current cluster.
-  echo ">> Starting Knative Eventing"
-  echo "Installing Knative Eventing"
-  ko apply --strict -f ${EVENTING_CONFIG} || return 1
+  install_knative_eventing
+}
+
+# This installs everything from the config dir but then removes the Channel Based Broker.
+# TODO: This should only install the core.
+# Args:
+#  - $1 - if passed, it will be used as eventing config directory
+function install_knative_eventing() {
+  local kne_config
+  kne_config="${1:-${EVENTING_CONFIG}}"
+  # Install Knative Eventing in the current cluster.
+  echo "Installing Knative Eventing from: ${kne_config}"
+  if [ -f "${kne_config}" ] || [ -d "${kne_config}" ]; then
+    ko apply --strict -f "${kne_config}" || return $?
+  else
+    kubectl apply -f "${kne_config}" || return $?
+    UNINSTALL_LIST+=( "${kne_config}" )
+  fi
 
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
-  echo "Installing Knative Monitoring"
-  start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+  if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
+
+  # Ensure knative monitoring is installed only once
+  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
+    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
+  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
+    echo ">> Installing Knative Monitoring"
+    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+  else
+    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
+  fi
+}
+
+function install_head {
+  # Install Knative Eventing from HEAD in the current cluster.
+  echo ">> Installing Knative Eventing from HEAD"
+  install_knative_eventing || \
+    fail_test "Knative HEAD installation failed"
+}
+
+function install_latest_release() {
+  header ">> Installing Knative Eventing latest public release"
+  local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
+  local yaml="eventing.yaml"
+
+  install_knative_eventing \
+    "${url}/${yaml}" || \
+    fail_test "Knative latest release installation failed"
 }
 
 function install_broker() {
@@ -84,6 +132,14 @@ function knative_teardown() {
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
   wait_until_object_does_not_exist namespaces knative-eventing
+
+  echo ">> Uninstalling dependencies"
+  for i in ${!UNINSTALL_LIST[@]}; do
+    # We uninstall elements in the reverse of the order they were installed.
+    local YAML="${UNINSTALL_LIST[$(( ${#array[@]} - $i ))]}"
+    echo ">> Bringing down YAML: ${YAML}"
+    kubectl delete --ignore-not-found=true -f "${YAML}" || return 1
+  done
 }
 
 # Add function call to trap
@@ -105,20 +161,20 @@ function test_setup() {
   echo ">> Setting up logging..."
 
   # Install kail if needed.
-  if ! which kail > /dev/null; then
-    bash <( curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
+  if ! which kail >/dev/null; then
+    bash <(curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
   fi
 
   # Capture all logs.
-  kail > ${ARTIFACTS}/k8s.log.txt &
+  kail >${ARTIFACTS}/k8s.log.txt &
   local kail_pid=$!
   # Clean up kail so it doesn't interfere with job shutting down
   add_trap "kill $kail_pid || true" EXIT
 
   install_test_resources || return 1
 
-  # Publish test images.
-  $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
+  echo ">> Publish test images"
+  "$(dirname "$0")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
 }
 
 # Tear down resources used in the eventing tests.
@@ -149,7 +205,7 @@ function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
   local namespace="knative-eventing"
-  for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
+  for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}'); do
     for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
       echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
       kubectl logs -n $namespace "${pod}" -c "${container}" || true
@@ -159,4 +215,27 @@ function dump_extra_cluster_state() {
       echo "============================================================"
     done
   done
+}
+
+function wait_for_file() {
+  local file timeout waits
+  file="$1"
+  waits=300
+  timeout=$waits
+
+  echo "Waiting for existance of file: ${file}"
+
+  while [ ! -f "${file}" ]; do
+    # When the timeout is equal to zero, show an error and leave the loop.
+    if [ "${timeout}" == 0 ]; then
+      echo "ERROR: Timeout (${waits}s) while waiting for the file ${file}."
+      return 1
+    fi
+
+    sleep 1
+
+    # Decrease the timeout of one
+    ((timeout--))
+  done
+  return 0
 }

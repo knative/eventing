@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	// The interval and timeout used for polling in checking resource states.
 	interval = 1 * time.Second
 	timeout  = 2 * time.Minute
 )
