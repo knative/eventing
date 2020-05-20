@@ -75,7 +75,7 @@ func NewController(
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("ApiServerSource")),
+		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("ApiServerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

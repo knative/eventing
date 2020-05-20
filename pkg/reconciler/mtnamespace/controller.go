@@ -79,7 +79,7 @@ func NewController(
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	brokerInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace")),
+			FilterFunc: controller.FilterControllerGVK(corev1.SchemeGroupVersion.WithKind("Namespace")),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 
