@@ -29,6 +29,11 @@ const (
 	EventTypeConditionBrokerReady  apis.ConditionType = "BrokerReady"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*EventType) GetConditionSet() apis.ConditionSet {
+	return eventTypeCondSet
+}
+
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (et *EventTypeStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return eventTypeCondSet.Manage(et).GetCondition(t)
