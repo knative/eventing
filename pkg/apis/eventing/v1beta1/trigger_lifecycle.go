@@ -41,6 +41,11 @@ const (
 	TriggerAnyFilter = ""
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*Trigger) GetConditionSet() apis.ConditionSet {
+	return triggerCondSet
+}
+
 // GetGroupVersionKind returns GroupVersionKind for Triggers
 func (t *Trigger) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Trigger")

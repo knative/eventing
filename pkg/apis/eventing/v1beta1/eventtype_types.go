@@ -55,6 +55,8 @@ var (
 
 	// Check that we can create OwnerReferences to an EventType.
 	_ kmeta.OwnerRefable = (*EventType)(nil)
+
+	_ duckv1.KRShaped = (*EventType)(nil)
 )
 
 type EventTypeSpec struct {
@@ -107,4 +109,9 @@ func (p *EventType) GetGroupVersionKind() schema.GroupVersionKind {
 // GetUntypedSpec returns the spec of the EventType.
 func (e *EventType) GetUntypedSpec() interface{} {
 	return e.Spec
+}
+
+// GetStatus retrieves the status of the EventType. Implements the KRShaped interface.
+func (t *EventType) GetStatus() *duckv1.Status {
+	return &t.Status.Status
 }
