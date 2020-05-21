@@ -1,0 +1,58 @@
+/*
+ * Copyright 2020 The Knative Authors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package main
+
+import (
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"syscall"
+	"testing"
+	"time"
+
+	"github.com/wavesoftware/go-ensure"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+)
+
+func TestSenderMain(t *testing.T) {
+	ts := createMockServer()
+	defer ts.Close()
+
+	p := syscall.Getpid()
+	go main()
+	time.Sleep(500 * time.Millisecond)
+	err := syscall.Kill(p, syscall.SIGTERM)
+	ensure.NoError(err)
+	time.Sleep(500 * time.Millisecond)
+}
+
+func createMockServer() *httptest.Server {
+	l, err := net.Listen("tcp",
+		fmt.Sprintf(":%d", config.DefaultForwarderPort),
+	)
+	ensure.NoError(err)
+	ts := &httptest.Server{
+		Listener: l,
+		Config: &http.Server{
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			}),
+		},
+	}
+	ts.Start()
+	return ts
+}

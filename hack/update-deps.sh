@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-readonly ROOT_DIR=$(dirname $0)/..
-source ${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh
+readonly ROOT_DIR=$(dirname "$0")/..
+source "${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh"
 
 set -o errexit
 set -o nounset
@@ -26,13 +26,13 @@ export GO111MODULE=on
 # This controls the release branch we track.
 VERSION="master"
 
-cd ${ROOT_DIR}
+cd "${ROOT_DIR}"
 
 # The list of dependencies that we track at HEAD and periodically
 # float forward in this repository.
 FLOATING_DEPS=(
-  "knative.dev/test-infra@${VERSION}"
-  "knative.dev/pkg@${VERSION}"
+  "knative.dev/test-infra@release-0.15"
+  "knative.dev/pkg@release-0.15"
 )
 
 # Parse flags to determine any we should pass to dep.
@@ -55,8 +55,8 @@ fi
 go mod tidy
 go mod vendor
 
-rm -rf $(find vendor/ -name 'OWNERS')
-rm -rf $(find vendor/ -name '*_test.go')
+find vendor/ -name 'OWNERS' -delete
+find vendor/ -name '*_test.go'-delete
 
 export GOFLAGS=-mod=vendor
 

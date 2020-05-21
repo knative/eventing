@@ -237,7 +237,7 @@ func TestIngressHandler_Start(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		if err := handler.Start(ctx); err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 	}()
 	// Need time for the handler to start up. Wait.

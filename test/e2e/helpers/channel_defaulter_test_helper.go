@@ -158,6 +158,9 @@ func updateDefaultChannelCM(client *lib.Client, updateConfig func(config *config
 	// update the defaultchannel configmap
 	configMap.Data[channelDefaulterKey] = string(configBytes)
 	_, err = cmInterface.Update(configMap)
+	if err != nil {
+		return err
+	}
 	// In cmd/webhook.go, configMapWatcher watches the configmap changes and set the config for channeldefaulter,
 	// the resync time is set to 0, which means the the resync will be delayed as long as possible (until the upstream
 	// source closes the watch or times out, or you stop the controller)

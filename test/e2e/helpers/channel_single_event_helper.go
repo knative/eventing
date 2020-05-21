@@ -28,11 +28,11 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-type subscriptionVersion string
+type SubscriptionVersion string
 
 const (
-	subscriptionV1alpha1 subscriptionVersion = "v1alpha1"
-	subscriptionV1beta1  subscriptionVersion = "v1beta1"
+	SubscriptionV1alpha1 SubscriptionVersion = "v1alpha1"
+	SubscriptionV1beta1  SubscriptionVersion = "v1beta1"
 )
 
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
@@ -42,7 +42,7 @@ const (
 // channelVersion == "" means that the version of the channel subscribed to is not
 // modified.
 func SingleEventForChannelTestHelper(t *testing.T, encoding string,
-	subscriptionVersion subscriptionVersion,
+	subscriptionVersion SubscriptionVersion,
 	channelVersion string,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption) {
@@ -70,14 +70,14 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string,
 		}
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		switch subscriptionVersion {
-		case subscriptionV1alpha1:
+		case SubscriptionV1alpha1:
 			client.CreateSubscriptionOrFail(
 				subscriptionName,
 				channelName,
 				&channel,
 				resources.WithSubscriberForSubscription(loggerPodName),
 			)
-		case subscriptionV1beta1:
+		case SubscriptionV1beta1:
 			client.CreateSubscriptionOrFailV1Beta1(
 				subscriptionName,
 				channelName,

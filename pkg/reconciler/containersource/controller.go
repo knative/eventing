@@ -57,12 +57,12 @@ func NewController(
 	containersourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupVersionKind(v1alpha2.SchemeGroupVersion.WithKind("ContainerSource")),
+		FilterFunc: controller.FilterControllerGVK(v1alpha2.SchemeGroupVersion.WithKind("ContainerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	sinkbindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha2.Kind("ContainerSource")),
+		FilterFunc: controller.FilterControllerGK(v1alpha2.Kind("ContainerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

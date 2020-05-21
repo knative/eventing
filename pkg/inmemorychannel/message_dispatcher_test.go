@@ -145,7 +145,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	// Start the dispatcher
 	go func() {
 		if err := dispatcher.Start(serverCtx); err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 	}()
 

@@ -37,7 +37,7 @@ func TestSingleBinaryEventForChannel(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.Binary,
-		"v1alpha1",
+		helpers.SubscriptionV1alpha1,
 		"",
 		channelTestRunner,
 	)
@@ -47,7 +47,7 @@ func TestSingleStructuredEventForChannel(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.Structured,
-		"v1alpha1",
+		helpers.SubscriptionV1alpha1,
 		"",
 		channelTestRunner,
 	)
@@ -57,7 +57,7 @@ func TestSingleBinaryEventForChannelV1Beta1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.Binary,
-		"v1beta1",
+		helpers.SubscriptionV1beta1,
 		"",
 		channelTestRunner,
 	)
@@ -67,7 +67,7 @@ func TestSingleBinaryEventForChannelV1Beta1SubscribeToV1Alpha1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.Binary,
-		"v1beta1",
+		helpers.SubscriptionV1beta1,
 		"messaging.knative.dev/v1alpha1",
 		channelTestRunner,
 	)
@@ -77,7 +77,7 @@ func TestSingleStructuredEventForChannelV1Beta1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.Structured,
-		"v1beta1",
+		helpers.SubscriptionV1beta1,
 		"",
 		channelTestRunner,
 	)

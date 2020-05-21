@@ -1,7 +1,7 @@
 # Approvers in this repo should also be added to the eventing-contrib
 # approvers list.
 approvers:
-- evankanderson
+- toc
 - grantr
 - Harwayne
 - vaikas
@@ -15,7 +15,6 @@ approvers:
 # list. To add reviewers while spreading the load among existing approvers,
 # copy the approvers to the reviewers list too.
 reviewers:
-- evankanderson
 - grantr
 - Harwayne
 - vaikas
@@ -23,6 +22,7 @@ reviewers:
 - matzew
 - nachocano
 - lionelvillard
+- slinkydeveloper
 # Add reviewers below
 - liu-cong
 - yolocs

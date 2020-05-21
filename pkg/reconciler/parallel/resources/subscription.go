@@ -99,6 +99,7 @@ func NewSubscription(branchNumber int, p *v1beta1.Parallel) *messagingv1beta1.Su
 				Ref: p.Spec.Branches[branchNumber].Subscriber.Ref,
 				URI: p.Spec.Branches[branchNumber].Subscriber.URI,
 			},
+			Delivery: p.Spec.Branches[branchNumber].Delivery,
 		},
 	}
 

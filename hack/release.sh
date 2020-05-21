@@ -21,7 +21,7 @@ source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 
 readonly EVENTING_CORE_YAML="eventing-core.yaml"
 readonly EVENTING_CRDS_YAML="eventing-crds.yaml"
-readonly CHANNEL_BROKER_YAML="channel-broker.yaml"
+readonly CHANNEL_BROKER_YAML="deprecated-channel-broker.yaml"
 readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
 readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
 readonly UPGRADE_JOB="upgrade-to-v0.14.0.yaml"

@@ -23,7 +23,7 @@ data:
   # Configuration for defaulting channels that do not specify CRD implementations.
   default-br-config: |
     clusterDefault:
-      brokerClass: ChannelBasedBroker
+      brokerClass: MTChannelBasedBroker
       apiVersion: v1
       kind: ConfigMap
       name: config-br-default-channel

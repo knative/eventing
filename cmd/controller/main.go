@@ -43,6 +43,7 @@ func main() {
 		// Eventing
 		eventtype.NewController,
 		// Trigger namespace labeler for default broker.
+		// Also sets the Status of Triggers that do not have a Broker.
 		trigger.NewController,
 
 		// Flows

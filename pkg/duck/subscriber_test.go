@@ -31,6 +31,10 @@ import (
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
+var (
+	testNS = "testnamespace"
+)
+
 func init() {
 	// Add types to scheme
 	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)

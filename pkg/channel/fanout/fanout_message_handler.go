@@ -39,8 +39,6 @@ import (
 
 const (
 	defaultTimeout = 15 * time.Minute
-
-	eventBufferSize = 500
 )
 
 // Config for a fanout.MessageHandler.
@@ -51,7 +49,7 @@ type Config struct {
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 
-// Handler is a http.Handler that takes a single request in and fans it out to N other servers.
+// MessageHandler is a http.Handler that takes a single request in and fans it out to N other servers.
 type MessageHandler struct {
 	config Config
 
@@ -65,7 +63,7 @@ type MessageHandler struct {
 	logger *zap.Logger
 }
 
-// NewHandler creates a new fanout.MessageHandler.
+// NewMessageHandler creates a new fanout.MessageHandler.
 func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config) (*MessageHandler, error) {
 	handler := &MessageHandler{
 		logger:     logger,

@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -90,6 +91,12 @@ type ParallelBranch struct {
 	// If not specified, sent the result to the Parallel Reply
 	// +optional
 	Reply *duckv1.Destination `json:"reply,omitempty"`
+
+	// Delivery is the delivery specification for events to the subscriber
+	// This includes things like retries, DLQ, etc.
+	// Needed for Roundtripping v1alpha1 <-> v1beta1.
+	// +optional
+	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // ParallelStatus represents the current state of a Parallel.

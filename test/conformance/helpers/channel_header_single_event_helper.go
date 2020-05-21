@@ -70,7 +70,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the channel
-		eventID := fmt.Sprintf("%s", uuid.NewUUID())
+		eventID := string(uuid.NewUUID())
 		body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
 		event := cloudevents.New(
 			fmt.Sprintf(`{"msg":%q}`, body),
