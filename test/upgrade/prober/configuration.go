@@ -72,8 +72,7 @@ func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	brokers := p.client.Eventing.EventingV1alpha1().Brokers(namespace)
-	broker, err := brokers.Get(brokerName, metav1.GetOptions{})
+	broker, err := p.client.Eventing.EventingV1alpha1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +99,7 @@ func (p *prober) deployConfigMap() {
 			},
 			Data: data,
 		}
-		configmaps := p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace)
-		_, err = configmaps.Create(watholaConfigMap)
+		_, err = p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).Create(watholaConfigMap)
 		if err != nil {
 			return err
 		}
