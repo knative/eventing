@@ -46,7 +46,7 @@ readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
 
 # PostInstall script for v0.15, storage migration
-readonly POST_INSTALL_V015="config/post-install/v0.15"
+readonly POST_INSTALL_V015="config/post-install/v0.15.0"
 
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
