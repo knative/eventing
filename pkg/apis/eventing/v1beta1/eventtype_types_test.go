@@ -20,6 +20,15 @@ import (
 	"testing"
 )
 
+func TestEventTypeGetStatus(t *testing.T) {
+	r := &EventType{
+		Status: EventTypeStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestEventType_GetGroupVersionKind(t *testing.T) {
 	src := EventType{}
 	gvk := src.GetGroupVersionKind()
