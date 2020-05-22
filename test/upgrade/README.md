@@ -23,6 +23,7 @@ At a high level, we want to do this:
 1. Install the latest knative release.
 1. Create some resources.
 1. Install knative at HEAD.
+1. Run any post-install jobs that apply for the release to be.
 1. Test those resources, verify that we didn’t break anything.
 
 To achieve that, we just have three separate build tags:
@@ -30,6 +31,7 @@ To achieve that, we just have three separate build tags:
 1. Install the latest release from GitHub.
 1. Run the `preupgrade` tests in this directory.
 1. Install at HEAD (`ko apply -f config/`).
+1. Run the post-install job. For v0.15 we need to migrate storage versions.
 1. Run the `postupgrade` tests in this directory.
 1. Install the latest release from GitHub.
 1. Run the `postdowngrade` tests in this directory.

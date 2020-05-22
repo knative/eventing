@@ -45,6 +45,9 @@ readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 # Channel Based Broker config.
 readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
 
+# PostInstall script for v0.15, storage migration
+readonly POST_INSTALL_V015="config/post-install/v0.15.0"
+
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
 
@@ -112,6 +115,11 @@ function install_broker() {
   ko apply --strict -f ${CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
   ko apply --strict -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with Broker did not come up"
+}
+
+function run_postinstall() {
+  ko apply --strict -f ${POST_INSTALL_V015} || return 1
+  wait_until_batch_job_complete knative-eventing || return 1
 }
 
 function install_mt_broker() {
