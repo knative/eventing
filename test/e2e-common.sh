@@ -80,18 +80,18 @@ function install_knative_eventing() {
 
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
-  if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
+#  if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
 
   # Ensure knative monitoring is installed only once
-  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
-    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
-  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
-    echo ">> Installing Knative Monitoring"
-    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
-  else
-    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
-  fi
+#  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
+#    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
+#  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
+#    echo ">> Installing Knative Monitoring"
+#    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+#    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+#  else
+#    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
+#  fi
 }
 
 function install_head {
