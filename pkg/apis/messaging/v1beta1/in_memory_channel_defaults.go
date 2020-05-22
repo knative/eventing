@@ -32,7 +32,7 @@ func (imc *InMemoryChannel) SetDefaults(ctx context.Context) {
 		imc.Annotations = make(map[string]string)
 	}
 	if _, ok := imc.Annotations[messaging.SubscribableDuckVersionAnnotation]; !ok {
-		imc.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
+		imc.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 	}
 
 	imc.Spec.SetDefaults(ctx)
