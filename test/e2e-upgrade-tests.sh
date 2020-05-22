@@ -67,6 +67,7 @@ kubectl get inmemorychannels.v1alpha1.messaging.knative.dev --all-namespaces -oy
 kubectl get inmemorychannels.v1beta1.messaging.knative.dev --all-namespaces -oyaml
 kubectl get subscriptions.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
 kubectl get subscriptions.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get all --all-namespaces -oyaml
 
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
@@ -77,6 +78,7 @@ kubectl get inmemorychannels.v1alpha1.messaging.knative.dev --all-namespaces -oy
 kubectl get inmemorychannels.v1beta1.messaging.knative.dev --all-namespaces -oyaml
 kubectl get subscriptions.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
 kubectl get subscriptions.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get all --all-namespaces -oyaml
 
 header "Performing downgrade to latest release"
 install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
@@ -90,6 +92,7 @@ kubectl get inmemorychannels.v1alpha1.messaging.knative.dev --all-namespaces -oy
 kubectl get inmemorychannels.v1beta1.messaging.knative.dev --all-namespaces -oyaml
 kubectl get subscriptions.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
 kubectl get subscriptions.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get all --all-namespaces -oyaml
 
 # The prober is blocking on /tmp/prober-signal to know when it should exit.
 echo "done" > /tmp/prober-signal
