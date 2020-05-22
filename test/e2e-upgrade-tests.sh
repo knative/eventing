@@ -61,14 +61,35 @@ install_broker || fail_test 'Installing HEAD Broker failed'
 
 run_postinstall || fail_test 'Running postinstall failed'
 
+kubectl get brokers.v1alpha1.eventing.knative.dev --all-namespaces -oyaml
+kubectl get brokers.v1beta1.eventing.knative.dev --all-namespaces -oyaml
+kubectl get inmemorychannels.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get inmemorychannels.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get subscriptions.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get subscriptions.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
+
+kubectl get brokers.v1alpha1.eventing.knative.dev --all-namespaces -oyaml
+kubectl get brokers.v1beta1.eventing.knative.dev --all-namespaces -oyaml
+kubectl get inmemorychannels.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get inmemorychannels.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get subscriptions.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get subscriptions.v1beta1.messaging.knative.dev --all-namespaces -oyaml
 
 header "Performing downgrade to latest release"
 install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
 
 header "Running postdowngrade tests"
 go_test_e2e -tags=postdowngrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
+
+kubectl get brokers.v1alpha1.eventing.knative.dev --all-namespaces -oyaml
+kubectl get brokers.v1beta1.eventing.knative.dev --all-namespaces -oyaml
+kubectl get inmemorychannels.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get inmemorychannels.v1beta1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get subscriptions.v1alpha1.messaging.knative.dev --all-namespaces -oyaml
+kubectl get subscriptions.v1beta1.messaging.knative.dev --all-namespaces -oyaml
 
 # The prober is blocking on /tmp/prober-signal to know when it should exit.
 echo "done" > /tmp/prober-signal
