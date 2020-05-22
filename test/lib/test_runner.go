@@ -151,7 +151,7 @@ func TearDown(client *Client) {
 		}
 	}
 
-	client.Tracker.Clean(true)
+	client.Tracker.CleanAndDump(true, true)
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
 	}

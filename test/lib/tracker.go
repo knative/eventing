@@ -114,8 +114,15 @@ func (t *Tracker) AddObj(obj kmeta.OwnerRefable) {
 	t.Add(gvr.Group, gvr.Version, gvr.Resource, namespace, name)
 }
 
-// Clean will delete all registered resources
+// Clean will delete all registered resources and dumps the status of the resources
+// on test failure only.
 func (t *Tracker) Clean(awaitDeletion bool) error {
+	return t.CleanAndDump(awaitDeletion, false)
+}
+
+// CleanAndDump will delete all registered resources and optionally dumps the
+// resources regardless of the tests status.
+func (t *Tracker) CleanAndDump(awaitDeletion bool, dump bool) error {
 	logf := t.tc.Logf
 	for _, deleter := range t.resourcesToClean {
 		r, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{})
@@ -123,7 +130,7 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 			logf("Failed to get to-be cleaned resource %q : %v", deleter.Name, err)
 		} else {
 			// Only log the detailed resource data if the test fails.
-			if t.tc.Failed() {
+			if dump || t.tc.Failed() {
 				bytes, _ := json.MarshalIndent(r, "", "  ")
 				logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
 			} else {
