@@ -50,11 +50,11 @@ metadata:
   name: broker-upgrade-auto-gen-config-newbroker
   namespace: test-broker-6
   ownerReferences:
-  - apiVersion: eventing.knative.dev/v1alpha1
-    blockOwnerDeletion: true
-    controller: true
-    kind: Broker
-    name: newbroker
+    - apiVersion: eventing.knative.dev/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Broker
+      name: newbroker
 ```
 
 And your Broker will then look like this after the upgrade:
@@ -97,11 +97,11 @@ metadata:
   name: broker-upgrade-auto-gen-config-newbroker-kafka
   namespace: test-broker-6
   ownerReferences:
-  - apiVersion: eventing.knative.dev/v1alpha1
-    blockOwnerDeletion: true
-    controller: true
-    kind: Broker
-    name: newbroker-kafka
+    - apiVersion: eventing.knative.dev/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Broker
+      name: newbroker-kafka
 ```
 
 And the Broker will look like this:
