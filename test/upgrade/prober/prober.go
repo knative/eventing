@@ -50,11 +50,11 @@ type Prober interface {
 
 // Config represents a configuration for prober
 type Config struct {
-	Namespace           string
-	Interval            time.Duration
-	Serving             ServingConfig
-	FinishedSleep       time.Duration
-	FailOnMissingEvents bool
+	Namespace     string
+	Interval      time.Duration
+	Serving       ServingConfig
+	FinishedSleep time.Duration
+	FailOnErrors  bool
 }
 
 type ServingConfig struct {
@@ -64,10 +64,10 @@ type ServingConfig struct {
 
 func NewConfig(namespace string) *Config {
 	return &Config{
-		Namespace:           namespace,
-		Interval:            Interval,
-		FinishedSleep:       5 * time.Second,
-		FailOnMissingEvents: true,
+		Namespace:     namespace,
+		Interval:      Interval,
+		FinishedSleep: 5 * time.Second,
+		FailOnErrors:  true,
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
@@ -116,15 +116,15 @@ func (p *prober) servingClient() resources.ServingClient {
 
 func (p *prober) ReportErrors(t *testing.T, errors []error) {
 	for _, err := range errors {
-		if p.config.FailOnMissingEvents {
+		if p.config.FailOnErrors {
 			t.Error(err)
 		} else {
 			p.log.Warnf("Silenced FAIL: %v", err)
 		}
 	}
-	if len(errors) > 0 && !p.config.FailOnMissingEvents {
+	if len(errors) > 0 && !p.config.FailOnErrors {
 		t.Skipf(
-			"Found %d errors, but FailOnMissingEvents is false. Skipping test.",
+			"Found %d errors, but FailOnErrors is false. Skipping test.",
 			len(errors),
 		)
 	}
