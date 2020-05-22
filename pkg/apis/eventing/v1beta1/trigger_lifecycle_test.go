@@ -58,6 +58,14 @@ var (
 	}
 )
 
+func TestTriggerGetConditionSet(t *testing.T) {
+	r := &Trigger{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestTriggerGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string

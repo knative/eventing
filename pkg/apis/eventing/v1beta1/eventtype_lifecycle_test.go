@@ -47,6 +47,14 @@ var (
 	}
 )
 
+func TestEventTypeGetConditionSet(t *testing.T) {
+	r := &EventType{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestEventTypeGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
