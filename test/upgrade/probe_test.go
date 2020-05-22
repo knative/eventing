@@ -52,7 +52,7 @@ func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	config := prober.NewConfig(client.Namespace)
 
 	// FIXME: https://github.com/knative/eventing/issues/2665
-	config.FailOnMissingEvents = false
+	config.FailOnErrors = false
 
 	// Use zap.SugarLogger instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
