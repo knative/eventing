@@ -65,6 +65,8 @@ var (
 
 	// Check that we can create OwnerReferences to a Trigger.
 	_ kmeta.OwnerRefable = (*Trigger)(nil)
+
+	_ duckv1.KRShaped = (*Trigger)(nil)
 )
 
 type TriggerSpec struct {
@@ -119,4 +121,9 @@ type TriggerList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Trigger `json:"items"`
+}
+
+// GetStatus retrieves the status of the Trigger. Implements the KRShaped interface.
+func (t *Trigger) GetStatus() *duckv1.Status {
+	return &t.Status.Status
 }

@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestBrokerGetStatus(t *testing.T) {
+	r := &Broker{
+		Status: BrokerStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestBroker_GetGroupVersionKind(t *testing.T) {
 	b := Broker{}
 	gvk := b.GetGroupVersionKind()

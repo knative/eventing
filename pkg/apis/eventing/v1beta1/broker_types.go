@@ -62,6 +62,8 @@ var (
 
 	// Check that we can create OwnerReferences to a Broker.
 	_ kmeta.OwnerRefable = (*Broker)(nil)
+
+	_ duckv1.KRShaped = (*Broker)(nil)
 )
 
 type BrokerSpec struct {
@@ -108,4 +110,9 @@ func (t *Broker) GetGroupVersionKind() schema.GroupVersionKind {
 // GetUntypedSpec returns the spec of the Broker.
 func (b *Broker) GetUntypedSpec() interface{} {
 	return b.Spec
+}
+
+// GetStatus retrieves the status of the Broker. Implements the KRShaped interface.
+func (t *Broker) GetStatus() *duckv1.Status {
+	return &t.Status.Status
 }
