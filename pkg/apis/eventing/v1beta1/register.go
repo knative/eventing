@@ -47,8 +47,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Broker{},
 		&BrokerList{},
-		//		&EventType{},
-		//		&EventTypeList{},
+		&EventType{},
+		&EventTypeList{},
 		&Trigger{},
 		&TriggerList{},
 	)
