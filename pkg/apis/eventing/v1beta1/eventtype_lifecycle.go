@@ -19,7 +19,6 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -87,24 +86,6 @@ func (et *EventTypeStatus) MarkBrokerNotConfigured() {
 
 func (et *EventTypeStatus) PropagateBrokerStatus(bs *BrokerStatus) {
 	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
-	if bc == nil {
-		et.MarkBrokerNotConfigured()
-		return
-	}
-	switch {
-	case bc.Status == corev1.ConditionUnknown:
-		et.MarkBrokerUnknown(bc.Reason, bc.Message)
-	case bc.Status == corev1.ConditionTrue:
-		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
-	case bc.Status == corev1.ConditionFalse:
-		et.MarkBrokerFailed(bc.Reason, bc.Message)
-	default:
-		et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
-	}
-}
-
-func (et *EventTypeStatus) PropagateV1Alpha1BrokerStatus(bs *v1alpha1BrokerStatus) {
-	bc := v1alpha1.BrokerCondSet.Manage(bs).GetTopLevelCondition()
 	if bc == nil {
 		et.MarkBrokerNotConfigured()
 		return

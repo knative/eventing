@@ -24,7 +24,7 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
-var BrokerCondSet = apis.NewLivingConditionSet(
+var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionIngress,
 	BrokerConditionTriggerChannel,
 	BrokerConditionFilter,
@@ -41,57 +41,57 @@ const (
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (bs *BrokerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
-	return BrokerCondSet.Manage(bs).GetCondition(t)
+	return brokerCondSet.Manage(bs).GetCondition(t)
 }
 
 // GetTopLevelCondition returns the top level Condition.
 func (bs *BrokerStatus) GetTopLevelCondition() *apis.Condition {
-	return BrokerCondSet.Manage(bs).GetTopLevelCondition()
+	return brokerCondSet.Manage(bs).GetTopLevelCondition()
 }
 
 // IsReady returns true if the resource is ready overall.
 func (bs *BrokerStatus) IsReady() bool {
-	return BrokerCondSet.Manage(bs).IsHappy()
+	return brokerCondSet.Manage(bs).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (bs *BrokerStatus) InitializeConditions() {
-	BrokerCondSet.Manage(bs).InitializeConditions()
+	brokerCondSet.Manage(bs).InitializeConditions()
 }
 
 func (bs *BrokerStatus) MarkIngressFailed(reason, format string, args ...interface{}) {
-	BrokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, reason, format, args...)
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, reason, format, args...)
 }
 
 func (bs *BrokerStatus) PropagateIngressAvailability(ep *corev1.Endpoints) {
 	if duck.EndpointsAreAvailable(ep) {
-		BrokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
 	} else {
 		bs.MarkIngressFailed("EndpointsUnavailable", "Endpoints %q are unavailable.", ep.Name)
 	}
 }
 
 func (bs *BrokerStatus) MarkTriggerChannelFailed(reason, format string, args ...interface{}) {
-	BrokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, reason, format, args...)
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, reason, format, args...)
 }
 
 func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1alpha1.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
 	address := cs.AddressStatus.Address
 	if address != nil {
-		BrokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
 	} else {
 		bs.MarkTriggerChannelFailed("ChannelNotReady", "trigger Channel is not ready: not addressalbe")
 	}
 }
 
 func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interface{}) {
-	BrokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
 }
 
 func (bs *BrokerStatus) PropagateFilterAvailability(ep *corev1.Endpoints) {
 	if duck.EndpointsAreAvailable(ep) {
-		BrokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 	} else {
 		bs.MarkFilterFailed("EndpointsUnavailable", "Endpoints %q are unavailable.", ep.Name)
 	}
@@ -103,10 +103,10 @@ func (bs *BrokerStatus) SetAddress(url *apis.URL) {
 	if url != nil {
 		bs.Address.Hostname = url.Host
 		bs.Address.URL = url
-		BrokerCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
 	} else {
 		bs.Address.Hostname = ""
 		bs.Address.URL = nil
-		BrokerCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
+		brokerCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }

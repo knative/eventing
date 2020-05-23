@@ -84,7 +84,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 		return err
 	}
 
-	et.Status.PropagateBrokerStatus(&b.Status)
+	v1alpha1.PropagateV1Alpha1BrokerStatus(&et.Status, &b.Status)
 
 	return newReconciledNormal(et.Namespace, et.Name)
 }
