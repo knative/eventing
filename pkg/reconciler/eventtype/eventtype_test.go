@@ -178,12 +178,12 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			eventTypeLister: listers.GetEventTypeLister(),
+			eventTypeLister: listers.GetV1Beta1EventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
 			tracker:         tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		return eventtype.NewReconciler(ctx, logger,
-			fakeeventingclient.Get(ctx), listers.GetEventTypeLister(),
+			fakeeventingclient.Get(ctx), listers.GetV1Beta1EventTypeLister(),
 			controller.GetEventRecorder(ctx), r)
 	},
 		false,
