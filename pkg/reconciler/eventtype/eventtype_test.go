@@ -28,7 +28,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
