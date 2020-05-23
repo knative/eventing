@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +34,7 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -41,10 +44,10 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
-	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -107,7 +110,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeAvailableReceiveAdapter(),
+			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -157,7 +160,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeAvailableReceiveAdapter(),
+			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -208,7 +211,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeAvailableReceiveAdapter(),
+			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -264,7 +267,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeAvailableReceiveAdapterWithTargetURI(),
+			makeAvailableReceiveAdapterWithTargetURI(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -320,7 +323,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeReceiveAdapterWithDifferentEnv(),
+			makeReceiveAdapterWithDifferentEnv(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -348,7 +351,7 @@ func TestReconcile(t *testing.T) {
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: makeReceiveAdapter(),
+			Object: makeReceiveAdapter(t),
 		}},
 		WantCreates: []runtime.Object{
 			makeSubjectAccessReview("namespaces", "get", "default"),
@@ -378,7 +381,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeReceiveAdapterWithDifferentServiceAccount("morgan"),
+			makeReceiveAdapterWithDifferentServiceAccount(t, "morgan"),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -409,7 +412,7 @@ func TestReconcile(t *testing.T) {
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: makeReceiveAdapterWithDifferentServiceAccount("malin"),
+			Object: makeReceiveAdapterWithDifferentServiceAccount(t, "malin"),
 		}},
 		WantCreates: []runtime.Object{
 			makeSubjectAccessReview("namespaces", "get", "malin"),
@@ -436,7 +439,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithChannelAddress(sinkDNS),
 			),
-			makeReceiveAdapterWithDifferentContainerCount(),
+			makeReceiveAdapterWithDifferentContainerCount(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -464,7 +467,7 @@ func TestReconcile(t *testing.T) {
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: makeReceiveAdapter(),
+			Object: makeReceiveAdapter(t),
 		}},
 		WantCreates: []runtime.Object{
 			makeSubjectAccessReview("namespaces", "get", "default"),
@@ -491,7 +494,7 @@ func TestReconcile(t *testing.T) {
 				WithInitBrokerConditions,
 				WithBrokerAddress(sinkDNS),
 			),
-			makeAvailableReceiveAdapter(),
+			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
@@ -532,9 +535,11 @@ func TestReconcile(t *testing.T) {
 		r := &Reconciler{
 			kubeClientSet:         fakekubeclient.Get(ctx),
 			apiserversourceLister: listers.GetApiServerSourceV1alpha2Lister(),
-			source:                source,
+			ceSource:              source,
 			receiveAdapterImage:   image,
 			sinkResolver:          resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			loggingContext:        ctx,
+			configs:               &reconcilersource.EmptyVarsGenerator{},
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceV1alpha2Lister(),
@@ -545,11 +550,13 @@ func TestReconcile(t *testing.T) {
 	))
 }
 
-func makeReceiveAdapter() *appsv1.Deployment {
-	return makeReceiveAdapterWithName(sourceName)
+func makeReceiveAdapter(t *testing.T) *appsv1.Deployment {
+	return makeReceiveAdapterWithName(t, sourceName)
 }
 
-func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
+func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deployment {
+	t.Helper()
+
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
@@ -570,18 +577,24 @@ func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
 		Source:  src,
 		Labels:  resources.Labels(sourceName),
 		SinkURI: sinkURI.String(),
+		Configs: &reconcilersource.EmptyVarsGenerator{},
 	}
-	ra, _ := resources.MakeReceiveAdapter(&args)
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
 	return ra
 }
 
-func makeAvailableReceiveAdapter() *appsv1.Deployment {
-	ra := makeReceiveAdapter()
+func makeAvailableReceiveAdapter(t *testing.T) *appsv1.Deployment {
+	ra := makeReceiveAdapter(t)
 	WithDeploymentAvailable()(ra)
 	return ra
 }
 
-func makeAvailableReceiveAdapterWithTargetURI() *appsv1.Deployment {
+func makeAvailableReceiveAdapterWithTargetURI(t *testing.T) *appsv1.Deployment {
+	t.Helper()
+
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
@@ -602,14 +615,18 @@ func makeAvailableReceiveAdapterWithTargetURI() *appsv1.Deployment {
 		Source:  src,
 		Labels:  resources.Labels(sourceName),
 		SinkURI: sinkTargetURI.String(),
+		Configs: &reconcilersource.EmptyVarsGenerator{},
 	}
-	ra, _ := resources.MakeReceiveAdapter(&args)
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
 	WithDeploymentAvailable()(ra)
 	return ra
 }
 
-func makeReceiveAdapterWithDifferentEnv() *appsv1.Deployment {
-	ra := makeReceiveAdapter()
+func makeReceiveAdapterWithDifferentEnv(t *testing.T) *appsv1.Deployment {
+	ra := makeReceiveAdapter(t)
 	ra.Spec.Template.Spec.Containers[0].Env = append(ra.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "not-in",
 		Value: "the-original",
@@ -617,14 +634,14 @@ func makeReceiveAdapterWithDifferentEnv() *appsv1.Deployment {
 	return ra
 }
 
-func makeReceiveAdapterWithDifferentServiceAccount(name string) *appsv1.Deployment {
-	ra := makeReceiveAdapter()
+func makeReceiveAdapterWithDifferentServiceAccount(t *testing.T, name string) *appsv1.Deployment {
+	ra := makeReceiveAdapter(t)
 	ra.Spec.Template.Spec.ServiceAccountName = name
 	return ra
 }
 
-func makeReceiveAdapterWithDifferentContainerCount() *appsv1.Deployment {
-	ra := makeReceiveAdapter()
+func makeReceiveAdapterWithDifferentContainerCount(t *testing.T) *appsv1.Deployment {
+	ra := makeReceiveAdapter(t)
 	ra.Spec.Template.Spec.Containers = append(ra.Spec.Template.Spec.Containers, corev1.Container{})
 	return ra
 }

@@ -7,10 +7,13 @@ metadata:
     eventing.knative.dev/release: devel
 spec:
   template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
     spec:
       serviceAccountName: eventing-controller
       restartPolicy: Never
       containers:
       - name: upgrade-brokers
-        image: ko://knative.dev/eventing/cmd/upgrade/v0.14.0/
+        image: ko://knative.dev/eventing/cmd/upgrade/v0.14.0
 

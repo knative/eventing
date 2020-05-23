@@ -26,7 +26,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel/fake"
 )
 
 func TestNew(t *testing.T) {

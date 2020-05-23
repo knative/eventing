@@ -2168,7 +2168,7 @@ data:
           "id": 42,
           "panels": [],
           "repeat": null,
-          "title": "PingSource - JobRunner",
+          "title": "MT PingSource",
           "type": "row"
         },
         {
@@ -2238,7 +2238,7 @@ data:
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(rate(pingsource_jobrunner_controller_event_count[1m]))",
+              "expr": "sum(rate(pingsource_mt_adapter_event_count[1m]))",
               "format": "time_series",
               "instant": false,
               "refId": "A"
@@ -2326,7 +2326,7 @@ data:
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(rate(pingsource_jobrunner_controller_event_count{response_code_class=\"2xx\"}[1m])) / sum(rate(pingsource_jobrunner_controller_event_count[1m]))",
+              "expr": "sum(rate(pingsource_mt_adapter_event_count{response_code_class=\"2xx\"}[1m])) / sum(rate(pingsource_mt_adapter_event_count[1m]))",
               "format": "time_series",
               "instant": false,
               "refId": "A"
@@ -2392,7 +2392,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(pingsource_jobrunner_controller_event_count[1m])) by (response_code_class)",
+              "expr": "sum(rate(pingsource_mt_adapter_event_count[1m])) by (response_code_class)",
               "format": "time_series",
               "hide": false,
               "instant": false,
@@ -2510,7 +2510,7 @@ data:
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(rate(pingsource_jobrunner_controller_event_count{response_code_class!=\"2xx\"}[1m])) / sum(rate(pingsource_jobrunner_controller_event_count[1m]))",
+              "expr": "sum(rate(pingsource_mt_adapter_event_count{response_code_class!=\"2xx\"}[1m])) / sum(rate(pingsource_mt_adapter_event_count[1m]))",
               "format": "time_series",
               "instant": false,
               "refId": "A"

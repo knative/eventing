@@ -31,6 +31,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   preserveUnknownFields: false
   validation:
     openAPIV3Schema:
@@ -66,7 +72,7 @@ spec:
   versions:
   - name: v1alpha1
     served: true
-    storage: true
+    storage: false
   - name: v1beta1
     served: true
-    storage: false
+    storage: true

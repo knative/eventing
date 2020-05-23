@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
-	"github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/eventing/pkg/broker"
@@ -202,7 +202,7 @@ func TestIngressHandler_Start(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		if err := handler.Start(ctx); err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 	}()
 	// Need time for the handler to start up. Wait.

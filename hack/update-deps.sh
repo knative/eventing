@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2018 The Knative Authors
+# Copyright 2020 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,41 +14,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-readonly ROOT_DIR=$(dirname $0)/..
-source ${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh
+readonly ROOT_DIR=$(dirname "$0")/..
+source "${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh"
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-cd ${ROOT_DIR}
+export GO111MODULE=on
+
+# This controls the release branch we track.
+VERSION="master"
+
+cd "${ROOT_DIR}"
 
 # The list of dependencies that we track at HEAD and periodically
 # float forward in this repository.
 FLOATING_DEPS=(
-  "knative.dev/pkg"
-  "knative.dev/test-infra"
+  "knative.dev/test-infra@release-0.15"
+  "knative.dev/pkg@release-0.15"
 )
 
 # Parse flags to determine any we should pass to dep.
-DEP_FLAGS=()
+GO_GET=0
 while [[ $# -ne 0 ]]; do
   parameter=$1
   case ${parameter} in
-    --upgrade) DEP_FLAGS=( -update ${FLOATING_DEPS[@]} ) ;;
+    --upgrade) GO_GET=1 ;;
     *) abort "unknown option ${parameter}" ;;
   esac
   shift
 done
-readonly DEP_FLAGS
+readonly GO_GET
 
-# Ensure we have everything we need under vendor/
-dep ensure ${DEP_FLAGS[@]}
+if (( GO_GET )); then
+  go get -d ${FLOATING_DEPS[@]}
+fi
 
-rm -rf $(find vendor/ -name 'OWNERS')
-rm -rf $(find vendor/ -name 'OWNERS_ALIASES')
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
+# Prune modules.
+go mod tidy
+go mod vendor
 
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+find vendor/ -name 'OWNERS' -delete
+find vendor/ -name '*_test.go'-delete
+
+export GOFLAGS=-mod=vendor
+
+update_licenses third_party/VENDOR-LICENSE "./..."

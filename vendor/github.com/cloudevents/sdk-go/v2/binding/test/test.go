@@ -32,7 +32,7 @@ func NameOf(x interface{}) string {
 	return fmt.Sprintf("%T(%#v)", x, x)
 }
 
-// Run f as a test for each event in events
+// EachEvent runs f as a test for each event in events
 func EachEvent(t *testing.T, events []event.Event, f func(*testing.T, event.Event)) {
 	for _, e := range events {
 		in := e
@@ -40,7 +40,7 @@ func EachEvent(t *testing.T, events []event.Event, f func(*testing.T, event.Even
 	}
 }
 
-// Run f as a test for each message in messages
+// EachMessage runs f as a test for each message in messages
 func EachMessage(t *testing.T, messages []binding.Message, f func(*testing.T, binding.Message)) {
 	for _, m := range messages {
 		in := m
@@ -48,7 +48,7 @@ func EachMessage(t *testing.T, messages []binding.Message, f func(*testing.T, bi
 	}
 }
 
-// Assert two event.Event context are equals
+// AssertEventContextEquals asserts that two event.Event contexts are equals
 func AssertEventContextEquals(t *testing.T, want event.EventContext, have event.EventContext) {
 	wantVersion := spec.VS.Version(want.GetSpecVersion())
 	require.NotNil(t, wantVersion)
@@ -63,7 +63,7 @@ func AssertEventContextEquals(t *testing.T, want event.EventContext, have event.
 	require.Equal(t, want.GetExtensions(), have.GetExtensions(), "Extensions")
 }
 
-// Assert two event.Event are equals
+// AssertEventEquals asserts that two event.Event are equals
 func AssertEventEquals(t *testing.T, want event.Event, have event.Event) {
 	AssertEventContextEquals(t, want.Context, have.Context)
 	wantPayload := want.Data()
@@ -71,16 +71,16 @@ func AssertEventEquals(t *testing.T, want event.Event, have event.Event) {
 	assert.Equal(t, wantPayload, havePayload)
 }
 
-// Returns a copy of the event.Event where all extensions are converted to strings. Fails the test if conversion fails
+// ExToStr returns a copy of the event.Event where all extensions are converted to strings. Fails the test if conversion fails
 func ExToStr(t *testing.T, e event.Event) event.Event {
 	out := e.Clone()
 	for k, v := range e.Extensions() {
 		var vParsed interface{}
 		var err error
 
-		switch v.(type) {
+		switch v := v.(type) {
 		case json.RawMessage:
-			err = json.Unmarshal(v.(json.RawMessage), &vParsed)
+			err = json.Unmarshal(v, &vParsed)
 			require.NoError(t, err)
 		default:
 			vParsed, err = types.Format(v)
@@ -91,7 +91,7 @@ func ExToStr(t *testing.T, e event.Event) event.Event {
 	return out
 }
 
-// Must marshal the event.Event to JSON structured representation
+// MustJSON marshals the event.Event to JSON structured representation or panics
 func MustJSON(e event.Event) []byte {
 	b, err := format.JSON.Marshal(&e)
 	if err != nil {
@@ -100,9 +100,11 @@ func MustJSON(e event.Event) []byte {
 	return b
 }
 
-// Must convert the Message to event.Event
+// MustToEvent converts a Message to event.Event
 func MustToEvent(t *testing.T, ctx context.Context, m binding.Message) event.Event {
 	e, err := binding.ToEvent(ctx, m)
 	require.NoError(t, err)
 	return *e
 }
+
+//TODO message interfaces compliance check?

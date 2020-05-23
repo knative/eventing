@@ -27,7 +27,7 @@ import (
 // DeliverySpec contains the delivery options for event senders,
 // such as channelable and source.
 type DeliverySpec struct {
-	// DeadLetterSink is the sink receiving event that couldn't be sent to
+	// DeadLetterSink is the sink receiving event that could not be sent to
 	// a destination.
 	// +optional
 	DeadLetterSink *duckv1.Destination `json:"deadLetterSink,omitempty"`
@@ -37,7 +37,7 @@ type DeliverySpec struct {
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
 
-	// BackoffPolicy is the retry backoff policy (linear, exponential)
+	// BackoffPolicy is the retry backoff policy (linear, exponential).
 	// +optional
 	BackoffPolicy *BackoffPolicyType `json:"backoffPolicy,omitempty"`
 
@@ -45,7 +45,7 @@ type DeliverySpec struct {
 	// More information on Duration format: https://www.ietf.org/rfc/rfc3339.txt
 	//
 	// For linear policy, backoff delay is the time interval between retries.
-	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>
+	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>.
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
 }

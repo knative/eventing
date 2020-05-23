@@ -27,6 +27,7 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
@@ -36,6 +37,10 @@ func (source *InMemoryChannel) ConvertTo(ctx context.Context, obj apis.Convertib
 	switch sink := obj.(type) {
 	case *v1beta1.InMemoryChannel:
 		sink.ObjectMeta = source.ObjectMeta
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 		source.Status.ConvertTo(ctx, &sink.Status)
 		return source.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
@@ -84,6 +89,10 @@ func (sink *InMemoryChannel) ConvertFrom(ctx context.Context, obj apis.Convertib
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
 		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
@@ -114,16 +123,9 @@ func (sink *InMemoryChannelStatus) ConvertFrom(ctx context.Context, source v1bet
 	}
 	if len(source.SubscribableStatus.Subscribers) > 0 {
 		sink.SubscribableTypeStatus.SubscribableStatus = &duckv1alpha1.SubscribableStatus{
-			Subscribers: make([]duckv1alpha1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
+			Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers)),
 		}
-		for i, ss := range source.SubscribableStatus.Subscribers {
-			sink.SubscribableTypeStatus.SubscribableStatus.Subscribers[i] = duckv1alpha1.SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
-			}
-		}
+		copy(sink.SubscribableTypeStatus.SubscribableStatus.Subscribers, source.SubscribableStatus.Subscribers)
 	}
 	return nil
 }

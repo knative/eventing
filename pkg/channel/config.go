@@ -18,9 +18,19 @@ package channel
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	knconfigmap "knative.dev/pkg/configmap"
+
 	"knative.dev/eventing/pkg/configmap"
 	"knative.dev/eventing/pkg/kncloudevents"
-	knconfigmap "knative.dev/pkg/configmap"
+)
+
+const (
+	// Defaults for the underlying HTTP Client transport. These would enable better connection reuse.
+	// Set them on a 10:1 ratio, but this would actually depend on the Subscriptions' subscribers and the workload itself.
+	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
 )
 
 // EventDispatcherConfigMap is the name of the configmap for event dispatcher.

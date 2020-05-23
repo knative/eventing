@@ -140,8 +140,13 @@ func (r *URIResolver) URIFromObjectReference(ref *corev1.ObjectReference, parent
 		return nil, errors.New("ref is nil")
 	}
 
-	if err := r.tracker.Track(*ref, parent); err != nil {
-		return nil, fmt.Errorf("failed to track %+v: %v", ref, err)
+	if err := r.tracker.TrackReference(tracker.Reference{
+		APIVersion: ref.APIVersion,
+		Kind:       ref.Kind,
+		Namespace:  ref.Namespace,
+		Name:       ref.Name,
+	}, parent); err != nil {
+		return nil, fmt.Errorf("failed to track %+v: %w", ref, err)
 	}
 
 	// K8s Services are special cased. They can be called, even though they do not satisfy the
@@ -159,12 +164,12 @@ func (r *URIResolver) URIFromObjectReference(ref *corev1.ObjectReference, parent
 	gvr, _ := meta.UnsafeGuessKindToResource(ref.GroupVersionKind())
 	_, lister, err := r.informerFactory.Get(gvr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get lister for %+v: %v", gvr, err)
+		return nil, fmt.Errorf("failed to get lister for %+v: %w", gvr, err)
 	}
 
 	obj, err := lister.ByNamespace(ref.Namespace).Get(ref.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ref %+v: %v", ref, err)
+		return nil, fmt.Errorf("failed to get ref %+v: %w", ref, err)
 	}
 
 	addressable, ok := obj.(*duckv1.AddressableType)
@@ -176,7 +181,7 @@ func (r *URIResolver) URIFromObjectReference(ref *corev1.ObjectReference, parent
 	}
 	url := addressable.Status.Address.URL
 	if url == nil {
-		return nil, fmt.Errorf("url missing in address of %+v", ref)
+		return nil, fmt.Errorf("URL missing in address of %+v", ref)
 	}
 	if url.Host == "" {
 		return nil, fmt.Errorf("hostname missing in address of %+v", ref)

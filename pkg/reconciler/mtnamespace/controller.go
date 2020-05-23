@@ -33,13 +33,8 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 )
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-)
-
 type envConfig struct {
-	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"true"`
+	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"false"`
 }
 
 func onByDefault(labels map[string]string) bool {
@@ -84,7 +79,7 @@ func NewController(
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	brokerInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace")),
+			FilterFunc: controller.FilterControllerGVK(corev1.SchemeGroupVersion.WithKind("Namespace")),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 

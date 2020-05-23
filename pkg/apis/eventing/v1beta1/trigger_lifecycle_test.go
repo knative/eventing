@@ -58,6 +58,14 @@ var (
 	}
 )
 
+func TestTriggerGetConditionSet(t *testing.T) {
+	r := &Trigger{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestTriggerGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -322,7 +330,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
 			if test.brokerStatus != nil {
-				ts.PropagateBrokerStatus(test.brokerStatus)
+				ts.PropagateBrokerCondition(test.brokerStatus.GetTopLevelCondition())
 			}
 			if test.subscriptionCondition != nil {
 				ts.PropagateSubscriptionCondition(test.subscriptionCondition)

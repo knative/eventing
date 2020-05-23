@@ -19,10 +19,10 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var pCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable)
@@ -108,7 +108,7 @@ func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagi
 
 // PropagateChannelStatuses sets the ChannelStatuses and SequenceConditionChannelsReady based on the
 // status of the incoming channels.
-func (ss *SequenceStatus) PropagateChannelStatuses(channels []*duckv1beta1.Channelable) {
+func (ss *SequenceStatus) PropagateChannelStatuses(channels []*eventingduckv1beta1.Channelable) {
 	ss.ChannelStatuses = make([]SequenceChannelStatus, len(channels))
 	allReady := true
 	// If there are no channels, treat that as a False case. Could go either way, but this seems right.
@@ -159,11 +159,11 @@ func (ss *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, 
 	pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, reason, messageFormat, messageA...)
 }
 
-func (ss *SequenceStatus) setAddress(address *pkgduckv1.Addressable) {
-	ss.Address = address
-	if address == nil {
+func (ss *SequenceStatus) setAddress(address *duckv1.Addressable) {
+	if address == nil || address.URL == nil {
 		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyAddress", "addressable is nil")
 	} else {
+		ss.AddressStatus.Address = &duckv1.Addressable{URL: address.URL}
 		pCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
 	}
 }

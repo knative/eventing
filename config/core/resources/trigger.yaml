@@ -51,14 +51,14 @@ spec:
       JSONPath: .spec.broker
     - name: Subscriber_URI
       type: string
-      JSONPath: .status.subscriberURI
+      JSONPath: .status.subscriberUri
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
   versions:
   - name: v1alpha1
     served: true
-    storage: true
+    storage: false
     schema:
       openAPIV3Schema:
         type: object
@@ -104,6 +104,9 @@ spec:
                       kind:
                         type: string
                         minLength: 1
+                      namespace:
+                        type: string
+                        minLength: 1
                       name:
                         type: string
                         minLength: 1
@@ -115,7 +118,7 @@ spec:
             x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
     served: true
-    storage: false
+    storage: true
     schema:
       openAPIV3Schema:
         type: object
@@ -152,6 +155,9 @@ spec:
                         type: string
                         minLength: 1
                       kind:
+                        type: string
+                        minLength: 1
+                      namespace:
                         type: string
                         minLength: 1
                       name:

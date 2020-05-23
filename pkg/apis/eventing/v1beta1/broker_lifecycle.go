@@ -27,6 +27,11 @@ const (
 	BrokerConditionAddressable apis.ConditionType = "Addressable"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*Broker) GetConditionSet() apis.ConditionSet {
+	return brokerCondSet
+}
+
 // GetTopLevelCondition returns the top level Condition.
 func (bs *BrokerStatus) GetTopLevelCondition() *apis.Condition {
 	return brokerCondSet.Manage(bs).GetTopLevelCondition()

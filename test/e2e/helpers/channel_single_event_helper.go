@@ -28,16 +28,22 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-type subscriptionVersion string
+type SubscriptionVersion string
 
 const (
-	subscriptionV1alpha1 subscriptionVersion = "v1alpha1"
-	subscriptionV1beta1  subscriptionVersion = "v1beta1"
+	SubscriptionV1alpha1 SubscriptionVersion = "v1alpha1"
+	SubscriptionV1beta1  SubscriptionVersion = "v1beta1"
 )
 
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
+// channelVersion can be used to override which version you want to create the
+// subscription against. For example, you could create a v1beta1 channel, but create
+// a subscription to its v1alpha1 version by using channelVersion to override it.
+// channelVersion == "" means that the version of the channel subscribed to is not
+// modified.
 func SingleEventForChannelTestHelper(t *testing.T, encoding string,
-	subscriptionVersion subscriptionVersion,
+	subscriptionVersion SubscriptionVersion,
+	channelVersion string,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption) {
 	channelName := "e2e-singleevent-channel-" + encoding
@@ -57,16 +63,21 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string,
 		pod := resources.EventLoggerPod(loggerPodName)
 		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
+		// If the caller specified a different version, override it here.
+		if channelVersion != "" {
+			st.Logf("Changing API version from: %q to %q", channel.APIVersion, channelVersion)
+			channel.APIVersion = channelVersion
+		}
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		switch subscriptionVersion {
-		case subscriptionV1alpha1:
+		case SubscriptionV1alpha1:
 			client.CreateSubscriptionOrFail(
 				subscriptionName,
 				channelName,
 				&channel,
 				resources.WithSubscriberForSubscription(loggerPodName),
 			)
-		case subscriptionV1beta1:
+		case SubscriptionV1beta1:
 			client.CreateSubscriptionOrFailV1Beta1(
 				subscriptionName,
 				channelName,

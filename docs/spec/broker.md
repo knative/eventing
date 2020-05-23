@@ -137,7 +137,19 @@ Upon receiving an event with context attributes defined in the
 [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/master/extensions/distributed-tracing.md),
 the Broker SHOULD preserve that trace header on delivery to subscribers and on
 reply events, unless the reply is sent with a different set of tracing
-attributes.
+attributes. Forwarded trace headers SHOULD be updated with any intermediate
+spans emitted by the broker.
+
+Spans emitted by the Broker SHOULD follow the
+[OpenTelemetry Semantic Conventions for Messaging Systems](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/messaging.md)
+whenever possible. In particular, spans emitted by the Broker SHOULD set the
+following attributes:
+
+- messaging.system: "knative"
+- messaging.destination: broker:name.namespace or trigger:name.namespace with
+  the Broker or Trigger to which the event is being routed
+- messaging.protocol: the name of the underlying transport protocol
+- messaging.message_id: the event ID
 
 ## Conformance Tests
 

@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	ce "github.com/cloudevents/sdk-go/v1"
+	ce "github.com/cloudevents/sdk-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"go.opentelemetry.io/otel/api/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,7 +106,7 @@ func tracingTest(
 	matches := assertEventMatch(t, client, loggerPodName, mustMatch)
 
 	traceID := getTraceIDHeader(t, matches)
-	trace, err := zipkin.JSONTracePred(traceID, 2*time.Minute, func(trace []model.SpanModel) bool {
+	trace, err := zipkin.JSONTracePred(traceID, 5*time.Minute, func(trace []model.SpanModel) bool {
 		tree, err := tracinghelper.GetTraceTree(trace)
 		if err != nil {
 			return false

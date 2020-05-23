@@ -31,10 +31,11 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -47,11 +48,6 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
 )
 
 type envConfig struct {
@@ -114,7 +110,7 @@ func NewController(
 	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
+		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
@@ -124,14 +120,14 @@ func NewController(
 	})
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
+		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
 	// that I own are changed.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
+		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
@@ -144,7 +140,7 @@ func NewController(
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
 		func(obj interface{}) {
-			if trigger, ok := obj.(*v1alpha1.Trigger); ok {
+			if trigger, ok := obj.(*v1beta1.Trigger); ok {
 				impl.EnqueueKey(types.NamespacedName{Namespace: trigger.Namespace, Name: trigger.Spec.Broker})
 			}
 		},

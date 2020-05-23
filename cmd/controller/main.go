@@ -27,7 +27,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	"knative.dev/eventing/pkg/reconciler/parallel"
-	pingsource "knative.dev/eventing/pkg/reconciler/pingsource/controller"
+	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	sourcecrd "knative.dev/eventing/pkg/reconciler/source/crd"
 	"knative.dev/eventing/pkg/reconciler/subscription"
@@ -43,6 +43,7 @@ func main() {
 		// Eventing
 		eventtype.NewController,
 		// Trigger namespace labeler for default broker.
+		// Also sets the Status of Triggers that do not have a Broker.
 		trigger.NewController,
 
 		// Flows

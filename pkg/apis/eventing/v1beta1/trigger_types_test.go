@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestTriggerGetStatus(t *testing.T) {
+	r := &Trigger{
+		Status: TriggerStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestTrigger_GetGroupVersionKind(t *testing.T) {
 
 	tr := Trigger{}

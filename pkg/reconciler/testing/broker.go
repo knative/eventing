@@ -111,6 +111,24 @@ func WithBrokerReady(b *v1alpha1.Broker) {
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 }
 
+func WithDeprecatedStatus(b *v1alpha1.Broker) {
+	dc := apis.Condition{
+		Type:     "Deprecated",
+		Reason:   "SingleTenantChannelBrokerDeprecated",
+		Status:   corev1.ConditionTrue,
+		Severity: apis.ConditionSeverityWarning,
+		Message:  "Single Tenant Channel Brokers are deprecated and will be removed in release 0.16. Use Multi Tenant Channel Brokers instead.",
+	}
+
+	for i, c := range b.Status.Status.Conditions {
+		if c.Type == dc.Type {
+			b.Status.Status.Conditions[i] = dc
+			return
+		}
+	}
+	b.Status.Status.Conditions = append(b.Status.Status.Conditions, dc)
+}
+
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
 func WithTriggerChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {

@@ -36,6 +36,7 @@ import (
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
@@ -44,6 +45,7 @@ import (
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -120,6 +122,10 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	return all
 }
 
+func (l *Listers) GetV1Beta1SubscriptionLister() messaginglistersv1beta1.SubscriptionLister {
+	return messaginglistersv1beta1.NewSubscriptionLister(l.indexerFor(&messagingv1beta1.Subscription{}))
+}
+
 func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
 	return messaginglisters.NewSubscriptionLister(l.indexerFor(&messagingv1alpha1.Subscription{}))
 }
@@ -130,6 +136,10 @@ func (l *Listers) GetFlowsSequenceLister() flowslisters.SequenceLister {
 
 func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
 	return eventinglisters.NewTriggerLister(l.indexerFor(&eventingv1alpha1.Trigger{}))
+}
+
+func (l *Listers) GetV1Beta1TriggerLister() eventingv1beta1listers.TriggerLister {
+	return eventingv1beta1listers.NewTriggerLister(l.indexerFor(&eventingv1beta1.Trigger{}))
 }
 
 func (l *Listers) GetBrokerLister() eventinglisters.BrokerLister {
@@ -148,8 +158,16 @@ func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLis
 	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
 }
 
+func (l *Listers) GetV1Beta1InMemoryChannelLister() messaginglistersv1beta1.InMemoryChannelLister {
+	return messaginglistersv1beta1.NewInMemoryChannelLister(l.indexerFor(&messagingv1beta1.InMemoryChannel{}))
+}
+
 func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
 	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
+}
+
+func (l *Listers) GetV1Beta1MessagingChannelLister() messaginglistersv1beta1.ChannelLister {
+	return messaginglistersv1beta1.NewChannelLister(l.indexerFor(&messagingv1beta1.Channel{}))
 }
 
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
