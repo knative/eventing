@@ -26,10 +26,11 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -42,6 +43,7 @@ const (
 
 var (
 	eventTypes = []string{"step", "finished"}
+	brokerName = "default"
 )
 
 func (p *prober) deployConfiguration() {
@@ -62,22 +64,47 @@ func (p *prober) annotateNamespace() {
 	ensure.NoError(err)
 }
 
+func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
+	namespace := p.config.Namespace
+	p.log.Debugf("Fetching %s broker URL for ns %s", brokerName, namespace)
+	meta := resources.NewMetaResource(brokerName, p.config.Namespace, lib.BrokerTypeMeta)
+	err := duck.WaitForResourceReady(p.client.Dynamic, meta)
+	if err != nil {
+		return nil, err
+	}
+	broker, err := p.client.Eventing.EventingV1alpha1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	url := broker.Status.Address.URL
+	p.log.Debugf("%s broker URL for ns %s is %v", brokerName, namespace, url)
+	return url, nil
+}
+
 func (p *prober) deployConfigMap() {
 	name := configName
-	p.log.Infof("Deploying config map: %v", name)
+	lib.WaitFor(fmt.Sprintf("configmap be deployed: %v", name), func() error {
+		p.log.Infof("Deploying config map: %v", name)
 
-	configData := p.compileTemplate(configFilename)
-	data := make(map[string]string, 0)
-	data[configFilename] = configData
-	secret := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Data: data,
-	}
-	_, err := p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).
-		Create(secret)
-	ensure.NoError(err)
+		brokerUrl, err := p.fetchBrokerUrl()
+		if err != nil {
+			return err
+		}
+		configData := p.compileTemplate(configFilename, brokerUrl)
+		data := make(map[string]string, 0)
+		data[configFilename] = configData
+		watholaConfigMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+			Data: data,
+		}
+		_, err = p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).Create(watholaConfigMap)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (p *prober) deployTriggers() {
@@ -90,9 +117,9 @@ func (p *prober) deployTriggers() {
 		}
 		trigger := resources.Trigger(
 			name,
-			resources.WithBroker("default"),
+			resources.WithBroker(brokerName),
 			resources.WithAttributesTriggerFilter(
-				v1alpha1.TriggerAnyFilter,
+				eventingv1alpha1.TriggerAnyFilter,
 				fullType,
 				map[string]interface{}{},
 			),
@@ -132,7 +159,7 @@ func (p *prober) removeTriggers() {
 	}
 }
 
-func (p *prober) compileTemplate(templateName string) string {
+func (p *prober) compileTemplate(templateName string, brokerUrl *apis.URL) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
@@ -140,6 +167,13 @@ func (p *prober) compileTemplate(templateName string) string {
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
 	ensure.NoError(err)
 	var buff bytes.Buffer
-	ensure.NoError(tmpl.Execute(&buff, p.config))
+	data := struct {
+		*Config
+		BrokerUrl string
+	}{
+		p.config,
+		brokerUrl.String(),
+	}
+	ensure.NoError(tmpl.Execute(&buff, data))
 	return buff.String()
 }

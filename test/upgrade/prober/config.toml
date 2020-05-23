@@ -1,6 +1,6 @@
 # logLevel = 5 # DEBUG(5)
 [sender]
-address = 'http://default-broker.{{- .Namespace -}}.svc.cluster.local'
-interval = {{ .Interval.Nanoseconds }}
+address = '{{- .BrokerUrl -}}'
+interval = {{ .Config.Interval.Nanoseconds }}
 [forwarder]
-target = 'http://wathola-receiver.{{- .Namespace -}}.svc.cluster.local'
+target = 'http://wathola-receiver.{{- .Config.Namespace -}}.svc.cluster.local'
