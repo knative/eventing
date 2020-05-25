@@ -99,6 +99,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	defer message.Finish(nil)
 	event, err := binding.ToEvent(request.Context(), message)
 	if err != nil {
+		h.Logger.Warn("failed to extract event from request", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}

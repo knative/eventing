@@ -146,7 +146,7 @@ func main() {
 	h := &ingress.Handler{
 		Receiver:  kncloudevents.NewHttpMessageReceiver(env.Port),
 		Sender:    sender,
-		Defaulter: broker.TTLDefaulterV2(logger, defaultTTL),
+		Defaulter: broker.TTLDefaulter(logger, defaultTTL),
 		Reporter:  reporter,
 		Logger:    logger,
 	}

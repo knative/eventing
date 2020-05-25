@@ -377,7 +377,7 @@ func TestReceiver(t *testing.T) {
 			if err != nil {
 				t.Error("failed to get TTL", err)
 			}
-			err = broker.SetTTLv2(event.Context, ttl)
+			err = broker.SetTTL(event.Context, ttl)
 			if err != nil {
 				t.Error("failed to set TTL", err)
 			}
@@ -507,7 +507,7 @@ func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
 }
 
 func makeEventWithoutTTL() *cloudevents.Event {
-	e := event.New(event.CloudEventsVersionV1)
+	e := event.New()
 	e.SetType(eventType)
 	e.SetSource(eventSource)
 	e.SetID("1234")
@@ -521,7 +521,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	_ = broker.SetTTLv2(e.Context, 1)
+	_ = broker.SetTTL(e.Context, 1)
 	return e
 }
 

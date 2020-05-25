@@ -20,7 +20,7 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	client "github.com/cloudevents/sdk-go/v2/client"
+	"github.com/cloudevents/sdk-go/v2/client"
 	cetypes "github.com/cloudevents/sdk-go/v2/types"
 	"go.uber.org/zap"
 )

@@ -22,9 +22,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/event"
-	"knative.dev/eventing/pkg/health"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -132,6 +129,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	event, err := binding.ToEvent(ctx, message)
 	if err != nil {
+		h.logger.Warn("failed to extract event from request", zap.Error(err))
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -209,7 +207,7 @@ func (h *Handler) send(
 	headers http.Header,
 	target string,
 	reportArgs *ReportArgs,
-	event *event.Event,
+	event *cloudevents.Event,
 	ttl int32) {
 
 	// send the event to trigger's subscriber
@@ -231,7 +229,7 @@ func (h *Handler) send(
 	writer.WriteHeader(statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *event.Event, reporterArgs *ReportArgs) (*http.Response, error) {
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, error) {
 	// Send the event to the subscriber
 	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target)
 	if err != nil {

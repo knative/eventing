@@ -250,7 +250,7 @@ func (r *mockReporter) ReportEventDispatchTime(_ *ReportArgs, _ int, _ time.Dura
 }
 
 func getValidEvent() io.Reader {
-	e := event.New(event.CloudEventsVersionV1)
+	e := event.New()
 	e.SetType("type")
 	e.SetSource("source")
 	e.SetID("1234")
