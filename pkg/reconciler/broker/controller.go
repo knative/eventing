@@ -55,8 +55,6 @@ type envConfig struct {
 	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
 	FilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
 	FilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
-	// The default value should match the cluster default in config/core/configmaps/default-broker.yaml
-	BrokerClass string `envconfig:"BROKER_CLASS" default:"ChannelBasedBroker"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -92,10 +90,10 @@ func NewController(
 		ingressServiceAccountName: env.IngressServiceAccount,
 		filterImage:               env.FilterImage,
 		filterServiceAccountName:  env.FilterServiceAccount,
-		brokerClass:               env.BrokerClass,
+		brokerClass:               eventing.ChannelBrokerClassValue,
 	}
 
-	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass)
+	impl := brokerreconciler.NewImpl(ctx, r, eventing.ChannelBrokerClassValue)
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 
@@ -105,7 +103,7 @@ func NewController(
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, env.BrokerClass, false /*allowUnset*/),
+		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.ChannelBrokerClassValue, false /*allowUnset*/),
 		Handler:    controller.HandleAll(impl.Enqueue),
 	})
 
