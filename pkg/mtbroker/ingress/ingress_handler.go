@@ -19,11 +19,12 @@ package ingress
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/pkg/health"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"knative.dev/eventing/pkg/health"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -95,8 +96,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	message := cehttp.NewMessageFromHttpRequest(request)
+	defer message.Finish(nil)
 	event, err := binding.ToEvent(request.Context(), message)
-	_ = message.Finish(nil)
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return

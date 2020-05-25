@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/cloudevents/sdk-go/v2/event"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cloudevents/sdk-go/v2/event"
 
 	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cloudevents "github.com/cloudevents/sdk-go/v2"

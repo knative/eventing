@@ -19,12 +19,13 @@ package ingress
 import (
 	"bytes"
 	"io"
-	"knative.dev/eventing/pkg/kncloudevents"
 	nethttp "net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
+
+	"knative.dev/eventing/pkg/kncloudevents"
 
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
