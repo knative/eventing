@@ -26,11 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/event"
-
-	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
@@ -353,7 +351,7 @@ func TestReceiver(t *testing.T) {
 				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
 			}
 			if tc.returnedEvent != nil {
-				if tc.returnedEvent.SpecVersion() != cepkg.CloudEventsVersionV1 {
+				if tc.returnedEvent.SpecVersion() != event.CloudEventsVersionV1 {
 					t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
 				}
 			}
