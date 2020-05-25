@@ -19,6 +19,7 @@ package ingress
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/pkg/health"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,17 +47,31 @@ type Handler struct {
 	// Receiver receives incoming HTTP requests
 	Receiver *kncloudevents.HttpMessageReceiver
 	// Sender sends requests to the broker
-	Sender broker.Sender
+	Sender *kncloudevents.HttpMessageSender
 	// Defaults sets default values to incoming events
 	Defaulter client.EventDefaulter
 	// Reporter reports stats of status code and dispatch time
 	Reporter StatsReporter
 
 	Logger *zap.Logger
+
+	getChannelURL func(string, string, string) url.URL
+}
+
+func getChannelURL(name, namespace, domain string) url.URL {
+	return url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
+		Path:   "/",
+	}
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, broker.WithLivenessCheck(h))
+	if h.getChannelURL == nil {
+		h.getChannelURL = getChannelURL
+	}
+
+	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -78,7 +93,10 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	event, err := binding.ToEvent(request.Context(), cehttp.NewMessageFromHttpRequest(request))
+
+	message := cehttp.NewMessageFromHttpRequest(request)
+	event, err := binding.ToEvent(request.Context(), message)
+	_ = message.Finish(nil)
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
@@ -140,28 +158,36 @@ func (h *Handler) receive(
 
 	// TODO: Today these are pre-deterministic, change this watch for
 	//  	 channels and look up from the channels Status
-	channelURI := &url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", brokerName, brokerNamespace, utils.GetClusterDomainName()),
-		Path:   "/",
-	}
+	channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
 
-	request, err := h.Sender.NewCloudEventRequestWithTarget(ctx, channelURI.String())
+	return h.send(ctx, headers, event, channelURI.String())
+}
+
+func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudevents.Event, target string) (int, time.Duration) {
+
+	request, err := h.Sender.NewCloudEventRequestWithTarget(ctx, target)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}
 	request.Header = utils.PassThroughHeaders(headers)
-	err = cehttp.WriteRequest(ctx, binding.ToMessage(event), request)
+	message := binding.ToMessage(event)
+	defer message.Finish(nil)
+	err = cehttp.WriteRequest(ctx, message, request)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}
 
-	start := time.Now()
-	resp, err := h.Sender.Send(request)
-	dispatchTime := time.Since(start)
+	resp, dispatchTime, err := h.sendAndRecordDispatchTime(request)
 	if err != nil {
 		return http.StatusInternalServerError, dispatchTime
 	}
 
 	return resp.StatusCode, dispatchTime
+}
+
+func (h *Handler) sendAndRecordDispatchTime(request *http.Request) (*http.Response, time.Duration, error) {
+	start := time.Now()
+	resp, err := h.Sender.Send(request)
+	dispatchTime := time.Since(start)
+	return resp, dispatchTime, err
 }

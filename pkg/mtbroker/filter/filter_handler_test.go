@@ -17,11 +17,12 @@
 package filter
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -247,8 +248,9 @@ func TestReceiver(t *testing.T) {
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			request: func() *http.Request {
-				request := httptest.NewRequest(http.MethodPost, validPath, nil)
-				_ = cehttp.WriteRequest(context.Background(), binding.ToMessage(makeEvent()), request)
+				e := makeEvent()
+				b, _ := e.MarshalJSON()
+				request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
 
 				// foo won't pass filtering.
 				request.Header.Set("foo", "bar")
@@ -258,6 +260,8 @@ func TestReceiver(t *testing.T) {
 				request.Header.Set("Knative-Foo", "baz")
 				// X-Request-Id will pass as an exact header match.
 				request.Header.Set("X-Request-Id", "123")
+				// Content-Type will not pass filtering.
+				request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 
 				return request
 			}(),
@@ -315,13 +319,17 @@ func TestReceiver(t *testing.T) {
 				t.Fatalf("Unable to create receiver: %v", err)
 			}
 
-			event := tc.event
-			if event == nil {
-				event = makeEvent()
+			e := tc.event
+			if e == nil {
+				e = makeEvent()
 			}
 			if tc.request == nil {
-				tc.request = httptest.NewRequest(http.MethodPost, validPath, nil)
-				_ = cehttp.WriteRequest(context.Background(), binding.ToMessage(event), tc.request)
+				b, err := e.MarshalJSON()
+				if err != nil {
+					t.Fatal(err)
+				}
+				tc.request = httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
+				tc.request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 			responseWriter := httptest.NewRecorder()
 			r.ServeHTTP(responseWriter, tc.request)
@@ -350,7 +358,7 @@ func TestReceiver(t *testing.T) {
 			}
 			// Compare the returned event.
 			message := cehttp.NewMessageFromHttpResponse(response)
-			event, err = binding.ToEvent(context.Background(), message)
+			event, err := binding.ToEvent(context.Background(), message)
 			if tc.returnedEvent == nil {
 				if err == nil || event != nil {
 					t.Fatalf("Unexpected response event: %v", event)
@@ -441,6 +449,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	message := binding.ToMessage(h.returnedEvent)
+	defer message.Finish(nil)
 	err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
 	if err != nil {
 		h.t.Fatalf("Unable to write body: %v", err)
@@ -499,17 +508,11 @@ func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
 }
 
 func makeEventWithoutTTL() *cloudevents.Event {
-	return &cloudevents.Event{
-		Context: cloudevents.EventContextV1{
-			Type: eventType,
-			Source: cloudevents.URIRef{
-				URL: url.URL{
-					Path: eventSource,
-				},
-			},
-			DataContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV1(),
-	}
+	e := event.New(event.CloudEventsVersionV1)
+	e.SetType(eventType)
+	e.SetSource(eventSource)
+	e.SetID("1234")
+	return &e
 }
 
 func makeEvent() *cloudevents.Event {
@@ -524,34 +527,15 @@ func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
 }
 
 func makeDifferentEvent() *cloudevents.Event {
-	return &cloudevents.Event{
-		Context: cloudevents.EventContextV1{
-			Type: "some-other-type",
-			Source: cloudevents.URIRef{
-				URL: url.URL{
-					Path: eventSource,
-				},
-			},
-			DataContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV1(),
-	}
+	e := makeEvent()
+	e.SetSource("another-source")
+	e.SetID("another-id")
+	return e
 }
 
 func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
-	noTTL := &cloudevents.Event{
-		Context: cloudevents.EventContextV1{
-			Type: eventType,
-			Source: cloudevents.URIRef{
-				URL: url.URL{
-					Path: eventSource,
-				},
-			},
-			DataContentType: cloudevents.StringOfApplicationJSON(),
-			Extensions: map[string]interface{}{
-				extName: extValue,
-			},
-		}.AsV1(),
-	}
+	noTTL := makeEvent()
+	noTTL.SetExtension(extName, extValue)
 	e := addTTLToEvent(*noTTL)
 	return &e
 }

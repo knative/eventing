@@ -19,22 +19,24 @@ package filter
 import (
 	"context"
 	"fmt"
-	"go.opencensus.io/trace"
-	"knative.dev/pkg/logging"
 	"net/http"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/logging"
 )
 
 const (
@@ -57,7 +59,7 @@ type Handler struct {
 	// receiver receives incoming HTTP requests
 	receiver *kncloudevents.HttpMessageReceiver
 	// sender sends requests to downstream services
-	sender broker.Sender
+	sender *kncloudevents.HttpMessageSender
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
@@ -97,9 +99,15 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 //
 // This method will block until ctx is done.
 func (h *Handler) Start(ctx context.Context) error {
-	return h.receiver.StartListen(ctx, broker.WithLivenessCheck(broker.WithReadinessCheck(h)))
+	return h.receiver.StartListen(ctx, health.WithLivenessCheck(health.WithReadinessCheck(h)))
 }
 
+// 1. validate request
+// 2. extract event from request
+// 3. get trigger from its trigger reference extracted from the request URI
+// 4. filter event
+// 5. send event to trigger's subscriber
+// 6. write the response
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	if request.Method != http.MethodPost {
@@ -116,7 +124,10 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	ctx := request.Context()
 
-	event, err := binding.ToEvent(ctx, cehttp.NewMessageFromHttpRequest(request))
+	message := cehttp.NewMessageFromHttpRequest(request)
+	defer message.Finish(nil)
+
+	event, err := binding.ToEvent(ctx, message)
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
@@ -145,7 +156,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := broker.DeleteTTLv2(event.Context); err != nil {
+	if err := broker.DeleteTTL(event.Context); err != nil {
 		h.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
@@ -168,9 +179,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	subscriberURI := t.Status.SubscriberURI
 	if subscriberURI == nil {
 		// Record the event count.
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
 		writer.WriteHeader(http.StatusBadRequest)
-		_, _ = writer.Write([]byte("unable to get subscriber URI"))
 		_ = h.reporter.ReportEventCount(reportArgs, http.StatusBadRequest)
 		return
 	}
@@ -186,6 +195,94 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	h.reportArrivalTime(event, reportArgs)
+
+	h.send(ctx, writer, request.Header, subscriberURI.String(), reportArgs, event, ttl)
+}
+
+func (h *Handler) send(
+	ctx context.Context,
+	writer http.ResponseWriter,
+	headers http.Header,
+	target string,
+	reportArgs *ReportArgs,
+	event *event.Event,
+	ttl int32) {
+
+	// send the event to trigger's subscriber
+	response, err := h.sendEvent(ctx, headers, target, event, reportArgs)
+	if err != nil {
+		h.logger.Error("failed to send event", zap.Error(err))
+		writer.WriteHeader(http.StatusInternalServerError)
+		_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
+		return
+	}
+
+	// If there is an event in the response write it to the response
+	statusCode, err := writeResponse(ctx, writer, response, ttl)
+	if err != nil {
+		h.logger.Error("failed to write response", zap.Error(err))
+	}
+
+	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
+	writer.WriteHeader(statusCode)
+}
+
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *event.Event, reporterArgs *ReportArgs) (*http.Response, error) {
+	// Send the event to the subscriber
+	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the request: %w", err)
+	}
+
+	req.Header = utils.PassThroughHeaders(headers)
+
+	message := binding.ToMessage(event)
+	defer message.Finish(nil)
+
+	if err := cehttp.WriteRequest(ctx, message, req); err != nil {
+		return nil, fmt.Errorf("failed to write request: %w", err)
+	}
+
+	start := time.Now()
+	resp, err := h.sender.Send(req)
+	dispatchTime := time.Since(start)
+	if err != nil {
+		err = fmt.Errorf("failed to dispatch message: %w", err)
+	}
+
+	_ = h.reporter.ReportEventDispatchTime(reporterArgs, resp.StatusCode, dispatchTime)
+
+	return resp, err
+}
+
+func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32) (int, error) {
+
+	response := cehttp.NewMessageFromHttpResponse(resp)
+	defer response.Finish(nil)
+
+	event, err := binding.ToEvent(ctx, response)
+	if err != nil || event == nil {
+		// No event in response.
+		return resp.StatusCode, nil
+	}
+
+	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
+	if err := broker.SetTTL(event.Context, ttl); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
+	}
+
+	eventResponse := binding.ToMessage(event)
+	defer eventResponse.Finish(nil)
+
+	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
+	}
+
+	return resp.StatusCode, nil
+}
+
+func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) {
 	// Record the event processing time. This might be off if the receiver and the filter pods are running in
 	// different nodes with different clocks.
 	var arrivalTimeStr string
@@ -195,67 +292,6 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			_ = h.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))
 		}
 	}
-
-	// Send the event to the subscriber
-	target := subscriberURI.String()
-	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target)
-	if err != nil {
-		h.logger.Info("failed to create the request", zap.String("target", target))
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	req.Header = utils.PassThroughHeaders(request.Header)
-	err = cehttp.WriteRequest(ctx, binding.ToMessage(event), req)
-	if err != nil {
-		h.logger.Info("failed to write request")
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	start := time.Now()
-	resp, err := h.sender.Send(req)
-	dispatchTime := time.Since(start)
-	_ = h.reporter.ReportEventDispatchTime(reportArgs, http.StatusInternalServerError, dispatchTime)
-	if err != nil {
-		h.logger.Error("failed to dispatch message", zap.Error(err))
-		writer.WriteHeader(http.StatusServiceUnavailable)
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusServiceUnavailable)
-		return
-	}
-
-	response := cehttp.NewMessageFromHttpResponse(resp)
-	event, err = binding.ToEvent(ctx, response)
-	if err != nil {
-		h.logger.Error("failed to convert message to event", zap.Error(err))
-		// No event in the response.
-		writer.WriteHeader(resp.StatusCode)
-		_ = h.reporter.ReportEventCount(reportArgs, resp.StatusCode)
-		return
-	}
-	if event == nil {
-		// No event in the response.
-		writer.WriteHeader(resp.StatusCode)
-		_ = h.reporter.ReportEventCount(reportArgs, resp.StatusCode)
-		return
-	}
-
-	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	if err := broker.SetTTLv2(event.Context, ttl); err != nil {
-		h.logger.Error("failed to reset TTL", zap.Error(err))
-		writer.WriteHeader(http.StatusInternalServerError)
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
-		return
-	}
-
-	eventResponse := binding.ToMessage(event)
-	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
-		h.logger.Error("failed to write response event", zap.Error(err))
-		writer.WriteHeader(http.StatusInternalServerError)
-		_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
-		return
-	}
-
-	_ = h.reporter.ReportEventCount(reportArgs, resp.StatusCode)
 }
 
 func (r *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigger, error) {

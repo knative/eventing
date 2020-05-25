@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package broker
+package health
 
 import (
-	"context"
 	"net/http"
 )
 
@@ -25,11 +24,6 @@ const (
 	livenessURI  = "/healthz"
 	readinessURI = "/readyz"
 )
-
-type Sender interface {
-	NewCloudEventRequestWithTarget(ctx context.Context, target string) (*http.Request, error)
-	Send(req *http.Request) (*http.Response, error)
-}
 
 func WithLivenessCheck(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {

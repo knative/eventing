@@ -18,10 +18,11 @@ package ingress
 
 import (
 	"bytes"
-	"context"
 	"io"
+	"knative.dev/eventing/pkg/kncloudevents"
 	nethttp "net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
 	broker "knative.dev/eventing/pkg/mtbroker"
 )
@@ -44,16 +44,16 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	logger := zap.NewNop()
 
 	tt := []struct {
-		name                  string
-		method                string
-		uri                   string
-		body                  io.Reader
-		headers               nethttp.Header
-		statusCode            int
-		sender                broker.Sender
-		reporter              StatsReporter
-		defaulter             client.EventDefaulter
-		expectedSenderHeaders nethttp.Header
+		name            string
+		method          string
+		uri             string
+		body            io.Reader
+		headers         nethttp.Header
+		expectedHeaders nethttp.Header
+		statusCode      int
+		handler         nethttp.Handler
+		reporter        StatsReporter
+		defaulter       client.EventDefaulter
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -61,7 +61,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
@@ -71,7 +71,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
@@ -81,7 +81,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
@@ -91,7 +91,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
@@ -101,7 +101,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusMethodNotAllowed,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
@@ -111,12 +111,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: senderResponseStatusCode,
-			sender: &mockSender{
-				NewCloudEventRequestWithTargetCalled: true,
-				SendCalled:                           true,
-			},
-			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
-			defaulter: broker.TTLDefaulter(logger, 100),
+			handler:    handler(),
+			reporter:   &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
+			defaulter:  broker.TTLDefaulter(logger, 100),
 		},
 		{
 			name:       "no TTL drop event",
@@ -124,7 +121,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusBadRequest,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest},
 		},
 		{
@@ -133,7 +130,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/knative/ns/name",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusBadRequest,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 		},
 		{
@@ -142,11 +139,11 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			uri:        "/",
 			body:       getValidEvent(),
 			statusCode: nethttp.StatusNotFound,
-			sender:     &mockSender{},
+			handler:    handler(),
 			reporter:   &mockReporter{},
 		},
 		{
-			name:       "pass headers to sender",
+			name:       "pass headers to handler",
 			method:     nethttp.MethodPost,
 			uri:        "/ns/name",
 			body:       getValidEvent(),
@@ -158,15 +155,10 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				"X-Request-Id":     []string{"123"},
 				cehttp.ContentType: []string{event.ApplicationCloudEventsJSON},
 			},
-			sender: &mockSender{
-				t: t,
-				expectedHeaders: nethttp.Header{
-					"Knative-Foo":      []string{"123"},
-					"X-Request-Id":     []string{"123"},
-					cehttp.ContentType: []string{event.ApplicationCloudEventsJSON},
-				},
-				NewCloudEventRequestWithTargetCalled: true,
-				SendCalled:                           true,
+			handler: &svc{},
+			expectedHeaders: nethttp.Header{
+				"Knative-Foo":  []string{"123"},
+				"X-Request-Id": []string{"123"},
 			},
 			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter: broker.TTLDefaulter(logger, 100),
@@ -176,25 +168,30 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 
+			s := httptest.NewServer(tc.handler)
+			defer s.Close()
+
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tc.method, tc.uri, tc.body)
 			if tc.headers != nil {
 				request.Header = tc.headers
 			} else {
-				tc.expectedSenderHeaders = nethttp.Header{
+				tc.expectedHeaders = nethttp.Header{
 					cehttp.ContentType: []string{event.ApplicationCloudEventsJSON},
 				}
 				request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 
+			sender, _ := kncloudevents.NewHttpMessageSender(nil, "")
 			h := &Handler{
-				Sender: &mockSender{
-					t:               t,
-					expectedHeaders: tc.expectedSenderHeaders,
-				},
+				Sender:    sender,
 				Defaulter: tc.defaulter,
 				Reporter:  &mockReporter{},
 				Logger:    logger,
+				getChannelURL: func(name, namespace, domain string) url.URL {
+					u, _ := url.Parse(s.URL)
+					return *u
+				},
 			}
 
 			h.ServeHTTP(recorder, request)
@@ -204,8 +201,14 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				t.Errorf("expected status code %d got %d", tc.statusCode, result.StatusCode)
 			}
 
-			if diff := cmp.Diff(tc.sender, h.Sender, cmpopts.IgnoreUnexported(mockSender{})); diff != "" {
-				t.Errorf("expected sender state %+v got %+v - diff %s", tc.sender, h.Sender, diff)
+			if svc, ok := tc.handler.(*svc); ok {
+				for k, expValue := range tc.expectedHeaders {
+					if v, ok := svc.receivedHeaders[k]; !ok {
+						t.Errorf("expected header %s - %v", k, svc.receivedHeaders)
+					} else if diff := cmp.Diff(expValue, v); diff != "" {
+						t.Errorf("(-want +got) %s", diff)
+					}
+				}
 			}
 
 			if diff := cmp.Diff(tc.reporter, h.Reporter); diff != "" {
@@ -215,22 +218,19 @@ func TestHandler_ServeHTTP(t *testing.T) {
 	}
 }
 
-type mockSender struct {
-	t               *testing.T
-	expectedHeaders nethttp.Header
-
-	NewCloudEventRequestWithTargetCalled bool
-	SendCalled                           bool
+type svc struct {
+	receivedHeaders nethttp.Header
 }
 
-func (s *mockSender) NewCloudEventRequestWithTarget(_ context.Context, _ string) (*nethttp.Request, error) {
-	s.NewCloudEventRequestWithTargetCalled = true
-	return httptest.NewRequest("POST", "/ns/broker", nil), nil
+func (s *svc) ServeHTTP(w nethttp.ResponseWriter, req *nethttp.Request) {
+	s.receivedHeaders = req.Header
+	w.WriteHeader(senderResponseStatusCode)
 }
 
-func (s *mockSender) Send(_ *nethttp.Request) (*nethttp.Response, error) {
-	s.SendCalled = true
-	return &nethttp.Response{StatusCode: senderResponseStatusCode}, nil
+func handler() nethttp.Handler {
+	return nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+		writer.WriteHeader(senderResponseStatusCode)
+	})
 }
 
 type mockReporter struct {

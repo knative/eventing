@@ -47,7 +47,6 @@ var (
 
 // SendingContextFrom creates the context to use when sending a Cloud Event with cloudevents.Client. It
 // sets the target if specified, and attaches a filtered set of headers from the initial request.
-// Deprecated: migrate to cloudevents sdk v2
 func SendingContextFrom(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
 	// Get the allowed set of headers.
 	h := PassThroughHeaders(tctx.Header)
@@ -63,7 +62,6 @@ func SendingContextFrom(ctx context.Context, tctx cloudevents.HTTPTransportConte
 // ReceivingContextFrom filters the transport context headers using
 // PassThroughHeaders after receiving an event using
 // cloudevents.Client
-// Deprecated: migrate to cloudevents sdk v2
 func ReceivingContextFrom(ctx context.Context) context.Context {
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	// Get the allowed set of headers.
