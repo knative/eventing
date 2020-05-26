@@ -22,7 +22,7 @@ import (
 	"flag"
 	"log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
 )
 
@@ -38,19 +38,15 @@ func init() {
 	flag.StringVar(&pongType, "pong", "dev.knative.pong", "Responds with this CloudEvent Type.")
 }
 
-func receive(event cloudevents.Event, resp *cloudevents.EventResponse) {
-	log.Printf("Received CloudEvent,\n%s", event)
+func receive(event cloudevents.Event) *cloudevents.Event {
+	log.Printf("Received CloudEvent:\n%s", event)
 	if event.Type() == pingType {
-		pong := cloudevents.NewEvent()
+		pong := event.Clone()
 		pong.SetType(pongType)
 		pong.SetSource("knative.dev/eventing/cmd/pong/" + id)
-		if err := pong.SetData(event.Data); err != nil {
-			log.Printf("failed to set data on pong: %s", err)
-			resp.Error(400, "bad data")
-			return
-		}
-		resp.RespondWith(200, &pong)
+		return &pong
 	}
+	return nil
 }
 
 func main() {
