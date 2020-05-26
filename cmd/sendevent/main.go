@@ -25,7 +25,7 @@ import (
 	"log"
 	"os"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 
 	"knative.dev/eventing/pkg/utils"
 )
@@ -64,10 +64,7 @@ func main() {
 		source = fmt.Sprintf("http://%s", utils.GetClusterDomainName())
 	}
 
-	t, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithTarget(target),
-		cloudevents.WithBinaryEncoding(),
-	)
+	t, err := cloudevents.NewHTTP(cloudevents.WithTarget(target))
 	if err != nil {
 		log.Printf("failed to create transport, %v", err)
 		os.Exit(1)
@@ -87,13 +84,13 @@ func main() {
 	}
 	event.SetType(eventType)
 	event.SetSource(source)
-	if err := event.SetData(untyped); err != nil {
+	if err := event.SetData(cloudevents.ApplicationJSON, untyped); err != nil {
 		log.Printf("failed to set data, %v", err)
 		os.Exit(1)
 	}
 
-	if _, resp, err := c.Send(context.Background(), event); err != nil {
-		fmt.Printf("Failed to send event to %s: %s\n", target, err)
+	if resp, res := c.Request(context.Background(), event); !cloudevents.IsACK(res) {
+		fmt.Printf("Failed to send event to %s: %s\n", target, res.Error())
 		os.Exit(1)
 	} else if resp != nil {
 		fmt.Printf("Got response from %s\n%s\n", target, resp)
