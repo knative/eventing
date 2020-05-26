@@ -1654,7 +1654,7 @@ func containerPorts(httpInternal int32) []corev1.ContainerPort {
 		},
 		{
 			Name:          "metrics",
-			ContainerPort: 9090,
+			ContainerPort: 9092,
 		},
 	}
 }
