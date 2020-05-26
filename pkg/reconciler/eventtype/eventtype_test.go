@@ -27,9 +27,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -42,16 +44,20 @@ const (
 	eventTypeName   = "test-eventtype"
 	eventTypeType   = "test-type"
 	eventTypeBroker = "test-broker"
-	eventTypeSource = "/test-source"
 )
 
 var (
-	testKey = fmt.Sprintf("%s/%s", testNS, eventTypeName)
+	testKey         = fmt.Sprintf("%s/%s", testNS, eventTypeName)
+	eventTypeSource = &apis.URL{
+		Scheme: "http",
+		Host:   "test-source",
+	}
 )
 
 func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestReconcile(t *testing.T) {
@@ -178,12 +184,12 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			eventTypeLister: listers.GetEventTypeLister(),
+			eventTypeLister: listers.GetV1Beta1EventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
 			tracker:         tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		return eventtype.NewReconciler(ctx, logger,
-			fakeeventingclient.Get(ctx), listers.GetEventTypeLister(),
+			fakeeventingclient.Get(ctx), listers.GetV1Beta1EventTypeLister(),
 			controller.GetEventRecorder(ctx), r)
 	},
 		false,

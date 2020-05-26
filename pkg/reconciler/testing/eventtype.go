@@ -21,15 +21,16 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/pkg/apis"
 )
 
 // EventTypeOption enables further configuration of an EventType.
-type EventTypeOption func(*v1alpha1.EventType)
+type EventTypeOption func(*v1beta1.EventType)
 
 // NewEventType creates a EventType with EventTypeOptions.
-func NewEventType(name, namespace string, o ...EventTypeOption) *v1alpha1.EventType {
-	et := &v1alpha1.EventType{
+func NewEventType(name, namespace string, o ...EventTypeOption) *v1beta1.EventType {
+	et := &v1beta1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
@@ -43,76 +44,76 @@ func NewEventType(name, namespace string, o ...EventTypeOption) *v1alpha1.EventT
 }
 
 // WithInitEventTypeConditions initializes the EventType's conditions.
-func WithInitEventTypeConditions(et *v1alpha1.EventType) {
+func WithInitEventTypeConditions(et *v1beta1.EventType) {
 	et.Status.InitializeConditions()
 }
 
-func WithEventTypeSource(source string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+func WithEventTypeSource(source *apis.URL) EventTypeOption {
+	return func(et *v1beta1.EventType) {
 		et.Spec.Source = source
 	}
 }
 
 func WithEventTypeType(t string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.Spec.Type = t
 	}
 }
 
 func WithEventTypeBroker(broker string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.Spec.Broker = broker
 	}
 }
 
 func WithEventTypeDescription(description string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.Spec.Description = description
 	}
 }
 
 func WithEventTypeLabels(labels map[string]string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.ObjectMeta.Labels = labels
 	}
 }
 
 func WithEventTypeOwnerReference(ownerRef metav1.OwnerReference) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
 			ownerRef,
 		}
 	}
 }
 
-func WithEventTypeDeletionTimestamp(et *v1alpha1.EventType) {
+func WithEventTypeDeletionTimestamp(et *v1beta1.EventType) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	et.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
 // WithEventTypeBrokerNotFound calls .Status.MarkFilterFailed on the EventType.
-func WithEventTypeBrokerDoesNotExist(et *v1alpha1.EventType) {
+func WithEventTypeBrokerDoesNotExist(et *v1beta1.EventType) {
 	et.Status.MarkBrokerDoesNotExist()
 }
 
 // WithEventTypeBrokerExists calls .Status.MarkBrokerExists on the EventType.
-func WithEventTypeBrokerExists(et *v1alpha1.EventType) {
+func WithEventTypeBrokerExists(et *v1beta1.EventType) {
 	et.Status.MarkBrokerExists()
 }
 
 func WithEventTypeBrokerFailed(reason, message string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.Status.MarkBrokerFailed(reason, message)
 	}
 }
 
 func WithEventTypeBrokerUnknown(reason, message string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
+	return func(et *v1beta1.EventType) {
 		et.Status.MarkBrokerUnknown(reason, message)
 	}
 }
 
 // WithEventTypeBrokerReady calls .Status.MarkBrokerReady on the EventType.
-func WithEventTypeBrokerReady(et *v1alpha1.EventType) {
+func WithEventTypeBrokerReady(et *v1beta1.EventType) {
 	et.Status.MarkBrokerReady()
 }

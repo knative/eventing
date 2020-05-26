@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/pkg/apis"
 )
@@ -58,5 +59,24 @@ func (sink *Broker) ConvertFrom(ctx context.Context, obj apis.Convertible) error
 		return nil
 	default:
 		return fmt.Errorf("Unknown conversion, got: %T", source)
+	}
+}
+
+// PropagateV1Alpha1BrokerStatus propagates a v1alpha1 BrokerStatus to a v1beta1 EventTypeStatus
+func PropagateV1Alpha1BrokerStatus(et *v1beta1.EventTypeStatus, bs *BrokerStatus) {
+	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
+	if bc == nil {
+		et.MarkBrokerNotConfigured()
+		return
+	}
+	switch {
+	case bc.Status == corev1.ConditionUnknown:
+		et.MarkBrokerUnknown(bc.Reason, bc.Message)
+	case bc.Status == corev1.ConditionTrue:
+		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
+	case bc.Status == corev1.ConditionFalse:
+		et.MarkBrokerFailed(bc.Reason, bc.Message)
+	default:
+		et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 	}
 }

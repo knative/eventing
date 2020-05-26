@@ -148,6 +148,60 @@ func TestBrokerConversion(t *testing.T) {
 	}
 }
 
+func TestBrokerPropagateStatus(t *testing.T) {
+	tests := []struct {
+		name                string
+		markBrokerExists    *bool
+		brokerStatus        *BrokerStatus
+		wantConditionStatus corev1.ConditionStatus
+	}{{
+		name:                "all happy",
+		markBrokerExists:    &trueValue,
+		brokerStatus:        TestHelper.ReadyBrokerStatus(),
+		wantConditionStatus: corev1.ConditionTrue,
+	}, {
+		name:                "broker exist sad",
+		markBrokerExists:    &falseValue,
+		brokerStatus:        nil,
+		wantConditionStatus: corev1.ConditionFalse,
+	}, {
+		name:                "broker ready sad",
+		markBrokerExists:    &trueValue,
+		brokerStatus:        TestHelper.FalseBrokerStatus(),
+		wantConditionStatus: corev1.ConditionFalse,
+	}, {
+		name:                "broker ready unknown",
+		markBrokerExists:    &trueValue,
+		brokerStatus:        TestHelper.UnknownBrokerStatus(),
+		wantConditionStatus: corev1.ConditionUnknown,
+	}, {
+		name:                "all sad",
+		markBrokerExists:    &falseValue,
+		brokerStatus:        nil,
+		wantConditionStatus: corev1.ConditionFalse,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ets := &v1beta1.EventTypeStatus{}
+			if test.markBrokerExists != nil {
+				if *test.markBrokerExists {
+					ets.MarkBrokerExists()
+				} else {
+					ets.MarkBrokerDoesNotExist()
+				}
+			}
+			if test.brokerStatus != nil {
+				PropagateV1Alpha1BrokerStatus(ets, test.brokerStatus)
+			}
+
+			got := ets.GetTopLevelCondition().Status
+			if test.wantConditionStatus != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
+			}
+		})
+	}
+}
+
 // Since v1beta1 to v1alpha1 is lossy but semantically equivalent,
 // fix that so diff works.
 func fixBrokerDeprecated(in *Broker) *Broker {

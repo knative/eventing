@@ -154,6 +154,10 @@ func (l *Listers) GetEventTypeLister() eventinglisters.EventTypeLister {
 	return eventinglisters.NewEventTypeLister(l.indexerFor(&eventingv1alpha1.EventType{}))
 }
 
+func (l *Listers) GetV1Beta1EventTypeLister() eventingv1beta1listers.EventTypeLister {
+	return eventingv1beta1listers.NewEventTypeLister(l.indexerFor(&eventingv1beta1.EventType{}))
+}
+
 func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLister {
 	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
 }

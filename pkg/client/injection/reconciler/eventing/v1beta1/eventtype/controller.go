@@ -31,7 +31,7 @@ import (
 	record "k8s.io/client-go/tools/record"
 	versionedscheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	client "knative.dev/eventing/pkg/client/injection/client"
-	eventtype "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
+	eventtype "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
