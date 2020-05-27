@@ -38,6 +38,7 @@ import (
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/reconciler"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -373,8 +374,12 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 			c.T.Fatalf("Failed to configure pod %q: %v", pod.Name, err)
 		}
 	}
-	c.T.Logf("Creating pod %+v", pod)
-	if _, err := c.Kube.CreatePod(pod); err != nil {
+	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		c.T.Logf("Creating pod %+v", pod)
+		_, e := c.Kube.CreatePod(pod)
+		return e
+	})
+	if err != nil {
 		c.T.Fatalf("Failed to create pod %q: %v", pod.Name, err)
 	}
 	c.Tracker.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
