@@ -30,7 +30,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/broker"
+	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/network"

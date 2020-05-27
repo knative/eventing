@@ -25,7 +25,7 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"knative.dev/eventing/pkg/broker"
+	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
