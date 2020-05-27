@@ -21,7 +21,8 @@ import (
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/test"
+	bindingtest "github.com/cloudevents/sdk-go/v2/binding/test"
+	"github.com/cloudevents/sdk-go/v2/test"
 )
 
 func TestMessageHistory(t *testing.T) {
@@ -113,16 +114,16 @@ func TestHistoryTransformer(t *testing.T) {
 	withHistoryExpected := withHistory.Clone()
 	withHistoryExpected.SetExtension(EventHistory, encodeEventHistory([]string{"knative.dev", "example.com"}))
 
-	test.RunTransformerTests(t, context.Background(), []test.TransformerTestArgs{
+	bindingtest.RunTransformerTests(t, context.Background(), []bindingtest.TransformerTestArgs{
 		{
 			Name:         "Add history in Mock Structured message",
-			InputMessage: test.MustCreateMockStructuredMessage(withoutHistory),
+			InputMessage: bindingtest.MustCreateMockStructuredMessage(t, withoutHistory),
 			WantEvent:    withoutHistoryExpected,
 			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Add history in Mock Binary message",
-			InputMessage: test.MustCreateMockBinaryMessage(withoutHistory),
+			InputMessage: bindingtest.MustCreateMockBinaryMessage(withoutHistory),
 			WantEvent:    withoutHistoryExpected,
 			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
@@ -134,13 +135,13 @@ func TestHistoryTransformer(t *testing.T) {
 		},
 		{
 			Name:         "Update history in Mock Structured message",
-			InputMessage: test.MustCreateMockStructuredMessage(withHistory),
+			InputMessage: bindingtest.MustCreateMockStructuredMessage(t, withHistory),
 			WantEvent:    withHistoryExpected,
 			Transformers: binding.Transformers{AddHistory("example.com")},
 		},
 		{
 			Name:         "Update history in Mock Binary message",
-			InputMessage: test.MustCreateMockBinaryMessage(withHistory),
+			InputMessage: bindingtest.MustCreateMockBinaryMessage(withHistory),
 			WantEvent:    withHistoryExpected,
 			Transformers: binding.Transformers{AddHistory("example.com")},
 		},

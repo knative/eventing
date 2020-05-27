@@ -4,7 +4,6 @@ package test
 import (
 	"fmt"
 	"net/url"
-	"reflect"
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
@@ -79,18 +78,4 @@ func AllVersions(events []event.Event) []event.Event {
 // all event-processing code.
 func Events() []event.Event {
 	return AllVersions([]event.Event{FullEvent(), MinEvent()})
-}
-
-// NoExtensions returns a copy of events with no Extensions.
-// Use for testing where extensions are not supported.
-func NoExtensions(events []event.Event) []event.Event {
-	result := make([]event.Event, len(events))
-	for i, e := range events {
-		result[i] = e
-		result[i].Context = e.Context.Clone()
-		ctx := reflect.ValueOf(result[i].Context).Elem()
-		ext := ctx.FieldByName("Extensions")
-		ext.Set(reflect.Zero(ext.Type()))
-	}
-	return result
 }

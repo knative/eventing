@@ -21,8 +21,9 @@ import (
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/test"
+	bindingtest "github.com/cloudevents/sdk-go/v2/binding/test"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/trace"
 )
@@ -52,10 +53,10 @@ func TestPopulateSpan(t *testing.T) {
 		"cloudevents.specversion": "1.0",
 	}
 
-	test.RunTransformerTests(t, context.Background(), []test.TransformerTestArgs{
+	bindingtest.RunTransformerTests(t, context.Background(), []bindingtest.TransformerTestArgs{
 		{
 			Name:         "Populate span for binary messages",
-			InputMessage: test.MustCreateMockBinaryMessage(wantEvent),
+			InputMessage: bindingtest.MustCreateMockBinaryMessage(wantEvent),
 			AssertFunc: func(t *testing.T, haveEvent event.Event) {
 				test.AssertEventEquals(t, wantEvent, haveEvent) // Event should be unchanged
 				testSpanBinary.End()

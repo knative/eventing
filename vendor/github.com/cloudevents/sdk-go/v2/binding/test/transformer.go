@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/test"
 )
 
 type TransformerTestArgs struct {
@@ -52,7 +53,7 @@ func RunTransformerTests(t *testing.T, ctx context.Context, tests []TransformerT
 			if tt.AssertFunc != nil {
 				tt.AssertFunc(t, *e)
 			} else {
-				AssertEventEquals(t, tt.WantEvent, *e)
+				test.AssertEventEquals(t, tt.WantEvent, *e)
 			}
 		})
 	}

@@ -27,8 +27,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/test"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/trace"
@@ -183,7 +183,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 }
 
 func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
-	want := test.ExToStr(t, test.FullEvent())
+	want := test.ConvertEventExtensionsToString(t, test.FullEvent())
 
 	done := make(chan struct{}, 1)
 

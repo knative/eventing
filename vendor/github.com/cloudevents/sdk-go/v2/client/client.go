@@ -149,18 +149,17 @@ func (c *ceClient) Request(ctx context.Context, e event.Event) (*event.Event, pr
 			}
 		}()
 	}
+	if !protocol.IsACK(err) {
+		return nil, err
+	}
 
 	// try to turn msg into an event, it might not work and that is ok.
 	if rs, rserr := binding.ToEvent(ctx, msg); rserr != nil {
 		cecontext.LoggerFrom(ctx).Debugw("response: failed calling ToEvent", zap.Error(rserr), zap.Any("resp", msg))
-		if err != nil {
-			err = fmt.Errorf("%w; failed to convert response into event: %s", err, rserr)
-		} else {
-			// If the protocol returns no error, it is an ACK on the request, but we had
-			// issues turning the response into an event, so make an ACK Result and pass
-			// down the ToEvent error as well.
-			err = fmt.Errorf("%w; failed to convert response into event: %s", protocol.ResultACK, rserr)
-		}
+		// If the protocol returns no error, it is an ACK on the request, but we had
+		// issues turning the response into an event, so make an ACK Result and pass
+		// down the ToEvent error as well.
+		err = fmt.Errorf("%w; failed to convert response into event: %s", protocol.ResultACK, rserr)
 	} else {
 		resp = rs
 	}
