@@ -5,10 +5,12 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/format"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/test"
 )
 
 // MockStructuredMessage implements a structured-mode message as a simple struct.
@@ -19,9 +21,9 @@ type MockStructuredMessage struct {
 }
 
 // MustCreateMockStructuredMessage creates a new MockStructuredMessage starting from an event.Event. Panics in case of error.
-func MustCreateMockStructuredMessage(e event.Event) binding.Message {
+func MustCreateMockStructuredMessage(t testing.TB, e event.Event) binding.Message {
 	return &MockStructuredMessage{
-		Bytes:  MustJSON(e),
+		Bytes:  test.MustJSON(t, e),
 		Format: format.JSON,
 	}
 }
