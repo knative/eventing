@@ -29,11 +29,6 @@ const (
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"
 
-	// ChannelBrokerClassValue is the value we use to specify the
-	// Broker using channels. As in Broker from this repository
-	// pkg/reconciler/broker
-	ChannelBrokerClassValue = "ChannelBasedBroker"
-
 	// MTChannelBrokerClassValue is the value we use to specify the
 	// Broker using channels, but the resources (ingress,filter) run
 	// in the system namespace. As in Broker from this repository

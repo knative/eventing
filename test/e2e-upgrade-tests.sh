@@ -57,7 +57,7 @@ wait_for_file /tmp/prober-ready || fail_test
 header "Performing upgrade to HEAD"
 install_head || fail_test 'Installing HEAD version of eventing failed'
 install_channel_crds || fail_test 'Installing HEAD channel CRDs failed'
-install_broker || fail_test 'Installing HEAD Broker failed'
+install_mt_broker || fail_test 'Installing HEAD Broker failed'
 
 run_postinstall || fail_test 'Running postinstall failed'
 
