@@ -109,15 +109,18 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
+	// Note that since by default MT ChannelBroker creates a Broker in each namespace, there's
+	// actually two channels.
+	// https://github.com/knative/eventing/issues/3138
 	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
 	objs, err := duck.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduck.SubscribableType{})
 	if err != nil {
 		t.Fatalf("Failed to list the underlying channels: %v", err)
 	}
-	if len(objs) != 1 {
+	if len(objs) != 2 {
 		t.Logf("Got extra channels:")
 		for i, ec := range objs {
-			t.Logf("Extra channel: %d\n%+v", i, ec)
+			t.Logf("Extra channels: %d\n%+v", i, ec)
 		}
 		t.Fatalf("The defaultchannel is expected to create 1 underlying channel, but got %d", len(objs))
 	}
