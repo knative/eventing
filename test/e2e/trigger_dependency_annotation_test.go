@@ -82,9 +82,6 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 			},
 		}),
 	)
-	if brokerClass == eventing.ChannelBrokerClassValue {
-		pingSource.Spec.SourceSpec.Sink.Ref = resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace)
-	}
 	if brokerClass == eventing.MTChannelBrokerClassValue {
 		pingSource.Spec.SourceSpec.Sink.URI = &apis.URL{
 			Scheme: "http",
