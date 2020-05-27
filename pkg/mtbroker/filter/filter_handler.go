@@ -17,8 +17,10 @@
 package filter
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	"time"
 
@@ -186,13 +188,16 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check if the event should be sent.
+	ctx = logging.WithLogger(ctx, h.logger.Sugar())
 	filterResult := h.shouldSendEvent(ctx, &t.Spec, event)
 
 	if filterResult == failFilter {
-		h.logger.Debug("Event did not pass filter", zap.Any("triggerRef", triggerRef))
+		if h.logger.Check(zapcore.DebugLevel, "").Level.Enabled(zapcore.DebugLevel) {
+			b, _ := event.MarshalJSON()
+			h.logger.Debug("Event did not pass filter", zap.Any("triggerRef", triggerRef), zap.String("event", bytes.NewBuffer(b).String()))
+		}
 		// We do not count the event. The event will be counted in the broker ingress.
 		// If the filter didn't pass, it means that the event wasn't meant for this Trigger.
-		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
