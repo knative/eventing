@@ -120,7 +120,7 @@ func TestCopySecret(t *testing.T) {
 	}
 }
 
-// m creates a ServiceAccount object for the Namespace 'ns'.
+// makeServiceAccount creates a ServiceAccount object for the Namespace 'ns'.
 func makeServiceAccount(namespace *corev1.Namespace, name string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
