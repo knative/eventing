@@ -123,7 +123,7 @@ function install_mt_broker() {
   kubectl -n knative-eventing set env deployment/mt-broker-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with MT Broker did not come up"
 }
- 
+
 # Teardown the Knative environment after tests finish.
 function knative_teardown() {
   echo ">> Stopping Knative Eventing"
