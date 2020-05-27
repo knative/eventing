@@ -77,7 +77,7 @@ type EventingEnvironmentFlags struct {
 // go1.13+, see https://github.com/knative/test-infra/issues/1329 for details
 func InitializeEventingFlags() {
 	flag.Var(&EventingFlags.Channels, "channels", "The names of the channel type metas, separated by comma. Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\".")
-	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "ChannelBasedBroker", "Which brokerclass to test, requires the proper Broker implementation to have been installed, and only one value. brokerclass can be one of 'ChannelBasedBroker' or 'MTChannelBasedBroker'.")
+	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", "Which brokerclass to test, requires the proper Broker implementation to have been installed, and only one value. brokerclass must be (for now) 'MTChannelBasedBroker'.")
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
@@ -89,7 +89,7 @@ func InitializeEventingFlags() {
 		log.Fatalf("Brokerclass not specified")
 	}
 
-	if EventingFlags.BrokerClass != "ChannelBasedBroker" && EventingFlags.BrokerClass != "MTChannelBasedBroker" {
-		log.Fatalf("Invalid Brokerclass specified, got %q must be either %q or %q", EventingFlags.BrokerClass, "ChannelBasedBroker", "MTChannelBasedBroker")
+	if EventingFlags.BrokerClass != "MTChannelBasedBroker" {
+		log.Fatalf("Invalid Brokerclass specified, got %q must be %q", EventingFlags.BrokerClass, "MTChannelBasedBroker")
 	}
 }
