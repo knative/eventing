@@ -115,6 +115,10 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 		t.Fatalf("Failed to list the underlying channels: %v", err)
 	}
 	if len(objs) != 1 {
+		t.Logf("Got extra channels:")
+		for i, ec := range objs {
+			t.Logf("Extra channel: %d\n%+v", i, ec)
+		}
 		t.Fatalf("The defaultchannel is expected to create 1 underlying channel, but got %d", len(objs))
 	}
 
