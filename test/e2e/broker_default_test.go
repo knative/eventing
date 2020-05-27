@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	"knative.dev/eventing/test/e2e/helpers"
 	"knative.dev/eventing/test/lib"
 )
