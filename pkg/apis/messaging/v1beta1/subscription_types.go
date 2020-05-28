@@ -54,6 +54,8 @@ var (
 
 	// Check that we can create OwnerReferences to a Subscription.
 	_ kmeta.OwnerRefable = (*Subscription)(nil)
+
+	_ duckv1.KRShaped = (*Subscription)(nil)
 )
 
 // SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
@@ -138,11 +140,16 @@ type SubscriptionList struct {
 }
 
 // GetGroupVersionKind returns GroupVersionKind for Subscriptions
-func (t *Subscription) GetGroupVersionKind() schema.GroupVersionKind {
+func (*Subscription) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Subscription")
 }
 
 // GetUntypedSpec returns the spec of the Subscription.
 func (s *Subscription) GetUntypedSpec() interface{} {
 	return s.Spec
+}
+
+// GetStatus retrieves the status of the Subscription. Implements the KRShaped interface.
+func (s *Subscription) GetStatus() *duckv1.Status {
+	return &s.Status.Status
 }

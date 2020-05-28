@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestChannelGetStatus(t *testing.T) {
+	r := &Channel{
+		Status: ChannelStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestChannel_GetGroupVersionKind(t *testing.T) {
 	c := Channel{}
 	gvk := c.GetGroupVersionKind()

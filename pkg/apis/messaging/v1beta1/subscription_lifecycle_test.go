@@ -41,6 +41,14 @@ var subscriptionConditionChannelReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
+func TestSubscriptionGetConditionSet(t *testing.T) {
+	r := &Subscription{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestSubscriptionGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
