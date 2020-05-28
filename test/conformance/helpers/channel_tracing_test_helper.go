@@ -45,6 +45,87 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 	})
 }
 
+// ChannelTracingTestHelper runs the Channel tracing test using the given TypeMeta.
+func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient lib.SetupClientOption) {
+	testCases := map[string]TracingTestCase{
+		"includes incoming trace id": {
+			IncomingTraceId: true,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			tracingTest(t, setupClient, setupChannelTracingWithReply, channel, tc)
+		})
+	}
+}
+
+func tracingTest(
+	t *testing.T,
+	setupClient lib.SetupClientOption,
+	setupInfrastructure SetupInfrastructureFunc,
+	channel metav1.TypeMeta,
+	tc TracingTestCase,
+) {
+	const (
+		recordEventsPodName = "recordevents"
+	)
+
+	client := lib.Setup(t, true, setupClient)
+	defer lib.TearDown(client)
+
+	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
+	// TestMain.
+	tracinghelper.Setup(t, client)
+
+	// Setup the test infrastructure
+	expectedTestSpan, eventMatcher := setupInfrastructure(t, &channel, client, recordEventsPodName, tc)
+
+	// Start the event info store and assert the event was received correctly
+	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
+	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
+
+	// Match the trace
+	traceID := getTraceIDHeader(t, matches)
+	trace, err := zipkin.JSONTracePred(traceID, 5*time.Minute, func(trace []model.SpanModel) bool {
+		tree, err := tracinghelper.GetTraceTree(trace)
+		if err != nil {
+			return false
+		}
+		return len(expected.MatchesSubtree(t, tree)) > 0
+	})
+	if err != nil {
+		t.Logf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
+		tree, err := tracinghelper.GetTraceTree(trace)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(expectedTestSpan.MatchesSubtree(t, tree)) == 0 {
+			t.Fatalf("No matching subtree. want: %v got: %v", expectedTestSpan, tree)
+		}
+	}
+}
+
+// getTraceIDHeader gets the TraceID from the passed in events.  It returns the header from the
+// first matching event, but registers a fatal error if more than one traceid header is seen
+// in that message.
+func getTraceIDHeader(t *testing.T, evInfos []recordevents.EventInfo) string {
+	for i := range evInfos {
+		if nil != evInfos[i].HTTPHeaders {
+			sc := trace.RemoteSpanContextFromContext(trace.DefaultHTTPPropagator().Extract(context.TODO(), http.Header(evInfos[i].HTTPHeaders)))
+			if sc.HasTraceID() {
+				return sc.TraceIDString()
+			}
+		}
+	}
+	t.Fatalf("FAIL: No traceid in %d messages: (%s)", len(evInfos), evInfos)
+	return ""
+}
+
 // setupChannelTracing is the general setup for TestChannelTracing. It creates the following:
 // SendEvents (Pod) -> Channel -> Subscription -> K8s Service -> Mutate (Pod)
 //                                                                   v

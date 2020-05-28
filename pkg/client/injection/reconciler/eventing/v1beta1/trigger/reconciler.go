@@ -219,7 +219,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *reconcilerImpl) maveupdateStatus(existing *v1beta1.Trigger, desired *v1beta1.Trigger) error {
+func (r *reconcilerImpl) updateStatus(existing *v1beta1.Trigger, desired *v1beta1.Trigger) error {
 	existing = existing.DeepCopy()
 	return reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
