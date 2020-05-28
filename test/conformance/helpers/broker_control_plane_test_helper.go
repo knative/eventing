@@ -30,17 +30,13 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-/*
-This tests if the broker control plane:
-
-1. Trigger can be created before Broker (with attributes filter)
-2. Broker can be created and progresses to Ready
-3. Ready Broker is Addressable
-4. Trigger with Ready broker progresses to Ready
-5. Trigger with no broker, updated with broker, updates status to include subscriberURI
-6. Ready Trigger includes status.subscriberUri
-*/
-
+//This tests if the broker control plane:
+//1. Trigger can be created before Broker (with attributes filter)
+//2. Broker can be created and progresses to Ready
+//3. Ready Broker is Addressable
+//4. Trigger with Ready broker progresses to Ready
+//5. Trigger with no broker, updated with broker, updates status to include subscriberURI
+//6. Ready Trigger includes status.subscriberUri
 func BrokerV1Beta1ControlPlaneTestHelperWithChannelTestRunner(
 	t *testing.T,
 	brokerClass string,
@@ -149,7 +145,7 @@ func TriggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, bro
 	if err != nil {
 		t.Fatalf("Error: Could not update trigger %s: %v", triggerName, err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 	tr, err = client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
