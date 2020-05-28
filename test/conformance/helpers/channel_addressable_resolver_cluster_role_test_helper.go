@@ -28,14 +28,14 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
-func TestChannelChannelableManipulatorClusterRoleTestRunner(
+func TestChannelAddressableResolverClusterRoleTestRunner(
 	t *testing.T,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 
-	const aggregationClusterRoleName = "channelable-manipulator"
-	var permissionTestCaseVerbs = []string{"get", "list", "watch", "update", "patch"}
+	const aggregationClusterRoleName = "addressable-resolver"
+	var permissionTestCaseVerbs = []string{"get", "list", "watch"}
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := lib.Setup(st, true, options...)
@@ -43,7 +43,7 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 
 		gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 
-		saName := names.SimpleNameGenerator.GenerateName("conformance-test-channel-manipulator-")
+		saName := names.SimpleNameGenerator.GenerateName("conformance-test-channel-addressable-resolver-")
 		client.CreateServiceAccountOrFail(saName)
 		client.CreateClusterRoleBindingOrFail(
 			saName,
@@ -52,13 +52,11 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 		)
 		client.WaitForAllTestResourcesReadyOrFail()
 
-		// From spec: (...) ClusterRole MUST include permissions to create, get, list, watch, patch,
-		// and update the CRD's custom objects and their status.
 		for _, verb := range permissionTestCaseVerbs {
-			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %s on %s", verb, gvr), func(t *testing.T) {
+			t.Run(fmt.Sprintf("AddressableResolverClusterRole can do %s on %s", verb, gvr), func(t *testing.T) {
 				ServiceAccountCanDoVerbOnResourceOrFail(client, gvr, "", saName, verb)
 			})
-			t.Run(fmt.Sprintf("ChannelableManipulatorClusterRole can do %s on status subresource of %s", verb, gvr), func(t *testing.T) {
+			t.Run(fmt.Sprintf("AddressableResolverClusterRole can do %s on status subresource of %s", verb, gvr), func(t *testing.T) {
 				ServiceAccountCanDoVerbOnResourceOrFail(client, gvr, "status", saName, verb)
 			})
 		}
