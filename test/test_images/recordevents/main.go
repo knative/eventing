@@ -25,10 +25,12 @@ import (
 	"strconv"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
+	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 	"go.uber.org/zap"
 
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/test/lib"
 )
@@ -113,28 +115,34 @@ func (er *eventRecorder) handleGetEntry(w http.ResponseWriter, r *http.Request) 
 	w.Write(entryBytes)
 }
 
-// handler for cloudevents
-func (er *eventRecorder) handler(ctx context.Context, event cloudevents.Event) {
-	cloudevents.HTTPTransportContextFrom(ctx)
+func (er *eventRecorder) handle(writer http.ResponseWriter, request *http.Request) {
+	m := cloudeventshttp.NewMessageFromHttpRequest(request)
+	defer m.Finish(nil)
 
-	tx := cloudevents.HTTPTransportContextFrom(ctx)
+	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
+	header := request.Header
 
-	// Store the event
-	er.es.StoreEvent(event, map[string][]string(tx.Header))
+	er.es.StoreEvent(event, eventErr, map[string][]string(header))
 
-	// Print interesting headers and full events for debugging
-	header := tx.Header
 	headerNameList := lib.InterestingHeaders()
 	for _, headerName := range headerNameList {
 		if headerValue := header.Get(headerName); headerValue != "" {
 			log.Printf("Header %s: %s\n", headerName, headerValue)
 		}
 	}
-	if err := event.Validate(); err == nil {
-		log.Printf("eventdetails:\n%s", event.String())
+
+	if eventErr != nil {
+		log.Printf("error receiving the event: %v", eventErr)
 	} else {
-		log.Printf("error validating the event: %v", err)
+		valErr := event.Validate()
+		if valErr == nil {
+			log.Printf("eventdetails:\n%s", event.String())
+		} else {
+			log.Printf("error validating the event: %v", valErr)
+		}
 	}
+
+	writer.WriteHeader(http.StatusAccepted)
 }
 
 func main() {
@@ -145,10 +153,13 @@ func main() {
 	if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
-	c, err := kncloudevents.NewDefaultClient()
-	if err != nil {
-		log.Fatalf("Failed to create client, %v", err)
-	}
 
-	log.Fatalf("Failed to start receiver: %s", c.StartReceiver(context.Background(), er.handler))
+	handler := ochttp.Handler{
+		Handler:     http.HandlerFunc(er.handle),
+		Propagation: &tracecontext.HTTPFormat{},
+	}
+	err := http.ListenAndServe(":8080", http.HandlerFunc(handler.ServeHTTP))
+	if err != nil {
+		panic(err)
+	}
 }

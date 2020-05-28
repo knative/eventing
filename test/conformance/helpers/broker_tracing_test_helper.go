@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	ce "github.com/cloudevents/sdk-go"
+	ce2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -223,14 +224,14 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 				Children: []tracinghelper.TestSpanTree{expected},
 			}
 		}
-		matchFunc := func(ev ce.Event) bool {
+		matchFunc := func(ev ce2.Event) bool {
 			if ev.Source() != senderName {
 				return false
 			}
 			if ev.ID() != eventID {
 				return false
 			}
-			db, _ := ev.DataBytes()
+			db := ev.Data()
 			return strings.Contains(string(db), body)
 		}
 
