@@ -104,7 +104,7 @@ func ReadyBrokerV1Beta1AvailableHelper(t *testing.T, brokerClass string, client 
 	obj := resources.NewMetaResource("br", client.Namespace, lib.BrokerTypeMeta)
 	_, err := duck.GetAddressableURI(client.Dynamic, obj)
 	if err != nil {
-		t.Fatalf("Broker is not addressable %w", err)
+		t.Fatalf("Broker is not addressable %v", err)
 	}
 }
 
@@ -126,7 +126,7 @@ func TriggerV1Beta1ReadyIncludesSubURI(t *testing.T, brokerClass string, client 
 	client.WaitForResourceReadyOrFail("trigger-with-broker", lib.TriggerTypeMeta)
 	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get("trigger-with-broker", metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Error: Could not get trigger %s: %w", "trigger-with-broker", err)
+		t.Fatalf("Error: Could not get trigger %s: %v", "trigger-with-broker", err)
 	}
 	if tr.Status.SubscriberURI == nil {
 		t.Fatalf("Error: trigger.Status.SubscriberURI is nil but resource reported Ready")
