@@ -62,6 +62,8 @@ var (
 
 	// Check that we can create OwnerReferences to a Sequence.
 	_ kmeta.OwnerRefable = (*Sequence)(nil)
+
+	_ duckv1.KRShaped = (*Sequence)(nil)
 )
 
 type SequenceSpec struct {
@@ -134,4 +136,9 @@ type SequenceList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Sequence `json:"items"`
+}
+
+// GetStatus retrieves the status of the Sequence. Implements the KRShaped interface.
+func (p *Sequence) GetStatus() *duckv1.Status {
+	return &p.Status.Status
 }

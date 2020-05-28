@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestParallelGetStatus(t *testing.T) {
+	r := &Parallel{
+		Status: ParallelStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestParallelKind(t *testing.T) {
 	parallel := Parallel{}
 	if parallel.GetGroupVersionKind().String() != "flows.knative.dev/v1beta1, Kind=Parallel" {

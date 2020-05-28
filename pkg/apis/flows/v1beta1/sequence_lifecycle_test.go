@@ -36,6 +36,14 @@ var sequenceConditionReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
+func TestSequenceGetConditionSet(t *testing.T) {
+	r := &Sequence{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func getSubscription(name string, ready bool) *messagingv1beta1.Subscription {
 	s := messagingv1beta1.Subscription{
 		TypeMeta: metav1.TypeMeta{
