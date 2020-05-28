@@ -30,6 +30,17 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
+/*
+This tests if the broker control plane:
+
+1. Trigger can be created before Broker (with attributes filter)
+2. Broker can be created and progresses to Ready
+3. Ready Broker is Addressable
+4. Trigger with Ready broker progresses to Ready
+5. Trigger with no broker, updated with broker, updates status to include subscriberURI
+6. Ready Trigger includes status.subscriberUri
+*/
+
 func BrokerV1Beta1ControlPlaneTestHelperWithChannelTestRunner(
 	t *testing.T,
 	brokerClass string,
