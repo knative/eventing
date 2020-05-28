@@ -32,8 +32,13 @@ import (
 
 var sbCondSet = apis.NewLivingConditionSet()
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*SinkBinding) GetConditionSet() apis.ConditionSet {
+	return sbCondSet
+}
+
 // GetGroupVersionKind returns the GroupVersionKind.
-func (s *SinkBinding) GetGroupVersionKind() schema.GroupVersionKind {
+func (*SinkBinding) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("SinkBinding")
 }
 

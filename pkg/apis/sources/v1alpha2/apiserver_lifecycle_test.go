@@ -42,6 +42,14 @@ var (
 	}
 )
 
+func TestApiServerSourceGetConditionSet(t *testing.T) {
+	r := &ApiServerSource{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
 	r := &ApiServerSource{}
 	want := schema.GroupVersionKind{

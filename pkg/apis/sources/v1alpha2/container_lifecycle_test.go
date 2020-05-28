@@ -84,6 +84,14 @@ var (
 	}
 )
 
+func TestContainerSourceGetConditionSet(t *testing.T) {
+	r := &ContainerSource{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestContainerSourceStatusIsReady(t *testing.T) {
 	tests := []struct {
 		name string

@@ -45,6 +45,7 @@ var (
 	_ apis.Validatable   = (*ContainerSource)(nil)
 	_ apis.Defaultable   = (*ContainerSource)(nil)
 	_ apis.HasSpec       = (*ContainerSource)(nil)
+	_ duckv1.KRShaped    = (*ContainerSource)(nil)
 )
 
 // ContainerSourceSpec defines the desired state of ContainerSource
@@ -61,7 +62,7 @@ type ContainerSourceSpec struct {
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.
-func (s *ContainerSource) GetGroupVersionKind() schema.GroupVersionKind {
+func (*ContainerSource) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ContainerSource")
 }
 
@@ -89,4 +90,9 @@ type ContainerSourceList struct {
 // GetUntypedSpec returns the spec of the ContainerSource.
 func (c *ContainerSource) GetUntypedSpec() interface{} {
 	return c.Spec
+}
+
+// GetStatus retrieves the status of the ContainerSource. Implements the KRShaped interface.
+func (c *ContainerSource) GetStatus() *duckv1.Status {
+	return &c.Status.Status
 }

@@ -39,6 +39,11 @@ var containerCondSet = apis.NewLivingConditionSet(
 	ContainerSourceConditionReceiveAdapterReady,
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*ContainerSource) GetConditionSet() apis.ConditionSet {
+	return containerCondSet
+}
+
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (s *ContainerSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return containerCondSet.Manage(s).GetCondition(t)
