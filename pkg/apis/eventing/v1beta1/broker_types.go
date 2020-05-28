@@ -28,7 +28,7 @@ import (
 )
 
 // +genclient
-// +genreconciler:class=eventing.knative.dev/broker.class
+// +genreconciler:class=eventing.knative.dev/broker.class,krshapedlogic=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Broker collects a pool of events that are consumable using Triggers. Brokers
