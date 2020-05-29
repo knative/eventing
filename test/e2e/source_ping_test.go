@@ -41,15 +41,20 @@ func TestPingSourceV1Alpha1(t *testing.T) {
 		// Every 1 minute starting from now
 		schedule = "*/1 * * * *"
 
-		loggerPodName = "e2e-ping-source-logger-pod"
+		loggerPodName = "e2e-ping-source-logger-pod-v1alpha1"
 	)
 
 	client := setup(t, true)
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	// create cron job source
 	data := fmt.Sprintf("TestPingSource %s", uuid.NewUUID())
@@ -68,8 +73,9 @@ func TestPingSourceV1Alpha1(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event and only once
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
-		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
+	err = targetTracker.WaitMatchSourceData(sourcesv1alpha1.PingSourceSource(client.Namespace, sourceName), data, 1, 1)
+	if err != nil {
+		t.Fatalf("Error watching for data %s event in pod %s: %v", data, loggerPodName, err)
 	}
 }
 
@@ -78,15 +84,20 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 		sourceName = "e2e-ping-source"
 		// Every 1 minute starting from now
 
-		loggerPodName = "e2e-ping-source-logger-pod"
+		loggerPodName = "e2e-ping-source-logger-pod-v1alpha2"
 	)
 
 	client := setup(t, true)
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	// create cron job source
 	data := fmt.Sprintf("TestPingSource %s", uuid.NewUUID())
@@ -108,8 +119,9 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event and only once
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
-		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
+	err = targetTracker.WaitMatchSourceData(sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName), data, 1, 1)
+	if err != nil {
+		t.Fatalf("Error watching for data %s event in pod %s: %v", data, loggerPodName, err)
 	}
 }
 
@@ -118,15 +130,20 @@ func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
 		sourceName = "e2e-ping-source"
 		// Every 1 minute starting from now
 
-		loggerPodName = "e2e-ping-source-logger-pod"
+		loggerPodName = "e2e-ping-source-logger-pod-v1alpha2rs"
 	)
 
 	client := setup(t, true)
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	// create cron job source
 	data := fmt.Sprintf("TestPingSource %s", uuid.NewUUID())
@@ -149,8 +166,9 @@ func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event and only once
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
-		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
+	err = targetTracker.WaitMatchSourceData(sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName), data, 1, 1)
+	if err != nil {
+		t.Fatalf("Error watching for data %s event in pod %s: %v", data, loggerPodName, err)
 	}
 }
 
@@ -203,5 +221,4 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 		t.Fatalf("Invalid spec.type and/or spec.source for PingSource EventType, expected: type=%s source=%s, got: type=%s source=%s",
 			sourcesv1alpha2.PingSourceEventType, sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName), et.Spec.Type, et.Spec.Source)
 	}
-
 }

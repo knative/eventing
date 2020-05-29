@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -235,8 +236,34 @@ func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]Even
 	return matchRet, internalErr
 }
 
+// Wait for at least minCount events with source exactly matching source and data contained within the event
+// data field.  If source is the empty string, don't check the source.  If maxCount is >0, return an error
+// if more than maxCount entries are seen.
+func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCount int, maxCount int) error {
+	matchFunc := func(ev cloudevents.Event) bool {
+		if source != "" && ev.Source() != source {
+			return false
+		}
+		db := ev.Data()
+		return strings.Contains(string(db), data)
+	}
+	// verify the logger service receives the event and only once
+	match, err := ei.WaitAtLeastNMatch(ValidEvFunc(matchFunc), minCount)
+	if err != nil {
+		return fmt.Errorf("error waiting for event: %v", err)
+	}
+	if maxCount > 0 && len(match) > maxCount {
+		return fmt.Errorf("expected <= %d events, saw %d", maxCount, len(match))
+	}
+	return nil
+}
+
 // Does the provided EventInfo match some criteria
 type EventInfoMatchFunc func(EventInfo) bool
 
 // Does the provided event match some criteria
 type EventMatchFunc func(cloudevents.Event) bool
+
+func MatchAllEvent(cloudevents.Event) bool {
+	return true
+}

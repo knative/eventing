@@ -141,8 +141,13 @@ func TestApiServerSource(t *testing.T) {
 		loggerPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
 		tc.spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(loggerPodName)}
 
-		loggerPod := resources.EventLoggerPod(loggerPodName)
+		loggerPod := resources.EventRecordPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+		targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+		if err != nil {
+			t.Fatalf("Pod tracker failed: %v", err)
+		}
+		defer targetTracker.Cleanup()
 
 		apiServerSource := eventingtesting.NewApiServerSource(
 			fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
@@ -163,13 +168,19 @@ func TestApiServerSource(t *testing.T) {
 		//                we can add a json matcher to improve it in the future.
 
 		if tc.expected == "" {
-			if err := client.CheckLogEmpty(loggerPodName, 10*time.Second); err != nil {
-				t.Fatalf("Log is not empty in logger pod %q: %v", loggerPodName, err)
+			time.Sleep(10 * time.Second)
+			ev, _, err := targetTracker.Find(lib.ValidEvFunc(lib.MatchAllEvent))
+			if err != nil {
+				t.Fatalf("Saw error looking for events: %v", err)
+			}
+			if len(ev) != 0 {
+				t.Fatalf("Log is not empty in logger pod %q: %d events seen", loggerPodName, len(ev))
 			}
 
 		} else {
-			if err := client.CheckLog(loggerPodName, lib.CheckerContains(tc.expected)); err != nil {
-				t.Fatalf("String %q does not appear in logs of logger pod %q: %v", tc.expected, loggerPodName, err)
+			err = targetTracker.WaitMatchSourceData("", tc.expected, 1, -1)
+			if err != nil {
+				t.Fatalf("Error watching for data %s event in pod %s: %v", tc.expected, loggerPodName, err)
 			}
 		}
 	}
