@@ -55,6 +55,14 @@ var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 	apis.Condition{},
 	"LastTransitionTime", "Message", "Reason", "Severity")
 
+func TestInMemoryChannelGetConditionSet(t *testing.T) {
+	r := &InMemoryChannel{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestInMemoryChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string

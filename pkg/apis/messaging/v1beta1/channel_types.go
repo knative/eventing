@@ -56,6 +56,9 @@ var (
 
 	// Check that we can create OwnerReferences to a Channel.
 	_ kmeta.OwnerRefable = (*Channel)(nil)
+
+	// Check that the type conforms to the duck Knative Resource shape.
+	_ duckv1.KRShaped = (*Channel)(nil)
 )
 
 // ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel.
@@ -86,4 +89,9 @@ type ChannelList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Channel `json:"items"`
+}
+
+// GetStatus retrieves the status of the Channel. Implements the KRShaped interface.
+func (t *Channel) GetStatus() *duckv1.Status {
+	return &t.Status.Status
 }

@@ -53,8 +53,13 @@ const (
 	InMemoryChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*InMemoryChannel) GetConditionSet() apis.ConditionSet {
+	return imcCondSet
+}
+
 // GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
-func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
+func (*InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("InMemoryChannel")
 }
 

@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestInMemoryChannelGetStatus(t *testing.T) {
+	r := &InMemoryChannel{
+		Status: InMemoryChannelStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestInMemoryChannel_GetGroupVersionKind(t *testing.T) {
 	imc := InMemoryChannel{}
 	gvk := imc.GetGroupVersionKind()

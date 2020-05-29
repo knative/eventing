@@ -38,8 +38,13 @@ const (
 	ChannelConditionAddressable apis.ConditionType = "Addressable"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*Channel) GetConditionSet() apis.ConditionSet {
+	return chCondSet
+}
+
 // GetGroupVersionKind returns GroupVersionKind for Channels.
-func (dc *Channel) GetGroupVersionKind() schema.GroupVersionKind {
+func (*Channel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Channel")
 }
 
