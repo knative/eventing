@@ -21,6 +21,15 @@ import (
 	"testing"
 )
 
+func TestConfigMapPropagation_GetStatus(t *testing.T) {
+	r := &ConfigMapPropagation{
+		Status: ConfigMapPropagationStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestConfigMapPropagation_GetGroupVersionKind(t *testing.T) {
 	cmp := ConfigMapPropagation{}
 	gvk := cmp.GetGroupVersionKind()
