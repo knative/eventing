@@ -57,6 +57,7 @@ var (
 	// Check that we can create OwnerReferences to an InMemoryChannel.
 	_ kmeta.OwnerRefable = (*InMemoryChannel)(nil)
 
+	// Check that the type conforms to the duck Knative Resource shape.
 	_ duckv1.KRShaped = (*InMemoryChannel)(nil)
 )
 

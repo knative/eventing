@@ -55,6 +55,7 @@ var (
 	// Check that we can create OwnerReferences to a Subscription.
 	_ kmeta.OwnerRefable = (*Subscription)(nil)
 
+	// Check that the type conforms to the duck Knative Resource shape.
 	_ duckv1.KRShaped = (*Subscription)(nil)
 )
 
