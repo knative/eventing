@@ -27,9 +27,9 @@ const SystemNamespace = "knative-eventing"
 // API versions for the resources.
 const (
 	CoreAPIVersion      = "v1"
-	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
-	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
-	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
+	EventingAPIVersion  = "eventing.knative.dev/v1beta1"
+	MessagingAPIVersion = "messaging.knative.dev/v1beta1"
+	FlowsAPIVersion     = "flows.knative.dev/v1beta1"
 	ServingAPIVersion   = "serving.knative.dev/v1"
 )
 
