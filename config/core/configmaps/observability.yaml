@@ -21,6 +21,7 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
+    knative.dev/example-checksum: "7f61d62e"
 data:
   _example: |
     ################################
