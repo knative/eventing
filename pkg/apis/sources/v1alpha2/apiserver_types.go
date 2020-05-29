@@ -45,7 +45,7 @@ var (
 	_ apis.Validatable   = (*ApiServerSource)(nil)
 	_ apis.Defaultable   = (*ApiServerSource)(nil)
 	_ apis.HasSpec       = (*ApiServerSource)(nil)
-	_ duckv1.KRShaped    = (*PingSource)(nil)
+	_ duckv1.KRShaped    = (*ApiServerSource)(nil)
 )
 
 const (
