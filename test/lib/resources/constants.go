@@ -42,7 +42,7 @@ var (
 	// KServicesGVR is GroupVersionResource for Knative Service
 	KServicesGVR = schema.GroupVersionResource{
 		Group:    "serving.knative.dev",
-		Version:  "v1alpha1",
+		Version:  "v1",
 		Resource: "services",
 	}
 	// KServiceType is type of Knative Service
