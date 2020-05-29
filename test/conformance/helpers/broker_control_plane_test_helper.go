@@ -22,7 +22,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 
 	"knative.dev/eventing/test/lib"
@@ -91,16 +90,6 @@ func TriggerV1Beta1BeforeBrokerHelper(t *testing.T, triggerName string, client *
 }
 
 func BrokerV1Beta1CreatedToReadyHelper(t *testing.T, brokerName, brokerClass string, client *lib.Client, channel metav1.TypeMeta) {
-	const defaultCMPName = "eventing"
-
-	// Create the Broker.
-	if brokerClass == eventing.ChannelBrokerClassValue {
-		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-		client.CreateConfigMapPropagationOrFail(defaultCMPName)
-		client.CreateRBACResourcesForBrokers()
-	}
-
-	// Create a configmap used by the broker.
 	client.CreateBrokerConfigMapOrFail(brokerName, &channel)
 
 	broker := client.CreateBrokerV1Beta1OrFail(
