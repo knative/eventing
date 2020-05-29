@@ -28,13 +28,11 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 )
 
 // BrokerOption enables further configuration of a Broker.
@@ -251,30 +249,12 @@ func WithBrokerClassForBroker(brokerClass string) BrokerOption {
 	}
 }
 
-// ConfigMapPropagation returns a ConfigMapPropagation.
-func ConfigMapPropagation(name, namespace string) *configsv1alpha1.ConfigMapPropagation {
-	return &configsv1alpha1.ConfigMapPropagation{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		Spec: configsv1alpha1.ConfigMapPropagationSpec{
-			OriginalNamespace: "knative-eventing",
-			Selector: &metav1.LabelSelector{
-				MatchLabels: resources.ConfigMapPropagationOwnedLabels(),
-			},
-		},
-	}
-}
-
 // ConfigMap returns a ConfigMap.
 func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				// Filter label for a configmap being picked to be propagated by current configmappropagation.
-				resources.CmpDefaultLabelKey: resources.CmpDefaultLabelValue,
 				// Default label for a configmap being eligible to be propagated.
 				"knative.dev/config-propagation": "original",
 			},

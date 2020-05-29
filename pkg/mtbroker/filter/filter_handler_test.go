@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/broker"
+	broker "knative.dev/eventing/pkg/mtbroker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"

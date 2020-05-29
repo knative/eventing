@@ -26,7 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -82,9 +82,6 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 			},
 		}),
 	)
-	if brokerClass == eventing.ChannelBrokerClassValue {
-		pingSource.Spec.SourceSpec.Sink.Ref = resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace)
-	}
 	if brokerClass == eventing.MTChannelBrokerClassValue {
 		pingSource.Spec.SourceSpec.Sink.URI = &apis.URL{
 			Scheme: "http",

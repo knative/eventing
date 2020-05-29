@@ -21,30 +21,15 @@ package e2e
 import (
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/e2e/helpers"
 )
 
 // TestChannelClusterDefaulter tests a cluster defaulted channel can be created with the template specified through configmap.
 func TestChannelClusterDefaulter(t *testing.T) {
-	// Since these tests already get run as part of the ChannelBasedBroker, there's no point
-	// rerunning them again for MT broker. Or if want to, we then have to create the namespace
-	// with a label that prevents the Broker from (and hence a trigger channel for it being
-	// created). Either case, seems silly to run the tests twice.
-	if brokerClass == eventing.MTChannelBrokerClassValue {
-		t.Skip("Not double running tests for MT Broker")
-	}
 	helpers.ChannelClusterDefaulterTestHelper(t, channelTestRunner)
 }
 
 // TestChannelNamespaceDefaulter tests a namespace defaulted channel can be created with the template specified through configmap.
 func TestChannelNamespaceDefaulter(t *testing.T) {
-	// Since these tests already get run as part of the ChannelBasedBroker, there's no point
-	// rerunning them again for MT broker. Or if want to, we then have to create the namespace
-	// with a label that prevents the Broker from (and hence a trigger channel for it being
-	// created). Either case, seems silly to run the tests twice.
-	if brokerClass == eventing.MTChannelBrokerClassValue {
-		t.Skip("Not double running tests for MT Broker")
-	}
 	helpers.ChannelNamespaceDefaulterTestHelper(t, channelTestRunner)
 }

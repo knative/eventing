@@ -12,10 +12,86 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This one is a placeholder to bring the replicas down to zero.
+# Remove this after .16 ships.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: broker-ingress
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      eventing.knative.dev/brokerRole: ingress
+  template:
+    metadata:
+      labels:
+        eventing.knative.dev/brokerRole: ingress
+        eventing.knative.dev/release: devel
+    spec:
+      serviceAccountName: mt-broker-ingress
+      containers:
+      - name: ingress
+        terminationMessagePolicy: FallbackToLogsOnError
+        image: ko://knative.dev/eventing/cmd/mtbroker/ingress
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        terminationMessagePath: /dev/termination-log
+        env:
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: CONTAINER_NAME
+            value: ingress
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/internal/eventing
+          - name: INGRESS_PORT
+            value: "8080"
+        securityContext:
+          allowPrivilegeEscalation: false
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mt-broker-ingress
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
@@ -85,6 +161,7 @@ spec:
           allowPrivilegeEscalation: false
 
 ---
+
 apiVersion: v1
 kind: Service
 metadata:

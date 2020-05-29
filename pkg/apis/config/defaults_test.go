@@ -86,8 +86,8 @@ func TestGetBrokerClass(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetBrokerClass Failed = %v", err)
 	}
-	if c != "ChannelBasedBroker" {
-		t.Errorf("GetBrokerClass Failed, wanted ChannelBasedBroker, got: %s", c)
+	if c != "MTChannelBasedBroker" {
+		t.Errorf("GetBrokerClass Failed, wanted MTChannelBasedBroker, got: %s", c)
 	}
 	c, err = defaults.GetBrokerClass("some-namespace")
 	if err != nil {

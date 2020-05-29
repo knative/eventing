@@ -53,7 +53,7 @@ var (
 				},
 			},
 			ClusterDefault: &config.ClassAndKRef{
-				BrokerClass: eventing.ChannelBrokerClassValue,
+				BrokerClass: eventing.MTChannelBrokerClassValue,
 				KReference: &duckv1.KReference{
 					APIVersion: "v1",
 					Kind:       "ConfigMap",
@@ -74,7 +74,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -91,7 +91,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -126,7 +126,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -145,7 +145,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "mynamespace",
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{

@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/broker"
+	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 	_ "knative.dev/pkg/metrics/testing"

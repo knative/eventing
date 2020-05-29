@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/eventing/pkg/reconciler/broker/resources"
+	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/utils"
