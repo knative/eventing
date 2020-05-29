@@ -21,10 +21,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"knative.dev/eventing/pkg/reconciler/namespace/resources"
+
+	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 )
 
 const (
@@ -73,7 +75,9 @@ func TestCopySecret(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			// set up src namespace secret
 			srcNamespaceSecrets := tc.corev1Input.Secrets(srcNamespace)
-			_, secretCreateError := srcNamespaceSecrets.Create(resources.MakeSecret(pullSecretName))
+			_, secretCreateError := srcNamespaceSecrets.Create(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: pullSecretName},
+			})
 			if secretCreateError != nil {
 				t.Errorf("error creating secret resources for test case: %s", secretCreateError)
 
@@ -85,7 +89,7 @@ func TestCopySecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tgtNamespace,
 				}}
-			_, saCreateError := tgtNamespaceServiceAccts.Create(resources.MakeServiceAccount(namespace, svcAccountName))
+			_, saCreateError := tgtNamespaceServiceAccts.Create(makeServiceAccount(namespace, svcAccountName))
 			if saCreateError != nil {
 				t.Errorf("error creating service account resources for test case %s", saCreateError)
 			}
@@ -113,5 +117,23 @@ func TestCopySecret(t *testing.T) {
 			tc.corev1Input.Secrets(srcNamespace).Delete(pullSecretName, &metav1.DeleteOptions{})
 			tc.corev1Input.Secrets(tc.tgtNS).Delete(pullSecretName, &metav1.DeleteOptions{})
 		})
+	}
+}
+
+// makeServiceAccount creates a ServiceAccount object for the Namespace 'ns'.
+func makeServiceAccount(namespace *corev1.Namespace, name string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(namespace.GetObjectMeta(), schema.GroupVersionKind{
+					Group:   corev1.SchemeGroupVersion.Group,
+					Version: corev1.SchemeGroupVersion.Version,
+					Kind:    "Namespace",
+				}),
+			},
+			Namespace: namespace.Name,
+			Name:      name,
+			Labels:    resources.OwnedLabels(),
+		},
 	}
 }

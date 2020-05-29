@@ -23,6 +23,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -114,8 +115,24 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	if err != nil {
 		t.Fatalf("Failed to list the underlying channels: %v", err)
 	}
-	if len(objs) != 1 {
-		t.Fatalf("The defaultchannel is expected to create 1 underlying channel, but got %d", len(objs))
+
+	// Note that since by default MT ChannelBroker creates a Broker in each namespace, there's
+	// actually two channels.
+	// https://github.com/knative/eventing/issues/3138
+	// So, filter out the broker channel from the list before checking that there's only one.
+	filteredObjs := make([]runtime.Object, 0)
+	for _, o := range objs {
+		if o.(*eventingduck.SubscribableType).Name != "default-kne-trigger" {
+			filteredObjs = append(filteredObjs, o)
+		}
+	}
+
+	if len(filteredObjs) != 1 {
+		t.Logf("Got unexpected channels:")
+		for i, ec := range filteredObjs {
+			t.Logf("Extra channels: %d : %+v", i, ec)
+		}
+		t.Fatalf("The defaultchannel is expected to create 1 underlying channel, but got %d", len(filteredObjs))
 	}
 
 	// send fake CloudEvent to the channel

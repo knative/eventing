@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -55,6 +56,9 @@ var (
 
 	// Check that we can create OwnerReferences to an InMemoryChannel.
 	_ kmeta.OwnerRefable = (*InMemoryChannel)(nil)
+
+	// Check that the type conforms to the duck Knative Resource shape.
+	_ duckv1.KRShaped = (*InMemoryChannel)(nil)
 )
 
 // InMemoryChannelSpec defines which subscribers have expressed interest in
@@ -79,4 +83,9 @@ type InMemoryChannelList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []InMemoryChannel `json:"items"`
+}
+
+// GetStatus retrieves the status of the InMemoryChannel. Implements the KRShaped interface.
+func (t *InMemoryChannel) GetStatus() *duckv1.Status {
+	return &t.Status.Status
 }

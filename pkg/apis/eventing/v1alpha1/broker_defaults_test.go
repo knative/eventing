@@ -54,7 +54,7 @@ var (
 				},
 			},
 			ClusterDefault: &config.ClassAndKRef{
-				BrokerClass: eventing.ChannelBrokerClassValue,
+				BrokerClass: eventing.MTChannelBrokerClassValue,
 			},
 		},
 	}
@@ -72,7 +72,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 			},
@@ -81,7 +81,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 			},
@@ -91,7 +91,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -114,7 +114,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -142,7 +142,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 				Spec: BrokerSpec{
@@ -177,7 +177,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
 					},
 				},
 			},

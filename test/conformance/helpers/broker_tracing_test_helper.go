@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
@@ -83,12 +82,6 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		loggerPodName string,
 		tc TracingTestCase,
 	) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
-		// Create the Broker.
-		if brokerClass == eventing.ChannelBrokerClassValue {
-			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-			client.CreateConfigMapPropagationOrFail(defaultCMPName)
-			client.CreateRBACResourcesForBrokers()
-		}
 		// Create a configmap used by the broker.
 		client.CreateBrokerConfigMapOrFail("br", channel)
 

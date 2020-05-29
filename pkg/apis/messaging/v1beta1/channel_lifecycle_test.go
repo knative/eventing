@@ -36,6 +36,14 @@ var (
 	}
 )
 
+func TestChannelGetConditionSet(t *testing.T) {
+	r := &Channel{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string

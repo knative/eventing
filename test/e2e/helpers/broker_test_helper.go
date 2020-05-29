@@ -22,8 +22,6 @@ import (
 	"strings"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/eventing"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/lib"
@@ -67,12 +65,6 @@ type BrokerCreator func(client *lib.Client) string
 // ChannelBasedBrokerCreator creates a BrokerCreator that creates a broker based on the channel parameter.
 func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) BrokerCreator {
 	return func(client *lib.Client) string {
-
-		if brokerClass == eventing.ChannelBrokerClassValue {
-			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers.
-			client.CreateRBACResourcesForBrokers()
-		}
-
 		brokerName := strings.ToLower(channel.Kind)
 
 		// create a ConfigMap used by the broker.

@@ -28,7 +28,7 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
-	"knative.dev/eventing/pkg/broker"
+	broker "knative.dev/eventing/pkg/mtbroker"
 )
 
 const (

@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestSubscriptionGetStatus(t *testing.T) {
+	r := &Subscription{
+		Status: SubscriptionStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestSubscription_GetGroupVersionKind(t *testing.T) {
 	c := Subscription{}
 	gvk := c.GetGroupVersionKind()

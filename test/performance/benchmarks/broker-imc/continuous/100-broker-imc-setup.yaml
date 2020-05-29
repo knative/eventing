@@ -1,4 +1,4 @@
-# Copyright 2019 The Knative Authors
+# Copyright 2020 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ metadata:
   name: imc
   namespace: default
   annotations:
-    eventing.knative.dev/broker.class: ChannelBasedBroker
+    eventing.knative.dev/broker.class: MTChannelBasedBroker
 
 spec:
   config:
@@ -133,19 +133,6 @@ roleRef:
   kind: ClusterRole
   name: eventing-broker-filter
   apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: configs.internal.knative.dev/v1alpha1
-kind: ConfigMapPropagation
-metadata:
-  name: eventing
-  namespace: default
-spec:
-  originalNamespace: knative-eventing
-  selector:
-    matchlabels:
-      knative.dev/config-category: eventing
 
 ---
 

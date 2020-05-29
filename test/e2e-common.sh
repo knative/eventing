@@ -111,12 +111,6 @@ function install_latest_release() {
     fail_test "Knative latest release installation failed"
 }
 
-function install_broker() {
-  ko apply --strict -f ${CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
-  ko apply --strict -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
-  wait_until_pods_running knative-eventing || fail_test "Knative Eventing with Broker did not come up"
-}
-
 function run_postinstall() {
   ko apply --strict -f ${POST_INSTALL_V015} || return 1
   wait_until_batch_job_complete knative-eventing || return 1
@@ -128,10 +122,6 @@ function install_mt_broker() {
   wait_until_pods_running knative-eventing || return 1
   kubectl -n knative-eventing set env deployment/mt-broker-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing with MT Broker did not come up"
-}
-
-function uninstall_broker() {
-  ko delete -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
 }
 
 # Teardown the Knative environment after tests finish.

@@ -100,7 +100,7 @@ func processBroker(ctx context.Context, broker v1alpha1.Broker) ([]byte, error) 
 		return []byte{}, nil
 	}
 	if _, present := annotations[eventing.BrokerClassKey]; !present {
-		annotations[eventing.BrokerClassKey] = eventing.ChannelBrokerClassValue
+		annotations[eventing.BrokerClassKey] = "ChannelBasedBroker"
 		modified.ObjectMeta.SetAnnotations(annotations)
 	}
 	patch, err := duck.CreateMergePatch(broker, modified)

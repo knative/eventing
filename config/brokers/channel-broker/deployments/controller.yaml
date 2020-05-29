@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: broker-controller
@@ -31,11 +31,10 @@ spec:
         eventing.knative.dev/release: devel
     spec:
       serviceAccountName: eventing-controller
-
       containers:
       - name: broker-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: ko://knative.dev/eventing/cmd/channel_broker
+        image: gcr.io/knative-releases/knative.dev/eventing/cmd/channel_broker@sha256:7d3ae9a7139a846490869e58d9f4ddbe31b8a60df306c3636962609fbcca523d
 
         resources:
           requests:
@@ -55,11 +54,11 @@ spec:
             value: knative.dev/eventing
           # Broker
           - name: BROKER_INGRESS_IMAGE
-            value: ko://knative.dev/eventing/cmd/broker/ingress
+            value: gcr.io/knative-releases/knative.dev/eventing/cmd/broker/ingress@sha256:a7a9dba94024ba961604f08be1bc49eddb40941dee4f291ed609149d899e7afa
           - name: BROKER_INGRESS_SERVICE_ACCOUNT
             value: eventing-broker-ingress
           - name: BROKER_FILTER_IMAGE
-            value: ko://knative.dev/eventing/cmd/broker/filter
+            value: gcr.io/knative-releases/knative.dev/eventing/cmd/broker/filter@sha256:fa50a25fd2db5ab09cc604d2b3d4ad36da3687882352c68ca11cb273e65111f7
           - name: BROKER_FILTER_SERVICE_ACCOUNT
             value: eventing-broker-filter
           - name: BROKER_IMAGE_PULL_SECRET_NAME
