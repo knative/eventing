@@ -67,7 +67,7 @@ type Store struct {
 func NewStore(logger configmap.Logger, onAfterStore ...func(name string, value interface{})) *Store {
 	store := &Store{
 		UntypedStore: configmap.NewUntypedStore(
-			"chnaneldefaults",
+			"channeldefaults",
 			logger,
 			configmap.Constructors{
 				ChannelDefaultsConfigName: NewChannelDefaultsConfigFromConfigMap,
