@@ -29,6 +29,11 @@ const (
 	ConfigMapPropagationConditionPropagated apis.ConditionType = "Propagated"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*ConfigMapPropagation) GetConditionSet() apis.ConditionSet {
+	return configMapPropagationCondSet
+}
+
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (cmps *ConfigMapPropagationStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return configMapPropagationCondSet.Manage(cmps).GetCondition(t)

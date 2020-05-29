@@ -46,6 +46,14 @@ var (
 	}
 )
 
+func TestConfigMapPropagationGetConditionSet(t *testing.T) {
+	cmp := &ConfigMapPropagation{}
+
+	if got, want := cmp.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestConfigMapPropagationGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string

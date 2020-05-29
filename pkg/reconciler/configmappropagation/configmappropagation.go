@@ -71,7 +71,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cmp *v1alpha1.ConfigMapP
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("ConfigMapPropagation", cmp))
 	cmp.Status.InitializeConditions()
 	cmp.Status.CopyConfigMaps = []v1alpha1.ConfigMapPropagationStatusCopyConfigMap{}
-	cmp.Status.ObservedGeneration = cmp.Generation
 
 	// 1. Create/update ConfigMaps from original namespace to current namespace.
 	// 2. Track changes of original ConfigMaps as well as copy ConfigMaps.
