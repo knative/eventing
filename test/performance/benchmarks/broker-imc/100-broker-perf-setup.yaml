@@ -19,19 +19,34 @@ metadata:
 
 ---
 
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: in-memory-test-broker
+  name: config-broker
   namespace: perf-eventing
-spec:
-  channelTemplateSpec:
-    apiVersion: messaging.knative.dev/v1alpha1
+data:
+  channelTemplateSpec: |
+    apiVersion: messaging.knative.dev/v1beta1
     kind: InMemoryChannel
 
 ---
 
-apiVersion: eventing.knative.dev/v1alpha1
+apiVersion: eventing.knative.dev/v1beta1
+kind: Broker
+metadata:
+  name: in-memory-test-broker
+  namespace: perf-eventing
+  annotations:
+    eventing.knative.dev/broker.class: MTChannelBasedBroker
+spec:
+  config:
+    apiVersion: v1
+    kind: ConfigMap
+    name: config-broker
+
+---
+
+apiVersion: eventing.knative.dev/v1beta1
 kind: Trigger
 metadata:
   name: broker-perf
@@ -125,19 +140,6 @@ roleRef:
   kind: ClusterRole
   name: eventing-broker-filter
   apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: configs.internal.knative.dev/v1alpha1
-kind: ConfigMapPropagation
-metadata:
-  name: eventing
-  namespace: perf-eventing
-spec:
-  originalNamespace: knative-eventing
-  selector:
-    matchlabels:
-      knative.dev/config-category: eventing
 
 ---
 
