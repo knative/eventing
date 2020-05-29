@@ -30,6 +30,14 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
+func TestSinkBindingGetConditionSet(t *testing.T) {
+	r := &SinkBinding{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestSinkBindingGetGroupVersionKind(t *testing.T) {
 	r := &SinkBinding{}
 	want := schema.GroupVersionKind{

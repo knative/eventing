@@ -18,6 +18,15 @@ package v1alpha2
 
 import "testing"
 
+func TestSinkBinding_GetStatus(t *testing.T) {
+	r := &SinkBinding{
+		Status: SinkBindingStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestSinkBinding_GetGroupVersionKind(t *testing.T) {
 	sb := SinkBinding{}
 	gvk := sb.GetGroupVersionKind()

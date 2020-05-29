@@ -45,6 +45,7 @@ var (
 	_ apis.Validatable   = (*ApiServerSource)(nil)
 	_ apis.Defaultable   = (*ApiServerSource)(nil)
 	_ apis.HasSpec       = (*ApiServerSource)(nil)
+	_ duckv1.KRShaped    = (*ApiServerSource)(nil)
 )
 
 const (
@@ -152,4 +153,9 @@ type ApiServerSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ApiServerSource `json:"items"`
+}
+
+// GetStatus retrieves the status of the ApiServerSource . Implements the KRShaped interface.
+func (a *ApiServerSource) GetStatus() *duckv1.Status {
+	return &a.Status.Status
 }

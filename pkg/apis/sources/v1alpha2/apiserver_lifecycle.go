@@ -48,8 +48,13 @@ var apiserverCondSet = apis.NewLivingConditionSet(
 	ApiServerConditionSufficientPermissions,
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*ApiServerSource) GetConditionSet() apis.ConditionSet {
+	return apiserverCondSet
+}
+
 // GetGroupVersionKind returns the GroupVersionKind.
-func (s *ApiServerSource) GetGroupVersionKind() schema.GroupVersionKind {
+func (*ApiServerSource) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ApiServerSource")
 }
 

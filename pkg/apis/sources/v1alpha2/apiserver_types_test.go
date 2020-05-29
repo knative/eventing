@@ -18,6 +18,15 @@ package v1alpha2
 
 import "testing"
 
+func TestApiServerSource_GetStatus(t *testing.T) {
+	r := &ApiServerSource{
+		Status: ApiServerSourceStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestApiServerSource_GetGroupVersionKind(t *testing.T) {
 	ass := ApiServerSource{}
 	gvk := ass.GetGroupVersionKind()

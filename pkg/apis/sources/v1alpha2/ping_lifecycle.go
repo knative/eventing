@@ -57,6 +57,11 @@ const (
 	PingSourceEventType = "dev.knative.sources.ping"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*PingSource) GetConditionSet() apis.ConditionSet {
+	return PingSourceCondSet
+}
+
 // PingSourceSource returns the PingSource CloudEvent source.
 func PingSourceSource(namespace, name string) string {
 	return fmt.Sprintf("/apis/v1/namespaces/%s/pingsources/%s", namespace, name)

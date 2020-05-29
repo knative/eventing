@@ -41,6 +41,14 @@ var (
 	}
 )
 
+func TestPingSourceGetConditionSet(t *testing.T) {
+	r := &v1alpha2.PingSource{}
+
+	if got, want := r.GetConditionSet().GetTopLevelConditionType(), apis.ConditionReady; got != want {
+		t.Errorf("GetTopLevelCondition=%v, want=%v", got, want)
+	}
+}
+
 func TestPingSource_GetGroupVersionKind(t *testing.T) {
 	src := v1alpha2.PingSource{}
 	gvk := src.GetGroupVersionKind()

@@ -50,6 +50,7 @@ var (
 	_ apis.Validatable   = (*SinkBinding)(nil)
 	_ apis.Defaultable   = (*SinkBinding)(nil)
 	_ apis.HasSpec       = (*SinkBinding)(nil)
+	_ duckv1.KRShaped    = (*SinkBinding)(nil)
 )
 
 // SinkBindingSpec holds the desired state of the SinkBinding (from the client).
@@ -92,4 +93,9 @@ type SinkBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SinkBinding `json:"items"`
+}
+
+// GetStatus retrieves the status of the SinkBinding. Implements the KRShaped interface.
+func (s *SinkBinding) GetStatus() *duckv1.Status {
+	return &s.Status.Status
 }
