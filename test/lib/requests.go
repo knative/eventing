@@ -191,7 +191,7 @@ func (eg *eventGetter) getMinMax() (minRet int, maxRet int, errRet error) {
 	if err != nil {
 		return -1, -1, fmt.Errorf("error unmarshalling response %w", err)
 	}
-	if minMaxResponse.MinAvail == 0 || minMaxResponse.MaxSeen == 0 {
+	if minMaxResponse.MinAvail == 0 {
 		return -1, -1, fmt.Errorf("invalid decoded json: %+v", minMaxResponse)
 	}
 
