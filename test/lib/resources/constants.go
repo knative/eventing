@@ -27,9 +27,9 @@ const SystemNamespace = "knative-eventing"
 // API versions for the resources.
 const (
 	CoreAPIVersion      = "v1"
-	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
-	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
-	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
+	EventingAPIVersion  = "eventing.knative.dev/v1beta1"
+	MessagingAPIVersion = "messaging.knative.dev/v1beta1"
+	FlowsAPIVersion     = "flows.knative.dev/v1beta1"
 	ServingAPIVersion   = "serving.knative.dev/v1"
 )
 
@@ -42,7 +42,7 @@ var (
 	// KServicesGVR is GroupVersionResource for Knative Service
 	KServicesGVR = schema.GroupVersionResource{
 		Group:    "serving.knative.dev",
-		Version:  "v1alpha1",
+		Version:  "v1",
 		Resource: "services",
 	}
 	// KServiceType is type of Knative Service
