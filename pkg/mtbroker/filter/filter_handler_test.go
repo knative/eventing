@@ -144,13 +144,13 @@ func TestReceiver(t *testing.T) {
 		},
 		"No TTL": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
+				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
 			},
 			event: makeEventWithoutTTL(),
 		},
 		"Wrong type": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("some-other-type", "")),
+				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
 			},
 			expectedEventCount: false,
 		},
@@ -162,7 +162,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Wrong source": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "some-other-source")),
+				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
 			expectedEventCount: false,
 		},
@@ -180,7 +180,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			requestFails:              true,
 			expectedErr:               true,
@@ -190,7 +190,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -206,7 +206,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Specific": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType(eventType, eventSource)),
+				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -248,7 +248,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -275,7 +275,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1beta1.Trigger{
-				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
@@ -483,18 +483,9 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func makeTriggerFilterWithDeprecatedSourceAndType(t, s string) *eventingv1beta1.TriggerFilter {
-	return &eventingv1beta1.TriggerFilter{
-		DeprecatedSourceAndType: &eventingv1beta1.TriggerFilterSourceAndType{
-			Type:   t,
-			Source: s,
-		},
-	}
-}
-
 func makeTriggerFilterWithAttributes(t, s string) *eventingv1beta1.TriggerFilter {
 	return &eventingv1beta1.TriggerFilter{
-		Attributes: &eventingv1beta1.TriggerFilterAttributes{
+		Attributes: eventingv1beta1.TriggerFilterAttributes{
 			"type":   t,
 			"source": s,
 		},
@@ -503,7 +494,7 @@ func makeTriggerFilterWithAttributes(t, s string) *eventingv1beta1.TriggerFilter
 
 func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1beta1.TriggerFilter {
 	return &eventingv1beta1.TriggerFilter{
-		Attributes: &eventingv1beta1.TriggerFilterAttributes{
+		Attributes: eventingv1beta1.TriggerFilterAttributes{
 			"type":        t,
 			"source":      s,
 			extensionName: e,
@@ -532,13 +523,13 @@ func makeTrigger(filter *eventingv1beta1.TriggerFilter) *eventingv1beta1.Trigger
 }
 
 func makeTriggerWithoutFilter() *eventingv1beta1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
+	t := makeTrigger(makeTriggerFilterWithAttributes("", ""))
 	t.Spec.Filter = nil
 	return t
 }
 
 func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
+	t := makeTrigger(makeTriggerFilterWithAttributes("", ""))
 	t.Status = eventingv1beta1.TriggerStatus{}
 	return t
 }
