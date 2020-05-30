@@ -36,9 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	broker "knative.dev/eventing/pkg/mtbroker"
-	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
+	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 )
@@ -63,12 +63,12 @@ var (
 
 func init() {
 	// Add types to scheme.
-	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingv1beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
-		triggers                    []*eventingv1alpha1.Trigger
+		triggers                    []*eventingv1beta1.Trigger
 		tctx                        *cloudevents.HTTPTransportContext
 		event                       *cloudevents.Event
 		requestFails                bool
@@ -128,14 +128,14 @@ func TestReceiver(t *testing.T) {
 			expectedErr: true,
 		},
 		"Trigger doesn't have SubscriberURI": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
 			},
 			expectedErr:        true,
 			expectedEventCount: true,
 		},
 		"Trigger without a Filter": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTriggerWithoutFilter(),
 			},
 			expectedDispatch:          true,
@@ -143,43 +143,43 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"No TTL": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			event: makeEventWithoutTTL(),
 		},
 		"Wrong type": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("some-other-type", "")),
 			},
 			expectedEventCount: false,
 		},
 		"Wrong type with attribs": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
 			},
 			expectedEventCount: false,
 		},
 		"Wrong source": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "some-other-source")),
 			},
 			expectedEventCount: false,
 		},
 		"Wrong source with attribs": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
 			expectedEventCount: false,
 		},
 		"Wrong extension": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
 			expectedEventCount: false,
 		},
 		"Dispatch failed": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			requestFails:              true,
@@ -189,7 +189,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Any": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			expectedDispatch:          true,
@@ -197,7 +197,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Any with attribs": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			expectedDispatch:          true,
@@ -205,7 +205,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Specific": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType(eventType, eventSource)),
 			},
 			expectedDispatch:          true,
@@ -213,7 +213,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Specific with attribs": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
 			},
 			expectedDispatch:          true,
@@ -221,7 +221,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Extension with attribs": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, extensionValue)),
 			},
 			event:                     makeEventWithExtension(extensionName, extensionValue),
@@ -230,7 +230,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Any with attribs - Arrival extension": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			event:                       makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
@@ -240,14 +240,14 @@ func TestReceiver(t *testing.T) {
 			expectedEventProcessingTime: true,
 		},
 		"Wrong Extension with attribs": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
 			},
 			event:              makeEventWithExtension(extensionName, extensionValue),
 			expectedEventCount: false,
 		},
 		"Returned Cloud Event": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			expectedDispatch:          true,
@@ -256,7 +256,7 @@ func TestReceiver(t *testing.T) {
 			returnedEvent:             makeDifferentEvent(),
 		},
 		"Error From Trigger": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			tctx: &cloudevents.HTTPTransportContext{
@@ -274,7 +274,7 @@ func TestReceiver(t *testing.T) {
 			expectedStatus:            http.StatusTooManyRequests,
 		},
 		"Returned Cloud Event with custom headers": {
-			triggers: []*eventingv1alpha1.Trigger{
+			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			tctx: &cloudevents.HTTPTransportContext{
@@ -483,27 +483,27 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func makeTriggerFilterWithDeprecatedSourceAndType(t, s string) *eventingv1alpha1.TriggerFilter {
-	return &eventingv1alpha1.TriggerFilter{
-		DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+func makeTriggerFilterWithDeprecatedSourceAndType(t, s string) *eventingv1beta1.TriggerFilter {
+	return &eventingv1beta1.TriggerFilter{
+		DeprecatedSourceAndType: &eventingv1beta1.TriggerFilterSourceAndType{
 			Type:   t,
 			Source: s,
 		},
 	}
 }
 
-func makeTriggerFilterWithAttributes(t, s string) *eventingv1alpha1.TriggerFilter {
-	return &eventingv1alpha1.TriggerFilter{
-		Attributes: &eventingv1alpha1.TriggerFilterAttributes{
+func makeTriggerFilterWithAttributes(t, s string) *eventingv1beta1.TriggerFilter {
+	return &eventingv1beta1.TriggerFilter{
+		Attributes: &eventingv1beta1.TriggerFilterAttributes{
 			"type":   t,
 			"source": s,
 		},
 	}
 }
 
-func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1alpha1.TriggerFilter {
-	return &eventingv1alpha1.TriggerFilter{
-		Attributes: &eventingv1alpha1.TriggerFilterAttributes{
+func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1beta1.TriggerFilter {
+	return &eventingv1beta1.TriggerFilter{
+		Attributes: &eventingv1beta1.TriggerFilterAttributes{
 			"type":        t,
 			"source":      s,
 			extensionName: e,
@@ -511,10 +511,10 @@ func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1alph
 	}
 }
 
-func makeTrigger(filter *eventingv1alpha1.TriggerFilter) *eventingv1alpha1.Trigger {
-	return &eventingv1alpha1.Trigger{
+func makeTrigger(filter *eventingv1beta1.TriggerFilter) *eventingv1beta1.Trigger {
+	return &eventingv1beta1.Trigger{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "eventing.knative.dev/v1beta1",
 			Kind:       "Trigger",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -522,24 +522,24 @@ func makeTrigger(filter *eventingv1alpha1.TriggerFilter) *eventingv1alpha1.Trigg
 			Name:      triggerName,
 			UID:       triggerUID,
 		},
-		Spec: eventingv1alpha1.TriggerSpec{
+		Spec: eventingv1beta1.TriggerSpec{
 			Filter: filter,
 		},
-		Status: eventingv1alpha1.TriggerStatus{
+		Status: eventingv1beta1.TriggerStatus{
 			SubscriberURI: &apis.URL{Host: "toBeReplaced"},
 		},
 	}
 }
 
-func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
+func makeTriggerWithoutFilter() *eventingv1beta1.Trigger {
 	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
 	t.Spec.Filter = nil
 	return t
 }
 
-func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
+func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
 	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
-	t.Status = eventingv1alpha1.TriggerStatus{}
+	t.Status = eventingv1beta1.TriggerStatus{}
 	return t
 }
 

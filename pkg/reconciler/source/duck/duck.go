@@ -30,11 +30,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -72,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	var ok bool
 	var original *duckv1.Source
 	if original, ok = runtimeObj.(*duckv1.Source); !ok {
-		logging.FromContext(ctx).Error("runtime object is not convertible to Source duck type")
+		logging.FromContext(ctx).Error("runtime object is not convertible to Source duck type: ", zap.Any("runtimeObj", runtimeObj))
 		// Avoid re-enqueuing.
 		return nil
 	}
@@ -118,14 +119,14 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 	toCreate, toDelete := r.computeDiff(current, expected)
 
 	for _, eventType := range toDelete {
-		if err = r.eventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+		if err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
 			logging.FromContext(ctx).Error("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
 
 	for _, eventType := range toCreate {
-		if _, err = r.eventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+		if _, err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Create(&eventType); err != nil {
 			logging.FromContext(ctx).Error("Error creating eventType", zap.Any("eventType", eventType))
 			return err
 		}
@@ -134,13 +135,13 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 	return nil
 }
 
-func (r *Reconciler) getEventTypes(ctx context.Context, src *duckv1.Source) ([]v1alpha1.EventType, error) {
+func (r *Reconciler) getEventTypes(ctx context.Context, src *duckv1.Source) ([]v1beta1.EventType, error) {
 	etl, err := r.eventTypeLister.EventTypes(src.Namespace).List(labels.SelectorFromSet(resources.Labels(src.Name)))
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
 	}
-	eventTypes := make([]v1alpha1.EventType, 0)
+	eventTypes := make([]v1beta1.EventType, 0)
 	for _, et := range etl {
 		if metav1.IsControlledBy(et, src) {
 			eventTypes = append(eventTypes, *et)
@@ -149,19 +150,19 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *duckv1.Source) ([]v
 	return eventTypes, nil
 }
 
-func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]v1alpha1.EventType, error) {
+func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]v1beta1.EventType, error) {
 	// Only create EventTypes for Broker sinks.
 	// We add this check here in case the Source was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
 	// TODO remove broker from EventType https://github.com/knative/eventing/issues/2750
 	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
-		return make([]v1alpha1.EventType, 0), nil
+		return make([]v1beta1.EventType, 0), nil
 	}
 
 	// If the Source didn't specify a CloudEventsAttributes, then we skip the creation of EventTypes.
 	// TODO might change in the near future https://github.com/knative/eventing/issues/2750.
 	if src.Status.CloudEventAttributes == nil {
-		return make([]v1alpha1.EventType, 0), nil
+		return make([]v1beta1.EventType, 0), nil
 	}
 
 	entries := make(map[string]eventTypeEntry)
@@ -188,7 +189,7 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]
 		}
 	}
 
-	eventTypes := make([]v1alpha1.EventType, 0)
+	eventTypes := make([]v1beta1.EventType, 0)
 	for _, attrib := range src.Status.CloudEventAttributes {
 		if attrib.Type == "" {
 			// Cannot have empty spec.type
@@ -199,11 +200,19 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]
 			schema = v.Schema
 			description = v.Description
 		}
+		sourceURL, err := apis.ParseURL(attrib.Source)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to parse source as a URL", zap.String("source", attrib.Source), zap.Error(err))
+		}
+		schemaURL, err := apis.ParseURL(schema)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to parse schema as a URL", zap.String("schema", schema), zap.Error(err))
+		}
 		eventType := resources.MakeEventType(&resources.EventTypeArgs{
 			Source:      src,
 			CeType:      attrib.Type,
-			CeSource:    attrib.Source,
-			CeSchema:    schema,
+			CeSource:    sourceURL,
+			CeSchema:    schemaURL,
 			Description: description,
 		})
 		eventTypes = append(eventTypes, *eventType)
@@ -211,9 +220,9 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]
 	return eventTypes, nil
 }
 
-func (r *Reconciler) computeDiff(current []v1alpha1.EventType, expected []v1alpha1.EventType) ([]v1alpha1.EventType, []v1alpha1.EventType) {
-	toCreate := make([]v1alpha1.EventType, 0)
-	toDelete := make([]v1alpha1.EventType, 0)
+func (r *Reconciler) computeDiff(current []v1beta1.EventType, expected []v1beta1.EventType) ([]v1beta1.EventType, []v1beta1.EventType) {
+	toCreate := make([]v1beta1.EventType, 0)
+	toDelete := make([]v1beta1.EventType, 0)
 	currentMap := asMap(current, keyFromEventType)
 	expectedMap := asMap(expected, keyFromEventType)
 
@@ -239,8 +248,8 @@ func (r *Reconciler) computeDiff(current []v1alpha1.EventType, expected []v1alph
 	return toCreate, toDelete
 }
 
-func asMap(eventTypes []v1alpha1.EventType, keyFunc func(*v1alpha1.EventType) string) map[string]v1alpha1.EventType {
-	eventTypesAsMap := make(map[string]v1alpha1.EventType)
+func asMap(eventTypes []v1beta1.EventType, keyFunc func(*v1beta1.EventType) string) map[string]v1beta1.EventType {
+	eventTypesAsMap := make(map[string]v1beta1.EventType)
 	for _, eventType := range eventTypes {
 		key := keyFunc(&eventType)
 		eventTypesAsMap[key] = eventType
@@ -249,6 +258,6 @@ func asMap(eventTypes []v1alpha1.EventType, keyFunc func(*v1alpha1.EventType) st
 }
 
 // TODO we should probably use the hash of this instead. Will be revisited together with https://github.com/knative/eventing/issues/2750.
-func keyFromEventType(eventType *v1alpha1.EventType) string {
+func keyFromEventType(eventType *v1beta1.EventType) string {
 	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
 }

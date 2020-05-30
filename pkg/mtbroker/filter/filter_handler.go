@@ -27,8 +27,8 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/logging"
 	broker "knative.dev/eventing/pkg/mtbroker"
@@ -303,7 +303,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	return replyEvent, err
 }
 
-func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
+func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1beta1.Trigger, error) {
 	t, err := r.triggerLister.Triggers(ref.Namespace).Get(ref.Name)
 	if err != nil {
 		return nil, err
@@ -317,23 +317,12 @@ func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*
 // shouldSendEvent determines whether event 'event' should be sent based on the triggerSpec 'ts'.
 // Currently it supports exact matching on event context attributes and extension attributes.
 // If no filter is present, shouldSendEvent returns passFilter.
-func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) FilterResult {
+func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1beta1.TriggerSpec, event *cloudevents.Event) FilterResult {
 	// No filter specified, default to passing everything.
-	if ts.Filter == nil || (ts.Filter.DeprecatedSourceAndType == nil && ts.Filter.Attributes == nil) {
+	if ts.Filter == nil || len(ts.Filter.Attributes) == 0 {
 		return noFilter
 	}
-
-	attrs := map[string]string{}
-	// Since the filters cannot distinguish presence, filtering for an empty
-	// string is impossible.
-	if ts.Filter.DeprecatedSourceAndType != nil {
-		attrs["type"] = ts.Filter.DeprecatedSourceAndType.Type
-		attrs["source"] = ts.Filter.DeprecatedSourceAndType.Source
-	} else if ts.Filter.Attributes != nil {
-		attrs = map[string]string(*ts.Filter.Attributes)
-	}
-
-	return r.filterEventByAttributes(ctx, attrs, event)
+	return r.filterEventByAttributes(ctx, map[string]string(ts.Filter.Attributes), event)
 }
 
 func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) FilterResult {
@@ -367,7 +356,7 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 			return failFilter
 		}
 		// If the attribute is not set to any and is different than the one from the event, return false.
-		if v != eventingv1alpha1.TriggerAnyFilter && v != value {
+		if v != eventingv1beta1.TriggerAnyFilter && v != value {
 			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
 			return failFilter
 		}
@@ -377,20 +366,12 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
 // returns the any value filter.
-func triggerFilterAttribute(filter *eventingv1alpha1.TriggerFilter, attributeName string) string {
-	attributeValue := eventingv1alpha1.TriggerAnyFilter
+func triggerFilterAttribute(filter *eventingv1beta1.TriggerFilter, attributeName string) string {
+	attributeValue := eventingv1beta1.TriggerAnyFilter
 	if filter != nil {
-		if filter.DeprecatedSourceAndType != nil {
-			if attributeName == "type" {
-				attributeValue = filter.DeprecatedSourceAndType.Type
-			} else if attributeName == "source" {
-				attributeValue = filter.DeprecatedSourceAndType.Source
-			}
-		} else if filter.Attributes != nil {
-			attrs := map[string]string(*filter.Attributes)
-			if v, ok := attrs[attributeName]; ok {
-				attributeValue = v
-			}
+		attrs := map[string]string(filter.Attributes)
+		if v, ok := attrs[attributeName]; ok {
+			attributeValue = v
 		}
 	}
 	return attributeValue

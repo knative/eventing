@@ -48,6 +48,7 @@ import (
 	"knative.dev/pkg/resolver"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	rtv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -63,7 +64,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "eventing.knative.dev/v1beta1",
 		},
 	}
 	sinkDNS          = "sink.mynamespace.svc." + utils.GetClusterDomainName()
@@ -490,9 +491,9 @@ func TestReconcile(t *testing.T) {
 				WithApiServerSourceUID(sourceUID),
 				WithApiServerSourceObjectMetaGeneration(generation),
 			),
-			NewBroker(sinkName, testNS,
-				WithInitBrokerConditions,
-				WithBrokerAddress(sinkDNS),
+			rtv1beta1.NewBroker(sinkName, testNS,
+				rtv1beta1.WithInitBrokerConditions,
+				rtv1beta1.WithBrokerAddress(sinkDNS),
 			),
 			makeAvailableReceiveAdapter(t),
 		},

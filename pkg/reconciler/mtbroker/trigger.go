@@ -28,7 +28,6 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
@@ -53,7 +52,7 @@ const (
 	subscriptionDeleted       = "SubscriptionDeleted"
 )
 
-func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1beta1.Trigger) error {
+func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1beta1.Broker, t *v1beta1.Trigger, brokerTrigger *corev1.ObjectReference) error {
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
@@ -63,7 +62,6 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 
 	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
 
-	brokerTrigger := b.Status.TriggerChannel
 	if brokerTrigger == nil {
 		// Should not happen because Broker is ready to go if we get here
 		return errors.New("failed to find Broker's Trigger channel")
@@ -101,7 +99,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1beta1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1beta1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1beta1.Broker, t *v1beta1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1beta1.Subscription, error) {
 	uri := &apis.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName("broker-filter", system.Namespace()),
@@ -195,7 +193,7 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1beta1.T
 	return r.eventingClientSet.EventingV1beta1().Triggers(desired.Namespace).UpdateStatus(existing)
 }
 
-func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.Trigger, b *v1alpha1.Broker) error {
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.Trigger, b *v1beta1.Broker) error {
 	if dependencyAnnotation, ok := t.GetAnnotations()[v1beta1.DependencyAnnotation]; ok {
 		dependencyObjRef, err := v1beta1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {

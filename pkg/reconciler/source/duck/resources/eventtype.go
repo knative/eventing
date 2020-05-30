@@ -21,7 +21,8 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
@@ -30,20 +31,20 @@ import (
 type EventTypeArgs struct {
 	Source      *duckv1.Source
 	CeType      string
-	CeSource    string
-	CeSchema    string
+	CeSource    *apis.URL
+	CeSchema    *apis.URL
 	Description string
 }
 
-func MakeEventType(args *EventTypeArgs) *v1alpha1.EventType {
+func MakeEventType(args *EventTypeArgs) *v1beta1.EventType {
 	// Name it with the hash of the concatenation of the three fields.
 	// Cannot generate a fixed name based on type+UUID, because long type names might be cut, and we end up trying to create
 	// event types with the same name.
 	// TODO revisit whether we want multiple event types, or just one with multiple owner refs. That will depend on the fields
 	//  it will contain. For example, if we remove Broker and Source, then the latter makes more sense.
 	//  See https://github.com/knative/eventing/issues/2750
-	fixedName := fmt.Sprintf("%x", md5.Sum([]byte(args.CeType+args.CeSource+args.CeSchema+string(args.Source.GetUID()))))
-	return &v1alpha1.EventType{
+	fixedName := fmt.Sprintf("%x", md5.Sum([]byte(args.CeType+args.CeSource.String()+args.CeSchema.String()+string(args.Source.GetUID()))))
+	return &v1beta1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fixedName,
 			Labels:    Labels(args.Source.Name),
@@ -57,7 +58,7 @@ func MakeEventType(args *EventTypeArgs) *v1alpha1.EventType {
 				Controller:         ptr.Bool(true),
 			}},
 		},
-		Spec: v1alpha1.EventTypeSpec{
+		Spec: v1beta1.EventTypeSpec{
 			Type:   args.CeType,
 			Source: args.CeSource,
 			// TODO remove broker https://github.com/knative/eventing/issues/2750
