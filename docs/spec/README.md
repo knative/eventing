@@ -1,11 +1,11 @@
 # Knative Eventing API spec
 
 This directory contains the specification of the Knative Eventing API, which is
-implemented in [`eventing.knative.dev`](/pkg/apis/eventing/v1alpha1) and
+implemented in [`eventing.knative.dev`](/pkg/apis/eventing/v1beta1) and
 verified via [the e2e test](/test/e2e).
 
 **Updates to this spec should include a corresponding change to the API
-implementation for [eventing](/pkg/apis/eventing/v1alpha1) and
+implementation for [eventing](/pkg/apis/eventing/v1beta1) and
 [the e2e test](/test/e2e).**
 
 Docs in this directory:
