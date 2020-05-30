@@ -211,7 +211,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": missing field(s): spec.config.name`),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to find channelTemplate"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
@@ -221,7 +221,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(&duckv1.KReference{Kind: "ConfigMap", APIVersion: "v1"}),
 					WithInitBrokerConditions,
-					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.Config name and namespace are required")),
+					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: failed to find channelTemplate")),
 			}},
 			// This returns an internal error, so it emits an Error
 			WantErr: true,
@@ -461,6 +461,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReady,
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithBrokerAddressURI(brokerAddress)),
 			}},
 			WantEvents: []string{
@@ -1261,44 +1262,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				},
 			},
 		}
-	}
-
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1beta1",
-			"kind":       "InMemoryChannel",
-			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         "eventing.knative.dev/v1beta1",
-						"blockOwnerDeletion": true,
-						"controller":         true,
-						"kind":               "Broker",
-						"name":               brokerName,
-						"uid":                "",
-					},
-				},
-				"labels":      labels,
-				"annotations": annotations,
-			},
-		},
-	}
-}
-
-func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
-	var labels map[string]interface{}
-	var annotations map[string]interface{}
-	var name string
-	name = fmt.Sprintf("%s-kne-trigger", brokerName)
-	labels = map[string]interface{}{
-		eventing.BrokerLabelKey:                 brokerName,
-		"eventing.knative.dev/brokerEverything": "true",
-	}
-	annotations = map[string]interface{}{
-		"eventing.knative.dev/scope": "cluster",
 	}
 
 	return &unstructured.Unstructured{
