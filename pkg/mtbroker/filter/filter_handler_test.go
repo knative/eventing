@@ -494,7 +494,7 @@ func makeTriggerFilterWithAttributes(t, s string) *eventingv1beta1.TriggerFilter
 
 func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1beta1.TriggerFilter {
 	return &eventingv1beta1.TriggerFilter{
-		Attributes: &eventingv1beta1.TriggerFilterAttributes{
+		Attributes: eventingv1beta1.TriggerFilterAttributes{
 			"type":        t,
 			"source":      s,
 			extensionName: e,
@@ -523,13 +523,13 @@ func makeTrigger(filter *eventingv1beta1.TriggerFilter) *eventingv1beta1.Trigger
 }
 
 func makeTriggerWithoutFilter() *eventingv1beta1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
+	t := makeTrigger(makeTriggerFilterWithAttributes("", ""))
 	t.Spec.Filter = nil
 	return t
 }
 
 func makeTriggerWithoutSubscriberURI() *eventingv1beta1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
+	t := makeTrigger(makeTriggerFilterWithAttributes("", ""))
 	t.Status = eventingv1beta1.TriggerStatus{}
 	return t
 }
