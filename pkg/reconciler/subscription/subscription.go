@@ -91,7 +91,6 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1beta1.Subscription) pkgreconciler.Event {
 	subscription.Status.InitializeConditions()
-	subscription.Status.ObservedGeneration = subscription.Generation
 
 	// Find the channel for this subscription.
 	channel, err := r.getChannel(ctx, subscription)
