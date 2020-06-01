@@ -35,7 +35,7 @@ import (
 )
 
 type Adapter interface {
-	Start(stopCh <-chan struct{}) error
+	Start(ctx context.Context) error
 }
 
 type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client) Adapter
@@ -113,7 +113,7 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 
 	logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
 
-	if err := adapter.Start(ctx.Done()); err != nil {
+	if err := adapter.Start(ctx); err != nil {
 		logger.Warn("start returned an error", zap.Error(err))
 	}
 }
