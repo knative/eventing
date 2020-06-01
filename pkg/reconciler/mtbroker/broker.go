@@ -159,19 +159,11 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1beta1.Broker) (*cor
 		return &chanMan.ref, nil
 	}
 	if url := triggerChan.Status.Address.URL; url.Host == "" {
-		// We check the trigger Channel's address here because it is needed to create the Ingress Deployment.
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return &chanMan.ref, nil
 	}
-
-	// Serialize the trigger channel ref.
-	//	bytes, err := json.Marshal(chanMan.ref)
-	//	if err != nil {
-	//		logging.FromContext(ctx).Errorw("Failed to marshal trigger channel ref", zap.Any("triggerChan", triggerChan), zap.Error(err))
-	//	}
-	//	b.Status.Annotations["triggerChannel"] = string(bytes)
 
 	channelStatus := &duckv1beta1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)

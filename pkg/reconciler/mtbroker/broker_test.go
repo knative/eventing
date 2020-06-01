@@ -178,7 +178,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "BrokerReconciled", `Broker reconciled: "test-namespace/test-broker"`),
 			},
 		}, {
-			Name: "nil channeltemplatespec",
+			Name: "nil config",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
@@ -199,6 +199,55 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: failed to find channelTemplate")),
 			}},
 			// This returns an internal error, so it emits an Error
+			WantErr: true,
+		}, {
+			Name: "nil config, missing name",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(&duckv1.KReference{Kind: "ConfigMap", APIVersion: "v1"}),
+					WithInitBrokerConditions),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": missing field(s): spec.config.name`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(&duckv1.KReference{Kind: "ConfigMap", APIVersion: "v1"}),
+					WithInitBrokerConditions,
+					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.Config name and namespace are required")),
+			}},
+			// This returns an internal error, so it emits an Error
+			WantErr: true,
+		}, {
+			Name: "Config not found",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithInitBrokerConditions,
+					WithBrokerConfig(config()),
+					WithTriggerChannelFailed("ChannelTemplateFailed", `Error on setting up the ChannelTemplate: configmaps "test-configmap" not found`)),
+			}},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", `configmaps "test-configmap" not found`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 			WantErr: true,
 		}, {
 			Name: "Trigger Channel.Create error",
@@ -258,6 +307,55 @@ func TestReconcile(t *testing.T) {
 				finalizerUpdatedEvent,
 			},
 		}, {
+			Name: "Trigger Channel.Create no host in the url",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				createChannelNoHostInUrl(testNS),
+				imcConfigMap(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
+			}},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+		}, {
+			Name: "nil config, not a configmap",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(&duckv1.KReference{Kind: "Deployment", APIVersion: "v1", Name: "dummy"}),
+					WithInitBrokerConditions),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", `Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]`),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(&duckv1.KReference{Kind: "Deployment", APIVersion: "v1", Name: "dummy"}),
+					WithInitBrokerConditions,
+					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]")),
+			}},
+			// This returns an internal error, so it emits an Error
+			WantErr: true,
+		}, {
 			Name: "Trigger Channel is not yet Addressable",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -281,6 +379,33 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				finalizerUpdatedEvent,
 			},
+		}, {
+			Name: "Trigger Channel endpoints fails",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions),
+				imcConfigMap(),
+				createChannel(testNS, true),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterFailed("ServiceFailure", `endpoints "broker-filter" not found`)),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", `endpoints "broker-filter" not found`),
+			},
+			WantErr: true,
 		}, {
 			Name: "Successful Reconciliation",
 			Key:  testKey,
@@ -336,7 +461,6 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReady,
-					// 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithBrokerAddressURI(brokerAddress)),
 			}},
 			WantEvents: []string{
@@ -1098,7 +1222,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	var labels map[string]interface{}
 	var annotations map[string]interface{}
 	var name string
-	var hostname string
 	var url string
 	name = fmt.Sprintf("%s-kne-trigger", brokerName)
 	labels = map[string]interface{}{
@@ -1108,7 +1231,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	annotations = map[string]interface{}{
 		"eventing.knative.dev/scope": "cluster",
 	}
-	hostname = triggerChannelHostname
 	url = fmt.Sprintf("http://%s", triggerChannelHostname)
 	if ready {
 		return &unstructured.Unstructured{
@@ -1134,8 +1256,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				},
 				"status": map[string]interface{}{
 					"address": map[string]interface{}{
-						"hostname": hostname,
-						"url":      url,
+						"url": url,
 					},
 				},
 			},
@@ -1162,6 +1283,49 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				},
 				"labels":      labels,
 				"annotations": annotations,
+			},
+		},
+	}
+}
+
+func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
+	var labels map[string]interface{}
+	var annotations map[string]interface{}
+	var name string
+	name = fmt.Sprintf("%s-kne-trigger", brokerName)
+	labels = map[string]interface{}{
+		eventing.BrokerLabelKey:                 brokerName,
+		"eventing.knative.dev/brokerEverything": "true",
+	}
+	annotations = map[string]interface{}{
+		"eventing.knative.dev/scope": "cluster",
+	}
+
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "messaging.knative.dev/v1beta1",
+			"kind":       "InMemoryChannel",
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         namespace,
+				"name":              name,
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "eventing.knative.dev/v1beta1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "Broker",
+						"name":               brokerName,
+						"uid":                "",
+					},
+				},
+				"labels":      labels,
+				"annotations": annotations,
+			},
+			"status": map[string]interface{}{
+				"address": map[string]interface{}{
+					"url": "http://",
+				},
 			},
 		},
 	}

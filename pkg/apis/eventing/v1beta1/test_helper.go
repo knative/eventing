@@ -126,3 +126,7 @@ func (testHelper) ReadyChannelStatus() *duckv1beta1.ChannelableStatus {
 		SubscribableStatus: duckv1beta1.SubscribableStatus{}}
 	return cs
 }
+
+func (t testHelper) NotReadyChannelStatus() *duckv1beta1.ChannelableStatus {
+	return &duckv1beta1.ChannelableStatus{}
+}
