@@ -27,7 +27,6 @@ import (
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var parallelConditionReady = apis.Condition{
@@ -178,7 +177,7 @@ func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 		name: "empty status",
 		fsubs: []*messagingv1beta1.Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "messaging.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1beta1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -188,7 +187,7 @@ func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 			Status: messagingv1beta1.SubscriptionStatus{},
 		}}, subs: []*messagingv1beta1.Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "messaging.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1beta1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -393,7 +392,7 @@ func TestParallelPropagateSetAddress(t *testing.T) {
 	tests := []struct {
 		name       string
 		address    *duckv1.Addressable
-		want       *pkgduckv1.Addressable
+		want       *duckv1.Addressable
 		wantStatus corev1.ConditionStatus
 	}{{
 		name:       "nil",
@@ -408,7 +407,7 @@ func TestParallelPropagateSetAddress(t *testing.T) {
 	}, {
 		name:       "URL",
 		address:    &duckv1.Addressable{URL: URL},
-		want:       &pkgduckv1.Addressable{URL: URL},
+		want:       &duckv1.Addressable{URL: URL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "nil",
