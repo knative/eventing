@@ -3,6 +3,8 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: broker-ingress-hpa
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -23,6 +25,8 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: broker-filter-hpa
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
