@@ -23,6 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
@@ -269,6 +270,16 @@ func WithSubscriberServiceRefForTriggerV1Beta1(name string) TriggerOptionV1Beta1
 			t.Spec.Subscriber = duckv1.Destination{
 				Ref: KnativeRefForService(name, t.Namespace),
 			}
+		}
+	}
+}
+
+// WithSubscriberURIForTriggerV1Beta1 returns an option that adds a Subscriber URI for the given Trigger.
+func WithSubscriberURIForTriggerV1Beta1(uri string) TriggerOptionV1Beta1 {
+	apisURI, _ := apis.ParseURL(uri)
+	return func(t *eventingv1beta1.Trigger) {
+		t.Spec.Subscriber = duckv1.Destination{
+			URI: apisURI,
 		}
 	}
 }
