@@ -21,28 +21,19 @@ package resources
 import (
 	"fmt"
 
-	"knative.dev/pkg/apis"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
-// BrokerOption enables further configuration of a Broker.
-type BrokerOption func(*eventingv1alpha1.Broker)
-
 // BrokerV1Beta1Option enables further configuration of a Broker.
 type BrokerV1Beta1Option func(*eventingv1beta1.Broker)
-
-// TriggerOption enables further configuration of a Trigger.
-type TriggerOption func(*eventingv1alpha1.Trigger)
 
 // TriggerOptionV1Beta1 enables further configuration of a v1beta1 Trigger.
 type TriggerOptionV1Beta1 func(*eventingv1beta1.Trigger)
@@ -175,16 +166,6 @@ func SubscriptionV1Beta1(
 	return subscription
 }
 
-// WithChannelTemplateForBroker returns a function that adds a ChannelTemplate for the given Broker.
-func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption {
-	return func(b *eventingv1alpha1.Broker) {
-		channelTemplate := &messagingv1beta1.ChannelTemplateSpec{
-			TypeMeta: *channelTypeMeta,
-		}
-		b.Spec.ChannelTemplate = channelTemplate
-	}
-}
-
 // WithConfigMapForBrokerConfig returns a function that configures the ConfigMap
 // for the Spec.Config for a given Broker. Note that the CM must exist and has
 // to be in the same namespace as the Broker and have the same Name. Typically
@@ -221,31 +202,11 @@ func WithBrokerClassForBrokerV1Beta1(brokerClass string) BrokerV1Beta1Option {
 	}
 }
 
-// WithDeliveryForBroker returns a function that adds a Delivery for the given Broker.
-func WithDeliveryForBroker(delivery *eventingduckv1beta1.DeliverySpec) BrokerOption {
-	return func(b *eventingv1alpha1.Broker) {
-		b.Spec.Delivery = delivery
-	}
-}
-
 // WithDeliveryForBrokerV1Beta1 returns a function that adds a Delivery for the given
 // v1beta1 Broker.
 func WithDeliveryForBrokerV1Beta1(delivery *eventingduckv1beta1.DeliverySpec) BrokerV1Beta1Option {
 	return func(b *eventingv1beta1.Broker) {
 		b.Spec.Delivery = delivery
-	}
-}
-
-// WithBrokerClassForBroker returns a function that adds a brokerClass
-// annotation to the given Broker.
-func WithBrokerClassForBroker(brokerClass string) BrokerOption {
-	return func(b *eventingv1alpha1.Broker) {
-		annotations := b.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string, 1)
-		}
-		annotations["eventing.knative.dev/broker.class"] = brokerClass
-		b.SetAnnotations(annotations)
 	}
 }
 
@@ -264,19 +225,6 @@ func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 }
 
 // Broker returns a Broker.
-func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
-	broker := &eventingv1alpha1.Broker{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	for _, option := range options {
-		option(broker)
-	}
-	return broker
-}
-
-// Broker returns a Broker.
 func BrokerV1Beta1(name string, options ...BrokerV1Beta1Option) *eventingv1beta1.Broker {
 	broker := &eventingv1beta1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -287,35 +235,6 @@ func BrokerV1Beta1(name string, options ...BrokerV1Beta1Option) *eventingv1beta1
 		option(broker)
 	}
 	return broker
-}
-
-// WithDeprecatedSourceAndTypeTriggerFilter returns an option that adds a TriggerFilter with DeprecatedSourceAndType for the given Trigger.
-func WithDeprecatedSourceAndTypeTriggerFilter(eventSource, eventType string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
-		triggerFilter := &eventingv1alpha1.TriggerFilter{
-			DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
-				Type:   eventType,
-				Source: eventSource,
-			},
-		}
-		t.Spec.Filter = triggerFilter
-	}
-}
-
-// WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
-func WithAttributesTriggerFilter(eventSource, eventType string, extensions map[string]interface{}) TriggerOption {
-	attrs := make(map[string]string)
-	attrs["type"] = eventType
-	attrs["source"] = eventSource
-	for k, v := range extensions {
-		attrs[k] = fmt.Sprintf("%v", v)
-	}
-	triggerFilterAttributes := eventingv1alpha1.TriggerFilterAttributes(attrs)
-	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Filter = &eventingv1alpha1.TriggerFilter{
-			Attributes: &triggerFilterAttributes,
-		}
-	}
 }
 
 // WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
@@ -343,34 +262,6 @@ func WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation string) Trigger
 	}
 }
 
-// WithBroker returns an option that adds a Broker for the given Trigger.
-func WithBroker(brokerName string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Broker = brokerName
-	}
-}
-
-// WithSubscriberServiceRefForTrigger returns an option that adds a Subscriber Kubernetes Service Ref for the given Trigger.
-func WithSubscriberServiceRefForTrigger(name string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
-		if name != "" {
-			t.Spec.Subscriber = duckv1.Destination{
-				Ref: KnativeRefForService(name, t.Namespace),
-			}
-		}
-	}
-}
-
-// WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
-func WithSubscriberURIForTrigger(uri string) TriggerOption {
-	apisURI, _ := apis.ParseURL(uri)
-	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = duckv1.Destination{
-			URI: apisURI,
-		}
-	}
-}
-
 // WithSubscriberServiceRefForTriggerV1Beta1 returns an option that adds a Subscriber Knative Service Ref for the given Trigger.
 func WithSubscriberServiceRefForTriggerV1Beta1(name string) TriggerOptionV1Beta1 {
 	return func(t *eventingv1beta1.Trigger) {
@@ -387,19 +278,6 @@ func WithBrokerV1Beta1(name string) TriggerOptionV1Beta1 {
 	return func(trigger *eventingv1beta1.Trigger) {
 		trigger.Spec.Broker = name
 	}
-}
-
-// Trigger returns a Trigger.
-func Trigger(name string, options ...TriggerOption) *eventingv1alpha1.Trigger {
-	trigger := &eventingv1alpha1.Trigger{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	for _, option := range options {
-		option(trigger)
-	}
-	return trigger
 }
 
 // TriggerV1Beta1 returns a v1beta1 Trigger.

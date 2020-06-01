@@ -23,14 +23,14 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
-	any          = v1alpha1.TriggerAnyFilter
+	any          = v1beta1.TriggerAnyFilter
 	eventType1   = "type1"
 	eventType2   = "type2"
 	eventSource1 = "source1"

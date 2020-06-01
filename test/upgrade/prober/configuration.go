@@ -26,7 +26,7 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
@@ -72,7 +72,7 @@ func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	broker, err := p.client.Eventing.EventingV1alpha1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
+	broker, err := p.client.Eventing.EventingV1beta1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -111,21 +111,21 @@ func (p *prober) deployTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		fullType := fmt.Sprintf("%v.%v", watholaEventNs, eventType)
-		subscriberOption := resources.WithSubscriberServiceRefForTrigger(receiverName)
+		subscriberOption := resources.WithSubscriberServiceRefForTriggerV1Beta1(receiverName)
 		if p.config.Serving.Use {
 			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
 		}
-		trigger := resources.Trigger(
+		trigger := resources.TriggerV1Beta1(
 			name,
-			resources.WithBroker(brokerName),
-			resources.WithAttributesTriggerFilter(
-				eventingv1alpha1.TriggerAnyFilter,
+			resources.WithBrokerV1Beta1(brokerName),
+			resources.WithAttributesTriggerFilterV1Beta1(
+				eventingv1beta1.TriggerAnyFilter,
 				fullType,
 				map[string]interface{}{},
 			),
 			subscriberOption,
 		)
-		triggers := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace)
+		triggers := p.client.Eventing.EventingV1beta1().Triggers(p.config.Namespace)
 		p.log.Infof("Deploying trigger: %v", name)
 		// update trigger with the new reference
 		_, err := triggers.Create(trigger)
@@ -153,7 +153,7 @@ func (p *prober) removeTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		p.log.Infof("Removing trigger: %v", name)
-		err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
+		err := p.client.Eventing.EventingV1beta1().Triggers(p.config.Namespace).
 			Delete(name, &metav1.DeleteOptions{})
 		ensure.NoError(err)
 	}
