@@ -232,7 +232,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify that EventTypes were created.
-	eventTypes, err := client.Eventing.EventingV1alpha1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	eventTypes, err := client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("Error retrieving EventTypes: %v", err)
 	}

@@ -191,7 +191,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify that an EventType was created.
-	eventTypes, err := client.Eventing.EventingV1alpha1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	eventTypes, err := client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("Error retrieving EventTypes: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 		t.Fatalf("Invalid number of EventTypes registered for PingSource: %s/%s, expected 1, got %d", client.Namespace, sourceName, len(eventTypes.Items))
 	}
 	et := eventTypes.Items[0]
-	if et.Spec.Type != sourcesv1alpha2.PingSourceEventType && et.Spec.Source != sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName) {
+	if et.Spec.Type != sourcesv1alpha2.PingSourceEventType && et.Spec.Source.String() != sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName) {
 		t.Fatalf("Invalid spec.type and/or spec.source for PingSource EventType, expected: type=%s source=%s, got: type=%s source=%s",
 			sourcesv1alpha2.PingSourceEventType, sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName), et.Spec.Type, et.Spec.Source)
 	}

@@ -66,11 +66,11 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create trigger to receive the original event, and send to an invalid destination
-		client.CreateTriggerOrFail(
+		client.CreateTriggerOrFailV1Beta1(
 			triggerName,
-			resources.WithBroker(brokerName),
-			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource, eventType),
-			resources.WithSubscriberURIForTrigger("http://does-not-exist.svc.cluster.local"),
+			resources.WithBrokerV1Beta1(brokerName),
+			resources.WithAttributesTriggerFilterV1Beta1(eventSource, eventType, nil),
+			resources.WithSubscriberURIForTriggerV1Beta1("http://does-not-exist.svc.cluster.local"),
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
