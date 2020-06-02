@@ -25,7 +25,7 @@ import (
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var pParallelCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable)
+var pCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable)
 
 const (
 	// ParallelConditionReady has status True when all subconditions below have been set to True.
@@ -44,8 +44,13 @@ const (
 	ParallelConditionAddressable apis.ConditionType = "Addressable"
 )
 
+// GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
+func (*Parallel) GetConditionSet() apis.ConditionSet {
+	return pCondSet
+}
+
 // GetGroupVersionKind returns GroupVersionKind for Parallel
-func (p *Parallel) GetGroupVersionKind() schema.GroupVersionKind {
+func (*Parallel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Parallel")
 }
 
@@ -56,17 +61,17 @@ func (p *Parallel) GetUntypedSpec() interface{} {
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ps *ParallelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
-	return pParallelCondSet.Manage(ps).GetCondition(t)
+	return pCondSet.Manage(ps).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
 func (ps *ParallelStatus) IsReady() bool {
-	return pParallelCondSet.Manage(ps).IsHappy()
+	return pCondSet.Manage(ps).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ps *ParallelStatus) InitializeConditions() {
-	pParallelCondSet.Manage(ps).InitializeConditions()
+	pCondSet.Manage(ps).InitializeConditions()
 }
 
 // PropagateSubscriptionStatuses sets the ParallelConditionSubscriptionsReady based on
@@ -122,7 +127,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 
 	}
 	if allReady {
-		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionSubscriptionsReady)
+		pCondSet.Manage(ps).MarkTrue(ParallelConditionSubscriptionsReady)
 	} else {
 		ps.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
@@ -172,29 +177,29 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1beta1.C
 		}
 	}
 	if allReady {
-		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionChannelsReady)
+		pCondSet.Manage(ps).MarkTrue(ParallelConditionChannelsReady)
 	} else {
 		ps.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
 }
 
 func (ps *ParallelStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionChannelsReady, reason, messageFormat, messageA...)
+	pCondSet.Manage(ps).MarkFalse(ParallelConditionChannelsReady, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionSubscriptionsReady, reason, messageFormat, messageA...)
+	pCondSet.Manage(ps).MarkFalse(ParallelConditionSubscriptionsReady, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, reason, messageFormat, messageA...)
+	pCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) setAddress(address *pkgduckv1.Addressable) {
 	ps.Address = address
 	if address == nil {
-		pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyAddress", "addressable is nil")
+		pCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyAddress", "addressable is nil")
 	} else {
-		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
+		pCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
 	}
 }

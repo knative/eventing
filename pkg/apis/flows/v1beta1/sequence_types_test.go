@@ -18,6 +18,15 @@ package v1beta1
 
 import "testing"
 
+func TestSequenceGetStatus(t *testing.T) {
+	r := &Sequence{
+		Status: SequenceStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
+}
+
 func TestSequenceKind(t *testing.T) {
 	sequence := Sequence{}
 	if sequence.GetGroupVersionKind().String() != "flows.knative.dev/v1beta1, Kind=Sequence" {
