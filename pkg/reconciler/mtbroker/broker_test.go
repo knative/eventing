@@ -1284,11 +1284,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				"labels":      labels,
 				"annotations": annotations,
 			},
-			"status": map[string]interface{}{
-				"address": map[string]interface{}{
-					"url": "http://",
-				},
-			},
 		},
 	}
 }
