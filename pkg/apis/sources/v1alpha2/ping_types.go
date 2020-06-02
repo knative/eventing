@@ -26,7 +26,7 @@ import (
 )
 
 // +genclient
-// +genreconciler
+// +genreconciler:krshapedlogic=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 

@@ -27,7 +27,7 @@ import (
 )
 
 // +genclient
-// +genreconciler
+// +genreconciler:krshapedlogic=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ContainerSource is the Schema for the containersources API
