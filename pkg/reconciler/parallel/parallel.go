@@ -68,7 +68,6 @@ var _ parallelreconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1beta1.Parallel) pkgreconciler.Event {
 	p.Status.InitializeConditions()
-	p.Status.ObservedGeneration = p.Generation
 
 	// Reconciling parallel is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
