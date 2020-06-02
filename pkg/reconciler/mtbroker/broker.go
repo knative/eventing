@@ -126,7 +126,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1beta1.Broker) pkgre
 }
 
 func (r *Reconciler) reconcileKind(ctx context.Context, b *v1beta1.Broker) (*corev1.ObjectReference, pkgreconciler.Event) {
-	logging.FromContext(ctx).Debugw("Reconciling", zap.Any("Broker", b))
+	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
 	b.Status.ObservedGeneration = b.Generation
 

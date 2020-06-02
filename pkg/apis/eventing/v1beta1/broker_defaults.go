@@ -39,9 +39,7 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	cfg := config.FromContextOrDefaults(ctx)
 	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
 	if err == nil {
-		if c.Namespace == "" {
-			c.Namespace = apis.ParentMeta(ctx).Namespace
-		}
+		c.SetDefaults(ctx)
 		bs.Config = c
 	}
 }

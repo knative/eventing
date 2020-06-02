@@ -43,7 +43,6 @@ import (
 
 	defaultconfig "knative.dev/eventing/pkg/apis/config"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/apis/flows"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
@@ -223,7 +222,6 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
-		eventingv1beta1_   = eventingv1beta1.SchemeGroupVersion.Version
 		messagingv1alpha1_ = messagingv1alpha1.SchemeGroupVersion.Version
 		messagingv1beta1_  = messagingv1beta1.SchemeGroupVersion.Version
 		flowsv1alpha1_     = flowsv1alpha1.SchemeGroupVersion.Version
@@ -238,28 +236,6 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
-			// eventing
-			eventingv1beta1.Kind("Trigger"): {
-				DefinitionName: eventing.TriggersResource.String(),
-				HubVersion:     eventingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1beta1_: &eventingv1beta1.Trigger{},
-				},
-			},
-			eventingv1beta1.Kind("Broker"): {
-				DefinitionName: eventing.BrokersResource.String(),
-				HubVersion:     eventingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1beta1_: &eventingv1beta1.Broker{},
-				},
-			},
-			eventingv1beta1.Kind("EventType"): {
-				DefinitionName: eventing.EventTypesResource.String(),
-				HubVersion:     eventingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1beta1_: &eventingv1beta1.EventType{},
-				},
-			},
 			// messaging
 			messagingv1beta1.Kind("Channel"): {
 				DefinitionName: messaging.ChannelsResource.String(),
