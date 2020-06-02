@@ -79,7 +79,11 @@ func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClie
 	}
 }
 
-func (a *pingAdapter) Start(stopCh <-chan struct{}) error {
+func (a *pingAdapter) Start(ctx context.Context) error {
+	return a.start(ctx.Done())
+}
+
+func (a *pingAdapter) start(stopCh <-chan struct{}) error {
 	sched, err := cron.ParseStandard(a.Schedule)
 	if err != nil {
 		return fmt.Errorf("unparseable schedule %s: %v", a.Schedule, err)

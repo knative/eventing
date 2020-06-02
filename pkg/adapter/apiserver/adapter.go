@@ -17,6 +17,7 @@ limitations under the License.
 package apiserver
 
 import (
+	"context"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -51,7 +52,11 @@ type apiServerAdapter struct {
 	name     string // TODO: who dis?
 }
 
-func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
+func (a *apiServerAdapter) Start(ctx context.Context) error {
+	return a.start(ctx.Done())
+}
+
+func (a *apiServerAdapter) start(stopCh <-chan struct{}) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 

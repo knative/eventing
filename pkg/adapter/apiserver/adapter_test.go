@@ -17,6 +17,7 @@ limitations under the License.
 package apiserver
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -65,10 +66,11 @@ func TestAdapter_StartRef(t *testing.T) {
 	}
 
 	err := errors.New("test never ran")
-	stopCh := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
-		err = a.Start(stopCh)
+		err = a.Start(ctx)
 		done <- struct{}{}
 	}()
 
@@ -77,7 +79,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	// don't have access to it.
 	time.Sleep(1 * time.Second)
 
-	stopCh <- struct{}{}
+	cancel()
 	<-done
 
 	if err != nil {
@@ -112,10 +114,10 @@ func TestAdapter_StartResource(t *testing.T) {
 	}
 
 	err := errors.New("test never ran")
-	stopCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
-		err = a.Start(stopCh)
+		err = a.Start(ctx)
 		done <- struct{}{}
 	}()
 
@@ -124,7 +126,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	// don't have access to it.
 	time.Sleep(1 * time.Second)
 
-	stopCh <- struct{}{}
+	cancel()
 	<-done
 
 	if err != nil {
@@ -159,10 +161,10 @@ func TestAdapter_StartNonNamespacedResource(t *testing.T) {
 	}
 
 	err := errors.New("test never ran")
-	stopCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
-		err = a.Start(stopCh)
+		err = a.Start(ctx)
 		done <- struct{}{}
 	}()
 
@@ -171,7 +173,7 @@ func TestAdapter_StartNonNamespacedResource(t *testing.T) {
 	// don't have access to it.
 	time.Sleep(1 * time.Second)
 
-	stopCh <- struct{}{}
+	cancel()
 	<-done
 
 	if err != nil {

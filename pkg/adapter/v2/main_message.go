@@ -36,7 +36,7 @@ import (
 )
 
 type MessageAdapter interface {
-	Start(stopCh <-chan struct{}) error
+	Start(ctx context.Context) error
 }
 
 type MessageAdapterConstructor func(ctx context.Context, env EnvConfigAccessor, adapter *kncloudevents.HttpMessageSender, reporter source.StatsReporter) MessageAdapter
@@ -116,7 +116,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 
 	logger.Info("Starting Receive MessageAdapter", zap.Any("adapter", adapter))
 
-	if err := adapter.Start(ctx.Done()); err != nil {
+	if err := adapter.Start(ctx); err != nil {
 		logger.Warn("start returned an error", zap.Error(err))
 	}
 }

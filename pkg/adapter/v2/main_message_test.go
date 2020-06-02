@@ -59,6 +59,6 @@ func TestMainMessageAdapter(t *testing.T) {
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
-func (m *myAdapterBindings) Start(_ <-chan struct{}) error {
+func (m *myAdapterBindings) Start(_ context.Context) error {
 	return nil
 }

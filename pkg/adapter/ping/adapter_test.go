@@ -17,6 +17,7 @@ limitations under the License.
 package ping
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -55,7 +56,7 @@ func TestStart_ServeHTTP(t *testing.T) {
 				Client:   ce,
 			}
 
-			stop := make(chan struct{})
+			stop := context.Background()
 			go func() {
 				if err := a.Start(stop); err != nil {
 					if tc.error {
@@ -81,7 +82,7 @@ func TestStartBadCron(t *testing.T) {
 		Schedule: schedule,
 	}
 
-	stop := make(chan struct{})
+	stop := context.Background()
 	if err := a.Start(stop); err == nil {
 
 		t.Errorf("failed to fail, %v", err)

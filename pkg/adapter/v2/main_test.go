@@ -57,6 +57,6 @@ func TestMainWithContext(t *testing.T) {
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
-func (m *myAdapter) Start(stopCh <-chan struct{}) error {
+func (m *myAdapter) Start(_ context.Context) error {
 	return nil
 }
