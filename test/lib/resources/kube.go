@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/lib/cloudevents"
+	cetest "knative.dev/eventing/test/lib/cloudevents"
 )
 
 // PodOption enables further configuration of a Pod.
@@ -41,18 +41,21 @@ type PodOption func(*corev1.Pod)
 type RoleOption func(*rbacv1.Role)
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, sink string, event *cloudevents.CloudEvent) (*corev1.Pod, error) {
+// Deprecated: use sender.EventSenderPod
+func EventSenderPod(name string, sink string, event *cetest.CloudEvent) (*corev1.Pod, error) {
 	return eventSenderPodImage("sendevents", name, sink, event, false)
 }
 
 // EventSenderTracingPod creates a Pod that sends a single event to the given address.
-func EventSenderTracingPod(name string, sink string, event *cloudevents.CloudEvent) (*corev1.Pod, error) {
+// Deprecated: use sender.EventSenderPod
+func EventSenderTracingPod(name string, sink string, event *cetest.CloudEvent) (*corev1.Pod, error) {
 	return eventSenderPodImage("sendevents", name, sink, event, true)
 }
 
-func eventSenderPodImage(imageName string, name string, sink string, event *cloudevents.CloudEvent, addTracing bool) (*corev1.Pod, error) {
+// Deprecated: use sender.EventSenderPod
+func eventSenderPodImage(imageName string, name string, sink string, event *cetest.CloudEvent, addTracing bool) (*corev1.Pod, error) {
 	if event.Encoding == "" {
-		event.Encoding = cloudevents.DefaultEncoding
+		event.Encoding = cetest.DefaultEncoding
 	}
 	eventExtensionsBytes, err := json.Marshal(event.Extensions)
 	eventExtensions := string(eventExtensionsBytes)
@@ -129,7 +132,7 @@ func eventLoggerPod(imageName string, name string) *corev1.Pod {
 }
 
 // EventTransformationPod creates a Pod that transforms events received.
-func EventTransformationPod(name string, event *cloudevents.CloudEvent) *corev1.Pod {
+func EventTransformationPod(name string, event *cetest.CloudEvent) *corev1.Pod {
 	const imageName = "transformevents"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{

@@ -46,6 +46,7 @@ func (c *Client) LabelNamespace(labels map[string]string) error {
 }
 
 // SendFakeEventToAddressableOrFail will send the given event to the given Addressable.
+// Deprecated: you should use SendEventToAddressable
 func (c *Client) SendFakeEventToAddressableOrFail(
 	senderName,
 	addressableName string,
@@ -62,6 +63,7 @@ func (c *Client) SendFakeEventToAddressableOrFail(
 }
 
 // SendFakeEventWithTracingToAddressableOrFail will send the given event with tracing to the given Addressable.
+// Deprecated: you should use SendEventToAddressable
 func (c *Client) SendFakeEventWithTracingToAddressableOrFail(
 	senderName,
 	addressableName string,
@@ -90,6 +92,7 @@ func (c *Client) GetAddressableURI(addressableName string, typeMeta *metav1.Type
 }
 
 // sendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
+// Deprecated: you should use SendEvent
 func (c *Client) sendFakeEventToAddress(
 	senderName string,
 	uri string,
@@ -108,6 +111,7 @@ func (c *Client) sendFakeEventToAddress(
 }
 
 // sendFakeEventWithTracingToAddress will create a sender pod, which will send the given event with tracing to the given url.
+// Deprecated: you should use SendEvent
 func (c *Client) sendFakeEventWithTracingToAddress(
 	senderName string,
 	uri string,
