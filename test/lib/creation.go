@@ -130,7 +130,7 @@ func (c *Client) CreateSubscriptionsOrFail(
 // CreateConfigMapOrFail will create a configmap or fail the test if there is an error.
 func (c *Client) CreateConfigMapOrFail(name, namespace string, data map[string]string) *corev1.ConfigMap {
 	c.T.Logf("Creating configmap %s", name)
-	configMap, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(resources.ConfigMap(name, data))
+	configMap, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(resources.ConfigMap(name, namespace, data))
 	if err != nil {
 		c.T.Fatalf("Failed to create configmap %s: %v", name, err)
 	}
