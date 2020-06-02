@@ -27,10 +27,9 @@ import (
 
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/test/lib"
 )
@@ -115,7 +114,7 @@ func (er *eventRecorder) handleGetEntry(w http.ResponseWriter, r *http.Request) 
 	w.Write(entryBytes)
 }
 
-func (er *eventRecorder) handle(writer http.ResponseWriter, request *http.Request) {
+func (er *eventRecorder) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
 	defer m.Finish(nil)
 
@@ -154,11 +153,7 @@ func main() {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 
-	handler := ochttp.Handler{
-		Handler:     http.HandlerFunc(er.handle),
-		Propagation: &tracecontext.HTTPFormat{},
-	}
-	err := http.ListenAndServe(":8080", http.HandlerFunc(handler.ServeHTTP))
+	err := http.ListenAndServe(":8080", kncloudevents.CreateHandler(er))
 	if err != nil {
 		panic(err)
 	}
