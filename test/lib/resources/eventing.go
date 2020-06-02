@@ -212,10 +212,11 @@ func WithDeliveryForBrokerV1Beta1(delivery *eventingduckv1beta1.DeliverySpec) Br
 }
 
 // ConfigMap returns a ConfigMap.
-func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
+func ConfigMap(name, namespace string, data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 			Labels: map[string]string{
 				// Default label for a configmap being eligible to be propagated.
 				"knative.dev/config-propagation": "original",
