@@ -308,7 +308,7 @@ type SourceSpec struct {
 ```
 
 For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
-see [Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1#Destination),
+see [Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination),
 and
 [CloudEventOverrides](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
@@ -359,7 +359,7 @@ The usage of CloudEvents version `1.0` is RECOMMENDED.
 Every Source SHOULD support sending events via _Binary Content Mode_ or
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents. Sources
 SHOULD send events to its
-[Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1?tab=doc#Destination).
+[Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination).
 
 For more details of the Knative Event delivery, take a look at its
 [specification](../delivery/README.md).
