@@ -124,20 +124,23 @@ func TestSinkBindingDeployment(t *testing.T) {
 	// Look for events with expected data, and sinkbinding extension
 	expectedCount := 2
 	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)
-	matchFunc := func(ev ce.Event) bool {
+	matchFunc := func(ev ce.Event) error {
 		if expectedSource != ev.Source() {
-			return false
+			return fmt.Errorf("expected source %s, saw %s", expectedSource, ev.Source())
 		}
 		ext := ev.Extensions()
 		value, found := ext["sinkbinding"]
 		if !found {
-			return false
+			return fmt.Errorf("didn't find extension sinkbinding")
 		}
 		if value != extensionSecret {
-			return false
+			return fmt.Errorf("expension sinkbinding didn't match %s, saw %s", extensionSecret, value)
 		}
 		db := ev.Data()
-		return strings.Contains(string(db), data)
+		if !strings.Contains(string(db), data) {
+			return fmt.Errorf("expected substring %s in %s", data, string(db))
+		}
+		return nil
 	}
 
 	_, err = targetTracker.WaitAtLeastNMatch(lib.ValidEvFunc(matchFunc), expectedCount)

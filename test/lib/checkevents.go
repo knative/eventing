@@ -182,7 +182,7 @@ func (ei *EventInfoStore) Find(f EventInfoMatchFunc) ([]EventInfo, SearchedInfo,
 		return nil, sInfo, fmt.Errorf("error getting events %v", err)
 	}
 	for i := range allEvents {
-		if f(allEvents[i]) {
+		if f(allEvents[i]) == nil {
 			allMatch = append(allMatch, allEvents[i])
 		}
 		lastEvents = append(lastEvents, allEvents[i])
@@ -201,9 +201,9 @@ func (ei *EventInfoStore) Find(f EventInfoMatchFunc) ([]EventInfo, SearchedInfo,
 // that checks EventInfo structures, returning false for any that don't
 // contain valid events.
 func ValidEvFunc(evf EventMatchFunc) EventInfoMatchFunc {
-	return func(ei EventInfo) bool {
+	return func(ei EventInfo) error {
 		if ei.Event == nil {
-			return false
+			return fmt.Errorf("Saw nil event")
 		} else {
 			return evf(*ei.Event)
 		}
@@ -240,12 +240,17 @@ func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]Even
 // data field.  If source is the empty string, don't check the source.  If maxCount is >0, return an error
 // if more than maxCount entries are seen.
 func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCount int, maxCount int) error {
-	matchFunc := func(ev cloudevents.Event) bool {
+	matchFunc := func(ev cloudevents.Event) error {
 		if source != "" && ev.Source() != source {
-			return false
+			return fmt.Errorf("mismatched source: expected %s, saw %s", source, ev.Source())
 		}
 		db := ev.Data()
-		return strings.Contains(string(db), data)
+		body := string(db)
+		if strings.Contains(body, data) {
+			return nil
+		} else {
+			return fmt.Errorf("didn't find substring (%s) in data (%s)", data, body)
+		}
 	}
 	// verify the logger service receives the event and only once
 	match, err := ei.WaitAtLeastNMatch(ValidEvFunc(matchFunc), minCount)
@@ -259,11 +264,11 @@ func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCou
 }
 
 // Does the provided EventInfo match some criteria
-type EventInfoMatchFunc func(EventInfo) bool
+type EventInfoMatchFunc func(EventInfo) error
 
 // Does the provided event match some criteria
-type EventMatchFunc func(cloudevents.Event) bool
+type EventMatchFunc func(cloudevents.Event) error
 
-func MatchAllEvent(cloudevents.Event) bool {
-	return true
+func MatchAllEvent(cloudevents.Event) error {
+	return nil
 }

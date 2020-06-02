@@ -336,15 +336,18 @@ func setupChannelTracingWithReply(
 		}
 	}
 
-	matchFunc := func(ev ce2.Event) bool {
+	matchFunc := func(ev ce2.Event) error {
 		if ev.Source() != senderName {
-			return false
+			return fmt.Errorf("expected source %s, saw %s", senderName, ev.Source())
 		}
 		if ev.ID() != eventID {
-			return false
+			return fmt.Errorf("expected id %s, saw %s", eventID, ev.ID())
 		}
 		db := ev.Data()
-		return strings.Contains(string(db), body)
+		if !strings.Contains(string(db), body) {
+			return fmt.Errorf("expected substring %s in %s", body, string(db))
+		}
+		return nil
 	}
 
 	return expected, matchFunc
