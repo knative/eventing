@@ -32,7 +32,7 @@ func TestForwarderMain(t *testing.T) {
 	config.Instance.Forwarder.Port = port
 	go main()
 	cancel := <-forwarder.Canceling
-	err := lib.WaitForReadiness(port)
+	err := lib.WaitForReadiness(port, config.Log)
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
 	cancel()
