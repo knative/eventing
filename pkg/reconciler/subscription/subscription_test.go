@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 
@@ -162,7 +162,7 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingv1beta1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
 	_ = messagingv1alpha1.AddToScheme(scheme.Scheme)

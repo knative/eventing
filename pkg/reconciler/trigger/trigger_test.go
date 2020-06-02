@@ -52,7 +52,6 @@ const (
 func init() {
 	// Add types to scheme
 	_ = v1beta1.AddToScheme(scheme.Scheme)
-	//	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
@@ -224,11 +223,11 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			kubeClientSet:     fakekubeclient.Get(ctx),
-			brokerLister:      listers.GetV1Beta1BrokerLister(),
+			brokerLister:      listers.GetBrokerLister(),
 			namespaceLister:   listers.GetNamespaceLister(),
 		}
 		return trigger.NewReconciler(ctx, logger,
-			fakeeventingclient.Get(ctx), listers.GetV1Beta1TriggerLister(),
+			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }

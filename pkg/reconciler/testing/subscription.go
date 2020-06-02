@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -95,7 +95,7 @@ func WithInitSubscriptionConditions(s *v1alpha1.Subscription) {
 }
 
 func WithSubscriptionReady(s *v1alpha1.Subscription) {
-	s.Status = *eventingv1alpha1.TestHelper.ReadySubscriptionStatus()
+	s.Status = *eventingv1beta1.TestHelper.ReadySubscriptionStatusV1Alpha1()
 }
 
 // TODO: this can be a runtime object

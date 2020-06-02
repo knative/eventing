@@ -26,9 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	"knative.dev/pkg/configmap"
@@ -36,7 +37,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/ptr"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -54,7 +55,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "eventing.knative.dev/v1beta1",
 		},
 	}
 
@@ -87,26 +88,26 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeSource([]duckv1.CloudEventAttributes{{
 					Type:   "my-type-1",
-					Source: "my-source-1",
+					Source: "http://my-source-1",
 				}, {
 					Type:   "my-type-2",
-					Source: "my-source-1",
+					Source: "http://my-source-1",
 				}}),
 			},
 			Key: testNS + "/" + sourceName,
 			WantCreates: []runtime.Object{
-				makeEventType("my-type-1", "my-source-1"),
-				makeEventType("my-type-2", "my-source-1"),
+				makeEventType("my-type-1", "http://my-source-1"),
+				makeEventType("my-type-2", "http://my-source-1"),
 			},
 		}, {
 			Name: "valid source with broker sink, delete event type",
 			Objects: []runtime.Object{
 				makeSource([]duckv1.CloudEventAttributes{{
 					Type:   "my-type-1",
-					Source: "my-source-1",
+					Source: "http://my-source-1",
 				}, {
 					Type:   "my-type-2",
-					Source: "my-source-1",
+					Source: "http://my-source-1",
 				}}),
 				// https://github.com/knative/pkg/issues/411
 				// Be careful adding more EventTypes here, the current unit test lister does not
@@ -120,24 +121,24 @@ func TestAllCases(t *testing.T) {
 				{Name: "name-1"},
 			},
 			WantCreates: []runtime.Object{
-				makeEventType("my-type-1", "my-source-1"),
-				makeEventType("my-type-2", "my-source-1"),
+				makeEventType("my-type-1", "http://my-source-1"),
+				makeEventType("my-type-2", "http://my-source-1"),
 			},
 		}, {
 			Name: "valid source with broker sink, create missing event types",
 			Objects: []runtime.Object{
 				makeSource([]duckv1.CloudEventAttributes{{
 					Type:   "my-type-1",
-					Source: "my-source-1",
+					Source: "http://my-source-1",
 				}, {
 					Type:   "my-type-2",
-					Source: "my-source-1",
+					Source: "http://my-source-1",
 				}}),
-				makeEventType("my-type-1", "my-source-1"),
+				makeEventType("my-type-1", "http://my-source-1"),
 			},
 			Key: testNS + "/" + sourceName,
 			WantCreates: []runtime.Object{
-				makeEventType("my-type-2", "my-source-1"),
+				makeEventType("my-type-2", "http://my-source-1"),
 			},
 			// TODO add tests that read the CRD registry annotation.
 		}}
@@ -179,8 +180,9 @@ func makeSource(attributes []duckv1.CloudEventAttributes) *duckv1.Source {
 	}
 }
 
-func makeEventType(ceType, ceSource string) *v1alpha1.EventType {
-	return &v1alpha1.EventType{
+func makeEventType(ceType, ceSource string) *v1beta1.EventType {
+	ceSourceURL, _ := apis.ParseURL(ceSource)
+	return &v1beta1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%x", md5.Sum([]byte(ceType+ceSource+sourceUID))),
 			Labels:    resources.Labels(sourceName),
@@ -194,15 +196,15 @@ func makeEventType(ceType, ceSource string) *v1alpha1.EventType {
 				Controller:         ptr.Bool(true),
 			}},
 		},
-		Spec: v1alpha1.EventTypeSpec{
+		Spec: v1beta1.EventTypeSpec{
 			Type:   ceType,
-			Source: ceSource,
+			Source: ceSourceURL,
 			Broker: sinkName,
 		},
 	}
 }
 
-func makeEventTypeWithName(ceType, ceSource, name string) *v1alpha1.EventType {
+func makeEventTypeWithName(ceType, ceSource, name string) *v1beta1.EventType {
 	et := makeEventType(ceType, ceSource)
 	et.Name = name
 	return et

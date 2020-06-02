@@ -22,11 +22,9 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
-	alphalisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	betalisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/tracker"
@@ -40,12 +38,12 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 
 type Reconciler struct {
 	// listers index properties about resources
-	eventTypeLister betalisters.EventTypeLister
-	brokerLister    alphalisters.BrokerLister
+	eventTypeLister listers.EventTypeLister
+	brokerLister    listers.BrokerLister
 	tracker         tracker.Interface
 }
 
-var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+var brokerGVK = v1beta1.SchemeGroupVersion.WithKind("Broker")
 
 // Check that our Reconciler implements interface
 var _ eventtypereconciler.Interface = (*Reconciler)(nil)
@@ -84,12 +82,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 		return err
 	}
 
-	v1alpha1.PropagateV1Alpha1BrokerStatus(&et.Status, &b.Status)
+	et.Status.PropagateBrokerStatus(&b.Status)
 
 	return newReconciledNormal(et.Namespace, et.Name)
 }
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
-func (r *Reconciler) getBroker(ctx context.Context, et *v1beta1.EventType) (*v1alpha1.Broker, error) {
+func (r *Reconciler) getBroker(ctx context.Context, et *v1beta1.EventType) (*v1beta1.Broker, error) {
 	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Broker)
 }

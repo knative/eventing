@@ -32,7 +32,6 @@ import (
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
@@ -40,7 +39,6 @@ import (
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1beta1"
 	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
@@ -128,24 +126,16 @@ func (l *Listers) GetSequenceLister() flowslisters.SequenceLister {
 	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1beta1.Sequence{}))
 }
 
-func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
-	return eventinglisters.NewTriggerLister(l.indexerFor(&eventingv1alpha1.Trigger{}))
-}
-
-func (l *Listers) GetV1Beta1TriggerLister() eventingv1beta1listers.TriggerLister {
+func (l *Listers) GetTriggerLister() eventingv1beta1listers.TriggerLister {
 	return eventingv1beta1listers.NewTriggerLister(l.indexerFor(&eventingv1beta1.Trigger{}))
 }
 
-func (l *Listers) GetBrokerLister() eventinglisters.BrokerLister {
-	return eventinglisters.NewBrokerLister(l.indexerFor(&eventingv1alpha1.Broker{}))
-}
-
-func (l *Listers) GetV1Beta1BrokerLister() eventingv1beta1listers.BrokerLister {
+func (l *Listers) GetBrokerLister() eventingv1beta1listers.BrokerLister {
 	return eventingv1beta1listers.NewBrokerLister(l.indexerFor(&eventingv1beta1.Broker{}))
 }
 
-func (l *Listers) GetEventTypeLister() eventinglisters.EventTypeLister {
-	return eventinglisters.NewEventTypeLister(l.indexerFor(&eventingv1alpha1.EventType{}))
+func (l *Listers) GetEventTypeLister() eventingv1beta1listers.EventTypeLister {
+	return eventingv1beta1listers.NewEventTypeLister(l.indexerFor(&eventingv1beta1.EventType{}))
 }
 
 func (l *Listers) GetInMemoryChannelLister() messaginglistersv1beta1.InMemoryChannelLister {

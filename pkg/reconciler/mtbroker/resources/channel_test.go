@@ -22,7 +22,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
@@ -71,18 +71,15 @@ func TestNewChannel(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			b := &v1alpha1.Broker{
+			b := &v1beta1.Broker{
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "brokers-namespace",
 					Name:      "my-broker",
 					UID:       "1234",
 				},
-				Spec: v1alpha1.BrokerSpec{
-					ChannelTemplate: &tc.channelTemplate,
-				},
 			}
 			labels := map[string]string{"key": "value"}
-			c, err := NewChannel("ingress", b, b.Spec.ChannelTemplate, labels)
+			c, err := NewChannel("ingress", b, &tc.channelTemplate, labels)
 			if err != nil {
 				if !tc.expectError {
 					t.Fatalf("Unexpected error calling NewChannel: %v", err)

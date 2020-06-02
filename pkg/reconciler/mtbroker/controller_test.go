@@ -24,7 +24,7 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake"

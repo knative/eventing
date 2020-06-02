@@ -104,7 +104,7 @@ func main() {
 	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
 	eventingFactory := eventinginformers.NewSharedInformerFactory(eventingClient,
 		controller.GetResyncPeriod(ctx))
-	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
+	triggerInformer := eventingFactory.Eventing().V1beta1().Triggers()
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())

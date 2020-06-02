@@ -24,8 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -44,7 +43,7 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestEnabledByDefault(t *testing.T) {
@@ -130,7 +129,7 @@ func TestEnabledByDefault(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(resources.InjectionDisabledLabels()),
 			),
-			&v1alpha1.Broker{
+			&v1beta1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      resources.DefaultBrokerName,
@@ -234,7 +233,7 @@ func TestDisabledByDefault(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(resources.InjectionDisabledLabels()),
 			),
-			&v1alpha1.Broker{
+			&v1beta1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      resources.DefaultBrokerName,
