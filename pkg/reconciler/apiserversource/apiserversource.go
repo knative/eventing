@@ -92,8 +92,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.ApiServ
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
 	// 3. Create the EventType that it can emit.
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
-	source.Status.ObservedGeneration = source.Generation
-
 	source.Status.InitializeConditions()
 
 	dest := source.Spec.Sink.DeepCopy()

@@ -101,3 +101,11 @@ func WithContainerSourceObjectMetaGeneration(generation int64) ContainerSourceOp
 		c.ObjectMeta.Generation = generation
 	}
 }
+
+func WithContainerUnobservedGeneration() ContainerSourceOption {
+	return func(c *sourcesv1alpha2.ContainerSource) {
+		condSet := c.GetConditionSet()
+		condSet.Manage(&c.Status).MarkUnknown(
+			condSet.GetTopLevelConditionType(), "NewObservedGenFailure", "unsuccessfully observed a new generation")
+	}
+}

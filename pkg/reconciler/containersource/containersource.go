@@ -71,7 +71,6 @@ var _ containersource.Interface = (*Reconciler)(nil)
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.ContainerSource) pkgreconciler.Event {
 	source.Status.InitializeConditions()
-	source.Status.ObservedGeneration = source.Generation
 
 	_, err := r.reconcileSinkBinding(ctx, source)
 	if err != nil {

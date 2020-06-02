@@ -119,6 +119,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
+					WithContainerUnobservedGeneration(),
 				),
 			}},
 			WantCreates: []runtime.Object{
