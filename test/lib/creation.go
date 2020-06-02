@@ -163,7 +163,7 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 	}
 }
 
-// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
+// CreateBrokerV1Beta1OrFail will create a Broker or fail the test if there is an error.
 func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.BrokerV1Beta1Option) *v1beta1.Broker {
 	namespace := c.Namespace
 	broker := resources.BrokerV1Beta1(name, options...)

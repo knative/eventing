@@ -71,7 +71,7 @@ spec:
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
   versions:
   - name: v1alpha1
-    served: true
+    served: false
     storage: false
   - name: v1beta1
     served: true
