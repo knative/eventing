@@ -178,15 +178,6 @@ func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.Bro
 	return broker
 }
 
-// CreateBrokersOrFail will create a list of Brokers.
-func (c *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
-	c.T.Logf("Creating brokers %v", names)
-	for _, name := range names {
-		c.CreateBrokerV1Beta1OrFail(name)
-		//		c.CreateBrokerV1Beta1OrFail(name, resources.WithChannelTemplateForBroker(channelTypeMeta))
-	}
-}
-
 // CreateTriggerOrFailV1Beta1 will create a v1beta1 Trigger or fail the test if there is an error.
 func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.TriggerOptionV1Beta1) *v1beta1.Trigger {
 	namespace := c.Namespace
