@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -37,7 +37,7 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
 
-		any          = v1alpha1.TriggerAnyFilter
+		any          = v1beta1.TriggerAnyFilter
 		eventType1   = "type1"
 		eventType2   = "type2"
 		eventSource1 = "source1"
@@ -82,11 +82,11 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create trigger1 to receive the original event, and do event transformation
-		client.CreateTriggerOrFail(
+		client.CreateTriggerOrFailV1Beta1(
 			triggerName1,
-			resources.WithBroker(brokerName),
-			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource1, eventType1),
-			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
+			resources.WithBrokerV1Beta1(brokerName),
+			resources.WithAttributesTriggerFilterV1Beta1(eventSource1, eventType1, nil),
+			resources.WithSubscriberServiceRefForTriggerV1Beta1(transformationPodName),
 		)
 
 		// create logger pod and service for trigger2
@@ -94,11 +94,11 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 		client.CreatePodOrFail(loggerPod1, lib.WithService(loggerPodName1))
 
 		// create trigger2 to receive all the events
-		client.CreateTriggerOrFail(
+		client.CreateTriggerOrFailV1Beta1(
 			triggerName2,
-			resources.WithBroker(brokerName),
-			resources.WithDeprecatedSourceAndTypeTriggerFilter(any, any),
-			resources.WithSubscriberServiceRefForTrigger(loggerPodName1),
+			resources.WithBrokerV1Beta1(brokerName),
+			resources.WithAttributesTriggerFilterV1Beta1(any, any, nil),
+			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName1),
 		)
 
 		// create channel for trigger3
@@ -110,11 +110,11 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 		if err != nil {
 			st.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
 		}
-		client.CreateTriggerOrFail(
+		client.CreateTriggerOrFailV1Beta1(
 			triggerName3,
-			resources.WithBroker(brokerName),
-			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
-			resources.WithSubscriberURIForTrigger(channelURL),
+			resources.WithBrokerV1Beta1(brokerName),
+			resources.WithAttributesTriggerFilterV1Beta1(eventSource2, eventType2, nil),
+			resources.WithSubscriberURIForTriggerV1Beta1(channelURL),
 		)
 
 		// create logger pod and service for subscription

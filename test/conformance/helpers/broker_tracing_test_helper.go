@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/utils"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
@@ -97,11 +96,11 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
-		loggerTrigger := client.CreateTriggerOrFail(
+		loggerTrigger := client.CreateTriggerOrFailV1Beta1(
 			"logger",
-			resources.WithBroker(broker.Name),
-			resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
-			resources.WithSubscriberServiceRefForTrigger(loggerPodName),
+			resources.WithBrokerV1Beta1(broker.Name),
+			resources.WithAttributesTriggerFilterV1Beta1(v1beta1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
+			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName),
 		)
 
 		// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
@@ -114,11 +113,11 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
-		transformerTrigger := client.CreateTriggerOrFail(
+		transformerTrigger := client.CreateTriggerOrFailV1Beta1(
 			"transformer",
-			resources.WithBroker(broker.Name),
-			resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
-			resources.WithSubscriberServiceRefForTrigger(eventTransformerPod.Name),
+			resources.WithBrokerV1Beta1(broker.Name),
+			resources.WithAttributesTriggerFilterV1Beta1(v1beta1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
+			resources.WithSubscriberServiceRefForTriggerV1Beta1(eventTransformerPod.Name),
 		)
 
 		// Wait for all test resources to be ready, so that we can start sending events.
@@ -241,7 +240,7 @@ func ingressSpan(broker *v1beta1.Broker, eventID string) *tracinghelper.SpanMatc
 	}
 }
 
-func triggerSpan(trigger *v1alpha1.Trigger, eventID string) *tracinghelper.SpanMatcher {
+func triggerSpan(trigger *v1beta1.Trigger, eventID string) *tracinghelper.SpanMatcher {
 	return &tracinghelper.SpanMatcher{
 		Tags: map[string]string{
 			"messaging.system":      "knative",

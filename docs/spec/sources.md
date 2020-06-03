@@ -308,7 +308,7 @@ type SourceSpec struct {
 ```
 
 For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
-see [Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1#Destination),
+see [Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination),
 and
 [CloudEventOverrides](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
@@ -340,7 +340,7 @@ For a full definition of `Status` and `SinkURI`, please see
 
 Upon instantiation of a Source Custom Object, a controller (potentially the
 source controller) SHOULD realize the
-[EventType(s)](https://pkg.go.dev/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
+[EventType(s)](https://pkg.go.dev/knative.dev/eventing/pkg/apis/eventing/v1beta1#EventType)
 this instantiation brings onto the eventing mesh. For a more detailed
 description, please refer to the
 [Event Registry](https://knative.dev/docs/eventing/event-registry/)
@@ -359,7 +359,7 @@ The usage of CloudEvents version `1.0` is RECOMMENDED.
 Every Source SHOULD support sending events via _Binary Content Mode_ or
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents. Sources
 SHOULD send events to its
-[Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1?tab=doc#Destination).
+[Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination).
 
 For more details of the Knative Event delivery, take a look at its
 [specification](../delivery/README.md).

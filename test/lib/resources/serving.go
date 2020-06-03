@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 )
@@ -45,8 +45,8 @@ type KServiceRoute struct {
 
 // WithSubscriberKServiceRefForTrigger returns an option that adds a Subscriber
 // Knative Service Ref for the given Trigger.
-func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
+func WithSubscriberKServiceRefForTrigger(name string) TriggerOptionV1Beta1 {
+	return func(t *eventingv1beta1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = duckv1.Destination{
 				Ref: KnativeRefForKservice(name, t.Namespace),

@@ -224,7 +224,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 				// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
 			}),
 	)
-	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1alpha1", Kind: "Broker", Name: pkgResources.DefaultBrokerName, Namespace: client.Namespace}}
+	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: pkgResources.DefaultBrokerName, Namespace: client.Namespace}}
 
 	client.CreateApiServerSourceOrFail(apiServerSource)
 
@@ -232,7 +232,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify that EventTypes were created.
-	eventTypes, err := client.Eventing.EventingV1alpha1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	eventTypes, err := client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("Error retrieving EventTypes: %v", err)
 	}

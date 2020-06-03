@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -131,27 +130,12 @@ func (c *Client) CreateSubscriptionsOrFail(
 // CreateConfigMapOrFail will create a configmap or fail the test if there is an error.
 func (c *Client) CreateConfigMapOrFail(name, namespace string, data map[string]string) *corev1.ConfigMap {
 	c.T.Logf("Creating configmap %s", name)
-	configMap, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(resources.ConfigMap(name, data))
+	configMap, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(resources.ConfigMap(name, namespace, data))
 	if err != nil {
 		c.T.Fatalf("Failed to create configmap %s: %v", name, err)
 	}
 	c.Tracker.Add(coreAPIGroup, coreAPIVersion, "configmaps", namespace, name)
 	return configMap
-}
-
-// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
-func (c *Client) CreateBrokerOrFail(name string, options ...resources.BrokerOption) *v1alpha1.Broker {
-	namespace := c.Namespace
-	broker := resources.Broker(name, options...)
-	brokers := c.Eventing.EventingV1alpha1().Brokers(namespace)
-	c.T.Logf("Creating broker %s", name)
-	// update broker with the new reference
-	broker, err := brokers.Create(broker)
-	if err != nil {
-		c.T.Fatalf("Failed to create broker %q: %v", name, err)
-	}
-	c.Tracker.AddObj(broker)
-	return broker
 }
 
 func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMeta) *duckv1.KReference {
@@ -179,7 +163,7 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 	}
 }
 
-// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
+// CreateBrokerV1Beta1OrFail will create a Broker or fail the test if there is an error.
 func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.BrokerV1Beta1Option) *v1beta1.Broker {
 	namespace := c.Namespace
 	broker := resources.BrokerV1Beta1(name, options...)
@@ -192,29 +176,6 @@ func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.Bro
 	}
 	c.Tracker.AddObj(broker)
 	return broker
-}
-
-// CreateBrokersOrFail will create a list of Brokers.
-func (c *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
-	c.T.Logf("Creating brokers %v", names)
-	for _, name := range names {
-		c.CreateBrokerOrFail(name, resources.WithChannelTemplateForBroker(channelTypeMeta))
-	}
-}
-
-// CreateTriggerOrFail will create a Trigger or fail the test if there is an error.
-func (c *Client) CreateTriggerOrFail(name string, options ...resources.TriggerOption) *v1alpha1.Trigger {
-	namespace := c.Namespace
-	trigger := resources.Trigger(name, options...)
-	triggers := c.Eventing.EventingV1alpha1().Triggers(namespace)
-	c.T.Logf("Creating trigger %s", name)
-	// update trigger with the new reference
-	trigger, err := triggers.Create(trigger)
-	if err != nil {
-		c.T.Fatalf("Failed to create trigger %q: %v", name, err)
-	}
-	c.Tracker.AddObj(trigger)
-	return trigger
 }
 
 // CreateTriggerOrFailV1Beta1 will create a v1beta1 Trigger or fail the test if there is an error.

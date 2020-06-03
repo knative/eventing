@@ -33,12 +33,15 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	if bs.Config != nil {
+		// Default the namespace if not given
+		bs.Config.SetDefaults(ctx)
 		return
 	}
 
 	cfg := config.FromContextOrDefaults(ctx)
 	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
 	if err == nil {
+		c.SetDefaults(ctx)
 		bs.Config = c
 	}
 }
