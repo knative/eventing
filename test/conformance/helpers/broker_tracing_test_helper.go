@@ -28,6 +28,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/utils"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
@@ -141,8 +142,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		}
 		sendEvent(senderName, broker.Name, lib.BrokerTypeMeta, event)
 
-		// TODO Actually determine the cluster's domain, similar to knative.dev/pkg/network/domain.go.
-		domain := "cluster.local"
+		domain := utils.GetClusterDomainName()
 
 		// We expect the following spans:
 		// 1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).
