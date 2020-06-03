@@ -26,7 +26,6 @@ import (
 )
 
 // +genclient
-// +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ApiServerSource is the Schema for the apiserversources API
