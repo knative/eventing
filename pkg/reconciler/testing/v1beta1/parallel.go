@@ -22,7 +22,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
-	messagingvbeta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -66,7 +66,7 @@ func WithFlowsParallelDeleted(p *v1beta1.Parallel) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithFlowsParallelChannelTemplateSpec(cts *messagingvbeta1.ChannelTemplateSpec) FlowsParallelOption {
+func WithFlowsParallelChannelTemplateSpec(cts *messagingv1beta1.ChannelTemplateSpec) FlowsParallelOption {
 	return func(p *v1beta1.Parallel) {
 		p.Spec.ChannelTemplate = cts
 	}
