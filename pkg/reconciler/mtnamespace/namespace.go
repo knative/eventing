@@ -76,6 +76,10 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 		if err != nil {
 			return nil, err
 		}
+		// we want the event created in the namespace, and while ns is a cluster
+		// wide object, if don't do this we'll end with the event created
+		// in the default namespace, which is a bad UX in our case.
+		ns.SetNamespace(ns.Name)
 		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, brokerCreated,
 			"Default eventing.knative.dev Broker created.")
 		return b, nil
