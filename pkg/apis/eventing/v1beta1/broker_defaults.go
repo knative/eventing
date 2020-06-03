@@ -33,6 +33,8 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	if bs.Config != nil {
+		// Default the namespace if not given
+		bs.Config.SetDefaults(ctx)
 		return
 	}
 
