@@ -33,7 +33,7 @@ func TestReceiverMain(t *testing.T) {
 	config.Instance.Receiver.Port = port
 	go main()
 	cancel := <-receiver.Canceling
-	err := lib.WaitForReadiness(port)
+	err := lib.WaitForReadiness(port, config.Log)
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
 
