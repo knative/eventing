@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -41,7 +41,7 @@ import (
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
+	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1beta1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
@@ -129,7 +129,7 @@ func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
 }
 
 func (l *Listers) GetFlowsSequenceLister() flowslisters.SequenceLister {
-	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1alpha1.Sequence{}))
+	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1beta1.Sequence{}))
 }
 
 func (l *Listers) GetV1Beta1TriggerLister() eventingv1beta1listers.TriggerLister {
@@ -161,7 +161,7 @@ func (l *Listers) GetV1Beta1MessagingChannelLister() messaginglistersv1beta1.Cha
 }
 
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
-	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
+	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1beta1.Parallel{}))
 }
 
 func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {

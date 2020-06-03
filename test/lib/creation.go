@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
@@ -195,9 +195,9 @@ func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.Tr
 
 // CreateFlowsSequenceOrFail will create a Sequence (in flows.knative.dev api group) or
 // fail the test if there is an error.
-func (c *Client) CreateFlowsSequenceOrFail(sequence *flowsv1alpha1.Sequence) {
+func (c *Client) CreateFlowsSequenceOrFail(sequence *flowsv1beta1.Sequence) {
 	c.T.Logf("Creating flows sequence %+v", sequence)
-	sequences := c.Eventing.FlowsV1alpha1().Sequences(c.Namespace)
+	sequences := c.Eventing.FlowsV1beta1().Sequences(c.Namespace)
 	_, err := sequences.Create(sequence)
 	if err != nil {
 		c.T.Fatalf("Failed to create flows sequence %q: %v", sequence.Name, err)
@@ -207,9 +207,9 @@ func (c *Client) CreateFlowsSequenceOrFail(sequence *flowsv1alpha1.Sequence) {
 
 // CreateFlowsParallelOrFail will create a Parallel (in flows.knative.dev api group) or
 // fail the test if there is an error.
-func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1alpha1.Parallel) {
+func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1beta1.Parallel) {
 	c.T.Logf("Creating flows parallel %+v", parallel)
-	parallels := c.Eventing.FlowsV1alpha1().Parallels(c.Namespace)
+	parallels := c.Eventing.FlowsV1beta1().Parallels(c.Namespace)
 	_, err := parallels.Create(parallel)
 	if err != nil {
 		c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)

@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
@@ -63,7 +63,7 @@ func SequenceTestHelper(t *testing.T,
 		defer lib.TearDown(client)
 
 		// construct steps for the sequence
-		steps := make([]v1alpha1.SequenceStep, 0)
+		steps := make([]v1beta1.SequenceStep, 0)
 		for _, config := range stepSubscriberConfigs {
 			// create a stepper Pod with Service
 			podName := config.podName
@@ -72,7 +72,7 @@ func SequenceTestHelper(t *testing.T,
 
 			client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 			// create a new step
-			step := v1alpha1.SequenceStep{
+			step := v1beta1.SequenceStep{
 				Destination: duckv1.Destination{
 					Ref: resources.KnativeRefForService(podName, client.Namespace),
 				}}

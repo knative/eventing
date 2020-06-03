@@ -44,8 +44,6 @@ import (
 	defaultconfig "knative.dev/eventing/pkg/apis/config"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/pkg/apis/flows"
-	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
@@ -87,9 +85,6 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha2.ContainerSource{},
 
 	// For group flows.knative.dev
-	// v1alpha1
-	flowsv1alpha1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1alpha1.Parallel{},
-	flowsv1alpha1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1alpha1.Sequence{},
 	// v1beta1
 	flowsv1beta1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1beta1.Parallel{},
 	flowsv1beta1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1beta1.Sequence{},
@@ -224,8 +219,6 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	var (
 		messagingv1alpha1_ = messagingv1alpha1.SchemeGroupVersion.Version
 		messagingv1beta1_  = messagingv1beta1.SchemeGroupVersion.Version
-		flowsv1alpha1_     = flowsv1alpha1.SchemeGroupVersion.Version
-		flowsv1beta1_      = flowsv1beta1.SchemeGroupVersion.Version
 		sourcesv1alpha1_   = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_   = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
@@ -251,23 +244,6 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					messagingv1alpha1_: &messagingv1alpha1.InMemoryChannel{},
 					messagingv1beta1_:  &messagingv1beta1.InMemoryChannel{},
-				},
-			},
-			// flows
-			flowsv1beta1.Kind("Sequence"): {
-				DefinitionName: flows.SequenceResource.String(),
-				HubVersion:     flowsv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					flowsv1alpha1_: &flowsv1alpha1.Sequence{},
-					flowsv1beta1_:  &flowsv1beta1.Sequence{},
-				},
-			},
-			flowsv1beta1.Kind("Parallel"): {
-				DefinitionName: flows.ParallelResource.String(),
-				HubVersion:     flowsv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					flowsv1alpha1_: &flowsv1alpha1.Parallel{},
-					flowsv1beta1_:  &flowsv1beta1.Parallel{},
 				},
 			},
 			// Sources
