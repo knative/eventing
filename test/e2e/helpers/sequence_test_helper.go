@@ -25,7 +25,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -103,12 +103,12 @@ func SequenceTestHelper(t *testing.T,
 		replyRef := &duckv1.KReference{Kind: channel.Kind, APIVersion: channel.APIVersion, Name: channelName, Namespace: client.Namespace}
 
 		// create the sequence object
-		sequence := eventingtesting.NewFlowsSequence(
+		sequence := eventingtesting.NewSequence(
 			sequenceName,
 			client.Namespace,
-			eventingtesting.WithFlowsSequenceSteps(steps),
-			eventingtesting.WithFlowsSequenceChannelTemplateSpec(channelTemplate),
-			eventingtesting.WithFlowsSequenceReply(&duckv1.Destination{Ref: replyRef}),
+			eventingtesting.WithSequenceSteps(steps),
+			eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
+			eventingtesting.WithSequenceReply(&duckv1.Destination{Ref: replyRef}),
 		)
 
 		// create Sequence or fail the test if there is an error
