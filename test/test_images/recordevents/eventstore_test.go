@@ -73,8 +73,8 @@ func TestAddGetMany(t *testing.T) {
 		if evInfo.Event == nil {
 			t.Fatalf("Unexpected empty event info event %d: %+v", i, evInfo)
 		}
-		if len(evInfo.ValidationError) != 0 {
-			t.Fatalf("Unexpected error for stored event %d: %s", i, evInfo.ValidationError)
+		if len(evInfo.Error) != 0 {
+			t.Fatalf("Unexpected error for stored event %d: %s", i, evInfo.Error)
 		}
 
 		// Make sure it's the expected event
@@ -146,8 +146,8 @@ func TestAddGetSingleValid(t *testing.T) {
 	if evInfo.Event == nil {
 		t.Fatalf("Unexpected empty event info event: %+v", evInfo)
 	}
-	if len(evInfo.ValidationError) != 0 {
-		t.Fatalf("Unexpected error for stored event: %s", evInfo.ValidationError)
+	if len(evInfo.Error) != 0 {
+		t.Fatalf("Unexpected error for stored event: %s", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -199,8 +199,8 @@ func TestAddGetSingleInvalid(t *testing.T) {
 	if evInfo.Event != nil {
 		t.Fatalf("Unexpected event info: %+v", evInfo)
 	}
-	if len(evInfo.ValidationError) == 0 {
-		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.ValidationError)
+	if len(evInfo.Error) == 0 {
+		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -240,8 +240,8 @@ func TestAddGetSingleInvalidError(t *testing.T) {
 	if evInfo.Event != nil {
 		t.Fatalf("Unexpected event info: %+v", evInfo)
 	}
-	if len(evInfo.ValidationError) == 0 {
-		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.ValidationError)
+	if len(evInfo.Error) == 0 {
+		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)

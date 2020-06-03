@@ -79,9 +79,9 @@ func (es *eventStore) StoreEvent(event *cloudevents.Event, evErr error, httpHead
 	var evInfoBytes []byte
 	if evErr != nil {
 		evInfo.HTTPHeaders = httpHeaders
-		evInfo.ValidationError = evErr.Error()
-		if evInfo.ValidationError == "" {
-			evInfo.ValidationError = "Unknown Incoming Error"
+		evInfo.Error = evErr.Error()
+		if evInfo.Error == "" {
+			evInfo.Error = "Unknown Incoming Error"
 		}
 		evInfoBytes, err = json.Marshal(&evInfo)
 		if err != nil {
@@ -94,9 +94,9 @@ func (es *eventStore) StoreEvent(event *cloudevents.Event, evErr error, httpHead
 
 		if err != nil {
 			evInfo.Event = nil
-			evInfo.ValidationError = err.Error()
-			if evInfo.ValidationError == "" {
-				evInfo.ValidationError = "Unknown Error"
+			evInfo.Error = err.Error()
+			if evInfo.Error == "" {
+				evInfo.Error = "Unknown Error"
 			}
 			evInfoBytes, err = json.Marshal(&evInfo)
 			if err != nil {
