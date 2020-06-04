@@ -86,25 +86,6 @@ func (c *Client) CreateSubscriptionOrFail(
 	namespace := c.Namespace
 	subscription := resources.SubscriptionV1Beta1(name, channelName, channelTypeMeta, options...)
 	subscriptions := c.Eventing.MessagingV1beta1().Subscriptions(namespace)
-	c.T.Logf("Creating subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
-	// update subscription with the new reference
-	subscription, err := subscriptions.Create(subscription)
-	if err != nil {
-		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
-	}
-	c.Tracker.AddObj(subscription)
-	return subscription
-}
-
-// CreateSubscriptionOrFailV1Beta1 will create a Subscription or fail the test if there is an error.
-func (c *Client) CreateSubscriptionOrFailV1Beta1(
-	name, channelName string,
-	channelTypeMeta *metav1.TypeMeta,
-	options ...resources.SubscriptionOptionV1Beta1,
-) {
-	namespace := c.Namespace
-	subscription := resources.SubscriptionV1Beta1(name, channelName, channelTypeMeta, options...)
-	subscriptions := c.Eventing.MessagingV1beta1().Subscriptions(namespace)
 	c.T.Logf("Creating v1beta1 subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
 	// update subscription with the new reference
 	subscription, err := subscriptions.Create(subscription)
@@ -112,6 +93,7 @@ func (c *Client) CreateSubscriptionOrFailV1Beta1(
 		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
 	c.Tracker.AddObj(subscription)
+	return subscription
 }
 
 // CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.

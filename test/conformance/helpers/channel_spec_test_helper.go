@@ -43,7 +43,7 @@ func ChannelSpecTestHelperWithChannelTestRunner(
 		defer lib.TearDown(client)
 
 		t.Run("Channel spec allows subscribers", func(t *testing.T) {
-			if channel == channelv1alpha1 || channel == channelv1beta1 {
+			if channel == channelv1beta1 {
 				t.Skip("Not running spec.subscribers array test for generic Channel")
 			}
 			channelSpecAllowsSubscribersArray(st, client, channel)

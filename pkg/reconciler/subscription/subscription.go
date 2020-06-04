@@ -361,8 +361,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 	// Test to see if the channel is Channel.messaging because it is going
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
-	if (v1alpha1ChannelGVK.Group == gvk.Group && v1alpha1ChannelGVK.Kind == gvk.Kind) ||
-		(v1beta1ChannelGVK.Group == gvk.Group && v1beta1ChannelGVK.Kind == gvk.Kind) {
+	if v1beta1ChannelGVK.Group == gvk.Group && v1beta1ChannelGVK.Kind == gvk.Kind {
 		// Track changes on Channel.
 		// Ref: https://github.com/knative/eventing/issues/2641
 		// NOTE: There is a race condition with using the channelableTracker
@@ -412,19 +411,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", obj)
 	}
 
-	retCh := ch.DeepCopy()
-	gvk = retCh.GetObjectKind().GroupVersionKind()
-	// IMC has been know to lie about the duck version it supports. We know that
-	// v1alpha1 supports v1alpha1 Subscribable duck so override it here.
-	// If there are other channels that have this lying behaviour, add them here...
-	if gvk.Kind == "InMemoryChannel" && gvk.Version == "v1alpha1" {
-		if retCh.Annotations == nil {
-			retCh.Annotations = make(map[string]string)
-		}
-		retCh.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1alpha1"
-	}
-
-	return retCh, nil
+	return ch.DeepCopy(), nil
 }
 
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1beta1.DeliverySpec) bool {

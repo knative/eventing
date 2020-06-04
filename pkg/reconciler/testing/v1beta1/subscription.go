@@ -231,11 +231,3 @@ func WithSubscriptionReply(gvk metav1.GroupVersionKind, name, namespace string) 
 		}
 	}
 }
-
-func apiVersion(gvk metav1.GroupVersionKind) string {
-	groupVersion := gvk.Version
-	if gvk.Group != "" {
-		groupVersion = gvk.Group + "/" + gvk.Version
-	}
-	return groupVersion
-}

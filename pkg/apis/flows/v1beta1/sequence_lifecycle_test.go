@@ -72,7 +72,7 @@ func getChannelable(ready bool) *eventingduckv1beta1.Channelable {
 	URL, _ := apis.ParseURL("http://example.com")
 	c := eventingduckv1beta1.Channelable{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 			Kind:       "InMemoryChannel",
 		},
 		ObjectMeta: metav1.ObjectMeta{},

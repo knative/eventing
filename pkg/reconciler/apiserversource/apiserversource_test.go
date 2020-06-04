@@ -57,7 +57,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 	}
 	brokerDest = duckv1.Destination{

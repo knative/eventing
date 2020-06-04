@@ -28,7 +28,7 @@ import (
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/duck"

@@ -17,7 +17,7 @@
 ---
 
 # By not specifying a spec, the default Channel for the namespace will be used.
-apiVersion: eventing.knative.dev/v1alpha1
+apiVersion: eventing.knative.dev/v1beta1
 kind: Broker
 metadata:
   name: default
@@ -28,13 +28,13 @@ metadata:
 # can be used, and thus guarantee the durability of the events that are sent to this
 # Broker, like here with Kafka:
 
-apiVersion: eventing.knative.dev/v1alpha1
+apiVersion: eventing.knative.dev/v1beta1
 kind: Broker
 metadata:
   name: kafka
 spec:
   channelTemplateSpec:
-    apiVersion: messaging.knative.dev/v1alpha1
+    apiVersion: messaging.knative.dev/v1beta1
     kind: KafkaChannel
     spec:
       numPartitions: 3

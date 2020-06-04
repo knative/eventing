@@ -67,14 +67,47 @@ func KnativeRefForBroker(name, namespace string) *duckv1.KReference {
 	}
 }
 
-// WithSubscriberForSubscriptionV1Beta1 returns an option that adds a Subscriber for the given
+// WithSubscriberForSubscription returns an option that adds a Subscriber for the given
 // v1beta1 Subscription.
-func WithSubscriberForSubscriptionV1Beta1(name string) SubscriptionOptionV1Beta1 {
+func WithSubscriberForSubscription(name string) SubscriptionOptionV1Beta1 {
 	return func(s *messagingv1beta1.Subscription) {
 		if name != "" {
 			s.Spec.Subscriber = &duckv1.Destination{
 				Ref: KnativeRefForService(name, ""),
 			}
+		}
+	}
+}
+
+// WithReplyForSubscription returns an options that adds a ReplyStrategy for the given Subscription.
+func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) SubscriptionOptionV1Beta1 {
+	return func(s *messagingv1beta1.Subscription) {
+		if name != "" {
+			s.Spec.Reply = &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Kind:       typemeta.Kind,
+					APIVersion: typemeta.APIVersion,
+					Name:       name,
+					Namespace:  s.Namespace},
+			}
+		}
+	}
+}
+
+// WithDeadLetterSinkForSubscription returns an options that adds a DeadLetterSink for the given Subscription.
+func WithDeadLetterSinkForSubscription(name string) SubscriptionOptionV1Beta1 {
+	return func(s *messagingv1beta1.Subscription) {
+		if name != "" {
+			delivery := s.Spec.Delivery
+			if delivery == nil {
+				delivery = &eventingduckv1beta1.DeliverySpec{}
+				s.Spec.Delivery = delivery
+			}
+
+			delivery.DeadLetterSink = &duckv1.Destination{
+				Ref: KnativeRefForService(name, s.Namespace),
+			}
+
 		}
 	}
 }
