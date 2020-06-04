@@ -38,7 +38,6 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
@@ -58,8 +57,7 @@ const (
 )
 
 var (
-	v1alpha1ChannelGVK = v1alpha1.SchemeGroupVersion.WithKind("Channel")
-	v1beta1ChannelGVK  = v1beta1.SchemeGroupVersion.WithKind("Channel")
+	v1beta1ChannelGVK = v1beta1.SchemeGroupVersion.WithKind("Channel")
 )
 
 func newReconciledNormal(namespace, name string) pkgreconciler.Event {
