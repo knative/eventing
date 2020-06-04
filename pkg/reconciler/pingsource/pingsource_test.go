@@ -23,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -75,6 +76,7 @@ const (
 	testNS         = "testnamespace"
 	testSchedule   = "*/2 * * * *"
 	testData       = "data"
+	crName         = "knative-eventing-pingsource-adapter"
 
 	sinkName   = "testsink"
 	generation = 1
@@ -159,7 +161,13 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantCreates: []runtime.Object{
+				MakeServiceAccount(sourceName, sourceUID),
+				MakeRoleBinding(sourceName, sourceUID),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha2(sourceName, testNS,
@@ -205,7 +213,13 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantCreates: []runtime.Object{
+				MakeServiceAccount(sourceName, sourceUID),
+				MakeRoleBinding(sourceName, sourceUID),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha2(sourceName, testNS,
@@ -251,7 +265,13 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantCreates: []runtime.Object{
+				MakeServiceAccount(sourceName, sourceUID),
+				MakeRoleBinding(sourceName, sourceUID),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha2(sourceName, testNS,
@@ -299,6 +319,8 @@ func TestAllCases(t *testing.T) {
 					rtv1beta1.WithChannelAddress(sinkDNS),
 				),
 				makeAvailableReceiveAdapter(sinkDest),
+				MakeServiceAccount(sourceName, sourceUID),
+				MakeRoleBinding(sourceName, sourceUID),
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -348,7 +370,13 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantCreates: []runtime.Object{
+				MakeServiceAccount(sourceName, sourceUID),
+				MakeRoleBinding(sourceName, sourceUID),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha2(sourceName, testNS,
@@ -489,6 +517,8 @@ func TestAllCases(t *testing.T) {
 					rtv1beta1.WithChannelAddress(sinkDNS),
 				),
 				makeAvailableReceiveAdapterDeprecatedName(sourceNameLong, sourceUIDLong, sinkDest),
+				MakeServiceAccount(sourceNameLong, sourceUIDLong),
+				MakeRoleBinding(sourceNameLong, sourceUIDLong),
 			},
 			Key: testNS + "/" + sourceNameLong,
 			WantEvents: []string{
@@ -534,6 +564,8 @@ func TestAllCases(t *testing.T) {
 			kubeClientSet:         fakekubeclient.Get(ctx),
 			pingLister:            listers.GetPingSourceV1alpha2Lister(),
 			deploymentLister:      listers.GetDeploymentLister(),
+			serviceAccountLister:  listers.GetServiceAccountLister(),
+			roleBindingLister:     listers.GetRoleBindingLister(),
 			tracker:               tracker.New(func(types.NamespacedName) {}, 0),
 			receiveAdapterImage:   image,
 			receiveMTAdapterImage: mtimage,
@@ -609,4 +641,16 @@ func makeAvailableMTAdapter() *appsv1.Deployment {
 	ma := MakeMTAdapter()
 	WithDeploymentAvailable()(ma)
 	return ma
+}
+
+func MakeServiceAccount(sourceName, sourceUID string) *corev1.ServiceAccount {
+	source := NewPingSourceV1Alpha2(sourceName, testNS,
+		WithPingSourceV1A2UID(sourceUID))
+	return resources.MakeServiceAccount(source, resources.CreateReceiveAdapterName(sourceName, types.UID(sourceUID)))
+}
+
+func MakeRoleBinding(sourceName, sourceUID string) *rbacv1.RoleBinding {
+	source := NewPingSourceV1Alpha2(sourceName, testNS,
+		WithPingSourceV1A2UID(sourceUID))
+	return resources.MakeRoleBinding(source, resources.CreateReceiveAdapterName(sourceName, types.UID(sourceUID)), crName)
 }
