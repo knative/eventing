@@ -23,9 +23,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -61,7 +61,7 @@ func ParallelTestHelper(t *testing.T,
 		defer lib.TearDown(client)
 
 		for _, tc := range table {
-			parallelBranches := make([]v1alpha1.ParallelBranch, len(tc.branchesConfig))
+			parallelBranches := make([]v1beta1.ParallelBranch, len(tc.branchesConfig))
 			for branchNumber, cse := range tc.branchesConfig {
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
@@ -73,7 +73,7 @@ func ParallelTestHelper(t *testing.T,
 				subPod := resources.SequenceStepperPod(subPodName, subPodName)
 				client.CreatePodOrFail(subPod, lib.WithService(subPodName))
 
-				parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
+				parallelBranches[branchNumber] = v1beta1.ParallelBranch{
 					Filter: &duckv1.Destination{
 						Ref: resources.KnativeRefForService(filterPodName, client.Namespace),
 					},

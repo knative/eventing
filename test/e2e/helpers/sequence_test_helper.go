@@ -23,9 +23,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -63,7 +63,7 @@ func SequenceTestHelper(t *testing.T,
 		defer lib.TearDown(client)
 
 		// construct steps for the sequence
-		steps := make([]v1alpha1.SequenceStep, 0)
+		steps := make([]v1beta1.SequenceStep, 0)
 		for _, config := range stepSubscriberConfigs {
 			// create a stepper Pod with Service
 			podName := config.podName
@@ -72,7 +72,7 @@ func SequenceTestHelper(t *testing.T,
 
 			client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 			// create a new step
-			step := v1alpha1.SequenceStep{
+			step := v1beta1.SequenceStep{
 				Destination: duckv1.Destination{
 					Ref: resources.KnativeRefForService(podName, client.Namespace),
 				}}
@@ -103,12 +103,12 @@ func SequenceTestHelper(t *testing.T,
 		replyRef := &duckv1.KReference{Kind: channel.Kind, APIVersion: channel.APIVersion, Name: channelName, Namespace: client.Namespace}
 
 		// create the sequence object
-		sequence := eventingtesting.NewFlowsSequence(
+		sequence := eventingtesting.NewSequence(
 			sequenceName,
 			client.Namespace,
-			eventingtesting.WithFlowsSequenceSteps(steps),
-			eventingtesting.WithFlowsSequenceChannelTemplateSpec(channelTemplate),
-			eventingtesting.WithFlowsSequenceReply(&duckv1.Destination{Ref: replyRef}),
+			eventingtesting.WithSequenceSteps(steps),
+			eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
+			eventingtesting.WithSequenceReply(&duckv1.Destination{Ref: replyRef}),
 		)
 
 		// create Sequence or fail the test if there is an error
