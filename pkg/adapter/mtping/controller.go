@@ -20,8 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"knative.dev/eventing/pkg/adapter/v2"
-
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
@@ -29,6 +27,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 
+	"knative.dev/eventing/pkg/adapter/v2"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"

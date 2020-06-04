@@ -25,7 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -34,53 +35,41 @@ var (
 	one = int32(1)
 )
 
-// ReceiveAdapterArgs are the arguments needed to create a Cron Job Source Receive Adapter. Every
+// ReceiveAdapterArgs are the arguments needed to create a PingSource Receive Adapter. Every
 // field is required.
 type Args struct {
 	Image         string
-	Source        *v1alpha1.PingSource
+	Source        *v1alpha2.PingSource
 	Labels        map[string]string
 	SinkURI       *apis.URL
 	MetricsConfig string
 	LoggingConfig string
 }
 
+func CreateReceiveAdapterName(name string, uid types.UID) string {
+	return kmeta.ChildName(fmt.Sprintf("pingsource-%s-", name), string(uid))
+}
+
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
 // PingSources.
 func MakeReceiveAdapter(args *Args) *v1.Deployment {
-	name := args.Source.ObjectMeta.Name
-	RequestResourceCPU, err := resource.ParseQuantity(args.Source.Spec.Resources.Requests.ResourceCPU)
-	if err != nil {
-		RequestResourceCPU = resource.MustParse("250m")
-	}
-	RequestResourceMemory, err := resource.ParseQuantity(args.Source.Spec.Resources.Requests.ResourceMemory)
-	if err != nil {
-		RequestResourceMemory = resource.MustParse("512Mi")
-	}
-	LimitResourceCPU, err := resource.ParseQuantity(args.Source.Spec.Resources.Limits.ResourceCPU)
-	if err != nil {
-		LimitResourceCPU = resource.MustParse("250m")
-	}
-	LimitResourceMemory, err := resource.ParseQuantity(args.Source.Spec.Resources.Limits.ResourceMemory)
-	if err != nil {
-		LimitResourceMemory = resource.MustParse("512Mi")
-	}
-
 	res := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    RequestResourceCPU,
-			corev1.ResourceMemory: RequestResourceMemory,
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("32Mi"),
 		},
 		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    LimitResourceCPU,
-			corev1.ResourceMemory: LimitResourceMemory,
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
 		},
 	}
+
+	name := CreateReceiveAdapterName(args.Source.Name, args.Source.GetUID())
 
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
-			Name:      kmeta.ChildName(fmt.Sprintf("pingsource-%s-", name), string(args.Source.GetUID())),
+			Name:      name,
 			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),
@@ -96,7 +85,7 @@ func MakeReceiveAdapter(args *Args) *v1.Deployment {
 					Labels: args.Labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: args.Source.Spec.ServiceAccountName,
+					ServiceAccountName: name,
 					Containers: []corev1.Container{
 						{
 							Name:  "receive-adapter",
@@ -113,7 +102,7 @@ func MakeReceiveAdapter(args *Args) *v1.Deployment {
 								},
 								{
 									Name:  "DATA",
-									Value: args.Source.Spec.Data,
+									Value: args.Source.Spec.JsonData,
 								},
 								{
 									Name:  "K_SINK",

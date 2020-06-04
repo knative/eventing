@@ -20,28 +20,26 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/pkg/apis"
-
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
-	src := &v1alpha1.PingSource{
+	src := &v1alpha2.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "source-name",
 			Namespace: "source-namespace",
 			UID:       "source-uid",
 		},
-		Spec: v1alpha1.PingSourceSpec{
-			ServiceAccountName: "source-svc-acct",
-			Schedule:           "*/2 * * * *",
-			Data:               "data",
+		Spec: v1alpha2.PingSourceSpec{
+			Schedule: "*/2 * * * *",
+			JsonData: "data",
 		},
 	}
 
@@ -68,7 +66,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				"test-key2": "test-value2",
 			},
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "sources.knative.dev/v1alpha1",
+				APIVersion:         "sources.knative.dev/v1alpha2",
 				Kind:               "PingSource",
 				Name:               src.Name,
 				UID:                src.UID,
@@ -92,7 +90,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 					},
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "source-svc-acct",
+					ServiceAccountName: "pingsource-source-name-source-uid",
 					Containers: []corev1.Container{
 						{
 							Name:  "receive-adapter",
@@ -137,12 +135,12 @@ func TestMakeReceiveAdapter(t *testing.T) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("250m"),
-									corev1.ResourceMemory: resource.MustParse("512Mi"),
+									corev1.ResourceCPU:    resource.MustParse("20m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("250m"),
-									corev1.ResourceMemory: resource.MustParse("512Mi"),
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("32Mi"),
 								},
 							},
 						},

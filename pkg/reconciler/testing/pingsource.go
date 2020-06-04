@@ -74,6 +74,12 @@ func WithPingSourceUID(uid string) PingSourceOption {
 	}
 }
 
+func WithPingSourceV1A2UID(uid string) PingSourceV1A2Option {
+	return func(c *v1alpha2.PingSource) {
+		c.UID = types.UID(uid)
+	}
+}
+
 func WithPingSourceResourceScopeAnnotation(c *v1alpha1.PingSource) {
 	if c.Annotations == nil {
 		c.Annotations = make(map[string]string)
@@ -149,6 +155,12 @@ func WithPingSourceNotDeployed(name string) PingSourceOption {
 	}
 }
 
+func WithPingSourceV1A2NotDeployed(name string) PingSourceV1A2Option {
+	return func(s *v1alpha2.PingSource) {
+		s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
+	}
+}
+
 func WithPingSourceDeployed(s *v1alpha1.PingSource) {
 	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
@@ -164,8 +176,11 @@ func WithPingSourceEventType(s *v1alpha1.PingSource) {
 	}}
 }
 
-func WithPingSourceV1A2EventType(s *v1alpha2.PingSource) {
-	s.Status.MarkEventType()
+func WithPingSourceV1A2CloudEventAttributes(s *v1alpha2.PingSource) {
+	s.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
+		Type:   v1alpha2.PingSourceEventType,
+		Source: v1alpha2.PingSourceSource(s.Namespace, s.Name),
+	}}
 }
 
 func WithValidPingSourceResources(s *v1alpha1.PingSource) {
@@ -205,8 +220,20 @@ func WithPingSourceStatusObservedGeneration(generation int64) PingSourceOption {
 	}
 }
 
+func WithPingSourceV1A2StatusObservedGeneration(generation int64) PingSourceV1A2Option {
+	return func(c *v1alpha2.PingSource) {
+		c.Status.ObservedGeneration = generation
+	}
+}
+
 func WithPingSourceObjectMetaGeneration(generation int64) PingSourceOption {
 	return func(c *v1alpha1.PingSource) {
+		c.ObjectMeta.Generation = generation
+	}
+}
+
+func WithPingSourceV1A2ObjectMetaGeneration(generation int64) PingSourceV1A2Option {
+	return func(c *v1alpha2.PingSource) {
 		c.ObjectMeta.Generation = generation
 	}
 }
