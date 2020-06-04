@@ -25,6 +25,7 @@ import (
 	"time"
 
 	ce "github.com/cloudevents/sdk-go"
+	ce2 "github.com/cloudevents/sdk-go/v2"
 	"github.com/openzipkin/zipkin-go/model"
 	"go.opentelemetry.io/otel/api/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -335,15 +336,18 @@ func setupChannelTracingWithReply(
 		}
 	}
 
-	matchFunc := func(ev ce.Event) bool {
+	matchFunc := func(ev ce2.Event) error {
 		if ev.Source() != senderName {
-			return false
+			return fmt.Errorf("expected source %s, saw %s", senderName, ev.Source())
 		}
 		if ev.ID() != eventID {
-			return false
+			return fmt.Errorf("expected id %s, saw %s", eventID, ev.ID())
 		}
-		db, _ := ev.DataBytes()
-		return strings.Contains(string(db), body)
+		db := ev.Data()
+		if !strings.Contains(string(db), body) {
+			return fmt.Errorf("expected substring %s in %s", body, string(db))
+		}
+		return nil
 	}
 
 	return expected, matchFunc

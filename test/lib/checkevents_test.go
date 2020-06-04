@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
 
 type dummyEventGet struct {
@@ -139,7 +139,7 @@ func TestSequentialAndTrim(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) bool { return true })
+	allData, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestSequentialAndTrim(t *testing.T) {
 	subEv = totalEv[10:19]
 	deg.setEv(11, subEv)
 
-	allData, _, err = ei.Find(func(EventInfo) bool { return true })
+	allData, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -169,14 +169,14 @@ func TestOverlap(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) bool { return true })
+	allData, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[6:19]
 	deg.setEv(7, subEv)
-	allData, _, err = ei.Find(func(EventInfo) bool { return true })
+	allData, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -193,14 +193,14 @@ func TestGap(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) bool { return true })
+	allData, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[11:19]
 	deg.setEv(12, subEv)
-	_, _, err = ei.Find(func(EventInfo) bool { return true })
+	_, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err == nil {
 		t.Fatalf("Unexpected success from find")
 	}
@@ -216,14 +216,14 @@ func TestSequentialNoOp(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) bool { return true })
+	allData, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = []EventInfo{}
 	deg.setEv(11, subEv)
-	allData, _, err = ei.Find(func(EventInfo) bool { return true })
+	allData, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -242,7 +242,15 @@ func TestWaitForN(t *testing.T) {
 	var waitErr error
 	var allMatch []EventInfo
 	go func() {
-		allMatch, waitErr = ei.WaitAtLeastNMatch(ValidEvFunc(func(ev cloudevents.Event) bool { return ev.ID() == "3" }), 2)
+		matchFunc := func(ev cloudevents.Event) error {
+			if ev.ID() == "3" {
+				return nil
+			} else {
+				return fmt.Errorf("mismatch %s %s", ev.ID(), "3")
+			}
+		}
+
+		allMatch, waitErr = ei.WaitAtLeastNMatch(ValidEvFunc(matchFunc), 2)
 		wg.Done()
 	}()
 	var tCalls int

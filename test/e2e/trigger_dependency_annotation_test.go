@@ -58,8 +58,13 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
 	// Create subscribers.
-	pod := resources.EventLoggerPod(subscriberName)
-	client.CreatePodOrFail(pod, lib.WithService(subscriberName))
+	loggerPod := resources.EventRecordPod(subscriberName)
+	client.CreatePodOrFail(loggerPod, lib.WithService(subscriberName))
+	targetTracker, err := client.NewEventInfoStore(subscriberName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	// Wait for subscriber to become ready
 	client.WaitForAllTestResourcesReadyOrFail()
@@ -95,7 +100,8 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	// Trigger should become ready after pingSource was created
 	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)
 
-	if err := client.CheckLog(subscriberName, lib.CheckerContains(jsonData)); err != nil {
-		t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
+	err = targetTracker.WaitMatchSourceData(sourcesv1alpha2.PingSourceSource(client.Namespace, pingSourceName), jsonData, 1, -1)
+	if err != nil {
+		t.Fatalf("Error watching for data %s event in pod %s: %v", jsonData, subscriberName, err)
 	}
 }

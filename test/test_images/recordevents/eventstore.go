@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 
 	"knative.dev/eventing/test/lib"
 )
@@ -73,20 +73,35 @@ func (es *eventStore) checkAppendBlock() {
 }
 
 // Store the specified event.
-func (es *eventStore) StoreEvent(event cloudevents.Event, httpHeaders map[string][]string) {
+func (es *eventStore) StoreEvent(event *cloudevents.Event, evErr error, httpHeaders map[string][]string) {
 	var evInfo lib.EventInfo
-	evInfo.Event = &event
-	evInfo.HTTPHeaders = httpHeaders
-	evInfoBytes, err := json.Marshal(&evInfo)
-	if err != nil {
-		evInfo.Event = nil
-		evInfo.ValidationError = err.Error()
-		if evInfo.ValidationError == "" {
-			evInfo.ValidationError = "Unknown Error"
+	var err error
+	var evInfoBytes []byte
+	if evErr != nil {
+		evInfo.HTTPHeaders = httpHeaders
+		evInfo.Error = evErr.Error()
+		if evInfo.Error == "" {
+			evInfo.Error = "Unknown Incoming Error"
 		}
 		evInfoBytes, err = json.Marshal(&evInfo)
 		if err != nil {
 			panic(fmt.Errorf("unexpected marshal error (%v) (%+v)", err, evInfo))
+		}
+	} else {
+		evInfo.Event = event
+		evInfo.HTTPHeaders = httpHeaders
+		evInfoBytes, err = json.Marshal(&evInfo)
+
+		if err != nil {
+			evInfo.Event = nil
+			evInfo.Error = err.Error()
+			if evInfo.Error == "" {
+				evInfo.Error = "Unknown Error"
+			}
+			evInfoBytes, err = json.Marshal(&evInfo)
+			if err != nil {
+				panic(fmt.Errorf("unexpected marshal error (%v) (%+v)", err, evInfo))
+			}
 		}
 	}
 

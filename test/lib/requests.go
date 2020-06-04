@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,8 +56,9 @@ type MinMaxResponse struct {
 
 // Structure to hold information about an event seen by recordevents pod.
 type EventInfo struct {
-	// Set if the cloudevent received by the pod didn't pass validation
-	ValidationError string
+	// Set if the http request received by the pod couldn't be decoded or
+	// didn't pass validation
+	Error string
 	// Event received if the cloudevent received by the pod passed validation
 	Event *cloudevents.Event
 	// HTTPHeaders of the connection that delivered the event
@@ -70,7 +71,7 @@ func (ei *EventInfo) String() string {
 	if ei.Event != nil {
 		return ei.Event.String()
 	} else {
-		return fmt.Sprintf("invalid event \"%s\"", ei.ValidationError)
+		return fmt.Sprintf("invalid event \"%s\"", ei.Error)
 	}
 }
 
@@ -191,7 +192,7 @@ func (eg *eventGetter) getMinMax() (minRet int, maxRet int, errRet error) {
 	if err != nil {
 		return -1, -1, fmt.Errorf("error unmarshalling response %w", err)
 	}
-	if minMaxResponse.MinAvail == 0 || minMaxResponse.MaxSeen == 0 {
+	if minMaxResponse.MinAvail == 0 {
 		return -1, -1, fmt.Errorf("invalid decoded json: %+v", minMaxResponse)
 	}
 
@@ -219,7 +220,7 @@ func (eg *eventGetter) getEntry(seqno int) (EventInfo, error) {
 	if err != nil {
 		return EventInfo{}, fmt.Errorf("error unmarshalling response %w", err)
 	}
-	if len(entryResponse.ValidationError) == 0 && entryResponse.Event == nil {
+	if len(entryResponse.Error) == 0 && entryResponse.Event == nil {
 		return EventInfo{}, fmt.Errorf("invalid decoded json: %+v", entryResponse)
 	}
 

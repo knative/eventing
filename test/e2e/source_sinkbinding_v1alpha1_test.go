@@ -19,12 +19,14 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
+	ce "github.com/cloudevents/sdk-go/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -52,8 +54,13 @@ func TestSinkBindingDeployment(t *testing.T) {
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	extensionSecret := string(uuid.NewUUID())
 
@@ -114,15 +121,32 @@ func TestSinkBindingDeployment(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	// verify the logger service receives the event
+	// Look for events with expected data, and sinkbinding extension
 	expectedCount := 2
-	// Look for body.
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
-		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
+	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)
+	matchFunc := func(ev ce.Event) error {
+		if expectedSource != ev.Source() {
+			return fmt.Errorf("expected source %s, saw %s", expectedSource, ev.Source())
+		}
+		ext := ev.Extensions()
+		value, found := ext["sinkbinding"]
+		if !found {
+			return fmt.Errorf("didn't find extension sinkbinding")
+		}
+		if value != extensionSecret {
+			return fmt.Errorf("expension sinkbinding didn't match %s, saw %s", extensionSecret, value)
+		}
+		db := ev.Data()
+		if !strings.Contains(string(db), data) {
+			return fmt.Errorf("expected substring %s in %s", data, string(db))
+		}
+		return nil
 	}
-	// Look for extensions.
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(extensionSecret, expectedCount)); err != nil {
-		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", extensionSecret, expectedCount, loggerPodName, err)
+
+	_, err = targetTracker.WaitAtLeastNMatch(lib.ValidEvFunc(matchFunc), expectedCount)
+	if err != nil {
+		t.Fatalf("Data %s, extension %q does not appear at least %d times in events of logger pod %q: %v", data, extensionSecret, expectedCount, loggerPodName, err)
+
 	}
 }
 
@@ -140,8 +164,13 @@ func TestSinkBindingCronJob(t *testing.T) {
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBindingV1Alpha1(
@@ -207,7 +236,8 @@ func TestSinkBindingCronJob(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)
+	if err := targetTracker.WaitMatchSourceData(expectedSource, data, expectedCount, -1); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }

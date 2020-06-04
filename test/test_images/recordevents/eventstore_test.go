@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 
 	"knative.dev/eventing/test/lib"
 )
@@ -54,7 +54,7 @@ func TestAddGetMany(t *testing.T) {
 		ce.SetType("knative.dev.test.event.a")
 		ce.SetSource("https://source.test.event.knative.dev/foo")
 		ce.SetID(strconv.FormatInt(int64(i), 10))
-		es.StoreEvent(ce, nil)
+		es.StoreEvent(&ce, nil, nil)
 		minAvail, maxSeen := es.MinMax()
 		if minAvail != 1 {
 			t.Fatalf("Pass %d Bad min: %d, expected %d", i, minAvail, 1)
@@ -73,8 +73,8 @@ func TestAddGetMany(t *testing.T) {
 		if evInfo.Event == nil {
 			t.Fatalf("Unexpected empty event info event %d: %+v", i, evInfo)
 		}
-		if len(evInfo.ValidationError) != 0 {
-			t.Fatalf("Unexpected error for stored event %d: %s", i, evInfo.ValidationError)
+		if len(evInfo.Error) != 0 {
+			t.Fatalf("Unexpected error for stored event %d: %s", i, evInfo.Error)
 		}
 
 		// Make sure it's the expected event
@@ -127,7 +127,7 @@ func TestAddGetSingleValid(t *testing.T) {
 	ce.SetType(expectedType)
 	ce.SetSource(expectedSource)
 	ce.SetID(expectedID)
-	es.StoreEvent(ce, headers)
+	es.StoreEvent(&ce, nil, headers)
 	minAvail, maxSeen := es.MinMax()
 	if minAvail != maxSeen {
 		t.Fatalf("Expected match, saw %d, %d", minAvail, maxSeen)
@@ -146,8 +146,8 @@ func TestAddGetSingleValid(t *testing.T) {
 	if evInfo.Event == nil {
 		t.Fatalf("Unexpected empty event info event: %+v", evInfo)
 	}
-	if len(evInfo.ValidationError) != 0 {
-		t.Fatalf("Unexpected error for stored event: %s", evInfo.ValidationError)
+	if len(evInfo.Error) != 0 {
+		t.Fatalf("Unexpected error for stored event: %s", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -181,7 +181,7 @@ func TestAddGetSingleInvalid(t *testing.T) {
 	ce.SetType("knative.dev.test.event.a")
 	// No source
 	ce.SetID("111")
-	es.StoreEvent(ce, headers)
+	es.StoreEvent(&ce, nil, headers)
 	minAvail, maxSeen := es.MinMax()
 	if minAvail != maxSeen {
 		t.Fatalf("Expected match, saw %d, %d", minAvail, maxSeen)
@@ -199,8 +199,49 @@ func TestAddGetSingleInvalid(t *testing.T) {
 	if evInfo.Event != nil {
 		t.Fatalf("Unexpected event info: %+v", evInfo)
 	}
-	if len(evInfo.ValidationError) == 0 {
-		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.ValidationError)
+	if len(evInfo.Error) == 0 {
+		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.Error)
+	}
+	if len(evInfo.HTTPHeaders) != 1 {
+		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
+	}
+	if len(evInfo.HTTPHeaders["foo"]) != 2 {
+		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
+	}
+	if evInfo.HTTPHeaders["foo"][0] != "bar" || evInfo.HTTPHeaders["foo"][1] != "baz" {
+		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
+	}
+}
+
+func TestAddGetSingleInvalidError(t *testing.T) {
+	es := newEventStore()
+
+	headers := make(map[string][]string)
+	headers["foo"] = []string{"bar", "baz"}
+	ce := cloudevents.NewEvent(cloudevents.VersionV1)
+	ce.SetType("knative.dev.test.event.a")
+	ce.SetID("111")
+	ce.SetSource("nnn")
+	es.StoreEvent(&ce, fmt.Errorf("Error passed in"), headers)
+	minAvail, maxSeen := es.MinMax()
+	if minAvail != maxSeen {
+		t.Fatalf("Expected match, saw %d, %d", minAvail, maxSeen)
+	}
+
+	evInfoBytes, err := es.GetEventInfoBytes(minAvail)
+	if err != nil {
+		t.Fatalf("Error calling get: %v", err)
+	}
+	var evInfo lib.EventInfo
+	err = json.Unmarshal(evInfoBytes, &evInfo)
+	if err != nil {
+		t.Fatalf("Error unmarshalling stored JSON: %v", err)
+	}
+	if evInfo.Event != nil {
+		t.Fatalf("Unexpected event info: %+v", evInfo)
+	}
+	if len(evInfo.Error) == 0 {
+		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -219,7 +260,7 @@ func helperFillCount(es *eventStore, count int) {
 		ce.SetType("knative.dev.test.event.a")
 		ce.SetSource("https://source.test.event.knative.dev/foo")
 		ce.SetID(strconv.FormatInt(int64(i), 10))
-		es.StoreEvent(ce, nil)
+		es.StoreEvent(&ce, nil, nil)
 	}
 }
 
@@ -264,7 +305,7 @@ func TestTrim(t *testing.T) {
 		ce.SetType("knative.dev.test.event.a")
 		ce.SetSource("https://source.test.event.knative.dev/foo")
 		ce.SetID(strconv.FormatInt(int64(count), 10))
-		es.StoreEvent(ce, nil)
+		es.StoreEvent(&ce, nil, nil)
 		addedMinAvail, addedMaxSeen := es.MinMax()
 		if addedMaxSeen != maxSeen+1 {
 			t.Fatalf("Add after trim resulted in bad maxSeen: expected %d, saw %d for trim %d",

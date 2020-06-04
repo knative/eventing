@@ -49,8 +49,13 @@ func TestContainerSource(t *testing.T) {
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
 
 	// create container source
 	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
@@ -94,7 +99,8 @@ func TestContainerSource(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, templateName)
+	if err := targetTracker.WaitMatchSourceData(expectedSource, data, expectedCount, -1); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }
