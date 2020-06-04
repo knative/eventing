@@ -170,6 +170,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 			return err
 		}
 	} else {
+		if _, err := r.reconcileServiceAccount(ctx, source); err != nil {
+			logging.FromContext(ctx).Error("Unable to create the receive adapter service account", zap.Error(err))
+			return fmt.Errorf("creating receive adapter service account: %v", err)
+		}
+
+		if _, err := r.reconcileRoleBinding(ctx, source); err != nil {
+			logging.FromContext(ctx).Error("Unable to create the receive adapter role binding", zap.Error(err))
+			return fmt.Errorf("creating receive adapter role binding: %v", err)
+		}
+
 		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 		if err != nil {
 			logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))

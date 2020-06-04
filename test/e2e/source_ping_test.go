@@ -33,47 +33,8 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
-
-func TestPingSourceV1Alpha1(t *testing.T) {
-	const (
-		sourceName = "e2e-ping-source"
-		// Every 1 minute starting from now
-		schedule = "*/1 * * * *"
-
-		recordEventPodName = "e2e-ping-source-logger-pod-v1alpha1"
-	)
-
-	client := setup(t, true)
-	defer tearDown(client)
-
-	// create event logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	defer eventTracker.Cleanup()
-
-	// create cron job source
-	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-	source := eventingtesting.NewPingSourceV1Alpha1(
-		sourceName,
-		client.Namespace,
-		eventingtesting.WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
-			Schedule: schedule,
-			Data:     data,
-			Sink:     &duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)},
-		}),
-	)
-	client.CreatePingSourceV1Alpha1OrFail(source)
-
-	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail()
-
-	eventTracker.AssertExact(1, recordevents.MatchEvent(
-		HasSource(sourcesv1alpha1.PingSourceSource(client.Namespace, sourceName)),
-		HasData([]byte(data)),
-	))
-}
 
 func TestPingSourceV1Alpha2(t *testing.T) {
 	const (
