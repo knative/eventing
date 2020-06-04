@@ -23,8 +23,8 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/test/lib"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/resources/sender"
 )
