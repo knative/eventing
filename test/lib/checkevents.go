@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -236,6 +237,15 @@ func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]Even
 	return matchRet, internalErr
 }
 
+func (ei *EventInfoStore) MustWaitAtLeastNMatch(t testing.TB, f EventInfoMatchFunc, n int) []EventInfo {
+	events, err := ei.WaitAtLeastNMatch(f, n)
+	if err != nil {
+		t.Fatalf("Timeout waiting for %d matches. Error: %v", n, err)
+	}
+
+	return events
+}
+
 // Wait for at least minCount events with source exactly matching source and data contained within the event
 // data field.  If source is the empty string, don't check the source.  If maxCount is >0, return an error
 // if more than maxCount entries are seen.
@@ -261,6 +271,12 @@ func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCou
 		return fmt.Errorf("expected <= %d events, saw %d", maxCount, len(match))
 	}
 	return nil
+}
+
+func (ei *EventInfoStore) AssertWaitMatchSourceData(tb testing.TB, eventRecord string, source string, data string, minCount int, maxCount int) {
+	if err := ei.WaitMatchSourceData(source, data, minCount, maxCount); err != nil {
+		tb.Fatalf("Timeout waiting for source %q and data %q. It does not appear at least %d times in the event record pod %q: %v", source, data, minCount, eventRecord, err)
+	}
 }
 
 // Does the provided EventInfo match some criteria
