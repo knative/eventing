@@ -308,7 +308,8 @@ type SourceSpec struct {
 ```
 
 For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
-see [Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination),
+see
+[Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination),
 and
 [CloudEventOverrides](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
