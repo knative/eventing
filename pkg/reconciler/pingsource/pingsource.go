@@ -50,6 +50,7 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+	recresources "knative.dev/eventing/pkg/reconciler/resources"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -201,7 +202,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1alph
 	sa, err := r.serviceAccountLister.ServiceAccounts(source.Namespace).Get(saName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			expected := resources.MakeServiceAccount(source, saName)
+			expected := recresources.MakeServiceAccount(source, saName)
 			sa, err := r.kubeClientSet.CoreV1().ServiceAccounts(source.Namespace).Create(expected)
 			if err != nil {
 				return sa, newServiceAccountWarn(err)

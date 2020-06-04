@@ -32,6 +32,7 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+	recresources "knative.dev/eventing/pkg/reconciler/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -646,7 +647,7 @@ func makeAvailableMTAdapter() *appsv1.Deployment {
 func MakeServiceAccount(sourceName, sourceUID string) *corev1.ServiceAccount {
 	source := NewPingSourceV1Alpha2(sourceName, testNS,
 		WithPingSourceV1A2UID(sourceUID))
-	return resources.MakeServiceAccount(source, resources.CreateReceiveAdapterName(sourceName, types.UID(sourceUID)))
+	return recresources.MakeServiceAccount(source, resources.CreateReceiveAdapterName(sourceName, types.UID(sourceUID)))
 }
 
 func MakeRoleBinding(sourceName, sourceUID string) *rbacv1.RoleBinding {

@@ -20,18 +20,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/kmeta"
-
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
-// MakeServiceAccount creates a ServiceAccount object for the given PingSource
-func MakeServiceAccount(source *v1alpha2.PingSource, name string) *corev1.ServiceAccount {
+// MakeServiceAccount creates a ServiceAccount object for the given referable object
+func MakeServiceAccount(obj kmeta.OwnerRefable, name string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: source.Namespace,
+			Namespace: obj.GetObjectMeta().GetNamespace(),
 			Name:      name,
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(source),
+				*kmeta.NewControllerRef(obj),
 			},
 		},
 	}

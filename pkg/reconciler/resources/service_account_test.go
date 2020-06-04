@@ -30,15 +30,10 @@ import (
 func TestNewServiceAccount(t *testing.T) {
 	testNS := "test-ns"
 	testName := "test-name"
-	src := &v1alpha2.PingSource{
+	obj := &v1alpha2.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testName,
 			Namespace: testNS,
-			UID:       "source-uid",
-		},
-		Spec: v1alpha2.PingSourceSpec{
-			Schedule: "*/2 * * * *",
-			JsonData: "data",
 		},
 	}
 
@@ -47,12 +42,12 @@ func TestNewServiceAccount(t *testing.T) {
 			Namespace: testNS,
 			Name:      testName,
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(src),
+				*kmeta.NewControllerRef(obj),
 			},
 		},
 	}
 
-	got := MakeServiceAccount(src, testName)
+	got := MakeServiceAccount(obj, testName)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)
