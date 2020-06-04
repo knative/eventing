@@ -34,7 +34,6 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
@@ -42,7 +41,6 @@ import (
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1beta1"
-	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
@@ -124,10 +122,6 @@ func (l *Listers) GetV1Beta1SubscriptionLister() messaginglistersv1beta1.Subscri
 	return messaginglistersv1beta1.NewSubscriptionLister(l.indexerFor(&messagingv1beta1.Subscription{}))
 }
 
-func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
-	return messaginglisters.NewSubscriptionLister(l.indexerFor(&messagingv1alpha1.Subscription{}))
-}
-
 func (l *Listers) GetFlowsSequenceLister() flowslisters.SequenceLister {
 	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1beta1.Sequence{}))
 }
@@ -144,16 +138,8 @@ func (l *Listers) GetV1Beta1EventTypeLister() eventingv1beta1listers.EventTypeLi
 	return eventingv1beta1listers.NewEventTypeLister(l.indexerFor(&eventingv1beta1.EventType{}))
 }
 
-func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLister {
-	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
-}
-
 func (l *Listers) GetV1Beta1InMemoryChannelLister() messaginglistersv1beta1.InMemoryChannelLister {
 	return messaginglistersv1beta1.NewInMemoryChannelLister(l.indexerFor(&messagingv1beta1.InMemoryChannel{}))
-}
-
-func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
-	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
 }
 
 func (l *Listers) GetV1Beta1MessagingChannelLister() messaginglistersv1beta1.ChannelLister {
