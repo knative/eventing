@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 
@@ -50,14 +51,15 @@ func TestChannelSetDefaults(t *testing.T) {
 	}{
 		"nil ChannelDefaulter": {
 			nilChannelDefaulter: true,
-			expected:            Channel{},
+			expected:            Channel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1beta1"}}},
 		},
 		"unset ChannelDefaulter": {
-			expected: Channel{},
+			expected: Channel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1beta1"}}},
 		},
 		"set ChannelDefaulter": {
 			channelTemplate: defaultChannelTemplate,
 			expected: Channel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1beta1"}},
 				Spec: ChannelSpec{
 					ChannelTemplate: ourDefaultChannelTemplate,
 				},
@@ -76,6 +78,7 @@ func TestChannelSetDefaults(t *testing.T) {
 				},
 			},
 			expected: Channel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1beta1"}},
 				Spec: ChannelSpec{
 					ChannelTemplate: &ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
