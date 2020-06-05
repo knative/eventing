@@ -87,7 +87,7 @@ func ParallelTestHelper(t *testing.T,
 			}
 
 			// create event logger pod and service
-			eventRecorder := fmt.Sprintf("%s-eventRecord", tc.name)
+			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
 			eventRecordPod := resources.EventRecordPod(eventRecorder)
 			client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
 			eventTracker, err := client.NewEventInfoStore(eventRecorder, t.Logf)
@@ -134,11 +134,10 @@ func ParallelTestHelper(t *testing.T,
 				senderPodName,
 				tc.name,
 				lib.FlowsParallelTypeMeta,
-				event,
-			)
+				event)
 
 			// verify the logger service receives the correct transformed event
-			eventTracker.AssertWaitMatchSourceData(t, eventRecorder, eventSource, body, 1, 1)
+			eventTracker.AssertWaitMatchSourceData(t, eventRecorder, eventSource, tc.expected, 1, 1)
 		}
 	})
 }
