@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgTest "knative.dev/pkg/test"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "knative.dev/eventing/test/lib/cloudevents"
 )
 
@@ -151,6 +152,35 @@ func EventTransformationPod(name string, event *cetest.CloudEvent) *corev1.Pod {
 					event.Source.String(),
 					"-event-data",
 					event.Data,
+				},
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+}
+
+// EventTransformationPodV2 creates a Pod that transforms events received receiving as arg a cloudevents sdk2 Event
+// TODO(nlopezgi): remove EventTransformationPod above and rename this method to
+// EventTransformationPod once other tests that use sdk1 and depend on this method are migrated.
+func EventTransformationPodV2(name string, event *cloudevents.Event) *corev1.Pod {
+	const imageName = "transformevents"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-event-type",
+					event.Type(),
+					"-event-source",
+					event.Source(),
+					"-event-data",
+					string(event.Data()),
 				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
