@@ -16,18 +16,17 @@ limitations under the License.
 package helpers
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -39,9 +38,9 @@ func SequenceTestHelper(t *testing.T,
 		sequenceName  = "e2e-sequence"
 		senderPodName = "e2e-sequence-sender-pod"
 
-		channelName      = "e2e-sequence-channel"
-		subscriptionName = "e2e-sequence-subscription"
-		loggerPodName    = "e2e-sequence-logger-pod"
+		channelName         = "e2e-sequence-channel"
+		subscriptionName    = "e2e-sequence-subscription"
+		recordEventsPodName = "e2e-sequence-recordevents-pod"
 	)
 
 	stepSubscriberConfigs := []struct {
@@ -90,15 +89,20 @@ func SequenceTestHelper(t *testing.T,
 		//                must be Addressable. In the future if we use Knative Serving in the tests, we can
 		//                make the logger service as a Knative service, and remove the channel and subscription.
 		client.CreateChannelOrFail(channelName, &channel)
-		// create logger service as the subscriber
-		loggerPod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+		// create event logger pod and service as the subscriber
+		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
+		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
+		eventTracker, err := client.NewEventInfoStore(recordEventsPodName, t.Logf)
+		if err != nil {
+			t.Fatalf("Pod tracker failed: %v", err)
+		}
+		defer eventTracker.Cleanup()
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
 			&channel,
-			resources.WithSubscriberForSubscription(loggerPodName),
+			resources.WithSubscriberForSubscription(recordEventsPodName),
 		)
 		replyRef := &duckv1.KReference{Kind: channel.Kind, APIVersion: channel.APIVersion, Name: channelName, Namespace: client.Namespace}
 
@@ -117,19 +121,18 @@ func SequenceTestHelper(t *testing.T,
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()
 
-		// send fake CloudEvent to the Sequence
-		msg := fmt.Sprintf("TestSequence %s", uuid.NewUUID())
-		// NOTE: the eventData format must be BaseData, as it needs to be correctly parsed in the stepper service.
-		eventData := cloudevents.BaseData{Message: msg}
-		eventDataBytes, err := json.Marshal(eventData)
-		if err != nil {
-			st.Fatalf("Failed to convert %v to json: %v", eventData, err)
+		// send CloudEvent to the Sequence
+		event := cloudevents.NewEvent()
+		event.SetID("dummy")
+		eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
+		event.SetSource(eventSource)
+		event.SetType(lib.DefaultEventType)
+		msg := fmt.Sprintf("TestSequence %s", uuid.New().String())
+		body := fmt.Sprintf(`{"msg":"%s"}`, msg)
+		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
+			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
-		event := cloudevents.New(
-			string(eventDataBytes),
-			cloudevents.WithSource(senderPodName),
-		)
-		client.SendFakeEventToAddressableOrFail(
+		client.SendEventToAddressable(
 			senderPodName,
 			sequenceName,
 			lib.FlowsSequenceTypeMeta,
@@ -140,8 +143,6 @@ func SequenceTestHelper(t *testing.T,
 		for _, config := range stepSubscriberConfigs {
 			expectedMsg += config.msgAppender
 		}
-		if err := client.CheckLog(loggerPodName, lib.CheckerContains(expectedMsg)); err != nil {
-			st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedMsg, loggerPodName, err)
-		}
+		eventTracker.AssertWaitMatchSourceData(t, recordEventsPodName, eventSource, expectedMsg, 1, 1)
 	})
 }
