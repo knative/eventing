@@ -18,12 +18,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"log"
 
-	ce "github.com/cloudevents/sdk-go"
-
-	"knative.dev/eventing/test/lib/cloudevents"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
 
 var (
@@ -34,43 +33,49 @@ func init() {
 	flag.StringVar(&eventMsgAppender, "msg-appender", "", "a string we want to append on the event message")
 }
 
-func gotEvent(event ce.Event, resp *ce.EventResponse) error {
-	ctx := event.Context.AsV1()
-
-	data := &cloudevents.BaseData{}
-	if err := event.DataAs(data); err != nil {
-		log.Printf("Got Data Error: %s\n", err.Error())
-		return err
-	}
-
+func gotEvent(event cloudevents.Event) (*cloudevents.Event, error) {
 	log.Println("Received a new event: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
+	log.Printf("[%s] %s %s: %s", event.Time().String(), event.Source(), event.Type(), string(event.Data()))
+
+	outputEvent := event.Clone()
 
 	// append eventMsgAppender to message of the data
-	data.Message = data.Message + eventMsgAppender
-	r := ce.Event{
-		Context: ctx,
-		Data:    data,
+	var data map[string]interface{}
+	if err := json.Unmarshal(event.Data(), &data); err != nil {
+		return nil, err
+	}
+	data["msg"] = data["msg"].(string) + eventMsgAppender
+	if eventData, err := json.Marshal(&data); err != nil {
+		return nil, err
+	} else if err := outputEvent.SetData(cloudevents.ApplicationJSON, []byte(eventData)); err != nil {
+		return nil, err
 	}
 
-	r.SetDataContentType(ce.ApplicationJSON)
-
 	log.Println("Transform the event to: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
+	log.Printf("[%s] %s %s: %s", outputEvent.Time().String(), outputEvent.Source(), outputEvent.Type(), string(outputEvent.Data()))
 
-	resp.RespondWith(200, &r)
-	return nil
+	return &outputEvent, nil
 }
 
 func main() {
 	// parse the command line flags
 	flag.Parse()
 
-	c, err := ce.NewDefaultClient()
+	t, err := cloudevents.NewHTTP(cloudevents.WithPort(8080))
+	if err != nil {
+		log.Fatalf("failed to create transport, %v", err)
+	}
+
+	c, err := cloudevents.NewClient(t,
+		cloudevents.WithTimeNow(),
+		cloudevents.WithUUIDs(),
+	)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}
 
 	log.Printf("listening on 8080")
-	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), gotEvent))
+	if err := c.StartReceiver(context.Background(), gotEvent); err != nil {
+		log.Fatalf("failed to start receiver: %s", err)
+	}
 }
