@@ -31,7 +31,7 @@ import (
 
 var (
 	log       = config.Log
-	Canceling = make(chan context.CancelFunc)
+	Canceling = make(chan context.CancelFunc, 1)
 )
 
 // New creates new Receiver

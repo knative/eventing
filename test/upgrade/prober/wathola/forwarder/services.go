@@ -29,7 +29,7 @@ import (
 var (
 	log                = config.Log
 	lastProgressReport = time.Now()
-	Canceling          = make(chan context.CancelFunc)
+	Canceling          = make(chan context.CancelFunc, 1)
 )
 
 // New creates new forwarder
