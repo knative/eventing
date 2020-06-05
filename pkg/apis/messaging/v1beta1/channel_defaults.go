@@ -19,11 +19,19 @@ package v1beta1
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 	"knative.dev/pkg/apis"
 )
 
 func (c *Channel) SetDefaults(ctx context.Context) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	if _, ok := c.Annotations[messaging.SubscribableDuckVersionAnnotation]; !ok {
+		c.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
+	}
+
 	c.Spec.SetDefaults(apis.WithinParent(ctx, c.ObjectMeta))
 }
 

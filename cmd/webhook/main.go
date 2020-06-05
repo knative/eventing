@@ -45,9 +45,7 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
-	"knative.dev/eventing/pkg/apis/messaging"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -64,10 +62,6 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
 
 	// For group messaging.knative.dev.
-	// v1alpha1
-	messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
-	messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
-	messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
 	// v1beta1
 	messagingv1beta1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1beta1.InMemoryChannel{},
 	messagingv1beta1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1beta1.Channel{},
@@ -217,10 +211,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
-		messagingv1alpha1_ = messagingv1alpha1.SchemeGroupVersion.Version
-		messagingv1beta1_  = messagingv1beta1.SchemeGroupVersion.Version
-		sourcesv1alpha1_   = sourcesv1alpha1.SchemeGroupVersion.Version
-		sourcesv1alpha2_   = sourcesv1alpha2.SchemeGroupVersion.Version
+		sourcesv1alpha1_ = sourcesv1alpha1.SchemeGroupVersion.Version
+		sourcesv1alpha2_ = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -229,23 +221,6 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
-			// messaging
-			messagingv1beta1.Kind("Channel"): {
-				DefinitionName: messaging.ChannelsResource.String(),
-				HubVersion:     messagingv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1alpha1_: &messagingv1alpha1.Channel{},
-					messagingv1beta1_:  &messagingv1beta1.Channel{},
-				},
-			},
-			messagingv1beta1.Kind("InMemoryChannel"): {
-				DefinitionName: messaging.InMemoryChannelsResource.String(),
-				HubVersion:     messagingv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1alpha1_: &messagingv1alpha1.InMemoryChannel{},
-					messagingv1beta1_:  &messagingv1beta1.InMemoryChannel{},
-				},
-			},
 			// Sources
 			sourcesv1alpha2.Kind("ApiServerSource"): {
 				DefinitionName: sources.ApiServerSourceResource.String(),

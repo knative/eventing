@@ -60,6 +60,10 @@ func WithInitChannelConditions(c *v1beta1.Channel) {
 	c.Status.InitializeConditions()
 }
 
+func WithNoAnnotations(c *v1beta1.Channel) {
+	c.ObjectMeta.Annotations = nil
+}
+
 func WithChannelGeneration(gen int64) ChannelOption {
 	return func(s *v1beta1.Channel) {
 		s.Generation = gen

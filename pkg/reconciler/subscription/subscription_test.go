@@ -35,7 +35,6 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
@@ -51,10 +50,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel/fake"
-	rt "knative.dev/eventing/pkg/reconciler/testing"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
@@ -113,10 +110,10 @@ var (
 		Kind:    "InMemoryChannel",
 	}
 
-	imcV1Alpha1GVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
+	channelableV1Alpha1GVK = metav1.GroupVersionKind{
+		Group:   "duck.knative.dev",
 		Version: "v1alpha1",
-		Kind:    "InMemoryChannel",
+		Kind:    "Channelable",
 	}
 
 	channelV1Beta1GVK = metav1.GroupVersionKind{
@@ -125,34 +122,14 @@ var (
 		Kind:    "Channel",
 	}
 
-	channelV1Alpha1GVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "Channel",
-	}
-
-	imcV1Alpha1KRef = duckv1.KReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "InMemoryChannel",
+	channelableV1Alpha1KRef = duckv1.KReference{
+		APIVersion: "duck.knative.dev/v1alpha1",
+		Kind:       "Channelable",
 		Namespace:  testNS,
 		Name:       channelName,
 	}
 
 	imcV1Beta1KRef = duckv1.KReference{
-		APIVersion: "messaging.knative.dev/v1beta1",
-		Kind:       "InMemoryChannel",
-		Namespace:  testNS,
-		Name:       channelName,
-	}
-
-	imcV1Alpha1Ref = corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "InMemoryChannel",
-		Namespace:  testNS,
-		Name:       channelName,
-	}
-
-	imcV1Beta1Ref = corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1beta1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
@@ -164,8 +141,8 @@ func init() {
 	// Add types to scheme
 	_ = eventingv1beta1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingduckv1alpha1.AddToScheme(scheme.Scheme)
 	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
-	_ = messagingv1alpha1.AddToScheme(scheme.Scheme)
 	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
 }
 
@@ -195,8 +172,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
 				// Subscriber
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				// Reply
 				NewInMemoryChannel(replyName, testNS,
@@ -256,7 +233,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
 			},
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
@@ -284,7 +261,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
@@ -316,7 +293,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
@@ -380,8 +357,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS)),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS)),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
@@ -416,14 +393,14 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(nonAddressableGVK, replyName, testNS), // reply will be a nonAddressableGVK for this test
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
 				),
-				rt.NewUnstructured(nonAddressableGVK, replyName, testNS),
+				NewUnstructured(nonAddressableGVK, replyName, testNS),
 			},
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
@@ -453,8 +430,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -488,21 +465,19 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			// Use v1alpha1 IMC to make sure the patch uses the v1alpha1 subscribable
-			Name: "v1alpha1 imc, valid channel+subscriber",
+			// Use v1alpha1 duck shaped Channelable to make sure the patch uses the v1alpha1 subscribable
+			Name: "v1alpha1 channelable, valid channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
-				rt.NewInMemoryChannel(channelName, testNS,
-					rt.WithInitInMemoryChannelConditions,
-					rt.WithInMemoryChannelAddress(channelDNS),
-					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
+				NewChannelable(channelName, testNS,
+					WithChannelableReadySubscriber(subscriptionUID),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -514,7 +489,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -539,8 +514,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -578,11 +553,11 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
-				rt.NewUnstructured(subscriberGVK, dlcName, testNS,
-					rt.WithUnstructuredAddressable(dlcDNS),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -617,6 +592,102 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
+			// Use v1beta1 Channel, v1alpha Channelable as backing channel to make sure that backing channel gets
+			// patched properly using v1alpha1
+			Name: "v1beta1 channel+v1alpha1 channelable backing channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&channelableV1Alpha1KRef),
+					WithBackingChannelReady,
+					WithChannelAddress("example.com"),
+				),
+				NewChannelable(channelName, testNS,
+					WithChannelableReadySubscriber(subscriptionUID),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			// Use v1beta1 Channel, v1alpha Channelable as backing channel to make sure that backing channel gets
+			// patched properly using v1alpha1
+			Name: "v1beta1 channel no annotation+v1alpha1 channelable backing channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&channelableV1Alpha1KRef),
+					WithBackingChannelReady,
+					WithChannelAddress("example.com"),
+					WithNoAnnotations,
+				),
+				NewChannelable(channelName, testNS,
+					WithChannelableReadySubscriber(subscriptionUID),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			}}, {}, {
 			Name: "v1beta1 channel+v1beta1 imc backing channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -624,8 +695,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -661,175 +732,6 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI},
-				}),
-				patchFinalizers(testNS, subscriptionName),
-			},
-		}, {
-			// Use v1beta1 Channel, v1alpha IMC as backing channel to make sure that backing channel gets
-			// patched properly using v1alpha1
-			Name: "v1beta1 channel+v1alpha1 imc backing channel+subscriber",
-			Objects: []runtime.Object{
-				NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
-				),
-				NewChannel(channelName, testNS,
-					WithInitChannelConditions,
-					WithBackingChannelObjRef(&imcV1Alpha1KRef),
-					WithBackingChannelReady,
-					WithChannelAddress("example.com"),
-				),
-				rt.NewInMemoryChannel(channelName, testNS,
-					rt.WithInitInMemoryChannelConditions,
-					rt.WithInMemoryChannelAddress(channelDNS),
-					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
-					rt.WithInMemoryChannelReady("example.com"),
-				),
-			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitSubscriptionConditions,
-					MarkReferencesResolved,
-					MarkAddedToChannel,
-
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-				),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI},
-				}),
-				patchFinalizers(testNS, subscriptionName),
-			},
-		}, {
-			// Use v1alpha1 Channel with v1beta1 IMC channel.
-			Name: "v1alpha1 channel+v1beta1 imc backing channel+subscriber",
-			Objects: []runtime.Object{
-				NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
-				),
-				rt.NewChannel(channelName, testNS,
-					rt.WithInitChannelConditions,
-					rt.WithBackingChannelObjRef(&imcV1Beta1Ref),
-					rt.WithBackingChannelReady,
-					rt.WithChannelAddress("example.com"),
-				),
-				// We need to create a fake v1beta1 object, since we use the v1beta1 lister
-				// in the actual code and our test infra won't set that up correctly.
-				// In real world, lister would find the correct version.
-				NewChannel(channelName, testNS,
-					WithInitChannelConditions,
-					WithBackingChannelObjRef(&imcV1Beta1KRef),
-					WithBackingChannelReady,
-					WithChannelAddress("example.com"),
-				),
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(channelDNS),
-					WithInMemoryChannelReadySubscriber(subscriptionUID),
-					WithInMemoryChannelReady("example.com"),
-				),
-			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitSubscriptionConditions,
-					MarkReferencesResolved,
-					MarkAddedToChannel,
-
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-				),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI},
-				}),
-				patchFinalizers(testNS, subscriptionName),
-			},
-		}, {
-			// Use v1alpha1 Channel with v1alpha1 IMC channel.
-			Name: "v1alpha1 channel+v1alpha1 imc backing channel+subscriber",
-			Objects: []runtime.Object{
-				NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
-				),
-				rt.NewChannel(channelName, testNS,
-					rt.WithInitChannelConditions,
-					rt.WithBackingChannelObjRef(&imcV1Alpha1Ref),
-					rt.WithBackingChannelReady,
-					rt.WithChannelAddress("example.com"),
-				),
-				// We need to create a fake v1beta1 object, since we use the v1beta1 lister
-				// in the actual code and our test infra won't set that up correctly.
-				// In real world, lister would find the correct version.
-				NewChannel(channelName, testNS,
-					WithInitChannelConditions,
-					WithBackingChannelObjRef(&imcV1Alpha1KRef),
-					WithBackingChannelReady,
-					WithChannelAddress("example.com"),
-				),
-				rt.NewInMemoryChannel(channelName, testNS,
-					rt.WithInitInMemoryChannelConditions,
-					rt.WithInMemoryChannelAddress(channelDNS),
-					rt.WithInMemoryChannelReadySubscriber(subscriptionUID),
-					rt.WithInMemoryChannelReady("example.com"),
-				),
-			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelV1Alpha1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitSubscriptionConditions,
-					MarkReferencesResolved,
-					MarkAddedToChannel,
-
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-				),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -842,8 +744,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(channelV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -968,8 +870,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(imcV1Beta1GVK, replyName, testNS),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1020,8 +922,8 @@ func TestAllCases(t *testing.T) {
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1118,7 +1020,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelDNS),
 					WithInMemoryChannelReadySubscriber(subscriptionUID),
 				),
-				rt.NewService(serviceName, testNS),
+				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -1167,7 +1069,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
 					WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
 				),
-				rt.NewService(serviceName, testNS),
+				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
 			WantErr: false,
@@ -1203,8 +1105,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
-				rt.NewUnstructured(subscriberGVK, dlcName, testNS,
-					rt.WithUnstructuredAddressable(dlcDNS),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b-"+subscriptionName, testNS,
@@ -1224,7 +1126,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
 					WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
 				),
-				rt.NewService(serviceName, testNS),
+				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
 			WantErr: false,
@@ -1253,30 +1155,28 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
-			Name: "v1alpha1 imc+two subscribers for a channel",
+			Name: "v1alpha1 channelable+two subscribers for a channel",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b-"+subscriptionName, testNS,
 					WithSubscriptionUID("b-"+subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
 				),
-				rt.NewInMemoryChannel(channelName, testNS,
-					rt.WithInitInMemoryChannelConditions,
-					rt.WithInMemoryChannelAddress(channelDNS),
-					rt.WithInMemoryChannelSubscribers([]eventingduckv1alpha1.SubscriberSpec{{UID: "b-" + subscriptionUID}}),
-					rt.WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
-					rt.WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
+				NewChannelable(channelName, testNS,
+					WithChannelableSubscribers([]eventingduckv1alpha1.SubscriberSpec{{UID: "b-" + subscriptionUID}}),
+					WithChannelableReadySubscriber("a-"+subscriptionUID),
+					WithChannelableReadySubscriber("b-"+subscriptionUID),
 				),
-				rt.NewService(serviceName, testNS),
+				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
 			WantErr: false,
@@ -1287,7 +1187,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -1304,30 +1204,28 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
-			Name: "v1alpha1 imc+two subscribers for a channel - updated",
+			Name: "v1alpha1 channelable+two subscribers for a channel - updated",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b-"+subscriptionName, testNS,
 					WithSubscriptionUID("b-"+subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
 				),
-				rt.NewInMemoryChannel(channelName, testNS,
-					rt.WithInitInMemoryChannelConditions,
-					rt.WithInMemoryChannelAddress(channelDNS),
-					rt.WithInMemoryChannelSubscribers([]eventingduckv1alpha1.SubscriberSpec{{UID: "b-" + subscriptionUID}, {UID: "a-" + subscriptionUID}}),
-					rt.WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
-					rt.WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
+				NewChannelable(channelName, testNS,
+					WithChannelableSubscribers([]eventingduckv1alpha1.SubscriberSpec{{UID: "b-" + subscriptionUID}, {UID: "a-" + subscriptionUID}}),
+					WithChannelableReadySubscriber("a-"+subscriptionUID),
+					WithChannelableReadySubscriber("b-"+subscriptionUID),
 				),
-				rt.NewService(serviceName, testNS),
+				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
 			WantErr: false,
@@ -1338,7 +1236,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -1367,8 +1265,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1389,11 +1287,11 @@ func TestAllCases(t *testing.T) {
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "v1alpha1 imc+deleted - channel patch succeeded",
+			Name: "v1alpha1 channelable+deleted - channel patch succeeded",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(imcV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
@@ -1401,13 +1299,11 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
-				rt.NewInMemoryChannel(channelName, testNS,
-					rt.WithInitInMemoryChannelConditions,
-					rt.WithInMemoryChannelAddress(channelDNS),
-					rt.WithInMemoryChannelSubscribers([]eventingduckv1alpha1.SubscriberSpec{
+				NewChannelable(channelName, testNS,
+					WithChannelableSubscribers([]eventingduckv1alpha1.SubscriberSpec{
 						{UID: subscriptionUID, SubscriberURI: subscriberURI},
 					}),
 				),
@@ -1435,8 +1331,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1484,8 +1380,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
-				rt.NewUnstructured(subscriberGVK, subscriberName, testNS,
-					rt.WithUnstructuredAddressable(subscriberDNS),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
 				),
 			},
 			Key: testNS + "/" + subscriptionName,

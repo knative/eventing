@@ -1,4 +1,4 @@
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1beta1
 kind: InMemoryChannel
 metadata:
   name: imc
@@ -8,9 +8,8 @@ spec:
     retry: 5
     backoffPolicy: exponential
     backoffDelay: 3s
-  subscribable: # populated by Subscription
-    subscribers:
-    - subscriberURI: mysub.default.svc.cluster.local
-      delivery:
-        deadLetterSinkURI: mydls.default.svc.cluster.local
+  subscribers:
+  - subscriberURI: mysub.default.svc.cluster.local
+    delivery:
+      deadLetterSinkURI: mydls.default.svc.cluster.local
 

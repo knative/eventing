@@ -54,7 +54,7 @@ func TestIsChannelEmpty(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		r := corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 			Kind:       "Channel",
 		}
 		if isChannelEmpty(r) {
@@ -104,7 +104,7 @@ func TestIsValidObjectReference(t *testing.T) {
 			name: "missing name",
 			ref: corev1.ObjectReference{
 				Name:       "",
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "eventing.knative.dev/v1beta1",
 				Kind:       "Strait",
 			},
 			want: []*apis.FieldError{
@@ -128,7 +128,7 @@ func TestIsValidObjectReference(t *testing.T) {
 			name: "missing none",
 			ref: corev1.ObjectReference{
 				Name:       "kind",
-				APIVersion: "messaging.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1beta1",
 				Kind:       "Channel",
 			},
 			want: []*apis.FieldError{},

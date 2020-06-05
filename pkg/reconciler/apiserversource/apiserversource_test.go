@@ -47,8 +47,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
-	rtv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	rttestingv1alpha1 "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -57,7 +57,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 	}
 	brokerDest = duckv1.Destination{
@@ -96,16 +96,16 @@ func TestReconcile(t *testing.T) {
 	table := TableTest{{
 		Name: "not enough permissions",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -115,21 +115,21 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceStatusObservedGeneration(generation),
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceNoSufficientPermissions,
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceNoSufficientPermissions,
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -146,16 +146,16 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "valid",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -168,23 +168,23 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceDeployed,
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceDeployed,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -197,16 +197,16 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "valid with sink URI",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -219,23 +219,23 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceDeployed,
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceDeployed,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -248,8 +248,8 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "valid with relative uri reference",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
@@ -261,8 +261,8 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -275,8 +275,8 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
@@ -288,15 +288,15 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceDeployed,
-				WithApiServerSourceSink(sinkTargetURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceDeployed,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkTargetURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -309,16 +309,16 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "deployment update due to env",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -332,23 +332,23 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceDeploymentUnavailable,
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceDeploymentUnavailable,
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -364,8 +364,8 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "deployment update due to service account",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
@@ -375,8 +375,8 @@ func TestReconcile(t *testing.T) {
 					},
 					ServiceAccountName: "malin",
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -390,8 +390,8 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
@@ -401,15 +401,15 @@ func TestReconcile(t *testing.T) {
 					},
 					ServiceAccountName: "malin",
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceDeploymentUnavailable,
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceDeploymentUnavailable,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -425,16 +425,16 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "deployment update due to container count",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
 			NewChannel(sinkName, testNS,
 				WithInitChannelConditions,
@@ -448,23 +448,23 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceDeploymentUnavailable,
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceDeploymentUnavailable,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -480,20 +480,20 @@ func TestReconcile(t *testing.T) {
 	}, {
 		Name: "valid with broker sink",
 		Objects: []runtime.Object{
-			NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: brokerDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 			),
-			rtv1beta1.NewBroker(sinkName, testNS,
-				rtv1beta1.WithInitBrokerConditions,
-				rtv1beta1.WithBrokerAddress(sinkDNS),
+			NewBroker(sinkName, testNS,
+				WithInitBrokerConditions,
+				WithBrokerAddress(sinkDNS),
 			),
 			makeAvailableReceiveAdapter(t),
 		},
@@ -502,23 +502,23 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewApiServerSource(sourceName, testNS,
-				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+			Object: rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+				rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: "v1",
 						Kind:       "Namespace",
 					}},
 					SourceSpec: duckv1.SourceSpec{Sink: brokerDest},
 				}),
-				WithApiServerSourceUID(sourceUID),
-				WithApiServerSourceObjectMetaGeneration(generation),
+				rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
+				rttestingv1alpha1.WithApiServerSourceObjectMetaGeneration(generation),
 				// Status Update:
-				WithInitApiServerSourceConditions,
-				WithApiServerSourceDeployed,
-				WithApiServerSourceSink(sinkURI),
-				WithApiServerSourceSufficientPermissions,
-				WithApiServerSourceEventTypes(source),
-				WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1alpha1.WithInitApiServerSourceConditions,
+				rttestingv1alpha1.WithApiServerSourceDeployed,
+				rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
+				rttestingv1alpha1.WithApiServerSourceSufficientPermissions,
+				rttestingv1alpha1.WithApiServerSourceEventTypes(source),
+				rttestingv1alpha1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
 		WantCreates: []runtime.Object{
@@ -558,19 +558,19 @@ func makeReceiveAdapter(t *testing.T) *appsv1.Deployment {
 func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deployment {
 	t.Helper()
 
-	src := NewApiServerSource(sourceName, testNS,
-		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+	src := rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+		rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 				APIVersion: "v1",
 				Kind:       "Namespace",
 			}},
 			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 		}),
-		WithApiServerSourceUID(sourceUID),
+		rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
 		// Status Update:
-		WithInitApiServerSourceConditions,
-		WithApiServerSourceDeployed,
-		WithApiServerSourceSink(sinkURI),
+		rttestingv1alpha1.WithInitApiServerSourceConditions,
+		rttestingv1alpha1.WithApiServerSourceDeployed,
+		rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
 	)
 
 	args := resources.ReceiveAdapterArgs{
@@ -589,26 +589,26 @@ func makeReceiveAdapterWithName(t *testing.T, sourceName string) *appsv1.Deploym
 
 func makeAvailableReceiveAdapter(t *testing.T) *appsv1.Deployment {
 	ra := makeReceiveAdapter(t)
-	WithDeploymentAvailable()(ra)
+	rttestingv1alpha1.WithDeploymentAvailable()(ra)
 	return ra
 }
 
 func makeAvailableReceiveAdapterWithTargetURI(t *testing.T) *appsv1.Deployment {
 	t.Helper()
 
-	src := NewApiServerSource(sourceName, testNS,
-		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
+	src := rttestingv1alpha1.NewApiServerSource(sourceName, testNS,
+		rttestingv1alpha1.WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 				APIVersion: "v1",
 				Kind:       "Namespace",
 			}},
 			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 		}),
-		WithApiServerSourceUID(sourceUID),
+		rttestingv1alpha1.WithApiServerSourceUID(sourceUID),
 		// Status Update:
-		WithInitApiServerSourceConditions,
-		WithApiServerSourceDeployed,
-		WithApiServerSourceSink(sinkURI),
+		rttestingv1alpha1.WithInitApiServerSourceConditions,
+		rttestingv1alpha1.WithApiServerSourceDeployed,
+		rttestingv1alpha1.WithApiServerSourceSink(sinkURI),
 	)
 
 	args := resources.ReceiveAdapterArgs{
@@ -622,7 +622,7 @@ func makeAvailableReceiveAdapterWithTargetURI(t *testing.T) *appsv1.Deployment {
 	ra, err := resources.MakeReceiveAdapter(&args)
 	require.NoError(t, err)
 
-	WithDeploymentAvailable()(ra)
+	rttestingv1alpha1.WithDeploymentAvailable()(ra)
 	return ra
 }
 

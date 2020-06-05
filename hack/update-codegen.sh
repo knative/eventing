@@ -45,7 +45,7 @@ chmod +x ${CODEGEN_PKG}/generate-groups.sh
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "eventing:v1beta1 messaging:v1alpha1 messaging:v1beta1 flows:v1beta1 sources:v1alpha1 sources:v1alpha2 configs:v1alpha1" \
+  "eventing:v1beta1 messaging:v1beta1 flows:v1beta1 sources:v1alpha1 sources:v1alpha2 configs:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Deep copy config
@@ -65,7 +65,7 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
 chmod +x ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh
 ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "eventing:v1beta1 messaging:v1alpha1 messaging:v1beta1 flows:v1beta1 sources:v1alpha1 sources:v1alpha2 duck:v1alpha1 duck:v1beta1 configs:v1alpha1" \
+  "eventing:v1beta1 messaging:v1beta1 flows:v1beta1 sources:v1alpha1 sources:v1alpha2 duck:v1alpha1 duck:v1beta1 configs:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Make sure our dependencies are up-to-date

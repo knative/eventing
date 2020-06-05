@@ -174,6 +174,14 @@ func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1beta1.Subsc
 	}
 }
 
+func WithInMemoryChannelDuckAnnotationV1Beta1(imc *v1beta1.InMemoryChannel) {
+	annotations := map[string]string{
+		messaging.SubscribableDuckVersionAnnotation: "v1beta1",
+	}
+	imc.ObjectMeta.SetAnnotations(annotations)
+
+}
+
 func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
 	return func(imc *v1beta1.InMemoryChannel) {
 		if imc.Annotations == nil {

@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 
@@ -118,7 +118,7 @@ func channelHasRequiredSubscriberStatus(st *testing.T, client *lib.Client, chann
 	}
 }
 
-func findSubscriberStatus(statusArr []duckv1beta1.SubscriberStatus, subscription *eventingv1alpha1.Subscription) *duckv1beta1.SubscriberStatus {
+func findSubscriberStatus(statusArr []duckv1beta1.SubscriberStatus, subscription *eventingv1beta1.Subscription) *duckv1beta1.SubscriberStatus {
 	for _, v := range statusArr {
 		if v.UID == subscription.UID {
 			return &v

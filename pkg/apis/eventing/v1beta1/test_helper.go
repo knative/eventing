@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -30,15 +29,6 @@ type testHelper struct{}
 
 // TestHelper contains helpers for unit tests.
 var TestHelper = testHelper{}
-
-// Moved to here from ../v1alpha1 while we migrate things...
-func (testHelper) ReadySubscriptionStatusV1Alpha1() *messagingv1alpha1.SubscriptionStatus {
-	ss := &messagingv1alpha1.SubscriptionStatus{}
-	ss.MarkChannelReady()
-	ss.MarkReferencesResolved()
-	ss.MarkAddedToChannel()
-	return ss
-}
 
 func (testHelper) ReadySubscriptionCondition() *apis.Condition {
 	return &apis.Condition{

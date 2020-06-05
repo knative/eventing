@@ -59,7 +59,7 @@ spec:
       JSONPath: .metadata.creationTimestamp
   versions:
   - name: v1alpha1
-    served: true
+    served: false
     storage: false
     schema:
       openAPIV3Schema:

@@ -141,7 +141,7 @@ spec:
           x-kubernetes-preserve-unknown-fields: true
   versions:
   - name: v1alpha1
-    served: true
+    served: false
     storage: false
   - name: v1beta1
     served: true
