@@ -17,6 +17,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/phayes/freeport"
 	"go.uber.org/zap/zapcore"
@@ -32,6 +33,7 @@ func TestReceiverMain(t *testing.T) {
 	config.Instance.LogLevel = zapcore.DebugLevel
 	config.Instance.Receiver.Port = port
 	go main()
+	time.Sleep(time.Millisecond)
 	cancel := <-receiver.Canceling
 	err := lib.WaitForReadiness(port, config.Log)
 	assert.NoError(t, err)

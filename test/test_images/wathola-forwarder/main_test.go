@@ -17,6 +17,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
@@ -31,6 +32,7 @@ func TestForwarderMain(t *testing.T) {
 	config.Instance.LogLevel = zapcore.DebugLevel
 	config.Instance.Forwarder.Port = port
 	go main()
+	time.Sleep(time.Millisecond)
 	cancel := <-forwarder.Canceling
 	err := lib.WaitForReadiness(port, config.Log)
 	assert.NoError(t, err)
