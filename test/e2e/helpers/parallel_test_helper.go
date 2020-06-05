@@ -16,18 +16,17 @@ limitations under the License.
 package helpers
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -87,10 +86,15 @@ func ParallelTestHelper(t *testing.T,
 				TypeMeta: channel,
 			}
 
-			// create logger service for global reply
-			loggerPodName := fmt.Sprintf("%s-logger", tc.name)
-			loggerPod := resources.EventLoggerPod(loggerPodName)
-			client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+			// create event logger pod and service
+			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
+			eventRecordPod := resources.EventRecordPod(eventRecorder)
+			client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
+			eventTracker, err := client.NewEventInfoStore(eventRecorder, t.Logf)
+			if err != nil {
+				t.Fatalf("Pod tracker failed: %v", err)
+			}
+			defer eventTracker.Cleanup()
 
 			// create channel as reply of the Parallel
 			// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -102,7 +106,7 @@ func ParallelTestHelper(t *testing.T,
 				replySubscriptionName,
 				replyChannelName,
 				&channel,
-				resources.WithSubscriberForSubscription(loggerPodName),
+				resources.WithSubscriberForSubscription(eventRecorder),
 			)
 
 			parallel := eventingtesting.NewFlowsParallel(tc.name, client.Namespace,
@@ -114,28 +118,26 @@ func ParallelTestHelper(t *testing.T,
 
 			client.WaitForAllTestResourcesReadyOrFail()
 
-			// send fake CloudEvent to the Parallel
-			msg := fmt.Sprintf("TestFlowParallel %s - ", uuid.NewUUID())
-			// NOTE: the eventData format must be BaseData, as it needs to be correctly parsed in the stepper service.
-			eventData := cloudevents.BaseData{Message: msg}
-			eventDataBytes, err := json.Marshal(eventData)
-			if err != nil {
-				st.Fatalf("Failed to convert %v to json: %v", eventData, err)
+			// send CloudEvent to the Parallel
+			event := cloudevents.NewEvent()
+			event.SetID("dummy")
+
+			eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
+			event.SetSource(eventSource)
+			event.SetType(lib.DefaultEventType)
+			body := fmt.Sprintf(`{"msg":"TestFlowParallel %s"}`, uuid.New().String())
+			if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
+				st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 			}
-			event := cloudevents.New(
-				string(eventDataBytes),
-				cloudevents.WithSource(senderPodName),
-			)
-			client.SendFakeEventToAddressableOrFail(
+
+			client.SendEventToAddressable(
 				senderPodName,
 				tc.name,
 				lib.FlowsParallelTypeMeta,
 				event)
 
 			// verify the logger service receives the correct transformed event
-			if err := client.CheckLog(loggerPodName, lib.CheckerContains(tc.expected)); err != nil {
-				st.Fatalf("String %q not found in logs of logger pod %q: %v", tc.expected, loggerPodName, err)
-			}
+			eventTracker.AssertWaitMatchSourceData(t, eventRecorder, eventSource, tc.expected, 1, 1)
 		}
 	})
 }
