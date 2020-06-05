@@ -21,10 +21,9 @@ import (
 	"flag"
 	"log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
 
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 )
 
@@ -40,37 +39,28 @@ func init() {
 	flag.StringVar(&eventData, "event-data", "", "Cloudevent data body.")
 }
 
-func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	ctx := event.Context.AsV1()
-
-	dataBytes, err := event.DataBytes()
-	if err != nil {
-		log.Printf("Got Data Error: %s\n", err.Error())
-		return err
-	}
+func gotEvent(event cloudevents.Event) (*cloudevents.Event, error) {
 	log.Println("Received a new event: ")
-	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
+	log.Printf("[%s] %s %s: %s", event.Time().String(), event.Source(), event.Type(), string(event.Data()))
+
+	outputEvent := event.Clone()
 
 	if eventSource != "" {
-		ctx.SetSource(eventSource)
+		outputEvent.SetSource(eventSource)
 	}
 	if eventType != "" {
-		ctx.SetType(eventType)
+		outputEvent.SetType(eventType)
 	}
 	if eventData != "" {
-		dataBytes = []byte(eventData)
+		if err := outputEvent.SetData(cloudevents.ApplicationJSON, []byte(eventData)); err != nil {
+			return nil, err
+		}
 	}
-	r := cloudevents.Event{
-		Context: ctx,
-		Data:    string(dataBytes),
-	}
-	r.SetDataContentType(cloudevents.ApplicationJSON)
 
 	log.Println("Transform the event to: ")
-	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
+	log.Printf("[%s] %s %s: %s", outputEvent.Time().String(), outputEvent.Source(), outputEvent.Type(), string(outputEvent.Data()))
 
-	resp.RespondWith(200, &r)
-	return nil
+	return &outputEvent, nil
 }
 
 func main() {
@@ -82,11 +72,21 @@ func main() {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 
-	c, err := kncloudevents.NewDefaultClient()
+	t, err := cloudevents.NewHTTP(cloudevents.WithPort(8080))
+	if err != nil {
+		log.Fatalf("failed to create transport, %v", err)
+	}
+
+	c, err := cloudevents.NewClient(t,
+		cloudevents.WithTimeNow(),
+		cloudevents.WithUUIDs(),
+	)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}
 
 	log.Printf("listening on 8080")
-	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), gotEvent))
+	if err := c.StartReceiver(context.Background(), gotEvent); err != nil {
+		log.Fatalf("failed to start receiver: %s", err)
+	}
 }
