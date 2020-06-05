@@ -60,6 +60,7 @@ var (
 func init() {
 	// Add types to scheme
 	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = eventingduckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestReconcile(t *testing.T) {
@@ -248,6 +249,34 @@ func TestReconcile(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 		},
+	}, {
+		Name: "Updating v1alpha1 channelable subscribers statuses",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelableV1Alpha1CRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname)),
+			NewChannelable(channelName, testNS,
+				WithChannelableReady(),
+				WithChannelableAddress(backingChannelHostname),
+				WithChannelableSubscribers(subscribersV1Alpha1()),
+				WithChannelableStatusSubscribers(subscriberStatuses())),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelableV1Alpha1CRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelSubscriberStatuses(subscriberStatuses())),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
 	}}
 
 	logger := logtesting.TestLogger(t)
@@ -274,10 +303,10 @@ func channelCRD() metav1.TypeMeta {
 	}
 }
 
-func channelV1Alpha1CRD() metav1.TypeMeta {
+func channelableV1Alpha1CRD() metav1.TypeMeta {
 	return metav1.TypeMeta{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "InMemoryChannel",
+		APIVersion: "duck.knative.dev/v1alpha1",
+		Kind:       "Channelable",
 	}
 }
 
@@ -365,8 +394,8 @@ func backingChannelObjRef() *duckv1.KReference {
 
 func backingChannelObjRefV1Alpha1() *duckv1.KReference {
 	return &duckv1.KReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "InMemoryChannel",
+		APIVersion: "duck.knative.dev/v1alpha1",
+		Kind:       "Channelable",
 		Namespace:  testNS,
 		Name:       channelName,
 	}
