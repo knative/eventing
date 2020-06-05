@@ -24,9 +24,7 @@ readonly EVENTING_CRDS_YAML="eventing-crds.yaml"
 readonly CHANNEL_BROKER_YAML="deprecated-channel-broker.yaml"
 readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
 readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
-readonly UPGRADE_JOB="upgrade-to-v0.14.0.yaml"
-readonly UPGRADE_JOB_V_0_15="upgrade-to-v0.15.0.yaml"
-readonly EVENTING_STORAGE_VERSION_MIGRATE_YAML="storage-version-migration-v0.15.0.yaml"
+readonly PRE_INSTALL_V_0_16="pre-install-to-v0.16.0.yaml"
 
 declare -A RELEASES
 RELEASES=(
@@ -61,16 +59,10 @@ function build_release() {
   # Create in memory channel yaml
   ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${IN_MEMORY_CHANNEL}"
 
-  # Create v0.14.0 upgrade job yaml
-  ko resolve ${KO_FLAGS} -f config/upgrade/v0.14.0/ | "${LABEL_YAML_CMD[@]}" > "${UPGRADE_JOB}"
+  # Create v0.16.0 pre-install job yaml. Upgrades Broker storage version from v1alpha1 to v1beta1.
+  ko resolve ${KO_FLAGS} -f config/pre-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${PRE_INSTALL_V_0_16}"
 
-  # Create  v0.15.0 upgrade job yaml
-  ko resolve ${KO_FLAGS} -f config/upgrade/v0.15.0/ | "${LABEL_YAML_CMD[@]}" > "${UPGRADE_JOB_V_0_15}"
-
-  # Create storage migration job yaml
-  ko resolve ${KO_FLAGS} -f config/post-install/v0.15.0/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_STORAGE_VERSION_MIGRATE_YAML}"
-
-  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${UPGRADE_JOB} ${UPGRADE_JOB_V_0_15} ${EVENTING_STORAGE_VERSION_MIGRATE_YAML})
+  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${PRE_INSTALL_V_0_16})
 
   # Assemble the release
   for yaml in "${!RELEASES[@]}"; do
