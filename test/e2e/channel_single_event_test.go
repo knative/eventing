@@ -33,42 +33,12 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 
-func TestSingleBinaryEventForChannel(t *testing.T) {
-	helpers.SingleEventForChannelTestHelper(
-		t,
-		cloudevents.EncodingBinary,
-		helpers.SubscriptionV1alpha1,
-		"",
-		channelTestRunner,
-	)
-}
-
-func TestSingleStructuredEventForChannel(t *testing.T) {
-	helpers.SingleEventForChannelTestHelper(
-		t,
-		cloudevents.EncodingStructured,
-		helpers.SubscriptionV1alpha1,
-		"",
-		channelTestRunner,
-	)
-}
-
 func TestSingleBinaryEventForChannelV1Beta1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.EncodingBinary,
 		helpers.SubscriptionV1beta1,
 		"",
-		channelTestRunner,
-	)
-}
-
-func TestSingleBinaryEventForChannelV1Beta1SubscribeToV1Alpha1(t *testing.T) {
-	helpers.SingleEventForChannelTestHelper(
-		t,
-		cloudevents.EncodingBinary,
-		helpers.SubscriptionV1beta1,
-		"messaging.knative.dev/v1alpha1",
 		channelTestRunner,
 	)
 }
