@@ -3,12 +3,10 @@
 
 package internal
 
-import (
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	any "github.com/golang/protobuf/ptypes/any"
-	math "math"
-)
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+import any "github.com/golang/protobuf/ptypes/any"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -19,7 +17,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // StreamError is a response type which is returned when
 // streaming rpc returns an error.
@@ -38,17 +36,16 @@ func (m *StreamError) Reset()         { *m = StreamError{} }
 func (m *StreamError) String() string { return proto.CompactTextString(m) }
 func (*StreamError) ProtoMessage()    {}
 func (*StreamError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9d15b670e96bbb5a, []int{0}
+	return fileDescriptor_stream_chunk_a2afb657504565d7, []int{0}
 }
-
 func (m *StreamError) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StreamError.Unmarshal(m, b)
 }
 func (m *StreamError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StreamError.Marshal(b, m, deterministic)
 }
-func (m *StreamError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StreamError.Merge(m, src)
+func (dst *StreamError) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StreamError.Merge(dst, src)
 }
 func (m *StreamError) XXX_Size() int {
 	return xxx_messageInfo_StreamError.Size(m)
@@ -98,9 +95,11 @@ func init() {
 	proto.RegisterType((*StreamError)(nil), "grpc.gateway.runtime.StreamError")
 }
 
-func init() { proto.RegisterFile("internal/stream_chunk.proto", fileDescriptor_9d15b670e96bbb5a) }
+func init() {
+	proto.RegisterFile("internal/stream_chunk.proto", fileDescriptor_stream_chunk_a2afb657504565d7)
+}
 
-var fileDescriptor_9d15b670e96bbb5a = []byte{
+var fileDescriptor_stream_chunk_a2afb657504565d7 = []byte{
 	// 223 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x34, 0x90, 0x41, 0x4e, 0xc3, 0x30,
 	0x10, 0x45, 0x15, 0x4a, 0x69, 0x3b, 0xd9, 0x45, 0x5d, 0x18, 0xba, 0x20, 0x62, 0x95, 0x95, 0x23,

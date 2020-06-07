@@ -28,6 +28,7 @@ import (
 var (
 	validComponents = sets.NewString(
 		"controller",
+		"webhook",
 		"broker-controller",
 		"inmemorychannel-dispatcher",
 		"inmemorychannel-controller",

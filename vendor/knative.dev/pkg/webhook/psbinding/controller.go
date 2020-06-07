@@ -30,6 +30,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook"
 )
@@ -66,6 +67,8 @@ type GetListAll func(context.Context, cache.ResourceEventHandler) ListAll
 // to NewAdmissionController and BaseReconciler.
 type BindableContext func(context.Context, Bindable) (context.Context, error)
 
+var sentinel = types.NamespacedName{}
+
 // NewAdmissionController constructs the webhook portion of the pair of
 // reconcilers that implement the semantics of our Binding.
 func NewAdmissionController(
@@ -86,9 +89,14 @@ func NewAdmissionController(
 	wh := NewReconciler(name, path, options.SecretName, client, mwhInformer.Lister(), secretInformer.Lister(), withContext, reconcilerOptions...)
 	c := controller.NewImpl(wh, logging.FromContext(ctx), name)
 
+	// Enqueue a sentinel when we become leader.
+	wh.PromoteFunc = func(bkt pkgreconciler.Bucket, enq func(pkgreconciler.Bucket, types.NamespacedName)) {
+		enq(bkt, sentinel)
+	}
+
 	// It doesn't matter what we enqueue because we will always Reconcile
 	// the named MWH resource.
-	handler := controller.HandleAll(c.EnqueueSentinel(types.NamespacedName{}))
+	handler := controller.HandleAll(c.EnqueueSentinel(sentinel))
 
 	// Reconcile when the named MutatingWebhookConfiguration changes.
 	mwhInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

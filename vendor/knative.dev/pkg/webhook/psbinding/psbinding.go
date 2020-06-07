@@ -41,6 +41,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook"
 	certresources "knative.dev/pkg/webhook/certificates/resources"
@@ -97,6 +98,8 @@ func NewReconciler(
 //  2. Admit: which leverages the index built by the Reconciler to apply
 //     mutations to resources.
 type Reconciler struct {
+	pkgreconciler.LeaderAwareFuncs
+
 	Name        string
 	HandlerPath string
 	SecretName  string
@@ -120,6 +123,7 @@ type Reconciler struct {
 }
 
 var _ controller.Reconciler = (*Reconciler)(nil)
+var _ pkgreconciler.LeaderAware = (*Reconciler)(nil)
 var _ webhook.AdmissionController = (*Reconciler)(nil)
 
 // We need to specifically exclude our deployment(s) from consideration, but this provides a way
@@ -301,6 +305,12 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		ac.exact = exact
 		ac.inexact = inexact
 	}()
+
+	// After we've updated our indices, bail out unless we are the leader.
+	// Only the leader should be mutating the webhook.
+	if !ac.IsLeaderFor(sentinel) {
+		return nil
+	}
 
 	rules := make([]admissionregistrationv1beta1.RuleWithOperations, 0, len(gks))
 	for gk, versions := range gks {
