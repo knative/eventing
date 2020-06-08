@@ -23,7 +23,7 @@ metadata:
     knative.dev/config-category: eventing
     knative.dev/example-checksum: "7f61d62e"
   annotations:
-    knative.dev/example-checksum: 7f61d62e
+    knative.dev/example-checksum: 04b1e560
 data:
   _example: |
     ################################
