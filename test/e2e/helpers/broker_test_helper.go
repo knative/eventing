@@ -312,7 +312,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 					} else {
 						// This filter should not match this event
 						unexpectedMatchers[subscriberName] = append(
-							expectedMatchers[subscriberName],
+							unexpectedMatchers[subscriberName],
 							lib.MatchEvent(sentEventMatcher),
 						)
 					}
