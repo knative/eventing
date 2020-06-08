@@ -95,6 +95,6 @@ func ChannelChainTestHelper(t *testing.T,
 		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
 
 		// verify the logger service receives the event
-		eventTracker.AssertWaitMatchSourceData(t, recordEventsPodName, eventSource, body, expectedContentCount, expectedContentCount)
+		eventTracker.AssertWaitMatchSourceData(t, eventSource, body, expectedContentCount, expectedContentCount)
 	})
 }

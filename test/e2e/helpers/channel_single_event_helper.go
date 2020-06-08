@@ -112,6 +112,6 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		)
 
 		// verify the logger service receives the event
-		eventTracker.AssertWaitMatchSourceData(t, eventRecorder, eventSource, body, 1, 1)
+		eventTracker.AssertWaitMatchSourceData(t, eventSource, body, 1, 1)
 	})
 }

@@ -137,7 +137,7 @@ func ParallelTestHelper(t *testing.T,
 				event)
 
 			// verify the logger service receives the correct transformed event
-			eventTracker.AssertWaitMatchSourceData(t, eventRecorder, eventSource, tc.expected, 1, 1)
+			eventTracker.AssertWaitMatchSourceData(t, eventSource, tc.expected, 1, 1)
 		}
 	})
 }

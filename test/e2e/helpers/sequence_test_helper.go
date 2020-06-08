@@ -143,6 +143,6 @@ func SequenceTestHelper(t *testing.T,
 		for _, config := range stepSubscriberConfigs {
 			expectedMsg += config.msgAppender
 		}
-		eventTracker.AssertWaitMatchSourceData(t, recordEventsPodName, eventSource, expectedMsg, 1, 1)
+		eventTracker.AssertWaitMatchSourceData(t, eventSource, expectedMsg, 1, 1)
 	})
 }

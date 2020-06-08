@@ -169,7 +169,7 @@ func TestApiServerSource(t *testing.T) {
 
 		if tc.expected == "" {
 			time.Sleep(10 * time.Second)
-			ev, _, err := targetTracker.Find(lib.ValidEvFunc(lib.MatchAllEvent))
+			ev, _, err := targetTracker.Find(lib.MatchEvent(lib.MatchAllEvent))
 			if err != nil {
 				t.Fatalf("Saw error looking for events: %v", err)
 			}

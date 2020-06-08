@@ -143,7 +143,7 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 		return nil
 	}
 
-	_, err = targetTracker.WaitAtLeastNMatch(lib.ValidEvFunc(matchFunc), expectedCount)
+	_, err = targetTracker.WaitAtLeastNMatch(lib.MatchEvent(matchFunc), expectedCount)
 	if err != nil {
 		t.Fatalf("Data %s, extension %q does not appear at least %d times in events of logger pod %q: %v", data, extensionSecret, expectedCount, loggerPodName, err)
 

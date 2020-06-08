@@ -46,7 +46,7 @@ type SetupInfrastructureFunc func(
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, lib.EventMatchFunc)
+) (tracinghelper.TestSpanTree, lib.EventMatcher)
 
 // TracingTestCase is the test case information for tracing tests.
 type TracingTestCase struct {
@@ -131,13 +131,13 @@ func tracingTest(
 // matches mustMatch. It is used to show that the expected event was sent to
 // the logger Pod.  It returns a list of the matching events.
 func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
-	mustMatch lib.EventMatchFunc) []lib.EventInfo {
+	mustMatch lib.EventMatcher) []lib.EventInfo {
 	targetTracker, err := client.NewEventInfoStore(recorderPodName, t.Logf)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
 	defer targetTracker.Cleanup()
-	matches, err := targetTracker.WaitAtLeastNMatch(lib.ValidEvFunc(mustMatch), 1)
+	matches, err := targetTracker.WaitAtLeastNMatch(lib.MatchEvent(mustMatch), 1)
 	if err != nil {
 		t.Fatalf("Expected messages not found: %v", err)
 	}
@@ -172,7 +172,7 @@ func setupChannelTracingWithReply(
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
+) (tracinghelper.TestSpanTree, lib.EventMatcher) {
 	// Create the Channels.
 	channelName := "ch"
 	client.CreateChannelOrFail(channelName, channel)

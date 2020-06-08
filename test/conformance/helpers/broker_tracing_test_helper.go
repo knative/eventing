@@ -82,7 +82,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client *lib.Client,
 		loggerPodName string,
 		tc TracingTestCase,
-	) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
+	) (tracinghelper.TestSpanTree, lib.EventMatcher) {
 		// Create a configmap used by the broker.
 		client.CreateBrokerConfigMapOrFail("br", channel)
 
