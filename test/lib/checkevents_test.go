@@ -250,7 +250,7 @@ func TestWaitForN(t *testing.T) {
 			}
 		}
 
-		allMatch, waitErr = ei.WaitAtLeastNMatch(ValidEvFunc(matchFunc), 2)
+		allMatch, waitErr = ei.WaitAtLeastNMatch(MatchEvent(matchFunc), 2)
 		wg.Done()
 	}()
 	var tCalls int

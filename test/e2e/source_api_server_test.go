@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudevents/sdk-go/v2/event"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -169,7 +170,10 @@ func TestApiServerSource(t *testing.T) {
 
 		if tc.expected == "" {
 			time.Sleep(10 * time.Second)
-			ev, _, err := targetTracker.Find(lib.ValidEvFunc(lib.MatchAllEvent))
+			ev, _, err := targetTracker.Find(lib.MatchEvent(func(have event.Event) error {
+				//TODO This really needs to be no-op?
+				return nil
+			}))
 			if err != nil {
 				t.Fatalf("Saw error looking for events: %v", err)
 			}

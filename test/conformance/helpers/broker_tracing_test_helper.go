@@ -23,6 +23,7 @@ import (
 
 	ce "github.com/cloudevents/sdk-go"
 	ce2 "github.com/cloudevents/sdk-go/v2"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -82,7 +83,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client *lib.Client,
 		loggerPodName string,
 		tc TracingTestCase,
-	) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
+	) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
 		// Create a configmap used by the broker.
 		client.CreateBrokerConfigMapOrFail("br", channel)
 

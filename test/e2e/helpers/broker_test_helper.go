@@ -18,14 +18,20 @@ package helpers
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
+	"github.com/google/uuid"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -33,8 +39,8 @@ const (
 	any          = v1beta1.TriggerAnyFilter
 	eventType1   = "type1"
 	eventType2   = "type2"
-	eventSource1 = "source1"
-	eventSource2 = "source2"
+	eventSource1 = "http://source1.com"
+	eventSource2 = "http://source2.com"
 	// Be careful with the length of extension name and values,
 	// we use extension name and value as a part of the name of resources like subscriber and trigger,
 	// the maximum characters allowed of resource name is 63
@@ -46,16 +52,58 @@ const (
 	nonMatchingExtensionValue = "nonmatchingextval"
 )
 
-type eventContext struct {
+type eventTestCase struct {
 	Type       string
 	Source     string
 	Extensions map[string]interface{}
 }
 
-// Helper struct to tie the type and sources of the events we expect to receive
-// in subscribers with the selectors we use when creating their pods.
-type eventReceiver struct {
-	context eventContext
+// ToString converts the test case to a string to create names for different objects (e.g., triggers, services, etc.).
+func (tc eventTestCase) String() string {
+	eventType := tc.Type
+	eventSource := tc.Source
+	extensions := tc.Extensions
+	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
+	if eventType == any {
+		eventType = "testany"
+	}
+	if eventSource == any {
+		eventSource = "testany"
+	} else {
+		u, _ := url.Parse(eventSource)
+		eventSource = strings.Split(u.Host, ".")[0]
+	}
+	name := strings.ToLower(fmt.Sprintf("%s-%s", eventType, eventSource))
+	if len(extensions) > 0 {
+		name = strings.ToLower(fmt.Sprintf("%s-%s", name, extensionsToString(extensions)))
+	}
+	return name
+}
+
+// ToEventMatcher converts the test case to the event matcher
+func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
+	var matchers []cetest.EventMatcher
+	if tc.Type == any {
+		matchers = append(matchers, cetest.ContainsAttributes(spec.Type))
+	} else {
+		matchers = append(matchers, cetest.HasType(tc.Type))
+	}
+
+	if tc.Source == any {
+		matchers = append(matchers, cetest.ContainsAttributes(spec.Source))
+	} else {
+		matchers = append(matchers, cetest.HasSource(tc.Source))
+	}
+
+	for k, v := range tc.Extensions {
+		if v == any {
+			matchers = append(matchers, cetest.ContainsExtensions(k))
+		} else {
+			matchers = append(matchers, cetest.HasExtension(k, v))
+		}
+	}
+
+	return cetest.AllOf(matchers...)
 }
 
 // BrokerCreator creates a broker and returns its broker name.
@@ -87,11 +135,12 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) Brok
 func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shouldLabelNamespace bool) {
 	tests := []struct {
 		name string
+		// These are the event context attributes and extension attributes that will be send.
+		eventsToSend []eventTestCase
 		// These are the event context attributes and extension attributes that triggers will listen to,
 		// to set in the subscriber and services pod
-		eventsToReceive []eventReceiver
-		// These are the event context attributes and extension attributes that will be send.
-		eventsToSend []eventContext
+		// The attributes in these test cases will be used as assertions on the receivers
+		eventFilters []eventTestCase
 		//TriggerFilter with DeprecatedSourceAndType or not
 		deprecatedTriggerFilter bool
 		// Use v1beta1 trigger
@@ -99,62 +148,53 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 	}{
 		{
 			name: "test default broker with many deprecated triggers",
-			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any}},
-				{eventContext{Type: eventType1, Source: any}},
-				{eventContext{Type: any, Source: eventSource1}},
-				{eventContext{Type: eventType1, Source: eventSource1}},
-			},
-			eventsToSend: []eventContext{
+			eventsToSend: []eventTestCase{
 				{Type: eventType1, Source: eventSource1},
 				{Type: eventType1, Source: eventSource2},
 				{Type: eventType2, Source: eventSource1},
 				{Type: eventType2, Source: eventSource2},
+			},
+			eventFilters: []eventTestCase{
+				{Type: any, Source: any},
+				{Type: eventType1, Source: any},
+				{Type: any, Source: eventSource1},
+				{Type: eventType1, Source: eventSource1},
 			},
 			deprecatedTriggerFilter: true,
 		}, {
 			name: "test default broker with many attribute triggers",
-			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any}},
-				{eventContext{Type: eventType1, Source: any}},
-				{eventContext{Type: any, Source: eventSource1}},
-				{eventContext{Type: eventType1, Source: eventSource1}},
-			},
-			eventsToSend: []eventContext{
+			eventsToSend: []eventTestCase{
 				{Type: eventType1, Source: eventSource1},
 				{Type: eventType1, Source: eventSource2},
 				{Type: eventType2, Source: eventSource1},
 				{Type: eventType2, Source: eventSource2},
+			},
+			eventFilters: []eventTestCase{
+				{Type: any, Source: any},
+				{Type: eventType1, Source: any},
+				{Type: any, Source: eventSource1},
+				{Type: eventType1, Source: eventSource1},
 			},
 			deprecatedTriggerFilter: false,
 		}, {
 			name: "test default broker with many attribute triggers using v1beta1 trigger",
-			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any}},
-				{eventContext{Type: eventType1, Source: any}},
-				{eventContext{Type: any, Source: eventSource1}},
-				{eventContext{Type: eventType1, Source: eventSource1}},
-			},
-			eventsToSend: []eventContext{
+			eventsToSend: []eventTestCase{
 				{Type: eventType1, Source: eventSource1},
 				{Type: eventType1, Source: eventSource2},
 				{Type: eventType2, Source: eventSource1},
 				{Type: eventType2, Source: eventSource2},
+			},
+			eventFilters: []eventTestCase{
+				{Type: any, Source: any},
+				{Type: eventType1, Source: any},
+				{Type: any, Source: eventSource1},
+				{Type: eventType1, Source: eventSource1},
 			},
 			deprecatedTriggerFilter: false,
 			v1beta1:                 true,
 		}, {
 			name: "test default broker with many attribute and extension triggers",
-			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}}},
-				{eventContext{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}}},
-				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}}},
-				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}},
-			},
-			eventsToSend: []eventContext{
+			eventsToSend: []eventTestCase{
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
@@ -163,6 +203,15 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{nonMatchingExtensionName: extensionValue1}},
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, nonMatchingExtensionName: extensionValue2}},
+			},
+			eventFilters: []eventTestCase{
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
+				{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}},
+				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 			},
 			deprecatedTriggerFilter: false,
 		},
@@ -192,137 +241,134 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 			}
 
-			// Create subscribers.
-			for _, event := range test.eventsToReceive {
-				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
-				pod := resources.EventLoggerPod(subscriberName)
-				client.CreatePodOrFail(pod, lib.WithService(subscriberName))
-			}
+			// Let's start event recorders and triggers
+			eventTrackers := make(map[string]*lib.EventInfoStore, len(test.eventFilters))
+			for _, event := range test.eventFilters {
+				// Create event recorder pod and service
+				subscriberName := "dumper-" + event.String()
+				eventRecordPod := resources.EventRecordPod(subscriberName)
+				client.CreatePodOrFail(eventRecordPod, lib.WithService(subscriberName))
+				eventTracker, err := client.NewEventInfoStore(subscriberName, t.Logf)
+				if err != nil {
+					t.Fatalf("Pod tracker failed: %v", err)
+				}
+				eventTrackers[subscriberName] = eventTracker
+				defer eventTracker.Cleanup()
 
-			// Create triggers.
-			for _, event := range test.eventsToReceive {
-				triggerName := name("trigger", event.context.Type, event.context.Source, event.context.Extensions)
-				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
+				// Create trigger.
+				triggerName := "trigger-" + event.String()
 				client.CreateTriggerOrFailV1Beta1(triggerName,
 					resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
-					resources.WithAttributesTriggerFilterV1Beta1(event.context.Source, event.context.Type, event.context.Extensions),
-					resources.WithBrokerV1Beta1(brokerName))
-
+					resources.WithAttributesTriggerFilterV1Beta1(event.Source, event.Type, event.Extensions),
+					resources.WithBrokerV1Beta1(brokerName),
+				)
 			}
-
 			// Wait for all test resources to become ready before sending the events.
 			client.WaitForAllTestResourcesReadyOrFail()
 
-			// Map to save the expected events per dumper so that we can verify the delivery.
-			expectedEvents := make(map[string][]string)
-			// Map to save the unexpected events per dumper so that we can verify that they weren't delivered.
-			unexpectedEvents := make(map[string][]string)
-			for _, eventToSend := range test.eventsToSend {
+			// Map to save the expected matchers per dumper so that we can verify the delivery.
+			expectedMatchers := make(map[string][]lib.EventInfoMatchFunc)
+			// Map to save the unexpected matchers per dumper so that we can verify that they weren't delivered.
+			unexpectedMatchers := make(map[string][]lib.EventInfoMatchFunc)
+
+			// Now we need to send events and populate the expectedMatcher/unexpectedMatchers map,
+			// in order to assert if I correctly receive only the expected events
+			for _, eventTestCase := range test.eventsToSend {
 				// Create cloud event.
 				// Using event type, source and extensions as part of the body for easier debugging.
-				extensionsStr := joinSortedExtensions(eventToSend.Extensions)
-				body := fmt.Sprintf(("Body-%s-%s-%s"), eventToSend.Type, eventToSend.Source, extensionsStr)
-				cloudEvent := cloudevents.New(
-					fmt.Sprintf(`{"msg":%q}`, body),
-					cloudevents.WithSource(eventToSend.Source),
-					cloudevents.WithType(eventToSend.Type),
-					cloudevents.WithExtensions(eventToSend.Extensions),
-				)
-				// Create sender pod.
-				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.Extensions)
-				client.SendFakeEventToAddressableOrFail(senderPodName, brokerName, lib.BrokerTypeMeta, cloudEvent)
+				eventToSend := cloudevents.NewEvent()
+				eventToSend.SetID(uuid.New().String())
+				eventToSend.SetType(eventTestCase.Type)
+				eventToSend.SetSource(eventTestCase.Source)
+				for k, v := range eventTestCase.Extensions {
+					eventToSend.SetExtension(k, v)
+				}
 
-				// Check on every dumper whether we should expect this event or not, and add its body
-				// to the expectedEvents/unexpectedEvents maps.
-				for _, eventToReceive := range test.eventsToReceive {
-					subscriberName := name("dumper", eventToReceive.context.Type, eventToReceive.context.Source, eventToReceive.context.Extensions)
-					if shouldExpectEvent(&eventToSend, &eventToReceive) {
-						expectedEvents[subscriberName] = append(expectedEvents[subscriberName], body)
+				data := fmt.Sprintf(`{"msg":"%s"}`, eventTestCase.String())
+				if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(data)); err != nil {
+					t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+				}
+
+				// Send event
+				senderPodName := "sender-" + eventTestCase.String()
+				client.SendEventToAddressable(senderPodName, brokerName, lib.BrokerTypeMeta, eventToSend)
+
+				// Sent event matcher
+				sentEventMatcher := cetest.AllOf(
+					cetest.HasId(eventToSend.ID()),
+					eventTestCase.ToEventMatcher(),
+				)
+
+				// Check on every dumper whether we should expect this event or not
+				for _, eventFilter := range test.eventFilters {
+					subscriberName := "dumper-" + eventFilter.String()
+
+					if eventFilter.ToEventMatcher()(eventToSend) == nil {
+						// This filter should match this event
+						expectedMatchers[subscriberName] = append(
+							expectedMatchers[subscriberName],
+							lib.MatchEvent(sentEventMatcher),
+						)
 					} else {
-						unexpectedEvents[subscriberName] = append(unexpectedEvents[subscriberName], body)
+						// This filter should not match this event
+						unexpectedMatchers[subscriberName] = append(
+							unexpectedMatchers[subscriberName],
+							lib.MatchEvent(sentEventMatcher),
+						)
 					}
 				}
 			}
 
-			for _, event := range test.eventsToReceive {
-				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
-				if err := client.CheckLog(subscriberName, lib.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
-					t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
+			// Let's check that all expected matchers are fulfilled
+			for subscriberName, matchers := range expectedMatchers {
+				eventTracker := eventTrackers[subscriberName]
+
+				for _, matcher := range matchers {
+					// One match per event is enough
+					eventTracker.MustWaitAtLeastNMatch(t, matcher, 1)
 				}
-				// At this point all the events should have been received in the pod.
-				// We check whether we find unexpected events. If so, then we fail.
-				found, err := client.FindAnyLogContents(subscriberName, unexpectedEvents[subscriberName])
-				if err != nil {
-					t.Fatalf("Failed querying to find log contents in pod %q: %v", subscriberName, err)
-				}
-				if found {
-					t.Fatalf("Unexpected event(s) found in logs of subscriber pod %q", subscriberName)
+			}
+
+			// Let's check the unexpected matchers
+			// NOTE: this check is not really robust because we could receive
+			// an unexpected event after the check is done
+			for subscriberName, matchers := range unexpectedMatchers {
+				eventTracker := eventTrackers[subscriberName]
+
+				for _, matcher := range matchers {
+					res, _, err := eventTracker.Find(matcher)
+					if err != nil {
+						t.Fatalf("unexpected error during find: %v", err)
+					}
+
+					if len(res) != 0 {
+						t.Fatalf("Unexpected matches on subscriber '%s', found: %v", subscriberName, res)
+					}
 				}
 			}
 		})
 	}
 }
 
-// Helper function to create names for different objects (e.g., triggers, services, etc.).
-func name(obj, eventType, eventSource string, extensions map[string]interface{}) string {
-	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
-	if eventType == "" {
-		eventType = "testany"
+func extensionsToString(extensions map[string]interface{}) string {
+	// Sort extension keys
+	sortedExtensionNames := make([]string, 0)
+	for k := range extensions {
+		sortedExtensionNames = append(sortedExtensionNames, k)
 	}
-	if eventSource == "" {
-		eventSource = "testany"
-	}
-	name := strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
-	if len(extensions) > 0 {
-		name = strings.ToLower(fmt.Sprintf("%s-%s", name, joinSortedExtensions(extensions)))
-	}
-	return name
-}
+	sort.Strings(sortedExtensionNames)
 
-func joinSortedExtensions(extensions map[string]interface{}) string {
+	// Write map as string
 	var sb strings.Builder
-	sortedExtensionNames := sortedKeys(extensions)
 	for _, sortedExtensionName := range sortedExtensionNames {
 		sb.WriteString("-")
 		sb.WriteString(sortedExtensionName)
 		sb.WriteString("-")
 		vStr := fmt.Sprintf("%v", extensions[sortedExtensionName])
-		if vStr == "" {
+		if vStr == any {
 			vStr = "testany"
 		}
 		sb.WriteString(vStr)
 	}
 	return sb.String()
-}
-
-func sortedKeys(m map[string]interface{}) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-// Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.
-func shouldExpectEvent(eventToSend *eventContext, receiver *eventReceiver) bool {
-	if receiver.context.Type != any && receiver.context.Type != eventToSend.Type {
-		return false
-	}
-	if receiver.context.Source != any && receiver.context.Source != eventToSend.Source {
-		return false
-	}
-	for k, v := range receiver.context.Extensions {
-		var value interface{}
-		value, ok := eventToSend.Extensions[k]
-		// If the attribute does not exist in the event, return false.
-		if !ok {
-			return false
-		}
-		// If the attribute is not set to any and is different than the one from the event, return false.
-		if v != any && v != value {
-			return false
-		}
-	}
-	return true
 }

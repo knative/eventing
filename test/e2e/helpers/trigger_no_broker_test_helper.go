@@ -35,7 +35,7 @@ func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreat
 	client := lib.Setup(t, true)
 	defer lib.TearDown(client)
 	brokerName := strings.ToLower(channel)
-	subscriberName := name("dumper", "", "", map[string]interface{}{})
+	subscriberName := "dumper-empty"
 	pod := resources.EventLoggerPod(subscriberName)
 	client.CreatePodOrFail(pod, lib.WithService(subscriberName))
 	client.CreateTriggerOrFailV1Beta1("testtrigger",

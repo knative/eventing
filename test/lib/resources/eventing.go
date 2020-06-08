@@ -207,8 +207,16 @@ func BrokerV1Beta1(name string, options ...BrokerV1Beta1Option) *eventingv1beta1
 // WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
 func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extensions map[string]interface{}) TriggerOptionV1Beta1 {
 	attrs := make(map[string]string)
-	attrs["type"] = eventType
-	attrs["source"] = eventSource
+	if eventType != "" {
+		attrs["type"] = eventType
+	} else {
+		attrs["type"] = eventingv1beta1.TriggerAnyFilter
+	}
+	if eventSource != "" {
+		attrs["source"] = eventSource
+	} else {
+		attrs["source"] = eventingv1beta1.TriggerAnyFilter
+	}
 	for k, v := range extensions {
 		attrs[k] = fmt.Sprintf("%v", v)
 	}

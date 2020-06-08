@@ -153,7 +153,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	client.SendEventToAddressable(senderName, channelName, lib.ChannelTypeMeta, event)
 
 	// verify the logger service receives the event
-	eventTracker.AssertWaitMatchSourceData(t, recordEventsPodName, eventSource, body, 1, 1)
+	eventTracker.AssertWaitMatchSourceData(t, eventSource, body, 1, 1)
 }
 
 // updateDefaultChannelCM will update the default channel configmap

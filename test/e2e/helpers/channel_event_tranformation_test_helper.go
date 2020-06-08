@@ -105,7 +105,6 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
 		eventTracker.AssertWaitMatchSourceData(
 			t,
-			recordEventsPodName,
 			eventSource,
 			transformedEventBody,
 			expectedContentCount,

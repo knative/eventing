@@ -83,6 +83,6 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 
 		// check if the logging service receives the correct number of event messages
 		expectedContentCount := len(subscriptionNames)
-		eventTracker.AssertWaitMatchSourceData(t, recordEventsPodName, eventSource, body, expectedContentCount, expectedContentCount)
+		eventTracker.AssertWaitMatchSourceData(t, eventSource, body, expectedContentCount, expectedContentCount)
 	})
 }

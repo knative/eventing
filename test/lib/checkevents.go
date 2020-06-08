@@ -24,6 +24,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"knative.dev/pkg/test/logging"
@@ -39,7 +40,8 @@ const (
 // This pulls events from the pod during any Find or Wait call, storing them
 // locally and triming them from the remote pod store.
 type EventInfoStore struct {
-	getter eventGetterInterface
+	podName string
+	getter  eventGetterInterface
 
 	lock          sync.Mutex
 	allEvents     []EventInfo
@@ -84,6 +86,7 @@ func (c *Client) NewEventInfoStore(podName string, logf logging.FormatLogger) (*
 		return nil, err
 	}
 	ei := newTestableEventInfoStore(egi, -1, -1)
+	ei.podName = podName
 	return ei, nil
 }
 
@@ -198,15 +201,15 @@ func (ei *EventInfoStore) Find(f EventInfoMatchFunc) ([]EventInfo, SearchedInfo,
 	return allMatch, sInfo, nil
 }
 
-// Convert a boolean check function that checks valid messages to a function
-// that checks EventInfo structures, returning false for any that don't
+// Convert a matcher that checks valid messages to a function
+// that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
-func ValidEvFunc(evf EventMatchFunc) EventInfoMatchFunc {
+func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatchFunc {
 	return func(ei EventInfo) error {
 		if ei.Event == nil {
 			return fmt.Errorf("Saw nil event")
 		} else {
-			return evf(*ei.Event)
+			return cetest.AllOf(evf...)(*ei.Event)
 		}
 	}
 }
@@ -214,7 +217,7 @@ func ValidEvFunc(evf EventMatchFunc) EventInfoMatchFunc {
 // Wait a long time (currently 4 minutes) until the provided function matches at least
 // five events.  The matching events are returned if we find at least n.  If the
 // function times out, an error is returned.
-func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]EventInfo, error) {
+func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, min int) ([]EventInfo, error) {
 	var matchRet []EventInfo
 	var internalErr error
 
@@ -225,9 +228,9 @@ func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]Even
 			return false, nil
 		}
 		count := len(allMatch)
-		if count < n {
+		if count < min {
 			internalErr = fmt.Errorf("FAIL MATCHING: saw %d/%d matching events. recent events: (%s)",
-				count, n, &sInfo)
+				count, min, &sInfo)
 			return false, nil
 		}
 		matchRet = allMatch
@@ -263,7 +266,7 @@ func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCou
 		}
 	}
 	// verify the logger service receives the event and only once
-	match, err := ei.WaitAtLeastNMatch(ValidEvFunc(matchFunc), minCount)
+	match, err := ei.WaitAtLeastNMatch(MatchEvent(matchFunc), minCount)
 	if err != nil {
 		return fmt.Errorf("error waiting for event: %v", err)
 	}
@@ -273,18 +276,11 @@ func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCou
 	return nil
 }
 
-func (ei *EventInfoStore) AssertWaitMatchSourceData(tb testing.TB, eventRecord string, source string, data string, minCount int, maxCount int) {
+func (ei *EventInfoStore) AssertWaitMatchSourceData(tb testing.TB, source string, data string, minCount int, maxCount int) {
 	if err := ei.WaitMatchSourceData(source, data, minCount, maxCount); err != nil {
-		tb.Fatalf("Timeout waiting for source %q and data %q. It does not appear at least %d times in the event record pod %q: %v", source, data, minCount, eventRecord, err)
+		tb.Fatalf("Timeout waiting for source %q and data %q. It does not appear at least %d times in the event record pod %q: %v", source, data, minCount, ei.podName, err)
 	}
 }
 
 // Does the provided EventInfo match some criteria
 type EventInfoMatchFunc func(EventInfo) error
-
-// Does the provided event match some criteria
-type EventMatchFunc func(cloudevents.Event) error
-
-func MatchAllEvent(cloudevents.Event) error {
-	return nil
-}
