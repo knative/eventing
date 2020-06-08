@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -91,7 +92,7 @@ func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
 	if tc.Source == any {
 		matchers = append(matchers, cetest.ContainsAttributes(spec.Source))
 	} else {
-		matchers = append(matchers, cetest.HasType(tc.Source))
+		matchers = append(matchers, cetest.HasSource(tc.Source))
 	}
 
 	for k, v := range tc.Extensions {
