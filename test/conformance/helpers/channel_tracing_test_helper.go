@@ -185,7 +185,7 @@ func setupChannelTracingWithReply(
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// Create the subscriber, a Pod that mutates the event.
-	transformerPod := resources.EventTransformationPod("transformer", &cloudevents.CloudEvent{
+	transformerPod := resources.DeprecatedEventTransformationPod("transformer", &cloudevents.CloudEvent{
 		EventContextV1: ce.EventContextV1{
 			Type: "mutated",
 		},

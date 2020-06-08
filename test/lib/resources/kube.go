@@ -132,8 +132,8 @@ func eventLoggerPod(imageName string, name string) *corev1.Pod {
 	}
 }
 
-// EventTransformationPod creates a Pod that transforms events received.
-func EventTransformationPod(name string, event *cetest.CloudEvent) *corev1.Pod {
+// DeprecatedEventTransformationPod creates a Pod that transforms events received.
+func DeprecatedEventTransformationPod(name string, event *cetest.CloudEvent) *corev1.Pod {
 	const imageName = "transformevents"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -159,10 +159,9 @@ func EventTransformationPod(name string, event *cetest.CloudEvent) *corev1.Pod {
 	}
 }
 
-// EventTransformationPodV2 creates a Pod that transforms events received receiving as arg a cloudevents sdk2 Event
-// TODO(nlopezgi): remove EventTransformationPod above and rename this method to
-// EventTransformationPod once other tests that use sdk1 and depend on this method are migrated.
-func EventTransformationPodV2(name string, event *cloudevents.Event) *corev1.Pod {
+// EventTransformationPod creates a Pod that transforms events received receiving as arg a cloudevents sdk2 Event
+// TODO(nlopezgi): remove DeprecatedEventTransformationPod above once other tests that use sdk1 and depend on this method are migrated.
+func EventTransformationPod(name string, event cloudevents.Event) *corev1.Pod {
 	const imageName = "transformevents"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{

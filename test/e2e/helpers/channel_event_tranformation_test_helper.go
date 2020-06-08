@@ -34,6 +34,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 	options ...lib.SetupClientOption) {
 	senderName := "e2e-eventtransformation-sender"
 	channelNames := []string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
+	eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
 	subscriptionNames1 := []string{"e2e-eventtransformation-subs11", "e2e-eventtransformation-subs12"}
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
@@ -52,14 +53,13 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		// create transformation pod and service
 		eventAfterTransformation := cloudevents.NewEvent()
 		eventAfterTransformation.SetID("dummy-transformed")
-		eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 		eventAfterTransformation.SetSource(eventSource)
 		eventAfterTransformation.SetType(lib.DefaultEventType)
 		transformedEventBody := fmt.Sprintf(`{"msg":"eventBody %s"}`, uuid.New().String())
 		if err := eventAfterTransformation.SetData(cloudevents.ApplicationJSON, []byte(transformedEventBody)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
-		transformationPod := resources.EventTransformationPodV2(transformationPodName, &eventAfterTransformation)
+		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
 		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create event logger pod and service as the subscriber
