@@ -18,6 +18,7 @@ package helpers
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"testing"
@@ -67,6 +68,9 @@ func (tc eventTestCase) String() string {
 	}
 	if eventSource == any {
 		eventSource = "testany"
+	} else {
+		u, _ := url.Parse(eventSource)
+		eventSource = strings.Split(u.Host, ".")[0]
 	}
 	name := strings.ToLower(fmt.Sprintf("%s-%s", eventType, eventSource))
 	if len(extensions) > 0 {
