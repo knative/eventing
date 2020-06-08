@@ -47,7 +47,7 @@ func gotEvent(event cloudevents.Event) (*cloudevents.Event, error) {
 	data["msg"] = data["msg"].(string) + eventMsgAppender
 	if eventData, err := json.Marshal(&data); err != nil {
 		return nil, err
-	} else if err := outputEvent.SetData(cloudevents.ApplicationJSON, []byte(eventData)); err != nil {
+	} else if err := outputEvent.SetData(cloudevents.ApplicationJSON, eventData); err != nil {
 		return nil, err
 	}
 

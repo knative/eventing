@@ -44,7 +44,7 @@ func AwaitForAll(log *zap.SugaredLogger) error {
 			log.Infof("Wait for %s", w.name)
 			before := time.Now()
 			err := w.routine()
-			took := time.Now().Sub(before)
+			took := time.Since(before)
 			if err != nil {
 				log.Errorf("Error while waiting for %s: %v", w.name, err)
 			} else {
