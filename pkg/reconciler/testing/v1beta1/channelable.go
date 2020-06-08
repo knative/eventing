@@ -98,7 +98,7 @@ func WithChannelableStatusSubscribers(subscriberStatuses []duckv1beta1.Subscribe
 
 func WithChannelableReady() ChannelableOption {
 	return func(c *v1alpha1.Channelable) {
-		c.Status.Conditions = []apis.Condition{apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}}
+		c.Status.Conditions = []apis.Condition{{Type: apis.ConditionReady, Status: corev1.ConditionTrue}}
 	}
 }
 
