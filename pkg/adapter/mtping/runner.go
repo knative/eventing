@@ -63,8 +63,8 @@ func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string) (
 	ctx = cloudevents.ContextWithTarget(ctx, sink)
 
 	// Simple retry configuration to be less than 1mn.
-	// We might want to retry more time for less-frequent schedule.
-	ctx = cloudevents.ContextWithRetriesLinearBackoff(ctx, 500*time.Millisecond, 3)
+	// We might want to retry more times for less-frequent schedule.
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
 
 	metricTag := &kncloudevents.MetricTag{
 		Namespace:     namespace,
