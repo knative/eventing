@@ -11,7 +11,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 )
 
-// TODO(slinkydeveloper) this code is temporarly took from
+// TODO(slinkydeveloper) this code is temporary took from
 // https://github.com/cloudevents/sdk-go/blob/master/v2/test/event_matchers.go
 // It will be removed as soon as we update sdk-go to latest version that includes such matchers
 // LICENSE: Apache 2.0 License, CloudEvents authors
