@@ -76,7 +76,7 @@ func TestBrokerWithConfig(t *testing.T,
 		)
 
 		// create the transformation service for trigger1
-		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
+		transformationPod := resources.DeprecatedEventTransformationPod(transformationPodName, eventAfterTransformation)
 		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create trigger1 to receive the original event, and do event transformation

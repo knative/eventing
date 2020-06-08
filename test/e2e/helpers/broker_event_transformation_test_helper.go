@@ -71,7 +71,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 		)
 
 		// create the transformation service
-		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
+		transformationPod := resources.DeprecatedEventTransformationPod(transformationPodName, eventAfterTransformation)
 		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create trigger1 for event transformation

@@ -106,7 +106,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 
 		// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
 		// except the reply's event's type is changed to bar.
-		eventTransformerPod := resources.EventTransformationPod("transformer", &cloudevents.CloudEvent{
+		eventTransformerPod := resources.DeprecatedEventTransformationPod("transformer", &cloudevents.CloudEvent{
 			EventContextV1: ce.EventContextV1{
 				Type: etLogger,
 			},
