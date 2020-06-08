@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"knative.dev/eventing/pkg/apis/eventing"
