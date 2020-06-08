@@ -96,13 +96,6 @@ const (
 apiVersion: "messaging.knative.dev/v1beta1"
 kind: "InMemoryChannel"
 `
-	kafkaSpec = `
-apiVersion: "messaging.knative.dev/v1beta1"
-kind: "KafkaChannel"
-spec:
-  numPartitions: 3
-  replicationFactor: 1
-`
 )
 
 var (
@@ -1206,18 +1199,6 @@ func imcConfigMap() *corev1.ConfigMap {
 		WithConfigMapData(map[string]string{"channelTemplateSpec": imcSpec}))
 }
 
-func kafkaConfigMap() *corev1.ConfigMap {
-	return NewConfigMap(configMapName, testNS,
-		WithConfigMapData(map[string]string{"channelTemplateSpec": kafkaSpec}))
-}
-
-func channel() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: "messaging.knative.dev/v1beta1",
-		Kind:       "InMemoryChannel",
-	}
-}
-
 func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	var labels map[string]interface{}
 	var annotations map[string]interface{}
@@ -1289,15 +1270,12 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 }
 
 func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
-	var labels map[string]interface{}
-	var annotations map[string]interface{}
-	var name string
-	name = fmt.Sprintf("%s-kne-trigger", brokerName)
-	labels = map[string]interface{}{
+	name := fmt.Sprintf("%s-kne-trigger", brokerName)
+	labels := map[string]interface{}{
 		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
-	annotations = map[string]interface{}{
+	annotations := map[string]interface{}{
 		"eventing.knative.dev/scope": "cluster",
 	}
 

@@ -91,13 +91,13 @@ func (p *prober) deployConfigMap() {
 			return err
 		}
 		configData := p.compileTemplate(configFilename, brokerUrl)
-		data := make(map[string]string, 0)
-		data[configFilename] = configData
 		watholaConfigMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
-			Data: data,
+			Data: map[string]string{
+				configFilename: configData,
+			},
 		}
 		_, err = p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).Create(watholaConfigMap)
 		if err != nil {
