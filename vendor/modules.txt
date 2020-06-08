@@ -91,7 +91,7 @@ github.com/cloudevents/sdk-go/pkg/cloudevents/observability
 github.com/cloudevents/sdk-go/pkg/cloudevents/transport
 github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http
 github.com/cloudevents/sdk-go/pkg/cloudevents/types
-# github.com/cloudevents/sdk-go/v2 v2.0.0
+# github.com/cloudevents/sdk-go/v2 v2.0.1-0.20200608152019-2ab697c8fc0b
 ## explicit
 github.com/cloudevents/sdk-go/v2
 github.com/cloudevents/sdk-go/v2/binding

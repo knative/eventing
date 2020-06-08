@@ -26,6 +26,7 @@ import (
 
 	ce "github.com/cloudevents/sdk-go"
 	ce2 "github.com/cloudevents/sdk-go/v2"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/openzipkin/zipkin-go/model"
 	"go.opentelemetry.io/otel/api/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,7 @@ type SetupInfrastructureFunc func(
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, lib.EventMatcher)
+) (tracinghelper.TestSpanTree, cetest.EventMatcher)
 
 // TracingTestCase is the test case information for tracing tests.
 type TracingTestCase struct {
@@ -131,7 +132,7 @@ func tracingTest(
 // matches mustMatch. It is used to show that the expected event was sent to
 // the logger Pod.  It returns a list of the matching events.
 func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
-	mustMatch lib.EventMatcher) []lib.EventInfo {
+	mustMatch cetest.EventMatcher) []lib.EventInfo {
 	targetTracker, err := client.NewEventInfoStore(recorderPodName, t.Logf)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
@@ -172,7 +173,7 @@ func setupChannelTracingWithReply(
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, lib.EventMatcher) {
+) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
 	// Create the Channels.
 	channelName := "ch"
 	client.CreateChannelOrFail(channelName, channel)

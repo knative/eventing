@@ -24,6 +24,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,29 +76,29 @@ func (tc eventTestCase) String() string {
 }
 
 // ToEventMatcher converts the test case to the event matcher
-func (tc eventTestCase) ToEventMatcher() lib.EventMatcher {
-	var matchers []lib.EventMatcher
+func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
+	var matchers []cetest.EventMatcher
 	if tc.Type == any {
-		matchers = append(matchers, lib.ContainsAttributes(spec.Type))
+		matchers = append(matchers, cetest.ContainsAttributes(spec.Type))
 	} else {
-		matchers = append(matchers, lib.HasType(tc.Type))
+		matchers = append(matchers, cetest.HasType(tc.Type))
 	}
 
 	if tc.Source == any {
-		matchers = append(matchers, lib.ContainsAttributes(spec.Source))
+		matchers = append(matchers, cetest.ContainsAttributes(spec.Source))
 	} else {
-		matchers = append(matchers, lib.HasType(tc.Source))
+		matchers = append(matchers, cetest.HasType(tc.Source))
 	}
 
 	for k, v := range tc.Extensions {
 		if v == any {
-			matchers = append(matchers, lib.ContainsExtensions(k))
+			matchers = append(matchers, cetest.ContainsExtensions(k))
 		} else {
-			matchers = append(matchers, lib.HasExtension(k, v))
+			matchers = append(matchers, cetest.HasExtension(k, v))
 		}
 	}
 
-	return lib.AllOf(matchers...)
+	return cetest.AllOf(matchers...)
 }
 
 // BrokerCreator creates a broker and returns its broker name.
@@ -288,8 +289,8 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				client.SendEventToAddressable(senderPodName, brokerName, lib.BrokerTypeMeta, eventToSend)
 
 				// Sent event matcher
-				sentEventMatcher := lib.AllOf(
-					lib.HasId(eventToSend.ID()),
+				sentEventMatcher := cetest.AllOf(
+					cetest.HasId(eventToSend.ID()),
 					eventTestCase.ToEventMatcher(),
 				)
 

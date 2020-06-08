@@ -24,6 +24,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"knative.dev/pkg/test/logging"
@@ -203,12 +204,12 @@ func (ei *EventInfoStore) Find(f EventInfoMatchFunc) ([]EventInfo, SearchedInfo,
 // Convert a matcher that checks valid messages to a function
 // that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
-func MatchEvent(evf ...EventMatcher) EventInfoMatchFunc {
+func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatchFunc {
 	return func(ei EventInfo) error {
 		if ei.Event == nil {
 			return fmt.Errorf("Saw nil event")
 		} else {
-			return AllOf(evf...)(*ei.Event)
+			return cetest.AllOf(evf...)(*ei.Event)
 		}
 	}
 }
