@@ -27,6 +27,7 @@ import (
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -90,7 +91,7 @@ func ParallelTestHelper(t *testing.T,
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
 			eventRecordPod := resources.EventRecordPod(eventRecorder)
 			client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
-			eventTracker, err := client.NewEventInfoStore(eventRecorder, t.Logf)
+			eventTracker, err := recordevents.NewEventInfoStore(client, eventRecorder)
 			if err != nil {
 				t.Fatalf("Pod tracker failed: %v", err)
 			}

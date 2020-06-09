@@ -23,7 +23,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 )
 
 // Number of EventInfo per block
@@ -74,7 +74,7 @@ func (es *eventStore) checkAppendBlock() {
 
 // Store the specified event.
 func (es *eventStore) StoreEvent(event *cloudevents.Event, evErr error, httpHeaders map[string][]string) {
-	var evInfo lib.EventInfo
+	var evInfo recordevents.EventInfo
 	var err error
 	var evInfoBytes []byte
 	if evErr != nil {

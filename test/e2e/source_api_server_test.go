@@ -28,12 +28,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestApiServerSource(t *testing.T) {
@@ -144,7 +146,7 @@ func TestApiServerSource(t *testing.T) {
 
 		loggerPod := resources.EventRecordPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-		targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+		targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
 		if err != nil {
 			t.Fatalf("Pod tracker failed: %v", err)
 		}
@@ -170,7 +172,7 @@ func TestApiServerSource(t *testing.T) {
 
 		if tc.expected == "" {
 			time.Sleep(10 * time.Second)
-			ev, _, err := targetTracker.Find(lib.MatchEvent(func(have event.Event) error {
+			ev, _, err := targetTracker.Find(recordevents.MatchEvent(func(have event.Event) error {
 				//TODO This really needs to be no-op?
 				return nil
 			}))

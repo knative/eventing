@@ -23,10 +23,10 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 )
 
-func helperGetEvInfo(es *eventStore, entry int) (*lib.EventInfo, error) {
+func helperGetEvInfo(es *eventStore, entry int) (*recordevents.EventInfo, error) {
 	evInfoBytes, err := es.GetEventInfoBytes(entry)
 	if err != nil {
 		return nil, fmt.Errorf("error calling get on item %d: %v", entry, err)
@@ -35,7 +35,7 @@ func helperGetEvInfo(es *eventStore, entry int) (*lib.EventInfo, error) {
 		return nil, fmt.Errorf("empty info bytes")
 	}
 
-	var evInfo lib.EventInfo
+	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling stored JSON: %v", err)
@@ -137,7 +137,7 @@ func TestAddGetSingleValid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error calling get: %v", err)
 	}
-	var evInfo lib.EventInfo
+	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
 		t.Fatalf("Error unmarshalling stored JSON: %v", err)
@@ -191,7 +191,7 @@ func TestAddGetSingleInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error calling get: %v", err)
 	}
-	var evInfo lib.EventInfo
+	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
 		t.Fatalf("Error unmarshalling stored JSON: %v", err)
@@ -232,7 +232,7 @@ func TestAddGetSingleInvalidError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error calling get: %v", err)
 	}
-	var evInfo lib.EventInfo
+	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
 		t.Fatalf("Error unmarshalling stored JSON: %v", err)

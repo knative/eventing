@@ -25,6 +25,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/resources/sender"
 )
@@ -62,7 +63,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		// create event logger pod and service
 		eventRecordPod := resources.EventRecordPod(eventRecorder)
 		client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
-		eventTracker, err := client.NewEventInfoStore(eventRecorder, t.Logf)
+		eventTracker, err := recordevents.NewEventInfoStore(client, eventRecorder)
 		if err != nil {
 			t.Fatalf("Pod tracker failed: %v", err)
 		}

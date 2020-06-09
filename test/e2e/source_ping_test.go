@@ -23,6 +23,7 @@ import (
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	"knative.dev/eventing/test/lib/recordevents"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -50,7 +51,7 @@ func TestPingSourceV1Alpha1(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
@@ -93,7 +94,7 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
@@ -139,7 +140,7 @@ func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}

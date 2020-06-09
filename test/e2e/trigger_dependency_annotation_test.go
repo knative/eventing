@@ -29,6 +29,7 @@ import (
 	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
 )
@@ -60,7 +61,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	// Create subscribers.
 	loggerPod := resources.EventRecordPod(subscriberName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(subscriberName))
-	targetTracker, err := client.NewEventInfoStore(subscriberName, t.Logf)
+	targetTracker, err := recordevents.NewEventInfoStore(client, subscriberName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}

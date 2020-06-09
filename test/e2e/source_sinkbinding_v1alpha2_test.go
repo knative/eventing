@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -56,7 +57,7 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
@@ -143,7 +144,7 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 		return nil
 	}
 
-	_, err = targetTracker.WaitAtLeastNMatch(lib.MatchEvent(matchFunc), expectedCount)
+	_, err = targetTracker.WaitAtLeastNMatch(recordevents.MatchEvent(matchFunc), expectedCount)
 	if err != nil {
 		t.Fatalf("Data %s, extension %q does not appear at least %d times in events of logger pod %q: %v", data, extensionSecret, expectedCount, loggerPodName, err)
 
@@ -166,7 +167,7 @@ func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}

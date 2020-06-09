@@ -36,6 +36,7 @@ import (
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -132,13 +133,13 @@ func tracingTest(
 // matches mustMatch. It is used to show that the expected event was sent to
 // the logger Pod.  It returns a list of the matching events.
 func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
-	mustMatch cetest.EventMatcher) []lib.EventInfo {
-	targetTracker, err := client.NewEventInfoStore(recorderPodName, t.Logf)
+	mustMatch cetest.EventMatcher) []recordevents.EventInfo {
+	targetTracker, err := recordevents.NewEventInfoStore(client, recorderPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
 	defer targetTracker.Cleanup()
-	matches, err := targetTracker.WaitAtLeastNMatch(lib.MatchEvent(mustMatch), 1)
+	matches, err := targetTracker.WaitAtLeastNMatch(recordevents.MatchEvent(mustMatch), 1)
 	if err != nil {
 		t.Fatalf("Expected messages not found: %v", err)
 	}
@@ -148,7 +149,7 @@ func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
 // getTraceIDHeader gets the TraceID from the passed in events.  It returns the header from the
 // first matching event, but registers a fatal error if more than one traceid header is seen
 // in that message.
-func getTraceIDHeader(t *testing.T, evInfos []lib.EventInfo) string {
+func getTraceIDHeader(t *testing.T, evInfos []recordevents.EventInfo) string {
 	for i := range evInfos {
 		if nil != evInfos[i].HTTPHeaders {
 			sc := trace.RemoteSpanContextFromContext(trace.DefaultHTTPPropagator().Extract(context.TODO(), http.Header(evInfos[i].HTTPHeaders)))

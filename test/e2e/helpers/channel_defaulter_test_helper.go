@@ -32,6 +32,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	reconciler "knative.dev/pkg/reconciler"
 )
@@ -97,7 +98,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	// create event logger pod and service as the subscriber
 	recordEventsPod := resources.EventRecordPod(recordEventsPodName)
 	client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-	eventTracker, err := client.NewEventInfoStore(recordEventsPodName, t.Logf)
+	eventTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
