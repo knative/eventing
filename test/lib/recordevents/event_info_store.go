@@ -243,7 +243,7 @@ func (ei *EventInfoStore) MustWaitAtLeastNMatch(t testing.TB, f EventInfoMatcher
 // Wait for at least minCount events with source exactly matching source and data contained within the event
 // data field.  If source is the empty string, don't check the source.  If maxCount is >0, return an error
 // if more than maxCount entries are seen.
-// Deprecated: use AssertAtMost
+// Deprecated: use AssertInRange
 func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCount int, maxCount int) error {
 	matchFunc := func(ev cloudevents.Event) error {
 		if source != "" && ev.Source() != source {
@@ -268,7 +268,7 @@ func (ei *EventInfoStore) WaitMatchSourceData(source string, data string, minCou
 	return nil
 }
 
-// Deprecated: use AssertAtMost
+// Deprecated: use AssertInRange
 func (ei *EventInfoStore) AssertWaitMatchSourceData(tb testing.TB, source string, data string, minCount int, maxCount int) {
 	if err := ei.WaitMatchSourceData(source, data, minCount, maxCount); err != nil {
 		tb.Fatalf("Timeout waiting for source %q and data %q. It does not appear at least %d times in the event record pod %q: %v", source, data, minCount, ei.podName, err)
@@ -287,7 +287,7 @@ func (ei *EventInfoStore) AssertAtLeast(min int, f EventInfoMatcher) []EventInfo
 
 // Assert that there are at least min number of matches and at most max number of matches of f.
 // This method fails the test if the assert is not fulfilled.
-func (ei *EventInfoStore) AssertAtMost(min int, max int, f EventInfoMatcher) []EventInfo {
+func (ei *EventInfoStore) AssertInRange(min int, max int, f EventInfoMatcher) []EventInfo {
 	events := ei.AssertAtLeast(min, f)
 	if max > 0 && len(events) > max {
 		ei.tb.Fatalf("expected <= %d events, saw %d", max, len(events))
@@ -314,5 +314,5 @@ func (ei *EventInfoStore) AssertNot(f EventInfoMatcher) []EventInfo {
 // Assert that there are exactly n matches of f.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertExact(n int, f EventInfoMatcher) []EventInfo {
-	return ei.AssertAtMost(n, n, f)
+	return ei.AssertInRange(n, n, f)
 }
