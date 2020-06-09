@@ -56,7 +56,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := client.NewEventInfoStore(t, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 	// create event logger pod and service
 	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+	targetTracker, err := client.NewEventInfoStore(t, loggerPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}

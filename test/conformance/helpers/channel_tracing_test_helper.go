@@ -133,7 +133,7 @@ func tracingTest(
 // the logger Pod.  It returns a list of the matching events.
 func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
 	mustMatch cetest.EventMatcher) []lib.EventInfo {
-	targetTracker, err := client.NewEventInfoStore(recorderPodName, t.Logf)
+	targetTracker, err := client.NewEventInfoStore(t, recorderPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}

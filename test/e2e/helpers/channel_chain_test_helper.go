@@ -54,7 +54,7 @@ func ChannelChainTestHelper(t *testing.T,
 		// create loggerPod and expose it as a service
 		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
 		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-		eventTracker, err := client.NewEventInfoStore(recordEventsPodName, t.Logf)
+		eventTracker, err := client.NewEventInfoStore(t, recordEventsPodName)
 		if err != nil {
 			t.Fatalf("Pod tracker failed: %v", err)
 		}

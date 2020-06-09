@@ -62,7 +62,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		// create event logger pod and service
 		eventRecordPod := resources.EventRecordPod(eventRecorder)
 		client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
-		eventTracker, err := client.NewEventInfoStore(eventRecorder, t.Logf)
+		eventTracker, err := client.NewEventInfoStore(t, eventRecorder)
 		if err != nil {
 			t.Fatalf("Pod tracker failed: %v", err)
 		}

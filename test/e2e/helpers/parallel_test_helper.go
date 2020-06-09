@@ -90,7 +90,7 @@ func ParallelTestHelper(t *testing.T,
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
 			eventRecordPod := resources.EventRecordPod(eventRecorder)
 			client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
-			eventTracker, err := client.NewEventInfoStore(eventRecorder, t.Logf)
+			eventTracker, err := client.NewEventInfoStore(t, eventRecorder)
 			if err != nil {
 				t.Fatalf("Pod tracker failed: %v", err)
 			}

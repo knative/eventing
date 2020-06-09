@@ -65,7 +65,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		// create event logger pod and service as the subscriber
 		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
 		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-		eventTracker, err := client.NewEventInfoStore(recordEventsPodName, t.Logf)
+		eventTracker, err := client.NewEventInfoStore(t, recordEventsPodName)
 		if err != nil {
 			t.Fatalf("Pod tracker failed: %v", err)
 		}

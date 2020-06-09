@@ -144,7 +144,7 @@ func TestApiServerSource(t *testing.T) {
 
 		loggerPod := resources.EventRecordPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-		targetTracker, err := client.NewEventInfoStore(loggerPodName, t.Logf)
+		targetTracker, err := client.NewEventInfoStore(t, loggerPodName)
 		if err != nil {
 			t.Fatalf("Pod tracker failed: %v", err)
 		}

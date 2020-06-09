@@ -248,7 +248,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				subscriberName := "dumper-" + event.String()
 				eventRecordPod := resources.EventRecordPod(subscriberName)
 				client.CreatePodOrFail(eventRecordPod, lib.WithService(subscriberName))
-				eventTracker, err := client.NewEventInfoStore(subscriberName, t.Logf)
+				eventTracker, err := client.NewEventInfoStore(t, subscriberName)
 				if err != nil {
 					t.Fatalf("Pod tracker failed: %v", err)
 				}
@@ -267,9 +267,9 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			client.WaitForAllTestResourcesReadyOrFail()
 
 			// Map to save the expected matchers per dumper so that we can verify the delivery.
-			expectedMatchers := make(map[string][]lib.EventInfoMatchFunc)
+			expectedMatchers := make(map[string][]lib.EventInfoMatcher)
 			// Map to save the unexpected matchers per dumper so that we can verify that they weren't delivered.
-			unexpectedMatchers := make(map[string][]lib.EventInfoMatchFunc)
+			unexpectedMatchers := make(map[string][]lib.EventInfoMatcher)
 
 			// Now we need to send events and populate the expectedMatcher/unexpectedMatchers map,
 			// in order to assert if I correctly receive only the expected events
@@ -325,7 +325,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 
 				for _, matcher := range matchers {
 					// One match per event is enough
-					eventTracker.MustWaitAtLeastNMatch(t, matcher, 1)
+					eventTracker.AssertAtLeast(1, matcher)
 				}
 			}
 
@@ -336,14 +336,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				eventTracker := eventTrackers[subscriberName]
 
 				for _, matcher := range matchers {
-					res, _, err := eventTracker.Find(matcher)
-					if err != nil {
-						t.Fatalf("unexpected error during find: %v", err)
-					}
-
-					if len(res) != 0 {
-						t.Fatalf("Unexpected matches on subscriber '%s', found: %v", subscriberName, res)
-					}
+					eventTracker.AssertNot(matcher)
 				}
 			}
 		})

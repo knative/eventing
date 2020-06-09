@@ -60,7 +60,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	// Create subscribers.
 	loggerPod := resources.EventRecordPod(subscriberName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(subscriberName))
-	targetTracker, err := client.NewEventInfoStore(subscriberName, t.Logf)
+	targetTracker, err := client.NewEventInfoStore(t, subscriberName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
