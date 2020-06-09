@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgTest "knative.dev/pkg/test"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "knative.dev/eventing/test/lib/cloudevents"
 )
 
@@ -133,6 +132,8 @@ func eventLoggerPod(imageName string, name string) *corev1.Pod {
 }
 
 // DeprecatedEventTransformationPod creates a Pod that transforms events received.
+// Deprecated: Use EventTransformationPod
+// TODO(nlopezgi): remove once other tests that use sdk1 and depend on this method are migrated.
 func DeprecatedEventTransformationPod(name string, event *cetest.CloudEvent) *corev1.Pod {
 	const imageName = "transformevents"
 	return &corev1.Pod{
@@ -160,8 +161,7 @@ func DeprecatedEventTransformationPod(name string, event *cetest.CloudEvent) *co
 }
 
 // EventTransformationPod creates a Pod that transforms events received receiving as arg a cloudevents sdk2 Event
-// TODO(nlopezgi): remove DeprecatedEventTransformationPod above once other tests that use sdk1 and depend on this method are migrated.
-func EventTransformationPod(name string, event cloudevents.Event) *corev1.Pod {
+func EventTransformationPod(name string, newEventType string, newEventSource string, newEventData []byte) *corev1.Pod {
 	const imageName = "transformevents"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,11 +175,11 @@ func EventTransformationPod(name string, event cloudevents.Event) *corev1.Pod {
 				ImagePullPolicy: corev1.PullAlways,
 				Args: []string{
 					"-event-type",
-					event.Type(),
+					newEventType,
 					"-event-source",
-					event.Source(),
+					newEventSource,
 					"-event-data",
-					string(event.Data()),
+					string(newEventData),
 				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
