@@ -100,11 +100,15 @@ func eventSenderPodImage(imageName string, name string, sink string, event *cete
 }
 
 // EventLoggerPod creates a Pod that logs events received.
+// Deprecated: This test image is gonna be removed soon and you should use EventRecordPod.
+//             Look at recordevents.StartEventRecordOrFail for more info
 func EventLoggerPod(name string) *corev1.Pod {
 	return eventLoggerPod("logevents", name)
 }
 
 // EventDetailsPod creates a Pod that validates events received and log details about events.
+// Deprecated: This test image is gonna be removed soon and you should use EventRecordPod.
+//             Look at recordevents.StartEventRecordOrFail for more info
 func EventDetailsPod(name string) *corev1.Pod {
 	return eventLoggerPod("eventdetails", name)
 }
