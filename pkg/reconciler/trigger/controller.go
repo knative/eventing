@@ -19,10 +19,15 @@ package trigger
 import (
 	"context"
 
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
+	"knative.dev/eventing/pkg/apis/eventing"
+
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
@@ -52,5 +57,19 @@ func NewController(
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
+	// Watch brokers.
+	brokerInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
+		if b, ok := obj.(*v1beta1.Broker); ok {
+			triggers, err := triggerInformer.Lister().Triggers(b.Namespace).List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
+			if err != nil {
+				logging.FromContext(ctx).Warn("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))
+				return
+			}
+			for _, trigger := range triggers {
+				impl.Enqueue(trigger)
+			}
+		}
+	}))
 	return impl
 }
