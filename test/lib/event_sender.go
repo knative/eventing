@@ -42,6 +42,23 @@ func (c *Client) SendEventToAddressable(
 	}
 }
 
+// SendEventToAddressable will send the given event to the given Addressable.
+func (c *Client) SendEventWithTracingToAddressable(
+	senderName,
+	addressableName string,
+	typemeta *metav1.TypeMeta,
+	event cloudevents.Event,
+	option ...sender.EventSenderOption,
+) {
+	uri, err := c.GetAddressableURI(addressableName, typemeta)
+	if err != nil {
+		c.T.Fatalf("Failed to get the URI for %v-%s", typemeta, addressableName)
+	}
+	if err = c.SendEventWithTracing(senderName, uri, event, option...); err != nil {
+		c.T.Fatalf("Failed to send event %v with tracing to %s: %v", event, uri, err)
+	}
+}
+
 // SendEvent will create a sender pod, which will send the given event to the given url.
 func (c *Client) SendEvent(
 	senderName string,
@@ -51,6 +68,26 @@ func (c *Client) SendEvent(
 ) error {
 	namespace := c.Namespace
 	pod, err := sender.EventSenderPod("event-sender", senderName, uri, event, option...)
+	if err != nil {
+		return err
+	}
+	c.CreatePodOrFail(pod)
+	if err := pkgTest.WaitForPodRunning(c.Kube, senderName, namespace); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendEvent will create a sender pod, which will send the given event to the given url.
+func (c *Client) SendEventWithTracing(
+	senderName string,
+	uri string,
+	event cloudevents.Event,
+	option ...sender.EventSenderOption,
+) error {
+	namespace := c.Namespace
+	pod, err := sender.EventSenderPod("event-sender", senderName, uri, event, option...)
+	sender.EnableTracing()
 	if err != nil {
 		return err
 	}

@@ -26,10 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/test/lib"
-<<<<<<< HEAD
 	"knative.dev/eventing/test/lib/recordevents"
-=======
->>>>>>> 785b7b17... Port Channel event transformation for subscription Test to new test images
 	"knative.dev/eventing/test/lib/resources"
 )
 
