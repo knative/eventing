@@ -24,9 +24,11 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
@@ -90,6 +92,17 @@ func NewEventInfoStore(client *lib.Client, podName string) (*EventInfoStore, err
 	ei.podName = podName
 	ei.tb = client.T
 	return ei, nil
+}
+
+// Deploys a new recordevents pod and start the associated EventInfoStore
+func StartEventRecordOrFail(client *lib.Client, podName string) (*EventInfoStore, *corev1.Pod) {
+	eventRecordPod := resources.EventRecordPod(podName)
+	client.CreatePodOrFail(eventRecordPod, lib.WithService(podName))
+	eventTracker, err := NewEventInfoStore(client, podName)
+	if err != nil {
+		client.T.Fatalf("Failed to start the EventInfoStore associated to pod '%s': %v", podName, err)
+	}
+	return eventTracker, eventRecordPod
 }
 
 // Starts the single threaded background goroutine used to update local state
