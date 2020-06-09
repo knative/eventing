@@ -32,6 +32,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -242,13 +243,13 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			}
 
 			// Let's start event recorders and triggers
-			eventTrackers := make(map[string]*lib.EventInfoStore, len(test.eventFilters))
+			eventTrackers := make(map[string]*recordevents.EventInfoStore, len(test.eventFilters))
 			for _, event := range test.eventFilters {
 				// Create event recorder pod and service
 				subscriberName := "dumper-" + event.String()
 				eventRecordPod := resources.EventRecordPod(subscriberName)
 				client.CreatePodOrFail(eventRecordPod, lib.WithService(subscriberName))
-				eventTracker, err := client.NewEventInfoStore(t, subscriberName)
+				eventTracker, err := recordevents.NewEventInfoStore(client, subscriberName)
 				if err != nil {
 					t.Fatalf("Pod tracker failed: %v", err)
 				}
@@ -267,9 +268,9 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			client.WaitForAllTestResourcesReadyOrFail()
 
 			// Map to save the expected matchers per dumper so that we can verify the delivery.
-			expectedMatchers := make(map[string][]lib.EventInfoMatcher)
+			expectedMatchers := make(map[string][]recordevents.EventInfoMatcher)
 			// Map to save the unexpected matchers per dumper so that we can verify that they weren't delivered.
-			unexpectedMatchers := make(map[string][]lib.EventInfoMatcher)
+			unexpectedMatchers := make(map[string][]recordevents.EventInfoMatcher)
 
 			// Now we need to send events and populate the expectedMatcher/unexpectedMatchers map,
 			// in order to assert if I correctly receive only the expected events
@@ -307,13 +308,13 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 						// This filter should match this event
 						expectedMatchers[subscriberName] = append(
 							expectedMatchers[subscriberName],
-							lib.MatchEvent(sentEventMatcher),
+							recordevents.MatchEvent(sentEventMatcher),
 						)
 					} else {
 						// This filter should not match this event
 						unexpectedMatchers[subscriberName] = append(
 							unexpectedMatchers[subscriberName],
-							lib.MatchEvent(sentEventMatcher),
+							recordevents.MatchEvent(sentEventMatcher),
 						)
 					}
 				}

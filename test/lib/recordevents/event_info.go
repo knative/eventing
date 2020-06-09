@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package lib
+package recordevents
 
 import (
 	"encoding/json"
@@ -33,6 +33,8 @@ import (
 	"knative.dev/pkg/test/monitoring"
 
 	"knative.dev/pkg/test/logging"
+
+	"knative.dev/eventing/test/lib"
 )
 
 // Port for the recordevents pod REST listener
@@ -101,7 +103,7 @@ type eventGetter struct {
 
 // Creates a forwarded port to the specified recordevents pod and waits until
 // it can successfully talk to the REST API.  Times out after timeoutEvRetry
-func newEventGetter(podName string, client *Client, logf logging.FormatLogger) (eventGetterInterface, error) {
+func newEventGetter(podName string, client *lib.Client, logf logging.FormatLogger) (eventGetterInterface, error) {
 	egi := &eventGetter{podName: podName, podNamespace: client.Namespace,
 		kubeClientset: client.Kube.Kube, podPort: RecordEventsPort, logf: logf}
 	err := egi.forwardPort()

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package lib
+package recordevents
 
 import (
 	"fmt"
@@ -25,6 +25,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"knative.dev/eventing/test/lib"
 )
 
 const (
@@ -79,14 +81,14 @@ func newTestableEventInfoStore(egi eventGetterInterface, retryInterval time.Dura
 // recordevents pod.  Calling this forwards the recordevents port to the local machine
 // and blocks waiting to connect to that pod.  Fails if it cannot connect within
 // the expected timeout (4 minutes currently)
-func (c *Client) NewEventInfoStore(tb testing.TB, podName string) (*EventInfoStore, error) {
-	egi, err := newEventGetter(podName, c, tb.Logf)
+func NewEventInfoStore(client *lib.Client, podName string) (*EventInfoStore, error) {
+	egi, err := newEventGetter(podName, client, client.T.Logf)
 	if err != nil {
 		return nil, err
 	}
 	ei := newTestableEventInfoStore(egi, -1, -1)
 	ei.podName = podName
-	ei.tb = tb
+	ei.tb = client.T
 	return ei, nil
 }
 

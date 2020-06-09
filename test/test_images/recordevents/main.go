@@ -32,6 +32,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 )
 
 type eventRecorder struct {
@@ -44,16 +45,16 @@ func newEventRecorder() *eventRecorder {
 
 // Start the recordevents REST api server
 func (er *eventRecorder) StartServer(port int) {
-	http.HandleFunc(lib.GetMinMaxPath, er.handleMinMax)
-	http.HandleFunc(lib.GetEntryPath, er.handleGetEntry)
-	http.HandleFunc(lib.TrimThroughPath, er.handleTrim)
+	http.HandleFunc(recordevents.GetMinMaxPath, er.handleMinMax)
+	http.HandleFunc(recordevents.GetEntryPath, er.handleGetEntry)
+	http.HandleFunc(recordevents.TrimThroughPath, er.handleTrim)
 	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
 // HTTP handler for GetMinMax requests
 func (er *eventRecorder) handleMinMax(w http.ResponseWriter, r *http.Request) {
 	minAvail, maxSeen := er.es.MinMax()
-	minMax := lib.MinMaxResponse{
+	minMax := recordevents.MinMaxResponse{
 		MinAvail: minAvail,
 		MaxSeen:  maxSeen,
 	}
@@ -71,7 +72,7 @@ func (er *eventRecorder) handleMinMax(w http.ResponseWriter, r *http.Request) {
 func (er *eventRecorder) handleTrim(w http.ResponseWriter, r *http.Request) {
 	// If we extend this much at all we should vendor a better mux(gorilla, etc)
 	path := strings.TrimLeft(r.URL.Path, "/")
-	getPrefix := strings.TrimLeft(lib.TrimThroughPath, "/")
+	getPrefix := strings.TrimLeft(recordevents.TrimThroughPath, "/")
 	suffix := strings.TrimLeft(strings.TrimPrefix(path, getPrefix), "/")
 
 	seqNum, err := strconv.ParseInt(suffix, 10, 32)
@@ -94,7 +95,7 @@ func (er *eventRecorder) handleTrim(w http.ResponseWriter, r *http.Request) {
 func (er *eventRecorder) handleGetEntry(w http.ResponseWriter, r *http.Request) {
 	// If we extend this much at all we should vendor a better mux(gorilla, etc)
 	path := strings.TrimLeft(r.URL.Path, "/")
-	getPrefix := strings.TrimLeft(lib.GetEntryPath, "/")
+	getPrefix := strings.TrimLeft(recordevents.GetEntryPath, "/")
 	suffix := strings.TrimLeft(strings.TrimPrefix(path, getPrefix), "/")
 
 	seqNum, err := strconv.ParseInt(suffix, 10, 32)
@@ -146,7 +147,7 @@ func (er *eventRecorder) ServeHTTP(writer http.ResponseWriter, request *http.Req
 
 func main() {
 	er := newEventRecorder()
-	er.StartServer(lib.RecordEventsPort)
+	er.StartServer(recordevents.RecordEventsPort)
 
 	logger, _ := zap.NewDevelopment()
 	if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
