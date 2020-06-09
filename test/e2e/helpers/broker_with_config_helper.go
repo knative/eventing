@@ -78,14 +78,6 @@ func TestBrokerWithConfig(t *testing.T,
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 
-		transformedEvent := cloudevents.NewEvent()
-		transformedEvent.SetID(uuid.New().String())
-		transformedEvent.SetType(transformedEventType)
-		transformedEvent.SetSource(transformedEventSource)
-		if err := transformedEvent.SetData(cloudevents.ApplicationJSON, []byte(transformedBody)); err != nil {
-			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
-		}
-
 		// create the transformation service for trigger1
 		transformationPod := resources.EventTransformationPod(
 			transformationPodName,
