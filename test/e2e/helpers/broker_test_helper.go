@@ -36,23 +36,6 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-const (
-	any          = v1beta1.TriggerAnyFilter
-	eventType1   = "type1"
-	eventType2   = "type2"
-	eventSource1 = "http://source1.com"
-	eventSource2 = "http://source2.com"
-	// Be careful with the length of extension name and values,
-	// we use extension name and value as a part of the name of resources like subscriber and trigger,
-	// the maximum characters allowed of resource name is 63
-	extensionName1            = "extname1"
-	extensionValue1           = "extval1"
-	extensionName2            = "extname2"
-	extensionValue2           = "extvalue2"
-	nonMatchingExtensionName  = "nonmatchingextname"
-	nonMatchingExtensionValue = "nonmatchingextval"
-)
-
 type eventTestCase struct {
 	Type       string
 	Source     string
@@ -65,10 +48,10 @@ func (tc eventTestCase) String() string {
 	eventSource := tc.Source
 	extensions := tc.Extensions
 	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
-	if eventType == any {
+	if eventType == v1beta1.TriggerAnyFilter {
 		eventType = "testany"
 	}
-	if eventSource == any {
+	if eventSource == v1beta1.TriggerAnyFilter {
 		eventSource = "testany"
 	} else {
 		u, _ := url.Parse(eventSource)
@@ -84,20 +67,20 @@ func (tc eventTestCase) String() string {
 // ToEventMatcher converts the test case to the event matcher
 func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
 	var matchers []cetest.EventMatcher
-	if tc.Type == any {
+	if tc.Type == v1beta1.TriggerAnyFilter {
 		matchers = append(matchers, cetest.ContainsAttributes(spec.Type))
 	} else {
 		matchers = append(matchers, cetest.HasType(tc.Type))
 	}
 
-	if tc.Source == any {
+	if tc.Source == v1beta1.TriggerAnyFilter {
 		matchers = append(matchers, cetest.ContainsAttributes(spec.Source))
 	} else {
 		matchers = append(matchers, cetest.HasSource(tc.Source))
 	}
 
 	for k, v := range tc.Extensions {
-		if v == any {
+		if v == v1beta1.TriggerAnyFilter {
 			matchers = append(matchers, cetest.ContainsExtensions(k))
 		} else {
 			matchers = append(matchers, cetest.HasExtension(k, v))
@@ -134,6 +117,22 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) Brok
 // different events to the broker's address.
 // Finally, it verifies that only the appropriate events are routed to the subscribers.
 func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shouldLabelNamespace bool) {
+	const (
+		any          = v1beta1.TriggerAnyFilter
+		eventType1   = "type1"
+		eventType2   = "type2"
+		eventSource1 = "http://source1.com"
+		eventSource2 = "http://source2.com"
+		// Be careful with the length of extension name and values,
+		// we use extension name and value as a part of the name of resources like subscriber and trigger,
+		// the maximum characters allowed of resource name is 63
+		extensionName1            = "extname1"
+		extensionValue1           = "extval1"
+		extensionName2            = "extname2"
+		extensionValue2           = "extvalue2"
+		nonMatchingExtensionName  = "nonmatchingextname"
+		nonMatchingExtensionValue = "nonmatchingextval"
+	)
 	tests := []struct {
 		name string
 		// These are the event context attributes and extension attributes that will be send.
@@ -359,7 +358,7 @@ func extensionsToString(extensions map[string]interface{}) string {
 		sb.WriteString(sortedExtensionName)
 		sb.WriteString("-")
 		vStr := fmt.Sprintf("%v", extensions[sortedExtensionName])
-		if vStr == any {
+		if vStr == v1beta1.TriggerAnyFilter {
 			vStr = "testany"
 		}
 		sb.WriteString(vStr)
