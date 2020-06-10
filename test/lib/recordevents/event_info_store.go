@@ -18,6 +18,7 @@ package recordevents
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -188,19 +189,22 @@ func (ei *EventInfoStore) refreshData() ([]EventInfo, error) {
 // last 5 events seen and the total events matched.  This SearchedInfo structure
 // is primarily to ease debugging in failure printouts.  The provided function is
 // guaranteed to be called exactly once on each EventInfo from the pod.
-func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, error) {
+func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, []error, error) {
 	const maxLastEvents = 5
 	allMatch := []EventInfo{}
 	sInfo := SearchedInfo{}
 	lastEvents := []EventInfo{}
+	var nonMatchingErrors []error
 
 	allEvents, err := ei.refreshData()
 	if err != nil {
-		return nil, sInfo, fmt.Errorf("error getting events %v", err)
+		return nil, sInfo, nonMatchingErrors, fmt.Errorf("error getting events %v", err)
 	}
 	for i := range allEvents {
-		if f(allEvents[i]) == nil {
+		if err := f(allEvents[i]); err == nil {
 			allMatch = append(allMatch, allEvents[i])
+		} else {
+			nonMatchingErrors = append(nonMatchingErrors, err)
 		}
 		lastEvents = append(lastEvents, allEvents[i])
 		if len(lastEvents) > maxLastEvents {
@@ -211,7 +215,7 @@ func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, e
 	sInfo.LastNEvent = lastEvents
 	sInfo.TotalEvent = len(allEvents)
 
-	return allMatch, sInfo, nil
+	return allMatch, sInfo, nonMatchingErrors, nil
 }
 
 // Assert that there are at least min number of matches of f.
@@ -238,7 +242,7 @@ func (ei *EventInfoStore) AssertInRange(min int, max int, f EventInfoMatcher) []
 // Assert that there aren't any matches of f.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertNot(f EventInfoMatcher) []EventInfo {
-	res, recentEvents, err := ei.Find(f)
+	res, recentEvents, _, err := ei.Find(f)
 	if err != nil {
 		ei.tb.Fatalf("unexpected error during find on recordevents '%s': %v", ei.podName, err)
 	}
@@ -265,15 +269,20 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 	var internalErr error
 
 	wait.PollImmediate(ei.retryInterval, ei.timeout, func() (bool, error) {
-		allMatch, sInfo, err := ei.Find(f)
+		allMatch, sInfo, matchErrs, err := ei.Find(f)
 		if err != nil {
 			internalErr = fmt.Errorf("FAIL MATCHING: unexpected error during find: %v", err)
 			return false, nil
 		}
 		count := len(allMatch)
 		if count < min {
-			internalErr = fmt.Errorf("FAIL MATCHING: saw %d/%d matching events. recent events: (%s)",
-				count, min, &sInfo)
+			internalErr = fmt.Errorf(
+				"FAIL MATCHING: saw %d/%d matching events.\nRecent events: \n%s\nMatch errors: \n%s\n",
+				count,
+				min,
+				&sInfo,
+				formatErrors(matchErrs),
+			)
 			return false, nil
 		}
 		matchRet = allMatch
@@ -281,4 +290,13 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 		return true, nil
 	})
 	return matchRet, internalErr
+}
+
+func formatErrors(errs []error) string {
+	var sb strings.Builder
+	for _, err := range errs {
+		sb.WriteString(err.Error())
+		sb.WriteRune('\n')
+	}
+	return sb.String()
 }

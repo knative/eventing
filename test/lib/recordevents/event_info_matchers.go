@@ -68,7 +68,7 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 func DataContains(expectedContainedString string) cetest.EventMatcher {
 	return func(have event.Event) error {
 		dataAsString := string(have.Data())
-		if strings.Contains(dataAsString, expectedContainedString) {
+		if !strings.Contains(dataAsString, expectedContainedString) {
 			return fmt.Errorf("data '%s' doesn't contain '%s'", dataAsString, expectedContainedString)
 		}
 		return nil

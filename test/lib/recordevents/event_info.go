@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -85,7 +86,13 @@ type SearchedInfo struct {
 
 // Pretty print the SearchedInfor for error messages
 func (s *SearchedInfo) String() string {
-	return fmt.Sprintf("%d events seen, last N = %s", s.TotalEvent, s.LastNEvent)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%d events seen, last %d events:", s.TotalEvent, len(s.LastNEvent)))
+	for _, ei := range s.LastNEvent {
+		sb.WriteString(ei.String())
+		sb.WriteRune('\n')
+	}
+	return sb.String()
 }
 
 // Connection state for a REST connection to a pod
