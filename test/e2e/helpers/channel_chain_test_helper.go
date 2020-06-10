@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -53,12 +54,7 @@ func ChannelChainTestHelper(t *testing.T,
 		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create loggerPod and expose it as a service
-		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
-		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-		eventTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
-		if err != nil {
-			t.Fatalf("Pod tracker failed: %v", err)
-		}
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 
 		// create subscriptions that subscribe the first channel, and reply events directly to the second channel
@@ -92,10 +88,10 @@ func ChannelChainTestHelper(t *testing.T,
 
 		client.SendEventToAddressable(senderName, channelNames[0], &channel, event)
 
-		// check if the logging service receives the correct number of event messages
-		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-
 		// verify the logger service receives the event
-		eventTracker.AssertWaitMatchSourceData(t, eventSource, body, expectedContentCount, expectedContentCount)
+		eventTracker.AssertAtLeast(len(subscriptionNames1)*len(subscriptionNames2), recordevents.MatchEvent(
+			HasSource(eventSource),
+			HasData([]byte(body)),
+		))
 	})
 }

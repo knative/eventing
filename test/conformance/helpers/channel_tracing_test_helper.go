@@ -132,18 +132,13 @@ func tracingTest(
 // assertEventMatch verifies that recorder pod contains at least one event that
 // matches mustMatch. It is used to show that the expected event was sent to
 // the logger Pod.  It returns a list of the matching events.
-func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
-	mustMatch cetest.EventMatcher) []recordevents.EventInfo {
+func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string, mustMatch cetest.EventMatcher) []recordevents.EventInfo {
 	targetTracker, err := recordevents.NewEventInfoStore(client, recorderPodName)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
 	defer targetTracker.Cleanup()
-	matches, err := targetTracker.WaitAtLeastNMatch(recordevents.MatchEvent(mustMatch), 1)
-	if err != nil {
-		t.Fatalf("Expected messages not found: %v", err)
-	}
-	return matches
+	return targetTracker.AssertAtLeast(1, recordevents.MatchEvent(mustMatch))
 }
 
 // getTraceIDHeader gets the TraceID from the passed in events.  It returns the header from the

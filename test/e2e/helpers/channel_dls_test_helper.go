@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -50,12 +51,7 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create event logger pod and service as the subscriber
-		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
-		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-		eventTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
-		if err != nil {
-			t.Fatalf("Pod tracker failed: %v", err)
-		}
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 
 		// create subscriptions that subscribe to a service that does not exist
@@ -83,7 +79,9 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 		client.SendEventToAddressable(senderName, channelNames[0], &channel, event)
 
 		// check if the logging service receives the correct number of event messages
-		expectedContentCount := len(subscriptionNames)
-		eventTracker.AssertWaitMatchSourceData(t, eventSource, body, expectedContentCount, expectedContentCount)
+		eventTracker.AssertAtLeast(len(subscriptionNames), recordevents.MatchEvent(
+			HasSource(eventSource),
+			HasData([]byte(body)),
+		))
 	})
 }

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -61,12 +62,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		client.CreateChannelOrFail(channelName, &channel)
 
 		// create event logger pod and service
-		eventRecordPod := resources.EventRecordPod(eventRecorder)
-		client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
-		eventTracker, err := recordevents.NewEventInfoStore(client, eventRecorder)
-		if err != nil {
-			t.Fatalf("Pod tracker failed: %v", err)
-		}
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
 		defer eventTracker.Cleanup()
 
 		// If the caller specified a different version, override it here.
@@ -113,6 +109,9 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		)
 
 		// verify the logger service receives the event
-		eventTracker.AssertWaitMatchSourceData(t, eventSource, body, 1, 1)
+		eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
+			HasData([]byte(body)),
+			HasSource(eventSource),
+		))
 	})
 }

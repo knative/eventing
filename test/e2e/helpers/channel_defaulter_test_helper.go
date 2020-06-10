@@ -22,6 +22,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/ghodss/yaml"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,12 +97,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	client.CreateChannelWithDefaultOrFail(eventingtesting.NewChannel(channelName, client.Namespace))
 
 	// create event logger pod and service as the subscriber
-	recordEventsPod := resources.EventRecordPod(recordEventsPodName)
-	client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-	eventTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
-	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
-	}
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 	defer eventTracker.Cleanup()
 
 	// create subscription to subscribe the channel, and forward the received events to the logger service
@@ -154,7 +150,10 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	client.SendEventToAddressable(senderName, channelName, lib.ChannelTypeMeta, event)
 
 	// verify the logger service receives the event
-	eventTracker.AssertWaitMatchSourceData(t, eventSource, body, 1, 1)
+	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
+		HasSource(eventSource),
+		HasData([]byte(body)),
+	))
 }
 
 // updateDefaultChannelCM will update the default channel configmap
