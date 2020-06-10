@@ -16,7 +16,6 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
