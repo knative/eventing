@@ -48,6 +48,7 @@ func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatcher {
 	}
 }
 
+// MatchHeartBeatsImageMessage matches that the data field of the event, in the format of the heartbeats image, contains the following msg field
 func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 	return cetest.AllOf(
 		cetest.HasDataContentType(cloudevents.ApplicationJSON),
@@ -65,6 +66,7 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 	)
 }
 
+// DataContains matches that the data field of the event, converted to a string, contains the provided string
 func DataContains(expectedContainedString string) cetest.EventMatcher {
 	return func(have event.Event) error {
 		dataAsString := string(have.Data())

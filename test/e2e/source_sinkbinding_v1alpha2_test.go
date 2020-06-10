@@ -46,7 +46,7 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		recordEventPodName = "e2e-sink-binding-logger-pod-v1alpha2dep"
+		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1alpha2dep"
 	)
 
 	client := setup(t, true)
@@ -130,7 +130,7 @@ func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		recordEventPodName = "e2e-sink-binding-logger-pod-v1alpha2c"
+		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1alpha2c"
 	)
 
 	client := setup(t, true)

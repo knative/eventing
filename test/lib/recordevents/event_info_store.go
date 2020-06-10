@@ -189,6 +189,8 @@ func (ei *EventInfoStore) refreshData() ([]EventInfo, error) {
 // last 5 events seen and the total events matched.  This SearchedInfo structure
 // is primarily to ease debugging in failure printouts.  The provided function is
 // guaranteed to be called exactly once on each EventInfo from the pod.
+// The error array contains the eventual match errors, while the last return error contains
+// an eventual communication error while trying to get the events from the recordevents pod
 func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, []error, error) {
 	const maxLastEvents = 5
 	allMatch := []EventInfo{}
