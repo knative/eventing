@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -59,13 +60,8 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
 	// Create subscribers.
-	loggerPod := resources.EventRecordPod(subscriberName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(subscriberName))
-	targetTracker, err := recordevents.NewEventInfoStore(client, subscriberName)
-	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
-	}
-	defer targetTracker.Cleanup()
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
+	defer eventTracker.Cleanup()
 
 	// Wait for subscriber to become ready
 	client.WaitForAllTestResourcesReadyOrFail()
@@ -76,7 +72,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		resources.WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation),
 	)
 
-	jsonData := fmt.Sprintf("Test trigger-annotation %s", uuid.NewUUID())
+	jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())
 	pingSource := eventingtesting.NewPingSourceV1Alpha2(
 		pingSourceName,
 		client.Namespace,
@@ -101,8 +97,8 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	// Trigger should become ready after pingSource was created
 	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)
 
-	err = targetTracker.WaitMatchSourceData(sourcesv1alpha2.PingSourceSource(client.Namespace, pingSourceName), jsonData, 1, -1)
-	if err != nil {
-		t.Fatalf("Error watching for data %s event in pod %s: %v", jsonData, subscriberName, err)
-	}
+	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
+		HasSource(sourcesv1alpha2.PingSourceSource(client.Namespace, pingSourceName)),
+		HasData([]byte(jsonData)),
+	))
 }

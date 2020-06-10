@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	. "github.com/cloudevents/sdk-go/v2/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -28,7 +29,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
@@ -43,25 +43,20 @@ func TestContainerSource(t *testing.T) {
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		loggerPodName = "e2e-container-source-logger-pod"
+		recordEventPodName = "e2e-container-source-logger-pod"
 	)
 
 	client := setup(t, true)
 	defer tearDown(client)
 
-	// create event logger pod and service
-	loggerPod := resources.EventRecordPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
-	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
-	}
-	defer targetTracker.Cleanup()
+	// create event record pod
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
+	defer eventTracker.Cleanup()
 
 	// create container source
-	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
+	message := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
 	// args are the arguments passing to the container, msg is used in the heartbeats image
-	args := []string{"--msg=" + data}
+	args := []string{"--msg=" + message}
 	// envVars are the environment variables of the container
 	envVars := []corev1.EnvVar{{
 		Name:  "POD_NAME",
@@ -89,7 +84,7 @@ func TestContainerSource(t *testing.T) {
 				},
 			},
 			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)},
+				Sink: duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)},
 			},
 		}),
 	)
@@ -99,9 +94,8 @@ func TestContainerSource(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
-	expectedCount := 2
-	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, templateName)
-	if err := targetTracker.WaitMatchSourceData(expectedSource, data, expectedCount, -1); err != nil {
-		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
-	}
+	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(
+		recordevents.MatchHeartBeatsImageMessage(message),
+		HasSource(fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, templateName)),
+	))
 }

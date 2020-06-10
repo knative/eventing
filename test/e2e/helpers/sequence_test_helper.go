@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -91,12 +92,7 @@ func SequenceTestHelper(t *testing.T,
 		//                make the logger service as a Knative service, and remove the channel and subscription.
 		client.CreateChannelOrFail(channelName, &channel)
 		// create event logger pod and service as the subscriber
-		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
-		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-		eventTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
-		if err != nil {
-			t.Fatalf("Pod tracker failed: %v", err)
-		}
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
@@ -144,6 +140,9 @@ func SequenceTestHelper(t *testing.T,
 		for _, config := range stepSubscriberConfigs {
 			expectedMsg += config.msgAppender
 		}
-		eventTracker.AssertWaitMatchSourceData(t, eventSource, expectedMsg, 1, 1)
+		eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
+			cetest.HasSource(eventSource),
+			recordevents.DataContains(expectedMsg),
+		))
 	})
 }

@@ -139,7 +139,7 @@ func TestSequentialAndTrim(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestSequentialAndTrim(t *testing.T) {
 	subEv = totalEv[10:19]
 	deg.setEv(11, subEv)
 
-	allData, _, err = ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -169,14 +169,14 @@ func TestOverlap(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[6:19]
 	deg.setEv(7, subEv)
-	allData, _, err = ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -193,14 +193,14 @@ func TestGap(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[11:19]
 	deg.setEv(12, subEv)
-	_, _, err = ei.Find(func(EventInfo) error { return nil })
+	_, _, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err == nil {
 		t.Fatalf("Unexpected success from find")
 	}
@@ -216,14 +216,14 @@ func TestSequentialNoOp(t *testing.T) {
 	subEv := totalEv[:10]
 	deg.setEv(1, subEv)
 	ei := newTestableEventInfoStore(deg, -1, -1)
-	allData, _, err := ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err := ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = []EventInfo{}
 	deg.setEv(11, subEv)
-	allData, _, err = ei.Find(func(EventInfo) error { return nil })
+	allData, _, _, err = ei.Find(func(EventInfo) error { return nil })
 	if err != nil {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestWaitForN(t *testing.T) {
 			}
 		}
 
-		allMatch, waitErr = ei.WaitAtLeastNMatch(MatchEvent(matchFunc), 2)
+		allMatch, waitErr = ei.waitAtLeastNMatch(MatchEvent(matchFunc), 2)
 		wg.Done()
 	}()
 	var tCalls int

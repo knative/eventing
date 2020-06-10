@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/event"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,8 +78,7 @@ func TestApiServerSource(t *testing.T) {
 				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
-			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
-			expected: "",
+			pod: func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
 		},
 		{
 			name: "event-ref-match-label",
@@ -119,76 +117,65 @@ func TestApiServerSource(t *testing.T) {
 		},
 	}
 
-	client := setup(t, true)
-	defer tearDown(client)
-
-	// creates ServiceAccount and RoleBinding with a role for reading pods and events
-	r := resources.Role(roleName,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events", "pods"},
-			Verbs:     []string{"get", "list", "watch"}}))
-	client.CreateServiceAccountOrFail(serviceAccountName)
-	client.CreateRoleOrFail(r)
-	client.CreateRoleBindingOrFail(
-		serviceAccountName,
-		lib.RoleKind,
-		roleName,
-		fmt.Sprintf("%s-%s", serviceAccountName, roleName),
-		client.Namespace,
-	)
-
 	for _, tc := range table {
+		tc := tc // capture range variable
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup client
+			client := setup(t, true)
+			defer tearDown(client)
 
-		// create event logger pod and service
-		loggerPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-		tc.spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(loggerPodName)}
+			// creates ServiceAccount and RoleBinding with a role for reading pods and events
+			r := resources.Role(roleName,
+				resources.WithRuleForRole(&rbacv1.PolicyRule{
+					APIGroups: []string{""},
+					Resources: []string{"events", "pods"},
+					Verbs:     []string{"get", "list", "watch"}}))
+			client.CreateServiceAccountOrFail(serviceAccountName)
+			client.CreateRoleOrFail(r)
+			client.CreateRoleBindingOrFail(
+				serviceAccountName,
+				lib.RoleKind,
+				roleName,
+				fmt.Sprintf("%s-%s", serviceAccountName, roleName),
+				client.Namespace,
+			)
 
-		loggerPod := resources.EventRecordPod(loggerPodName)
-		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-		targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
-		if err != nil {
-			t.Fatalf("Pod tracker failed: %v", err)
-		}
-		defer targetTracker.Cleanup()
+			// create event record
+			recordEventPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
+			defer eventTracker.Cleanup()
 
-		apiServerSource := eventingtesting.NewApiServerSource(
-			fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
-			client.Namespace,
-			eventingtesting.WithApiServerSourceSpec(tc.spec),
-		)
+			spec := tc.spec
+			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
-		client.CreateApiServerSourceOrFail(apiServerSource)
+			apiServerSource := eventingtesting.NewApiServerSource(
+				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
+				client.Namespace,
+				eventingtesting.WithApiServerSourceSpec(spec),
+			)
 
-		// wait for all test resources to be ready
-		client.WaitForAllTestResourcesReadyOrFail()
+			client.CreateApiServerSourceOrFail(apiServerSource)
 
-		helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
-		client.CreatePodOrFail(helloworldPod)
+			// wait for all test resources to be ready
+			client.WaitForAllTestResourcesReadyOrFail()
 
-		// verify the logger service receives the event(s)
-		// TODO(chizhg): right now it's only doing a very basic check by looking for the tc.data word,
-		//                we can add a json matcher to improve it in the future.
+			helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
+			client.CreatePodOrFail(helloworldPod)
 
-		if tc.expected == "" {
-			time.Sleep(10 * time.Second)
-			ev, _, err := targetTracker.Find(recordevents.MatchEvent(func(have event.Event) error {
-				//TODO This really needs to be no-op?
-				return nil
-			}))
-			if err != nil {
-				t.Fatalf("Saw error looking for events: %v", err)
+			// verify the logger service receives the event(s)
+			// TODO(chizhg): right now it's only doing a very basic check by looking for the tc.data word,
+			//                we can add a json matcher to improve it in the future.
+
+			// Run asserts
+			if tc.expected == "" {
+				time.Sleep(10 * time.Second)
+				eventTracker.AssertNot(recordevents.Any())
+			} else {
+				eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
+					recordevents.DataContains(tc.expected),
+				))
 			}
-			if len(ev) != 0 {
-				t.Fatalf("Log is not empty in logger pod %q: %d events seen", loggerPodName, len(ev))
-			}
-
-		} else {
-			err = targetTracker.WaitMatchSourceData("", tc.expected, 1, -1)
-			if err != nil {
-				t.Fatalf("Error watching for data %s event in pod %s: %v", tc.expected, loggerPodName, err)
-			}
-		}
+		})
 	}
 }
 

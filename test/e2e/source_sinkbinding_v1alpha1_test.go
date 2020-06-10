@@ -19,14 +19,13 @@ package e2e
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	ce "github.com/cloudevents/sdk-go/v2"
+	. "github.com/cloudevents/sdk-go/v2/test"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -34,7 +33,6 @@ import (
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
@@ -48,20 +46,15 @@ func TestSinkBindingDeployment(t *testing.T) {
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		loggerPodName = "e2e-sink-binding-logger-pod"
+		recordEventPodName = "e2e-sink-binding-recordevent-pod"
 	)
 
 	client := setup(t, true)
 	defer tearDown(client)
 
-	// create event logger pod and service
-	loggerPod := resources.EventRecordPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
-	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
-	}
-	defer targetTracker.Cleanup()
+	// create event record pod
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
+	defer eventTracker.Cleanup()
 
 	extensionSecret := string(uuid.NewUUID())
 
@@ -69,7 +62,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 	sinkBinding := eventingtesting.NewSinkBindingV1Alpha1(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSinkV1A1(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
+		eventingtesting.WithSinkV1A1(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
 		eventingtesting.WithSubjectV1A1(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
@@ -82,7 +75,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 	)
 	client.CreateSinkBindingV1Alpha1OrFail(sinkBinding)
 
-	data := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
+	message := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
@@ -105,7 +98,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 						Name:            imageName,
 						Image:           pkgTest.ImagePath(imageName),
 						ImagePullPolicy: corev1.PullAlways,
-						Args:            []string{"--msg=" + data},
+						Args:            []string{"--msg=" + message},
 						Env: []corev1.EnvVar{{
 							Name:  "POD_NAME",
 							Value: deploymentName,
@@ -122,33 +115,11 @@ func TestSinkBindingDeployment(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	// Look for events with expected data, and sinkbinding extension
-	expectedCount := 2
-	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)
-	matchFunc := func(ev ce.Event) error {
-		if expectedSource != ev.Source() {
-			return fmt.Errorf("expected source %s, saw %s", expectedSource, ev.Source())
-		}
-		ext := ev.Extensions()
-		value, found := ext["sinkbinding"]
-		if !found {
-			return fmt.Errorf("didn't find extension sinkbinding")
-		}
-		if value != extensionSecret {
-			return fmt.Errorf("expension sinkbinding didn't match %s, saw %s", extensionSecret, value)
-		}
-		db := ev.Data()
-		if !strings.Contains(string(db), data) {
-			return fmt.Errorf("expected substring %s in %s", data, string(db))
-		}
-		return nil
-	}
-
-	_, err = targetTracker.WaitAtLeastNMatch(recordevents.MatchEvent(matchFunc), expectedCount)
-	if err != nil {
-		t.Fatalf("Data %s, extension %q does not appear at least %d times in events of logger pod %q: %v", data, extensionSecret, expectedCount, loggerPodName, err)
-
-	}
+	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(
+		recordevents.MatchHeartBeatsImageMessage(message),
+		HasSource(fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)),
+		HasExtension("sinkbinding", extensionSecret),
+	))
 }
 
 func TestSinkBindingCronJob(t *testing.T) {
@@ -158,26 +129,21 @@ func TestSinkBindingCronJob(t *testing.T) {
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		loggerPodName = "e2e-sink-binding-logger-pod"
+		recordEventPod = "e2e-sink-binding-recordevent-pod"
 	)
 
 	client := setup(t, true)
 	defer tearDown(client)
 
 	// create event logger pod and service
-	loggerPod := resources.EventRecordPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
-	targetTracker, err := recordevents.NewEventInfoStore(client, loggerPodName)
-	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
-	}
-	defer targetTracker.Cleanup()
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPod)
+	defer eventTracker.Cleanup()
 
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBindingV1Alpha1(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSinkV1A1(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
+		eventingtesting.WithSinkV1A1(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPod, client.Namespace)}),
 		eventingtesting.WithSubjectV1A1(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
@@ -191,7 +157,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 	)
 	client.CreateSinkBindingV1Alpha1OrFail(sinkBinding)
 
-	data := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
+	message := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
@@ -213,7 +179,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 								Name:            imageName,
 								Image:           pkgTest.ImagePath(imageName),
 								ImagePullPolicy: corev1.PullAlways,
-								Args:            []string{"--msg=" + data},
+								Args:            []string{"--msg=" + message},
 								Env: []corev1.EnvVar{{
 									Name:  "ONE_SHOT",
 									Value: "true",
@@ -236,9 +202,8 @@ func TestSinkBindingCronJob(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
-	expectedCount := 2
-	expectedSource := fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)
-	if err := targetTracker.WaitMatchSourceData(expectedSource, data, expectedCount, -1); err != nil {
-		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
-	}
+	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(
+		recordevents.MatchHeartBeatsImageMessage(message),
+		HasSource(fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", client.Namespace, deploymentName)),
+	))
 }

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -89,13 +90,7 @@ func ParallelTestHelper(t *testing.T,
 
 			// create event logger pod and service
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
-			eventRecordPod := resources.EventRecordPod(eventRecorder)
-			client.CreatePodOrFail(eventRecordPod, lib.WithService(eventRecorder))
-			eventTracker, err := recordevents.NewEventInfoStore(client, eventRecorder)
-			if err != nil {
-				t.Fatalf("Pod tracker failed: %v", err)
-			}
-			defer eventTracker.Cleanup()
+			eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
 
 			// create channel as reply of the Parallel
 			// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -135,10 +130,16 @@ func ParallelTestHelper(t *testing.T,
 				senderPodName,
 				tc.name,
 				lib.FlowsParallelTypeMeta,
-				event)
+				event,
+			)
 
 			// verify the logger service receives the correct transformed event
-			eventTracker.AssertWaitMatchSourceData(t, eventSource, tc.expected, 1, 1)
+			eventTracker.AssertExact(1, recordevents.MatchEvent(
+				HasSource(eventSource),
+				recordevents.DataContains(tc.expected),
+			))
+
+			eventTracker.Cleanup()
 		}
 	})
 }

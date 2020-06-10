@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -69,12 +70,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create event logger pod and service as the subscriber
-		recordEventsPod := resources.EventRecordPod(recordEventsPodName)
-		client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
-		eventTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
-		if err != nil {
-			t.Fatalf("Pod tracker failed: %v", err)
-		}
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 
 		// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
@@ -108,13 +104,9 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		client.SendEventToAddressable(senderName, channelNames[0], &channel, eventToSend)
 
 		// check if the logging service receives the correct number of event messages
-		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-		eventTracker.AssertWaitMatchSourceData(
-			t,
-			eventSource,
-			transformedEventBody,
-			expectedContentCount,
-			expectedContentCount,
-		)
+		eventTracker.AssertAtLeast(len(subscriptionNames1)*len(subscriptionNames2), recordevents.MatchEvent(
+			HasSource(eventSource),
+			HasData([]byte(transformedEventBody)),
+		))
 	})
 }

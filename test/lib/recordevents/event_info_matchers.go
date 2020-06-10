@@ -18,12 +18,22 @@ package recordevents
 
 import (
 	"fmt"
+	"strings"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/event"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 )
 
 // Does the provided EventInfo match some criteria
 type EventInfoMatcher func(EventInfo) error
+
+// Matcher that never fails
+func Any() EventInfoMatcher {
+	return func(ei EventInfo) error {
+		return nil
+	}
+}
 
 // Convert a matcher that checks valid messages to a function
 // that checks EventInfo structures, returning an error for any that don't
@@ -35,5 +45,34 @@ func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatcher {
 		} else {
 			return cetest.AllOf(evf...)(*ei.Event)
 		}
+	}
+}
+
+// MatchHeartBeatsImageMessage matches that the data field of the event, in the format of the heartbeats image, contains the following msg field
+func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
+	return cetest.AllOf(
+		cetest.HasDataContentType(cloudevents.ApplicationJSON),
+		func(have cloudevents.Event) error {
+			var m map[string]interface{}
+			err := have.DataAs(&m)
+			if err != nil {
+				return fmt.Errorf("cannot parse heartbeats message %s", err.Error())
+			}
+			if m["msg"].(string) != expectedMsg {
+				return fmt.Errorf("heartbeats message don't match. Expected: '%s', Actual: '%s'", expectedMsg, m["msg"].(string))
+			}
+			return nil
+		},
+	)
+}
+
+// DataContains matches that the data field of the event, converted to a string, contains the provided string
+func DataContains(expectedContainedString string) cetest.EventMatcher {
+	return func(have event.Event) error {
+		dataAsString := string(have.Data())
+		if !strings.Contains(dataAsString, expectedContainedString) {
+			return fmt.Errorf("data '%s' doesn't contain '%s'", dataAsString, expectedContainedString)
+		}
+		return nil
 	}
 }
