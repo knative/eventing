@@ -119,6 +119,8 @@ func TestApiServerSource(t *testing.T) {
 
 	for _, tc := range table {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+
 			// Setup client
 			client := setup(t, true)
 			defer tearDown(client)
@@ -141,14 +143,16 @@ func TestApiServerSource(t *testing.T) {
 
 			// create event record
 			recordEventPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-			tc.spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 			eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
 			defer eventTracker.Cleanup()
+
+			spec := tc.spec
+			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
 			apiServerSource := eventingtesting.NewApiServerSource(
 				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 				client.Namespace,
-				eventingtesting.WithApiServerSourceSpec(tc.spec),
+				eventingtesting.WithApiServerSourceSpec(spec),
 			)
 
 			client.CreateApiServerSourceOrFail(apiServerSource)
