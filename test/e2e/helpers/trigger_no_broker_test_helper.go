@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -35,9 +36,11 @@ func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreat
 	client := lib.Setup(t, true)
 	defer lib.TearDown(client)
 	brokerName := strings.ToLower(channel)
+
 	subscriberName := "dumper-empty"
-	pod := resources.EventLoggerPod(subscriberName)
-	client.CreatePodOrFail(pod, lib.WithService(subscriberName))
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
+	defer eventTracker.Cleanup()
+
 	client.CreateTriggerOrFailV1Beta1("testtrigger",
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
 		resources.WithBrokerV1Beta1(brokerName),

@@ -24,7 +24,7 @@ import (
 )
 
 /*
-TestEventTransformationForTrigger tests the following topology:
+TestBrokerChannelFlow tests the following topology:
 
                    ------------- ----------------------
                    |           | |                    |
@@ -44,5 +44,5 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlow(t *testing.T) {
-	helpers.BrokerChannelFlowTestHelper(t, brokerClass, channelTestRunner)
+	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, channelTestRunner)
 }

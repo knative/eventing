@@ -29,8 +29,27 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-// TestBrokerWithConfig is the helper function for broker_with_config_test
-func TestBrokerWithConfig(t *testing.T,
+/*
+BrokerChannelFlowWithTransformation tests the following topology:
+
+                   ------------- ----------------------
+                   |           | |                    |
+                   v	       | v                    |
+EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
+                   |
+                   |
+                   |-------> Trigger2 -------> Service(Logger1)
+                   |
+                   |
+                   |-------> Trigger3 -------> Channel --------> Subscription --------> Service(Logger2)
+
+Explanation:
+Trigger1 filters the orignal event and tranforms it to a new event,
+Trigger2 logs all events,
+Trigger3 filters the transformed event and sends it to Channel.
+
+*/
+func BrokerChannelFlowWithTransformation(t *testing.T,
 	brokerClass string,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption) {
