@@ -94,7 +94,7 @@ func main() {
 		log.Fatalf("failed to create protocol: %s", err.Error())
 	}
 
-	c, err := cloudevents.NewClient(p)
+	c, err := cloudevents.NewClient(p, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
 	}
