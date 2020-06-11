@@ -117,7 +117,7 @@ func main() {
 	for {
 		hb.Sequence++
 
-		event := cloudevents.NewEvent("1.0")
+		event := cloudevents.NewEvent()
 		event.SetType("dev.knative.eventing.samples.heartbeat")
 		event.SetSource(source)
 		event.SetExtension("the", 42)
