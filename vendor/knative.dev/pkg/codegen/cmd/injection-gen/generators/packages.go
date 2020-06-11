@@ -187,7 +187,6 @@ func extractCommentTags(t *types.Type) map[string]map[string]string {
 	return ExtractCommentTags("+", comments)
 }
 
-<<<<<<< HEAD
 func extractReconcilerClassTag(tags map[string]map[string]string) (string, bool) {
 	vals, ok := tags["genreconciler"]
 	if !ok {
@@ -205,17 +204,6 @@ func isKRShaped(tags map[string]map[string]string) bool {
 	return vals["krshapedlogic"] != "false"
 }
 
-=======
-func extractReconcilerClassTag(tags map[string]map[string]string) (classname string, has bool) {
-	vals, has := tags["genreconciler"]
-	if !has {
-		return
-	}
-	classname, _ = vals["class"]
-	return
-}
-
->>>>>>> WIP: mtping reports general error and timeout
 func isNonNamespaced(tags map[string]map[string]string) bool {
 	vals, has := tags["genclient"]
 	if !has {
@@ -422,17 +410,10 @@ func reconcilerPackages(basePackage string, groupPkgName string, gv clientgentyp
 	for _, t := range typesToGenerate {
 		// Fix for golang iterator bug.
 		t := t
-<<<<<<< HEAD
 		extracted := extractCommentTags(t)
 		reconcilerClass, hasReconcilerClass := extractReconcilerClassTag(extracted)
 		nonNamespaced := isNonNamespaced(extracted)
 		isKRShaped := isKRShaped(extracted)
-=======
-
-		extracted := extractCommentTags(t)
-		reconcilerClass, hasReconcilerClass := extractReconcilerClassTag(extracted)
-		nonNamespaced := isNonNamespaced(extracted)
->>>>>>> WIP: mtping reports general error and timeout
 
 		packagePath := filepath.Join(packagePath, strings.ToLower(t.Name.Name))
 

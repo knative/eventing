@@ -945,18 +945,10 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-<<<<<<< HEAD
 # knative.dev/pkg v0.0.0-20200630170034-2c1a029eb97f
-=======
-<<<<<<< HEAD
-# knative.dev/pkg v0.0.0-20200606224418-7ed1d4a552bc
->>>>>>> WIP: mtping reports general error and timeout
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
-=======
-# knative.dev/pkg v0.0.0-20200501005942-d980c0865972 => github.com/lionelvillard/pkg v0.0.0-20200504190904-131a4e7b7451
->>>>>>> WIP: mtping reports general error and timeout
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
 knative.dev/pkg/apis/duck/v1

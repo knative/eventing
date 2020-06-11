@@ -18,10 +18,6 @@ package network
 
 import (
 	"context"
-<<<<<<< HEAD
-=======
-	"errors"
->>>>>>> WIP: mtping reports general error and timeout
 	"fmt"
 	"net"
 	"net/http"
@@ -92,11 +88,7 @@ func dialBackOffHelper(ctx context.Context, network, address string, bo wait.Bac
 		}
 		return c, nil
 	}
-<<<<<<< HEAD
 	elapsed := time.Since(start)
-=======
-	elapsed := time.Now().Sub(start)
->>>>>>> WIP: mtping reports general error and timeout
 	return nil, fmt.Errorf("timed out dialing after %.2fs", elapsed.Seconds())
 }
 
