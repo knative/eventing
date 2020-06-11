@@ -28,7 +28,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/test/performance/infra/common"
 	pb "knative.dev/eventing/test/performance/infra/event_state"
 )
@@ -148,7 +147,7 @@ func (r *Receiver) processEvents() {
 }
 
 func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
-	cli, err := kncloudevents.NewDefaultClient()
+	cli, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		return fmt.Errorf("failed to create CloudEvents client: %v", err)
 	}

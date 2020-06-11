@@ -21,7 +21,8 @@ import (
 	"flag"
 	"log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 )
 
 var (
@@ -32,26 +33,19 @@ func init() {
 	flag.BoolVar(&filter, "filter", false, "Whether to filter the event")
 }
 
-func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
+func gotEvent(event cloudevents.Event) (*cloudevents.Event, cloudevents.Result) {
 	ctx := event.Context.AsV1()
 
-	dataBytes, err := event.DataBytes()
-	if err != nil {
-		log.Printf("Got Data Error: %s\n", err.Error())
-		return err
-	}
 	log.Println("Received a new event: ")
-	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
+	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), string(event.Data()))
 
 	if filter {
 		log.Println("Filter event")
-		resp.Status = 200
-	} else {
-		event.SetDataContentType(cloudevents.ApplicationJSON)
-		log.Println("Reply with event")
-		resp.RespondWith(200, &event)
+		return nil, cehttp.NewResult(200, "OK")
 	}
-	return nil
+	event.SetDataContentType(cloudevents.ApplicationJSON)
+	log.Println("Reply with event")
+	return &event, cehttp.NewResult(200, "OK")
 }
 
 func main() {
