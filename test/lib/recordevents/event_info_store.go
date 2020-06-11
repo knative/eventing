@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -225,7 +226,7 @@ func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, [
 func (ei *EventInfoStore) AssertAtLeast(min int, f EventInfoMatcher) []EventInfo {
 	events, err := ei.waitAtLeastNMatch(f, min)
 	if err != nil {
-		ei.tb.Fatalf("Timeout waiting for at least %d matches. Error: %v", min, err)
+		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %v", min, errors.WithStack(err))
 	}
 	return events
 }
@@ -235,7 +236,7 @@ func (ei *EventInfoStore) AssertAtLeast(min int, f EventInfoMatcher) []EventInfo
 func (ei *EventInfoStore) AssertInRange(min int, max int, f EventInfoMatcher) []EventInfo {
 	events := ei.AssertAtLeast(min, f)
 	if max > 0 && len(events) > max {
-		ei.tb.Fatalf("expected <= %d events, saw %d", max, len(events))
+		ei.tb.Fatalf("Assert in range failed: %v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
 
 	return events
@@ -246,11 +247,13 @@ func (ei *EventInfoStore) AssertInRange(min int, max int, f EventInfoMatcher) []
 func (ei *EventInfoStore) AssertNot(f EventInfoMatcher) []EventInfo {
 	res, recentEvents, _, err := ei.Find(f)
 	if err != nil {
-		ei.tb.Fatalf("unexpected error during find on recordevents '%s': %v", ei.podName, err)
+		ei.tb.Fatalf("Unexpected error during find on recordevents '%s': %v", ei.podName, errors.WithStack(err))
 	}
 
 	if len(res) != 0 {
-		ei.tb.Fatalf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)
+		ei.tb.Fatalf("Assert not failed: %v", errors.WithStack(
+			fmt.Errorf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
+		)
 	}
 
 	return res
