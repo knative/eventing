@@ -252,7 +252,7 @@ func (ei *EventInfoStore) AssertNot(f EventInfoMatcher) []EventInfo {
 
 	if len(res) != 0 {
 		ei.tb.Fatalf("Assert not failed: %v", errors.WithStack(
-			fmt.Errorf("unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
+			fmt.Errorf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
 
