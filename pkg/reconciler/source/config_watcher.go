@@ -59,7 +59,7 @@ type ConfigWatcher struct {
 	tracingCfg *tracingconfig.Config
 }
 
-// configWatcherOption is a function option for ConfigWatchers.
+// configWatcherOption is a functional option for ConfigWatchers.
 type configWatcherOption func(*ConfigWatcher, configmap.Watcher)
 
 // WatchConfigurations returns a ConfigWatcher initialized with the given
@@ -95,8 +95,22 @@ func WithLogging(cw *ConfigWatcher, cmw configmap.Watcher) {
 
 // WithMetrics observes a metrics ConfigMap.
 func WithMetrics(cw *ConfigWatcher, cmw configmap.Watcher) {
-	cw.metricsCfg = &metrics.ExporterOptions{}
-	watchConfigMap(cmw, metrics.ConfigMapName(), cw.updateFromMetricsConfigMap)
+	withMetrics(0)(cw, cmw)
+}
+
+// WithMetricsPort observes a metrics ConfigMap and configures the metrics
+// exporter with a custom Prometheus port.
+func WithMetricsPort(prometheusPort int) configWatcherOption {
+	return withMetrics(prometheusPort)
+}
+
+func withMetrics(prometheusPort int) configWatcherOption {
+	return func(cw *ConfigWatcher, cmw configmap.Watcher) {
+		cw.metricsCfg = &metrics.ExporterOptions{
+			PrometheusPort: prometheusPort,
+		}
+		watchConfigMap(cmw, metrics.ConfigMapName(), cw.updateFromMetricsConfigMap)
+	}
 }
 
 // WithTracing observes a tracing ConfigMap.
@@ -167,9 +181,10 @@ func (cw *ConfigWatcher) updateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 	delete(cfg.Data, "_example")
 
 	cw.metricsCfg = &metrics.ExporterOptions{
-		Domain:    metrics.Domain(),
-		Component: cw.component,
-		ConfigMap: cfg.Data,
+		Domain:         metrics.Domain(),
+		Component:      cw.component,
+		ConfigMap:      cfg.Data,
+		PrometheusPort: cw.metricsCfg.PrometheusPort,
 	}
 
 	cw.logger.Debug("Updated metrics config from ConfigMap", zap.Any("ConfigMap", cfg))

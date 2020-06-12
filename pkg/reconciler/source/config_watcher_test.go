@@ -89,22 +89,31 @@ func TestNewConfigWatcher_defaults(t *testing.T) {
 	}
 }
 
-func TestNewConfigWatcher_withOptions(t *testing.T) {
+func TestNewConfigWatcher_withMetricsOption(t *testing.T) {
 	testCases := []struct {
 		name                  string
+		opt                   configWatcherOption
 		cmw                   configmap.Watcher
 		expectMetricsContains string
 	}{
 		{
 			name:                  "With pre-filled sample data",
+			opt:                   WithMetrics,
 			cmw:                   configMapWatcherWithSampleData(),
 			expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
 		},
 		{
 			name: "With empty data",
+			opt:  WithMetrics,
 			cmw:  configMapWatcherWithEmptyData(),
 			// metrics defaults to empty ConfigMap
 			expectMetricsContains: `"ConfigMap":{}`,
+		},
+		{
+			name:                  "With custom port",
+			opt:                   WithMetricsPort(9092),
+			cmw:                   configMapWatcherWithSampleData(),
+			expectMetricsContains: `"PrometheusPort":9092`,
 		},
 	}
 
@@ -112,7 +121,7 @@ func TestNewConfigWatcher_withOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := loggingtesting.TestContextWithLogger(t)
 			cw := WatchConfigurations(ctx, testComponent, tc.cmw,
-				WithMetrics,
+				tc.opt,
 			)
 
 			assert.Nil(t, cw.LoggingConfig(), "logging config should be disabled")
