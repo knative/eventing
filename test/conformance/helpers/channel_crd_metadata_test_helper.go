@@ -26,10 +26,10 @@ import (
 )
 
 // ChannelCRDMetadataTestHelperWithChannelTestRunner runs the Channel CRD metadata tests for all
-// Channel resources in the ChannelTestRunner.
+// Channel resources in the ComponentsTestRunner.
 func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 

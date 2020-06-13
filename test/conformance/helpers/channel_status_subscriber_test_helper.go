@@ -29,10 +29,10 @@ import (
 )
 
 // ChannelStatusSubscriberTestHelperWithChannelTestRunner runs the tests of
-// subscriber field of status for all Channels in the ChannelTestRunner.
+// subscriber field of status for all Channels in the ComponentsTestRunner.
 func ChannelStatusSubscriberTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 

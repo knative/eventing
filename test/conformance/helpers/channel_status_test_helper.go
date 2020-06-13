@@ -25,10 +25,10 @@ import (
 )
 
 // ChannelStatusTestHelperWithChannelTestRunner runs the Channel status tests for all Channels in
-// the ChannelTestRunner.
+// the ComponentsTestRunner.
 func ChannelStatusTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 

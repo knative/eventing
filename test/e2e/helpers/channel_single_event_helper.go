@@ -46,7 +46,7 @@ const (
 func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding,
 	subscriptionVersion SubscriptionVersion,
 	channelVersion string,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	channelName := "e2e-singleevent-channel-" + encoding.String()
 	senderName := "e2e-singleevent-sender-" + encoding.String()

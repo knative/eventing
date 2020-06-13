@@ -30,10 +30,10 @@ const (
 )
 
 // ChannelCRDNameTestHelperWithChannelTestRunner runs the Channel CRD name tests for all
-// Channel resources in the ChannelTestRunner.
+// Channel resources in the ComponentsTestRunner.
 func ChannelCRDNameTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 

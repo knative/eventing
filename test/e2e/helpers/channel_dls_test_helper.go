@@ -32,7 +32,7 @@ import (
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
 func ChannelDeadLetterSinkTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
 		senderName          = "e2e-channelchain-sender"

@@ -37,7 +37,7 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 // SingleEventHelperForChannelTestHelper is the helper function for header_test
 func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 	channelName := "conformance-headers-channel-" + encoding
