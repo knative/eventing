@@ -31,13 +31,14 @@ const (
 	ChannelUsage = "The names of the channel type metas, separated by comma. " +
 		"Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel," +
 		"messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\"."
-	BrokerUsage  = "Which brokerclass to test, requires the proper Broker " +
+	BrokerUsage = "Which brokerclass to test, requires the proper Broker " +
 		"implementation to have been installed, and only one value. brokerclass " +
 		"must be (for now) 'MTChannelBasedBroker'."
-	SourceUsage  = "The names of the source type metas, separated by comma. " +
+	SourceUsage = "The names of the source type metas, separated by comma. " +
 		"Example: \"sources.knative.dev/v1alpha1:ApiServerSource," +
 		"sources.knative.dev/v1alpha1:PingSource\"."
 )
+
 // EventingFlags holds the command line flags specific to knative/eventing.
 //var EventingFlags *EventingEnvironmentFlags
 var EventingFlags testFlags.EventingEnvironmentFlags

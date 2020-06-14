@@ -14,14 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package conformance
+package helpers
 
 import (
-	"knative.dev/eventing/test/conformance/helpers"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
-	"testing"
 )
 
-func TestSourceCRDMetadata(t *testing.T) {
-	helpers.SourceCRDMetadataTestHelperWithChannelTestRunner(t, sourcesTestRunner, lib.SetupClientOptionNoop)
+func objectHasRequiredLabels(client *lib.Client, object metav1.TypeMeta, key string, value string) (bool, error) {
+	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
+	crdName := gvr.Resource + "." + gvr.Group
+
+	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{
+		TypeMeta: metav1.TypeMeta{},
+	})
+	if err != nil {
+		return false, err
+	}
+	return crd.Labels[key] == value, nil
 }
