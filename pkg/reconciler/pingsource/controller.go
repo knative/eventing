@@ -22,7 +22,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -31,10 +30,13 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -54,11 +56,15 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
+	serviceAccountInformer := serviceaccount.Get(ctx)
+	roleBindingInformer := rolebinding.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:    kubeclient.Get(ctx),
-		pingLister:       pingSourceInformer.Lister(),
-		deploymentLister: deploymentInformer.Lister(),
+		kubeClientSet:        kubeclient.Get(ctx),
+		pingLister:           pingSourceInformer.Lister(),
+		deploymentLister:     deploymentInformer.Lister(),
+		serviceAccountLister: serviceAccountInformer.Lister(),
+		roleBindingLister:    roleBindingInformer.Lister(),
 
 		loggingContext: ctx,
 	}
@@ -79,7 +85,7 @@ func NewController(
 
 	// Watch for deployments owned by the source
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("PingSource")),
+		FilterFunc: controller.FilterControllerGK(v1alpha2.Kind("PingSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

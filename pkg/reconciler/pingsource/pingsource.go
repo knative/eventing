@@ -21,12 +21,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
+
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
@@ -41,21 +45,26 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+	recresources "knative.dev/eventing/pkg/reconciler/resources"
 	"knative.dev/eventing/pkg/utils"
 )
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	pingSourceDeploymentCreated = "PingSourceDeploymentCreated"
-	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
-	pingSourceDeploymentDeleted = "PingSourceDeploymentDeleted"
-	component                   = "pingsource"
-	mtadapterName               = "pingsource-mt-adapter"
+	pingSourceDeploymentCreated     = "PingSourceDeploymentCreated"
+	pingSourceDeploymentUpdated     = "PingSourceDeploymentUpdated"
+	pingSourceDeploymentDeleted     = "PingSourceDeploymentDeleted"
+	pingSourceServiceAccountCreated = "PingSourceServiceAccountCreated"
+	pingSourceRoleBindingCreated    = "PingSourceRoleBindingCreated"
+
+	component                = "pingsource"
+	mtadapterName            = "pingsource-mt-adapter"
+	stadapterClusterRoleName = "knative-eventing-pingsource-adapter"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -69,6 +78,14 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "SinkNotFound", "Sink not found: %s", string(b))
 }
 
+func newServiceAccountWarn(err error) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "PingSourceServiceAccountFailed", "Reconciling PingSource ServiceAccount failed: %s", err)
+}
+
+func newRoleBindingWarn(err error) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "PingSourceRoleBindingFailed", "Reconciling PingSource RoleBinding failed: %s", err)
+}
+
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
 
@@ -76,8 +93,10 @@ type Reconciler struct {
 	receiveMTAdapterImage string
 
 	// listers index properties about resources
-	pingLister       listers.PingSourceLister
-	deploymentLister appsv1listers.DeploymentLister
+	pingLister           listers.PingSourceLister
+	deploymentLister     appsv1listers.DeploymentLister
+	serviceAccountLister corev1listers.ServiceAccountLister
+	roleBindingLister    rbacv1listers.RoleBindingLister
 
 	// tracking mt adapter deployment changes
 	tracker tracker.Interface
@@ -91,7 +110,7 @@ type Reconciler struct {
 // Check that our Reconciler implements ReconcileKind
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -152,6 +171,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 			return err
 		}
 	} else {
+		if _, err := r.reconcileServiceAccount(ctx, source); err != nil {
+			logging.FromContext(ctx).Error("Unable to create the receive adapter service account", zap.Error(err))
+			return fmt.Errorf("creating receive adapter service account: %v", err)
+		}
+
+		if _, err := r.reconcileRoleBinding(ctx, source); err != nil {
+			logging.FromContext(ctx).Error("Unable to create the receive adapter role binding", zap.Error(err))
+			return fmt.Errorf("creating receive adapter role binding: %v", err)
+		}
+
 		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 		if err != nil {
 			logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
@@ -161,18 +190,56 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	}
 
 	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
-		Type:   v1alpha1.PingSourceEventType,
-		Source: v1alpha1.PingSourceSource(source.Namespace, source.Name),
+		Type:   v1alpha2.PingSourceEventType,
+		Source: v1alpha2.PingSourceSource(source.Namespace, source.Name),
 	}}
 
 	return newReconciledNormal(source.Namespace, source.Name)
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
-	if err := checkResourcesStatus(src); err != nil {
-		return nil, err
-	}
+func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1alpha2.PingSource) (*corev1.ServiceAccount, error) {
+	saName := resources.CreateReceiveAdapterName(source.Name, source.UID)
+	sa, err := r.serviceAccountLister.ServiceAccounts(source.Namespace).Get(saName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			expected := recresources.MakeServiceAccount(source, saName)
+			sa, err := r.kubeClientSet.CoreV1().ServiceAccounts(source.Namespace).Create(expected)
+			if err != nil {
+				return sa, newServiceAccountWarn(err)
+			}
+			controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, pingSourceServiceAccountCreated, "PingSource ServiceAccount created")
+			return sa, nil
+		}
 
+		logging.FromContext(ctx).Error("Unable to get the PingSource ServiceAccount", zap.Error(err))
+		source.Status.Annotations["serviceAccount"] = "Failed to get ServiceAccount"
+		return nil, newServiceAccountWarn(err)
+	}
+	return sa, nil
+}
+
+func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1alpha2.PingSource) (*rbacv1.RoleBinding, error) {
+	rbName := resources.CreateReceiveAdapterName(source.Name, source.UID)
+
+	rb, err := r.roleBindingLister.RoleBindings(source.Namespace).Get(rbName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			expected := resources.MakeRoleBinding(source, rbName, stadapterClusterRoleName)
+			rb, err := r.kubeClientSet.RbacV1().RoleBindings(source.Namespace).Create(expected)
+			if err != nil {
+				return rb, newRoleBindingWarn(err)
+			}
+			controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, pingSourceRoleBindingCreated, "PingSource RoleBinding created")
+			return rb, nil
+		}
+		logging.FromContext(ctx).Error("Unable to get the PingSource RoleBinding", zap.Error(err))
+		source.Status.Annotations["roleBinding"] = "Failed to get PingSource RoleBinding"
+		return nil, newRoleBindingWarn(err)
+	}
+	return rb, nil
+}
+
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
@@ -228,11 +295,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 	return ra, nil
 }
 
-func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
-	if err := checkResourcesStatus(source); err != nil {
-		return nil, err
-	}
-
+func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha2.PingSource) (*appsv1.Deployment, error) {
 	args := resources.MTArgs{
 		ServiceAccountName: mtadapterName,
 		MTAdapterName:      mtadapterName,
@@ -263,35 +326,6 @@ func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1al
 		logging.FromContext(ctx).Debug("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
 	}
 	return d, nil
-}
-
-func checkResourcesStatus(src *v1alpha1.PingSource) error {
-	for _, rsrc := range []struct {
-		key   string
-		field string
-	}{{
-		key:   "Request.CPU",
-		field: src.Spec.Resources.Requests.ResourceCPU,
-	}, {
-		key:   "Request.Memory",
-		field: src.Spec.Resources.Requests.ResourceMemory,
-	}, {
-		key:   "Limit.CPU",
-		field: src.Spec.Resources.Limits.ResourceCPU,
-	}, {
-		key:   "Limit.Memory",
-		field: src.Spec.Resources.Limits.ResourceMemory,
-	}} {
-		// In the event the field isn't specified, we assign a default in the receive_adapter
-		if rsrc.field != "" {
-			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
-				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %q, Error: %s", rsrc.key, rsrc.field, err)
-				return fmt.Errorf("incorrect resource specification, %s: %q: %v", rsrc.key, rsrc.field, err)
-			}
-		}
-	}
-	src.Status.MarkResourcesCorrect()
-	return nil
 }
 
 func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {

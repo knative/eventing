@@ -1486,7 +1486,7 @@ func makeReadyPingSource() *sourcesv1alpha2.PingSource {
 		rtv1alpha1.WithValidPingSourceV1A2Schedule,
 		rtv1alpha1.WithValidPingSourceV1A2Resources,
 		rtv1alpha1.WithPingSourceV1A2Deployed,
-		rtv1alpha1.WithPingSourceV1A2EventType,
+		rtv1alpha1.WithPingSourceV1A2CloudEventAttributes,
 		rtv1alpha1.WithPingSourceV1A2Sink(u),
 	)
 }

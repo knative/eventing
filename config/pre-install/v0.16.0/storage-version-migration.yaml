@@ -37,3 +37,4 @@ spec:
         image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
         args:
           - "brokers.eventing.knative.dev"
+          - "pingsources.sources.knative.dev"

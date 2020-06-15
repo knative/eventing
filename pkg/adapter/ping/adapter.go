@@ -25,10 +25,10 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
 type envConfig struct {
@@ -100,8 +100,8 @@ func (a *pingAdapter) start(stopCh <-chan struct{}) error {
 func (a *pingAdapter) cronTick() {
 	ctx := context.Background()
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
-	event.SetType(sourcesv1alpha1.PingSourceEventType)
-	event.SetSource(sourcesv1alpha1.PingSourceSource(a.Namespace, a.Name))
+	event.SetType(sourcesv1alpha2.PingSourceEventType)
+	event.SetSource(sourcesv1alpha2.PingSourceSource(a.Namespace, a.Name))
 	if err := event.SetData(cloudevents.ApplicationJSON, message(a.Data)); err != nil {
 		logging.FromContext(ctx).Errorw("ping failed to set event data", zap.Error(err))
 	}

@@ -27,9 +27,11 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 )
 
 func TestNew(t *testing.T) {
