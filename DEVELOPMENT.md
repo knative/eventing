@@ -195,3 +195,51 @@ To access Telemetry see:
 - [Accessing Metrics](https://www.knative.dev/docs/serving/accessing-metrics/)
 - [Accessing Logs](https://www.knative.dev/docs/serving/accessing-logs/)
 - [Accessing Traces](https://www.knative.dev/docs/serving/accessing-traces/)
+
+## Packet sniffing
+
+While debugging an Eventing component, it could be useful to perform packet
+sniffing on a container to analyze the traffic.
+
+**Note**: this debugging method should not be used in production.
+
+In order to do packet sniffing, you need:
+
+- [`ko`](https://github.com/google/ko) to deploy Eventing
+- [`kubectl sniff`](https://github.com/eldadru/ksniff) to deploy and collect
+  `tcpdump`
+- (Optional) [Wireshark](https://www.wireshark.org/) to analyze the `tcpdump`
+  output
+
+After you installed all these tools, change the base image ko uses to build
+Eventing component images changing the [.ko.yaml](./.ko.yaml). You need an image
+that has the `tar` tool installed, for example:
+
+```yaml
+defaultBaseImage: docker.io/debian:latest
+```
+
+Now redeploy with `ko` the component you want to sniff as explained in the above
+paragraphs.
+
+When the container is running, run:
+
+```
+kubectl sniff <POD_NAME> -n knative-eventing -o out.dump
+```
+
+Changing `<POD_NAME>` with the pod name of the component you wish to test, for
+example `imc-dispatcher-85797b44c8-gllnx`. This command will dump the `tcpdump`
+output with all the sniffed packets to `out.dump`. Then, you can open this file
+with Wireshark using:
+
+```
+wireshark out.dump
+```
+
+If you run `kubectl sniff` without the output file name, it will open directly
+Wireshark:
+
+```
+kubectl sniff <POD_NAME> -n knative-eventing
+```
