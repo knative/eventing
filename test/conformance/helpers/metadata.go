@@ -24,17 +24,13 @@ import (
 
 func validateRequiredLabels(client *testlib.Client, object metav1.TypeMeta, labels map[string]string) {
 	for k, v := range labels {
-		yes, err := objectHasRequiredLabel(client, object, k, v)
-		if err != nil {
-			client.T.Fatalf("error while checking labels for %q: %v", object, err)
-		}
-		if !yes {
+		if !objectHasRequiredLabel(client, object, k, v) {
 			client.T.Fatalf("can't find label '%s=%s' in CRD %q", k, v, object)
 		}
 	}
 }
 
-func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key string, value string) (bool, error) {
+func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key string, value string) bool {
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
@@ -42,7 +38,7 @@ func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key 
 		TypeMeta: metav1.TypeMeta{},
 	})
 	if err != nil {
-		return false, err
+		client.T.Errorf("error while getting %q:%v", object, err)
 	}
-	return crd.Labels[key] == value, nil
+	return crd.Labels[key] == value
 }
