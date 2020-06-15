@@ -44,7 +44,7 @@ func (sources *Sources) Set(value string) error {
 			Kind:       split[1],
 		}
 		if !isValidSource(tm.Kind) {
-			log.Fatalf("The given source name %q is invalid, tests cannot be run.\n", source)
+			log.Fatalf("The given Source name %q is invalid, tests cannot be run.\n", source)
 		}
 
 		*sources = append(*sources, tm)

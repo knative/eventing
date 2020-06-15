@@ -19,14 +19,14 @@ package helpers
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
-func validateRequiredLabels(client *lib.Client, object metav1.TypeMeta, labels map[string]string) {
+func validateRequiredLabels(client *testlib.Client, object metav1.TypeMeta, labels map[string]string) {
 	for k, v := range labels {
 		yes, err := objectHasRequiredLabel(client, object, k, v)
 		if err != nil {
-			client.T.Fatalf("can't find CRD for %q: %v", object, err)
+			client.T.Fatalf("error while checking labels for %q: %v", object, err)
 		}
 		if !yes {
 			client.T.Fatalf("can't find label '%s=%s' in CRD %q", k, v, object)
@@ -34,7 +34,7 @@ func validateRequiredLabels(client *lib.Client, object metav1.TypeMeta, labels m
 	}
 }
 
-func objectHasRequiredLabel(client *lib.Client, object metav1.TypeMeta, key string, value string) (bool, error) {
+func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key string, value string) (bool, error) {
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 

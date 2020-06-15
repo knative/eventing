@@ -44,7 +44,7 @@ func (channels *Channels) Set(value string) error {
 			Kind:       split[1],
 		}
 		if !isValidChannel(tm.Kind) {
-			log.Fatalf("The given channel name %q is invalid, tests cannot be run.\n", channel)
+			log.Fatalf("The given Channel name %q is invalid, tests cannot be run.\n", channel)
 		}
 
 		*channels = append(*channels, tm)

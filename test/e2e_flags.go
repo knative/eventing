@@ -24,7 +24,7 @@ import (
 	"log"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testFlags "knative.dev/eventing/test/flags"
+	testflags "knative.dev/eventing/test/flags"
 	"knative.dev/eventing/test/lib"
 )
 
@@ -41,8 +41,7 @@ const (
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
-//var EventingFlags *EventingEnvironmentFlags
-var EventingFlags testFlags.EventingEnvironmentFlags
+var EventingFlags testflags.EventingEnvironmentFlags
 
 // InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
 // go1.13+, see https://github.com/knative/test-infra/issues/1329 for details
