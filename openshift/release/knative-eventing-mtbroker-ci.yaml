@@ -148,7 +148,7 @@ spec:
       containers:
       - name: filter
         terminationMessagePolicy: FallbackToLogsOnError
-        image: registry.svc.ci.openshift.org/openshift/knative-nightly:knative-eventing-mtbroker-filter
+        image: registry.svc.ci.openshift.org/openshift/knative-v0.15.0:knative-eventing-mtbroker-filter
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -241,7 +241,7 @@ spec:
       containers:
       - name: ingress
         terminationMessagePolicy: FallbackToLogsOnError
-        image: registry.svc.ci.openshift.org/openshift/knative-nightly:knative-eventing-mtbroker-ingress
+        image: registry.svc.ci.openshift.org/openshift/knative-v0.15.0:knative-eventing-mtbroker-ingress
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -335,7 +335,7 @@ spec:
       containers:
       - name: mt-broker-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: registry.svc.ci.openshift.org/openshift/knative-nightly:knative-eventing-mtchannel-broker
+        image: registry.svc.ci.openshift.org/openshift/knative-v0.15.0:knative-eventing-mtchannel-broker
         resources:
           requests:
             cpu: 100m
