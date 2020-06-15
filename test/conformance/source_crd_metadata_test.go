@@ -17,9 +17,10 @@ limitations under the License.
 package conformance
 
 import (
+	"testing"
+
 	"knative.dev/eventing/test/conformance/helpers"
 	"knative.dev/eventing/test/lib"
-	"testing"
 )
 
 func TestSourceCRDMetadata(t *testing.T) {

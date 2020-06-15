@@ -22,7 +22,19 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
-func objectHasRequiredLabels(client *lib.Client, object metav1.TypeMeta, key string, value string) (bool, error) {
+func validateRequiredLabels(client *lib.Client, object metav1.TypeMeta, labels map[string]string) {
+	for k, v := range labels {
+		yes, err := objectHasRequiredLabel(client, object, k, v)
+		if err != nil {
+			client.T.Fatalf("can't find CRD for %q: %v", object, err)
+		}
+		if !yes {
+			client.T.Fatalf("can't find label '%s=%s' in CRD %q", k, v, object)
+		}
+	}
+}
+
+func objectHasRequiredLabel(client *lib.Client, object metav1.TypeMeta, key string, value string) (bool, error) {
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 

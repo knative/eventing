@@ -23,6 +23,10 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
+var sourceLabels = map[string]string{
+	"duck.knative.dev/source": "true",
+}
+
 func SourceCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
 	sourceTestRunner lib.ComponentsTestRunner,
@@ -37,13 +41,7 @@ func SourceCRDMetadataTestHelperWithChannelTestRunner(
 		// Each source MUST have the following:
 		//   label of duck.knative.dev/source: "true"
 		t.Run("Source CRD has required label", func(t *testing.T) {
-			yes, err := objectHasRequiredLabels(client, source, "duck.knative.dev/source", "true")
-			if err != nil {
-				client.T.Fatalf("Unable to find CRD for %q: %v", source, err)
-			}
-			if !yes {
-				client.T.Fatalf("Source CRD doesn't have the label 'duck.knative.dev/source=true' %q: %v", source, err)
-			}
+			validateRequiredLabels(client, source, sourceLabels)
 		})
 
 	})

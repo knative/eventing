@@ -21,10 +21,11 @@ package test
 
 import (
 	"flag"
+	"log"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testFlags "knative.dev/eventing/test/flags"
 	"knative.dev/eventing/test/lib"
-	"log"
 )
 
 const (

@@ -71,15 +71,9 @@ func channelCRDHasRequiredLabels(client *lib.Client, channel metav1.TypeMeta) {
 	// Each channel MUST have the following:
 	//   label of messaging.knative.dev/subscribable: "true"
 	//   label of duck.knative.dev/addressable: "true"
-	for k, v := range channelLabels {
-		yes, err := objectHasRequiredLabels(client, channel, k, v)
-		if err != nil {
-			client.T.Fatalf("Unable to find CRD for %q: %v", channel, err)
-		}
-		if !yes {
-			client.T.Fatalf("Channel CRD doesn't have the label '%s=%s' %q: %v", k, v, channel, err)
-		}
-	}
+
+
+	validateRequiredLabels(client, channel, channelLabels)
 }
 
 func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
