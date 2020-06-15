@@ -1,0 +1,83 @@
+kind: Template
+apiVersion: template.openshift.io/v1
+
+metadata:
+  name: e2e-origin-testsuite
+
+parameters:
+- name: NAMESPACE
+  required: true
+- name: IMAGE_TESTS
+  required: true
+- name: TEST_COMMAND
+  required: true
+
+objects:
+
+- kind: Job
+  apiVersion: batch/v1
+  metadata:
+    name: e2e-origin-testsuite
+    namespace: ${NAMESPACE}
+  spec:
+    parallelism: 1
+    completions: 1
+    backoffLimit: 1
+    template:
+      spec:
+        restartPolicy: Never
+        volumes:
+        - name: kubeconfig
+          configMap:
+            name: kubeconfig #this config map is created externally before deploying the template
+        containers:
+        - name: e2e-test-origin
+          image: ${IMAGE_TESTS}
+          terminationMessagePolicy: FallbackToLogsOnError
+          resources:
+            requests:
+              cpu: 500m
+              memory: 300Mi
+            limits:
+              memory: 3Gi
+          volumeMounts:
+          - name: kubeconfig
+            mountPath: /tmp/kubeconfig
+          env:
+          - name: KUBECONFIG
+            value: /tmp/kubeconfig/kubeconfig
+          command:
+          - /bin/bash
+          - -c
+          - |
+            #!/bin/bash
+            set -x
+
+            set -uo pipefail
+
+            export PATH=/usr/libexec/origin:$PATH
+
+            trap 'kill $(jobs -p); exit 0' TERM
+
+            mkdir -p "${HOME}"
+
+            export PROVIDER_ARGS="-provider=aws -gce-zone=us-east-1"
+            export TEST_PROVIDER='{"type":"aws","region":"us-east-1","zone":"us-east-1a","multizone":true,"multimaster":true}'
+            export KUBE_SSH_USER=core
+
+            mkdir -p /tmp/artifacts/e2e-origin
+
+            function run-tests() {
+              openshift-tests run "${TEST_SUITE}" \
+                --provider "${TEST_PROVIDER:-}" -o /tmp/artifacts/e2e-origin/e2e-origin.log \
+                --junit-dir /tmp/artifacts/e2e-origin/junit
+              
+              junit_file=$(find /tmp/artifacts/e2e-origin -name "junit_e2e_*.xml")
+              tar -cvf /tmp/artifacts/e2e-origin/test_logs.tar /tmp/artifacts/e2e-origin/e2e-origin.log $junit_file
+
+              sleep 60 #wait so that the e2e test pod can download the tar file
+
+              exit 0
+            }
+
+            ${TEST_COMMAND}

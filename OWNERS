@@ -1,30 +1,8 @@
-# Approvers in this repo should also be added to the eventing-contrib
-# approvers list.
-approvers:
-- toc
-- grantr
-- Harwayne
-- vaikas
-- n3wscott
-- matzew
-- nachocano
-- lionelvillard
-- slinkydeveloper
+# The OWNERS file is used by prow to automatically merge approved PRs.
 
-# Reviewers are suggested from the reviewers list first, then the approvers
-# list. To add reviewers while spreading the load among existing approvers,
-# copy the approvers to the reviewers list too.
+approvers:
+- eventing-approvers
+
 reviewers:
-- grantr
-- Harwayne
-- vaikas
-- n3wscott
-- matzew
-- nachocano
-- lionelvillard
-- slinkydeveloper
-# Add reviewers below
-- liu-cong
-- yolocs
-- aslom
-- lberk
+- eventing-reviewers
+

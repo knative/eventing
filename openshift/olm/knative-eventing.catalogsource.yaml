@@ -1,0 +1,1667 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: knative-eventing-operator
+
+data:
+  customResourceDefinitions: |-
+    - apiVersion: apiextensions.k8s.io/v1beta1
+      kind: CustomResourceDefinition
+      metadata:
+        name: knativeeventings.eventing.knative.dev
+      spec:
+        group: eventing.knative.dev
+        names:
+          kind: KnativeEventing
+          listKind: KnativeEventingList
+          plural: knativeeventings
+          singular: knativeeventing
+          shortNames:
+          - ke
+        scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                type: object
+              status:
+                properties:
+                  conditions:
+                    description: The latest available observations of a resource's current
+                      state. +patchMergeKey=type +patchStrategy=merge
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: LastTransitionTime is the last time the condition
+                            transitioned from one status to another. We use VolatileTime
+                            in place of metav1.Time to exclude this from creating equality.Semantic
+                            differences (all other things held constant).
+                          type: string
+                        message:
+                          description: A human readable message indicating details about
+                            the transition.
+                          type: string
+                        reason:
+                          description: The reason for the condition's last transition.
+                          type: string
+                        severity:
+                          description: Severity with which to treat failures of this type
+                            of condition. When this is not specified, it defaults to Error.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                            +required
+                          type: string
+                        type:
+                          description: Type of condition. +required
+                          type: string
+                      required:
+                      - type
+                      - status
+                      type: object
+                    type: array
+                  version:
+                    description: The version of the installed release
+                    type: string
+                type: object
+        version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+  clusterServiceVersions: |-
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"},"spec":{}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.10.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.10.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.10.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.10.0/openshift/release/knative-eventing-v0.10.0.yaml,https://raw.githubusercontent.com/openshift-knative/knative-eventing-operator/master/deploy/resources/networkpolicies.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Red Hat
+        replaces: knative-eventing-operator.v0.9.0
+        version: 0.10.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"},"spec":{}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.11.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.11.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.11.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.11.0/openshift/release/knative-eventing-v0.11.0.yaml,https://raw.githubusercontent.com/openshift-knative/knative-eventing-operator/master/deploy/resources/networkpolicies.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Red Hat
+        replaces: knative-eventing-operator.v0.10.0
+        version: 0.11.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"},"spec":{}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.12.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          operators.operatorframework.io/internal-objects: '["knativeeventings.eventing.knative.dev"]'
+          support: Red Hat
+        name: knative-eventing-operator.v0.12.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.12.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.12.0/openshift/release/knative-eventing-v0.12.0.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        minKubeVersion: 1.15.0
+        provider:
+          name: Red Hat
+        replaces: knative-eventing-operator.v0.11.0
+        version: 0.12.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"},"spec":{}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.13.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          operators.operatorframework.io/internal-objects: '["knativeeventings.eventing.knative.dev"]'
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.13.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.13.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-next/openshift/release/knative-eventing-ci.yaml,https://raw.githubusercontent.com/openshift/knative-eventing/release-next/openshift/release/knative-eventing-channelbroker-ci.yaml,https://raw.githubusercontent.com/openshift/knative-eventing/release-next/openshift/release/knative-eventing-mtbroker-ci.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        minKubeVersion: 1.15.0
+        provider:
+          name: Red Hat
+        replaces: knative-eventing-operator.v0.12.0
+        version: 0.13.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"},"spec":{}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.6.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.6.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.annotations['olm.targetNamespaces']
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.6.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.6.0/openshift/release/knative-eventing-v0.6.0.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Knative Community
+        version: 0.6.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.7.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.7.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.annotations['olm.targetNamespaces']
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.7.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.7.0/openshift/release/knative-eventing-v0.7.0.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Knative Community
+        replaces: knative-eventing-operator.v0.6.0
+        version: 0.7.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.7.1
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.7.1
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.7.1
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.7.1/openshift/release/knative-eventing-v0.7.1.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Knative Community
+        replaces: knative-eventing-operator.v0.7.0
+        version: 0.7.1
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.8.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.8.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.8.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.8.0/openshift/release/knative-eventing-v0.8.0.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Red Hat
+        replaces: knative-eventing-operator.v0.7.1
+        version: 0.8.0
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          alm-examples: '[{"apiVersion":"eventing.knative.dev/v1alpha1","kind":"KnativeEventing","metadata":{"name":"knative-eventing"},"spec":{}}]'
+          capabilities: Basic Install
+          categories: Networking,Integration & Delivery,Cloud Provider,Developer Tools
+          certified: "false"
+          containerImage: quay.io/openshift-knative/knative-eventing-operator:v0.9.0
+          createdAt: "2019-05-07T17:00:00Z"
+          description: |-
+            Knative Eventing is a system that is designed to address a
+            common need for cloud native development and provides composable
+            primitives to enable late-binding event sources and event
+            consumers.
+          repository: https://github.com/openshift-knative/knative-eventing-operator
+          support: Red Hat
+        name: knative-eventing-operator.v0.9.0
+        namespace: placeholder
+      spec:
+        apiservicedefinitions: {}
+        customresourcedefinitions:
+          owned:
+          - description: Represents an installation of a particular version of Knative Eventing
+            displayName: Knative Eventing
+            kind: KnativeEventing
+            name: knativeeventings.eventing.knative.dev
+            statusDescriptors:
+            - description: The version of Knative Eventing installed
+              displayName: Version
+              path: version
+            version: v1alpha1
+        description: |
+          Knative Eventing is designed to address a common need for cloud
+          native development:
+
+          1. Services are loosely coupled during development and deployed independently
+          1. A producer can generate events before a consumer is listening, and a consumer
+             can express an interest in an event or class of events that is not yet being
+             produced.
+          1. Services can be connected to create new applications
+             - without modifying producer or consumer, and
+             - with the ability to select a specific subset of events from a particular
+               producer.
+
+          For complete Knative Eventing documentation, see
+          [Knative eventing](https://www.knative.dev/docs/eventing/) or
+          [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
+        displayName: Knative Eventing Operator
+        icon:
+        - base64data: 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
+          mediatype: image/png
+        install:
+          spec:
+            clusterPermissions:
+            - rules:
+              - apiGroups:
+                - '*'
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+            deployments:
+            - name: knative-eventing-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: knative-eventing-operator
+                strategy: {}
+                template:
+                  metadata:
+                    labels:
+                      name: knative-eventing-operator
+                  spec:
+                    containers:
+                    - command:
+                      - knative-eventing-operator
+                      env:
+                      - name: WATCH_NAMESPACE
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: knative-eventing-operator
+                      image: quay.io/openshift-knative/knative-eventing-operator:v0.9.0
+                      args:
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.9.0/openshift/release/knative-eventing-v0.9.0.yaml
+                      imagePullPolicy: Always
+                      name: knative-eventing-operator
+                      resources: {}
+                    serviceAccountName: knative-eventing-operator
+            permissions:
+            - rules:
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                verbs:
+                - '*'
+              - apiGroups:
+                - ""
+                resources:
+                - namespaces
+                verbs:
+                - get
+              - apiGroups:
+                - apps
+                resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - apps
+                resourceNames:
+                - knative-eventing-operator
+                resources:
+                - deployments/finalizers
+                verbs:
+                - update
+              - apiGroups:
+                - eventing.knative.dev
+                resources:
+                - '*'
+                verbs:
+                - '*'
+              serviceAccountName: knative-eventing-operator
+          strategy: deployment
+        installModes:
+        - supported: false
+          type: OwnNamespace
+        - supported: false
+          type: SingleNamespace
+        - supported: false
+          type: MultiNamespace
+        - supported: true
+          type: AllNamespaces
+        keywords:
+        - serverless
+        - eventing
+        - camel
+        - kafka
+        links:
+        - name: Website
+          url: https://www.knative.dev/docs/eventing/
+        - name: Documentation
+          url: https://www.knative.dev/docs/
+        maintainers:
+        - email: knative@redhat.com
+          name: Knative team
+        maturity: alpha
+        provider:
+          name: Red Hat
+        replaces: knative-eventing-operator.v0.8.0
+        version: 0.9.0
+  packages: |-
+    - packageName: knative-eventing-operator
+      channels:
+      - name: alpha
+        currentCSV: knative-eventing-operator.v0.13.0
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: knative-eventing-operator
+spec:
+  configMap: knative-eventing-operator
+  displayName: Knative Eventing Operator
+  publisher: Red Hat
+  sourceType: internal

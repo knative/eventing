@@ -1,31 +1,27 @@
 aliases:
-  toc:
-  - evankanderson
-  - grantr
+  eventing-approvers:
+  - abd4lla
+  - alanfx
+  - aliok
+  - arilivigni
+  - bobmcwhirter
+  - evanchooly
+  - jcrossley3
+  - lberk
   - markusthoemmes
-  - mattmoor
-  - tcnghia
-
-  # These aliases are for OWNERS of the various Channel implementations. These
-  # Are in addition to the repo level OWNERS.
-
-  performance-approvers:
-  - chaodaiG
-  - chizhg
-  - slinkydeveloper
-  performance-reviewers:
-  - chaodaiG
-  - chizhg
-  - slinkydeveloper
-
-  productivity-approvers:
-  - chaodaiG
-  - chizhg
-  productivity-reviewers:
-  - chaodaiG
-  - chizhg
-  - steuhs
-  - yt3liu
-
-  channel-reviewers:
-  - slinkydeveloper
+  - matzew
+  - mgencur
+  - mvinkler
+  eventing-reviewers:
+  - abd4lla
+  - alanfx
+  - aliok
+  - arilivigni
+  - bobmcwhirter
+  - evanchooly
+  - jcrossley3
+  - lberk
+  - markusthoemmes
+  - matzew
+  - mgencur
+  - mvinkler

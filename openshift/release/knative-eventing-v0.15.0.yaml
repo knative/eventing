@@ -1,0 +1,2401 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      duck.knative.dev/addressable: "true"
+rules: [] # Rules are automatically filled in by the controller manager.
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: service-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: serving-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+- apiGroups:
+  - serving.knative.dev
+  resources:
+  - routes
+  - routes/status
+  - services
+  - services/status
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: channel-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+- apiGroups:
+  - messaging.knative.dev
+  resources:
+  - channels
+  - channels/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - messaging.knative.dev
+  resources:
+  - channels/finalizers
+  verbs:
+  - update
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: broker-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+- apiGroups:
+  - eventing.knative.dev
+  resources:
+  - brokers
+  - brokers/status
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: messaging-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+- apiGroups:
+  - messaging.knative.dev
+  resources:
+  - sequences
+  - sequences/status
+  - parallels
+  - parallels/status
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: flows-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+- apiGroups:
+  - flows.knative.dev
+  resources:
+  - sequences
+  - sequences/status
+  - parallels
+  - parallels/status
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventing-broker-filter
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "triggers"
+      - "triggers/status"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventing-broker-ingress
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventing-config-reader
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: channelable-manipulator
+  labels:
+    eventing.knative.dev/release: devel
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      duck.knative.dev/channelable: "true"
+rules: [] # Rules are automatically filled in by the controller manager.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: meta-channelable-manipulator
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/channelable: "true"
+rules:
+- apiGroups:
+  - messaging.knative.dev
+  resources:
+  - channels
+  - channels/status
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-namespaced-admin
+  labels:
+    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["eventing.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-messaging-namespaced-admin
+  labels:
+    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["messaging.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-flows-namespaced-admin
+  labels:
+    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["flows.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-sources-namespaced-admin
+  labels:
+    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["sources.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-namespaced-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "flows.knative.dev"]
+    resources: ["*"]
+    verbs: ["create", "update", "patch", "delete"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-namespaced-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", flows.knative.dev]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knative-eventing-controller
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "namespaces"
+      - "secrets"
+      - "configmaps"
+      - "services"
+      - "endpoints"
+      - "events"
+      - "serviceaccounts"
+    verbs: &everything
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    verbs: *everything
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments/finalizers"
+    verbs:
+      - "update"
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - "rolebindings"
+    verbs: *everything
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers"
+      - "brokers/status"
+      - "triggers"
+      - "triggers/status"
+      - "eventtypes"
+      - "eventtypes/status"
+    verbs: *everything
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers/finalizers"
+      - "triggers/finalizers"
+    verbs:
+      - "update"
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "sequences"
+      - "sequences/status"
+      - "channels"
+      - "channels/status"
+      - "parallels"
+      - "parallels/status"
+      - "subscriptions"
+      - "subscriptions/status"
+    verbs: *everything
+  - apiGroups:
+      - "flows.knative.dev"
+    resources:
+      - "sequences"
+      - "sequences/status"
+      - "parallels"
+      - "parallels/status"
+    verbs: *everything
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "sequences/finalizers"
+      - "parallels/finalizers"
+      - "channels/finalizers"
+    verbs:
+      - "update"
+  - apiGroups:
+      - "flows.knative.dev"
+    resources:
+      - "sequences/finalizers"
+      - "parallels/finalizers"
+    verbs:
+      - "update"
+  - apiGroups:
+      - "apiextensions.k8s.io"
+    resources:
+      - "customresourcedefinitions"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knative-eventing-pingsource-mt-adapter
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources
+      - pingsources/status
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources/finalizers
+    verbs:
+      - "patch"
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - "create"
+      - "patch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: podspecable-binding
+  labels:
+    eventing.knative.dev/release: devel
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      duck.knative.dev/podspecable: "true"
+rules: [] # Rules are automatically filled in by the controller manager.
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: builtin-podspecable-binding
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/podspecable: "true"
+rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+      - "daemonsets"
+      - "statefulsets"
+      - "replicasets"
+    verbs:
+      - "list"
+      - "watch"
+      - "patch"
+  - apiGroups:
+      - "batch"
+    resources:
+      - "jobs"
+    verbs:
+      - "list"
+      - "watch"
+      - "patch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: source-observer
+  labels:
+    eventing.knative.dev/release: devel
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        duck.knative.dev/source: "true"
+rules: [] # Rules are automatically filled in by the controller manager.
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: eventing-sources-source-observer
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/source: "true"
+rules:
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - apiserversources
+      - pingsources
+      - sinkbindings
+      - containersources
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knative-eventing-sources-controller
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+      - "configmaps"
+      - "services"
+    verbs: &everything
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    verbs: *everything
+  - apiGroups:
+      - "sources.knative.dev"
+    resources:
+      - "sinkbindings"
+      - "sinkbindings/status"
+      - "sinkbindings/finalizers"
+      - "apiserversources"
+      - "apiserversources/status"
+      - "apiserversources/finalizers"
+      - "pingsources"
+      - "pingsources/status"
+      - "pingsources/finalizers"
+      - "containersources"
+      - "containersources/status"
+      - "containersources/finalizers"
+    verbs: *everything
+  - apiGroups:
+      - serving.knative.dev
+    resources:
+      - services
+    verbs: *everything
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - eventtypes
+    verbs: *everything
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs: *everything
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knative-eventing-webhook
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+      - "namespaces"
+    verbs:
+      - "get"
+      - "create"
+      - "update"
+      - "list"
+      - "watch"
+      - "patch"
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    verbs:
+      - "get"
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments/finalizers"
+    verbs:
+      - update
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - "mutatingwebhookconfigurations"
+      - "validatingwebhookconfigurations"
+    verbs: &everything
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+  - apiGroups:
+      - "sources.knative.dev"
+    resources:
+      - "sinkbindings"
+      - "sinkbindings/status"
+      - "sinkbindings/finalizers"
+    verbs: *everything
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eventing-controller
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-controller
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-controller-resolver
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: addressable-resolver
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-controller-source-observer
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: source-observer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-controller-sources-controller
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-sources-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-controller-manipulator
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: channelable-manipulator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pingsource-mt-adapter
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: knative-eventing-pingsource-mt-adapter
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: pingsource-mt-adapter
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-pingsource-mt-adapter
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eventing-webhook
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-webhook
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-webhook
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-webhook
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-webhook-resolver
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-webhook
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: addressable-resolver
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-webhook-podspecable-binding
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-webhook
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: podspecable-binding
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    eventing.knative.dev/release: devel
+    eventing.knative.dev/source: "true"
+    duck.knative.dev/source: "true"
+    knative.dev/crd-install: "true"
+  annotations:
+    registry.knative.dev/eventTypes: |
+      [
+        { "type": "dev.knative.apiserver.resource.add" },
+        { "type": "dev.knative.apiserver.resource.delete" },
+        { "type": "dev.knative.apiserver.resource.update" },
+        { "type": "dev.knative.apiserver.ref.add" },
+        { "type": "dev.knative.apiserver.ref.delete" },
+        { "type": "dev.knative.apiserver.ref.update" }
+      ]
+  name: apiserversources.sources.knative.dev
+spec:
+  group: sources.knative.dev
+  names:
+    categories:
+    - all
+    - knative
+    - eventing
+    - sources
+    kind: ApiServerSource
+    plural: apiserversources
+  scope: Namespaced
+  subresources:
+    status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type=='Ready')].reason"
+    - name: Sink
+      type: string
+      JSONPath: ".status.sinkUri"
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1alpha2
+    served: true
+    storage: false
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: brokers.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: eventing.knative.dev
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  names:
+    kind: Broker
+    plural: brokers
+    singular: broker
+    categories:
+    - all
+    - knative
+    - eventing
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1beta1
+    served: true
+    storage: false
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: channels.messaging.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    messaging.knative.dev/subscribable: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: messaging.knative.dev
+  preserveUnknownFields: false
+  names:
+    kind: Channel
+    plural: channels
+    singular: channel
+    categories:
+      - all
+      - knative
+      - messaging
+      - channel
+    shortNames:
+      - ch
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              channelTemplate:
+                description: "Channel implementation which dictates the durability guarantees of events. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
+                type: object
+                properties:
+                  apiVersion:
+                    type: string
+                    description: "API version of the channel implementation."
+                    minLength: 1
+                  kind:
+                    type: string
+                    description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
+                    minLength: 1
+                  spec:
+                    type: object
+                required:
+                  - apiVersion
+                  - kind
+              subscribable:
+                type: object
+                properties:
+                  subscribers:
+                    type: array
+                    description: "Events received on the channel are forwarded to its subscribers."
+                    items:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      required:
+                        - uid
+                      properties:
+                        ref:
+                          type: object
+                          description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                          x-kubernetes-preserve-unknown-fields: true
+                          required:
+                            - namespace
+                            - name
+                            - uid
+                          properties:
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                              minLength: 1
+                            namespace:
+                              type: string
+                              minLength: 1
+                            uid:
+                              type: string
+                              minLength: 1
+                        uid:
+                          type: string
+                          description: "Used to understand the origin of the subscriber."
+                          minLength: 1
+                        subscriberURI:
+                          type: string
+                          description: "Endpoint for the subscriber."
+                          minLength: 1
+                        replyURI:
+                          type: string
+                          description: "Endpoint for the reply."
+                          minLength: 1
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+  - name: v1beta1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    eventing.knative.dev/source: "true"
+    duck.knative.dev/source: "true"
+    knative.dev/crd-install: "true"
+  name: containersources.sources.knative.dev
+spec:
+  group: sources.knative.dev
+  names:
+    categories:
+    - all
+    - knative
+    - eventing
+    - sources
+    kind: ContainerSource
+    plural: containersources
+  scope: Namespaced
+  subresources:
+    status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type=='Ready')].reason"
+    - name: Sink
+      type: string
+      JSONPath: ".status.sinkUri"
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha2
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: eventtypes.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+spec:
+  group: eventing.knative.dev
+  names:
+    kind: EventType
+    plural: eventtypes
+    singular: eventtype
+    categories:
+      - all
+      - knative
+      - eventing
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  additionalPrinterColumns:
+    - name: Type
+      type: string
+      JSONPath: ".spec.type"
+    - name: Source
+      type: string
+      JSONPath: ".spec.source"
+    - name: Schema
+      type: string
+      JSONPath: ".spec.schema"
+    - name: Broker
+      type: string
+      JSONPath: ".spec.broker"
+    - name: Description
+      type: string
+      JSONPath: ".spec.description"
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: parallels.flows.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: flows.knative.dev
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  names:
+    kind: Parallel
+    plural: parallels
+    singular: parallel
+    categories:
+    - all
+    - knative
+    - eventing
+    - flows
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    eventing.knative.dev/source: "true"
+    duck.knative.dev/source: "true"
+    knative.dev/crd-install: "true"
+  annotations:
+    registry.knative.dev/eventTypes: |
+      [
+        { "type": "dev.knative.sources.ping" }
+      ]
+  name: pingsources.sources.knative.dev
+spec:
+  group: sources.knative.dev
+  names:
+    categories:
+    - all
+    - knative
+    - eventing
+    - sources
+    kind: PingSource
+    plural: pingsources
+  scope: Namespaced
+  subresources:
+    status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type=='Ready')].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type=='Ready')].reason"
+    - name: Sink
+      type: string
+      JSONPath: .status.sinkUri
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1alpha2
+    served: true
+    storage: false
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: sequences.flows.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: flows.knative.dev
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  names:
+    kind: Sequence
+    plural: sequences
+    singular: sequence
+    categories:
+    - all
+    - knative
+    - eventing
+    - flows
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    eventing.knative.dev/source: "true"
+    duck.knative.dev/source: "true"
+    duck.knative.dev/binding: "true"
+    knative.dev/crd-install: "true"
+  name: sinkbindings.sources.knative.dev
+spec:
+  group: sources.knative.dev
+  names:
+    categories:
+    - all
+    - knative
+    - eventing
+    - sources
+    - bindings
+    kind: SinkBinding
+    plural: sinkbindings
+  scope: Namespaced
+  subresources:
+    status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+  - name: Ready
+    type: string
+    JSONPath: ".status.conditions[?(@.type=='Ready')].status"
+  - name: Reason
+    type: string
+    JSONPath: ".status.conditions[?(@.type=='Ready')].reason"
+  - name: Sink
+    type: string
+    JSONPath: ".status.sinkUri"
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1alpha2
+    served: true
+    storage: false
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: subscriptions.messaging.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+spec:
+  group: messaging.knative.dev
+  preserveUnknownFields: false
+  names:
+    kind: Subscription
+    plural: subscriptions
+    singular: subscription
+    categories:
+    - all
+    - knative
+    - eventing
+    shortNames:
+    - sub
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: None
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec:
+          required:
+            - channel
+          type: object
+          properties:
+            channel:
+              type: object
+              description: "Channel that forwards incoming events to the subscription."
+              required:
+                - apiVersion
+                - kind
+                - name
+              properties:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                name:
+                  type: string
+                  minLength: 1
+            subscriber:
+              type: object
+              description: "the subscriber that (optionally) processes events."
+              properties:
+                uri:
+                  type: string
+                  description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                  minLength: 1
+                ref:
+                  type: object
+                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                    kind:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                    namespace:
+                      type: string
+                      minLength: 1
+            reply:
+              type: object
+              description: "the destination that (optionally) receive events."
+              properties:
+                uri:
+                  type: string
+                  description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                  minLength: 1
+                ref:
+                  type: object
+                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                    kind:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                    namespace:
+                      type: string
+                      minLength: 1
+            delivery:
+              description: "Subscription delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+        status:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: triggers.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+spec:
+  group: eventing.knative.dev
+  preserveUnknownFields: false
+  names:
+    kind: Trigger
+    plural: triggers
+    singular: trigger
+    categories:
+    - all
+    - knative
+    - eventing
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: Broker
+      type: string
+      JSONPath: .spec.broker
+    - name: Subscriber_URI
+      type: string
+      JSONPath: .status.subscriberUri
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            required:
+              - subscriber
+            type: object
+            properties:
+              broker:
+                type: string
+                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
+              filter:
+                type: object
+                properties:
+                  sourceAndType:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      source:
+                        type: string
+                  attributes:
+                    type: object
+                    description: "Map of CloudEvents attributes used for filtering events."
+                    additionalProperties:
+                      type: string
+              subscriber:
+                type: object
+                description: "the destination that should receive events."
+                properties:
+                  ref:
+                    type: object
+                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    properties:
+                      apiVersion:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        minLength: 1
+                      namespace:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                  uri:
+                    type: string
+                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+  - name: v1beta1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            required:
+              - subscriber
+            type: object
+            properties:
+              broker:
+                type: string
+                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
+              filter:
+                type: object
+                properties:
+                  attributes:
+                    type: object
+                    description: "Map of CloudEvents attributes used for filtering events."
+                    additionalProperties:
+                      type: string
+              subscriber:
+                type: object
+                description: "the destination that should receive events."
+                properties:
+                  ref:
+                    type: object
+                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    properties:
+                      apiVersion:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        minLength: 1
+                      namespace:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                  uri:
+                    type: string
+                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-br-default-channel
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+data:
+  channelTemplateSpec: |
+    apiVersion: messaging.knative.dev/v1beta1
+    kind: InMemoryChannel
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-br-defaults
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+data:
+  default-br-config: |
+    clusterDefault:
+      brokerClass: MTChannelBasedBroker
+      apiVersion: v1
+      kind: ConfigMap
+      name: config-br-default-channel
+      namespace: knative-eventing
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: default-ch-webhook
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+data:
+  default-ch-config: |
+    clusterDefault:
+      apiVersion: messaging.knative.dev/v1beta1
+      kind: InMemoryChannel
+    namespaceDefaults:
+      some-namespace:
+        apiVersion: messaging.knative.dev/v1beta1
+        kind: InMemoryChannel
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eventing-webhook-certs
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventing-controller
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eventing-controller
+  template:
+    metadata:
+      labels:
+        app: eventing-controller
+        eventing.knative.dev/release: devel
+    spec:
+      serviceAccountName: eventing-controller
+      containers:
+      - name: eventing-controller
+        terminationMessagePolicy: FallbackToLogsOnError
+        image: quay.io/openshift-knative/knative-eventing-controller:v0.15.0
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        env:
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/eventing
+          - name: PING_IMAGE
+            value: quay.io/openshift-knative/knative-eventing-ping:v0.15.0
+          - name: MT_PING_IMAGE
+            value: quay.io/openshift-knative/knative-eventing-mtping:v0.15.0
+          - name: APISERVER_RA_IMAGE
+            value: quay.io/openshift-knative/knative-eventing-apiserver-receive-adapter:v0.15.0
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - name: metrics
+          containerPort: 9090
+        - name: profiling
+          containerPort: 8008
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: config.webhook.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: eventing-webhook
+      namespace: knative-eventing
+  sideEffects: None
+  failurePolicy: Fail
+  name: config.webhook.eventing.knative.dev
+  namespaceSelector:
+    matchExpressions:
+    - key: eventing.knative.dev/release
+      operator: Exists
+  timeoutSeconds: 2
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: eventing-webhook
+      namespace: knative-eventing
+  sideEffects: None
+  failurePolicy: Fail
+  name: webhook.eventing.knative.dev
+  timeoutSeconds: 2
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validation.webhook.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: eventing-webhook
+      namespace: knative-eventing
+  sideEffects: None
+  failurePolicy: Fail
+  name: validation.webhook.eventing.knative.dev
+  timeoutSeconds: 2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eventing-webhook-certs
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: sinkbindings.webhook.sources.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: eventing-webhook
+      namespace: knative-eventing
+  failurePolicy: Fail
+  sideEffects: None
+  name: sinkbindings.webhook.sources.knative.dev
+  timeoutSeconds: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventing-webhook
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      app: eventing-webhook
+      role: eventing-webhook
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: eventing-webhook
+      containers:
+      - name: eventing-webhook
+        terminationMessagePolicy: FallbackToLogsOnError
+        image: quay.io/openshift-knative/knative-eventing-webhook:v0.15.0
+        resources:
+          requests:
+            cpu: 20m
+            memory: 20Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_LOGGING_NAME
+          value: config-logging
+        - name: METRICS_DOMAIN
+          value: knative.dev/eventing
+        - name: WEBHOOK_NAME
+          value: eventing-webhook
+        - name: SINK_BINDING_SELECTION_MODE
+          value: "exclusion"
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - name: https-webhook
+          containerPort: 8443
+        - name: metrics
+          containerPort: 9090
+        - name: profiling
+          containerPort: 8008
+        readinessProbe: &probe
+          periodSeconds: 1
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            httpHeaders:
+            - name: k-kubelet-probe
+              value: "webhook"
+        livenessProbe: *probe
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    role: eventing-webhook
+  name: eventing-webhook
+  namespace: knative-eventing
+spec:
+  ports:
+    - name: https-webhook
+      port: 443
+      targetPort: 8443
+  selector:
+    role: eventing-webhook
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-leader-election
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+data:
+  _example: |
+    resourceLock: "leases"
+    leaseDuration: "15s"
+    renewDeadline: "10s"
+    retryPeriod: "2s"
+    enabledComponents: "controller,broker-controller,inmemorychannel-dispatcher,inmemorychannel-controller"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-logging
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/config-propagation: original
+    knative.dev/config-category: eventing
+data:
+  zap-logger-config: |
+    {
+      "level": "info",
+      "development": false,
+      "outputPaths": ["stdout"],
+      "errorOutputPaths": ["stderr"],
+      "encoding": "json",
+      "encoderConfig": {
+        "timeKey": "ts",
+        "levelKey": "level",
+        "nameKey": "logger",
+        "callerKey": "caller",
+        "messageKey": "msg",
+        "stacktraceKey": "stacktrace",
+        "lineEnding": "",
+        "levelEncoder": "",
+        "timeEncoder": "iso8601",
+        "durationEncoder": "",
+        "callerEncoder": ""
+      }
+    }
+  loglevel.controller: "info"
+  loglevel.webhook: "info"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-observability
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/config-propagation: original
+    knative.dev/config-category: eventing
+data:
+  _example: |
+    metrics.backend-destination: prometheus
+    metrics.request-metrics-backend-destination: prometheus
+    metrics.stackdriver-project-id: "<your stackdriver project id>"
+    metrics.allow-stackdriver-custom-metrics: "false"
+    profiling.enable: "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-tracing
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/config-propagation: original
+    knative.dev/config-category: eventing
+data:
+  _example: |
+    backend: "none"
+    zipkin-endpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
+    stackdriver-project-id: "my-project"
+    debug: "false"
+    sample-rate: "0.1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-imc-event-dispatcher
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+data:
+  MaxIdleConnections: "1000"
+  MaxIdleConnectionsPerHost: "100"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imc-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+rules:
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels
+      - inmemorychannels/status
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imc-channelable-manipulator
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/channelable: "true"
+rules:
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels
+      - inmemorychannels/status
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imc-controller
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels
+      - inmemorychannels/status
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - serviceaccounts
+    verbs: &everything
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - rolebindings
+    verbs: *everything
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs: *everything
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs: *everything
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imc-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels
+      - inmemorychannels/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "" # Core API group.
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels/status
+    verbs:
+      - update
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: imc-dispatcher
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imc-dispatcher
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+    messaging.knative.dev/channel: in-memory-channel
+    messaging.knative.dev/role: dispatcher
+spec:
+  selector:
+      messaging.knative.dev/channel: in-memory-channel
+      messaging.knative.dev/role: dispatcher
+  ports:
+    - name: http-dispatcher
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: imc-controller
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: imc-controller
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: imc-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: imc-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: imc-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: imc-dispatcher
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: imc-dispatcher
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+ name: inmemorychannels.messaging.knative.dev
+ labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    messaging.knative.dev/subscribable: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: messaging.knative.dev
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      x-kubernetes-preserve-unknown-fields: true
+  names:
+    kind: InMemoryChannel
+    plural: inmemorychannels
+    singular: inmemorychannel
+    categories:
+    - all
+    - knative
+    - messaging
+    - channel
+    shortNames:
+    - imc
+  scope: Namespaced
+  subresources:
+    status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imc-controller
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      messaging.knative.dev/channel: in-memory-channel
+      messaging.knative.dev/role: controller
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: imc-controller
+      containers:
+      - name: controller
+        image: quay.io/openshift-knative/knative-eventing-channel-controller:v0.15.0
+        env:
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/inmemorychannel-controller
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DISPATCHER_IMAGE
+            value: quay.io/openshift-knative/knative-eventing-channel-dispatcher:v0.15.0
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - name: metrics
+          containerPort: 9090
+        - name: profiling
+          containerPort: 8008
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imc-dispatcher
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      messaging.knative.dev/channel: in-memory-channel
+      messaging.knative.dev/role: dispatcher
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: imc-dispatcher
+      containers:
+      - name: dispatcher
+        image: quay.io/openshift-knative/knative-eventing-channel-dispatcher:v0.15.0
+        env:
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/inmemorychannel-dispatcher
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        ports:
+          - containerPort: 9090
+            name: metrics
