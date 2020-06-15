@@ -695,7 +695,7 @@ data:
                         value: knative-eventing-operator
                       image: quay.io/openshift-knative/knative-eventing-operator:v0.13.0
                       args:
-                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-next/openshift/release/knative-eventing-ci.yaml,https://raw.githubusercontent.com/openshift/knative-eventing/release-next/openshift/release/knative-eventing-channelbroker-ci.yaml,https://raw.githubusercontent.com/openshift/knative-eventing/release-next/openshift/release/knative-eventing-mtbroker-ci.yaml
+                        - --filename=https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.15.0/openshift/release/knative-eventing-ci.yaml,https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.15.0/openshift/release/knative-eventing-channelbroker-ci.yaml,https://raw.githubusercontent.com/openshift/knative-eventing/release-v0.15.0/openshift/release/knative-eventing-mtbroker-ci.yaml
                       imagePullPolicy: Always
                       name: knative-eventing-operator
                       resources: {}
