@@ -4,15 +4,14 @@ source $(dirname $0)/resolve.sh
 
 release=$1
 
+output_file="openshift/release/knative-eventing-ci.yaml"
+
 if [ "$release" == "ci" ]; then
-    output_file="openshift/release/knative-eventing-ci.yaml"
     image_prefix="registry.svc.ci.openshift.org/openshift/knative-nightly:knative-eventing-"
     tag=""
 else
-    suffix=${release}
-    output_file="openshift/release/knative-eventing-${release}.yaml"
-    image_prefix="quay.io/openshift-knative/knative-eventing-"
-    tag=$release
+    image_prefix="registry.svc.ci.openshift.org/openshift/knative-${release}:knative-eventing-"
+    tag=""
 fi
 
 # the core parts
