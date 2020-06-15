@@ -31,7 +31,7 @@ func (sources *Sources) String() string {
 	return fmt.Sprint(*sources)
 }
 
-// Set converts the input string to Sources.
+// Set appends the input string to Sources.
 func (sources *Sources) Set(value string) error {
 	for _, source := range strings.Split(value, ",") {
 		source := strings.TrimSpace(source)

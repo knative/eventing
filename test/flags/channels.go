@@ -31,7 +31,7 @@ func (channels *Channels) String() string {
 	return fmt.Sprint(*channels)
 }
 
-// Set converts the input string to Channels.
+// Set appends the input string to Channels.
 func (channels *Channels) Set(value string) error {
 	for _, channel := range strings.Split(value, ",") {
 		channel := strings.TrimSpace(channel)
