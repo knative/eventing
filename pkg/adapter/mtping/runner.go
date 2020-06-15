@@ -19,6 +19,7 @@ package mtping
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -61,6 +62,10 @@ func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string) (
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, sink)
 
+	// Simple retry configuration to be less than 1mn.
+	// We might want to retry more times for less-frequent schedule.
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
+
 	metricTag := &kncloudevents.MetricTag{
 		Namespace:     namespace,
 		Name:          name,
@@ -85,7 +90,7 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) error {
 func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
 	return func() {
 		if result := a.Client.Send(ctx, event); !cloudevents.IsACK(result) {
-			// TODO: at least retries
+			// Exhausted number of retries. Event is lost.
 			a.Logger.Error("failed to send cloudevent", zap.Any("result", result))
 		}
 	}

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/robfig/cron/v3"
@@ -99,6 +100,11 @@ func (a *pingAdapter) start(stopCh <-chan struct{}) error {
 
 func (a *pingAdapter) cronTick() {
 	ctx := context.Background()
+
+	// Simple retry configuration to be less than 1mn.
+	// We might want to retry more times for less-frequent schedule.
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
+
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType(sourcesv1alpha2.PingSourceEventType)
 	event.SetSource(sourcesv1alpha2.PingSourceSource(a.Namespace, a.Name))

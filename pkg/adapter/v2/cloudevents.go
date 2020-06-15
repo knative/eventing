@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -97,27 +98,49 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 		ResourceGroup: tags.ResourceGroup,
 	}
 
+	var rres *http.RetriesResult
+	if cloudevents.ResultAs(result, &rres) {
+		result = rres.Result
+	}
+
 	if cloudevents.IsACK(result) {
 		var res *http.Result
 		if !cloudevents.ResultAs(result, &res) {
-			return fmt.Errorf("protocol.Result is not http.Result")
+			return c.reportError(reportArgs, result)
 		}
 
 		_ = c.reporter.ReportEventCount(reportArgs, res.StatusCode)
 	} else {
 		var res *http.Result
 		if !cloudevents.ResultAs(result, &res) {
-			return result
+			return c.reportError(reportArgs, result)
 		}
 
 		if rErr := c.reporter.ReportEventCount(reportArgs, res.StatusCode); rErr != nil {
 			// metrics is not important enough to return an error if it is setup wrong.
 			// So combine reporter error with ce error if not nil.
 			if result != nil {
-				result = fmt.Errorf("%w\nmetrics reporter errror: %s", result, rErr)
+				result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
 			}
 		}
 	}
+	return result
+}
+
+func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Result) error {
+	err := errors.Unwrap(result)
+	if uerr, ok := err.(*url.Error); ok {
+		reportArgs.Timeout = uerr.Timeout()
+	}
+	reportArgs.Error = err.Error()
+	if rErr := c.reporter.ReportEventCount(reportArgs, 0); rErr != nil {
+		// metrics is not important enough to return an error if it is setup wrong.
+		// So combine reporter error with ce error if not nil.
+		if result != nil {
+			result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
+		}
+	}
+
 	return result
 }
 
