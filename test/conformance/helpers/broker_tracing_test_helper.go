@@ -22,7 +22,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
-	"github.com/google/uuid"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -60,10 +59,8 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 		etTransformer = "transformer"
 		etLogger      = "logger"
 		senderName    = "sender"
-	)
-	var (
-		eventID   = uuid.New().String()
-		eventBody = fmt.Sprintf(`{"msg":"TestBrokerTracing %s"}`, eventID)
+		eventID       = "event-1"
+		eventBody     = `{"msg":"TestBrokerTracing event-1"}`
 	)
 	return func(
 		t *testing.T,
