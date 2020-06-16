@@ -18,22 +18,20 @@ package helpers
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
-	ce "github.com/cloudevents/sdk-go"
-	ce2 "github.com/cloudevents/sdk-go/v2"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/utils"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/resources/sender"
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
@@ -45,23 +43,8 @@ func BrokerTracingTestHelperWithChannelTestRunner(
 	setupClient lib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		BrokerTracingTestHelper(t, brokerClass, channel, setupClient)
+		tracingTest(t, setupClient, setupBrokerTracing(brokerClass), channel)
 	})
-}
-
-// BrokerTracingTestHelper runs the Broker tracing test using the given TypeMeta.
-func BrokerTracingTestHelper(t *testing.T, brokerClass string, channel metav1.TypeMeta, setupClient lib.SetupClientOption) {
-	testCases := map[string]TracingTestCase{
-		"includes incoming trace id": {
-			IncomingTraceId: true,
-		},
-	}
-
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			tracingTest(t, setupClient, setupBrokerTracing(brokerClass), channel, tc)
-		})
-	}
 }
 
 // setupBrokerTracing is the general setup for TestBrokerTracing. It creates the following:
@@ -71,18 +54,20 @@ func BrokerTracingTestHelper(t *testing.T, brokerClass string, channel metav1.Ty
 // 4. Sender Pod which sends a 'foo' event.
 // It returns a string that is expected to be sent by the SendEvents Pod and should be present in
 // the LogEvents Pod logs.
-func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
+func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 	const (
-		etTransformer  = "transformer"
-		etLogger       = "logger"
-		defaultCMPName = "eventing"
+		etTransformer = "transformer"
+		etLogger      = "logger"
+		senderName    = "sender"
+		eventID       = "event-1"
+		eventBody     = `{"msg":"TestBrokerTracing event-1"}`
 	)
 	return func(
 		t *testing.T,
 		channel *metav1.TypeMeta,
 		client *lib.Client,
 		loggerPodName string,
-		tc TracingTestCase,
+		senderPublishTrace bool,
 	) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
 		// Create a configmap used by the broker.
 		client.CreateBrokerConfigMapOrFail("br", channel)
@@ -107,11 +92,12 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 
 		// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
 		// except the reply's event's type is changed to bar.
-		eventTransformerPod := resources.DeprecatedEventTransformationPod("transformer", &cloudevents.CloudEvent{
-			EventContextV1: ce.EventContextV1{
-				Type: etLogger,
-			},
-		})
+		eventTransformerPod := resources.EventTransformationPod(
+			"transformer",
+			etLogger,
+			senderName,
+			[]byte(eventBody),
+		)
 		client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
@@ -126,22 +112,20 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.WaitForAllTestResourcesReadyOrFail()
 
 		// Everything is setup to receive an event. Generate a CloudEvent.
-		senderName := "sender"
-		eventID := string(uuid.NewUUID())
-		body := fmt.Sprintf("TestBrokerTracing %s", eventID)
-		event := cloudevents.New(
-			fmt.Sprintf(`{"msg":%q}`, body),
-			cloudevents.WithSource(senderName),
-			cloudevents.WithID(eventID),
-			cloudevents.WithType(etTransformer),
-		)
+		event := cloudevents.NewEvent()
+		event.SetID(eventID)
+		event.SetSource(senderName)
+		event.SetType(etTransformer)
+		if err := event.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
+			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+		}
 
 		// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
-		sendEvent := client.SendFakeEventToAddressableOrFail
-		if tc.IncomingTraceId {
-			sendEvent = client.SendFakeEventWithTracingToAddressableOrFail
+		if senderPublishTrace {
+			client.SendEventToAddressable(senderName, broker.Name, lib.BrokerTypeMeta, event, sender.EnableTracing())
+		} else {
+			client.SendEventToAddressable(senderName, broker.Name, lib.BrokerTypeMeta, event)
 		}
-		sendEvent(senderName, broker.Name, lib.BrokerTypeMeta, event)
 
 		domain := utils.GetClusterDomainName()
 
@@ -207,7 +191,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 			},
 		}
 
-		if tc.IncomingTraceId {
+		if senderPublishTrace {
 			expected = tracinghelper.TestSpanTree{
 				Note: "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
 				Span: tracinghelper.MatchHTTPSpanNoReply(
@@ -217,21 +201,12 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 				Children: []tracinghelper.TestSpanTree{expected},
 			}
 		}
-		matchFunc := func(ev ce2.Event) error {
-			if ev.Source() != senderName {
-				return fmt.Errorf("expected source %s, saw %s", senderName, ev.Source())
-			}
-			if ev.ID() != eventID {
-				return fmt.Errorf("expected id %s, saw %s", eventID, ev.ID())
-			}
-			db := ev.Data()
-			if !strings.Contains(string(db), body) {
-				return fmt.Errorf("expected substring %s in data %s", body, string(db))
-			}
-			return nil
-		}
 
-		return expected, matchFunc
+		return expected, cetest.AllOf(
+			cetest.HasSource(senderName),
+			cetest.HasId(eventID),
+			recordevents.DataContains(eventBody),
+		)
 	}
 }
 
