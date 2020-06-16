@@ -22,10 +22,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	nethttp "net/http"
 	"strconv"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/tracing"
@@ -98,23 +101,37 @@ func main() {
 		log.Fatalf("unsupported encoding option: %q\n", eventEncoding)
 	}
 
-	t, err := cloudevents.NewHTTP(cloudevents.WithTarget(sink))
+	t, err := cloudevents.NewHTTP(
+		cloudevents.WithTarget(sink),
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Base:        nethttp.DefaultTransport,
+			Propagation: &tracecontext.HTTPFormat{},
+		}),
+	)
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}
 
+	var c cloudevents.Client
 	if addTracing {
 		log.Println("Adding tracing")
 		logger, _ := zap.NewDevelopment()
 		if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
 			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
+
+		c, err = cloudevents.NewClientObserved(t,
+			cloudevents.WithTimeNow(),
+			cloudevents.WithUUIDs(),
+			cloudevents.WithTracePropagation,
+		)
+	} else {
+		c, err = cloudevents.NewClient(t,
+			cloudevents.WithTimeNow(),
+			cloudevents.WithUUIDs(),
+		)
 	}
 
-	c, err := cloudevents.NewClient(t,
-		cloudevents.WithTimeNow(),
-		cloudevents.WithUUIDs(),
-	)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}
