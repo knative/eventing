@@ -147,7 +147,7 @@ function run_e2e_tests(){
   header "Running tests with Single Tenant Channel Based Broker"
   oc apply -f test/config/st-channel-broker.yaml || return 1
   wait_until_pods_running $EVENTING_NAMESPACE || return 1
-  go_test_e2e -timeout=90m -parallel=12 ./test/e2e -brokerclass=ChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1beta1:Channel \
+  go_test_e2e -timeout=90m -parallel=12 ./test/e2e -brokerclass=ChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel \
     --kubeconfig "$KUBECONFIG" \
     --imagetemplate "$TEST_IMAGE_TEMPLATE" \
     ${options} || failed=1
@@ -157,7 +157,7 @@ function run_e2e_tests(){
   oc -n knative-eventing set env deployment/mt-broker-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running $EVENTING_NAMESPACE || return 1
 
-  go_test_e2e -timeout=90m -parallel=12 ./test/e2e -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel \
+  go_test_e2e -timeout=90m -parallel=12 ./test/e2e -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel \
     --kubeconfig "$KUBECONFIG" \
     --imagetemplate "$TEST_IMAGE_TEMPLATE" \
     ${options} || failed=1
