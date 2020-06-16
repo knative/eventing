@@ -20,12 +20,15 @@ import (
 	"fmt"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
+	uuid "github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/resources/sender"
 )
 
 /*
@@ -35,15 +38,17 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 
-// SingleEventHelperForChannelTestHelper is the helper function for header_test
-func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
+// SingleEventWithKnativeHeaderHelperForChannelTestHelper is the helper function for header_test
+func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
+	t *testing.T,
+	encoding cloudevents.Encoding,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption,
 ) {
-	channelName := "conformance-headers-channel-" + encoding
-	senderName := "conformance-headers-sender-" + encoding
-	subscriptionName := "conformance-headers-subscription-" + encoding
-	loggerPodName := "conformance-headers-logger-pod-" + encoding
+	channelName := "conformance-headers-channel-" + encoding.String()
+	senderName := "conformance-headers-sender-" + encoding.String()
+	subscriptionName := "conformance-headers-subscription-" + encoding.String()
+	recordEventsPodName := "conformance-headers-recordevents-pod-" + encoding.String()
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Running header conformance test with channel %q", channel)
@@ -55,49 +60,44 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 		client.CreateChannelOrFail(channelName, &channel)
 
 		// create logger service as the subscriber
-		pod := resources.EventDetailsPod(loggerPodName)
-		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		defer eventTracker.Cleanup()
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
 			&channel,
-			resources.WithSubscriberForSubscription(loggerPodName),
+			resources.WithSubscriberForSubscription(recordEventsPodName),
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()
 
-		// send fake CloudEvent to the channel
-		eventID := string(uuid.NewUUID())
-		body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
-		event := cloudevents.New(
-			fmt.Sprintf(`{"msg":%q}`, body),
-			cloudevents.WithSource(senderName),
-			cloudevents.WithID(eventID),
-			cloudevents.WithEncoding(encoding),
+		// send CloudEvent to the channel
+		eventID := uuid.New().String()
+		body := fmt.Sprintf(`{"msg":"TestSingleHeaderEvent %s"}`, eventID)
+		event := cloudevents.NewEvent()
+		event.SetID(eventID)
+		event.SetSource(senderName)
+		event.SetType(lib.DefaultEventType)
+		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
+			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+		}
+
+		st.Logf("Sending event with knative headers to %s", senderName)
+		client.SendEventToAddressable(
+			senderName,
+			channelName,
+			&channel,
+			event,
+			sender.WithAdditionalHeaders(map[string]string{"knative-hello": "world"}),
 		)
-		st.Logf("Sending event with tracing headers to %s", senderName)
-		client.SendFakeEventWithTracingToAddressableOrFail(senderName, channelName, &channel, event)
 
-		// verify the logger service receives the event
-		st.Logf("Logging for event with body %s", body)
-
-		if err := client.CheckLog(loggerPodName, lib.CheckerContains(body)); err != nil {
-			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
-		}
-
-		// verify that required traceparent header is set
-		requiredHeaderNameList := []string{"Traceparent"}
-		for _, headerName := range requiredHeaderNameList {
-			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
-			if err := client.CheckLog(loggerPodName, lib.CheckerContains(expectedHeaderLog)); err != nil {
-				st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedHeaderLog, loggerPodName, err)
-			}
-		}
-
-		//TODO report x-custom-header
+		eventTracker.AssertAtLeast(1, recordevents.AllOf(
+			recordevents.MatchEvent(cetest.HasId(eventID)),
+			recordevents.HasAdditionalHeader("knative-hello", "world"),
+		))
 
 	})
 }

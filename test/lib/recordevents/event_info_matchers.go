@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/event"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 )
 
@@ -31,6 +30,18 @@ type EventInfoMatcher func(EventInfo) error
 // Matcher that never fails
 func Any() EventInfoMatcher {
 	return func(ei EventInfo) error {
+		return nil
+	}
+}
+
+// AllOf combines matchers together
+func AllOf(matchers ...EventInfoMatcher) EventInfoMatcher {
+	return func(have EventInfo) error {
+		for _, m := range matchers {
+			if err := m(have); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 }
@@ -45,6 +56,21 @@ func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatcher {
 		} else {
 			return cetest.AllOf(evf...)(*ei.Event)
 		}
+	}
+}
+
+// Convert a matcher that checks valid messages to a function
+// that checks EventInfo structures, returning an error for any that don't
+// contain valid events.
+func HasAdditionalHeader(key, value string) EventInfoMatcher {
+	key = strings.ToLower(key)
+	return func(ei EventInfo) error {
+		for k, v := range ei.HTTPHeaders {
+			if strings.ToLower(k) == key && v[0] == value {
+				return nil
+			}
+		}
+		return fmt.Errorf("cannot find header '%s' = '%s' between the headers", key, value)
 	}
 }
 
@@ -68,7 +94,7 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 
 // DataContains matches that the data field of the event, converted to a string, contains the provided string
 func DataContains(expectedContainedString string) cetest.EventMatcher {
-	return func(have event.Event) error {
+	return func(have cloudevents.Event) error {
 		dataAsString := string(have.Data())
 		if !strings.Contains(dataAsString, expectedContainedString) {
 			return fmt.Errorf("data '%s' doesn't contain '%s'", dataAsString, expectedContainedString)
