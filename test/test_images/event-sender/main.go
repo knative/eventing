@@ -24,9 +24,11 @@ import (
 	"log"
 	nethttp "net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 	"go.uber.org/zap"
@@ -35,14 +37,15 @@ import (
 )
 
 var (
-	sink          string
-	inputEvent    string
-	eventEncoding string
-	periodStr     string
-	delayStr      string
-	maxMsgStr     string
-	addTracing    bool
-	incrementalId bool
+	sink              string
+	inputEvent        string
+	eventEncoding     string
+	periodStr         string
+	delayStr          string
+	maxMsgStr         string
+	addTracing        bool
+	incrementalId     bool
+	additionalHeaders string
 )
 
 func init() {
@@ -54,6 +57,7 @@ func init() {
 	flag.StringVar(&maxMsgStr, "max-messages", "1", "The number of messages to attempt to send. 0 for unlimited.")
 	flag.BoolVar(&addTracing, "add-tracing", false, "Should tracing be added to events sent.")
 	flag.BoolVar(&incrementalId, "incremental-id", false, "Override the event id with an incremental id.")
+	flag.StringVar(&additionalHeaders, "additional-headers", "", "Additional non-CloudEvents headers to send")
 }
 
 func parseDurationStr(durationStr string, defaultDuration int) time.Duration {
@@ -101,13 +105,27 @@ func main() {
 		log.Fatalf("unsupported encoding option: %q\n", eventEncoding)
 	}
 
-	t, err := cloudevents.NewHTTP(
+	httpOpts := []cehttp.Option{
 		cloudevents.WithTarget(sink),
-		cloudevents.WithRoundTripper(&ochttp.Transport{
-			Base:        nethttp.DefaultTransport,
-			Propagation: &tracecontext.HTTPFormat{},
-		}),
-	)
+	}
+
+	if addTracing {
+		httpOpts = append(
+			httpOpts,
+			cloudevents.WithRoundTripper(&ochttp.Transport{
+				Base:        nethttp.DefaultTransport,
+				Propagation: &tracecontext.HTTPFormat{},
+			}),
+		)
+	}
+	if additionalHeaders != "" {
+		for _, kv := range strings.Split(additionalHeaders, ",") {
+			splitted := strings.Split(kv, "=")
+			httpOpts = append(httpOpts, cloudevents.WithHeader(splitted[0], splitted[1]))
+		}
+	}
+
+	t, err := cloudevents.NewHTTP(httpOpts...)
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}

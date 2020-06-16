@@ -18,6 +18,7 @@ package sender
 
 import (
 	"encoding/json"
+	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -56,6 +57,22 @@ func WithEncoding(encoding cloudevents.Encoding) EventSenderOption {
 			pod.Spec.Containers[0].Args,
 			"-event-encoding",
 			encoding.String(),
+		)
+	}
+}
+
+// WithEncoding forces the encoding of the event to send from the sender pod
+func WithAdditionalHeaders(headers map[string]string) EventSenderOption {
+	var kv []string
+	for k, v := range headers {
+		kv = append(kv, k+"="+v)
+	}
+	serializedHeaders := strings.Join(kv, ",")
+	return func(pod *corev1.Pod) {
+		pod.Spec.Containers[0].Args = append(
+			pod.Spec.Containers[0].Args,
+			"-additional-headers",
+			serializedHeaders,
 		)
 	}
 }

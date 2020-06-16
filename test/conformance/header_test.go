@@ -21,16 +21,16 @@ package conformance
 import (
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/lib/cloudevents"
 )
 
-// The Channel MUST pass through all tracing information as CloudEvents attributes
-func TestMustPassTracingHeaders(t *testing.T) {
-	t.Logf("Starting channel tracing headers test")
-	helpers.SingleEventHelperForChannelTestHelper(
+// The Channel MUST pass through all tracing information
+func TestChannelForwardHeadersPrependedWithKnative(t *testing.T) {
+	helpers.SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 		t,
-		cloudevents.DefaultEncoding,
+		cloudevents.EncodingBinary,
 		channelTestRunner,
 	)
 }
