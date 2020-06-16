@@ -84,7 +84,8 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 	}
 
 	// The schedule has already been validated by the validation webhook, so ignoring error
-	id, _ = r.cronRunner.AddSchedule(source.Namespace, source.Name, source.Spec.Schedule, source.Spec.JsonData, source.Status.SinkURI.String())
+	id, _ = r.cronRunner.AddSchedule(source.Namespace, source.Name, source.Spec.Schedule, source.Spec.JsonData,
+		source.Status.SinkURI.String(), source.Spec.CloudEventOverrides)
 
 	r.entryidMu.Lock()
 	r.entryids[key] = id
