@@ -54,9 +54,6 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
-		senderName = "e2e-brokerchannel-sender"
-		brokerName = "e2e-brokerchannel-broker"
-
 		any                    = v1beta1.TriggerAnyFilter
 		eventType              = "type1"
 		transformedEventType   = "type2"
@@ -64,20 +61,24 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		transformedEventSource = "http://source2.com"
 		eventBody              = `{"msg":"e2e-brokerchannel-body"}`
 		transformedBody        = `{"msg":"transformed body"}`
-
-		triggerName1 = "e2e-brokerchannel-trigger1"
-		triggerName2 = "e2e-brokerchannel-trigger2"
-		triggerName3 = "e2e-brokerchannel-trigger3"
-
-		transformationPodName            = "e2e-brokerchannel-trans-pod"
-		allEventsRecorderPodName         = "e2e-brokerchannel-logger-pod1"
-		transformedEventsRecorderPodName = "e2e-brokerchannel-logger-pod2"
-
-		channelName      = "e2e-brokerchannel-channel"
-		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		var (
+			senderName                       = testlib.NameForTest("e2e-brokerchannel-sender")
+			brokerName                       = testlib.NameForTest("e2e-brokerchannel-broker")
+			transformationPodName            = testlib.NameForTest("e2e-brokerchannel-trans-pod")
+			allEventsRecorderPodName         = testlib.NameForTest("e2e-brokerchannel-logger-pod1")
+			transformedEventsRecorderPodName = testlib.NameForTest("e2e-brokerchannel-logger-pod2")
+
+			triggerName1 = testlib.NameForTest("e2e-brokerchannel-trigger1")
+			triggerName2 = testlib.NameForTest("e2e-brokerchannel-trigger2")
+			triggerName3 = testlib.NameForTest("e2e-brokerchannel-trigger3")
+
+			channelName      = testlib.NameForTest("e2e-brokerchannel-channel")
+			subscriptionName = testlib.NameForTest("e2e-brokerchannel-subscription")
+		)
+
 		client := testlib.Setup(st, true, options...)
 		defer testlib.TearDown(client)
 

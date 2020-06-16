@@ -18,8 +18,8 @@ package lib
 
 import (
 	"fmt"
-
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/pkg/test/helpers"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -27,6 +27,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/storage/names"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
@@ -137,6 +138,7 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 	if err != nil {
 		c.T.Fatalf("Failed to create broker config %q: %v", name, err)
 	}
+	c.Tracker.Add(coreAPIGroup, coreAPIVersion, "configmaps", c.Namespace, name)
 	return &duckv1.KReference{
 		APIVersion: "v1",
 		Kind:       "ConfigMap",
@@ -455,4 +457,17 @@ func (c *Client) CreateRBACResourcesForBrokers() {
 		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
 		c.Namespace,
 	)
+}
+
+// NameForTest generates an object name based on the desired object prefix
+// A random suffix is appended so that each name is unique.
+// If the resulting name is too long it will be trimmed to 63 characters (the random
+// string is preserved in any case).
+func NameForTest(prefix string) string {
+	return names.SimpleNameGenerator.GenerateName(helpers.MakeK8sNamePrefix(prefix) + "-")
+}
+
+// RandomSuffix generates a random string starting with "-".
+func RandomSuffix() string {
+	return names.SimpleNameGenerator.GenerateName("-")
 }

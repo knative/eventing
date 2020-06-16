@@ -23,7 +23,6 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -48,25 +47,24 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
-		senderName = "e2e-eventtransformation-sender"
-		brokerName = "e2e-eventtransformation-broker"
-
-		any                    = v1beta1.TriggerAnyFilter
 		eventType              = "type1"
 		transformedEventType   = "type2"
 		eventSource            = "source1"
 		transformedEventSource = "source2"
 		eventBody              = `{"msg":"e2e-eventtransformation-body"}`
 		transformedBody        = `{"msg":"transformed body"}`
-
-		originalTriggerName    = "trigger1"
-		transformedTriggerName = "trigger2"
-
-		transformationPodName = "trans-pod"
-		recordEventsPodName   = "recordevents-pod"
 	)
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		var (
+			senderName             = testlib.NameForTest("e2e-eventtransformation-sender")
+			brokerName             = testlib.NameForTest("e2e-eventtransformation-broker")
+			originalTriggerName    = testlib.NameForTest("trigger1")
+			transformedTriggerName = testlib.NameForTest("trigger2")
+			transformationPodName  = testlib.NameForTest("trans-pod")
+			recordEventsPodName    = testlib.NameForTest("recordevents-pod")
+		)
+
 		client := testlib.Setup(st, true, options...)
 		defer testlib.TearDown(client)
 

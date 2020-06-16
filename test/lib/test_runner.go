@@ -94,8 +94,10 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, set the test case to run in parallel, etc.
 func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
-	// Create a new namespace to run this test case.
-	namespace := makeK8sNamespace(t.Name())
+	namespace := pkgTest.Flags.Namespace
+	if namespace == "" {
+		namespace = makeK8sNamespace(t.Name())
+	}
 	t.Logf("namespace is : %q", namespace)
 	client, err := NewClient(
 		pkgTest.Flags.Kubeconfig,
@@ -152,8 +154,10 @@ func TearDown(client *Client) {
 	}
 
 	client.Tracker.Clean(true)
-	if err := DeleteNameSpace(client); err != nil {
-		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
+	if pkgTest.Flags.Namespace == "" { // Delete namespace only if it's not common for all tests.
+		if err := DeleteNameSpace(client); err != nil {
+			client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
+		}
 	}
 }
 

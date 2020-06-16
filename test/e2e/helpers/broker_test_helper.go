@@ -40,10 +40,11 @@ type eventTestCase struct {
 	Type       string
 	Source     string
 	Extensions map[string]interface{}
+	NameSuffix string
 }
 
 // ToString converts the test case to a string to create names for different objects (e.g., triggers, services, etc.).
-func (tc eventTestCase) String() string {
+func (tc eventTestCase) Data() string {
 	eventType := tc.Type
 	eventSource := tc.Source
 	extensions := tc.Extensions
@@ -57,11 +58,15 @@ func (tc eventTestCase) String() string {
 		u, _ := url.Parse(eventSource)
 		eventSource = strings.Split(u.Host, ".")[0]
 	}
-	name := strings.ToLower(fmt.Sprintf("%s-%s", eventType, eventSource))
+	data := strings.ToLower(fmt.Sprintf("%s-%s", eventType, eventSource))
 	if len(extensions) > 0 {
-		name = strings.ToLower(fmt.Sprintf("%s-%s", name, extensionsToString(extensions)))
+		data = strings.ToLower(fmt.Sprintf("%s-%s", data, extensionsToString(extensions)))
 	}
-	return name
+	return data
+}
+
+func (tc eventTestCase) Name() string {
+	return fmt.Sprintf("%s%s", tc.Data(), tc.NameSuffix)
 }
 
 // ToEventMatcher converts the test case to the event matcher
@@ -97,7 +102,7 @@ type BrokerCreator func(client *testlib.Client) string
 // ChannelBasedBrokerCreator creates a BrokerCreator that creates a broker based on the channel parameter.
 func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) BrokerCreator {
 	return func(client *testlib.Client) string {
-		brokerName := strings.ToLower(channel.Kind)
+		brokerName := testlib.NameForTest(channel.Kind)
 
 		// create a ConfigMap used by the broker.
 		config := client.CreateBrokerConfigMapOrFail("config-"+brokerName, &channel)
@@ -155,10 +160,10 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				{Type: eventType2, Source: eventSource2},
 			},
 			eventFilters: []eventTestCase{
-				{Type: any, Source: any},
-				{Type: eventType1, Source: any},
-				{Type: any, Source: eventSource1},
-				{Type: eventType1, Source: eventSource1},
+				{Type: any, Source: any, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: any, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: eventSource1, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: eventSource1, NameSuffix: lib.RandomSuffix()},
 			},
 			deprecatedTriggerFilter: true,
 		}, {
@@ -170,10 +175,10 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				{Type: eventType2, Source: eventSource2},
 			},
 			eventFilters: []eventTestCase{
-				{Type: any, Source: any},
-				{Type: eventType1, Source: any},
-				{Type: any, Source: eventSource1},
-				{Type: eventType1, Source: eventSource1},
+				{Type: any, Source: any, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: any, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: eventSource1, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: eventSource1, NameSuffix: lib.RandomSuffix()},
 			},
 			deprecatedTriggerFilter: false,
 		}, {
@@ -185,10 +190,10 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				{Type: eventType2, Source: eventSource2},
 			},
 			eventFilters: []eventTestCase{
-				{Type: any, Source: any},
-				{Type: eventType1, Source: any},
-				{Type: any, Source: eventSource1},
-				{Type: eventType1, Source: eventSource1},
+				{Type: any, Source: any, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: any, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: eventSource1, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: eventSource1, NameSuffix: lib.RandomSuffix()},
 			},
 			deprecatedTriggerFilter: false,
 			v1beta1:                 true,
@@ -205,18 +210,19 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, nonMatchingExtensionName: extensionValue2}},
 			},
 			eventFilters: []eventTestCase{
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
-				{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}},
-				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}, NameSuffix: lib.RandomSuffix()},
+				{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}, NameSuffix: lib.RandomSuffix()},
+				{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}, NameSuffix: lib.RandomSuffix()},
 			},
 			deprecatedTriggerFilter: false,
 		},
 	}
 	for _, test := range tests {
+		test := test // Prevent race conditions when running in parallel.
 		t.Run(test.name, func(t *testing.T) {
 			client := testlib.Setup(t, true)
 			defer testlib.TearDown(client)
@@ -245,7 +251,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			eventTrackers := make(map[string]*recordevents.EventInfoStore, len(test.eventFilters))
 			for _, event := range test.eventFilters {
 				// Create event recorder pod and service
-				subscriberName := "dumper-" + event.String()
+				subscriberName := event.Name()
 				eventRecordPod := resources.EventRecordPod(subscriberName)
 				client.CreatePodOrFail(eventRecordPod, testlib.WithService(subscriberName))
 				eventTracker, err := recordevents.NewEventInfoStore(client, subscriberName)
@@ -256,7 +262,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				defer eventTracker.Cleanup()
 
 				// Create trigger.
-				triggerName := "trigger-" + event.String()
+				triggerName := event.Name()
 				client.CreateTriggerOrFailV1Beta1(triggerName,
 					resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
 					resources.WithAttributesTriggerFilterV1Beta1(event.Source, event.Type, event.Extensions),
@@ -284,13 +290,13 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 					eventToSend.SetExtension(k, v)
 				}
 
-				data := fmt.Sprintf(`{"msg":"%s"}`, eventTestCase.String())
+				data := fmt.Sprintf(`{"msg":"%s"}`, eventTestCase.Data())
 				if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(data)); err != nil {
 					t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 				}
 
 				// Send event
-				senderPodName := "sender-" + eventTestCase.String()
+				senderPodName := testlib.NameForTest("sender-" + eventTestCase.Data())
 				client.SendEventToAddressable(senderPodName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 				// Sent event matcher
@@ -301,7 +307,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 
 				// Check on every dumper whether we should expect this event or not
 				for _, eventFilter := range test.eventFilters {
-					subscriberName := "dumper-" + eventFilter.String()
+					subscriberName := eventFilter.Name()
 
 					if eventFilter.ToEventMatcher()(eventToSend) == nil {
 						// This filter should match this event
