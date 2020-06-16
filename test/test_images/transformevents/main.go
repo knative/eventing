@@ -77,9 +77,10 @@ func main() {
 		log.Fatalf("failed to create transport, %v", err)
 	}
 
-	c, err := cloudevents.NewClient(t,
+	c, err := cloudevents.NewClientObserved(t,
 		cloudevents.WithTimeNow(),
 		cloudevents.WithUUIDs(),
+		cloudevents.WithTracePropagation,
 	)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)

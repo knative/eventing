@@ -36,6 +36,7 @@ import (
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/resources/sender"
 )
 
 // SetupInfrastructureFunc sets up the infrastructure for running tracing tests. It returns the
@@ -221,11 +222,11 @@ func setupChannelTracingWithReply(
 	}
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
-	sendEvent := client.SendEventToAddressable
 	if tc.IncomingTraceId {
-		sendEvent = client.SendEventWithTracingToAddressable
+		client.SendEventToAddressable(senderName, channelName, channel, event, sender.EnableTracing())
+	} else {
+		client.SendEventToAddressable(senderName, channelName, channel, event)
 	}
-	sendEvent(senderName, channelName, channel, event)
 
 	// We expect the following spans:
 	// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
