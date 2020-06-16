@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -94,7 +93,7 @@ func tracingTest(
 	tc TracingTestCase,
 ) {
 	const (
-		loggerPodName = "logger"
+		recordEventsPodName = "recordevents"
 	)
 
 	client := lib.Setup(t, true, setupClient)
@@ -104,9 +103,18 @@ func tracingTest(
 	// TestMain.
 	tracinghelper.Setup(t, client)
 
-	expected, mustMatch := setupInfrastructure(t, &channel, client, loggerPodName, tc)
-	matches := assertEventMatch(t, client, loggerPodName, mustMatch)
+	// Setup the test infrastructure
+	expectedTestSpan, eventMatcher := setupInfrastructure(t, &channel, client, recordEventsPodName, tc)
 
+	// Start the event info store and assert the event was received correctly
+	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
+	}
+	defer targetTracker.Cleanup()
+	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
+
+	// Match the trace
 	traceID := getTraceIDHeader(t, matches)
 	trace, err := zipkin.JSONTracePred(traceID, 5*time.Minute, func(trace []model.SpanModel) bool {
 		tree, err := tracinghelper.GetTraceTree(trace)
@@ -114,7 +122,7 @@ func tracingTest(
 			return false
 		}
 		// Do not pass t to prevent unnecessary log output.
-		return len(expected.MatchesSubtree(nil, tree)) > 0
+		return len(expectedTestSpan.MatchesSubtree(nil, tree)) > 0
 	})
 	if err != nil {
 		t.Logf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
@@ -122,22 +130,10 @@ func tracingTest(
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(expected.MatchesSubtree(t, tree)) == 0 {
-			t.Fatalf("No matching subtree. want: %v got: %v", expected, tree)
+		if len(expectedTestSpan.MatchesSubtree(t, tree)) == 0 {
+			t.Fatalf("No matching subtree. want: %v got: %v", expectedTestSpan, tree)
 		}
 	}
-}
-
-// assertEventMatch verifies that recorder pod contains at least one event that
-// matches mustMatch. It is used to show that the expected event was sent to
-// the logger Pod.  It returns a list of the matching events.
-func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string, mustMatch cetest.EventMatcher) []recordevents.EventInfo {
-	targetTracker, err := recordevents.NewEventInfoStore(client, recorderPodName)
-	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
-	}
-	defer targetTracker.Cleanup()
-	return targetTracker.AssertAtLeast(1, recordevents.MatchEvent(mustMatch))
 }
 
 // getTraceIDHeader gets the TraceID from the passed in events.  It returns the header from the
@@ -166,7 +162,7 @@ func setupChannelTracingWithReply(
 	t *testing.T,
 	channel *metav1.TypeMeta,
 	client *lib.Client,
-	loggerPodName string,
+	recordEventsPodName string,
 	tc TracingTestCase,
 ) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
 	eventSource := "sender"
@@ -178,8 +174,8 @@ func setupChannelTracingWithReply(
 	client.CreateChannelOrFail(replyChannelName, channel)
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
-	loggerPod := resources.EventRecordPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	recordEventsPod := resources.EventRecordPod(recordEventsPodName)
+	client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
 
 	// Create the subscriber, a Pod that mutates the event.
 	transformerPod := resources.EventTransformationPod(
@@ -203,7 +199,7 @@ func setupChannelTracingWithReply(
 		"reply-sub",
 		replyChannelName,
 		channel,
-		resources.WithSubscriberForSubscription(loggerPodName),
+		resources.WithSubscriberForSubscription(recordEventsPodName),
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.
@@ -296,7 +292,7 @@ func setupChannelTracingWithReply(
 								Span: tracinghelper.MatchHTTPSpanNoReply(
 									model.Client,
 									tracinghelper.WithHTTPHostAndPath(
-										fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+										fmt.Sprintf("%s.%s.svc.cluster.local", recordEventsPod.Name, client.Namespace),
 										"/",
 									),
 								),
@@ -306,10 +302,10 @@ func setupChannelTracingWithReply(
 										Span: tracinghelper.MatchHTTPSpanNoReply(
 											model.Server,
 											tracinghelper.WithHTTPHostAndPath(
-												fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+												fmt.Sprintf("%s.%s.svc.cluster.local", recordEventsPod.Name, client.Namespace),
 												"/",
 											),
-											tracinghelper.WithLocalEndpointServiceName(loggerPod.Name),
+											tracinghelper.WithLocalEndpointServiceName(recordEventsPod.Name),
 										),
 									},
 								},
@@ -335,19 +331,10 @@ func setupChannelTracingWithReply(
 			Children: []tracinghelper.TestSpanTree{expected},
 		}
 	}
-	matchFunc := func(ev ce2.Event) error {
-		if ev.Source() != senderName {
-			return fmt.Errorf("expected source %s, saw %s", senderName, ev.Source())
-		}
-		if ev.ID() != eventID {
-			return fmt.Errorf("expected id %s, saw %s", eventID, ev.ID())
-		}
-		db := ev.Data()
-		if !strings.Contains(string(db), body) {
-			return fmt.Errorf("expected substring %s in %s", body, string(db))
-		}
-		return nil
-	}
 
-	return expected, matchFunc
+	return expected, cetest.AllOf(
+		cetest.HasSource(senderName),
+		cetest.HasId(eventID),
+		recordevents.DataContains(body),
+	)
 }
