@@ -56,7 +56,7 @@ func channelHasRequiredSubscriberStatus(st *testing.T, client *lib.Client, chann
 	client.CreateChannelOrFail(channelName, &channel)
 	client.WaitForResourceReadyOrFail(channelName, &channel)
 
-	pod := resources.EventDetailsPod(subscriberServiceName + "-pod")
+	pod := resources.EventRecordPod(subscriberServiceName + "-pod")
 	client.CreatePodOrFail(pod, lib.WithService(subscriberServiceName))
 
 	subscription := client.CreateSubscriptionOrFail(

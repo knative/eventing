@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Pod
-metadata:
-  name: sendevents
-spec:
-  containers:
-    - name: sendevents
-      image: ko://knative.dev/eventing/test/test_images/sendevents
-

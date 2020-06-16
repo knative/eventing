@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Pod
-metadata:
-  name: eventdetails
-spec:
-  containers:
-    - name: eventdetails
-      image: ko://knative.dev/eventing/test/test_images/eventdetails
-
