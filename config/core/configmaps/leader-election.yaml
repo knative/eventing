@@ -63,4 +63,5 @@ data:
     # - broker-controller
     # - inmemorychannel-dispatcher
     # - inmemorychannel-controller
+    # - pingsource-mt-adapter
     enabledComponents: "controller,broker-controller,inmemorychannel-dispatcher,inmemorychannel-controller,webhook,pingsource-mt-adapter"
