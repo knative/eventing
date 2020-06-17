@@ -293,10 +293,22 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Pin
 }
 
 func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha2.PingSource) (*appsv1.Deployment, error) {
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+	}
+
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+	}
+
 	args := resources.MTArgs{
 		ServiceAccountName: mtadapterName,
 		MTAdapterName:      mtadapterName,
 		Image:              r.receiveMTAdapterImage,
+		LoggingConfig:      loggingConfig,
+		MetricsConfig:      metricsConfig,
 	}
 	expected := resources.MakeMTReceiveAdapter(args)
 

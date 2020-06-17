@@ -35,6 +35,8 @@ func TestMakeMTPingAdapter(t *testing.T) {
 		ServiceAccountName: "test-sa",
 		MTAdapterName:      "test-name",
 		Image:              "test-image",
+		MetricsConfig:      "metrics",
+		LoggingConfig:      "logging",
 	}
 
 	want := &v1.Deployment{
@@ -65,21 +67,18 @@ func TestMakeMTPingAdapter(t *testing.T) {
 								Name:  system.NamespaceEnvKey,
 								Value: system.Namespace(),
 							}, {
-								Name:  "METRICS_DOMAIN",
-								Value: "knative.dev/eventing",
-							}, {
-								Name:  "CONFIG_OBSERVABILITY_NAME",
-								Value: "config-observability",
-							}, {
-								Name:  "CONFIG_LOGGING_NAME",
-								Value: "config-logging",
-							}, {
 								Name: "NAMESPACE",
 								ValueFrom: &corev1.EnvVarSource{
 									FieldRef: &corev1.ObjectFieldSelector{
 										FieldPath: "metadata.namespace",
 									},
 								},
+							}, {
+								Name:  "K_METRICS_CONFIG",
+								Value: "metrics",
+							}, {
+								Name:  "K_LOGGING_CONFIG",
+								Value: "logging",
 							}},
 							// Set low resource requests and limits.
 							// This should be configurable.

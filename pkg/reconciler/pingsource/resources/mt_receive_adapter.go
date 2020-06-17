@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/system"
 )
 
@@ -36,6 +36,8 @@ type MTArgs struct {
 	ServiceAccountName string
 	MTAdapterName      string
 	Image              string
+	MetricsConfig      string
+	LoggingConfig      string
 }
 
 // MakeMTReceiveAdapter generates the mtping deployment for pingsources
@@ -66,7 +68,7 @@ func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 						{
 							Name:  "dispatcher",
 							Image: args.Image,
-							Env:   makeEnv(),
+							Env:   makeEnv(args),
 
 							// Set low resource requests and limits.
 							// This should be configurable.
@@ -92,25 +94,22 @@ func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv() []corev1.EnvVar {
+func makeEnv(args MTArgs) []corev1.EnvVar {
 	return []corev1.EnvVar{{
 		Name:  system.NamespaceEnvKey,
 		Value: system.Namespace(),
 	}, {
-		Name:  "METRICS_DOMAIN",
-		Value: "knative.dev/eventing",
-	}, {
-		Name:  "CONFIG_OBSERVABILITY_NAME",
-		Value: "config-observability",
-	}, {
-		Name:  "CONFIG_LOGGING_NAME",
-		Value: "config-logging",
-	}, {
-		Name: "NAMESPACE",
+		Name: adapter.EnvConfigNamespace,
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
 			},
 		},
+	}, {
+		Name:  adapter.EnvConfigMetricsConfig,
+		Value: args.MetricsConfig,
+	}, {
+		Name:  adapter.EnvConfigLoggingConfig,
+		Value: args.LoggingConfig,
 	}}
 }
