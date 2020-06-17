@@ -111,11 +111,11 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 	gotExtensions := ce.Sent()[0].Context.GetExtensions()
 
 	if wantCEOverrides == nil && gotExtensions != nil {
-		t.Errorf("Expected event with no extention overrides got %v", gotExtensions)
+		t.Errorf("Expected event with no extension overrides got %v", gotExtensions)
 	}
 
 	if wantCEOverrides != nil && gotExtensions == nil {
-		t.Errorf("Expected event with extention overrides got nil")
+		t.Errorf("Expected event with extension overrides got nil")
 	}
 	if wantCEOverrides != nil {
 		compareTo := map[string]interface{}{}
@@ -123,7 +123,7 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 			compareTo[k] = v
 		}
 		if !reflect.DeepEqual(compareTo, gotExtensions) {
-			t.Errorf("Expected event with extention overrides to be the same want: %v, but got: %v", wantCEOverrides, gotExtensions)
+			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", wantCEOverrides, gotExtensions)
 		}
 	}
 }
