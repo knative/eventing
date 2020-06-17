@@ -16,9 +16,8 @@ more than one source.
 
 ## Multi Tenancy Modes
 
-There are three possible multi-tenancy modes:
+There are two possible multi-tenancy modes:
 
-- `off`: disable multi-tenancy, falling back to the single-tenant receive adapter.
 - `namespace`: multi-tenant receive adapter, one per namespace
 - `cluster`: multi-tenant receive adapter, one per cluster
 
@@ -52,8 +51,8 @@ data:
     # this example block and unindented to be in the data block
     # to actually change the configuration.
     #
-    # Multitenancy modes. This may be "off", "namespace" or "cluster". The default is "cluster"
-    multitenancy: "cluster"
+    # Multitenancy modes. This may be "namespace" or "cluster". The default is "namespace"
+    multitenancy: "namespace"
 ```
 
 
