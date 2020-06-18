@@ -19,6 +19,8 @@ package resources
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/adapter/v2"
+
 	"knative.dev/pkg/apis"
 
 	v1 "k8s.io/api/apps/v1"
@@ -105,24 +107,24 @@ func MakeReceiveAdapter(args *Args) *v1.Deployment {
 									Value: args.Source.Spec.JsonData,
 								},
 								{
-									Name:  "K_SINK",
+									Name:  adapter.EnvConfigSink,
 									Value: args.SinkURI.String(),
 								},
 								{
-									Name:  "NAME",
+									Name:  adapter.EnvConfigName,
 									Value: args.Source.Name,
 								},
 								{
-									Name:  "NAMESPACE",
+									Name:  adapter.EnvConfigNamespace,
 									Value: args.Source.Namespace,
 								}, {
 									Name:  "METRICS_DOMAIN",
 									Value: "knative.dev/eventing",
 								}, {
-									Name:  "K_METRICS_CONFIG",
+									Name:  adapter.EnvConfigMetricsConfig,
 									Value: args.MetricsConfig,
 								}, {
-									Name:  "K_LOGGING_CONFIG",
+									Name:  adapter.EnvConfigLoggingConfig,
 									Value: args.LoggingConfig,
 								},
 							},
