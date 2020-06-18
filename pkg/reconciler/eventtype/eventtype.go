@@ -53,9 +53,6 @@ var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 // 2. Verify the Broker is ready.
 // TODO remove https://github.com/knative/eventing/issues/2750
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) pkgreconciler.Event {
-	et.Status.InitializeConditions()
-	et.Status.ObservedGeneration = et.Generation
-
 	b, err := r.getBroker(ctx, et)
 	if err != nil {
 		if apierrs.IsNotFound(err) {

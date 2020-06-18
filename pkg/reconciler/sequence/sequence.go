@@ -65,8 +65,6 @@ var _ sequencereconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkgreconciler.Event {
-	s.Status.InitializeConditions()
-
 	// Reconciling sequence is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole sequence
 	// 2. For each of the Steps, create a Subscription to the previous Channel

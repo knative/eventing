@@ -67,8 +67,6 @@ type Reconciler struct {
 var _ parallelreconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1beta1.Parallel) pkgreconciler.Event {
-	p.Status.InitializeConditions()
-
 	// Reconciling parallel is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
 	// 2. For each of the Branches:

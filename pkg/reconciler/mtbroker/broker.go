@@ -127,8 +127,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1beta1.Broker) pkgre
 
 func (r *Reconciler) reconcileKind(ctx context.Context, b *v1beta1.Broker) (*corev1.ObjectReference, pkgreconciler.Event) {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Broker", b))
-	b.Status.InitializeConditions()
-	b.Status.ObservedGeneration = b.Generation
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
 	// 2. Check that Filter / Ingress deployment (shared within cluster are there)
