@@ -30,6 +30,18 @@ import (
 
 type EnvConfigConstructor func() EnvConfigAccessor
 
+const (
+	EnvConfigComponent     = "K_COMPONENT"
+	EnvConfigNamespace     = "NAMESPACE"
+	EnvConfigName          = "NAME"
+	EnvConfigResourceGroup = "K_RESOURCE_GROUP"
+	EnvConfigSink          = "K_SINK"
+	EnvConfigCEOverrides   = "K_CE_OVERRIDES"
+	EnvConfigMetricsConfig = "K_METRICS_CONFIG"
+	EnvConfigLoggingConfig = "K_LOGGING_CONFIG"
+	EnvConfigTracingConfig = "K_TRACING_CONFIG"
+)
+
 // EnvConfig is the minimal set of configuration parameters
 // source adapters should support.
 type EnvConfig struct {

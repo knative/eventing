@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"knative.dev/eventing/pkg/adapter/v2"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -124,7 +126,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	}
 
 	envs := []corev1.EnvVar{{
-		Name:  "K_SINK",
+		Name:  adapter.EnvConfigSink,
 		Value: args.SinkURI,
 	}, {
 		Name:  "K_SOURCE_CONFIG",
@@ -133,14 +135,14 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		Name:  "SYSTEM_NAMESPACE",
 		Value: system.Namespace(),
 	}, {
-		Name: "NAMESPACE",
+		Name: adapter.EnvConfigNamespace,
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
 			},
 		},
 	}, {
-		Name:  "NAME",
+		Name:  adapter.EnvConfigName,
 		Value: args.Source.Name,
 	}, {
 		Name:  "METRICS_DOMAIN",
