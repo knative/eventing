@@ -25,11 +25,16 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
+var channelLabels = map[string]string{
+	"messaging.knative.dev/subscribable": "true",
+	"duck.knative.dev/addressable":       "true",
+}
+
 // ChannelCRDMetadataTestHelperWithChannelTestRunner runs the Channel CRD metadata tests for all
-// Channel resources in the ChannelTestRunner.
+// Channel resources in the ComponentsTestRunner.
 func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 
@@ -41,7 +46,7 @@ func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 			channelIsNamespaced(st, client, channel)
 		})
 		t.Run("Channel CRD has required label", func(t *testing.T) {
-			channelCRDHasRequiredLabels(st, client, channel)
+			channelCRDHasRequiredLabels(client, channel)
 		})
 		t.Run("Channel CRD has required label", func(t *testing.T) {
 			channelCRDHasProperCategory(st, client, channel)
@@ -61,27 +66,13 @@ func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeM
 	}
 }
 
-func channelCRDHasRequiredLabels(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasRequiredLabels(client *lib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following:
 	//   label of messaging.knative.dev/subscribable: "true"
 	//   label of duck.knative.dev/addressable: "true"
 
-	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
-	crdName := gvr.Resource + "." + gvr.Group
-
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{
-		TypeMeta: metav1.TypeMeta{},
-	})
-	if err != nil {
-		client.T.Fatalf("Unable to find CRD for %q: %v", channel, err)
-	}
-	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
-		client.T.Fatalf("Channel CRD doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
-	}
-	if crd.Labels["duck.knative.dev/addressable"] != "true" {
-		client.T.Fatalf("Channel CRD doesn't have the label 'duck.knative.dev/addressable=true' %q: %v", channel, err)
-	}
+	validateRequiredLabels(client, channel, channelLabels)
 }
 
 func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {

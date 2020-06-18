@@ -45,7 +45,7 @@ Note: the number denotes the sequence of the event that flows in this test case.
 */
 func EventTransformationForTriggerTestHelper(t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
 		senderName = "e2e-eventtransformation-sender"

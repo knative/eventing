@@ -26,15 +26,15 @@ import (
 	"knative.dev/eventing/test/lib"
 )
 
-var channelTestRunner lib.ChannelTestRunner
+var channelTestRunner lib.ComponentsTestRunner
 var brokerClass string
 
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
 		test.InitializeEventingFlags()
-		channelTestRunner = lib.ChannelTestRunner{
-			ChannelFeatureMap: lib.ChannelFeatureMap,
-			ChannelsToTest:    test.EventingFlags.Channels,
+		channelTestRunner = lib.ComponentsTestRunner{
+			ComponentFeatureMap: lib.ChannelFeatureMap,
+			ComponentsToTest:    test.EventingFlags.Channels,
 		}
 		brokerClass = test.EventingFlags.BrokerClass
 

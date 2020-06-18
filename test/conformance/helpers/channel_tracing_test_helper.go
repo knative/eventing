@@ -34,10 +34,10 @@ import (
 )
 
 // ChannelTracingTestHelperWithChannelTestRunner runs the Channel tracing tests for all Channels in
-// the ChannelTestRunner.
+// the ComponentsTestRunner.
 func ChannelTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	setupClient lib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {

@@ -35,11 +35,11 @@ import (
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
-// the ChannelTestRunner.
+// the ComponentsTestRunner.
 func BrokerTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	setupClient lib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {

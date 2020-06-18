@@ -32,7 +32,7 @@ import (
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
 func EventTransformationForSubscriptionTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	senderName := "e2e-eventtransformation-sender"
 	channelNames := []string{"e2e-eventtransformation1", "e2e-eventtransformation2"}

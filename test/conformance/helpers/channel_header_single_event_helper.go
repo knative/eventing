@@ -42,7 +42,7 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 	t *testing.T,
 	encoding cloudevents.Encoding,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption,
 ) {
 	channelName := "conformance-headers-channel-" + encoding.String()

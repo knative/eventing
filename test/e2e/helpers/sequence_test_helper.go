@@ -34,7 +34,7 @@ import (
 )
 
 func SequenceTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
 		sequenceName  = "e2e-sequence"

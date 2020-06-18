@@ -32,7 +32,7 @@ import (
 
 // ChannelChainTestHelper is the helper function for channel_chain_test
 func ChannelChainTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
 		senderName          = "e2e-channelchain-sender"

@@ -38,7 +38,7 @@ type branchConfig struct {
 }
 
 func ParallelTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
 		senderPodName = "e2e-parallel"

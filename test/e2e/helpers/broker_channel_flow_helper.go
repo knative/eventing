@@ -51,7 +51,7 @@ Trigger3 filters the transformed event and sends it to Channel.
 */
 func BrokerChannelFlowWithTransformation(t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
+	channelTestRunner lib.ComponentsTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
 		senderName = "e2e-brokerchannel-sender"

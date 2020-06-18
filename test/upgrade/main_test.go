@@ -25,13 +25,13 @@ import (
 
 var setup = lib.Setup
 var tearDown = lib.TearDown
-var channelTestRunner lib.ChannelTestRunner
+var channelTestRunner lib.ComponentsTestRunner
 
 func TestMain(m *testing.M) {
 	test.InitializeEventingFlags()
-	channelTestRunner = lib.ChannelTestRunner{
-		ChannelFeatureMap: lib.ChannelFeatureMap,
-		ChannelsToTest:    test.EventingFlags.Channels,
+	channelTestRunner = lib.ComponentsTestRunner{
+		ComponentFeatureMap: lib.ChannelFeatureMap,
+		ComponentsToTest:    test.EventingFlags.Channels,
 	}
 	os.Exit(m.Run())
 }
