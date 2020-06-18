@@ -156,7 +156,7 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides.Extensions, err)
 		}
-		envs = append(envs, corev1.EnvVar{Name: "K_CE_OVERRIDES", Value: string(ceJson)})
+		envs = append(envs, corev1.EnvVar{Name: adapter.EnvConfigCEOverrides, Value: string(ceJson)})
 	}
 	return envs, nil
 }
