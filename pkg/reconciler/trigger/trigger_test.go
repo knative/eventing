@@ -79,12 +79,14 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist or there is no matching BrokerClass for it`)),
 			}},
 			WantErr: false,
