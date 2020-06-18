@@ -28,21 +28,21 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/utils"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/resources/sender"
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
-// the ChannelTestRunner.
+// the ComponentsTestRunner.
 func BrokerTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
-	setupClient lib.SetupClientOption,
+	channelTestRunner testlib.ComponentsTestRunner,
+	setupClient testlib.SetupClientOption,
 ) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		tracingTest(t, setupClient, setupBrokerTracing(brokerClass), channel)
 	})
 }
@@ -65,7 +65,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 	return func(
 		t *testing.T,
 		channel *metav1.TypeMeta,
-		client *lib.Client,
+		client *testlib.Client,
 		loggerPodName string,
 		senderPublishTrace bool,
 	) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
@@ -80,7 +80,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 
 		// Create a logger (EventRecord) Pod and a K8s Service that points to it.
 		logPod := resources.EventRecordPod(loggerPodName)
-		client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
+		client.CreatePodOrFail(logPod, testlib.WithService(loggerPodName))
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 		loggerTrigger := client.CreateTriggerOrFailV1Beta1(
@@ -98,7 +98,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 			senderName,
 			[]byte(eventBody),
 		)
-		client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
+		client.CreatePodOrFail(eventTransformerPod, testlib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
 		transformerTrigger := client.CreateTriggerOrFailV1Beta1(
@@ -122,9 +122,9 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 
 		// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 		if senderPublishTrace {
-			client.SendEventToAddressable(senderName, broker.Name, lib.BrokerTypeMeta, event, sender.EnableTracing())
+			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.EnableTracing())
 		} else {
-			client.SendEventToAddressable(senderName, broker.Name, lib.BrokerTypeMeta, event)
+			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event)
 		}
 
 		domain := utils.GetClusterDomainName()

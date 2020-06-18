@@ -22,26 +22,32 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/pkg/apis/messaging"
+	testlib "knative.dev/eventing/test/lib"
 )
 
+var channelLabels = map[string]string{
+	messaging.SubscribableDuckVersionAnnotation: "true",
+	"duck.knative.dev/addressable":              "true",
+}
+
 // ChannelCRDMetadataTestHelperWithChannelTestRunner runs the Channel CRD metadata tests for all
-// Channel resources in the ChannelTestRunner.
+// Channel resources in the ComponentsTestRunner.
 func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption,
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption,
 ) {
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		t.Run("Channel is namespaced", func(t *testing.T) {
 			channelIsNamespaced(st, client, channel)
 		})
 		t.Run("Channel CRD has required label", func(t *testing.T) {
-			channelCRDHasRequiredLabels(st, client, channel)
+			channelCRDHasRequiredLabels(client, channel)
 		})
 		t.Run("Channel CRD has required label", func(t *testing.T) {
 			channelCRDHasProperCategory(st, client, channel)
@@ -49,7 +55,7 @@ func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	})
 }
 
-func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelIsNamespaced(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec: Each channel is namespaced
 
 	apiResource, err := getApiResource(client, channel)
@@ -61,30 +67,16 @@ func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeM
 	}
 }
 
-func channelCRDHasRequiredLabels(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasRequiredLabels(client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following:
 	//   label of messaging.knative.dev/subscribable: "true"
 	//   label of duck.knative.dev/addressable: "true"
 
-	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
-	crdName := gvr.Resource + "." + gvr.Group
-
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{
-		TypeMeta: metav1.TypeMeta{},
-	})
-	if err != nil {
-		client.T.Fatalf("Unable to find CRD for %q: %v", channel, err)
-	}
-	if crd.Labels["messaging.knative.dev/subscribable"] != "true" {
-		client.T.Fatalf("Channel CRD doesn't have the label 'messaging.knative.dev/subscribable=true' %q: %v", channel, err)
-	}
-	if crd.Labels["duck.knative.dev/addressable"] != "true" {
-		client.T.Fatalf("Channel CRD doesn't have the label 'duck.knative.dev/addressable=true' %q: %v", channel, err)
-	}
+	validateRequiredLabels(client, channel, channelLabels)
 }
 
-func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasProperCategory(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following: the category channel
 
@@ -104,7 +96,7 @@ func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel meta
 	}
 }
 
-func getApiResource(client *lib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
+func getApiResource(client *testlib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
 	gvr, _ := meta.UnsafeGuessKindToResource(typeMeta.GroupVersionKind())
 	apiResourceList, err := client.Kube.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
 	if err != nil {

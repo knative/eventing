@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestChannelAddressableResolverClusterRoleTest(t *testing.T) {
-	helpers.TestChannelAddressableResolverClusterRoleTestRunner(t, channelTestRunner, lib.SetupClientOptionNoop)
+	helpers.TestChannelAddressableResolverClusterRoleTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
 }

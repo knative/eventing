@@ -31,7 +31,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -50,12 +50,12 @@ const (
 
 // ChannelClusterDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelClusterDefaulterTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// these tests cannot be run in parallel as they have cluster-wide impact
-		client := lib.Setup(st, false, options...)
-		defer lib.TearDown(client)
+		client := testlib.Setup(st, false, options...)
+		defer testlib.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *config.ChannelDefaults) {
 			setClusterDefaultChannel(conf, channel)
@@ -69,13 +69,13 @@ func ChannelClusterDefaulterTestHelper(t *testing.T,
 
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelNamespaceDefaulterTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// we cannot run these tests in parallel as the updateDefaultChannelCM function is not thread-safe
 		// TODO(chizhg): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
-		client := lib.Setup(st, false, options...)
-		defer lib.TearDown(client)
+		client := testlib.Setup(st, false, options...)
+		defer testlib.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *config.ChannelDefaults) {
 			setNamespaceDefaultChannel(conf, client.Namespace, channel)
@@ -87,7 +87,7 @@ func ChannelNamespaceDefaulterTestHelper(t *testing.T,
 	})
 }
 
-func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel metav1.TypeMeta) {
+func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChannel metav1.TypeMeta) {
 	channelName := "e2e-defaulter-channel"
 	senderName := "e2e-defaulter-sender"
 	subscriptionName := "e2e-defaulter-subscription"
@@ -104,7 +104,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
 		channelName,
-		lib.ChannelTypeMeta,
+		testlib.ChannelTypeMeta,
 		resources.WithSubscriberForSubscription(recordEventsPodName),
 	)
 
@@ -142,12 +142,12 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	event.SetID("dummy")
 	eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 	event.SetSource(eventSource)
-	event.SetType(lib.DefaultEventType)
+	event.SetType(testlib.DefaultEventType)
 	body := fmt.Sprintf(`{"msg":"TestSingleEvent %s"}`, uuid.New().String())
 	if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 		t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 	}
-	client.SendEventToAddressable(senderName, channelName, lib.ChannelTypeMeta, event)
+	client.SendEventToAddressable(senderName, channelName, testlib.ChannelTypeMeta, event)
 
 	// verify the logger service receives the event
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
@@ -157,7 +157,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 }
 
 // updateDefaultChannelCM will update the default channel configmap
-func updateDefaultChannelCM(client *lib.Client, updateConfig func(config *config.ChannelDefaults)) error {
+func updateDefaultChannelCM(client *testlib.Client, updateConfig func(config *config.ChannelDefaults)) error {
 	cmInterface := client.Kube.Kube.CoreV1().ConfigMaps(resources.SystemNamespace)
 
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {

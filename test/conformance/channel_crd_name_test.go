@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestChannelCRDName(t *testing.T) {
-	helpers.ChannelCRDNameTestHelperWithChannelTestRunner(t, channelTestRunner, lib.SetupClientOptionNoop)
+	helpers.ChannelCRDNameTestHelperWithChannelTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
 }

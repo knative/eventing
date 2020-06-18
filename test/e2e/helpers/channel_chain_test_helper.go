@@ -25,15 +25,15 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
 // ChannelChainTestHelper is the helper function for channel_chain_test
 func ChannelChainTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	const (
 		senderName          = "e2e-channelchain-sender"
 		recordEventsPodName = "e2e-channelchain-recordevents-pod"
@@ -45,9 +45,9 @@ func ChannelChainTestHelper(t *testing.T,
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 	eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
@@ -79,7 +79,7 @@ func ChannelChainTestHelper(t *testing.T,
 		event := cloudevents.NewEvent()
 		event.SetID("dummy")
 		event.SetSource(eventSource)
-		event.SetType(lib.DefaultEventType)
+		event.SetType(testlib.DefaultEventType)
 
 		body := fmt.Sprintf(`{"msg":"TestSingleEvent %s"}`, uuid.New().String())
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {

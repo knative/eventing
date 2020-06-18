@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	pkgTest "knative.dev/pkg/test"
 )
@@ -89,7 +89,7 @@ func (p *prober) deployReceiverPod() {
 	_, err := p.client.Kube.CreatePod(pod)
 	ensure.NoError(err)
 
-	lib.WaitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
+	testlib.WaitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
 		return pkgTest.WaitForPodRunning(p.client.Kube, receiverName, p.client.Namespace)
 	})
 }

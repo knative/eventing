@@ -25,15 +25,15 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
 func ChannelDeadLetterSinkTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	const (
 		senderName          = "e2e-channelchain-sender"
 		recordEventsPodName = "e2e-channel-dls-recordevents-pod"
@@ -42,9 +42,9 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 	// subscriptionNames corresponds to Subscriptions
 	subscriptionNames := []string{"e2e-channel-dls-subs1"}
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
@@ -71,7 +71,7 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 		event.SetID("dummy")
 		eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 		event.SetSource(eventSource)
-		event.SetType(lib.DefaultEventType)
+		event.SetType(testlib.DefaultEventType)
 		body := fmt.Sprintf(`{"msg":"TestChannelDeadLetterSink %s"}`, uuid.New().String())
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())

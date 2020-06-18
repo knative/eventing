@@ -27,20 +27,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/resources/sender"
 )
 
 // ChannelTracingTestHelperWithChannelTestRunner runs the Channel tracing tests for all Channels in
-// the ChannelTestRunner.
+// the ComponentsTestRunner.
 func ChannelTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	setupClient lib.SetupClientOption,
+	channelTestRunner testlib.ComponentsTestRunner,
+	setupClient testlib.SetupClientOption,
 ) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		tracingTest(t, setupClient, setupChannelTracingWithReply, channel)
 	})
 }
@@ -54,7 +54,7 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 func setupChannelTracingWithReply(
 	t *testing.T,
 	channel *metav1.TypeMeta,
-	client *lib.Client,
+	client *testlib.Client,
 	recordEventsPodName string,
 	senderPublishTrace bool,
 ) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
@@ -68,7 +68,7 @@ func setupChannelTracingWithReply(
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
 	recordEventsPod := resources.EventRecordPod(recordEventsPodName)
-	client.CreatePodOrFail(recordEventsPod, lib.WithService(recordEventsPodName))
+	client.CreatePodOrFail(recordEventsPod, testlib.WithService(recordEventsPodName))
 
 	// Create the subscriber, a Pod that mutates the event.
 	transformerPod := resources.EventTransformationPod(
@@ -77,7 +77,7 @@ func setupChannelTracingWithReply(
 		eventSource,
 		nil,
 	)
-	client.CreatePodOrFail(transformerPod, lib.WithService(transformerPod.Name))
+	client.CreatePodOrFail(transformerPod, testlib.WithService(transformerPod.Name))
 
 	// Create the Subscription linking the Channel to the mutator.
 	client.CreateSubscriptionOrFail(
@@ -104,7 +104,7 @@ func setupChannelTracingWithReply(
 	event := cloudevents.NewEvent()
 	event.SetID(eventID)
 	event.SetSource(senderName)
-	event.SetType(lib.DefaultEventType)
+	event.SetType(testlib.DefaultEventType)
 	body := fmt.Sprintf(`{"msg":"TestChannelTracing %s"}`, eventID)
 	if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 		t.Fatalf("Cannot set the payload of the event: %s", err.Error())

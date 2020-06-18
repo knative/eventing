@@ -39,7 +39,7 @@ var MessagingChannelTypeMeta = metav1.TypeMeta{
 	Kind:       resources.ChannelKind,
 }
 
-// ChannelFeatureMap saves the channel-features mapping.
+// ComponentFeatureMap saves the channel-features mapping.
 // Each pair means the channel support the list of features.
 var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
 	InMemoryChannelTypeMeta:  {FeatureBasic},

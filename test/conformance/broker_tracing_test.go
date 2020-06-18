@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestBrokerTracing(t *testing.T) {
-	helpers.BrokerTracingTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, lib.SetupClientOptionNoop)
+	helpers.BrokerTracingTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, testlib.SetupClientOptionNoop)
 }

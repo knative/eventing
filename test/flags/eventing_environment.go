@@ -1,5 +1,3 @@
-// +build e2e
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,18 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package flags
 
-import (
-	"testing"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/e2e/helpers"
-	testlib "knative.dev/eventing/test/lib"
-)
-
-func TestTriggerNoBroker(t *testing.T) {
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		helpers.TestTriggerNoBroker(t, channel.Kind, helpers.ChannelBasedBrokerCreator(channel, brokerClass))
-	})
+// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
+type EventingEnvironmentFlags struct {
+	BrokerClass string
+	Channels
 }

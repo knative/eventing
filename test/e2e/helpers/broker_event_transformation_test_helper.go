@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -45,8 +45,8 @@ Note: the number denotes the sequence of the event that flows in this test case.
 */
 func EventTransformationForTriggerTestHelper(t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	const (
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"
@@ -66,16 +66,16 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 		recordEventsPodName   = "recordevents-pod"
 	)
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// Create a configmap used by the broker.
 		config := client.CreateBrokerConfigMapOrFail(brokerName, &channel)
 
 		// create a new broker
 		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
-		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 		// create the transformation service
 		transformationPod := resources.EventTransformationPod(
@@ -84,7 +84,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 			transformedEventSource,
 			[]byte(transformedBody),
 		)
-		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
+		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create trigger1 for event transformation
 		client.CreateTriggerOrFailV1Beta1(
@@ -117,7 +117,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 		if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
-		client.SendEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend)
+		client.SendEventToAddressable(senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 		// check if the logging service receives the correct event
 		eventTracker.AssertAtLeast(1, recordevents.MatchEvent(

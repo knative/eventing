@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -51,8 +51,8 @@ Trigger3 filters the transformed event and sends it to Channel.
 */
 func BrokerChannelFlowWithTransformation(t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	const (
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
@@ -77,16 +77,16 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		config := client.CreateBrokerConfigMapOrFail(brokerName, &channel)
 		//&channel
 
 		// create a new broker
 		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
-		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 		// eventToSend is the event sent as input of the test
 		eventToSend := cloudevents.NewEvent()
@@ -104,7 +104,7 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 			transformedEventSource,
 			[]byte(transformedBody),
 		)
-		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
+		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create trigger1 to receive the original event, and do event transformation
 		client.CreateTriggerOrFailV1Beta1(
@@ -158,7 +158,7 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send CloudEvent to the broker
-		client.SendEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend)
+		client.SendEventToAddressable(senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 		// Assert the results on the event trackers
 		originalEventMatcher := recordevents.MatchEvent(AllOf(

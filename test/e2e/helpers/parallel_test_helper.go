@@ -27,7 +27,7 @@ import (
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -38,8 +38,8 @@ type branchConfig struct {
 }
 
 func ParallelTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	const (
 		senderPodName = "e2e-parallel"
 	)
@@ -57,9 +57,9 @@ func ParallelTestHelper(t *testing.T,
 			expected: "parallel-two-branches-pass-first-branch-only-branch-0-sub",
 		},
 	}
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		for _, tc := range table {
 			parallelBranches := make([]v1beta1.ParallelBranch, len(tc.branchesConfig))
@@ -67,12 +67,12 @@ func ParallelTestHelper(t *testing.T,
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
 				filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
-				client.CreatePodOrFail(filterPod, lib.WithService(filterPodName))
+				client.CreatePodOrFail(filterPod, testlib.WithService(filterPodName))
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 				subPod := resources.SequenceStepperPod(subPodName, subPodName)
-				client.CreatePodOrFail(subPod, lib.WithService(subPodName))
+				client.CreatePodOrFail(subPod, testlib.WithService(subPodName))
 
 				parallelBranches[branchNumber] = v1beta1.ParallelBranch{
 					Filter: &duckv1.Destination{
@@ -120,7 +120,7 @@ func ParallelTestHelper(t *testing.T,
 
 			eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 			event.SetSource(eventSource)
-			event.SetType(lib.DefaultEventType)
+			event.SetType(testlib.DefaultEventType)
 			body := fmt.Sprintf(`{"msg":"TestFlowParallel %s"}`, uuid.New().String())
 			if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 				st.Fatalf("Cannot set the payload of the event: %s", err.Error())
@@ -129,7 +129,7 @@ func ParallelTestHelper(t *testing.T,
 			client.SendEventToAddressable(
 				senderPodName,
 				tc.name,
-				lib.FlowsParallelTypeMeta,
+				testlib.FlowsParallelTypeMeta,
 				event,
 			)
 

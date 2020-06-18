@@ -21,10 +21,10 @@ import (
 
 	authv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
-func ServiceAccountCanDoVerbOnResourceOrFail(client *lib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
+func ServiceAccountCanDoVerbOnResourceOrFail(client *testlib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
 	r, err := client.Kube.Kube.AuthorizationV1().SubjectAccessReviews().Create(&authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
 			User: fmt.Sprintf("system:serviceaccount:%s:%s", client.Namespace, saName),

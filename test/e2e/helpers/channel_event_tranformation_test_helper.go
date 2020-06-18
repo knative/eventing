@@ -25,15 +25,15 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
 func EventTransformationForSubscriptionTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	senderName := "e2e-eventtransformation-sender"
 	channelNames := []string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
 	eventSource := fmt.Sprintf("http://%s.svc/", senderName)
@@ -44,9 +44,9 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	recordEventsPodName := "e2e-eventtransformation-recordevents-pod"
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
@@ -56,7 +56,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		eventAfterTransformation := cloudevents.NewEvent()
 		eventAfterTransformation.SetID("dummy-transformed")
 		eventAfterTransformation.SetSource(eventSource)
-		eventAfterTransformation.SetType(lib.DefaultEventType)
+		eventAfterTransformation.SetType(testlib.DefaultEventType)
 		transformedEventBody := fmt.Sprintf(`{"msg":"eventBody %s"}`, uuid.New().String())
 		if err := eventAfterTransformation.SetData(cloudevents.ApplicationJSON, []byte(transformedEventBody)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
@@ -67,7 +67,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 			eventAfterTransformation.Source(),
 			eventAfterTransformation.Data(),
 		)
-		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
+		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
@@ -96,7 +96,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		eventToSend := cloudevents.NewEvent()
 		eventToSend.SetID("dummy")
 		eventToSend.SetSource(eventSource)
-		eventToSend.SetType(lib.DefaultEventType)
+		eventToSend.SetType(testlib.DefaultEventType)
 		eventBody := fmt.Sprintf(`{"msg":"TestEventTransformation %s"}`, uuid.New().String())
 		if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())

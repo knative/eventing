@@ -27,15 +27,15 @@ import (
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func SequenceTestHelper(t *testing.T,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	const (
 		sequenceName  = "e2e-sequence"
 		senderPodName = "e2e-sequence-sender-pod"
@@ -59,9 +59,9 @@ func SequenceTestHelper(t *testing.T,
 		msgAppender: "-step3",
 	}}
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// construct steps for the sequence
 		steps := make([]v1beta1.SequenceStep, 0)
@@ -71,7 +71,7 @@ func SequenceTestHelper(t *testing.T,
 			msgAppender := config.msgAppender
 			stepperPod := resources.SequenceStepperPod(podName, msgAppender)
 
-			client.CreatePodOrFail(stepperPod, lib.WithService(podName))
+			client.CreatePodOrFail(stepperPod, testlib.WithService(podName))
 			// create a new step
 			step := v1beta1.SequenceStep{
 				Destination: duckv1.Destination{
@@ -123,7 +123,7 @@ func SequenceTestHelper(t *testing.T,
 		event.SetID("dummy")
 		eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 		event.SetSource(eventSource)
-		event.SetType(lib.DefaultEventType)
+		event.SetType(testlib.DefaultEventType)
 		msg := fmt.Sprintf("TestSequence %s", uuid.New().String())
 		body := fmt.Sprintf(`{"msg":"%s"}`, msg)
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
@@ -132,7 +132,7 @@ func SequenceTestHelper(t *testing.T,
 		client.SendEventToAddressable(
 			senderPodName,
 			sequenceName,
-			lib.FlowsSequenceTypeMeta,
+			testlib.FlowsSequenceTypeMeta,
 			event)
 
 		// verify the logger service receives the correct transformed event

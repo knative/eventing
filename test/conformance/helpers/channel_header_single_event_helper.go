@@ -25,7 +25,7 @@ import (
 	uuid "github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/resources/sender"
@@ -42,18 +42,18 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 	t *testing.T,
 	encoding cloudevents.Encoding,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption,
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption,
 ) {
 	channelName := "conformance-headers-channel-" + encoding.String()
 	senderName := "conformance-headers-sender-" + encoding.String()
 	subscriptionName := "conformance-headers-subscription-" + encoding.String()
 	recordEventsPodName := "conformance-headers-recordevents-pod-" + encoding.String()
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Running header conformance test with channel %q", channel)
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// create channel
 		st.Logf("Creating channel")
@@ -80,7 +80,7 @@ func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 		event := cloudevents.NewEvent()
 		event.SetID(eventID)
 		event.SetSource(senderName)
-		event.SetType(lib.DefaultEventType)
+		event.SetType(testlib.DefaultEventType)
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}

@@ -31,7 +31,7 @@ import (
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 )
 
@@ -124,7 +124,7 @@ func (er *eventRecorder) ServeHTTP(writer http.ResponseWriter, request *http.Req
 
 	er.es.StoreEvent(event, eventErr, map[string][]string(header))
 
-	headerNameList := lib.InterestingHeaders()
+	headerNameList := testlib.InterestingHeaders()
 	for _, headerName := range headerNameList {
 		if headerValue := header.Get(headerName); headerValue != "" {
 			log.Printf("Header %s: %s\n", headerName, headerValue)

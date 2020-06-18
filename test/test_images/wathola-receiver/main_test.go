@@ -21,7 +21,7 @@ import (
 
 	"github.com/phayes/freeport"
 	"go.uber.org/zap/zapcore"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 
@@ -35,7 +35,7 @@ func TestReceiverMain(t *testing.T) {
 	go main()
 	time.Sleep(time.Millisecond)
 	cancel := <-receiver.Canceling
-	err := lib.WaitForReadiness(port, config.Log)
+	err := testlib.WaitForReadiness(port, config.Log)
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
 

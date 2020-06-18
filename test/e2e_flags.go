@@ -21,68 +21,36 @@ package test
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
+	testflags "knative.dev/eventing/test/flags"
+	testlib "knative.dev/eventing/test/lib"
+)
+
+const (
+	ChannelUsage = "The names of the channel type metas, separated by comma. " +
+		"Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel," +
+		"messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\"."
+	BrokerUsage = "Which brokerclass to test, requires the proper Broker " +
+		"implementation to have been installed, and only one value. brokerclass " +
+		"must be (for now) 'MTChannelBasedBroker'."
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
-//var EventingFlags *EventingEnvironmentFlags
-var EventingFlags EventingEnvironmentFlags
-
-// Channels holds the Channels we want to run test against.
-type Channels []metav1.TypeMeta
-
-func (channels *Channels) String() string {
-	return fmt.Sprint(*channels)
-}
-
-// Set converts the input string to Channels.
-// The default Channel we will test against is InMemoryChannel.
-func (channels *Channels) Set(value string) error {
-	for _, channel := range strings.Split(value, ",") {
-		channel := strings.TrimSpace(channel)
-		split := strings.Split(channel, ":")
-		if len(split) != 2 {
-			log.Fatalf("The given Channel name %q is invalid, it needs to be in the form \"apiVersion:Kind\".", channel)
-		}
-		tm := metav1.TypeMeta{
-			APIVersion: split[0],
-			Kind:       split[1],
-		}
-		if !isValid(tm.Kind) {
-			log.Fatalf("The given channel name %q is invalid, tests cannot be run.\n", channel)
-		}
-
-		*channels = append(*channels, tm)
-	}
-	return nil
-}
-
-// Check if the channel name is valid.
-func isValid(channel string) bool {
-	return strings.HasSuffix(channel, "Channel")
-}
-
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
-type EventingEnvironmentFlags struct {
-	BrokerClass string
-	Channels
-}
+var EventingFlags testflags.EventingEnvironmentFlags
 
 // InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
 // go1.13+, see https://github.com/knative/test-infra/issues/1329 for details
 func InitializeEventingFlags() {
-	flag.Var(&EventingFlags.Channels, "channels", "The names of the channel type metas, separated by comma. Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\".")
-	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", "Which brokerclass to test, requires the proper Broker implementation to have been installed, and only one value. brokerclass must be (for now) 'MTChannelBasedBroker'.")
+
+	flag.Var(&EventingFlags.Channels, "channels", ChannelUsage)
+	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", BrokerUsage)
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
 	if EventingFlags.Channels == nil || len(EventingFlags.Channels) == 0 {
-		EventingFlags.Channels = []metav1.TypeMeta{lib.DefaultChannel}
+		EventingFlags.Channels = []metav1.TypeMeta{testlib.DefaultChannel}
 	}
 
 	if EventingFlags.BrokerClass == "" {

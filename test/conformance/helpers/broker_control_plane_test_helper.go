@@ -24,7 +24,7 @@ import (
 
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -39,12 +39,12 @@ import (
 func BrokerV1Beta1ControlPlaneTestHelperWithChannelTestRunner(
 	t *testing.T,
 	brokerClass string,
-	channelTestRunner lib.ChannelTestRunner,
-	setupClient ...lib.SetupClientOption,
+	channelTestRunner testlib.ComponentsTestRunner,
+	setupClient ...testlib.SetupClientOption,
 ) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(t, true, setupClient...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(t, true, setupClient...)
+		defer testlib.TearDown(client)
 		brokerName := "br"
 		triggerNoBroker := "trigger-no-broker"
 		triggerWithBroker := "trigger-with-broker"
@@ -76,12 +76,12 @@ func BrokerV1Beta1ControlPlaneTestHelperWithChannelTestRunner(
 
 }
 
-func TriggerV1Beta1BeforeBrokerHelper(t *testing.T, triggerName string, client *lib.Client) {
+func TriggerV1Beta1BeforeBrokerHelper(t *testing.T, triggerName string, client *testlib.Client) {
 	const etLogger = "logger"
 	const loggerPodName = "logger-pod"
 
 	logPod := resources.EventRecordPod(loggerPodName)
-	client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
+	client.CreatePodOrFail(logPod, testlib.WithService(loggerPodName))
 	client.WaitForAllTestResourcesReadyOrFail() //Can't do this for the trigger because it's not 'ready' yet
 	client.CreateTriggerOrFailV1Beta1(triggerName,
 		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
@@ -89,7 +89,7 @@ func TriggerV1Beta1BeforeBrokerHelper(t *testing.T, triggerName string, client *
 	)
 }
 
-func BrokerV1Beta1CreatedToReadyHelper(t *testing.T, brokerName, brokerClass string, client *lib.Client, channel metav1.TypeMeta) {
+func BrokerV1Beta1CreatedToReadyHelper(t *testing.T, brokerName, brokerClass string, client *testlib.Client, channel metav1.TypeMeta) {
 	client.CreateBrokerConfigMapOrFail(brokerName, &channel)
 
 	broker := client.CreateBrokerV1Beta1OrFail(
@@ -98,20 +98,20 @@ func BrokerV1Beta1CreatedToReadyHelper(t *testing.T, brokerName, brokerClass str
 		resources.WithConfigMapForBrokerConfig(),
 	)
 
-	client.WaitForResourceReadyOrFail(broker.Name, lib.BrokerTypeMeta)
+	client.WaitForResourceReadyOrFail(broker.Name, testlib.BrokerTypeMeta)
 
 }
 
-func ReadyBrokerV1Beta1AvailableHelper(t *testing.T, brokerName string, client *lib.Client) {
-	client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
-	obj := resources.NewMetaResource(brokerName, client.Namespace, lib.BrokerTypeMeta)
+func ReadyBrokerV1Beta1AvailableHelper(t *testing.T, brokerName string, client *testlib.Client) {
+	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
+	obj := resources.NewMetaResource(brokerName, client.Namespace, testlib.BrokerTypeMeta)
 	_, err := duck.GetAddressableURI(client.Dynamic, obj)
 	if err != nil {
 		t.Fatalf("Broker is not addressable %v", err)
 	}
 }
 
-func TriggerV1Beta1ReadyBrokerReadyHelper(t *testing.T, triggerName, brokerName string, client *lib.Client) {
+func TriggerV1Beta1ReadyBrokerReadyHelper(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
 	const etLogger = "logger"
 	const loggerPodName = "logger-pod"
 
@@ -121,10 +121,10 @@ func TriggerV1Beta1ReadyBrokerReadyHelper(t *testing.T, triggerName, brokerName 
 		resources.WithBrokerV1Beta1(brokerName),
 	)
 
-	client.WaitForResourceReadyOrFail(trigger.Name, lib.TriggerTypeMeta)
+	client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
 }
 
-func TriggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, brokerName string, client *lib.Client) {
+func TriggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
 	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
@@ -145,8 +145,8 @@ func TriggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, bro
 
 }
 
-func TriggerV1Beta1ReadyIncludesSubURI(t *testing.T, triggerName string, client *lib.Client) {
-	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)
+func TriggerV1Beta1ReadyIncludesSubURI(t *testing.T, triggerName string, client *testlib.Client) {
+	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
 	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Error: Could not get trigger %s: %v", tr.Name, err)

@@ -29,7 +29,7 @@ import (
 	"knative.dev/pkg/test/zipkin"
 
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 )
 
@@ -38,7 +38,7 @@ import (
 type SetupTracingTestInfrastructureFunc func(
 	t *testing.T,
 	channel *metav1.TypeMeta,
-	client *lib.Client,
+	client *testlib.Client,
 	loggerPodName string,
 	senderPublishTrace bool,
 ) (tracinghelper.TestSpanTree, cetest.EventMatcher)
@@ -46,7 +46,7 @@ type SetupTracingTestInfrastructureFunc func(
 // tracingTest bootstraps the test and then executes the assertions on the received event and on the spans
 func tracingTest(
 	t *testing.T,
-	setupClient lib.SetupClientOption,
+	setupClient testlib.SetupClientOption,
 	setupInfrastructure SetupTracingTestInfrastructureFunc,
 	channel metav1.TypeMeta,
 ) {
@@ -54,8 +54,8 @@ func tracingTest(
 		recordEventsPodName = "recordevents"
 	)
 
-	client := lib.Setup(t, true, setupClient)
-	defer lib.TearDown(client)
+	client := testlib.Setup(t, true, setupClient)
+	defer testlib.TearDown(client)
 
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.

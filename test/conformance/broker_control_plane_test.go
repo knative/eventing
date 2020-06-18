@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestBrokerV1Beta1ControlPlane(t *testing.T) {
-	helpers.BrokerV1Beta1ControlPlaneTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, lib.SetupClientOptionNoop)
+	helpers.BrokerV1Beta1ControlPlaneTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, testlib.SetupClientOptionNoop)
 }

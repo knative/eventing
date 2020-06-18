@@ -45,29 +45,29 @@ const (
 	testPullSecretName = "kn-eventing-test-pull-secret"
 )
 
-// ChannelTestRunner is used to run tests against channels.
-type ChannelTestRunner struct {
-	ChannelFeatureMap map[metav1.TypeMeta][]Feature
-	ChannelsToTest    []metav1.TypeMeta
+// ComponentsTestRunner is used to run tests against different eventing components.
+type ComponentsTestRunner struct {
+	ComponentFeatureMap map[metav1.TypeMeta][]Feature
+	ComponentsToTest    []metav1.TypeMeta
 }
 
-// RunTests will use all channels that support the given feature, to run
+// RunTests will use all components that support the given feature, to run
 // a test for the testFunc.
-func (tr *ChannelTestRunner) RunTests(
+func (tr *ComponentsTestRunner) RunTests(
 	t *testing.T,
 	feature Feature,
-	testFunc func(st *testing.T, channel metav1.TypeMeta),
+	testFunc func(st *testing.T, component metav1.TypeMeta),
 ) {
 	t.Parallel()
-	for _, channel := range tr.ChannelsToTest {
-		// If a Channel is not present in the map, then assume it has all properties. This is so an
-		// unknown Channel can be specified via the --channel flag and have tests run.
-		// TODO Use a flag to specify the features of the flag based Channel, rather than assuming
+	for _, component := range tr.ComponentsToTest {
+		// If a component is not present in the map, then assume it has all properties. This is so an
+		// unknown component (e.g. a Channel) can be specified via a dedicated flag (e.g. --channels) and have tests run.
+		// TODO Use a flag to specify the features of the flag based component, rather than assuming
 		// it supports all features.
-		features, present := tr.ChannelFeatureMap[channel]
+		features, present := tr.ComponentFeatureMap[component]
 		if !present || contains(features, feature) {
-			t.Run(fmt.Sprintf("%s-%s", channel.Kind, channel.APIVersion), func(st *testing.T) {
-				testFunc(st, channel)
+			t.Run(fmt.Sprintf("%s-%s", component.Kind, component.APIVersion), func(st *testing.T) {
+				testFunc(st, component)
 			})
 		}
 	}

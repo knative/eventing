@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -92,11 +92,11 @@ func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
 
 // BrokerCreator creates a broker and returns its broker name.
 // TestBrokerWithManyTriggers will wait for the broker to become ready.
-type BrokerCreator func(client *lib.Client) string
+type BrokerCreator func(client *testlib.Client) string
 
 // ChannelBasedBrokerCreator creates a BrokerCreator that creates a broker based on the channel parameter.
 func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) BrokerCreator {
-	return func(client *lib.Client) string {
+	return func(client *testlib.Client) string {
 		brokerName := strings.ToLower(channel.Kind)
 
 		// create a ConfigMap used by the broker.
@@ -218,8 +218,8 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := lib.Setup(t, true)
-			defer lib.TearDown(client)
+			client := testlib.Setup(t, true)
+			defer testlib.TearDown(client)
 
 			if shouldLabelNamespace {
 				// Label namespace so that it creates the default broker.
@@ -231,14 +231,14 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			brokerName := brokerCreator(client)
 
 			// Wait for broker ready.
-			client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
+			client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 			if shouldLabelNamespace {
 				// Test if namespace reconciler would recreate broker once broker was deleted.
 				if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(brokerName, &metav1.DeleteOptions{}); err != nil {
 					t.Fatalf("Can't delete default broker in namespace: %v", client.Namespace)
 				}
-				client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
+				client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 			}
 
 			// Let's start event recorders and triggers
@@ -247,7 +247,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				// Create event recorder pod and service
 				subscriberName := "dumper-" + event.String()
 				eventRecordPod := resources.EventRecordPod(subscriberName)
-				client.CreatePodOrFail(eventRecordPod, lib.WithService(subscriberName))
+				client.CreatePodOrFail(eventRecordPod, testlib.WithService(subscriberName))
 				eventTracker, err := recordevents.NewEventInfoStore(client, subscriberName)
 				if err != nil {
 					t.Fatalf("Pod tracker failed: %v", err)
@@ -291,7 +291,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 
 				// Send event
 				senderPodName := "sender-" + eventTestCase.String()
-				client.SendEventToAddressable(senderPodName, brokerName, lib.BrokerTypeMeta, eventToSend)
+				client.SendEventToAddressable(senderPodName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 				// Sent event matcher
 				sentEventMatcher := cetest.AllOf(

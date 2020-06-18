@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/resources/sender"
@@ -46,17 +46,17 @@ const (
 func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding,
 	subscriptionVersion SubscriptionVersion,
 	channelVersion string,
-	channelTestRunner lib.ChannelTestRunner,
-	options ...lib.SetupClientOption) {
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
 	channelName := "e2e-singleevent-channel-" + encoding.String()
 	senderName := "e2e-singleevent-sender-" + encoding.String()
 	subscriptionName := "e2e-singleevent-subscription-" + encoding.String()
 	eventRecorder := "e2e-singleevent-event-record-pod-" + encoding.String()
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Run test with channel %q", channel)
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		// create channel
 		client.CreateChannelOrFail(channelName, &channel)
@@ -92,7 +92,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 
 		eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 		event.SetSource(eventSource)
-		event.SetType(lib.DefaultEventType)
+		event.SetType(testlib.DefaultEventType)
 
 		body := fmt.Sprintf(`{"msg":"TestSingleEvent %s"}`, uuid.New().String())
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {

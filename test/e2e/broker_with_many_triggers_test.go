@@ -25,14 +25,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	"knative.dev/eventing/test/e2e/helpers"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 const defaultBrokerName = pkgResources.DefaultBrokerName
 
 var unsupportedChannelVersions = []string{"v1alpha1"}
 
-func DefaultBrokerCreator(_ *lib.Client) string {
+func DefaultBrokerCreator(_ *testlib.Client) string {
 	return defaultBrokerName
 }
 
@@ -41,7 +41,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 }
 
 func TestChannelBasedBrokerWithManyTriggers(t *testing.T) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		for _, version := range unsupportedChannelVersions {
 			if strings.HasSuffix(channel.APIVersion, version) {
 				t.Skipf("unsupported %s channel version", version)
