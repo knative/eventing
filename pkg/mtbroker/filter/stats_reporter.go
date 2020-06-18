@@ -110,7 +110,7 @@ func NewStatsReporter(container, uniqueName string) StatsReporter {
 
 func register() {
 	// Create view to see our measurements.
-	err := view.Register(
+	err := metrics.RegisterResourceView(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
