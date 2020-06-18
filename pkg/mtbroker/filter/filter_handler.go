@@ -18,19 +18,23 @@ package filter
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"sync/atomic"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/client"
+	"github.com/cloudevents/sdk-go/v2/event"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
+
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/logging"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -38,14 +42,9 @@ import (
 )
 
 const (
-	writeTimeout = 15 * time.Minute
-
 	passFilter FilterResult = "pass"
 	failFilter FilterResult = "fail"
 	noFilter   FilterResult = "no_filter"
-
-	// readyz is the HTTP path that will be used for readiness checks.
-	readyz = "/readyz"
 
 	// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
 	//  Issue: https://github.com/knative/eventing/issues/1777
@@ -59,24 +58,15 @@ const (
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	logger        *zap.Logger
+	// receiver receives incoming HTTP requests
+	receiver *kncloudevents.HttpMessageReceiver
+	// sender sends requests to downstream services
+	sender *kncloudevents.HttpMessageSender
+	// reporter reports stats of status code and dispatch time
+	reporter StatsReporter
+
 	triggerLister eventinglisters.TriggerLister
-	ceClient      cloudevents.Client
-	reporter      StatsReporter
-	isReady       *atomic.Value
-}
-
-type sendError struct {
-	Err    error
-	Status int
-}
-
-func (e sendError) Error() string {
-	return e.Err.Error()
-}
-
-func (e sendError) Unwrap() error {
-	return e.Err
+	logger        *zap.Logger
 }
 
 // FilterResult has the result of the filtering operation.
@@ -85,105 +75,65 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	httpTransport, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithBinaryEncoding(),
-		cloudevents.WithPort(port),
-		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
-	)
+
+	sender, err := kncloudevents.NewHttpMessageSender(&connectionArgs, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create message sender: %w", err)
 	}
 
-	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
-	if err != nil {
-		return nil, err
-	}
-
-	r := &Handler{
-		logger:        logger,
-		triggerLister: triggerLister,
-		ceClient:      ceClient,
+	return &Handler{
+		receiver:      kncloudevents.NewHttpMessageReceiver(port),
+		sender:        sender,
 		reporter:      reporter,
-		isReady:       &atomic.Value{},
-	}
-	r.isReady.Store(false)
-
-	httpTransport.Handler = http.NewServeMux()
-	httpTransport.Handler.HandleFunc("/healthz", r.healthZ)
-	httpTransport.Handler.HandleFunc(readyz, r.readyZ)
-
-	return r, nil
-}
-
-func (r *Handler) healthZ(writer http.ResponseWriter, _ *http.Request) {
-	writer.WriteHeader(http.StatusOK)
-}
-
-func (r *Handler) readyZ(writer http.ResponseWriter, _ *http.Request) {
-	if r.isReady == nil || !r.isReady.Load().(bool) {
-		http.Error(writer, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
-		return
-	}
-	writer.WriteHeader(http.StatusOK)
+		triggerLister: triggerLister,
+		logger:        logger,
+	}, nil
 }
 
 // Start begins to receive messages for the handler.
 //
-// Only HTTP POST requests to the root path (/) are accepted. If other paths or
-// methods are needed, use the HandleRequest method directly with another HTTP
-// server.
+// HTTP POST requests to the root path (/) are accepted.
 //
-// This method will block until a message is received on the stop channel.
-func (r *Handler) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- r.ceClient.StartReceiver(ctx, r.serveHTTP)
-	}()
-
-	// We are ready.
-	r.isReady.Store(true)
-
-	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
-	select {
-	case err := <-errCh:
-		return err
-	case <-ctx.Done():
-		break
-	}
-
-	// No longer ready.
-	r.isReady.Store(false)
-
-	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
-	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
-	cancel()
-	select {
-	case err := <-errCh:
-		return err
-	case <-time.After(writeTimeout):
-		return errors.New("timeout shutting down ceClient")
-	}
+// This method will block until ctx is done.
+func (h *Handler) Start(ctx context.Context) error {
+	return h.receiver.StartListen(ctx, health.WithLivenessCheck(health.WithReadinessCheck(h)))
 }
 
-func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	if tctx.Method != http.MethodPost {
-		resp.Status = http.StatusMethodNotAllowed
-		return nil
+// 1. validate request
+// 2. extract event from request
+// 3. get trigger from its trigger reference extracted from the request URI
+// 4. filter event
+// 5. send event to trigger's subscriber
+// 6. write the response
+func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+
+	if request.Method != http.MethodPost {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
 
-	// tctx.URI is actually the path...
-	triggerRef, err := path.Parse(tctx.URI)
+	triggerRef, err := path.Parse(request.RequestURI)
 	if err != nil {
-		r.logger.Info("Unable to parse path as a trigger", zap.Error(err), zap.String("path", tctx.URI))
-		return errors.New("unable to parse path as a Trigger")
+		h.logger.Info("Unable to parse path as trigger", zap.Error(err), zap.String("path", request.RequestURI))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	ctx := request.Context()
+
+	message := cehttp.NewMessageFromHttpRequest(request)
+	defer message.Finish(nil)
+
+	event, err := binding.ToEvent(ctx, message)
+	if err != nil {
+		h.logger.Warn("failed to extract event from request", zap.Error(err))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	ctx, span := trace.StartSpan(ctx, tracing.TriggerMessagingDestination(triggerRef.NamespacedName))
@@ -196,6 +146,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 			tracing.TriggerMessagingDestinationAttribute(triggerRef.NamespacedName),
 			tracing.MessagingMessageIDAttribute(event.ID()),
 		)
+		span.AddAttributes(client.EventTraceAttributes(event)...)
 	}
 
 	// Remove the TTL attribute that is used by the Broker.
@@ -203,53 +154,23 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	if err != nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
-		r.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
+		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
 		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
 		// the message to a DLQ.
-		resp.Status = http.StatusBadRequest
-		return nil
+		writer.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	if err := broker.DeleteTTL(event.Context); err != nil {
-		r.logger.Warn("Failed to delete TTL.", zap.Error(err))
+		h.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
-	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
+	h.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
-	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
+	t, err := h.getTrigger(triggerRef)
 	if err != nil {
-		// Propagate any error codes from the invoke back upstram.
-		var httpError sendError
-		if errors.As(err, &httpError) {
-			resp.Status = httpError.Status
-		}
-		r.logger.Error("Error sending the event", zap.Error(err))
-		return err
-	}
-
-	resp.Status = http.StatusAccepted
-	if responseEvent == nil {
-		return nil
-	}
-
-	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-
-	if err := broker.SetTTL(responseEvent.Context, ttl); err != nil {
-		return err
-	}
-	resp.Event = responseEvent
-	resp.Context = &cloudevents.HTTPTransportResponseContext{
-		Header: utils.PassThroughHeaders(tctx.Header),
-	}
-
-	return nil
-}
-
-// sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event) (*cloudevents.Event, error) {
-	t, err := r.getTrigger(ctx, trigger)
-	if err != nil {
-		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
-		return nil, err
+		h.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", triggerRef))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	reportArgs := &ReportArgs{
@@ -261,50 +182,116 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 
 	subscriberURI := t.Status.SubscriberURI
 	if subscriberURI == nil {
-		err = errors.New("unable to read subscriberURI")
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
-		return nil, err
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = h.reporter.ReportEventCount(reportArgs, http.StatusBadRequest)
+		return
 	}
 
 	// Check if the event should be sent.
-	filterResult := r.shouldSendEvent(ctx, &t.Spec, event)
+	ctx = logging.WithLogger(ctx, h.logger.Sugar())
+	filterResult := h.shouldSendEvent(ctx, &t.Spec, event)
 
 	if filterResult == failFilter {
-		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
 		// We do not count the event. The event will be counted in the broker ingress.
 		// If the filter didn't pass, it means that the event wasn't meant for this Trigger.
-		return nil, nil
+		return
 	}
 
+	h.reportArrivalTime(event, reportArgs)
+
+	h.send(ctx, writer, request.Header, subscriberURI.String(), reportArgs, event, ttl, span)
+}
+
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target string, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32, span *trace.Span) {
+
+	// send the event to trigger's subscriber
+	response, err := h.sendEvent(ctx, headers, target, event, reportArgs, span)
+	if err != nil {
+		h.logger.Error("failed to send event", zap.Error(err))
+		writer.WriteHeader(http.StatusInternalServerError)
+		_ = h.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
+		return
+	}
+
+	// If there is an event in the response write it to the response
+	statusCode, err := writeResponse(ctx, writer, response, ttl, span)
+	if err != nil {
+		h.logger.Error("failed to write response", zap.Error(err))
+	}
+
+	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
+	writer.WriteHeader(statusCode)
+}
+
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *cloudevents.Event, reporterArgs *ReportArgs, span *trace.Span) (*http.Response, error) {
+	// Send the event to the subscriber
+	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the request: %w", err)
+	}
+
+	message := binding.ToMessage(event)
+	defer message.Finish(nil)
+
+	additionalHeaders := utils.PassThroughHeaders(headers)
+	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write request: %w", err)
+	}
+
+	start := time.Now()
+	resp, err := h.sender.Send(req)
+	dispatchTime := time.Since(start)
+	if err != nil {
+		err = fmt.Errorf("failed to dispatch message: %w", err)
+	}
+
+	_ = h.reporter.ReportEventDispatchTime(reporterArgs, resp.StatusCode, dispatchTime)
+
+	return resp, err
+}
+
+func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32, span *trace.Span) (int, error) {
+
+	response := cehttp.NewMessageFromHttpResponse(resp)
+	defer response.Finish(nil)
+
+	event, err := binding.ToEvent(ctx, response)
+	if err != nil || event == nil {
+		// No event in response.
+		return resp.StatusCode, nil
+	}
+
+	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
+	if err := broker.SetTTL(event.Context, ttl); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
+	}
+
+	eventResponse := binding.ToMessage(event)
+	defer eventResponse.Finish(nil)
+
+	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
+	}
+
+	return resp.StatusCode, nil
+}
+
+func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) {
 	// Record the event processing time. This might be off if the receiver and the filter pods are running in
 	// different nodes with different clocks.
 	var arrivalTimeStr string
 	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
 		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
 		if err == nil {
-			r.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))
+			_ = h.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))
 		}
 	}
-
-	sendingCTX := utils.SendingContextFrom(ctx, tctx, subscriberURI.URL())
-
-	start := time.Now()
-	rctx, replyEvent, err := r.ceClient.Send(sendingCTX, *event)
-	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
-	// Record the dispatch time.
-	r.reporter.ReportEventDispatchTime(reportArgs, rtctx.StatusCode, time.Since(start))
-	// Record the event count.
-	r.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
-	// Wrap any errors along with the response status code so that can be propagated upstream.
-	if err != nil {
-		err = sendError{err, rtctx.StatusCode}
-	}
-	return replyEvent, err
 }
 
-func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1beta1.Trigger, error) {
-	t, err := r.triggerLister.Triggers(ref.Namespace).Get(ref.Name)
+func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigger, error) {
+	t, err := h.triggerLister.Triggers(ref.Namespace).Get(ref.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -317,15 +304,15 @@ func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*
 // shouldSendEvent determines whether event 'event' should be sent based on the triggerSpec 'ts'.
 // Currently it supports exact matching on event context attributes and extension attributes.
 // If no filter is present, shouldSendEvent returns passFilter.
-func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1beta1.TriggerSpec, event *cloudevents.Event) FilterResult {
+func (h *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1beta1.TriggerSpec, event *cloudevents.Event) FilterResult {
 	// No filter specified, default to passing everything.
 	if ts.Filter == nil || len(ts.Filter.Attributes) == 0 {
 		return noFilter
 	}
-	return r.filterEventByAttributes(ctx, map[string]string(ts.Filter.Attributes), event)
+	return filterEventByAttributes(ctx, map[string]string(ts.Filter.Attributes), event)
 }
 
-func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) FilterResult {
+func filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) FilterResult {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.

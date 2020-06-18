@@ -20,13 +20,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
@@ -138,32 +136,19 @@ func main() {
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	httpTransport, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithBinaryEncoding(),
-		cloudevents.WithPort(env.Port),
-		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
-	)
+	sender, err := kncloudevents.NewHttpMessageSender(&connectionArgs, "")
 	if err != nil {
-		logger.Fatal("Unable to create CE transport", zap.Error(err))
-	}
-
-	// Liveness check.
-	httpTransport.Handler = http.NewServeMux()
-	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
-		writer.WriteHeader(http.StatusOK)
-	})
-	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
-	if err != nil {
-		logger.Fatal("Unable to create CE client", zap.Error(err))
+		logger.Fatal("Unable to create message sender", zap.Error(err))
 	}
 
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		Logger:    logger,
-		CeClient:  ceClient,
-		Reporter:  reporter,
+		Receiver:  kncloudevents.NewHttpMessageReceiver(env.Port),
+		Sender:    sender,
 		Defaulter: broker.TTLDefaulter(logger, defaultTTL),
+		Reporter:  reporter,
+		Logger:    logger,
 	}
 
 	// configMapWatcher does not block, so start it first.

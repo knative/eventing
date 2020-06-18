@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
 )
 
