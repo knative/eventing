@@ -24,6 +24,23 @@ import (
 	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 )
 
+// ConnectionArgs allow to configure connection parameters to the underlying
+// HTTP Client transport.
+type ConnectionArgs struct {
+	// MaxIdleConns refers to the max idle connections, as in net/http/transport.
+	MaxIdleConns int
+	// MaxIdleConnsPerHost refers to the max idle connections per host, as in net/http/transport.
+	MaxIdleConnsPerHost int
+}
+
+func (ca *ConnectionArgs) ConfigureTransport(transport *nethttp.Transport) {
+	if ca == nil {
+		return
+	}
+	transport.MaxIdleConns = ca.MaxIdleConns
+	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
+}
+
 type HttpMessageSender struct {
 	Client *nethttp.Client
 	Target string
