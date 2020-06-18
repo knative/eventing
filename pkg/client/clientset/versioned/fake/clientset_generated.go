@@ -27,6 +27,8 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	configsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/configs/v1alpha1"
 	fakeconfigsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/configs/v1alpha1/fake"
+	eventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
+	fakeeventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1/fake"
 	eventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
 	fakeeventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1/fake"
 	flowsv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1beta1"
@@ -94,6 +96,11 @@ func (c *Clientset) ConfigsV1alpha1() configsv1alpha1.ConfigsV1alpha1Interface {
 // EventingV1beta1 retrieves the EventingV1beta1Client
 func (c *Clientset) EventingV1beta1() eventingv1beta1.EventingV1beta1Interface {
 	return &fakeeventingv1beta1.FakeEventingV1beta1{Fake: &c.Fake}
+}
+
+// EventingV1 retrieves the EventingV1Client
+func (c *Clientset) EventingV1() eventingv1.EventingV1Interface {
+	return &fakeeventingv1.FakeEventingV1{Fake: &c.Fake}
 }
 
 // FlowsV1beta1 retrieves the FlowsV1beta1Client
