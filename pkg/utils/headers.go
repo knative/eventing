@@ -17,13 +17,9 @@
 package utils
 
 import (
-	"context"
 	"net/http"
-	"net/url"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -44,31 +40,6 @@ var (
 		"knative-",
 	}
 )
-
-// SendingContextFrom creates the context to use when sending a Cloud Event with cloudevents.Client. It
-// sets the target if specified, and attaches a filtered set of headers from the initial request.
-func SendingContextFrom(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
-	// Get the allowed set of headers.
-	h := PassThroughHeaders(tctx.Header)
-	ctx = cloudevents.SetContextHeaders(ctx, h)
-
-	if targetURI != nil {
-		ctx = cloudevents.ContextWithTarget(ctx, targetURI.String())
-	}
-
-	return ctx
-}
-
-// ReceivingContextFrom filters the transport context headers using
-// PassThroughHeaders after receiving an event using
-// cloudevents.Client
-func ReceivingContextFrom(ctx context.Context) context.Context {
-	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	// Get the allowed set of headers.
-	h := PassThroughHeaders(tctx.Header)
-	tctx.Header = h
-	return cehttp.WithTransportContext(ctx, tctx)
-}
 
 // PassThroughHeaders extracts the headers from headers that are in the `forwardHeaders` set
 // or has any of the prefixes in `forwardPrefixes`.
