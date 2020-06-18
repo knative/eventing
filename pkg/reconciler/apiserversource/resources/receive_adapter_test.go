@@ -28,14 +28,18 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/reconciler/source"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
 	_ "knative.dev/pkg/metrics/testing"
 	_ "knative.dev/pkg/system/testing"
 )
 
-func TestMakeReceiveAdapter(t *testing.T) {
+func TestMakeReceiveAdapters(t *testing.T) {
 	name := "source-name"
+	one := int32(1)
+	trueValue := true
+
 	src := &v1alpha2.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -64,20 +68,6 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			ServiceAccountName: "source-svc-acct",
 		},
 	}
-
-	got, _ := MakeReceiveAdapter(&ReceiveAdapterArgs{
-		Image:  "test-image",
-		Source: src,
-		Labels: map[string]string{
-			"test-key1": "test-value1",
-			"test-key2": "test-value2",
-		},
-		SinkURI: "sink-uri",
-		Configs: &source.EmptyVarsGenerator{},
-	})
-
-	one := int32(1)
-	trueValue := true
 
 	want := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -167,7 +157,45 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected deploy (-want, +got) = %v", diff)
+	ceSrc := src.DeepCopy()
+	ceSrc.Spec.CloudEventOverrides = &duckv1.CloudEventOverrides{Extensions: map[string]string{"1": "one"}}
+	ceWant := want.DeepCopy()
+	ceWant.Spec.Template.Spec.Containers[0].Env = append(ceWant.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "K_CE_OVERRIDES",
+		Value: `{"1":"one"}`,
+	})
+
+	testCases := map[string]struct {
+		want *appsv1.Deployment
+		src  *v1alpha2.ApiServerSource
+	}{
+		"TestMakeReceiveAdapter": {
+
+			want: want,
+			src:  src,
+		}, "TestMakeReceiveAdapterWithExtensionOverride": {
+			src:  ceSrc,
+			want: ceWant,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+
+			got, _ := MakeReceiveAdapter(&ReceiveAdapterArgs{
+				Image:  "test-image",
+				Source: tc.src,
+				Labels: map[string]string{
+					"test-key1": "test-value1",
+					"test-key2": "test-value2",
+				},
+				SinkURI: "sink-uri",
+				Configs: &source.EmptyVarsGenerator{},
+			})
+
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("unexpected deploy (-want, +got) = %v", diff)
+			}
+
+		})
 	}
 }

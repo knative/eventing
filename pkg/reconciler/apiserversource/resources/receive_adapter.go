@@ -146,5 +146,15 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
 	}}
-	return append(envs, args.Configs.ToEnvVars()...), nil
+
+	envs = append(envs, args.Configs.ToEnvVars()...)
+
+	if args.Source.Spec.CloudEventOverrides != nil && args.Source.Spec.CloudEventOverrides.Extensions != nil {
+		ceJson, err := json.Marshal(args.Source.Spec.CloudEventOverrides.Extensions)
+		if err != nil {
+			return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides.Extensions, err)
+		}
+		envs = append(envs, corev1.EnvVar{Name: "K_CE_OVERRIDES", Value: string(ceJson)})
+	}
+	return envs, nil
 }
