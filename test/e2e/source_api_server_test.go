@@ -32,7 +32,7 @@ import (
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -134,7 +134,7 @@ func TestApiServerSource(t *testing.T) {
 			client.CreateRoleOrFail(r)
 			client.CreateRoleBindingOrFail(
 				serviceAccountName,
-				lib.RoleKind,
+				testlib.RoleKind,
 				roleName,
 				fmt.Sprintf("%s-%s", serviceAccountName, roleName),
 				client.Namespace,
@@ -199,7 +199,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.CreateRoleOrFail(r)
 	client.CreateRoleBindingOrFail(
 		serviceAccountName,
-		lib.RoleKind,
+		testlib.RoleKind,
 		roleName,
 		fmt.Sprintf("%s-%s", serviceAccountName, roleName),
 		client.Namespace,
@@ -211,7 +211,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	}
 
 	// Wait for default broker ready.
-	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, lib.BrokerTypeMeta)
+	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
 	apiServerSource := eventingtesting.NewApiServerSource(

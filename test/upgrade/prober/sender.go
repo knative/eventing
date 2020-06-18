@@ -21,7 +21,7 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -64,7 +64,7 @@ func (p *prober) deploySender() {
 		Create(pod)
 	ensure.NoError(err)
 
-	lib.WaitFor(fmt.Sprintf("sender pod be ready: %v", senderName), func() error {
+	testlib.WaitFor(fmt.Sprintf("sender pod be ready: %v", senderName), func() error {
 		return pkgTest.WaitForPodRunning(p.client.Kube, senderName, p.client.Namespace)
 	})
 }

@@ -29,7 +29,7 @@ import (
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
@@ -57,7 +57,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 	// Wait for default broker ready.
-	client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
+	client.WaitForResourceReadyOrFail(defaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create subscribers.
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
@@ -95,7 +95,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client.CreatePingSourceV1Alpha2OrFail(pingSource)
 
 	// Trigger should become ready after pingSource was created
-	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)
+	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
 
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
 		HasSource(sourcesv1alpha2.PingSourceSource(client.Namespace, pingSourceName)),

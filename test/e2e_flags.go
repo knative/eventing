@@ -25,7 +25,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testflags "knative.dev/eventing/test/flags"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 const (
@@ -50,7 +50,7 @@ func InitializeEventingFlags() {
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
 	if EventingFlags.Channels == nil || len(EventingFlags.Channels) == 0 {
-		EventingFlags.Channels = []metav1.TypeMeta{lib.DefaultChannel}
+		EventingFlags.Channels = []metav1.TypeMeta{testlib.DefaultChannel}
 	}
 
 	if EventingFlags.BrokerClass == "" {

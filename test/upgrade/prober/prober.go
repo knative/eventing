@@ -21,7 +21,7 @@ import (
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -76,7 +76,7 @@ func NewConfig(namespace string) *Config {
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(log *zap.SugaredLogger, client *lib.Client, config *Config) Prober {
+func RunEventProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
 	pm := newProber(log, client, config)
 	pm.deploy()
 	return pm
@@ -103,7 +103,7 @@ func AssertEventProber(t *testing.T, prober Prober) {
 
 type prober struct {
 	log    *zap.SugaredLogger
-	client *lib.Client
+	client *testlib.Client
 	config *Config
 }
 
@@ -137,10 +137,10 @@ func (p *prober) deploy() {
 	if p.config.Serving.Use {
 		p.deployForwarder()
 	}
-	ensure.NoError(lib.AwaitForAll(p.log))
+	ensure.NoError(testlib.AwaitForAll(p.log))
 
 	p.deploySender()
-	ensure.NoError(lib.AwaitForAll(p.log))
+	ensure.NoError(testlib.AwaitForAll(p.log))
 	// allow sender to send at least some events, 2 sec wait
 	time.Sleep(2 * time.Second)
 	p.log.Infof("Prober is now sending events with interval of %v in "+
@@ -155,7 +155,7 @@ func (p *prober) remove() {
 	p.removeConfiguration()
 }
 
-func newProber(log *zap.SugaredLogger, client *lib.Client, config *Config) Prober {
+func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
 	return &prober{
 		log:    log,
 		client: client,

@@ -22,11 +22,12 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/pkg/apis/messaging"
 )
 
 var channelLabels = map[string]string{
-	"messaging.knative.dev/subscribable": "true",
+	messaging.SubscribableDuckVersionAnnotation: "true",
 	"duck.knative.dev/addressable":       "true",
 }
 
@@ -34,13 +35,13 @@ var channelLabels = map[string]string{
 // Channel resources in the ComponentsTestRunner.
 func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner lib.ComponentsTestRunner,
-	options ...lib.SetupClientOption,
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption,
 ) {
 
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true, options...)
-		defer lib.TearDown(client)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
 
 		t.Run("Channel is namespaced", func(t *testing.T) {
 			channelIsNamespaced(st, client, channel)
@@ -54,7 +55,7 @@ func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	})
 }
 
-func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelIsNamespaced(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec: Each channel is namespaced
 
 	apiResource, err := getApiResource(client, channel)
@@ -66,7 +67,7 @@ func channelIsNamespaced(st *testing.T, client *lib.Client, channel metav1.TypeM
 	}
 }
 
-func channelCRDHasRequiredLabels(client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasRequiredLabels(client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following:
 	//   label of messaging.knative.dev/subscribable: "true"
@@ -75,7 +76,7 @@ func channelCRDHasRequiredLabels(client *lib.Client, channel metav1.TypeMeta) {
 	validateRequiredLabels(client, channel, channelLabels)
 }
 
-func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel metav1.TypeMeta) {
+func channelCRDHasProperCategory(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following: the category channel
 
@@ -95,7 +96,7 @@ func channelCRDHasProperCategory(st *testing.T, client *lib.Client, channel meta
 	}
 }
 
-func getApiResource(client *lib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
+func getApiResource(client *testlib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
 	gvr, _ := meta.UnsafeGuessKindToResource(typeMeta.GroupVersionKind())
 	apiResourceList, err := client.Kube.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
 	if err != nil {

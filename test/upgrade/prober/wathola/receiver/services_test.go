@@ -22,7 +22,7 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
@@ -44,7 +44,7 @@ func TestReceiverReceive(t *testing.T) {
 	go instance.Receive()
 	cancel := <-Canceling
 	defer cancel()
-	assert.NoError(t, lib.WaitForReadiness(port, config.Log))
+	assert.NoError(t, testlib.WaitForReadiness(port, config.Log))
 
 	// when
 	sendEvent(t, e1, port)

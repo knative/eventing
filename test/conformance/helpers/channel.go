@@ -18,7 +18,7 @@ package helpers
 
 import (
 	"github.com/pkg/errors"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 
@@ -42,7 +42,7 @@ var (
 	}
 )
 
-func getChannelDuckTypeSupportVersion(channelName string, client *lib.Client, channel *metav1.TypeMeta) (string, error) {
+func getChannelDuckTypeSupportVersion(channelName string, client *testlib.Client, channel *metav1.TypeMeta) (string, error) {
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1beta1.Channelable{})
 	if err != nil {
@@ -55,7 +55,7 @@ func getChannelDuckTypeSupportVersion(channelName string, client *lib.Client, ch
 	return channelable.ObjectMeta.Annotations[SubscribableAnnotationKey], nil
 }
 
-func getChannelAsV1Beta1Channelable(channelName string, client *lib.Client, channel metav1.TypeMeta) (*eventingduckv1beta1.Channelable, error) {
+func getChannelAsV1Beta1Channelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1beta1.Channelable, error) {
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, &channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1beta1.Channelable{})
 	if err != nil {
@@ -69,7 +69,7 @@ func getChannelAsV1Beta1Channelable(channelName string, client *lib.Client, chan
 	return channelable, nil
 }
 
-func getChannelAsV1Alpha1Channelable(channelName string, client *lib.Client, channel metav1.TypeMeta) (*eventingduckv1alpha1.Channelable, error) {
+func getChannelAsV1Alpha1Channelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1alpha1.Channelable, error) {
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, &channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1alpha1.Channelable{})
 	if err != nil {

@@ -23,14 +23,14 @@ import (
 
 	"knative.dev/pkg/test/zipkin"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 
 	pkgtesting "knative.dev/pkg/configmap/testing"
 )
 
 // Setup sets up port forwarding to Zipkin and sets the knative-eventing tracing config to debug
 // mode (everything is sampled).
-func Setup(t *testing.T, client *lib.Client) {
+func Setup(t *testing.T, client *testlib.Client) {
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.
 	if !zipkin.SetupZipkinTracing(client.Kube.Kube, t.Logf) {
@@ -47,7 +47,7 @@ var setTracingConfigOnce = sync.Once{}
 // instance and caused https://github.com/knative/eventing/issues/2040. So now we just ensure that
 // the tests that test tracing ensure that the requests are made with the sampled flag set to true.
 // TODO Do we need a tear down method to revert the config map to its original state?
-func setTracingConfigToZipkin(t *testing.T, client *lib.Client) {
+func setTracingConfigToZipkin(t *testing.T, client *testlib.Client) {
 	setTracingConfigOnce.Do(func() {
 		tracingConfig, exampleTracingConfig := pkgtesting.ConfigMapsFromTestFile(t, "config-tracing")
 		_, backendOk := tracingConfig.Data["backend"]

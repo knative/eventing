@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
@@ -67,7 +67,7 @@ func (p *prober) annotateNamespace() {
 func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 	namespace := p.config.Namespace
 	p.log.Debugf("Fetching %s broker URL for ns %s", brokerName, namespace)
-	meta := resources.NewMetaResource(brokerName, p.config.Namespace, lib.BrokerTypeMeta)
+	meta := resources.NewMetaResource(brokerName, p.config.Namespace, testlib.BrokerTypeMeta)
 	err := duck.WaitForResourceReady(p.client.Dynamic, meta)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 
 func (p *prober) deployConfigMap() {
 	name := configName
-	lib.WaitFor(fmt.Sprintf("configmap be deployed: %v", name), func() error {
+	testlib.WaitFor(fmt.Sprintf("configmap be deployed: %v", name), func() error {
 		p.log.Infof("Deploying config map: %v", name)
 
 		brokerUrl, err := p.fetchBrokerUrl()
@@ -130,8 +130,8 @@ func (p *prober) deployTriggers() {
 		// update trigger with the new reference
 		_, err := triggers.Create(trigger)
 		ensure.NoError(err)
-		lib.WaitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
-			meta := resources.NewMetaResource(name, p.config.Namespace, lib.TriggerTypeMeta)
+		testlib.WaitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
+			meta := resources.NewMetaResource(name, p.config.Namespace, testlib.TriggerTypeMeta)
 			return duck.WaitForResourceReady(p.client.Dynamic, meta)
 		})
 	}

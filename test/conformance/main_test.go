@@ -23,17 +23,17 @@ import (
 	"knative.dev/pkg/test/zipkin"
 
 	"knative.dev/eventing/test"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
-var channelTestRunner lib.ComponentsTestRunner
+var channelTestRunner testlib.ComponentsTestRunner
 var brokerClass string
 
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
 		test.InitializeEventingFlags()
-		channelTestRunner = lib.ComponentsTestRunner{
-			ComponentFeatureMap: lib.ChannelFeatureMap,
+		channelTestRunner = testlib.ComponentsTestRunner{
+			ComponentFeatureMap: testlib.ChannelFeatureMap,
 			ComponentsToTest:    test.EventingFlags.Channels,
 		}
 		brokerClass = test.EventingFlags.BrokerClass

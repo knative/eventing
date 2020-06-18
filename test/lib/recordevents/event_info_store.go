@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -83,7 +83,7 @@ func newTestableEventInfoStore(egi eventGetterInterface, retryInterval time.Dura
 // recordevents pod.  Calling this forwards the recordevents port to the local machine
 // and blocks waiting to connect to that pod.  Fails if it cannot connect within
 // the expected timeout (4 minutes currently)
-func NewEventInfoStore(client *lib.Client, podName string) (*EventInfoStore, error) {
+func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore, error) {
 	egi, err := newEventGetter(podName, client, client.T.Logf)
 	if err != nil {
 		return nil, err
@@ -95,9 +95,9 @@ func NewEventInfoStore(client *lib.Client, podName string) (*EventInfoStore, err
 }
 
 // Deploys a new recordevents pod and start the associated EventInfoStore
-func StartEventRecordOrFail(client *lib.Client, podName string) (*EventInfoStore, *corev1.Pod) {
+func StartEventRecordOrFail(client *testlib.Client, podName string) (*EventInfoStore, *corev1.Pod) {
 	eventRecordPod := resources.EventRecordPod(podName)
-	client.CreatePodOrFail(eventRecordPod, lib.WithService(podName))
+	client.CreatePodOrFail(eventRecordPod, testlib.WithService(podName))
 	eventTracker, err := NewEventInfoStore(client, podName)
 	if err != nil {
 		client.T.Fatalf("Failed to start the EventInfoStore associated to pod '%s': %v", podName, err)
