@@ -60,8 +60,6 @@ var _ channelreconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgreconciler.Event {
-	c.Status.InitializeConditions()
-
 	// 1. Create the backing Channel CRD, if it doesn't exist.
 	// 2. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
