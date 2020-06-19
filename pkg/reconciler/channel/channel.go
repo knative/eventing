@@ -62,7 +62,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 		return fmt.Errorf("unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
 	}
 
-	track := r.channelableTracker.TrackInNamespaceKReference(c)
+	track := r.channelableTracker.TrackInNamespaceKReference(ctx, c)
 
 	backingChannelObjRef := duckv1.KReference{
 		Kind:       c.Spec.ChannelTemplate.Kind,
@@ -140,7 +140,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 				return nil, err
 			}
 			logger.Debugf("Creating Channel Object: %+v", newBackingChannel)
-			created, err := channelResourceInterface.Create(newBackingChannel, metav1.CreateOptions{})
+			created, err := channelResourceInterface.Create(ctx, newBackingChannel, metav1.CreateOptions{})
 			if err != nil {
 				logger.Errorw("Failed to create backing Channel", zap.Any("backingChannel", newBackingChannel), zap.Error(err))
 				return nil, err

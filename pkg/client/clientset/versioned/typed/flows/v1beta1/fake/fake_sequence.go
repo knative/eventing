@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var sequencesResource = schema.GroupVersionResource{Group: "flows.knative.dev", 
 var sequencesKind = schema.GroupVersionKind{Group: "flows.knative.dev", Version: "v1beta1", Kind: "Sequence"}
 
 // Get takes name of the sequence, and returns the corresponding sequence object, and an error if there is any.
-func (c *FakeSequences) Get(name string, options v1.GetOptions) (result *v1beta1.Sequence, err error) {
+func (c *FakeSequences) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Sequence, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(sequencesResource, c.ns, name), &v1beta1.Sequence{})
 
@@ -50,7 +52,7 @@ func (c *FakeSequences) Get(name string, options v1.GetOptions) (result *v1beta1
 }
 
 // List takes label and field selectors, and returns the list of Sequences that match those selectors.
-func (c *FakeSequences) List(opts v1.ListOptions) (result *v1beta1.SequenceList, err error) {
+func (c *FakeSequences) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.SequenceList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(sequencesResource, sequencesKind, c.ns, opts), &v1beta1.SequenceList{})
 
@@ -72,14 +74,14 @@ func (c *FakeSequences) List(opts v1.ListOptions) (result *v1beta1.SequenceList,
 }
 
 // Watch returns a watch.Interface that watches the requested sequences.
-func (c *FakeSequences) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeSequences) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(sequencesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a sequence and creates it.  Returns the server's representation of the sequence, and an error, if there is any.
-func (c *FakeSequences) Create(sequence *v1beta1.Sequence) (result *v1beta1.Sequence, err error) {
+func (c *FakeSequences) Create(ctx context.Context, sequence *v1beta1.Sequence, opts v1.CreateOptions) (result *v1beta1.Sequence, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(sequencesResource, c.ns, sequence), &v1beta1.Sequence{})
 
@@ -90,7 +92,7 @@ func (c *FakeSequences) Create(sequence *v1beta1.Sequence) (result *v1beta1.Sequ
 }
 
 // Update takes the representation of a sequence and updates it. Returns the server's representation of the sequence, and an error, if there is any.
-func (c *FakeSequences) Update(sequence *v1beta1.Sequence) (result *v1beta1.Sequence, err error) {
+func (c *FakeSequences) Update(ctx context.Context, sequence *v1beta1.Sequence, opts v1.UpdateOptions) (result *v1beta1.Sequence, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(sequencesResource, c.ns, sequence), &v1beta1.Sequence{})
 
@@ -102,7 +104,7 @@ func (c *FakeSequences) Update(sequence *v1beta1.Sequence) (result *v1beta1.Sequ
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSequences) UpdateStatus(sequence *v1beta1.Sequence) (*v1beta1.Sequence, error) {
+func (c *FakeSequences) UpdateStatus(ctx context.Context, sequence *v1beta1.Sequence, opts v1.UpdateOptions) (*v1beta1.Sequence, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(sequencesResource, "status", c.ns, sequence), &v1beta1.Sequence{})
 
@@ -113,7 +115,7 @@ func (c *FakeSequences) UpdateStatus(sequence *v1beta1.Sequence) (*v1beta1.Seque
 }
 
 // Delete takes name of the sequence and deletes it. Returns an error if one occurs.
-func (c *FakeSequences) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeSequences) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(sequencesResource, c.ns, name), &v1beta1.Sequence{})
 
@@ -121,15 +123,15 @@ func (c *FakeSequences) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeSequences) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(sequencesResource, c.ns, listOptions)
+func (c *FakeSequences) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(sequencesResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.SequenceList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched sequence.
-func (c *FakeSequences) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.Sequence, err error) {
+func (c *FakeSequences) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Sequence, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(sequencesResource, c.ns, name, pt, data, subresources...), &v1beta1.Sequence{})
 

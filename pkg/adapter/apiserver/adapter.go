@@ -53,10 +53,10 @@ type apiServerAdapter struct {
 }
 
 func (a *apiServerAdapter) Start(ctx context.Context) error {
-	return a.start(ctx.Done())
+	return a.start(ctx, ctx.Done())
 }
 
-func (a *apiServerAdapter) start(stopCh <-chan struct{}) error {
+func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 
@@ -102,8 +102,8 @@ func (a *apiServerAdapter) start(stopCh <-chan struct{}) error {
 				}
 
 				lw := &cache.ListWatch{
-					ListFunc:  asUnstructuredLister(res.List, configRes.LabelSelector),
-					WatchFunc: asUnstructuredWatcher(res.Watch, configRes.LabelSelector),
+					ListFunc:  asUnstructuredLister(ctx, res.List, configRes.LabelSelector),
+					WatchFunc: asUnstructuredWatcher(ctx, res.Watch, configRes.LabelSelector),
 				}
 
 				reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, delegate, resyncPeriod)
@@ -123,14 +123,14 @@ func (a *apiServerAdapter) start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-type unstructuredLister func(metav1.ListOptions) (*unstructured.UnstructuredList, error)
+type unstructuredLister func(context.Context, metav1.ListOptions) (*unstructured.UnstructuredList, error)
 
-func asUnstructuredLister(ulist unstructuredLister, selector string) cache.ListFunc {
+func asUnstructuredLister(ctx context.Context, ulist unstructuredLister, selector string) cache.ListFunc {
 	return func(opts metav1.ListOptions) (runtime.Object, error) {
 		if selector != "" && opts.LabelSelector == "" {
 			opts.LabelSelector = selector
 		}
-		ul, err := ulist(opts)
+		ul, err := ulist(ctx, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -138,11 +138,13 @@ func asUnstructuredLister(ulist unstructuredLister, selector string) cache.ListF
 	}
 }
 
-func asUnstructuredWatcher(wf cache.WatchFunc, selector string) cache.WatchFunc {
+type structuredWatcher func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+
+func asUnstructuredWatcher(ctx context.Context, wf structuredWatcher, selector string) cache.WatchFunc {
 	return func(lo metav1.ListOptions) (watch.Interface, error) {
 		if selector != "" && lo.LabelSelector == "" {
 			lo.LabelSelector = selector
 		}
-		return wf(lo)
+		return wf(ctx, lo)
 	}
 }

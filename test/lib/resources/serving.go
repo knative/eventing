@@ -19,6 +19,7 @@ package resources
 // This file contains functions that construct Serving resources.
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -74,7 +75,7 @@ func KServiceRef(name string) *corev1.ObjectReference {
 // If ksvc isn't ready yet second return value will be false.
 func KServiceRoutes(client ServingClient, name, namespace string) ([]KServiceRoute, bool, error) {
 	serving := client.Dynamic.Resource(KServicesGVR).Namespace(namespace)
-	unstruct, err := serving.Get(name, metav1.GetOptions{})
+	unstruct, err := serving.Get(context.Background(), name, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
 		// We swallow the error to keep on polling.

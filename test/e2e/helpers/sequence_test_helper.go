@@ -16,6 +16,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -37,7 +38,9 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-func SequenceTestHelper(t *testing.T,
+func SequenceTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -96,7 +99,7 @@ func SequenceTestHelper(t *testing.T,
 		//                make the logger service as a Knative service, and remove the channel and subscription.
 		client.CreateChannelOrFail(channelName, &channel)
 		// create event logger pod and service as the subscriber
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
@@ -119,7 +122,7 @@ func SequenceTestHelper(t *testing.T,
 		client.CreateFlowsSequenceOrFail(sequence)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send CloudEvent to the Sequence
 		event := cloudevents.NewEvent()
@@ -133,6 +136,7 @@ func SequenceTestHelper(t *testing.T,
 			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 		client.SendEventToAddressable(
+			ctx,
 			senderPodName,
 			sequenceName,
 			testlib.FlowsSequenceTypeMeta,
@@ -150,7 +154,9 @@ func SequenceTestHelper(t *testing.T,
 	})
 }
 
-func SequenceV1TestHelper(t *testing.T,
+func SequenceV1TestHelper(
+	ctx context.Context,
+	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -209,7 +215,7 @@ func SequenceV1TestHelper(t *testing.T,
 		//                make the logger service as a Knative service, and remove the channel and subscription.
 		client.CreateChannelOrFail(channelName, &channel)
 		// create event logger pod and service as the subscriber
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
@@ -232,7 +238,7 @@ func SequenceV1TestHelper(t *testing.T,
 		client.CreateFlowsSequenceV1OrFail(sequence)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send CloudEvent to the Sequence
 		event := cloudevents.NewEvent()
@@ -246,6 +252,7 @@ func SequenceV1TestHelper(t *testing.T,
 			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 		client.SendEventToAddressable(
+			ctx,
 			senderPodName,
 			sequenceName,
 			testlib.FlowsSequenceTypeMeta,

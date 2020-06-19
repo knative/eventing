@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var triggersResource = schema.GroupVersionResource{Group: "eventing.knative.dev"
 var triggersKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1", Kind: "Trigger"}
 
 // Get takes name of the trigger, and returns the corresponding trigger object, and an error if there is any.
-func (c *FakeTriggers) Get(name string, options v1.GetOptions) (result *eventingv1.Trigger, err error) {
+func (c *FakeTriggers) Get(ctx context.Context, name string, options v1.GetOptions) (result *eventingv1.Trigger, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(triggersResource, c.ns, name), &eventingv1.Trigger{})
 
@@ -50,7 +52,7 @@ func (c *FakeTriggers) Get(name string, options v1.GetOptions) (result *eventing
 }
 
 // List takes label and field selectors, and returns the list of Triggers that match those selectors.
-func (c *FakeTriggers) List(opts v1.ListOptions) (result *eventingv1.TriggerList, err error) {
+func (c *FakeTriggers) List(ctx context.Context, opts v1.ListOptions) (result *eventingv1.TriggerList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(triggersResource, triggersKind, c.ns, opts), &eventingv1.TriggerList{})
 
@@ -72,14 +74,14 @@ func (c *FakeTriggers) List(opts v1.ListOptions) (result *eventingv1.TriggerList
 }
 
 // Watch returns a watch.Interface that watches the requested triggers.
-func (c *FakeTriggers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeTriggers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(triggersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a trigger and creates it.  Returns the server's representation of the trigger, and an error, if there is any.
-func (c *FakeTriggers) Create(trigger *eventingv1.Trigger) (result *eventingv1.Trigger, err error) {
+func (c *FakeTriggers) Create(ctx context.Context, trigger *eventingv1.Trigger, opts v1.CreateOptions) (result *eventingv1.Trigger, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(triggersResource, c.ns, trigger), &eventingv1.Trigger{})
 
@@ -90,7 +92,7 @@ func (c *FakeTriggers) Create(trigger *eventingv1.Trigger) (result *eventingv1.T
 }
 
 // Update takes the representation of a trigger and updates it. Returns the server's representation of the trigger, and an error, if there is any.
-func (c *FakeTriggers) Update(trigger *eventingv1.Trigger) (result *eventingv1.Trigger, err error) {
+func (c *FakeTriggers) Update(ctx context.Context, trigger *eventingv1.Trigger, opts v1.UpdateOptions) (result *eventingv1.Trigger, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(triggersResource, c.ns, trigger), &eventingv1.Trigger{})
 
@@ -102,7 +104,7 @@ func (c *FakeTriggers) Update(trigger *eventingv1.Trigger) (result *eventingv1.T
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeTriggers) UpdateStatus(trigger *eventingv1.Trigger) (*eventingv1.Trigger, error) {
+func (c *FakeTriggers) UpdateStatus(ctx context.Context, trigger *eventingv1.Trigger, opts v1.UpdateOptions) (*eventingv1.Trigger, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(triggersResource, "status", c.ns, trigger), &eventingv1.Trigger{})
 
@@ -113,7 +115,7 @@ func (c *FakeTriggers) UpdateStatus(trigger *eventingv1.Trigger) (*eventingv1.Tr
 }
 
 // Delete takes name of the trigger and deletes it. Returns an error if one occurs.
-func (c *FakeTriggers) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeTriggers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(triggersResource, c.ns, name), &eventingv1.Trigger{})
 
@@ -121,15 +123,15 @@ func (c *FakeTriggers) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeTriggers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(triggersResource, c.ns, listOptions)
+func (c *FakeTriggers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(triggersResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &eventingv1.TriggerList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched trigger.
-func (c *FakeTriggers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *eventingv1.Trigger, err error) {
+func (c *FakeTriggers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *eventingv1.Trigger, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(triggersResource, c.ns, name, pt, data, subresources...), &eventingv1.Trigger{})
 

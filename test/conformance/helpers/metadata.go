@@ -17,6 +17,8 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testlib "knative.dev/eventing/test/lib"
@@ -34,7 +36,7 @@ func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key 
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(crdName, metav1.GetOptions{
+	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(context.Background(), crdName, metav1.GetOptions{
 		TypeMeta: metav1.TypeMeta{},
 	})
 	if err != nil {

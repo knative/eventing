@@ -17,6 +17,8 @@ limitations under the License.
 package lib
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +31,7 @@ import (
 
 // SendEventToAddressable will send the given event to the given Addressable.
 func (c *Client) SendEventToAddressable(
+	ctx context.Context,
 	senderName,
 	addressableName string,
 	typemeta *metav1.TypeMeta,
@@ -39,11 +42,12 @@ func (c *Client) SendEventToAddressable(
 	if err != nil {
 		c.T.Fatalf("Failed to get the URI for %+v-%s", typemeta, addressableName)
 	}
-	c.SendEvent(senderName, uri, event, option...)
+	c.SendEvent(ctx, senderName, uri, event, option...)
 }
 
 // SendEvent will create a sender pod, which will send the given event to the given url.
 func (c *Client) SendEvent(
+	ctx context.Context,
 	senderName string,
 	uri string,
 	event cloudevents.Event,
@@ -55,13 +59,14 @@ func (c *Client) SendEvent(
 		c.T.Fatalf("Failed to create event-sender pod: %+v", errors.WithStack(err))
 	}
 	c.CreatePodOrFail(pod)
-	if err := pkgTest.WaitForPodRunning(c.Kube, senderName, namespace); err != nil {
+	if err := pkgTest.WaitForPodRunning(ctx, c.Kube, senderName, namespace); err != nil {
 		c.T.Fatalf("Failed to send event %v to %s: %+v", event, uri, errors.WithStack(err))
 	}
 }
 
 // SendRequestToAddressable will send the given request to the given Addressable.
 func (c *Client) SendRequestToAddressable(
+	ctx context.Context,
 	senderName,
 	addressableName string,
 	typemeta *metav1.TypeMeta,
@@ -73,11 +78,12 @@ func (c *Client) SendRequestToAddressable(
 	if err != nil {
 		c.T.Fatalf("Failed to get the URI for %+v-%s", typemeta, addressableName)
 	}
-	c.SendRequest(senderName, uri, headers, body, option...)
+	c.SendRequest(ctx, senderName, uri, headers, body, option...)
 }
 
 // SendRequest will create a sender pod, which will send the given request to the given url.
 func (c *Client) SendRequest(
+	ctx context.Context,
 	senderName string,
 	uri string,
 	headers map[string]string,
@@ -90,7 +96,7 @@ func (c *Client) SendRequest(
 		c.T.Fatalf("Failed to create request-sender pod: %+v", errors.WithStack(err))
 	}
 	c.CreatePodOrFail(pod)
-	if err := pkgTest.WaitForPodRunning(c.Kube, senderName, namespace); err != nil {
+	if err := pkgTest.WaitForPodRunning(ctx, c.Kube, senderName, namespace); err != nil {
 		c.T.Fatalf("Failed to send request to %s: %+v", uri, errors.WithStack(err))
 	}
 }

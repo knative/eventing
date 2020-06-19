@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +62,13 @@ func NewFilteredBrokerInformer(client versioned.Interface, namespace string, res
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1().Brokers(namespace).List(options)
+				return client.EventingV1().Brokers(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1().Brokers(namespace).Watch(options)
+				return client.EventingV1().Brokers(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&eventingv1.Broker{},

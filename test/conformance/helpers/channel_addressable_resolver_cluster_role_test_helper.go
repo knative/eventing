@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"testing"
 
 	"fmt"
@@ -50,7 +51,7 @@ func TestChannelAddressableResolverClusterRoleTestRunner(
 			aggregationClusterRoleName,
 			saName+"-cluster-role-binding",
 		)
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(context.Background())
 
 		for _, verb := range permissionTestCaseVerbs {
 			t.Run(fmt.Sprintf("AddressableResolverClusterRole can do %s on %s", verb, gvr), func(t *testing.T) {

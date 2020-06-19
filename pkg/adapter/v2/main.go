@@ -146,7 +146,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	if metricsConfig, err := env.GetMetricsConfig(); err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
 	} else if metricsConfig != nil {
-		if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
+		if err := metrics.UpdateExporter(ctx, *metricsConfig, logger); err != nil {
 			logger.Error("failed to create the metrics exporter", zap.Error(err))
 		}
 		// Check if metrics config contains profiling flag

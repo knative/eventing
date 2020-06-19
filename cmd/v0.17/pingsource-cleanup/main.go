@@ -45,7 +45,7 @@ func main() {
 	k8s := kubeclient.Get(ctx)
 	client := eventingclient.Get(ctx)
 
-	nss, err := k8s.CoreV1().Namespaces().List(metav1.ListOptions{})
+	nss, err := k8s.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Fatalf("[ERROR] Failed to list namespaces: %s", err)
 	}
@@ -55,7 +55,7 @@ func main() {
 	for _, ns := range nss.Items {
 		fmt.Printf("# processing namespace %s\n", ns.Name)
 
-		pingsources, err := client.SourcesV1alpha2().PingSources(ns.Name).List(metav1.ListOptions{})
+		pingsources, err := client.SourcesV1alpha2().PingSources(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			fmt.Printf("# [error] failed to list pingsources in namespace %q, %s\n", ns.Name, err)
 		}
@@ -79,7 +79,7 @@ func main() {
 			finalizers.Delete("pingsources.sources.knative.dev")
 			ref.Finalizers = finalizers.List()
 
-			if _, err := client.SourcesV1alpha2().PingSources(ref.Namespace).Update(&ref); err != nil {
+			if _, err := client.SourcesV1alpha2().PingSources(ref.Namespace).Update(ctx, &ref, metav1.UpdateOptions{}); err != nil {
 				fmt.Printf("# [error] failed to update %s/%s %s\n", ref.Namespace, ref.Name, err)
 			}
 		}

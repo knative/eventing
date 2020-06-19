@@ -36,6 +36,7 @@ import (
 // SetupTracingTestInfrastructureFunc sets up the infrastructure for running tracing tests. It returns the
 // expected trace as well as a string that is expected to be in the logger Pod's logs.
 type SetupTracingTestInfrastructureFunc func(
+	ctx context.Context,
 	t *testing.T,
 	channel *metav1.TypeMeta,
 	client *testlib.Client,
@@ -45,6 +46,7 @@ type SetupTracingTestInfrastructureFunc func(
 
 // tracingTest bootstraps the test and then executes the assertions on the received event and on the spans
 func tracingTest(
+	ctx context.Context,
 	t *testing.T,
 	setupClient testlib.SetupClientOption,
 	setupInfrastructure SetupTracingTestInfrastructureFunc,
@@ -62,7 +64,7 @@ func tracingTest(
 	tracinghelper.Setup(t, client)
 
 	// Setup the test infrastructure
-	expectedTestSpan, eventMatcher := setupInfrastructure(t, &channel, client, recordEventsPodName, true)
+	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true)
 
 	// Start the event info store and assert the event was received correctly
 	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)

@@ -52,7 +52,7 @@ func main() {
 	k8s := kubeclient.Get(ctx)
 	client := eventingclient.Get(ctx)
 
-	nss, err := k8s.CoreV1().Namespaces().List(metav1.ListOptions{})
+	nss, err := k8s.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
@@ -68,7 +68,7 @@ func main() {
 
 		for _, name := range []string{"broker-controller", "broker-filter", "broker-ingress"} {
 
-			if d, err := k8s.AppsV1().Deployments(env.SystemNamespace).Get(name, metav1.GetOptions{}); err != nil {
+			if d, err := k8s.AppsV1().Deployments(env.SystemNamespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
 				fmt.Printf("# [error] %s\n", err)
 			} else if isScaledZero(d) {
 				d.Kind = "Deployment"
@@ -100,7 +100,7 @@ func main() {
 	}
 
 	for _, ns := range nss.Items {
-		brokers, err := client.EventingV1beta1().Brokers(ns.Name).List(metav1.ListOptions{})
+		brokers, err := client.EventingV1beta1().Brokers(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			fmt.Printf("# [error] failed to list brokers in namespace %q, %s\n", ns.Name, err)
 		}
@@ -125,7 +125,7 @@ func main() {
 			ingressName := fmt.Sprintf("%s-broker-ingress", broker.Name)
 			filterName := fmt.Sprintf("%s-broker-filter", broker.Name)
 
-			if ingress, err := k8s.AppsV1().Deployments(ns.Name).Get(ingressName, metav1.GetOptions{}); err != nil {
+			if ingress, err := k8s.AppsV1().Deployments(ns.Name).Get(ctx, ingressName, metav1.GetOptions{}); err != nil {
 				fmt.Printf("# [error] %s\n", err)
 			} else if metav1.IsControlledBy(ingress, &broker) {
 				ingress.Kind = "Deployment"
@@ -143,7 +143,7 @@ func main() {
 				fmt.Printf("#  Found Ingress Deployment %s/%s, but not owned?\n", ingress.Namespace, ingress.Name)
 			}
 
-			if filter, err := k8s.AppsV1().Deployments(ns.Name).Get(filterName, metav1.GetOptions{}); err != nil {
+			if filter, err := k8s.AppsV1().Deployments(ns.Name).Get(ctx, filterName, metav1.GetOptions{}); err != nil {
 				fmt.Printf("# [error] %s\n", err)
 			} else if metav1.IsControlledBy(filter, &broker) {
 				filter.Kind = "Deployment"
@@ -164,7 +164,7 @@ func main() {
 
 		if foundBrokerForCleaning {
 			// Look for Role Bindings
-			if ingress, err := k8s.RbacV1().RoleBindings(ns.Name).Get("eventing-broker-ingress", metav1.GetOptions{}); err != nil {
+			if ingress, err := k8s.RbacV1().RoleBindings(ns.Name).Get(ctx, "eventing-broker-ingress", metav1.GetOptions{}); err != nil {
 				fmt.Printf("# [error] %s\n", err)
 			} else {
 				ingress.Kind = "RoleBinding"
@@ -180,7 +180,7 @@ func main() {
 				})
 			}
 
-			if filter, err := k8s.RbacV1().RoleBindings(ns.Name).Get("eventing-broker-filter", metav1.GetOptions{}); err != nil {
+			if filter, err := k8s.RbacV1().RoleBindings(ns.Name).Get(ctx, "eventing-broker-filter", metav1.GetOptions{}); err != nil {
 				fmt.Printf("# [error] %s\n", err)
 			} else {
 				filter.Kind = "RoleBinding"
@@ -197,7 +197,7 @@ func main() {
 			}
 
 			// Look for Service Accounts
-			if ingress, err := k8s.CoreV1().ServiceAccounts(ns.Name).Get("eventing-broker-ingress", metav1.GetOptions{}); err != nil {
+			if ingress, err := k8s.CoreV1().ServiceAccounts(ns.Name).Get(ctx, "eventing-broker-ingress", metav1.GetOptions{}); err != nil {
 				fmt.Printf("# Warn: Skipping Service Account %s/%s, %s\n", ns.Name, "eventing-broker-ingress", err)
 			} else {
 				ingress.Kind = "ServiceAccount"
@@ -213,7 +213,7 @@ func main() {
 				})
 			}
 
-			if filter, err := k8s.CoreV1().ServiceAccounts(ns.Name).Get("eventing-broker-filter", metav1.GetOptions{}); err != nil {
+			if filter, err := k8s.CoreV1().ServiceAccounts(ns.Name).Get(ctx, "eventing-broker-filter", metav1.GetOptions{}); err != nil {
 				fmt.Printf("# Warn: Skipping Service Account %s/%s, %s\n", ns.Name, "eventing-broker-filter", err)
 			} else {
 				filter.Kind = "ServiceAccount"
@@ -234,7 +234,7 @@ func main() {
 	if !env.DryRun {
 		for _, b := range relabel {
 			b.Annotations["eventing.knative.dev/broker.class"] = env.ReplacementBrokerClass
-			if _, err := client.EventingV1beta1().Brokers(b.Namespace).Update(&b); err != nil {
+			if _, err := client.EventingV1beta1().Brokers(b.Namespace).Update(ctx, &b, metav1.UpdateOptions{}); err != nil {
 				fmt.Printf("# [error] failed to update broker class for %s/%s: %s\n", b.Namespace, b.Name, err)
 			}
 		}
@@ -243,7 +243,7 @@ func main() {
 		for _, ref := range cleanups {
 			fmt.Printf("# will delete %v\n", ref)
 			gvr, _ := meta.UnsafeGuessKindToResource(ref.GroupVersionKind())
-			if err := dynamic.Resource(gvr).Namespace(ref.Namespace).Delete(ref.Name, nil); err != nil {
+			if err := dynamic.Resource(gvr).Namespace(ref.Namespace).Delete(ctx, ref.Name, metav1.DeleteOptions{}); err != nil {
 				fmt.Printf("# [error] failed to delete %s %s\n", ref.String(), err)
 			}
 		}

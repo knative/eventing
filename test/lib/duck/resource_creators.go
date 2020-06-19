@@ -19,6 +19,7 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -46,7 +47,7 @@ func CreateGenericChannelObject(
 	}
 
 	channelResourceInterface := dynamicClient.Resource(gvr).Namespace(obj.Namespace)
-	_, err = channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
+	_, err = channelResourceInterface.Create(context.Background(), newChannel, metav1.CreateOptions{})
 	return gvr, err
 }
 

@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -36,13 +37,14 @@ import (
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
 // the ComponentsTestRunner.
 func BrokerTracingTestHelperWithChannelTestRunner(
+	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
 	channelTestRunner testlib.ComponentsTestRunner,
 	setupClient testlib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		tracingTest(t, setupClient, setupBrokerTracing(brokerClass), channel)
+		tracingTest(ctx, t, setupClient, setupBrokerTracing(ctx, brokerClass), channel)
 	})
 }
 
@@ -53,7 +55,7 @@ func BrokerTracingTestHelperWithChannelTestRunner(
 // 4. Sender Pod which sends a 'foo' event.
 // It returns a string that is expected to be sent by the SendEvents Pod and should be present in
 // the LogEvents Pod logs.
-func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
+func setupBrokerTracing(ctx context.Context, brokerClass string) SetupTracingTestInfrastructureFunc {
 	const (
 		etTransformer = "transformer"
 		etLogger      = "logger"
@@ -62,6 +64,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 		eventBody     = `{"msg":"TestBrokerTracing event-1"}`
 	)
 	return func(
+		ctx context.Context,
 		t *testing.T,
 		channel *metav1.TypeMeta,
 		client *testlib.Client,
@@ -108,7 +111,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 		)
 
 		// Wait for all test resources to be ready, so that we can start sending events.
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// Everything is setup to receive an event. Generate a CloudEvent.
 		event := cloudevents.NewEvent()
@@ -121,9 +124,9 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 
 		// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 		if senderPublishTrace {
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.EnableTracing())
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.EnableTracing())
 		} else {
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event)
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event)
 		}
 
 		domain := utils.GetClusterDomainName()

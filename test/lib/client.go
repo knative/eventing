@@ -20,6 +20,7 @@ limitations under the License.
 package lib
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -126,7 +127,7 @@ func (c *Client) runCleanup() (err error) {
 }
 
 func getTracingConfig(c *kubernetes.Clientset) (corev1.EnvVar, error) {
-	cm, err := c.CoreV1().ConfigMaps(resources.SystemNamespace).Get("config-tracing", metav1.GetOptions{})
+	cm, err := c.CoreV1().ConfigMaps(resources.SystemNamespace).Get(context.Background(), "config-tracing", metav1.GetOptions{})
 	if err != nil {
 		return corev1.EnvVar{}, fmt.Errorf("error while retrieving the config-tracing config map: %+v", errors.WithStack(err))
 	}

@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +62,13 @@ func NewFilteredContainerSourceInformer(client versioned.Interface, namespace st
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SourcesV1alpha2().ContainerSources(namespace).List(options)
+				return client.SourcesV1alpha2().ContainerSources(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SourcesV1alpha2().ContainerSources(namespace).Watch(options)
+				return client.SourcesV1alpha2().ContainerSources(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&sourcesv1alpha2.ContainerSource{},

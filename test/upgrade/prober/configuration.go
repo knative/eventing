@@ -17,6 +17,7 @@ package prober
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -63,7 +64,7 @@ func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	broker, err := p.client.Eventing.EventingV1beta1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
+	broker, err := p.client.Eventing.EventingV1beta1().Brokers(namespace).Get(context.Background(), brokerName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -60,5 +60,5 @@ func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, names
 		return nil, err
 	}
 
-	return resourceClient.Get(ref.Name, metav1.GetOptions{})
+	return resourceClient.Get(ctx, ref.Name, metav1.GetOptions{})
 }

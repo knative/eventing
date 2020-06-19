@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,15 +38,15 @@ type TriggersGetter interface {
 
 // TriggerInterface has methods to work with Trigger resources.
 type TriggerInterface interface {
-	Create(*v1.Trigger) (*v1.Trigger, error)
-	Update(*v1.Trigger) (*v1.Trigger, error)
-	UpdateStatus(*v1.Trigger) (*v1.Trigger, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.Trigger, error)
-	List(opts metav1.ListOptions) (*v1.TriggerList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Trigger, err error)
+	Create(ctx context.Context, trigger *v1.Trigger, opts metav1.CreateOptions) (*v1.Trigger, error)
+	Update(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (*v1.Trigger, error)
+	UpdateStatus(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (*v1.Trigger, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Trigger, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.TriggerList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Trigger, err error)
 	TriggerExpansion
 }
 
@@ -64,20 +65,20 @@ func newTriggers(c *EventingV1Client, namespace string) *triggers {
 }
 
 // Get takes name of the trigger, and returns the corresponding trigger object, and an error if there is any.
-func (c *triggers) Get(name string, options metav1.GetOptions) (result *v1.Trigger, err error) {
+func (c *triggers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Trigger, err error) {
 	result = &v1.Trigger{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("triggers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Triggers that match those selectors.
-func (c *triggers) List(opts metav1.ListOptions) (result *v1.TriggerList, err error) {
+func (c *triggers) List(ctx context.Context, opts metav1.ListOptions) (result *v1.TriggerList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *triggers) List(opts metav1.ListOptions) (result *v1.TriggerList, err er
 		Resource("triggers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested triggers.
-func (c *triggers) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *triggers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *triggers) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("triggers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a trigger and creates it.  Returns the server's representation of the trigger, and an error, if there is any.
-func (c *triggers) Create(trigger *v1.Trigger) (result *v1.Trigger, err error) {
+func (c *triggers) Create(ctx context.Context, trigger *v1.Trigger, opts metav1.CreateOptions) (result *v1.Trigger, err error) {
 	result = &v1.Trigger{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("triggers").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(trigger).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a trigger and updates it. Returns the server's representation of the trigger, and an error, if there is any.
-func (c *triggers) Update(trigger *v1.Trigger) (result *v1.Trigger, err error) {
+func (c *triggers) Update(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (result *v1.Trigger, err error) {
 	result = &v1.Trigger{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("triggers").
 		Name(trigger.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(trigger).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *triggers) UpdateStatus(trigger *v1.Trigger) (result *v1.Trigger, err error) {
+func (c *triggers) UpdateStatus(ctx context.Context, trigger *v1.Trigger, opts metav1.UpdateOptions) (result *v1.Trigger, err error) {
 	result = &v1.Trigger{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("triggers").
 		Name(trigger.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(trigger).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the trigger and deletes it. Returns an error if one occurs.
-func (c *triggers) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *triggers) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("triggers").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *triggers) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *triggers) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("triggers").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched trigger.
-func (c *triggers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Trigger, err error) {
+func (c *triggers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Trigger, err error) {
 	result = &v1.Trigger{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("triggers").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

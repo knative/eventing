@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +62,13 @@ func NewFilteredSinkBindingInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SourcesV1beta1().SinkBindings(namespace).List(options)
+				return client.SourcesV1beta1().SinkBindings(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SourcesV1beta1().SinkBindings(namespace).Watch(options)
+				return client.SourcesV1beta1().SinkBindings(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&sourcesv1beta1.SinkBinding{},

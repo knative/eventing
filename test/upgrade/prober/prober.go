@@ -16,6 +16,7 @@
 package prober
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -38,13 +39,13 @@ type Prober interface {
 	Verify() ([]error, int)
 
 	// Finish send finished event
-	Finish()
+	Finish(ctx context.Context)
 
 	// ReportErrors will reports found errors in proper way
 	ReportErrors(t *testing.T, errors []error)
 
 	// deploy a prober to a cluster
-	deploy()
+	deploy(ctx context.Context)
 	// remove a prober from cluster
 	remove()
 }
@@ -81,15 +82,15 @@ func NewConfig(namespace string) *Config {
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
+func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
 	pm := newProber(log, client, config)
-	pm.deploy()
+	pm.deploy(ctx)
 	return pm
 }
 
 // AssertEventProber will send finish event and then verify if all events propagated well
-func AssertEventProber(t *testing.T, prober Prober) {
-	prober.Finish()
+func AssertEventProber(ctx context.Context, t *testing.T, prober Prober) {
+	prober.Finish(ctx)
 
 	waitAfterFinished(prober)
 
@@ -135,16 +136,16 @@ func (p *prober) ReportErrors(t *testing.T, errors []error) {
 	}
 }
 
-func (p *prober) deploy() {
+func (p *prober) deploy(ctx context.Context) {
 	p.log.Infof("Using namespace for probe testing: %v", p.client.Namespace)
 	p.deployConfiguration()
-	p.deployReceiver()
+	p.deployReceiver(ctx)
 	if p.config.Serving.Use {
-		p.deployForwarder()
+		p.deployForwarder(ctx)
 	}
-	p.client.WaitForAllTestResourcesReadyOrFail()
+	p.client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-	p.deploySender()
+	p.deploySender(ctx)
 	ensure.NoError(testlib.AwaitForAll(p.log))
 	// allow sender to send at least some events, 2 sec wait
 	time.Sleep(2 * time.Second)

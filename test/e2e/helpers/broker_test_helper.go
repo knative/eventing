@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"sort"
@@ -127,7 +128,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) Brok
 // It then binds many triggers with different filtering patterns to the broker created by brokerCreator, and sends
 // different events to the broker's address.
 // Finally, it verifies that only the appropriate events are routed to the subscribers.
-func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shouldLabelNamespace bool) {
+func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator BrokerCreator, shouldLabelNamespace bool) {
 	const (
 		any          = v1beta1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -246,7 +247,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 
 			if shouldLabelNamespace {
 				// Test if namespace reconciler would recreate broker once broker was deleted.
-				if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(brokerName, &metav1.DeleteOptions{}); err != nil {
+				if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(context.Background(), brokerName, metav1.DeleteOptions{}); err != nil {
 					t.Fatalf("Can't delete default broker in namespace: %v", client.Namespace)
 				}
 				client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
@@ -257,7 +258,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			for _, event := range test.eventFilters {
 				// Create event recorder pod and service
 				subscriberName := "dumper-" + event.String()
-				eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
+				eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, subscriberName)
 				eventTrackers[subscriberName] = eventTracker
 				// Create trigger.
 				triggerName := "trigger-" + event.String()
@@ -268,7 +269,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				)
 			}
 			// Wait for all test resources to become ready before sending the events.
-			client.WaitForAllTestResourcesReadyOrFail()
+			client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 			// Map to save the expected matchers per dumper so that we can verify the delivery.
 			expectedMatchers := make(map[string][]recordevents.EventInfoMatcher)
@@ -295,7 +296,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 
 				// Send event
 				senderPodName := "sender-" + eventTestCase.String()
-				client.SendEventToAddressable(senderPodName, brokerName, testlib.BrokerTypeMeta, eventToSend)
+				client.SendEventToAddressable(ctx, senderPodName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 				// Sent event matcher
 				sentEventMatcher := cetest.AllOf(

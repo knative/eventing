@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var containersourcesResource = schema.GroupVersionResource{Group: "sources.knati
 var containersourcesKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1alpha2", Kind: "ContainerSource"}
 
 // Get takes name of the containerSource, and returns the corresponding containerSource object, and an error if there is any.
-func (c *FakeContainerSources) Get(name string, options v1.GetOptions) (result *v1alpha2.ContainerSource, err error) {
+func (c *FakeContainerSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha2.ContainerSource, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(containersourcesResource, c.ns, name), &v1alpha2.ContainerSource{})
 
@@ -50,7 +52,7 @@ func (c *FakeContainerSources) Get(name string, options v1.GetOptions) (result *
 }
 
 // List takes label and field selectors, and returns the list of ContainerSources that match those selectors.
-func (c *FakeContainerSources) List(opts v1.ListOptions) (result *v1alpha2.ContainerSourceList, err error) {
+func (c *FakeContainerSources) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha2.ContainerSourceList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(containersourcesResource, containersourcesKind, c.ns, opts), &v1alpha2.ContainerSourceList{})
 
@@ -72,14 +74,14 @@ func (c *FakeContainerSources) List(opts v1.ListOptions) (result *v1alpha2.Conta
 }
 
 // Watch returns a watch.Interface that watches the requested containerSources.
-func (c *FakeContainerSources) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeContainerSources) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(containersourcesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a containerSource and creates it.  Returns the server's representation of the containerSource, and an error, if there is any.
-func (c *FakeContainerSources) Create(containerSource *v1alpha2.ContainerSource) (result *v1alpha2.ContainerSource, err error) {
+func (c *FakeContainerSources) Create(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.CreateOptions) (result *v1alpha2.ContainerSource, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(containersourcesResource, c.ns, containerSource), &v1alpha2.ContainerSource{})
 
@@ -90,7 +92,7 @@ func (c *FakeContainerSources) Create(containerSource *v1alpha2.ContainerSource)
 }
 
 // Update takes the representation of a containerSource and updates it. Returns the server's representation of the containerSource, and an error, if there is any.
-func (c *FakeContainerSources) Update(containerSource *v1alpha2.ContainerSource) (result *v1alpha2.ContainerSource, err error) {
+func (c *FakeContainerSources) Update(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.UpdateOptions) (result *v1alpha2.ContainerSource, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(containersourcesResource, c.ns, containerSource), &v1alpha2.ContainerSource{})
 
@@ -102,7 +104,7 @@ func (c *FakeContainerSources) Update(containerSource *v1alpha2.ContainerSource)
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeContainerSources) UpdateStatus(containerSource *v1alpha2.ContainerSource) (*v1alpha2.ContainerSource, error) {
+func (c *FakeContainerSources) UpdateStatus(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.UpdateOptions) (*v1alpha2.ContainerSource, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(containersourcesResource, "status", c.ns, containerSource), &v1alpha2.ContainerSource{})
 
@@ -113,7 +115,7 @@ func (c *FakeContainerSources) UpdateStatus(containerSource *v1alpha2.ContainerS
 }
 
 // Delete takes name of the containerSource and deletes it. Returns an error if one occurs.
-func (c *FakeContainerSources) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeContainerSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(containersourcesResource, c.ns, name), &v1alpha2.ContainerSource{})
 
@@ -121,15 +123,15 @@ func (c *FakeContainerSources) Delete(name string, options *v1.DeleteOptions) er
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeContainerSources) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(containersourcesResource, c.ns, listOptions)
+func (c *FakeContainerSources) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(containersourcesResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha2.ContainerSourceList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched containerSource.
-func (c *FakeContainerSources) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha2.ContainerSource, err error) {
+func (c *FakeContainerSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha2.ContainerSource, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(containersourcesResource, c.ns, name, pt, data, subresources...), &v1alpha2.ContainerSource{})
 

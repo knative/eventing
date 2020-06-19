@@ -202,7 +202,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
-		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(*subscriber, subscription)
+		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve Subscriber",
 				zap.Error(err),
@@ -229,7 +229,7 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 		if reply.Ref != nil {
 			reply.Ref.Namespace = subscription.Namespace
 		}
-		replyURI, err := r.destinationResolver.URIFromDestinationV1(*reply, subscription)
+		replyURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *reply, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve reply",
 				zap.Error(err),
@@ -257,7 +257,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 			delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
 		}
 
-		deadLetterSink, err := r.destinationResolver.URIFromDestinationV1(*delivery.DeadLetterSink, subscription)
+		deadLetterSink, err := r.destinationResolver.URIFromDestinationV1(ctx, *delivery.DeadLetterSink, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve spec.delivery.deadLetterSink",
 				zap.Error(err),
@@ -323,7 +323,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	if err := r.channelableTracker.TrackInNamespace(sub)(ref); err != nil {
+	if err := r.channelableTracker.TrackInNamespace(ctx, sub)(ref); err != nil {
 		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to spec.channel: %v", err)
 	}
 	chLister, err := r.channelableTracker.ListerFor(ref)
@@ -458,7 +458,7 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 		logging.FromContext(ctx).Warnw("Failed to create dynamic resource client", zap.Error(err))
 		return false, err
 	}
-	patched, err := resourceClient.Patch(channel.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+	patched, err := resourceClient.Patch(ctx, channel.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Warnw("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return false, err

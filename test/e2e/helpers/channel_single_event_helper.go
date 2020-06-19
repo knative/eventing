@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -45,7 +46,9 @@ const (
 // a subscription to its v1alpha1 version by using channelVersion to override it.
 // channelVersion == "" means that the version of the channel subscribed to is not
 // modified.
-func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding,
+func SingleEventForChannelTestHelper(
+	ctx context.Context,
+	t *testing.T, encoding cloudevents.Encoding,
 	subscriptionVersion SubscriptionVersion,
 	channelVersion string,
 	channelTestRunner testlib.ComponentsTestRunner,
@@ -64,7 +67,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		client.CreateChannelOrFail(channelName, &channel)
 
 		// create event logger pod and service
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, eventRecorder)
 		// If the caller specified a different version, override it here.
 		if channelVersion != "" {
 			st.Logf("Changing API version from: %q to %q", channel.APIVersion, channelVersion)
@@ -91,7 +94,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		}
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send CloudEvent to the channel
 		event := cloudevents.NewEvent()
@@ -107,6 +110,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		}
 
 		client.SendEventToAddressable(
+			ctx,
 			senderName,
 			channelName,
 			&channel,

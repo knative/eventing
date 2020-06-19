@@ -37,7 +37,7 @@ type FilterFn func(ob observer.Observed) bool
 
 type Collector interface {
 	// List all observed events from a ref, optionally filter (pass filter, && together)
-	List(from duckv1.KReference, filters ...FilterFn) ([]observer.Observed, error)
+	List(ctx context.Context, from duckv1.KReference, filters ...FilterFn) ([]observer.Observed, error)
 }
 
 func New(ctx context.Context) Collector {
@@ -48,14 +48,14 @@ type collector struct {
 	client kubernetes.Interface
 }
 
-func (c *collector) List(from duckv1.KReference, filters ...FilterFn) ([]observer.Observed, error) {
+func (c *collector) List(ctx context.Context, from duckv1.KReference, filters ...FilterFn) ([]observer.Observed, error) {
 	var lister v1.EventInterface
 	if from.Kind == "Namespace" {
 		lister = c.client.CoreV1().Events(from.Name)
 	} else {
 		lister = c.client.CoreV1().Events(from.Namespace) // TODO: I do not understand how to do cluster scoped objects.
 	}
-	events, err := lister.List(metav1.ListOptions{})
+	events, err := lister.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

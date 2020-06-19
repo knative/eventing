@@ -224,7 +224,7 @@ func (r *BaseReconciler) EnsureFinalizer(ctx context.Context, fb kmeta.Accessor)
 	}
 
 	// ... and apply it.
-	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(fb.GetName(),
+	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(ctx, fb.GetName(),
 		types.MergePatchType, patch, metav1.PatchOptions{})
 	return err
 }
@@ -247,7 +247,7 @@ func (r *BaseReconciler) RemoveFinalizer(ctx context.Context, fb kmeta.Accessor)
 	}
 
 	// ... and apply it.
-	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(fb.GetName(),
+	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(ctx, fb.GetName(),
 		types.MergePatchType, patch, metav1.PatchOptions{})
 	return err
 }
@@ -281,7 +281,7 @@ func (r *BaseReconciler) labelNamespace(ctx context.Context, subject tracker.Ref
 		Resource: "namespaces",
 	}
 
-	_, err = r.DynamicClient.Resource(gvr).Patch(subject.Namespace, types.MergePatchType, patch, metav1.PatchOptions{})
+	_, err = r.DynamicClient.Resource(gvr).Patch(ctx, subject.Namespace, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Infof("Error applying patch to namespace: %s: %v", subject.Namespace, err)
 		return err
@@ -311,7 +311,7 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 
 	// Use the GVR of the subject(s) to get ahold of a lister that we can
 	// use to fetch our PodSpecable resources.
-	_, lister, err := r.Factory.Get(gvr)
+	_, lister, err := r.Factory.Get(ctx, gvr)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Error getting a lister for resource '%+v': %v", gvr, err)
 		fb.GetBindingStatus().MarkBindingUnavailable("SubjectUnavailable", err.Error())
@@ -390,7 +390,7 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 			// a Job started or completed, which can be fine.  Consider treating
 			// certain error codes as acceptable.
 			_, err = r.DynamicClient.Resource(gvr).Namespace(ps.Namespace).Patch(
-				ps.Name, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+				ctx, ps.Name, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
 			if err != nil {
 				return fmt.Errorf("failed binding subject %s: %w", ps.Name, err)
 			}
@@ -440,6 +440,6 @@ func (r *BaseReconciler) UpdateStatus(ctx context.Context, desired Bindable) err
 	forUpdate := ua
 	forUpdate.Object["status"] = desiredStatus
 	_, err = r.DynamicClient.Resource(r.GVR).Namespace(desired.GetNamespace()).UpdateStatus(
-		forUpdate, metav1.UpdateOptions{})
+		ctx, forUpdate, metav1.UpdateOptions{})
 	return err
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -31,7 +32,9 @@ import (
 )
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
-func EventTransformationForSubscriptionTestHelper(t *testing.T,
+func EventTransformationForSubscriptionTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	subscriptionVersion SubscriptionVersion,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -71,7 +74,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create event logger pod and service as the subscriber
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 		switch subscriptionVersion {
 		case SubscriptionV1:
 			// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
@@ -111,7 +114,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		}
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send  CloudEvent to the first channel
 		eventToSend := cloudevents.NewEvent()
@@ -122,7 +125,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
-		client.SendEventToAddressable(senderName, channelNames[0], &channel, eventToSend)
+		client.SendEventToAddressable(ctx, senderName, channelNames[0], &channel, eventToSend)
 
 		// check if the logging service receives the correct number of event messages
 		eventTracker.AssertAtLeast(len(subscriptionNames1)*len(subscriptionNames2), recordevents.MatchEvent(

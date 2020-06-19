@@ -126,7 +126,7 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		sb := b.(*v1beta1.SinkBinding)
-		uri, err := r.URIFromDestinationV1(sb.Spec.Sink, sb)
+		uri, err := r.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
 		if err != nil {
 			return nil, err
 		}

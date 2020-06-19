@@ -16,6 +16,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -42,7 +43,9 @@ type branchConfig struct {
 	filter bool
 }
 
-func ParallelTestHelper(t *testing.T,
+func ParallelTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -95,7 +98,7 @@ func ParallelTestHelper(t *testing.T,
 
 			// create event logger pod and service
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, eventRecorder)
 
 			// create channel as reply of the Parallel
 			// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -117,7 +120,7 @@ func ParallelTestHelper(t *testing.T,
 
 			client.CreateFlowsParallelOrFail(parallel)
 
-			client.WaitForAllTestResourcesReadyOrFail()
+			client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 			// send CloudEvent to the Parallel
 			event := cloudevents.NewEvent()
@@ -133,6 +136,7 @@ func ParallelTestHelper(t *testing.T,
 			}
 
 			client.SendEventToAddressable(
+				ctx,
 				senderPodName,
 				tc.name,
 				testlib.FlowsParallelTypeMeta,
@@ -148,7 +152,9 @@ func ParallelTestHelper(t *testing.T,
 	})
 }
 
-func ParallelV1TestHelper(t *testing.T,
+func ParallelV1TestHelper(
+	ctx context.Context,
+	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -201,7 +207,7 @@ func ParallelV1TestHelper(t *testing.T,
 
 			// create event logger pod and service
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, eventRecorder)
 
 			// create channel as reply of the Parallel
 			// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -223,7 +229,7 @@ func ParallelV1TestHelper(t *testing.T,
 
 			client.CreateFlowsParallelV1OrFail(parallel)
 
-			client.WaitForAllTestResourcesReadyOrFail()
+			client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 			// send CloudEvent to the Parallel
 			event := cloudevents.NewEvent()
@@ -239,6 +245,7 @@ func ParallelV1TestHelper(t *testing.T,
 			}
 
 			client.SendEventToAddressable(
+				ctx,
 				senderPodName,
 				tc.name,
 				testlib.FlowsParallelTypeMeta,

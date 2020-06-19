@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +62,13 @@ func NewFilteredInMemoryChannelInformer(client versioned.Interface, namespace st
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MessagingV1beta1().InMemoryChannels(namespace).List(options)
+				return client.MessagingV1beta1().InMemoryChannels(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MessagingV1beta1().InMemoryChannels(namespace).Watch(options)
+				return client.MessagingV1beta1().InMemoryChannels(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&messagingv1beta1.InMemoryChannel{},

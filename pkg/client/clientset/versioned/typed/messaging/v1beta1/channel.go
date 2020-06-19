@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,15 +38,15 @@ type ChannelsGetter interface {
 
 // ChannelInterface has methods to work with Channel resources.
 type ChannelInterface interface {
-	Create(*v1beta1.Channel) (*v1beta1.Channel, error)
-	Update(*v1beta1.Channel) (*v1beta1.Channel, error)
-	UpdateStatus(*v1beta1.Channel) (*v1beta1.Channel, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1beta1.Channel, error)
-	List(opts v1.ListOptions) (*v1beta1.ChannelList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.Channel, err error)
+	Create(ctx context.Context, channel *v1beta1.Channel, opts v1.CreateOptions) (*v1beta1.Channel, error)
+	Update(ctx context.Context, channel *v1beta1.Channel, opts v1.UpdateOptions) (*v1beta1.Channel, error)
+	UpdateStatus(ctx context.Context, channel *v1beta1.Channel, opts v1.UpdateOptions) (*v1beta1.Channel, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Channel, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ChannelList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Channel, err error)
 	ChannelExpansion
 }
 
@@ -64,20 +65,20 @@ func newChannels(c *MessagingV1beta1Client, namespace string) *channels {
 }
 
 // Get takes name of the channel, and returns the corresponding channel object, and an error if there is any.
-func (c *channels) Get(name string, options v1.GetOptions) (result *v1beta1.Channel, err error) {
+func (c *channels) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Channel, err error) {
 	result = &v1beta1.Channel{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("channels").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Channels that match those selectors.
-func (c *channels) List(opts v1.ListOptions) (result *v1beta1.ChannelList, err error) {
+func (c *channels) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ChannelList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *channels) List(opts v1.ListOptions) (result *v1beta1.ChannelList, err e
 		Resource("channels").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested channels.
-func (c *channels) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *channels) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *channels) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("channels").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a channel and creates it.  Returns the server's representation of the channel, and an error, if there is any.
-func (c *channels) Create(channel *v1beta1.Channel) (result *v1beta1.Channel, err error) {
+func (c *channels) Create(ctx context.Context, channel *v1beta1.Channel, opts v1.CreateOptions) (result *v1beta1.Channel, err error) {
 	result = &v1beta1.Channel{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("channels").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(channel).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a channel and updates it. Returns the server's representation of the channel, and an error, if there is any.
-func (c *channels) Update(channel *v1beta1.Channel) (result *v1beta1.Channel, err error) {
+func (c *channels) Update(ctx context.Context, channel *v1beta1.Channel, opts v1.UpdateOptions) (result *v1beta1.Channel, err error) {
 	result = &v1beta1.Channel{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("channels").
 		Name(channel.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(channel).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *channels) UpdateStatus(channel *v1beta1.Channel) (result *v1beta1.Channel, err error) {
+func (c *channels) UpdateStatus(ctx context.Context, channel *v1beta1.Channel, opts v1.UpdateOptions) (result *v1beta1.Channel, err error) {
 	result = &v1beta1.Channel{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("channels").
 		Name(channel.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(channel).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the channel and deletes it. Returns an error if one occurs.
-func (c *channels) Delete(name string, options *v1.DeleteOptions) error {
+func (c *channels) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("channels").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *channels) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *channels) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("channels").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched channel.
-func (c *channels) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.Channel, err error) {
+func (c *channels) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Channel, err error) {
 	result = &v1beta1.Channel{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("channels").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

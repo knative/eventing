@@ -17,6 +17,7 @@ limitations under the License.
 package recordevents
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -129,7 +130,7 @@ func newEventGetter(podName string, client *testlib.Client, logf logging.FormatL
 // returns a pod list for compatibility with the monitoring.PortForward
 // interface
 func (eg *eventGetter) getRunningPodInfo(podName, namespace string) (*v1.PodList, error) {
-	pods, err := eg.kubeClientset.CoreV1().Pods(namespace).List(
+	pods, err := eg.kubeClientset.CoreV1().Pods(namespace).List(context.Background(),
 		metav1.ListOptions{FieldSelector: fmt.Sprintf("metadata.name=%s", podName)})
 	if err == nil && len(pods.Items) != 1 {
 		err = fmt.Errorf("no %s Pod found on the cluster", podName)

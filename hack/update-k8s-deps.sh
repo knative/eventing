@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 export GO111MODULE=on
-export K8S_VERSION="${1:-v0.17.6}"
+export K8S_VERSION="${1:-v0.18.8}"
 
 K8S_DEPS=(
   "k8s.io/api"

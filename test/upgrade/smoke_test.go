@@ -16,6 +16,7 @@
 package upgrade
 
 import (
+	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -24,6 +25,7 @@ import (
 
 func runSmokeTest(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
+		context.Background(),
 		t,
 		cloudevents.EncodingBinary,
 		helpers.SubscriptionV1beta1,

@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +62,13 @@ func NewFilteredConfigMapPropagationInformer(client versioned.Interface, namespa
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigsV1alpha1().ConfigMapPropagations(namespace).List(options)
+				return client.ConfigsV1alpha1().ConfigMapPropagations(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigsV1alpha1().ConfigMapPropagations(namespace).Watch(options)
+				return client.ConfigsV1alpha1().ConfigMapPropagations(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&configsv1alpha1.ConfigMapPropagation{},

@@ -213,7 +213,7 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *eventingv1.Broke
 		return nil, fmt.Errorf("unable to create dynamic client for: %+v", template)
 	}
 
-	track := r.channelableTracker.TrackInNamespace(b)
+	track := r.channelableTracker.TrackInNamespace(ctx, b)
 
 	// Start tracking the trigger channel.
 	if err := track(ref); err != nil {
@@ -238,7 +238,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			logging.FromContext(ctx).Info(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
-			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
+			created, err := channelResourceInterface.Create(ctx, newChannel, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 				return nil, err

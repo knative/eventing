@@ -3,7 +3,9 @@ module knative.dev/eventing
 go 1.14
 
 require (
+	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
 	github.com/cloudevents/sdk-go/v2 v2.2.0
+	github.com/dgryski/go-gk v0.0.0-20200319235926-a69029f61654 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.5.1
@@ -22,6 +24,7 @@ require (
 	github.com/rickb777/date v1.13.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
+	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
 	github.com/wavesoftware/go-ensure v1.0.0
@@ -33,22 +36,25 @@ require (
 	google.golang.org/grpc v1.31.0
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d // indirect
-	k8s.io/api v0.18.7-rc.0
+	k8s.io/api v0.18.8
 	k8s.io/apiextensions-apiserver v0.18.4
-	k8s.io/apimachinery v0.18.7-rc.0
-	k8s.io/apiserver v0.17.6
+	k8s.io/apimachinery v0.18.8
+	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/pkg v0.0.0-20200910143251-0761d6b47e4d
+	knative.dev/pkg v0.0.0-20200911145400-2d4efecc6bc1
 	knative.dev/test-infra v0.0.0-20200910231400-cfba2288403d
 	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-	k8s.io/api => k8s.io/api v0.17.6
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6
-	k8s.io/client-go => k8s.io/client-go v0.17.6
-	k8s.io/code-generator => k8s.io/code-generator v0.17.6
+	k8s.io/api => k8s.io/api v0.18.8
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
+	k8s.io/client-go => k8s.io/client-go v0.18.8
+	k8s.io/code-generator => k8s.io/code-generator v0.18.8
 )
+
+// TODO remove once k8s 1.18 is present knative/pkg (https://github.com/knative/pkg/pull/1428)
+replace knative.dev/pkg => github.com/zroubalik/pkg v0.0.0-20200910111858-77678bb83f22

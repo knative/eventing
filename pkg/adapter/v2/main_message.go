@@ -74,7 +74,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	if err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
 	} else {
-		if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
+		if err := metrics.UpdateExporter(ctx, *metricsConfig, logger); err != nil {
 			logger.Error("failed to create the metrics exporter", zap.Error(err))
 		}
 	}

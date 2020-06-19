@@ -379,7 +379,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	if ok := equality.Semantic.DeepEqual(configuredWebhook, webhook); !ok {
 		logging.FromContext(ctx).Info("Updating webhook")
 		mwhclient := ac.Client.AdmissionregistrationV1().MutatingWebhookConfigurations()
-		if _, err := mwhclient.Update(webhook); err != nil {
+		if _, err := mwhclient.Update(ctx, webhook, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {

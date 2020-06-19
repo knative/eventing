@@ -17,6 +17,8 @@ limitations under the License.
 package testing
 
 import (
+	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -45,8 +47,8 @@ type MockDynamicResource func(innerInterface dynamic.Interface, resource schema.
 type MockDynamicCreate func(ctx *MockDynamicContext, obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (MockHandled, *unstructured.Unstructured, error)
 type MockDynamicUpdate func(ctx *MockDynamicContext, obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (MockHandled, *unstructured.Unstructured, error)
 type MockDynamicUpdateStatus func(ctx *MockDynamicContext, obj *unstructured.Unstructured, options metav1.UpdateOptions) (MockHandled, *unstructured.Unstructured, error)
-type MockDynamicDelete func(ctx *MockDynamicContext, name string, options *metav1.DeleteOptions, subresources ...string) (MockHandled, error)
-type MockDynamicDeleteCollection func(ctx *MockDynamicContext, options *metav1.DeleteOptions, listOptions metav1.ListOptions) (MockHandled, error)
+type MockDynamicDelete func(ctx *MockDynamicContext, name string, options metav1.DeleteOptions, subresources ...string) (MockHandled, error)
+type MockDynamicDeleteCollection func(ctx *MockDynamicContext, options metav1.DeleteOptions, listOptions metav1.ListOptions) (MockHandled, error)
 type MockDynamicGet func(ctx *MockDynamicContext, name string, options metav1.GetOptions, subresources ...string) (MockHandled, *unstructured.Unstructured, error)
 type MockDynamicList func(ctx *MockDynamicContext, opts metav1.ListOptions) (MockHandled, *unstructured.UnstructuredList, error)
 type MockDynamicWatch func(ctx *MockDynamicContext, opts metav1.ListOptions) (MockHandled, watch.Interface, error)
@@ -148,7 +150,7 @@ func (m *mockDynamicResourceInterface) Namespace(ns string) dynamic.ResourceInte
 //      ii. Return the response from the mock.
 // 2. No mock handled the request, so call the inner client.
 
-func (m *mockDynamicResourceInterface) Create(obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (*unstructured.Unstructured, error) {
+func (m *mockDynamicResourceInterface) Create(ctx context.Context, obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (*unstructured.Unstructured, error) {
 	for i, mockCreate := range m.mocks.MockCreates {
 		handled, u, err := mockCreate(m.ctx, obj, options, subresources...)
 		if handled == Handled {
@@ -158,10 +160,10 @@ func (m *mockDynamicResourceInterface) Create(obj *unstructured.Unstructured, op
 			return u, err
 		}
 	}
-	return m.ctx.InnerInterface.Create(obj, options, subresources...)
+	return m.ctx.InnerInterface.Create(ctx, obj, options, subresources...)
 }
 
-func (m *mockDynamicResourceInterface) Update(obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error) {
+func (m *mockDynamicResourceInterface) Update(ctx context.Context, obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error) {
 	for i, mockUpdate := range m.mocks.MockUpdates {
 		handled, u, err := mockUpdate(m.ctx, obj, options, subresources...)
 		if handled == Handled {
@@ -171,10 +173,10 @@ func (m *mockDynamicResourceInterface) Update(obj *unstructured.Unstructured, op
 			return u, err
 		}
 	}
-	return m.ctx.InnerInterface.Update(obj, options, subresources...)
+	return m.ctx.InnerInterface.Update(ctx, obj, options, subresources...)
 }
 
-func (m *mockDynamicResourceInterface) UpdateStatus(obj *unstructured.Unstructured, options metav1.UpdateOptions) (*unstructured.Unstructured, error) {
+func (m *mockDynamicResourceInterface) UpdateStatus(ctx context.Context, obj *unstructured.Unstructured, options metav1.UpdateOptions) (*unstructured.Unstructured, error) {
 	for i, mockUpdateStatus := range m.mocks.MockUpdateStatuses {
 		handled, u, err := mockUpdateStatus(m.ctx, obj, options)
 		if handled == Handled {
@@ -184,10 +186,10 @@ func (m *mockDynamicResourceInterface) UpdateStatus(obj *unstructured.Unstructur
 			return u, err
 		}
 	}
-	return m.ctx.InnerInterface.UpdateStatus(obj, options)
+	return m.ctx.InnerInterface.UpdateStatus(ctx, obj, options)
 }
 
-func (m *mockDynamicResourceInterface) Delete(name string, options *metav1.DeleteOptions, subresources ...string) error {
+func (m *mockDynamicResourceInterface) Delete(ctx context.Context, name string, options metav1.DeleteOptions, subresources ...string) error {
 	for i, mockDelete := range m.mocks.MockDeletes {
 		handled, err := mockDelete(m.ctx, name, options, subresources...)
 		if handled == Handled {
@@ -197,10 +199,10 @@ func (m *mockDynamicResourceInterface) Delete(name string, options *metav1.Delet
 			return err
 		}
 	}
-	return m.ctx.InnerInterface.Delete(name, options, subresources...)
+	return m.ctx.InnerInterface.Delete(ctx, name, options, subresources...)
 }
 
-func (m *mockDynamicResourceInterface) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (m *mockDynamicResourceInterface) DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	for i, mockDeleteCollection := range m.mocks.MockDeleteCollections {
 		handled, err := mockDeleteCollection(m.ctx, options, listOptions)
 		if handled == Handled {
@@ -210,10 +212,10 @@ func (m *mockDynamicResourceInterface) DeleteCollection(options *metav1.DeleteOp
 			return err
 		}
 	}
-	return m.ctx.InnerInterface.DeleteCollection(options, listOptions)
+	return m.ctx.InnerInterface.DeleteCollection(ctx, options, listOptions)
 }
 
-func (m *mockDynamicResourceInterface) Get(name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error) {
+func (m *mockDynamicResourceInterface) Get(ctx context.Context, name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error) {
 	for i, mockGet := range m.mocks.MockGets {
 		handled, u, err := mockGet(m.ctx, name, options, subresources...)
 		if handled == Handled {
@@ -223,10 +225,10 @@ func (m *mockDynamicResourceInterface) Get(name string, options metav1.GetOption
 			return u, err
 		}
 	}
-	return m.ctx.InnerInterface.Get(name, options, subresources...)
+	return m.ctx.InnerInterface.Get(ctx, name, options, subresources...)
 }
 
-func (m *mockDynamicResourceInterface) List(opts metav1.ListOptions) (*unstructured.UnstructuredList, error) {
+func (m *mockDynamicResourceInterface) List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error) {
 	for i, mockList := range m.mocks.MockLists {
 		handled, u, err := mockList(m.ctx, opts)
 		if handled == Handled {
@@ -236,10 +238,10 @@ func (m *mockDynamicResourceInterface) List(opts metav1.ListOptions) (*unstructu
 			return u, err
 		}
 	}
-	return m.ctx.InnerInterface.List(opts)
+	return m.ctx.InnerInterface.List(ctx, opts)
 }
 
-func (m *mockDynamicResourceInterface) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (m *mockDynamicResourceInterface) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	for i, mockWatch := range m.mocks.MockWatches {
 		handled, w, err := mockWatch(m.ctx, opts)
 		if handled == Handled {
@@ -249,10 +251,10 @@ func (m *mockDynamicResourceInterface) Watch(opts metav1.ListOptions) (watch.Int
 			return w, err
 		}
 	}
-	return m.ctx.InnerInterface.Watch(opts)
+	return m.ctx.InnerInterface.Watch(ctx, opts)
 }
 
-func (m *mockDynamicResourceInterface) Patch(name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error) {
+func (m *mockDynamicResourceInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error) {
 	for i, mockPatch := range m.mocks.MockPatches {
 		handled, u, err := mockPatch(m.ctx, name, pt, data, options, subresources...)
 		if handled == Handled {
@@ -262,5 +264,5 @@ func (m *mockDynamicResourceInterface) Patch(name string, pt types.PatchType, da
 			return u, err
 		}
 	}
-	return m.ctx.InnerInterface.Patch(name, pt, data, options, subresources...)
+	return m.ctx.InnerInterface.Patch(ctx, name, pt, data, options, subresources...)
 }
