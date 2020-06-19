@@ -925,6 +925,8 @@ go.opencensus.io v0.22.1/go.mod h1:Ap50jQcDJrx6rB6VgeeFPtuPIf3wMRvRfrfYDO6+BmA=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
 go.opencensus.io v0.22.3 h1:8sGtKOrtQqkN1bp2AtX+misvLIlOmsEsNd+9NIcPEm8=
 go.opencensus.io v0.22.3/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
+go.opencensus.io v0.22.4 h1:LYy1Hy3MJdrCdMwwzxA/dRok4ejH+RwNGbuoD9fCjto=
+go.opencensus.io v0.22.4/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
 go.opentelemetry.io/otel v0.2.3 h1:o97YpRYk0PyhCyuanlJY0DepUgAlyzl3rJ+4kb+456c=
 go.opentelemetry.io/otel v0.2.3/go.mod h1:OgNpQOjrlt33Ew6Ds0mGjmcTQg/rhUctsbkRdk/g1fw=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
@@ -1402,6 +1404,8 @@ knative.dev/pkg v0.0.0-20200603222317-b79e4a24ca50/go.mod h1:8IfPj/lpuKHHg82xZCl
 knative.dev/pkg v0.0.0-20200611204322-2ddcfef739a2/go.mod h1:rA+FklsrVahwF4a+D63NyHJlzDoAFH81K4J5CYuE3bA=
 knative.dev/pkg v0.0.0-20200618002824-96c250871fac h1:X8XHaSFsUIW2IJCIEQEzNfPbs/gGib3CUK/+lkZuoEo=
 knative.dev/pkg v0.0.0-20200618002824-96c250871fac/go.mod h1:4ty6MSlNjZk5qBaGb3Gt4gopjMD4gRknfTABblcFpQ8=
+knative.dev/pkg v0.0.0-20200619020725-7df8fc5d7743 h1:W1NKMizoXYYX5e2mkFXnn21T7X6ROKKwL8YetGu7xCQ=
+knative.dev/pkg v0.0.0-20200619020725-7df8fc5d7743/go.mod h1:DquzK0hsLDcg2q63Sn+CngAyRwv4cKMpt5F19YzBfb0=
 knative.dev/test-infra v0.0.0-20200407185800-1b88cb3b45a5/go.mod h1:xcdUkMJrLlBswIZqL5zCuBFOC22WIPMQoVX1L35i0vQ=
 knative.dev/test-infra v0.0.0-20200505052144-5ea2f705bb55/go.mod h1:WqF1Azka+FxPZ20keR2zCNtiQA1MP9ZB4BH4HuI+SIU=
 knative.dev/test-infra v0.0.0-20200513011557-d03429a76034/go.mod h1:aMif0KXL4g19YCYwsy4Ocjjz5xgPlseYV+B95Oo4JGE=
@@ -1413,6 +1417,8 @@ knative.dev/test-infra v0.0.0-20200615231324-3a016f44102c h1:pzn7d3gVWX6p10CpdSF
 knative.dev/test-infra v0.0.0-20200615231324-3a016f44102c/go.mod h1:+BfrTJpc++rH30gX/C0QY6NT2eYVzycll52uw6CrQnc=
 knative.dev/test-infra v0.0.0-20200617235125-6382dba95484 h1:5D1Fm6aA1T1QQXLb1HkJ5t8gB9pTkhLYak1CCqIP+pE=
 knative.dev/test-infra v0.0.0-20200617235125-6382dba95484/go.mod h1:+BfrTJpc++rH30gX/C0QY6NT2eYVzycll52uw6CrQnc=
+knative.dev/test-infra v0.0.0-20200618184825-a7b2980a8884 h1:qGxu/U/8VxhAuyFedrrne4s0vfY+YfoRwJJCY0AKpbw=
+knative.dev/test-infra v0.0.0-20200618184825-a7b2980a8884/go.mod h1:qeiTuhDKO/HHheqVfepbxy5/q+O9toSJW6CO/DgjxFY=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
 modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=
 modernc.org/mathutil v1.0.0/go.mod h1:wU0vUrJsVWBZ4P6e7xtFJEhFSNsfRLJ8H458uRjg03k=

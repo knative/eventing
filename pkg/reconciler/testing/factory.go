@@ -28,12 +28,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/client-go/tools/record"
 
 	"go.uber.org/zap"
 	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/reconciler"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -93,6 +95,11 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		// Set up our Controller from the fakes.
 		c := ctor(ctx, &ls, cmw)
+
+		// If the reconcilers is leader aware, then promote it.
+		if la, ok := c.(reconciler.LeaderAware); ok {
+			la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {})
+		}
 
 		for _, reactor := range r.WithReactors {
 			kubeClient.PrependReactor("*", "*", reactor)
