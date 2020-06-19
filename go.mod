@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
 	github.com/wavesoftware/go-ensure v1.0.0
-	go.opencensus.io v0.22.3
+	go.opencensus.io v0.22.4
 	go.opentelemetry.io/otel v0.2.3
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.14.1
@@ -37,8 +37,8 @@ require (
 	k8s.io/apiserver v0.17.6
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200124190032-861946025e34
-	knative.dev/pkg v0.0.0-20200618002824-96c250871fac
-	knative.dev/test-infra v0.0.0-20200617235125-6382dba95484
+	knative.dev/pkg v0.0.0-20200619020725-7df8fc5d7743
+	knative.dev/test-infra v0.0.0-20200618184825-a7b2980a8884
 	sigs.k8s.io/yaml v1.2.0
 )
 
