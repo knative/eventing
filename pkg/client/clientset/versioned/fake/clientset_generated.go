@@ -31,6 +31,8 @@ import (
 	fakeeventingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1/fake"
 	eventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
 	fakeeventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1/fake"
+	flowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1"
+	fakeflowsv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1/fake"
 	flowsv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1beta1"
 	fakeflowsv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1beta1/fake"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
@@ -108,6 +110,11 @@ func (c *Clientset) EventingV1() eventingv1.EventingV1Interface {
 // FlowsV1beta1 retrieves the FlowsV1beta1Client
 func (c *Clientset) FlowsV1beta1() flowsv1beta1.FlowsV1beta1Interface {
 	return &fakeflowsv1beta1.FakeFlowsV1beta1{Fake: &c.Fake}
+}
+
+// FlowsV1 retrieves the FlowsV1Client
+func (c *Clientset) FlowsV1() flowsv1.FlowsV1Interface {
+	return &fakeflowsv1.FakeFlowsV1{Fake: &c.Fake}
 }
 
 // MessagingV1beta1 retrieves the MessagingV1beta1Client
