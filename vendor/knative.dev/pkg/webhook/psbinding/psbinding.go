@@ -26,21 +26,22 @@ import (
 	"sync"
 
 	"github.com/markbates/inflect"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
-	admissionlisters "k8s.io/client-go/listers/admissionregistration/v1beta1"
+	admissionlisters "k8s.io/client-go/listers/admissionregistration/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/ptr"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook"
 	certresources "knative.dev/pkg/webhook/certificates/resources"
@@ -97,6 +98,8 @@ func NewReconciler(
 //  2. Admit: which leverages the index built by the Reconciler to apply
 //     mutations to resources.
 type Reconciler struct {
+	pkgreconciler.LeaderAwareFuncs
+
 	Name        string
 	HandlerPath string
 	SecretName  string
@@ -120,6 +123,7 @@ type Reconciler struct {
 }
 
 var _ controller.Reconciler = (*Reconciler)(nil)
+var _ pkgreconciler.LeaderAware = (*Reconciler)(nil)
 var _ webhook.AdmissionController = (*Reconciler)(nil)
 
 // We need to specifically exclude our deployment(s) from consideration, but this provides a way
@@ -168,12 +172,12 @@ func (ac *Reconciler) Path() string {
 }
 
 // Admit implements AdmissionController
-func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1beta1.AdmissionRequest) *admissionv1beta1.AdmissionResponse {
+func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
 	switch request.Operation {
-	case admissionv1beta1.Create, admissionv1beta1.Update:
+	case admissionv1.Create, admissionv1.Update:
 	default:
 		logging.FromContext(ctx).Infof("Unhandled webhook operation, letting it through %v", request.Operation)
-		return &admissionv1beta1.AdmissionResponse{Allowed: true}
+		return &admissionv1.AdmissionResponse{Allowed: true}
 	}
 
 	orig := &duckv1.WithPod{}
@@ -209,7 +213,7 @@ func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1beta1.Admis
 	}()
 	if fb == nil {
 		// This doesn't apply!
-		return &admissionv1beta1.AdmissionResponse{Allowed: true}
+		return &admissionv1.AdmissionResponse{Allowed: true}
 	}
 
 	// Callback into the user's code to setup the context with additional
@@ -235,11 +239,11 @@ func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1beta1.Admis
 	if err != nil {
 		return webhook.MakeErrorStatus("unable to create patch with binding: %v", err)
 	}
-	return &admissionv1beta1.AdmissionResponse{
+	return &admissionv1.AdmissionResponse{
 		Patch:   patchBytes,
 		Allowed: true,
-		PatchType: func() *admissionv1beta1.PatchType {
-			pt := admissionv1beta1.PatchTypeJSONPatch
+		PatchType: func() *admissionv1.PatchType {
+			pt := admissionv1.PatchTypeJSONPatch
 			return &pt
 		}(),
 	}
@@ -302,16 +306,22 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		ac.inexact = inexact
 	}()
 
-	rules := make([]admissionregistrationv1beta1.RuleWithOperations, 0, len(gks))
+	// After we've updated our indices, bail out unless we are the leader.
+	// Only the leader should be mutating the webhook.
+	if !ac.IsLeaderFor(sentinel) {
+		return nil
+	}
+
+	rules := make([]admissionregistrationv1.RuleWithOperations, 0, len(gks))
 	for gk, versions := range gks {
 		plural := strings.ToLower(inflect.Pluralize(gk.Kind))
 
-		rules = append(rules, admissionregistrationv1beta1.RuleWithOperations{
-			Operations: []admissionregistrationv1beta1.OperationType{
-				admissionregistrationv1beta1.Create,
-				admissionregistrationv1beta1.Update,
+		rules = append(rules, admissionregistrationv1.RuleWithOperations{
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
 			},
-			Rule: admissionregistrationv1beta1.Rule{
+			Rule: admissionregistrationv1.Rule{
 				APIGroups:   []string{gk.Group},
 				APIVersions: versions.List(),
 				Resources:   []string{plural + "/*"},
@@ -339,7 +349,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 
 	// Use the "Equivalent" match policy so that we don't need to enumerate versions for same-types.
 	// This is only supported by 1.15+ clusters.
-	matchPolicy := admissionregistrationv1beta1.Equivalent
+	matchPolicy := admissionregistrationv1.Equivalent
 
 	for i, wh := range webhook.Webhooks {
 		if wh.Name != webhook.Name {
@@ -358,7 +368,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 
 	if ok := equality.Semantic.DeepEqual(configuredWebhook, webhook); !ok {
 		logging.FromContext(ctx).Info("Updating webhook")
-		mwhclient := ac.Client.AdmissionregistrationV1beta1().MutatingWebhookConfigurations()
+		mwhclient := ac.Client.AdmissionregistrationV1().MutatingWebhookConfigurations()
 		if _, err := mwhclient.Update(webhook); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}

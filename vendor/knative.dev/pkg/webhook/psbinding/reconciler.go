@@ -41,6 +41,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/tracker"
 )
 
@@ -52,6 +53,8 @@ var jsonLabelPatch = map[string]interface{}{
 
 // BaseReconciler helps implement controller.Reconciler for Binding resources.
 type BaseReconciler struct {
+	pkgreconciler.LeaderAwareFuncs
+
 	// The GVR of the "primary key" resource for this reconciler.
 	// This is used along with the DynamicClient for updating the status
 	// and managing finalizers of the resources being reconciled.
@@ -89,6 +92,7 @@ type BaseReconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*BaseReconciler)(nil)
+var _ pkgreconciler.LeaderAware = (*BaseReconciler)(nil)
 
 // Reconcile implements controller.Reconciler
 func (r *BaseReconciler) Reconcile(ctx context.Context, key string) error {
@@ -96,6 +100,15 @@ func (r *BaseReconciler) Reconcile(ctx context.Context, key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("invalid resource key: %s", key)
+		return nil
+	}
+
+	// Only the leader should reconcile binding resources.
+	if !r.IsLeaderFor(types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}) {
+		logging.FromContext(ctx).Debugf("Skipping key %q, not the leader.", key)
 		return nil
 	}
 

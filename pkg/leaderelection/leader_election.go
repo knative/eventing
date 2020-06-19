@@ -31,6 +31,7 @@ var (
 		"broker-controller",
 		"inmemorychannel-dispatcher",
 		"inmemorychannel-controller",
+		"webhook",
 	)
 )
 
