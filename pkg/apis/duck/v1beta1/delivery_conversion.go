@@ -21,24 +21,68 @@ import (
 	"fmt"
 
 	"knative.dev/pkg/apis"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *DeliverySpec) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+func (source *DeliverySpec) ConvertTo(ctx context.Context, to apis.Convertible) error {
+	switch sink := to.(type) {
+	case *eventingduckv1.DeliverySpec:
+		sink.Retry = source.Retry
+		sink.BackoffDelay = source.BackoffDelay
+		if *source.BackoffPolicy == BackoffPolicyLinear {
+			linear := eventingduckv1.BackoffPolicyLinear
+			sink.BackoffPolicy = &linear
+		} else if *source.BackoffPolicy == BackoffPolicyExponential {
+			exponential := eventingduckv1.BackoffPolicyExponential
+			sink.BackoffPolicy = &exponential
+		}
+		sink.DeadLetterSink = source.DeadLetterSink
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *DeliverySpec) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+func (sink *DeliverySpec) ConvertFrom(ctx context.Context, from apis.Convertible) error {
+	switch source := from.(type) {
+	case *eventingduckv1.DeliverySpec:
+		sink.Retry = source.Retry
+		sink.BackoffDelay = source.BackoffDelay
+		if *source.BackoffPolicy == eventingduckv1.BackoffPolicyLinear {
+			linear := BackoffPolicyLinear
+			sink.BackoffPolicy = &linear
+		} else if *source.BackoffPolicy == eventingduckv1.BackoffPolicyExponential {
+			exponential := BackoffPolicyExponential
+			sink.BackoffPolicy = &exponential
+		}
+		sink.DeadLetterSink = source.DeadLetterSink
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
+	}
 }
 
 // ConvertTo implements apis.Convertible
-func (source *DeliveryStatus) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+func (source *DeliveryStatus) ConvertTo(ctx context.Context, to apis.Convertible) error {
+	switch sink := to.(type) {
+	case *eventingduckv1.DeliveryStatus:
+		sink.DeadLetterChannel = source.DeadLetterChannel
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *DeliveryStatus) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+func (sink *DeliveryStatus) ConvertFrom(ctx context.Context, from apis.Convertible) error {
+	switch source := from.(type) {
+	case *eventingduckv1.DeliveryStatus:
+		sink.DeadLetterChannel = source.DeadLetterChannel
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
+	}
 }
