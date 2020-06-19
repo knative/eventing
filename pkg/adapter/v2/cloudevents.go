@@ -25,6 +25,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	"go.opencensus.io/plugin/ochttp"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
@@ -117,6 +118,7 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 
 		_ = c.reporter.ReportEventCount(reportArgs, res.StatusCode)
 	} else {
+		crstatusevent.ReportCRStatusEvent(ctx, result)
 		var res *http.Result
 		if !cloudevents.ResultAs(result, &res) {
 			return c.reportError(reportArgs, result)

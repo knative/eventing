@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	testclient "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
@@ -178,6 +179,7 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
+			kubeClient:        testclient.NewSimpleClientset(),
 			eventingClientSet: eventingclient.Get(ctx),
 			pingsourceLister:  listers.GetPingSourceV1alpha2Lister(),
 			cronRunner:        NewCronJobsRunner(ce, logger),

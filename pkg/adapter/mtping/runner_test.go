@@ -22,7 +22,10 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclient "k8s.io/client-go/kubernetes/fake"
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	logtesting "knative.dev/pkg/logging/testing"
 )
@@ -45,8 +48,18 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			runner := NewCronJobsRunner(ce, logger)
 
-			entryId, err := runner.AddSchedule("test-ns", "test-name", "* * * * ?", "some data",
-				"a sink", tc.wantCEOverrides)
+			kc := testclient.NewSimpleClientset()
+			x := &v1alpha2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "ping-name",
+					Namespace:  "ping-ns",
+					Generation: 17,
+				},
+				Spec:   v1alpha2.PingSourceSpec{},
+				Status: v1alpha2.PingSourceStatus{},
+			}
+
+			entryId, err := runner.AddSchedule(kc, x, "test-ns", "test-name", "* * * * ?", "some data", "a sink", tc.wantCEOverrides)
 
 			if err != nil {
 				t.Errorf("Should not throw error %v", err)

@@ -23,6 +23,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -38,6 +39,7 @@ type Reconciler struct {
 	cronRunner        *cronJobsRunner
 	eventingClientSet clientset.Interface
 	pingsourceLister  sourceslisters.PingSourceLister
+	kubeClient        kubernetes.Interface
 
 	entryidMu sync.RWMutex
 	entryids  map[string]cron.EntryID // key: resource namespace/name
@@ -84,7 +86,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 	}
 
 	// The schedule has already been validated by the validation webhook, so ignoring error
-	id, _ = r.cronRunner.AddSchedule(source.Namespace, source.Name, source.Spec.Schedule, source.Spec.JsonData,
+	id, _ = r.cronRunner.AddSchedule(r.kubeClient, source, source.Namespace, source.Name, source.Spec.Schedule, source.Spec.JsonData,
 		source.Status.SinkURI.String(), source.Spec.CloudEventOverrides)
 
 	r.entryidMu.Lock()
