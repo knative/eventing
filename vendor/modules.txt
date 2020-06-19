@@ -556,7 +556,7 @@ honnef.co/go/tools/unused
 honnef.co/go/tools/version
 # k8s.io/api v0.17.6 => k8s.io/api v0.17.6
 ## explicit
-k8s.io/api/admission/v1beta1
+k8s.io/api/admission/v1
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1
@@ -943,7 +943,7 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/pkg v0.0.0-20200619020725-7df8fc5d7743
+# knative.dev/pkg v0.0.0-20200619182625-b6a13e2894ee
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -955,6 +955,7 @@ knative.dev/pkg/apis/duck/v1beta1
 knative.dev/pkg/changeset
 knative.dev/pkg/client/injection/apiextensions/client
 knative.dev/pkg/client/injection/apiextensions/client/fake
+knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition
 knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition
 knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake
 knative.dev/pkg/client/injection/apiextensions/informers/factory
@@ -971,8 +972,8 @@ knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable
 knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake
 knative.dev/pkg/client/injection/kube/client
 knative.dev/pkg/client/injection/kube/client/fake
-knative.dev/pkg/client/injection/kube/informers/admissionregistration/v1beta1/mutatingwebhookconfiguration
-knative.dev/pkg/client/injection/kube/informers/admissionregistration/v1beta1/validatingwebhookconfiguration
+knative.dev/pkg/client/injection/kube/informers/admissionregistration/v1/mutatingwebhookconfiguration
+knative.dev/pkg/client/injection/kube/informers/admissionregistration/v1/validatingwebhookconfiguration
 knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment
 knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/configmap
@@ -1056,7 +1057,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/test-infra v0.0.0-20200618184825-a7b2980a8884
+# knative.dev/test-infra v0.0.0-20200619200026-0b0587234302
 ## explicit
 knative.dev/test-infra/scripts
 # sigs.k8s.io/yaml v1.2.0
