@@ -105,7 +105,7 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, encoding 
 		sender.WithEncoding(encoding),
 	)
 
-	eventTracker.AssertExact(1, recordevents.MatchEvent(
+	eventTracker.AssertExact(1, recordevents.NoError(), recordevents.MatchEvent(
 		test.HasSpecVersion(version),
 		test.HasId(event.ID()),
 	))

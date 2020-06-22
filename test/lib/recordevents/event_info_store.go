@@ -192,7 +192,8 @@ func (ei *EventInfoStore) refreshData() ([]EventInfo, error) {
 // guaranteed to be called exactly once on each EventInfo from the pod.
 // The error array contains the eventual match errors, while the last return error contains
 // an eventual communication error while trying to get the events from the recordevents pod
-func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, []error, error) {
+func (ei *EventInfoStore) Find(matchers ...EventInfoMatcher) ([]EventInfo, SearchedInfo, []error, error) {
+	f := AllOf(matchers...)
 	const maxLastEvents = 5
 	allMatch := []EventInfo{}
 	sInfo := SearchedInfo{}
@@ -223,8 +224,8 @@ func (ei *EventInfoStore) Find(f EventInfoMatcher) ([]EventInfo, SearchedInfo, [
 
 // Assert that there are at least min number of matches of f.
 // This method fails the test if the assert is not fulfilled.
-func (ei *EventInfoStore) AssertAtLeast(min int, f EventInfoMatcher) []EventInfo {
-	events, err := ei.waitAtLeastNMatch(f, min)
+func (ei *EventInfoStore) AssertAtLeast(min int, f ...EventInfoMatcher) []EventInfo {
+	events, err := ei.waitAtLeastNMatch(AllOf(f...), min)
 	if err != nil {
 		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %v", min, errors.WithStack(err))
 	}
@@ -233,8 +234,8 @@ func (ei *EventInfoStore) AssertAtLeast(min int, f EventInfoMatcher) []EventInfo
 
 // Assert that there are at least min number of matches and at most max number of matches of f.
 // This method fails the test if the assert is not fulfilled.
-func (ei *EventInfoStore) AssertInRange(min int, max int, f EventInfoMatcher) []EventInfo {
-	events := ei.AssertAtLeast(min, f)
+func (ei *EventInfoStore) AssertInRange(min int, max int, f ...EventInfoMatcher) []EventInfo {
+	events := ei.AssertAtLeast(min, f...)
 	if max > 0 && len(events) > max {
 		ei.tb.Fatalf("Assert in range failed: %v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
@@ -244,8 +245,8 @@ func (ei *EventInfoStore) AssertInRange(min int, max int, f EventInfoMatcher) []
 
 // Assert that there aren't any matches of f.
 // This method fails the test if the assert is not fulfilled.
-func (ei *EventInfoStore) AssertNot(f EventInfoMatcher) []EventInfo {
-	res, recentEvents, _, err := ei.Find(f)
+func (ei *EventInfoStore) AssertNot(f ...EventInfoMatcher) []EventInfo {
+	res, recentEvents, _, err := ei.Find(f...)
 	if err != nil {
 		ei.tb.Fatalf("Unexpected error during find on recordevents '%s': %v", ei.podName, errors.WithStack(err))
 	}
@@ -261,8 +262,8 @@ func (ei *EventInfoStore) AssertNot(f EventInfoMatcher) []EventInfo {
 
 // Assert that there are exactly n matches of f.
 // This method fails the test if the assert is not fulfilled.
-func (ei *EventInfoStore) AssertExact(n int, f EventInfoMatcher) []EventInfo {
-	return ei.AssertInRange(n, n, f)
+func (ei *EventInfoStore) AssertExact(n int, f ...EventInfoMatcher) []EventInfo {
+	return ei.AssertInRange(n, n, f...)
 }
 
 // Wait a long time (currently 4 minutes) until the provided function matches at least

@@ -46,6 +46,16 @@ func AllOf(matchers ...EventInfoMatcher) EventInfoMatcher {
 	}
 }
 
+// Matcher that fails if there is an error in the EventInfo
+func NoError() EventInfoMatcher {
+	return func(ei EventInfo) error {
+		if ei.Error != "" {
+			return fmt.Errorf("not expecting an error in event info: %s", ei.Error)
+		}
+		return nil
+	}
+}
+
 // Convert a matcher that checks valid messages to a function
 // that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
