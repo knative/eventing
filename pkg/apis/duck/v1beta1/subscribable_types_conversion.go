@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
@@ -51,9 +52,11 @@ func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *eventingduckv
 	sink.UID = source.UID
 	sink.Generation = source.Generation
 	sink.SubscriberURI = source.SubscriberURI
+	sink.Delivery = &eventingduckv1.DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{},
+	}
+	source.Delivery.ConvertTo(ctx, sink.Delivery)
 	sink.ReplyURI = source.ReplyURI
-	sink.Delivery.ConvertTo(ctx, source.Delivery)
-
 }
 
 // ConvertTo helps implement apis.Convertible
@@ -76,6 +79,7 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, from apis.Convertible
 	switch source := from.(type) {
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
+
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
 		return nil
@@ -100,15 +104,16 @@ func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source eventingduck
 	sink.Generation = source.Generation
 	sink.SubscriberURI = source.SubscriberURI
 	sink.ReplyURI = source.ReplyURI
+	sink.Delivery = &DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{},
+	}
 	sink.Delivery.ConvertFrom(ctx, source.Delivery)
 }
 
 // ConvertFrom helps implement apis.Convertible
 func (sink *SubscribableStatus) ConvertFrom(ctx context.Context, source eventingduckv1.SubscribableStatus) error {
 	if len(source.Subscribers) > 0 {
-		sink = &SubscribableStatus{
-			Subscribers: make([]SubscriberStatus, len(source.Subscribers)),
-		}
+		sink.Subscribers = make([]SubscriberStatus, len(source.Subscribers))
 		for i, ss := range source.Subscribers {
 			sink.Subscribers[i] = SubscriberStatus{
 				UID:                ss.UID,
