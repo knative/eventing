@@ -1,4 +1,4 @@
-# Copyright 2019 The Knative Authors
+# Copyright 2020 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: eventtypes.eventing.knative.dev
@@ -20,6 +20,48 @@ metadata:
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
+  versions:
+  - &version
+    name: v1alpha1
+    served: false
+    storage: false
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        type: object
+        # this is a work around so we don't need to flush out the
+        # schema for each version at this time
+        #
+        # see issue: https://github.com/knative/serving/issues/912
+        x-kubernetes-preserve-unknown-fields: true
+    additionalPrinterColumns:
+    - name: Type
+      type: string
+      jsonPath: ".spec.type"
+    - name: Source
+      type: string
+      jsonPath: ".spec.source"
+    - name: Schema
+      type: string
+      jsonPath: ".spec.schema"
+    - name: Broker
+      type: string
+      jsonPath: ".spec.broker"
+    - name: Description
+      type: string
+      jsonPath: ".spec.description"
+    # TODO remove Status https://github.com/knative/eventing/issues/2750
+    - name: Ready
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  - << : *version
+    name: v1beta1
+    served: true
+    storage: true
   names:
     kind: EventType
     plural: eventtypes
@@ -29,50 +71,11 @@ spec:
       - knative
       - eventing
   scope: Namespaced
-  subresources:
-    status: {}
   conversion:
     strategy: Webhook
-    webhookClientConfig:
-      service:
-        name: eventing-webhook
-        namespace: knative-eventing
-  preserveUnknownFields: false
-  validation:
-    openAPIV3Schema:
-      type: object
-      # this is a work around so we don't need to flesh out the
-      # schema for each version at this time
-      #
-      # see issue: https://github.com/knative/serving/issues/912
-      x-kubernetes-preserve-unknown-fields: true
-  additionalPrinterColumns:
-    - name: Type
-      type: string
-      JSONPath: ".spec.type"
-    - name: Source
-      type: string
-      JSONPath: ".spec.source"
-    - name: Schema
-      type: string
-      JSONPath: ".spec.schema"
-    - name: Broker
-      type: string
-      JSONPath: ".spec.broker"
-    - name: Description
-      type: string
-      JSONPath: ".spec.description"
-    # TODO remove Status https://github.com/knative/eventing/issues/2750
-    - name: Ready
-      type: string
-      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
-    - name: Reason
-      type: string
-      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
-  versions:
-  - name: v1alpha1
-    served: false
-    storage: false
-  - name: v1beta1
-    served: true
-    storage: true
+    webhook:
+      conversionReviewVersions: ["v1", "v1beta1"]
+      clientConfig:
+        service:
+          name: eventing-webhook
+          namespace: knative-eventing
