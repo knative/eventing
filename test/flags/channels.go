@@ -18,7 +18,6 @@ package flags
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,26 +32,11 @@ func (channels *Channels) String() string {
 
 // Set appends the input string to Channels.
 func (channels *Channels) Set(value string) error {
-	for _, channel := range strings.Split(value, ",") {
-		channel := strings.TrimSpace(channel)
-		split := strings.Split(channel, ":")
-		if len(split) != 2 {
-			log.Fatalf("The given Channel name %q is invalid, it needs to be in the form \"apiVersion:Kind\".", channel)
-		}
-		tm := metav1.TypeMeta{
-			APIVersion: split[0],
-			Kind:       split[1],
-		}
-		if !isValidChannel(tm.Kind) {
-			log.Fatalf("The given Channel name %q is invalid, tests cannot be run.\n", channel)
-		}
-
-		*channels = append(*channels, tm)
-	}
+	*channels = csvToObjects(value, isValidChannel)
 	return nil
 }
 
-// Check if the channel name is valid.
+// Check if the channel kind is valid.
 func isValidChannel(channel string) bool {
 	return strings.HasSuffix(channel, "Channel")
 }
