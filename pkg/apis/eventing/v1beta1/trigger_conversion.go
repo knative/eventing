@@ -20,15 +20,46 @@ import (
 	"context"
 	"fmt"
 
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *Trigger) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+func (source *Trigger) ConvertTo(ctx context.Context, to apis.Convertible) error {
+	switch sink := to.(type) {
+	case *v1.Trigger:
+		sink.Spec.Broker = source.Spec.Broker
+		sink.Spec.Subscriber = source.Spec.Subscriber
+		if source.Spec.Filter != nil {
+			sink.Spec.Filter = &v1.TriggerFilter{}
+		}
+		for k, v := range source.Spec.Filter.Attributes {
+			sink.Spec.Filter.Attributes[k] = v
+		}
+		sink.Status.Status = source.Status.Status
+		sink.Status.SubscriberURI = source.Status.SubscriberURI
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *Trigger) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+func (sink *Trigger) ConvertFrom(ctx context.Context, from apis.Convertible) error {
+	switch source := from.(type) {
+	case *v1.Trigger:
+		sink.Spec.Broker = source.Spec.Broker
+		sink.Spec.Subscriber = source.Spec.Subscriber
+		if source.Spec.Filter != nil {
+			sink.Spec.Filter = &TriggerFilter{}
+		}
+		for k, v := range source.Spec.Filter.Attributes {
+			sink.Spec.Filter.Attributes[k] = v
+		}
+		sink.Status.Status = source.Status.Status
+		sink.Status.SubscriberURI = source.Status.SubscriberURI
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
+	}
 }

@@ -20,15 +20,40 @@ import (
 	"context"
 	"fmt"
 
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *EventType) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) error {
+	switch sink := to.(type) {
+	case *v1.EventType:
+		sink.Spec.Type = source.Spec.Type
+		sink.Spec.Source = source.Spec.Source
+		sink.Spec.Schema = source.Spec.Schema
+		sink.Spec.SchemaData = source.Spec.SchemaData
+		sink.Spec.Broker = source.Spec.Broker
+		sink.Spec.Description = source.Spec.Description
+		sink.Status.Status = source.Status.Status
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *EventType) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+func (sink *EventType) ConvertFrom(ctx context.Context, from apis.Convertible) error {
+	switch source := from.(type) {
+	case *v1.EventType:
+		sink.Spec.Type = source.Spec.Type
+		sink.Spec.Source = source.Spec.Source
+		sink.Spec.Schema = source.Spec.Schema
+		sink.Spec.SchemaData = source.Spec.SchemaData
+		sink.Spec.Broker = source.Spec.Broker
+		sink.Spec.Description = source.Spec.Description
+		sink.Status.Status = source.Status.Status
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
+	}
 }
