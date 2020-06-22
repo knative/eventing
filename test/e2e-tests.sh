@@ -34,7 +34,8 @@ initialize $@ --skip-istio-addon
 
 install_mt_broker || fail_test "Could not install MT Channel Based Broker"
 
-echo "Running tests with Multi Tenant Channel Based Broker"
+header "Running tests with Multi Tenant Channel Based Broker"
 go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel -sources=sources.knative.dev/v1alpha2:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1alpha2:PingSource || fail_test
 
+header "Multi Tenant Channel Based Broker tests succeeded"
 success
