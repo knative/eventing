@@ -67,10 +67,50 @@ function knative_setup() {
 # Args:
 #  - $1 - if passed, it will be used as eventing config directory
 function install_knative_eventing() {
+
+  (
+    header "Publish test images"
+    "$(dirname "$0")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
+  ) &
+  pids=( $! )
+
+  if (( DEPLOY_KNATIVE_MONITORING )); then
+    # Ensure knative monitoring is installed only once
+    knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
+      --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
+    if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
+      # add monitoring to UNINSTALL_LIST before running the process
+      UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+      (
+            header "Installing Knative Monitoring"
+            start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+      ) &
+      pids+=( $! )
+    else
+      subheader "Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
+    fi
+  fi
+
+  (
+    header "Setting up logging..."
+
+    # Install kail if needed.
+    if ! which kail >/dev/null; then
+      bash <(curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
+    fi
+
+    # Capture all logs.
+    kail >${ARTIFACTS}/k8s.log.txt &
+    local kail_pid=$!
+    # Clean up kail so it doesn't interfere with job shutting down
+    add_trap "kill $kail_pid || true" EXIT
+  ) &
+  pids+=( $! )
+
   local kne_config
   kne_config="${1:-${EVENTING_CONFIG}}"
   # Install Knative Eventing in the current cluster.
-  echo "Installing Knative Eventing from: ${kne_config}"
+  header "Installing Knative Eventing from: ${kne_config}"
   if [ -f "${kne_config}" ] || [ -d "${kne_config}" ]; then
     ko apply --strict -f "${kne_config}" || return $?
   else
@@ -80,18 +120,16 @@ function install_knative_eventing() {
 
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
-  if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
+  echo "Waiting background processes"
 
-  # Ensure knative monitoring is installed only once
-  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
-    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
-  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
-    echo ">> Installing Knative Monitoring"
-    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
-  else
-    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
-  fi
+  for p in "${pids[@]}"; do
+    if wait "$p"; then
+      echo "Process $p success"
+    else
+      echo "Process $p fail"
+      fail_test "Process $p failed"
+    fi
+  done
 }
 
 function install_head {
@@ -156,28 +194,11 @@ function add_trap() {
 
 # Setup resources common to all eventing tests.
 function test_setup() {
-  echo ">> Setting up logging..."
-
-  # Install kail if needed.
-  if ! which kail >/dev/null; then
-    bash <(curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
-  fi
-
-  # Capture all logs.
-  kail >${ARTIFACTS}/k8s.log.txt &
-  local kail_pid=$!
-  # Clean up kail so it doesn't interfere with job shutting down
-  add_trap "kill $kail_pid || true" EXIT
-
   install_test_resources || return 1
-
-  echo ">> Publish test images"
-  "$(dirname "$0")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
 }
 
-# Tear down resources used in the eventing tests.
 function test_teardown() {
-  uninstall_test_resources
+    uninstall_test_resources || return 1
 }
 
 function install_test_resources() {
@@ -185,7 +206,7 @@ function install_test_resources() {
 }
 
 function uninstall_test_resources() {
-  uninstall_channel_crds
+  uninstall_channel_crds || return 1
 }
 
 function install_channel_crds() {
