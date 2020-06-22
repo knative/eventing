@@ -14,29 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flags
+package conformance
 
 import (
-	"fmt"
-	"strings"
+	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/conformance/helpers"
+	testlib "knative.dev/eventing/test/lib"
 )
 
-// Channels holds the Channels we want to run test against.
-type Channels []metav1.TypeMeta
-
-func (channels *Channels) String() string {
-	return fmt.Sprint(*channels)
-}
-
-// Set appends the input string to Channels.
-func (channels *Channels) Set(value string) error {
-	*channels = csvToObjects(value, isValidChannel)
-	return nil
-}
-
-// Check if the channel kind is valid.
-func isValidChannel(channel string) bool {
-	return strings.HasSuffix(channel, "Channel")
+func TestSourceCRDMetadata(t *testing.T) {
+	helpers.SourceCRDMetadataTestHelperWithChannelTestRunner(t, sourcesTestRunner, testlib.SetupClientOptionNoop)
 }

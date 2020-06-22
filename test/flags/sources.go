@@ -23,20 +23,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Channels holds the Channels we want to run test against.
-type Channels []metav1.TypeMeta
+// Sources holds the Sources we want to run test against.
+type Sources []metav1.TypeMeta
 
-func (channels *Channels) String() string {
-	return fmt.Sprint(*channels)
+func (sources *Sources) String() string {
+	return fmt.Sprint(*sources)
 }
 
-// Set appends the input string to Channels.
-func (channels *Channels) Set(value string) error {
-	*channels = csvToObjects(value, isValidChannel)
+// Set appends the input string to Sources.
+func (sources *Sources) Set(value string) error {
+	*sources = csvToObjects(value, isValidSource)
 	return nil
 }
 
-// Check if the channel kind is valid.
-func isValidChannel(channel string) bool {
-	return strings.HasSuffix(channel, "Channel")
+// Check if the Source kind is valid.
+func isValidSource(source string) bool {
+	return strings.HasSuffix(source, "Source")
 }

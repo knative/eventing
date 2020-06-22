@@ -27,6 +27,7 @@ import (
 )
 
 var channelTestRunner testlib.ComponentsTestRunner
+var sourcesTestRunner testlib.ComponentsTestRunner
 var brokerClass string
 
 func TestMain(m *testing.M) {
@@ -35,6 +36,9 @@ func TestMain(m *testing.M) {
 		channelTestRunner = testlib.ComponentsTestRunner{
 			ComponentFeatureMap: testlib.ChannelFeatureMap,
 			ComponentsToTest:    test.EventingFlags.Channels,
+		}
+		sourcesTestRunner = testlib.ComponentsTestRunner{
+			ComponentsToTest: test.EventingFlags.Sources,
 		}
 		brokerClass = test.EventingFlags.BrokerClass
 

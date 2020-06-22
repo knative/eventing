@@ -35,6 +35,9 @@ const (
 	BrokerUsage = "Which brokerclass to test, requires the proper Broker " +
 		"implementation to have been installed, and only one value. brokerclass " +
 		"must be (for now) 'MTChannelBasedBroker'."
+	SourceUsage = "The names of the source type metas, separated by comma. " +
+		"Example: \"sources.knative.dev/v1alpha1:ApiServerSource," +
+		"sources.knative.dev/v1alpha1:PingSource\"."
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
@@ -46,6 +49,7 @@ func InitializeEventingFlags() {
 
 	flag.Var(&EventingFlags.Channels, "channels", ChannelUsage)
 	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", BrokerUsage)
+	flag.Var(&EventingFlags.Sources, "sources", SourceUsage)
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
