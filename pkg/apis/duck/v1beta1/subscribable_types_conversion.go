@@ -32,19 +32,22 @@ func (source *Subscribable) ConvertTo(ctx context.Context, to apis.Convertible) 
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
 		source.Status.ConvertTo(ctx, &sink.Status)
-		return source.Spec.ConvertTo(ctx, &sink.Spec)
+		source.Spec.ConvertTo(ctx, &sink.Spec)
+		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 }
 
 // ConvertTo helps implement apis.Convertible
-func (source *SubscribableSpec) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscribableSpec) error {
-	sink.Subscribers = make([]eventingduckv1.SubscriberSpec, len(source.Subscribers))
-	for i, s := range source.Subscribers {
-		s.ConvertTo(ctx, &sink.Subscribers[i])
+func (source *SubscribableSpec) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscribableSpec) {
+	if len(source.Subscribers) > 0 {
+		sink.Subscribers = make([]eventingduckv1.SubscriberSpec, len(source.Subscribers))
+		for i, s := range source.Subscribers {
+			s.ConvertTo(ctx, &sink.Subscribers[i])
+		}
 	}
-	return nil
+
 }
 
 // ConvertTo helps implement apis.Convertible
@@ -79,7 +82,6 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, from apis.Convertible
 	switch source := from.(type) {
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
-
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
 		return nil
