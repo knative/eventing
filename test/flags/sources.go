@@ -36,7 +36,7 @@ func (sources *Sources) Set(value string) error {
 	return nil
 }
 
-// Check if the Source name is valid.
+// Check if the Source kind is valid.
 func isValidSource(source string) bool {
 	return strings.HasSuffix(source, "Source")
 }

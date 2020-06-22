@@ -36,7 +36,7 @@ func (channels *Channels) Set(value string) error {
 	return nil
 }
 
-// Check if the channel name is valid.
+// Check if the channel kind is valid.
 func isValidChannel(channel string) bool {
 	return strings.HasSuffix(channel, "Channel")
 }
