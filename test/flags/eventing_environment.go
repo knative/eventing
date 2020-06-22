@@ -20,4 +20,5 @@ package flags
 type EventingEnvironmentFlags struct {
 	BrokerClass string
 	Channels
+	Sources
 }
