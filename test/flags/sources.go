@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Sources holds the Sourcess we want to run test against.
+// Sources holds the Sources we want to run test against.
 type Sources []metav1.TypeMeta
 
 func (sources *Sources) String() string {
