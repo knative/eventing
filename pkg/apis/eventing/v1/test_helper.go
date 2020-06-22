@@ -19,7 +19,7 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -105,18 +105,18 @@ func (testHelper) AvailableEndpoints() *corev1.Endpoints {
 	return ep
 }
 
-func (testHelper) ReadyChannelStatus() *duckv1beta1.ChannelableStatus {
-	cs := &duckv1beta1.ChannelableStatus{
+func (testHelper) ReadyChannelStatus() *eventingduckv1.ChannelableStatus {
+	cs := &eventingduckv1.ChannelableStatus{
 		Status: duckv1.Status{},
 		AddressStatus: duckv1.AddressStatus{
 			Address: &duckv1.Addressable{
 				URL: &apis.URL{Scheme: "http", Host: "foo"},
 			},
 		},
-		SubscribableStatus: duckv1beta1.SubscribableStatus{}}
+		SubscribableStatus: eventingduckv1.SubscribableStatus{}}
 	return cs
 }
 
-func (t testHelper) NotReadyChannelStatus() *duckv1beta1.ChannelableStatus {
-	return &duckv1beta1.ChannelableStatus{}
+func (t testHelper) NotReadyChannelStatus() *eventingduckv1.ChannelableStatus {
+	return &eventingduckv1.ChannelableStatus{}
 }

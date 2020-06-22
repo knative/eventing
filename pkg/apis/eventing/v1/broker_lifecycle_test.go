@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -312,7 +312,7 @@ func TestBrokerIsReady(t *testing.T) {
 				bs.PropagateIngressAvailability(ep)
 			}
 			if test.markTriggerChannelReady != nil {
-				var c *duckv1beta1.ChannelableStatus
+				var c *eventingduckv1.ChannelableStatus
 				if *test.markTriggerChannelReady {
 					c = TestHelper.ReadyChannelStatus()
 				} else {

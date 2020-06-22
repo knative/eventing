@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"knative.dev/eventing/pkg/apis/duck"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -91,7 +91,7 @@ func (bs *BrokerStatus) MarkTriggerChannelFailed(reason, format string, args ...
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, reason, format, args...)
 }
 
-func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1beta1.ChannelableStatus) {
+func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
 	address := cs.AddressStatus.Address
 	if address != nil {
