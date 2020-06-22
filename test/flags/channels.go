@@ -26,8 +26,6 @@ import (
 // Channels holds the Channels we want to run test against.
 type Channels []metav1.TypeMeta
 
-var objs []metav1.TypeMeta
-
 func (channels *Channels) String() string {
 	return fmt.Sprint(*channels)
 }
