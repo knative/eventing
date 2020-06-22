@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -145,7 +145,7 @@ func TestValidate(t *testing.T) {
 		name: "invalid delivery, invalid delay string",
 		b: Broker{
 			Spec: BrokerSpec{
-				Delivery: &eventingduckv1beta1.DeliverySpec{
+				Delivery: &eventingduckv1.DeliverySpec{
 					BackoffDelay: &invalidString,
 				},
 			},
@@ -163,7 +163,7 @@ func TestValidate(t *testing.T) {
 }
 
 func TestValidSpec(t *testing.T) {
-	bop := eventingduckv1beta1.BackoffPolicyExponential
+	bop := eventingduckv1.BackoffPolicyExponential
 	tests := []struct {
 		name string
 		spec BrokerSpec
@@ -190,7 +190,7 @@ func TestValidSpec(t *testing.T) {
 				Kind:       "kind",
 				APIVersion: "apiversion",
 			},
-			Delivery: &eventingduckv1beta1.DeliverySpec{BackoffPolicy: &bop},
+			Delivery: &eventingduckv1.DeliverySpec{BackoffPolicy: &bop},
 		},
 	}, {}}
 

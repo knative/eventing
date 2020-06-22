@@ -25,10 +25,12 @@ import (
 
 // ConvertTo implements apis.Convertible
 func (source *Trigger) ConvertTo(ctx context.Context, sink apis.Convertible) error {
+	// TODO
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
 }
 
 // ConvertFrom implements apis.Convertible
 func (sink *Trigger) ConvertFrom(ctx context.Context, source apis.Convertible) error {
+	// TODO
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
 }

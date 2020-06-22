@@ -22,7 +22,7 @@ package v1
 
 import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	v1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	apisduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	apis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -98,7 +98,7 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 	}
 	if in.Delivery != nil {
 		in, out := &in.Delivery, &out.Delivery
-		*out = new(v1beta1.DeliverySpec)
+		*out = new(apisduckv1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
 	return

@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -77,7 +77,7 @@ type BrokerSpec struct {
 	// Delivery is the delivery specification for Events within the Broker mesh.
 	// This includes things like retries, DLQ, etc.
 	// +optional
-	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
+	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // BrokerStatus represents the current state of a Broker.
