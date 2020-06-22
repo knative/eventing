@@ -103,7 +103,7 @@ func register() {
 		broker.UniqueTagKey}
 
 	// Create view to see our measurements.
-	err := view.Register(
+	err := metrics.RegisterResourceView(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
