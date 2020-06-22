@@ -122,14 +122,7 @@ function install_knative_eventing() {
 
   echo "Waiting background processes"
 
-  for p in "${pids[@]}"; do
-    if wait "$p"; then
-      echo "Process $p success"
-    else
-      echo "Process $p fail"
-      fail_test "Process $p failed"
-    fi
-  done
+  wait_pids "${pids[@]}"
 }
 
 function install_head {
@@ -257,4 +250,16 @@ function wait_for_file() {
     ((timeout--))
   done
   return 0
+}
+
+function wait_pids() {
+  pids=("$@")
+  for p in "${pids[@]}"; do
+    if wait "$p"; then
+      echo "Process $p success"
+    else
+      echo "Process $p fail"
+      fail_test "Process $p failed"
+    fi
+  done
 }
