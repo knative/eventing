@@ -24,7 +24,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 // ConvertTo implements apis.Convertible
@@ -87,7 +86,7 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, sink *duckv
 }
 
 // ConvertFrom implements apis.Convertible.
-// Converts obj v1beta1.Subscribable into v1alpha1.Subscribable
+// Converts obj v1beta1.Subscribable into v1alpha1.SubscribableType
 func (sink *SubscribableType) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *duckv1beta1.Subscribable:
@@ -112,6 +111,7 @@ func (sink *SubscribableTypeSpec) ConvertFrom(ctx context.Context, source duckv1
 	}
 }
 
+// ConvertFrom helps implement apis.Convertible
 func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source duckv1beta1.SubscriberSpec) {
 	var deadLetterSinkURI *apis.URL
 	if source.Delivery != nil && source.Delivery.DeadLetterSink != nil {
@@ -130,10 +130,10 @@ func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source duckv1beta1.
 func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, source duckv1beta1.SubscribableStatus) error {
 	if len(source.Subscribers) > 0 {
 		sink.SubscribableStatus = &SubscribableStatus{
-			Subscribers: make([]eventingduckv1beta1.SubscriberStatus, len(source.Subscribers)),
+			Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.Subscribers)),
 		}
 		for i, ss := range source.Subscribers {
-			sink.SubscribableStatus.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{
+			sink.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
 				UID:                ss.UID,
 				ObservedGeneration: ss.ObservedGeneration,
 				Ready:              ss.Ready,
