@@ -74,7 +74,7 @@ func channelHasRequiredStatus(st *testing.T, client *testlib.Client, channel met
 			st.Fatalf("No hostname found for %q", channel)
 		}
 		if channelable.Status.AddressStatus.Address.URL.IsEmpty() {
-			st.Fatalf("No hostname found for %q", channel)
+			st.Fatalf("No URL found for %q", channel)
 		}
 	} else if dtsv == "v1beta1" {
 		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
@@ -90,7 +90,7 @@ func channelHasRequiredStatus(st *testing.T, client *testlib.Client, channel met
 		// SPEC: When the channel instance is ready to receive events status.address.hostname and
 		// status.address.url MUST be populated
 		if channelable.Status.Address.URL.IsEmpty() {
-			st.Fatalf("No hostname found for %q", channel)
+			st.Fatalf("No URL found for %q", channel)
 		}
 	} else {
 		st.Fatalf("Channel doesn't support v1alpha1 nor v1beta1 Channel duck types: %q", channel)
