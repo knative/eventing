@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/test"
+	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -87,7 +87,7 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, encoding 
 
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	event := test.FullEvent()
+	event := FullEvent()
 	event.SetID(uuid.New().String())
 
 	switch version {
@@ -106,7 +106,8 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, encoding 
 	)
 
 	eventTracker.AssertExact(1, recordevents.NoError(), recordevents.MatchEvent(
-		test.HasSpecVersion(version),
-		test.HasId(event.ID()),
+		HasSpecVersion(version),
+		HasId(event.ID()),
+		IsValid(),
 	))
 }
