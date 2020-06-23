@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors.
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,21 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1
 
 import (
 	"context"
-	"fmt"
-
-	"knative.dev/pkg/apis"
+	"testing"
 )
 
-// ConvertTo implements apis.Convertible
-func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", to)
-}
+func TestBrokerConversionBadType(t *testing.T) {
+	good, bad := &Broker{}, &Broker{}
 
-// ConvertFrom implements apis.Convertible
-func (sink *EventType) ConvertFrom(ctx context.Context, from apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", from)
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+	}
+
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
 }

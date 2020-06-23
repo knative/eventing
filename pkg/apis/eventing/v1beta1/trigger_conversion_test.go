@@ -22,7 +22,7 @@ import (
 )
 
 func TestTriggerConversionBadType(t *testing.T) {
-	good, bad := &Trigger{}, &Trigger{}
+	good, bad := &Trigger{}, &Broker{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

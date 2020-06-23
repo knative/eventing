@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors.
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,21 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1
 
-import (
-	"context"
-	"fmt"
+import "testing"
 
-	"knative.dev/pkg/apis"
-)
-
-// ConvertTo implements apis.Convertible
-func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", to)
+func TestTriggerGetStatus(t *testing.T) {
+	r := &Trigger{
+		Status: TriggerStatus{},
+	}
+	if got, want := r.GetStatus(), &r.Status.Status; got != want {
+		t.Errorf("GetStatus=%v, want=%v", got, want)
+	}
 }
 
-// ConvertFrom implements apis.Convertible
-func (sink *EventType) ConvertFrom(ctx context.Context, from apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", from)
+func TestTrigger_GetGroupVersionKind(t *testing.T) {
+
+	tr := Trigger{}
+	gvk := tr.GetGroupVersionKind()
+	if gvk.Kind != "Trigger" {
+		t.Errorf("Should be Trigger.")
+	}
 }

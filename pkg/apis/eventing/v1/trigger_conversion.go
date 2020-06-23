@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1
 
 import (
 	"context"
@@ -24,11 +24,11 @@ import (
 )
 
 // ConvertTo implements apis.Convertible
-func (source *EventType) ConvertTo(ctx context.Context, to apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", to)
+func (source *Trigger) ConvertTo(ctx context.Context, sink apis.Convertible) error {
+	return fmt.Errorf("v1 is the highest known version, got: %T", sink)
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *EventType) ConvertFrom(ctx context.Context, from apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", from)
+func (sink *Trigger) ConvertFrom(ctx context.Context, source apis.Convertible) error {
+	return fmt.Errorf("v1 is the highest known version, got: %T", source)
 }
