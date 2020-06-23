@@ -27,7 +27,6 @@ import (
 type EventingV1Interface interface {
 	RESTClient() rest.Interface
 	BrokersGetter
-	EventTypesGetter
 	TriggersGetter
 }
 
@@ -38,10 +37,6 @@ type EventingV1Client struct {
 
 func (c *EventingV1Client) Brokers(namespace string) BrokerInterface {
 	return newBrokers(c, namespace)
-}
-
-func (c *EventingV1Client) EventTypes(namespace string) EventTypeInterface {
-	return newEventTypes(c, namespace)
 }
 
 func (c *EventingV1Client) Triggers(namespace string) TriggerInterface {

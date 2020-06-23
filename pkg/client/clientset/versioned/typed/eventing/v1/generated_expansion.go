@@ -20,6 +20,4 @@ package v1
 
 type BrokerExpansion interface{}
 
-type EventTypeExpansion interface{}
-
 type TriggerExpansion interface{}
