@@ -283,7 +283,7 @@ CloudEvent, then it MUST reject the request.
 
 The Channel MUST recognize and pass through all tracing information from sender
 to subscribers using [W3C Tracecontext](https://w3c.github.io/trace-context/),
-although internally It MAY use another mechanism(s) to propagate the tracing
+although internally it MAY use another mechanism(s) to propagate the tracing
 information. The Channel SHOULD sample and write traces to the location
 specified in
 [`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
