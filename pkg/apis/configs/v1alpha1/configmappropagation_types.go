@@ -27,7 +27,7 @@ import (
 )
 
 // +genclient
-// +genreconciler:krshapedlogic=true
+// +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ConfigMapPropagation is used to propagate configMaps from original namespace to current namespace

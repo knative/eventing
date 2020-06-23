@@ -26,7 +26,7 @@ import (
 )
 
 // +genclient
-// +genreconciler:krshapedlogic=true
+// +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Channel represents a generic Channel. It is normally used when we want a Channel, but don't need a specific Channel implementation.
