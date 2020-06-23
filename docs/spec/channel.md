@@ -263,8 +263,14 @@ specification:
 The usage of CloudEvents version `1.0` is RECOMMENDED.
 
 The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit
-the event with the same version. It MUST support both _Binary Content Mode_ and
-_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
+the event with the same version.
+
+It MUST support both _Binary Content Mode_ and _Structured Content Mode_ of the
+HTTP Protocol Binding for CloudEvents. When dispatching the event, the channel
+MAY use a different
+[HTTP Message mode](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md#3-http-message-mapping)
+of the one used by the event. For example, It MAY receive an event in
+_Structured Content Mode_ and dispatch in _Binary Content Mode_.
 
 The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.
 Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their
@@ -275,10 +281,11 @@ discretion (e.g. expose a gRPC endpoint to accept events).
 If a Channel receives an event queueing request and is unable to parse a valid
 CloudEvent, then it MUST reject the request.
 
-The Channel MUST pass through all tracing information as CloudEvents attributes.
-In particular, it MUST translate any incoming W3C Tracecontext headers to the
-[Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
-The Channel SHOULD sample and write traces to the location specified in
+The Channel MUST recognize and pass through all tracing information from sender
+to subscribers using [W3C Tracecontext](https://w3c.github.io/trace-context/),
+although internally it MAY use another mechanism(s) to propagate the tracing
+information. The Channel SHOULD sample and write traces to the location
+specified in
 [`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
 
 ##### HTTP
@@ -305,13 +312,14 @@ CloudEvent, then it MUST respond with `400 Bad Request`.
 Channels MUST output CloudEvents. The output MUST match the CloudEvent version
 of the [Input](#input). Channels MUST NOT alter an event that goes through them.
 All CloudEvent attributes, including the data attribute, MUST be received at the
-subscriber identical to how they were received by the Channel. The only
-exception is the
-[Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md),
-which is expected to change as the span id will be altered at every network hop.
+subscriber identical to how they were received by the Channel, except:
+
+- The extension attribute `knativehistory`, which the channel MAY modify to
+  append its hostname
 
 Every Channel SHOULD support sending events via _Binary Content Mode_ or
-_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
+_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents, although
+dispatching events using _Binary Content Mode_ is RECOMMENDED.
 
 Channels MUST send events to all subscribers which are marked with a status of
 `ready: "True"` in the channel's `status.subscribableStatus.subscribers`
