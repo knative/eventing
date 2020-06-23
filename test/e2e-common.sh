@@ -122,7 +122,7 @@ function install_knative_eventing() {
 
   echo "Waiting background processes"
 
-  wait_pids "${pids[@]}"
+  wait_pids "${pids[@]}" || fail_test "Installation failed"
 }
 
 function install_head {
@@ -258,8 +258,8 @@ function wait_pids() {
     if wait "$p"; then
       echo "Process $p success"
     else
-      echo "Process $p fail"
-      fail_test "Process $p failed"
+      echo "Process $p failed"
+      return 1
     fi
   done
 }
