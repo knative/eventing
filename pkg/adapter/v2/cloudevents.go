@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"net/url"
 
+	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
@@ -36,6 +39,9 @@ func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides
 	if len(target) > 0 {
 		pOpts = append(pOpts, cloudevents.WithTarget(target))
 	}
+	pOpts = append(pOpts, cloudevents.WithRoundTripper(&ochttp.Transport{
+		Propagation: tracecontextb3.TraceContextEgress,
+	}))
 
 	p, err := cloudevents.NewHTTP(pOpts...)
 	if err != nil {

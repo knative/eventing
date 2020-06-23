@@ -22,9 +22,10 @@ import (
 	"log"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"go.opencensus.io/plugin/ochttp"
 	"go.uber.org/zap"
-
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 var (
@@ -72,7 +73,11 @@ func main() {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 
-	t, err := cloudevents.NewHTTP(cloudevents.WithPort(8080))
+	t, err := cloudevents.NewHTTP(
+		cloudevents.WithPort(8080),
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}))
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}

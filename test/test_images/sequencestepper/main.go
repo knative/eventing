@@ -23,6 +23,8 @@ import (
 	"log"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 var (
@@ -61,7 +63,11 @@ func main() {
 	// parse the command line flags
 	flag.Parse()
 
-	t, err := cloudevents.NewHTTP(cloudevents.WithPort(8080))
+	t, err := cloudevents.NewHTTP(
+		cloudevents.WithPort(8080),
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}))
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}

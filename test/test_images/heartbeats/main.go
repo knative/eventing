@@ -26,10 +26,11 @@ import (
 	"strconv"
 	"time"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
+	"go.opencensus.io/plugin/ochttp"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 type Heartbeat struct {
@@ -89,7 +90,11 @@ func main() {
 		ceOverrides = &overrides
 	}
 
-	p, err := cloudevents.NewHTTP(cloudevents.WithTarget(sink))
+	p, err := cloudevents.NewHTTP(
+		cloudevents.WithTarget(sink),
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}))
 	if err != nil {
 		log.Fatalf("failed to create protocol: %s", err.Error())
 	}

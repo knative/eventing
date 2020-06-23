@@ -29,8 +29,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
-
+	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/eventing/test/performance/infra/common"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 func init() {
@@ -188,7 +189,9 @@ func vegetaAttackerTransport() *http.Transport {
 func newCloudEventsClient(sinkUrl string) (cloudevents.Client, error) {
 	t, err := cloudevents.NewHTTP(
 		cloudevents.WithTarget(sinkUrl),
-	)
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transport: %v", err)
 	}
