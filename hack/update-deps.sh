@@ -61,3 +61,4 @@ find vendor/ -name '*_test.go'-delete
 export GOFLAGS=-mod=vendor
 
 update_licenses third_party/VENDOR-LICENSE "./..."
+git apply hack/patches/*.patch
