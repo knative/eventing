@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 const (
@@ -92,7 +92,7 @@ func WithShutdownTimeout(ctx context.Context, timeout time.Duration) context.Con
 
 func CreateHandler(handler nethttp.Handler) nethttp.Handler {
 	return &ochttp.Handler{
-		Propagation: &tracecontext.HTTPFormat{},
+		Propagation: tracecontextb3.TraceContextEgress,
 		Handler:     handler,
 	}
 }

@@ -21,7 +21,7 @@ import (
 	nethttp "net/http"
 
 	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 // ConnectionArgs allow to configure connection parameters to the underlying
@@ -54,7 +54,7 @@ func NewHttpMessageSender(connectionArgs *ConnectionArgs, target string) (*HttpM
 	client := &nethttp.Client{
 		Transport: &ochttp.Transport{
 			Base:        base,
-			Propagation: &tracecontext.HTTPFormat{},
+			Propagation: tracecontextb3.TraceContextEgress,
 		},
 	}
 

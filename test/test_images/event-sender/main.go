@@ -30,10 +30,9 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 	"go.uber.org/zap"
-
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 var (
@@ -114,7 +113,7 @@ func main() {
 			httpOpts,
 			cloudevents.WithRoundTripper(&ochttp.Transport{
 				Base:        nethttp.DefaultTransport,
-				Propagation: &tracecontext.HTTPFormat{},
+				Propagation: tracecontextb3.TraceContextEgress,
 			}),
 		)
 	}
