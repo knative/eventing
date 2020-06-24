@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
@@ -51,7 +52,7 @@ func (c *Client) GetAddressableURI(addressableName string, typeMeta *metav1.Type
 	metaAddressable := resources.NewMetaResource(addressableName, namespace, typeMeta)
 	u, err := duck.GetAddressableURI(c.Dynamic, metaAddressable)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	return u.String(), nil
 }
@@ -62,7 +63,7 @@ func (c *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMe
 	namespace := c.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, typemeta)
 	if err := duck.WaitForResourceReady(c.Dynamic, metaResource); err != nil {
-		c.T.Fatalf("Failed to get %v-%s ready: %v", *typemeta, name, err)
+		c.T.Fatalf("Failed to get %v-%s ready: %v", *typemeta, name, errors.WithStack(err))
 	}
 }
 
@@ -72,7 +73,7 @@ func (c *Client) WaitForResourcesReadyOrFail(typemeta *metav1.TypeMeta) {
 	namespace := c.Namespace
 	metaResourceList := resources.NewMetaResourceList(namespace, typemeta)
 	if err := duck.WaitForResourcesReady(c.Dynamic, metaResourceList); err != nil {
-		c.T.Fatalf("Failed to get all %v resources ready: %v", *typemeta, err)
+		c.T.Fatalf("Failed to get all %v resources ready: %v", *typemeta, errors.WithStack(err))
 	}
 }
 
@@ -85,7 +86,7 @@ func (c *Client) WaitForAllTestResourcesReady() error {
 	// Explicitly wait for all pods that were created directly by this test to become ready.
 	for _, n := range c.podsCreated {
 		if err := pkgTest.WaitForPodRunning(c.Kube, n, c.Namespace); err != nil {
-			return fmt.Errorf("created Pod %q did not become ready: %v", n, err)
+			return fmt.Errorf("created Pod %q did not become ready: %v", n, errors.WithStack(err))
 		}
 	}
 	// FIXME(chizhg): This hacky sleep is added to try mitigating the test flakiness.
@@ -96,13 +97,13 @@ func (c *Client) WaitForAllTestResourcesReady() error {
 
 func (c *Client) WaitForAllTestResourcesReadyOrFail() {
 	if err := c.WaitForAllTestResourcesReady(); err != nil {
-		c.T.Fatalf("Failed to get all test resources ready: %v", err)
+		c.T.Fatalf("Failed to get all test resources ready: %v", errors.WithStack(err))
 	}
 }
 
 func (c *Client) WaitForServiceEndpointsOrFail(svcName string, numberOfExpectedEndpoints int) {
 	c.T.Logf("Waiting for %d endpoints in service %s", numberOfExpectedEndpoints, svcName)
 	if err := pkgTest.WaitForServiceEndpoints(c.Kube, svcName, c.Namespace, numberOfExpectedEndpoints); err != nil {
-		c.T.Fatalf("Failed while waiting for %d endpoints in service %s: %v", numberOfExpectedEndpoints, svcName, err)
+		c.T.Fatalf("Failed while waiting for %d endpoints in service %s: %v", numberOfExpectedEndpoints, svcName, errors.WithStack(err))
 	}
 }
