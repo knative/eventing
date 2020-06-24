@@ -24,11 +24,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/pkg/apis/duck"
 )
 
 var channelLabels = map[string]string{
 	messaging.SubscribableDuckVersionAnnotation: "true",
-	"duck.knative.dev/addressable":              "true",
+	duck.AddressableDuckVersionLabel:            "true",
 }
 
 // ChannelCRDMetadataTestHelperWithChannelTestRunner runs the Channel CRD metadata tests for all
