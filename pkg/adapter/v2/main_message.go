@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/eventing/pkg/leaderelection"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
@@ -116,23 +116,11 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	// Configuring the adapter
 	adapter := ctor(ctx, env, httpBindingsSender, reporter)
 
-	run := func(ctx context.Context) {
-		logger.Info("Starting Receive MessageAdapter", zap.Any("adapter", adapter))
-
-		if err := adapter.Start(ctx); err != nil {
-			logger.Warn("start returned an error", zap.Error(err))
-		}
-	}
-
-	leConfig, err := env.GetLeaderElectionConfig()
+	// Build the leader elector
+	elector, err := leaderelection.BuildAdapterElector(ctx, adapter)
 	if err != nil {
-		logger.Error("Error loading the leader election configuration", zap.Error(err))
+		logger.Fatal("Error creating the adapter elector", zap.Error(err))
 	}
 
-	if leConfig.LeaderElect {
-		sharedmain.RunLeaderElected(ctx, logger, run, *leConfig)
-	} else {
-		logger.Infof("%v will not run in leader-elected mode", component)
-		run(ctx)
-	}
+	elector.Run(ctx)
 }
