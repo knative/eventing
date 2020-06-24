@@ -29,8 +29,10 @@ func (source *Broker) ConvertTo(ctx context.Context, to apis.Convertible) error 
 	switch sink := to.(type) {
 	case *v1.Broker:
 		sink.Spec.Config = source.Spec.Config
-		if err := source.Spec.Delivery.ConvertTo(ctx, sink.Spec.Delivery); err != nil {
-			return err
+		if source.Spec.Delivery != nil {
+			if err := source.Spec.Delivery.ConvertTo(ctx, sink.Spec.Delivery); err != nil {
+				return err
+			}
 		}
 		sink.Status.Status = source.Status.Status
 		sink.Status.Address = source.Status.Address
@@ -45,8 +47,10 @@ func (sink *Broker) ConvertFrom(ctx context.Context, from apis.Convertible) erro
 	switch source := from.(type) {
 	case *v1.Broker:
 		sink.Spec.Config = source.Spec.Config
-		if err := source.Spec.Delivery.ConvertFrom(ctx, sink.Spec.Delivery); err != nil {
-			return err
+		if source.Spec.Delivery != nil {
+			if err := source.Spec.Delivery.ConvertFrom(ctx, sink.Spec.Delivery); err != nil {
+				return err
+			}
 		}
 		sink.Status.Status = source.Status.Status
 		sink.Status.Address = source.Status.Address
