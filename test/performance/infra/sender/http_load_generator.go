@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
+
 	"knative.dev/eventing/test/performance/infra/common"
 )
 
@@ -185,7 +186,9 @@ func vegetaAttackerTransport() *http.Transport {
 }
 
 func newCloudEventsClient(sinkUrl string) (cloudevents.Client, error) {
-	t, err := cloudevents.NewHTTP(cloudevents.WithTarget(sinkUrl))
+	t, err := cloudevents.NewHTTP(
+		cloudevents.WithTarget(sinkUrl),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transport: %v", err)
 	}
