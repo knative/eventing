@@ -98,6 +98,9 @@ func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore,
 func StartEventRecordOrFail(client *testlib.Client, podName string) (*EventInfoStore, *corev1.Pod) {
 	eventRecordPod := resources.EventRecordPod(podName)
 	client.CreatePodOrFail(eventRecordPod, testlib.WithService(podName))
+	client.WaitForResourceReadyOrFail(eventRecordPod.Name, &eventRecordPod.TypeMeta)
+	client.WaitForServiceEndpointsOrFail(podName, 1)
+
 	eventTracker, err := NewEventInfoStore(client, podName)
 	if err != nil {
 		client.T.Fatalf("Failed to start the EventInfoStore associated to pod '%s': %v", podName, err)
