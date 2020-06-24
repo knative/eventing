@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestEventTypeConversionBadType(t *testing.T) {
+func TestEventTypeConversionHighestVersion(t *testing.T) {
 	good, bad := &EventType{}, &EventType{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {

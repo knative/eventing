@@ -21,10 +21,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/pkg/apis/duck"
 )
 
 var sourceLabels = map[string]string{
-	"duck.knative.dev/source": "true",
+	duck.SourceDuckVersionLabel: "true",
 }
 
 func SourceCRDMetadataTestHelperWithChannelTestRunner(
