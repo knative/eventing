@@ -99,7 +99,7 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 		sender.WithEncoding(encoding),
 	)
 
-	matchers := []EventMatcher{IsContextEqualTo(event.Context)}
+	matchers := []EventMatcher{HasExactlyAttributesEqualTo(event.Context)}
 	if event.Data() != nil {
 		matchers = append(matchers, HasData(event.Data()))
 	} else {
@@ -112,10 +112,10 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 		extKeys = append(extKeys, k)
 	}
 	extKeys = append(extKeys, eventingchannel.EventHistory)
-	matchers = append(matchers, recordevents.AnyOf(
+	matchers = append(matchers, AnyOf(
 		HasExactlyExtensions(event.Extensions()),
 		AllOf(
-			recordevents.ContainsExactlyExtensions(extKeys...),
+			ContainsExactlyExtensions(extKeys...),
 			HasExtensions(event.Extensions()),
 		),
 	))

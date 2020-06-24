@@ -1,8 +1,10 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -22,6 +24,26 @@ func AllOf(matchers ...EventMatcher) EventMatcher {
 			}
 		}
 		return nil
+	}
+}
+
+// AnyOf returns a matcher which match if at least one of the provided matchers matches
+func AnyOf(matchers ...EventMatcher) EventMatcher {
+	return func(have event.Event) error {
+		var errs []error
+		for _, m := range matchers {
+			if err := m(have); err == nil {
+				return nil
+			} else {
+				errs = append(errs, err)
+			}
+		}
+		var sb strings.Builder
+		sb.WriteString("Cannot match any of the provided matchers\n")
+		for i, err := range errs {
+			sb.WriteString(fmt.Sprintf("%d: %s\n", i+1, err))
+		}
+		return errors.New(sb.String())
 	}
 }
 
@@ -86,6 +108,52 @@ func ContainsExtensions(exts ...string) EventMatcher {
 	}
 }
 
+// ContainsExactlyExtensions checks if the event contains only the provided extension names and no more
+func ContainsExactlyExtensions(exts ...string) EventMatcher {
+	return func(have event.Event) error {
+		// Copy in a temporary set first
+		extsInEvent := map[string]struct{}{}
+		for k := range have.Extensions() {
+			extsInEvent[k] = struct{}{}
+		}
+
+		for _, ext := range exts {
+			if _, ok := have.Extensions()[ext]; !ok {
+				return fmt.Errorf("expecting extension '%s'", ext)
+			} else {
+				delete(extsInEvent, ext)
+			}
+		}
+
+		if len(extsInEvent) != 0 {
+			var unexpectedKeys []string
+			for k := range extsInEvent {
+				unexpectedKeys = append(unexpectedKeys, k)
+			}
+			return fmt.Errorf("not expecting extensions '%v'", unexpectedKeys)
+		}
+		return nil
+	}
+}
+
+// HasExactlyAttributesEqualTo checks if the event has exactly the provided spec attributes (excluding extension attributes)
+func HasExactlyAttributesEqualTo(want event.EventContext) EventMatcher {
+	return func(have event.Event) error {
+		if want.GetSpecVersion() != have.SpecVersion() {
+			return fmt.Errorf("not matching specversion: want = '%s', got = '%s'", want.GetSpecVersion(), have.SpecVersion())
+		}
+		vs := spec.VS.Version(want.GetSpecVersion())
+
+		for _, a := range vs.Attributes() {
+			if !reflect.DeepEqual(a.Get(want), a.Get(have.Context)) {
+				return fmt.Errorf("expecting attribute '%s' equal to '%s', got '%s'", a.PrefixedName(), a.Get(want), a.Get(have.Context))
+			}
+		}
+
+		return nil
+	}
+}
+
 // HasExactlyExtensions checks if the event contains exactly the provided extensions
 func HasExactlyExtensions(ext map[string]interface{}) EventMatcher {
 	return func(have event.Event) error {
@@ -126,6 +194,17 @@ func HasData(want []byte) EventMatcher {
 	}
 }
 
+// DataContains matches that the data field of the event, converted to a string, contains the provided string
+func DataContains(expectedContainedString string) EventMatcher {
+	return func(have event.Event) error {
+		dataAsString := string(have.Data())
+		if !strings.Contains(dataAsString, expectedContainedString) {
+			return fmt.Errorf("data '%s' doesn't contain '%s'", dataAsString, expectedContainedString)
+		}
+		return nil
+	}
+}
+
 // HasNoData checks if the event doesn't contain data
 func HasNoData() EventMatcher {
 	return func(have event.Event) error {
@@ -141,22 +220,9 @@ func IsEqualTo(want event.Event) EventMatcher {
 	return AllOf(IsContextEqualTo(want.Context), IsDataEqualTo(want))
 }
 
-// IsContextEqualTo performs a semantic equality check of the event context (like AssertEventContextEquals)
+// IsContextEqualTo performs a semantic equality check of the event context, including extension attributes (like AssertEventContextEquals)
 func IsContextEqualTo(want event.EventContext) EventMatcher {
-	return AllOf(func(have event.Event) error {
-		if want.GetSpecVersion() != have.SpecVersion() {
-			return fmt.Errorf("not matching specversion: want = '%s', got = '%s'", want.GetSpecVersion(), have.SpecVersion())
-		}
-		vs := spec.VS.Version(want.GetSpecVersion())
-
-		for _, a := range vs.Attributes() {
-			if !reflect.DeepEqual(a.Get(want), a.Get(have.Context)) {
-				return fmt.Errorf("expecting attribute '%s' equal to '%s', got '%s'", a.PrefixedName(), a.Get(want), a.Get(have.Context))
-			}
-		}
-
-		return nil
-	}, HasExactlyExtensions(want.GetExtensions()))
+	return AllOf(HasExactlyAttributesEqualTo(want), HasExactlyExtensions(want.GetExtensions()))
 }
 
 // IsDataEqualTo checks if the data field matches with want
