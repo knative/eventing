@@ -31,8 +31,10 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace"
 	_ "knative.dev/pkg/system/testing"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
@@ -220,7 +222,9 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	p, err := cloudevents.NewHTTP(
 		http.WithTarget(server.URL),
 		http.WithMethod(method),
-	)
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}))
 	require.NoError(t, err)
 	p.RequestTemplate.Host = host
 

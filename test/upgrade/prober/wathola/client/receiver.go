@@ -23,7 +23,9 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/wavesoftware/go-ensure"
+	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 var log = config.Log
@@ -38,9 +40,11 @@ func Receive(
 	receiveEvent ReceiveEvent,
 	middlewares ...cloudeventshttp.Middleware,
 ) {
-	portOpt := cloudevents.WithPort(port)
 	opts := make([]cloudeventshttp.Option, 0)
-	opts = append(opts, portOpt)
+	opts = append(opts, cloudevents.WithPort(port))
+	opts = append(opts, cloudevents.WithRoundTripper(&ochttp.Transport{
+		Propagation: tracecontextb3.TraceContextEgress,
+	}))
 	if config.Instance.Readiness.Enabled {
 		readyOpt := cloudevents.WithMiddleware(readinessMiddleware)
 		opts = append(opts, readyOpt)

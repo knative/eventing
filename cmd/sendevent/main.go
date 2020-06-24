@@ -26,8 +26,9 @@ import (
 	"os"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
+	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 var (
@@ -64,7 +65,11 @@ func main() {
 		source = fmt.Sprintf("http://%s", utils.GetClusterDomainName())
 	}
 
-	t, err := cloudevents.NewHTTP(cloudevents.WithTarget(target))
+	t, err := cloudevents.NewHTTP(
+		cloudevents.WithTarget(target),
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}))
 	if err != nil {
 		log.Printf("failed to create transport, %v", err)
 		os.Exit(1)
