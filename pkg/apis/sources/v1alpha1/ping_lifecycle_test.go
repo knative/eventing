@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1_test
+package v1alpha1
 
 import (
 	"testing"
@@ -24,45 +24,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
-var (
-	availableDeployment = &appsv1.Deployment{
-		Status: appsv1.DeploymentStatus{
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			},
-		},
-	}
-	unavailableDeployment = &appsv1.Deployment{
-		Status: appsv1.DeploymentStatus{
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionFalse,
-				},
-			},
-		},
-	}
-	unknownDeployment = &appsv1.Deployment{
-		Status: appsv1.DeploymentStatus{
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionUnknown,
-				},
-			},
-		},
-	}
-)
-
 func TestPingSource_GetGroupVersionKind(t *testing.T) {
-	src := v1alpha1.PingSource{}
+	src := PingSource{}
 	gvk := src.GetGroupVersionKind()
 
 	if gvk.Kind != "PingSource" {
@@ -71,7 +37,7 @@ func TestPingSource_GetGroupVersionKind(t *testing.T) {
 }
 
 func TestPingSource_PingSourceSource(t *testing.T) {
-	cePingSource := v1alpha1.PingSourceSource("ns1", "job1")
+	cePingSource := PingSourceSource("ns1", "job1")
 
 	if cePingSource != "/apis/v1/namespaces/ns1/pingsources/job1" {
 		t.Errorf("Should be '/apis/v1/namespaces/ns1/pingsources/job1'")
@@ -83,17 +49,17 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 
 	tests := []struct {
 		name                string
-		s                   *v1alpha1.PingSourceStatus
+		s                   *PingSourceStatus
 		wantConditionStatus corev1.ConditionStatus
 		want                bool
 	}{{
 		name: "uninitialized",
-		s:    &v1alpha1.PingSourceStatus{},
+		s:    &PingSourceStatus{},
 		want: false,
 	}, {
 		name: "initialized",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			return s
 		}(),
@@ -101,18 +67,18 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		want:                false,
 	}, {
 		name: "mark deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
 		name: "mark sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 
 			s.MarkSink(exampleUri)
@@ -122,8 +88,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		want:                false,
 	}, {
 		name: "mark schedule",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			return s
@@ -132,19 +98,19 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		want:                false,
 	}, {
 		name: "mark sink and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
 		name: "mark schedule and sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
@@ -154,48 +120,48 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		want:                false,
 	}, {
 		name: "mark schedule, sink and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
 		want:                true,
 	}, {
 		name: "mark schedule, sink and unavailable deployment",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(unavailableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.UnavailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
 		want:                false,
 	}, {
 		name: "mark schedule, sink and unknown deployment",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(unknownDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.UnknownDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
 		name: "mark schedule, sink and deployed then not deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
@@ -203,24 +169,24 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		want:                false,
 	}, {
 		name: "mark schedule validated, sink empty and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
 		want:                false,
 	}, {
 		name: "mark schedule validated, sink empty and deployed then sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.MarkSink(exampleUri)
 			return s
 		}(),
@@ -249,145 +215,145 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 
 	tests := []struct {
 		name string
-		s    *v1alpha1.PingSourceStatus
+		s    *PingSourceStatus
 		want *apis.Condition
 	}{{
 		name: "uninitialized",
-		s:    &v1alpha1.PingSourceStatus{},
+		s:    &PingSourceStatus{},
 		want: nil,
 	}, {
 		name: "initialized",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark schedule",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark sink and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark schedule and sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark schedule, sink and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}, {
 		name: "mark schedule, sink and deployed then not deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Reason:  "DeploymentUnavailable",
 			Status:  corev1.ConditionUnknown,
 			Message: "The Deployment '' is unavailable.",
 		},
 	}, {
 		name: "mark schedule validated, sink empty and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Reason:  "SinkEmpty",
 			Status:  corev1.ConditionFalse,
 			Message: "Sink has resolved to empty.",
 		},
 	}, {
 		name: "mark schedule validated, sink empty and deployed then sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}}
@@ -408,183 +374,183 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 	exampleUri, _ := apis.ParseURL("uri://example")
 	tests := []struct {
 		name      string
-		s         *v1alpha1.PingSourceStatus
+		s         *PingSourceStatus
 		condQuery apis.ConditionType
 		want      *apis.Condition
 	}{{
 		name:      "uninitialized",
-		s:         &v1alpha1.PingSourceStatus{},
-		condQuery: v1alpha1.PingSourceConditionReady,
+		s:         &PingSourceStatus{},
+		condQuery: PingSourceConditionReady,
 		want:      nil,
 	}, {
 		name: "initialized",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark schedule",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
 		name: "mark schedule, sink and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}, {
 		name: "mark schedule, sink and deployed then no sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.MarkNoSink("Testing", "hi%s", "")
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
 			Message: "hi",
 		},
 	}, {
 		name: "mark schedule, sink and deployed then invalid schedule",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.MarkInvalidSchedule("Testing", "hi%s", "")
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
 			Message: "hi",
 		},
 	}, {
 		name: "mark schedule, sink and deployed then deploying",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "DeploymentUnavailable",
 			Message: "The Deployment '' is unavailable.",
 		},
 	}, {
 		name: "mark schedule, sink and deployed then not deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "DeploymentUnavailable",
 			Message: "The Deployment '' is unavailable.",
 		},
 	}, {
 		name: "mark schedule, sink empty and deployed",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:    v1alpha1.PingSourceConditionReady,
+			Type:    PingSourceConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "SinkEmpty",
 			Message: "Sink has resolved to empty.",
 		},
 	}, {
 		name: "mark schedule, sink empty and deployed then sink",
-		s: func() *v1alpha1.PingSourceStatus {
-			s := &v1alpha1.PingSourceStatus{}
+		s: func() *PingSourceStatus {
+			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
 			s.MarkSink(exampleUri)
 			return s
 		}(),
-		condQuery: v1alpha1.PingSourceConditionReady,
+		condQuery: PingSourceConditionReady,
 		want: &apis.Condition{
-			Type:   v1alpha1.PingSourceConditionReady,
+			Type:   PingSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}}
