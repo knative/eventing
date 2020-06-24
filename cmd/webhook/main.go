@@ -43,6 +43,8 @@ import (
 
 	defaultconfig "knative.dev/eventing/pkg/apis/config"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
@@ -60,6 +62,9 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	eventingv1beta1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1beta1.Broker{},
 	eventingv1beta1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1beta1.Trigger{},
 	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
+	// v1
+	eventingv1.SchemeGroupVersion.WithKind("Broker"):  &eventingv1.Broker{},
+	eventingv1.SchemeGroupVersion.WithKind("Trigger"): &eventingv1.Trigger{},
 
 	// For group messaging.knative.dev.
 	// v1beta1
@@ -156,7 +161,7 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	)
 }
 
-func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *controller.Impl {
 	return configmaps.NewAdmissionController(ctx,
 
 		// Name of the configmap webhook.
@@ -211,6 +216,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
+		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
+		eventingv1_      = eventingv1.SchemeGroupVersion.Version
 		sourcesv1alpha1_ = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_ = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
@@ -221,6 +228,24 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
+			// Eventing
+			eventingv1beta1.Kind("Trigger"): {
+				DefinitionName: eventing.TriggersResource.String(),
+				HubVersion:     eventingv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					eventingv1beta1_: &eventingv1beta1.Trigger{},
+					eventingv1_:      &eventingv1.Trigger{},
+				},
+			},
+			eventingv1beta1.Kind("Broker"): {
+				DefinitionName: eventing.BrokersResource.String(),
+				HubVersion:     eventingv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					eventingv1beta1_: &eventingv1beta1.Broker{},
+					eventingv1_:      &eventingv1.Broker{},
+				},
+			},
+
 			// Sources
 			sourcesv1alpha2.Kind("ApiServerSource"): {
 				DefinitionName: sources.ApiServerSourceResource.String(),
