@@ -19,11 +19,12 @@ import (
 	"encoding/json"
 
 	"go.uber.org/zap"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	kle "knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/tracing"
 )
@@ -31,15 +32,16 @@ import (
 type EnvConfigConstructor func() EnvConfigAccessor
 
 const (
-	EnvConfigComponent     = "K_COMPONENT"
-	EnvConfigNamespace     = "NAMESPACE"
-	EnvConfigName          = "NAME"
-	EnvConfigResourceGroup = "K_RESOURCE_GROUP"
-	EnvConfigSink          = "K_SINK"
-	EnvConfigCEOverrides   = "K_CE_OVERRIDES"
-	EnvConfigMetricsConfig = "K_METRICS_CONFIG"
-	EnvConfigLoggingConfig = "K_LOGGING_CONFIG"
-	EnvConfigTracingConfig = "K_TRACING_CONFIG"
+	EnvConfigComponent            = "K_COMPONENT"
+	EnvConfigNamespace            = "NAMESPACE"
+	EnvConfigName                 = "NAME"
+	EnvConfigResourceGroup        = "K_RESOURCE_GROUP"
+	EnvConfigSink                 = "K_SINK"
+	EnvConfigCEOverrides          = "K_CE_OVERRIDES"
+	EnvConfigMetricsConfig        = "K_METRICS_CONFIG"
+	EnvConfigLoggingConfig        = "K_LOGGING_CONFIG"
+	EnvConfigTracingConfig        = "K_TRACING_CONFIG"
+	EnvConfigLeaderElectionConfig = "K_LEADER_ELECTION_CONFIG"
 )
 
 // EnvConfig is the minimal set of configuration parameters
@@ -79,6 +81,9 @@ type EnvConfig struct {
 	// a config map inside the controllers namespace and copied here.
 	// Default is no-op.
 	TracingConfigJson string `envconfig:"K_TRACING_CONFIG"`
+
+	// LeaderElectionConfigJson is the leader election component configuration.
+	LeaderElectionConfigJson string `envconfig:"K_LEADER_ELECTION_CONFIG"`
 }
 
 // EnvConfigAccessor defines accessors for the minimal
@@ -105,6 +110,9 @@ type EnvConfigAccessor interface {
 	SetupTracing(*zap.SugaredLogger) error
 
 	GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error)
+
+	// GetLeaderElectionConfig returns leader election configuration.
+	GetLeaderElectionConfig() (*kle.ComponentConfig, error)
 }
 
 var _ EnvConfigAccessor = (*EnvConfig)(nil)
@@ -166,4 +174,22 @@ func (e *EnvConfig) GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error
 		}
 	}
 	return &ceOverrides, nil
+}
+
+func (e *EnvConfig) GetLeaderElectionConfig() (*kle.ComponentConfig, error) {
+	if e.LeaderElectionConfigJson == "" {
+		return defaultLeaderElectionConfig(), nil
+	}
+
+	var config kle.ComponentConfig
+	if err := json.Unmarshal([]byte(e.LeaderElectionConfigJson), &config); err != nil {
+		return defaultLeaderElectionConfig(), err
+	}
+	return &config, nil
+}
+
+func defaultLeaderElectionConfig() *kle.ComponentConfig {
+	return &kle.ComponentConfig{
+		LeaderElect: false,
+	}
 }

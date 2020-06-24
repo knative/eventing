@@ -27,6 +27,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
@@ -105,16 +106,30 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 
 	eventsClient, err := NewCloudEventsClient(env.GetSink(), ceOverrides, reporter)
 	if err != nil {
-		logger.Fatal("error building cloud event client", zap.Error(err))
+		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
 
 	// Configuring the adapter
 	adapter := ctor(ctx, env, eventsClient)
 
-	logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
+	run := func(ctx context.Context) {
+		logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
 
-	if err := adapter.Start(ctx); err != nil {
-		logger.Warn("start returned an error", zap.Error(err))
+		if err := adapter.Start(ctx); err != nil {
+			logger.Warn("Start returned an error", zap.Error(err))
+		}
+	}
+
+	leConfig, err := env.GetLeaderElectionConfig()
+	if err != nil {
+		logger.Error("Error loading the leader election configuration", zap.Error(err))
+	}
+
+	if leConfig.LeaderElect {
+		sharedmain.RunLeaderElected(ctx, logger, run, *leConfig)
+	} else {
+		logger.Infof("%v will not run in leader-elected mode", component)
+		run(ctx)
 	}
 }
 

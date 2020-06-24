@@ -34,6 +34,7 @@ func TestMainWithContext(t *testing.T) {
 	os.Setenv("K_METRICS_CONFIG", "metrics")
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("MODE", "mymode")
+	os.Setenv("K_LEADER_ELECTION_CONFIG", "")
 
 	ctx, cancel := context.WithCancel(context.TODO())
 
@@ -48,6 +49,14 @@ func TestMainWithContext(t *testing.T) {
 
 			if env.Sink != "http://sink" {
 				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
+			}
+
+			leConfig, err := env.GetLeaderElectionConfig()
+			if err != nil {
+				t.Errorf("Expected no error: %v", err)
+			}
+			if leConfig.LeaderElect {
+				t.Errorf("Expected LeaderElect to be false, got: %t", leConfig.LeaderElect)
 			}
 			return &myAdapter{}
 		})
