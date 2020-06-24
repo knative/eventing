@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
+	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 )
 

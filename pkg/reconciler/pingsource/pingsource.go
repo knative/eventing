@@ -21,18 +21,17 @@ import (
 	"encoding/json"
 	"fmt"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
-
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
+
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -63,6 +62,7 @@ const (
 	pingSourceRoleBindingCreated    = "PingSourceRoleBindingCreated"
 
 	component                = "pingsource"
+	mtcomponent              = "pingsource-mt-adapter"
 	mtadapterName            = "pingsource-mt-adapter"
 	stadapterClusterRoleName = "knative-eventing-pingsource-adapter"
 )
@@ -105,6 +105,9 @@ type Reconciler struct {
 	sinkResolver   *resolver.URIResolver
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
+
+	// Leader election configuration for the mt receive adapter
+	leConfig string
 }
 
 // Check that our Reconciler implements ReconcileKind
@@ -309,6 +312,7 @@ func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1al
 		Image:              r.receiveMTAdapterImage,
 		LoggingConfig:      loggingConfig,
 		MetricsConfig:      metricsConfig,
+		LeConfig:           r.leConfig,
 	}
 	expected := resources.MakeMTReceiveAdapter(args)
 

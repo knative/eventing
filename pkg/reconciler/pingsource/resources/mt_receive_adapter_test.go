@@ -79,6 +79,9 @@ func TestMakeMTPingAdapter(t *testing.T) {
 							}, {
 								Name:  "K_LOGGING_CONFIG",
 								Value: "logging",
+							}, {
+								Name:  "K_LEADER_ELECTION_CONFIG",
+								Value: "",
 							}},
 							// Set low resource requests and limits.
 							// This should be configurable.

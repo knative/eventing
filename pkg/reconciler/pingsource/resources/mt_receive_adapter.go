@@ -38,6 +38,7 @@ type MTArgs struct {
 	Image              string
 	MetricsConfig      string
 	LoggingConfig      string
+	LeConfig           string
 }
 
 // MakeMTReceiveAdapter generates the mtping deployment for pingsources
@@ -111,5 +112,8 @@ func makeEnv(args MTArgs) []corev1.EnvVar {
 	}, {
 		Name:  adapter.EnvConfigLoggingConfig,
 		Value: args.LoggingConfig,
+	}, {
+		Name:  adapter.EnvConfigLeaderElectionConfig,
+		Value: args.LeConfig,
 	}}
 }

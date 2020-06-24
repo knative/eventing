@@ -27,7 +27,7 @@ import (
 	"knative.dev/eventing/pkg/adapter/v2"
 )
 
-// mtpingAdapter implements the PingSource mt adapter to
+// mtpingAdapter implements the PingSource mt adapter to sinks
 type mtpingAdapter struct {
 	logger *zap.SugaredLogger
 	client cloudevents.Client
