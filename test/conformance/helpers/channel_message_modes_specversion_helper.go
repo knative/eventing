@@ -48,7 +48,7 @@ func ChannelMessageModesAndSpecVersionsTestRunner(
 	for _, event := range []cloudevents.Event{MinEvent(), FullEvent()} {
 		for _, enc := range []cloudevents.Encoding{cloudevents.EncodingBinary, cloudevents.EncodingStructured} {
 			for _, version := range []string{cloudevents.VersionV03, cloudevents.VersionV1} {
-				testCases = append(testCases, testCase{event, enc, version})
+				testCases = append(testCases, testCase{ConvertEventExtensionsToString(t, event), enc, version})
 			}
 		}
 	}
