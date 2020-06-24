@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,7 +173,7 @@ func TestApiServerSource(t *testing.T) {
 				eventTracker.AssertNot(recordevents.Any())
 			} else {
 				eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
-					recordevents.DataContains(tc.expected),
+					cetest.DataContains(tc.expected),
 				))
 			}
 		})

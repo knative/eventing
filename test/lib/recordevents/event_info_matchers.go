@@ -17,7 +17,6 @@ limitations under the License.
 package recordevents
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -101,63 +100,4 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 			return nil
 		},
 	)
-}
-
-// DataContains matches that the data field of the event, converted to a string, contains the provided string
-func DataContains(expectedContainedString string) cetest.EventMatcher {
-	return func(have cloudevents.Event) error {
-		dataAsString := string(have.Data())
-		if !strings.Contains(dataAsString, expectedContainedString) {
-			return fmt.Errorf("data '%s' doesn't contain '%s'", dataAsString, expectedContainedString)
-		}
-		return nil
-	}
-}
-
-// AnyOf returns a matcher which match if at least one of the provided matchers matches
-func AnyOf(matchers ...cetest.EventMatcher) cetest.EventMatcher {
-	return func(have cloudevents.Event) error {
-		var errs []error
-		for _, m := range matchers {
-			if err := m(have); err == nil {
-				return nil
-			} else {
-				errs = append(errs, err)
-			}
-		}
-		var sb strings.Builder
-		sb.WriteString("Cannot match any of the provided matchers\n")
-		for i, err := range errs {
-			sb.WriteString(fmt.Sprintf("%d: %s\n", i+1, err))
-		}
-		return errors.New(sb.String())
-	}
-}
-
-// ContainsExactlyExtensions checks if the event contains only the provided extension names and no more
-func ContainsExactlyExtensions(exts ...string) cetest.EventMatcher {
-	return func(have cloudevents.Event) error {
-		// Copy in a temporary set first
-		extsInEvent := map[string]struct{}{}
-		for k, _ := range have.Extensions() {
-			extsInEvent[k] = struct{}{}
-		}
-
-		for _, ext := range exts {
-			if _, ok := have.Extensions()[ext]; !ok {
-				return fmt.Errorf("expecting extension '%s'", ext)
-			} else {
-				delete(extsInEvent, ext)
-			}
-		}
-
-		if len(extsInEvent) != 0 {
-			var unexpectedKeys []string
-			for k, _ := range extsInEvent {
-				unexpectedKeys = append(unexpectedKeys, k)
-			}
-			return fmt.Errorf("not expecting extensions '%v'", unexpectedKeys)
-		}
-		return nil
-	}
 }

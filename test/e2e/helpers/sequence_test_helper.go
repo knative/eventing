@@ -24,13 +24,14 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func SequenceTestHelper(t *testing.T,
@@ -142,7 +143,7 @@ func SequenceTestHelper(t *testing.T,
 		}
 		eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
 			cetest.HasSource(eventSource),
-			recordevents.DataContains(expectedMsg),
+			cetest.DataContains(expectedMsg),
 		))
 	})
 }

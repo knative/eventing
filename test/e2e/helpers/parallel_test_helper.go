@@ -24,13 +24,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type branchConfig struct {
@@ -136,7 +137,7 @@ func ParallelTestHelper(t *testing.T,
 			// verify the logger service receives the correct transformed event
 			eventTracker.AssertExact(1, recordevents.MatchEvent(
 				HasSource(eventSource),
-				recordevents.DataContains(tc.expected),
+				DataContains(tc.expected),
 			))
 
 			eventTracker.Cleanup()
