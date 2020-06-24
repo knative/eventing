@@ -108,10 +108,10 @@ func TestContainerSourceGetConditionSet(t *testing.T) {
 
 func TestContainerSourceStatusIsReady(t *testing.T) {
 	tests := []struct {
-		name string
-		s    *ContainerSourceStatus
+		name                string
+		s                   *ContainerSourceStatus
 		wantConditionStatus corev1.ConditionStatus
-		want bool
+		want                bool
 	}{{
 		name: "uninitialized",
 		s:    &ContainerSourceStatus{},
@@ -124,7 +124,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark ready ra",
 		s: func() *ContainerSourceStatus {
@@ -134,7 +134,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark ready sb",
 		s: func() *ContainerSourceStatus {
@@ -144,7 +144,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
@@ -155,7 +155,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
-		want: true,
+		want:                true,
 	}, {
 		name: "mark ready sb and unavailable ra",
 		s: func() *ContainerSourceStatus {
@@ -166,8 +166,8 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
-	},{
+		want:                false,
+	}, {
 		name: "mark ready sb and unknown ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
@@ -177,8 +177,8 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
-	},{
+		want:                false,
+	}, {
 		name: "mark ready sb and ra the no sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
@@ -189,7 +189,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark ready sb and ra then not ra",
 		s: func() *ContainerSourceStatus {
@@ -201,7 +201,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark not ready sb and ready ra",
 		s: func() *ContainerSourceStatus {
@@ -212,7 +212,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark not ready sb and ra then ready sb",
 		s: func() *ContainerSourceStatus {
@@ -224,7 +224,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
-		want: true,
+		want:                true,
 	}}
 
 	for _, test := range tests {

@@ -82,10 +82,10 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 	exampleUri, _ := apis.ParseURL("uri://example")
 
 	tests := []struct {
-		name string
-		s    *v1alpha1.PingSourceStatus
+		name                string
+		s                   *v1alpha1.PingSourceStatus
 		wantConditionStatus corev1.ConditionStatus
-		want bool
+		want                bool
 	}{{
 		name: "uninitialized",
 		s:    &v1alpha1.PingSourceStatus{},
@@ -98,7 +98,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark deployed",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -108,7 +108,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark sink",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -119,7 +119,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark schedule",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -129,7 +129,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark sink and deployed",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -140,7 +140,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark schedule and sink",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -151,7 +151,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark schedule, sink and deployed",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -163,7 +163,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
-		want: true,
+		want:                true,
 	}, {
 		name: "mark schedule, sink and unavailable deployment",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -200,7 +200,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark schedule validated, sink empty and deployed",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -212,7 +212,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
-		want: false,
+		want:                false,
 	}, {
 		name: "mark schedule validated, sink empty and deployed then sink",
 		s: func() *v1alpha1.PingSourceStatus {
@@ -225,7 +225,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
-		want: true,
+		want:                true,
 	}}
 
 	for _, test := range tests {
