@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -28,10 +28,13 @@ import (
 func (source *Trigger) ConvertTo(_ context.Context, to apis.Convertible) error {
 	switch sink := to.(type) {
 	case *v1.Trigger:
+		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Broker = source.Spec.Broker
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		if source.Spec.Filter != nil {
-			sink.Spec.Filter = &v1.TriggerFilter{}
+			sink.Spec.Filter = &v1.TriggerFilter{
+				Attributes: make(v1.TriggerFilterAttributes, 0),
+			}
 			for k, v := range source.Spec.Filter.Attributes {
 				sink.Spec.Filter.Attributes[k] = v
 			}
@@ -48,12 +51,16 @@ func (source *Trigger) ConvertTo(_ context.Context, to apis.Convertible) error {
 func (sink *Trigger) ConvertFrom(_ context.Context, from apis.Convertible) error {
 	switch source := from.(type) {
 	case *v1.Trigger:
+		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Broker = source.Spec.Broker
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		if source.Spec.Filter != nil {
-			sink.Spec.Filter = &TriggerFilter{}
+			attributes := TriggerFilterAttributes{}
 			for k, v := range source.Spec.Filter.Attributes {
-				sink.Spec.Filter.Attributes[k] = v
+				attributes[k] = v
+			}
+			sink.Spec.Filter = &TriggerFilter{
+				Attributes: attributes,
 			}
 		}
 		sink.Status.Status = source.Status.Status
