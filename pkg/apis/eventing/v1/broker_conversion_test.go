@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestBrokerConversionBadType(t *testing.T) {
+func TestBrokerConversionHighestVersion(t *testing.T) {
 	good, bad := &Broker{}, &Broker{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {

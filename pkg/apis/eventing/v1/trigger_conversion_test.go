@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestTriggerConversionBadType(t *testing.T) {
+func TestTriggerConversionHighestVersion(t *testing.T) {
 	good, bad := &Trigger{}, &Trigger{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
