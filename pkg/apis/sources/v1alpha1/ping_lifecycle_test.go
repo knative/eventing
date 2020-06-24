@@ -199,7 +199,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionFalse,
+		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
 		name: "mark schedule validated, sink empty and deployed",
@@ -356,7 +356,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		want: &apis.Condition{
 			Type:    v1alpha1.PingSourceConditionReady,
 			Reason:  "DeploymentUnavailable",
-			Status:  corev1.ConditionFalse,
+			Status:  corev1.ConditionUnknown,
 			Message: "The Deployment '' is unavailable.",
 		},
 	}, {
@@ -532,7 +532,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 		condQuery: v1alpha1.PingSourceConditionReady,
 		want: &apis.Condition{
 			Type:    v1alpha1.PingSourceConditionReady,
-			Status:  corev1.ConditionFalse,
+			Status:  corev1.ConditionUnknown,
 			Reason:  "DeploymentUnavailable",
 			Message: "The Deployment '' is unavailable.",
 		},
@@ -550,7 +550,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 		condQuery: v1alpha1.PingSourceConditionReady,
 		want: &apis.Condition{
 			Type:    v1alpha1.PingSourceConditionReady,
-			Status:  corev1.ConditionFalse,
+			Status:  corev1.ConditionUnknown,
 			Reason:  "DeploymentUnavailable",
 			Message: "The Deployment '' is unavailable.",
 		},

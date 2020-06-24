@@ -20,12 +20,11 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 )
 
@@ -175,6 +174,18 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(unknownDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
+	}, {
+		name: "mark sink and sufficient permissions and not deployed",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
+			s.MarkSufficientPermissions()
+			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,

@@ -169,7 +169,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		wantConditionStatus: corev1.ConditionFalse,
+		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
 		name: "mark sink and not enough permissions",

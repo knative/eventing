@@ -98,13 +98,13 @@ func (s *ContainerSourceStatus) PropagateReceiveAdapterStatus(d *appsv1.Deployme
 			if cond.Status == corev1.ConditionTrue {
 				containerCondSet.Manage(s).MarkTrue(ContainerSourceConditionReceiveAdapterReady)
 			} else if cond.Status == corev1.ConditionFalse {
-				containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, "The status of Deployment is False: %s : %s", cond.Reason, cond.Message)
+				containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, cond.Reason, cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
-				containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, "The status of Deployment is Unknown: %s : %s", cond.Reason, cond.Message)
+				containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, cond.Reason, cond.Message)
 			}
 		}
 	}
 	if !deploymentAvailableFound {
-		containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
 }

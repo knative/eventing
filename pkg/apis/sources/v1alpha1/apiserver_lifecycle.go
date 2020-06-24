@@ -119,14 +119,14 @@ func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deploy
 			if cond.Status == corev1.ConditionTrue {
 				apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionDeployed)
 			} else if cond.Status == corev1.ConditionFalse {
-				apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, "The status of Deployment is False: %s : %s", cond.Reason, cond.Message)
+				apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, cond.Reason, cond.Message)
 			} else if cond.Status == corev1.ConditionUnknown {
-				apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, "The status of Deployment is Unknown: %s : %s", cond.Reason, cond.Message)
+				apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, cond.Reason, cond.Message)
 			}
 		}
 	}
 	if !deploymentAvailableFound {
-		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+		PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
 }
 
