@@ -29,6 +29,8 @@ readonly PRE_INSTALL_V_0_16="pre-install-to-v0.16.0.yaml"
 declare -A RELEASES
 RELEASES=(
   ["eventing.yaml"]="${EVENTING_CORE_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL}"
+  # The artifact eventing-upgrade.yaml hosts all the resources necessary to do the upgrade.
+  ["eventing-upgrade.yaml"]="${PRE_INSTALL_V_0_16}"
 )
 readonly RELEASES
 
