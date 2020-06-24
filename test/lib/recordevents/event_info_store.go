@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	pkgTest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -98,7 +99,10 @@ func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore,
 func StartEventRecordOrFail(client *testlib.Client, podName string) (*EventInfoStore, *corev1.Pod) {
 	eventRecordPod := resources.EventRecordPod(podName)
 	client.CreatePodOrFail(eventRecordPod, testlib.WithService(podName))
-	client.WaitForResourceReadyOrFail(eventRecordPod.Name, &eventRecordPod.TypeMeta)
+	err := pkgTest.WaitForPodRunning(client.Kube, podName, client.Namespace)
+	if err != nil {
+		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", podName, errors.WithStack(err))
+	}
 	client.WaitForServiceEndpointsOrFail(podName, 1)
 
 	eventTracker, err := NewEventInfoStore(client, podName)
