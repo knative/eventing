@@ -159,12 +159,12 @@ func (r *Reconciler) resolveGroupVersions(ctx context.Context, crd *v1beta1.Cust
 
 func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVersionResource) {
 	r.lock.RLock()
-	rc, found := r.controllers[*gvr]
+	_, found := r.controllers[*gvr]
 	r.lock.RUnlock()
 	if found {
 		r.lock.Lock()
 		// Now that we grabbed the write lock, check that nobody deleted it already.
-		rc, found = r.controllers[*gvr]
+		rc, found := r.controllers[*gvr]
 		if found {
 			logging.FromContext(ctx).Info("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
 			rc.cancel()
@@ -176,7 +176,7 @@ func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVers
 
 func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) error {
 	r.lock.RLock()
-	rc, found := r.controllers[*gvr]
+	_, found := r.controllers[*gvr]
 	r.lock.RUnlock()
 	if found {
 		return nil
@@ -185,7 +185,7 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.Custo
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	// Now that we grabbed the write lock, check that nobody has created the controller.
-	rc, found = r.controllers[*gvr]
+	_, found = r.controllers[*gvr]
 	if found {
 		return nil
 	}
@@ -202,7 +202,7 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.Custo
 	// Source Duck controller instantiation
 	sd := sdc(sdctx, r.ogcmw)
 
-	rc = runningController{
+	rc := runningController{
 		controller: sd,
 		cancel:     cancel,
 	}
