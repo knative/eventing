@@ -24,18 +24,14 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 
+	"knative.dev/pkg/network"
+
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/network"
 )
-
-var defaultTransformers = []binding.Transformer{
-	transformer.AddTimeNow,
-}
 
 // UnknownChannelError represents the error when an event is received by a channel dispatcher for a
 // channel that does not exist.
@@ -176,9 +172,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
-	transformers := append(defaultTransformers, AddHistory(host))
-
-	err = r.receiverFunc(request.Context(), channel, message, transformers, utils.PassThroughHeaders(request.Header))
+	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{AddHistory(host)}, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
