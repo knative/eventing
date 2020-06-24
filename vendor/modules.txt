@@ -944,7 +944,7 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/pkg v0.0.0-20200623024526-fb0320d9287e
+# knative.dev/pkg v0.0.0-20200623204627-e0a0d63a9e86
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1047,6 +1047,8 @@ knative.dev/pkg/testutils/clustermanager/perf-tests
 knative.dev/pkg/testutils/clustermanager/perf-tests/pkg
 knative.dev/pkg/tracing
 knative.dev/pkg/tracing/config
+knative.dev/pkg/tracing/propagation
+knative.dev/pkg/tracing/propagation/tracecontextb3
 knative.dev/pkg/tracker
 knative.dev/pkg/version
 knative.dev/pkg/webhook
@@ -1058,7 +1060,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/test-infra v0.0.0-20200623005026-1f7e5f05c52b
+# knative.dev/test-infra v0.0.0-20200623231727-6d5d6aeb457c
 ## explicit
 knative.dev/test-infra/scripts
 # sigs.k8s.io/yaml v1.2.0
