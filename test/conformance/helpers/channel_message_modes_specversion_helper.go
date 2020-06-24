@@ -108,7 +108,7 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 	// The extension matcher needs to match an eventual extension containing knativehistory extension
 	// (which is not mandatory by the spec)
 	var extKeys []string
-	for k, _ := range event.Extensions() {
+	for k := range event.Extensions() {
 		extKeys = append(extKeys, k)
 	}
 	extKeys = append(extKeys, eventingchannel.EventHistory)
