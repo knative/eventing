@@ -20,10 +20,9 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
-
-	"knative.dev/eventing/pkg/apis/duck"
 )
 
 const (
@@ -119,11 +118,20 @@ func (s *PingSourceStatus) MarkNoSink(reason, messageFormat string, messageA ...
 // PropagateDeploymentAvailability uses the availability of the provided Deployment to determine if
 // PingSourceConditionDeployed should be marked as true or false.
 func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment) {
-	if duck.DeploymentIsAvailable(&d.Status, false) {
-		PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionDeployed)
-	} else {
-		// I don't know how to propagate the status well, so just give the name of the Deployment
-		// for now.
+	deploymentAvailableFound := false
+	for _, cond := range d.Status.Conditions {
+		if cond.Type == appsv1.DeploymentAvailable {
+			deploymentAvailableFound = true
+			if cond.Status == corev1.ConditionTrue {
+				PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionDeployed)
+			} else if cond.Status == corev1.ConditionFalse {
+				PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, "The status of Deployment is False: %s : %s", cond.Reason, cond.Message)
+			} else if cond.Status == corev1.ConditionUnknown {
+				PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, "The status of Deployment is Unknown: %s : %s", cond.Reason, cond.Message)
+			}
+		}
+	}
+	if !deploymentAvailableFound {
 		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
 }

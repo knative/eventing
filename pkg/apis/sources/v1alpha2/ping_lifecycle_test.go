@@ -39,6 +39,26 @@ var (
 			},
 		},
 	}
+	unavailableDeployment = &appsv1.Deployment{
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+	}
+	unknownDeployment = &appsv1.Deployment{
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionUnknown,
+				},
+			},
+		},
+	}
 )
 
 func TestPingSourceGetConditionSet(t *testing.T) {
@@ -70,9 +90,10 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 	exampleUri, _ := apis.ParseURL("uri://example")
 
 	tests := []struct {
-		name string
-		s    *v1alpha2.PingSourceStatus
-		want bool
+		name                string
+		s                   *v1alpha2.PingSourceStatus
+		wantConditionStatus corev1.ConditionStatus
+		want                bool
 	}{{
 		name: "uninitialized",
 		s:    &v1alpha2.PingSourceStatus{},
@@ -84,7 +105,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark deployed",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -93,7 +115,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sink",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -103,7 +126,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(exampleUri)
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark schedule",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -112,7 +136,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkSchedule()
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark event types",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -121,7 +146,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkEventType()
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark sink and deployed",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -131,7 +157,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark schedule and sink",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -141,7 +168,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(exampleUri)
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark schedule, sink and deployed",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -152,7 +180,32 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		want: true,
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
+	}, {
+		name: "mark schedule, sink and unavailable deployment",
+		s: func() *v1alpha2.PingSourceStatus {
+			s := &v1alpha2.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink(exampleUri)
+			s.PropagateDeploymentAvailability(unavailableDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
+	}, {
+		name: "mark schedule, sink and unknown deployment",
+		s: func() *v1alpha2.PingSourceStatus {
+			s := &v1alpha2.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink(exampleUri)
+			s.PropagateDeploymentAvailability(unknownDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
+		want:                false,
 	}, {
 		name: "mark schedule, sink, deployed, and event types",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -164,7 +217,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkEventType()
 			return s
 		}(),
-		want: true,
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
 	}, {
 		name: "mark schedule, sink and deployed then not deployed",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -176,7 +230,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
 	}, {
 		name: "mark schedule, sink, deployed and event types then no event types",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -188,7 +243,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkNoEventType("Testing", "")
 			return s
 		}(),
-		want: true,
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
 	}, {
 		name: "mark schedule validated, sink empty and deployed",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -199,7 +255,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
-		want: false,
+		wantConditionStatus: corev1.ConditionFalse,
+		want:                false,
 	}, {
 		name: "mark schedule validated, sink empty and deployed then sink",
 		s: func() *v1alpha2.PingSourceStatus {
@@ -211,14 +268,21 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.MarkSink(exampleUri)
 			return s
 		}(),
-		want: true,
+		wantConditionStatus: corev1.ConditionTrue,
+		want:                true,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.wantConditionStatus != "" {
+				gotConditionStatus := test.s.GetTopLevelCondition().Status
+				if gotConditionStatus != test.wantConditionStatus {
+					t.Errorf("unexpected condition status: want %v, got %v", test.wantConditionStatus, gotConditionStatus)
+				}
+			}
 			got := test.s.IsReady()
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("%s: unexpected condition (-want, +got) = %v", test.name, diff)
+			if got != test.want {
+				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
 			}
 		})
 	}

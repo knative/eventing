@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -24,7 +25,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -41,6 +41,20 @@ var (
 		},
 	}
 	unavailDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-namespace",
+		},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+	}
+	unknownavailDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-name",
 			Namespace: "test-namespace",
@@ -96,6 +110,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 	tests := []struct {
 		name string
 		s    *ContainerSourceStatus
+		wantConditionStatus corev1.ConditionStatus
 		want bool
 	}{{
 		name: "uninitialized",
@@ -108,6 +123,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
 		want: false,
 	}, {
 		name: "mark ready ra",
@@ -117,6 +133,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
 		want: false,
 	}, {
 		name: "mark ready sb",
@@ -126,6 +143,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionUnknown,
 		want: false,
 	}, {
 		name: "mark ready sb and ra",
@@ -136,8 +154,31 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionTrue,
 		want: true,
 	}, {
+		name: "mark ready sb and unavailable ra",
+		s: func() *ContainerSourceStatus {
+			s := &ContainerSourceStatus{}
+			s.InitializeConditions()
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(unavailDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionFalse,
+		want: false,
+	},{
+		name: "mark ready sb and unknown ra",
+		s: func() *ContainerSourceStatus {
+			s := &ContainerSourceStatus{}
+			s.InitializeConditions()
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(unknownavailDeployment)
+			return s
+		}(),
+		wantConditionStatus: corev1.ConditionFalse,
+		want: false,
+	},{
 		name: "mark ready sb and ra the no sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
@@ -147,6 +188,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionFalse,
 		want: false,
 	}, {
 		name: "mark ready sb and ra then not ra",
@@ -155,9 +197,10 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.PropagateReceiveAdapterStatus(availDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(unavailDeployment)
+			s.PropagateReceiveAdapterStatus(unavailableDeployment)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionFalse,
 		want: false,
 	}, {
 		name: "mark not ready sb and ready ra",
@@ -168,6 +211,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionFalse,
 		want: false,
 	}, {
 		name: "mark not ready sb and ra then ready sb",
@@ -179,14 +223,21 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
+		wantConditionStatus: corev1.ConditionTrue,
 		want: true,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.wantConditionStatus != "" {
+				gotConditionStatus := test.s.GetTopLevelCondition().Status
+				if gotConditionStatus != test.wantConditionStatus {
+					t.Errorf("unexpected condition status: want %v, got %v", test.wantConditionStatus, gotConditionStatus)
+				}
+			}
 			got := test.s.IsReady()
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("%s: unexpected condition (-want, +got) = %v", test.name, diff)
+			if got != test.want {
+				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
 			}
 		})
 	}
@@ -279,15 +330,15 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			s.PropagateReceiveAdapterStatus(availDeployment)
-			s.PropagateReceiveAdapterStatus(unavailDeployment)
+			s.PropagateReceiveAdapterStatus(unavailableDeployment)
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
 			Type:    ContainerSourceConditionReady,
 			Status:  corev1.ConditionFalse,
-			Reason:  "DeploymentUnavailable",
-			Message: "The Deployment 'test-name' is unavailable.",
+			Reason:  "The status of Deployment is False: %s : %s",
+			Message: "%!(EXTRA string=)",
 		},
 	}, {
 		name: "mark not ready sb and ready ra then ready sb",
