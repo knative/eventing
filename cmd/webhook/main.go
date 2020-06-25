@@ -237,7 +237,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			// Eventing
-			eventingv1beta1.Kind("Trigger"): {
+			eventingv1.Kind("Trigger"): {
 				DefinitionName: eventing.TriggersResource.String(),
 				HubVersion:     eventingv1beta1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
@@ -245,7 +245,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					eventingv1_:      &eventingv1.Trigger{},
 				},
 			},
-			eventingv1beta1.Kind("Broker"): {
+			eventingv1.Kind("Broker"): {
 				DefinitionName: eventing.BrokersResource.String(),
 				HubVersion:     eventingv1beta1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
@@ -255,7 +255,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 			},
 
 			// Messaging
-			messagingv1beta1.Kind("Channel"): {
+			messagingv1.Kind("Channel"): {
 				DefinitionName: messaging.ChannelsResource.String(),
 				HubVersion:     messagingv1beta1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
