@@ -19,7 +19,6 @@ package mtping
 import (
 	"testing"
 
-	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -29,7 +28,7 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, &configmap.InformedWatcher{})
+	c := NewController(ctx, nil)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
