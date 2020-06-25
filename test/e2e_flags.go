@@ -50,6 +50,8 @@ func InitializeEventingFlags() {
 	flag.Var(&EventingFlags.Channels, "channels", ChannelUsage)
 	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", BrokerUsage)
 	flag.Var(&EventingFlags.Sources, "sources", SourceUsage)
+	flag.StringVar(&EventingFlags.PipeFile, "pipefile", "/tmp/prober-signal", "Temporary file to write the prober signal into.")
+	flag.StringVar(&EventingFlags.ReadyFile, "readyfile", "/tmp/prober-ready", "Temporary file to get the prober result.")
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
