@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"knative.dev/eventing/pkg/apis/duck"
 	"knative.dev/pkg/apis"
 )
 
@@ -47,6 +46,11 @@ func (*ContainerSource) GetConditionSet() apis.ConditionSet {
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (s *ContainerSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return containerCondSet.Manage(s).GetCondition(t)
+}
+
+// GetTopLevelCondition returns the top level condition.
+func (s *ContainerSourceStatus) GetTopLevelCondition() *apis.Condition {
+	return containerCondSet.Manage(s).GetTopLevelCondition()
 }
 
 // IsReady returns true if the resource is ready overall.
@@ -87,11 +91,20 @@ func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingSt
 // PropagateReceiveAdapterStatus uses the availability of the provided Deployment to determine if
 // ContainerSourceConditionReceiveAdapterReady should be marked as true or false.
 func (s *ContainerSourceStatus) PropagateReceiveAdapterStatus(d *appsv1.Deployment) {
-	if duck.DeploymentIsAvailable(&d.Status, false) {
-		containerCondSet.Manage(s).MarkTrue(ContainerSourceConditionReceiveAdapterReady)
-	} else {
-		// I don't know how to propagate the status well, so just give the name of the Deployment
-		// for now.
-		containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+	deploymentAvailableFound := false
+	for _, cond := range d.Status.Conditions {
+		if cond.Type == appsv1.DeploymentAvailable {
+			deploymentAvailableFound = true
+			if cond.Status == corev1.ConditionTrue {
+				containerCondSet.Manage(s).MarkTrue(ContainerSourceConditionReceiveAdapterReady)
+			} else if cond.Status == corev1.ConditionFalse {
+				containerCondSet.Manage(s).MarkFalse(ContainerSourceConditionReceiveAdapterReady, cond.Reason, cond.Message)
+			} else if cond.Status == corev1.ConditionUnknown {
+				containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, cond.Reason, cond.Message)
+			}
+		}
+	}
+	if !deploymentAvailableFound {
+		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionReceiveAdapterReady, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
 }
