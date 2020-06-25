@@ -47,7 +47,9 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -71,6 +73,10 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	messagingv1beta1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1beta1.InMemoryChannel{},
 	messagingv1beta1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1beta1.Channel{},
 	messagingv1beta1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1beta1.Subscription{},
+	// v1
+	messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1.InMemoryChannel{},
+	messagingv1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1.Channel{},
+	messagingv1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1.Subscription{},
 
 	// For group sources.knative.dev.
 	// v1alpha1
@@ -216,10 +222,12 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
-		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
-		eventingv1_      = eventingv1.SchemeGroupVersion.Version
-		sourcesv1alpha1_ = sourcesv1alpha1.SchemeGroupVersion.Version
-		sourcesv1alpha2_ = sourcesv1alpha2.SchemeGroupVersion.Version
+		eventingv1beta1_  = eventingv1beta1.SchemeGroupVersion.Version
+		eventingv1_       = eventingv1.SchemeGroupVersion.Version
+		messagingv1beta1_ = messagingv1beta1.SchemeGroupVersion.Version
+		messagingv1_      = messagingv1.SchemeGroupVersion.Version
+		sourcesv1alpha1_  = sourcesv1alpha1.SchemeGroupVersion.Version
+		sourcesv1alpha2_  = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -229,7 +237,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			// Eventing
-			eventingv1beta1.Kind("Trigger"): {
+			eventingv1.Kind("Trigger"): {
 				DefinitionName: eventing.TriggersResource.String(),
 				HubVersion:     eventingv1beta1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
@@ -237,12 +245,22 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					eventingv1_:      &eventingv1.Trigger{},
 				},
 			},
-			eventingv1beta1.Kind("Broker"): {
+			eventingv1.Kind("Broker"): {
 				DefinitionName: eventing.BrokersResource.String(),
 				HubVersion:     eventingv1beta1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					eventingv1beta1_: &eventingv1beta1.Broker{},
 					eventingv1_:      &eventingv1.Broker{},
+				},
+			},
+
+			// Messaging
+			messagingv1.Kind("Channel"): {
+				DefinitionName: messaging.ChannelsResource.String(),
+				HubVersion:     messagingv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					messagingv1beta1_: &messagingv1beta1.Channel{},
+					messagingv1_:      &messagingv1.Channel{},
 				},
 			},
 

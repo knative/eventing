@@ -17,15 +17,83 @@ import (
 	"context"
 	"fmt"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/duck/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *Channel) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+// Converts source (from v1beta1.Channel) into v1.Channel
+func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *v1.Channel:
+		sink.ObjectMeta = source.ObjectMeta
+		source.Status.ConvertTo(ctx, &sink.Status)
+		source.Spec.ConvertTo(ctx, &sink.Spec)
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
 }
 
-// ConvertFrom implements apis.Convertible
-func (sink *Channel) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+// ConvertTo helps implement apis.Convertible
+func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) {
+	if source.ChannelTemplate != nil {
+		sink.ChannelTemplate = &v1.ChannelTemplateSpec{
+			TypeMeta: source.ChannelTemplate.TypeMeta,
+			Spec:     source.ChannelTemplate.Spec,
+		}
+	}
+	sink.ChannelableSpec = eventingduckv1.ChannelableSpec{}
+	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1.DeliverySpec{}
+		source.Delivery.ConvertTo(ctx, sink.Delivery)
+	}
+	source.SubscribableSpec.ConvertTo(ctx, &sink.SubscribableSpec)
+}
+
+// ConvertTo helps implement apis.Convertible
+func (source *ChannelStatus) ConvertTo(ctx context.Context, sink *v1.ChannelStatus) {
+	source.Status.ConvertTo(ctx, &sink.Status)
+	sink.AddressStatus.Address = source.AddressStatus.Address
+	source.SubscribableStatus.ConvertTo(ctx, &sink.SubscribableStatus)
+	sink.Channel = source.Channel
+}
+
+// ConvertFrom implements apis.Convertible.
+// Converts obj v1.Channel into v1beta1.Channel
+func (sink *Channel) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *v1.Channel:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Status.ConvertFrom(ctx, source.Status)
+		sink.Spec.ConvertFrom(ctx, source.Spec)
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
+	}
+}
+
+// ConvertFrom helps implement apis.Convertible
+func (sink *ChannelSpec) ConvertFrom(ctx context.Context, source v1.ChannelSpec) {
+	if source.ChannelTemplate != nil {
+		sink.ChannelTemplate = &ChannelTemplateSpec{
+			TypeMeta: source.ChannelTemplate.TypeMeta,
+			Spec:     source.ChannelTemplate.Spec,
+		}
+	}
+	if source.Delivery != nil {
+		sink.Delivery = &v1beta1.DeliverySpec{}
+		sink.Delivery.ConvertFrom(ctx, source.Delivery)
+	}
+	sink.ChannelableSpec.SubscribableSpec.ConvertFrom(ctx, source.ChannelableSpec.SubscribableSpec)
+}
+
+// ConvertFrom helps implement apis.Convertible
+func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1.ChannelStatus) {
+	source.Status.ConvertTo(ctx, &sink.Status)
+	sink.Channel = source.Channel
+	sink.SubscribableStatus.ConvertFrom(ctx, source.SubscribableStatus)
+	sink.AddressStatus.Address = source.AddressStatus.Address
 }
