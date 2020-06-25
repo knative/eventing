@@ -52,127 +52,100 @@ func TestChannelConversion(t *testing.T) {
 	tests := []struct {
 		name string
 		in   *Channel
-	}{ /*{
-			name: "min configuration",
-			in: &Channel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "channel-name",
-					Namespace:  "channel-ns",
-					Generation: 17,
+	}{{
+		name: "min configuration",
+		in: &Channel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "channel-name",
+				Namespace:  "channel-ns",
+				Generation: 17,
+			},
+			Spec: ChannelSpec{},
+			Status: ChannelStatus{
+				ChannelableStatus: v1beta1.ChannelableStatus{
+					Status: duckv1.Status{
+						Conditions: duckv1.Conditions{},
+					},
 				},
-				Spec: ChannelSpec{},
-				Status: ChannelStatus{
-					ChannelableStatus: v1beta1.ChannelableStatus{
-						Status: duckv1.Status{
-							Conditions: duckv1.Conditions{},
+			},
+		},
+	}, {
+		name: "full configuration",
+		in: &Channel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "channel-name",
+				Namespace:  "channel-ns",
+				Generation: 17,
+			},
+			Spec: ChannelSpec{
+				ChannelTemplate: &ChannelTemplateSpec{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "channelKind",
+						APIVersion: "channelAPIVersion",
+					},
+					// TODO: Add Spec...
+				},
+				ChannelableSpec: v1beta1.ChannelableSpec{
+					SubscribableSpec: v1beta1.SubscribableSpec{
+						Subscribers: []v1beta1.SubscriberSpec{
+							v1beta1.SubscriberSpec{
+								UID:           "uid-1",
+								Generation:    7,
+								SubscriberURI: apis.HTTP("subscriber.example.com"),
+								ReplyURI:      apis.HTTP("reply.example.com"),
+								Delivery: &v1beta1.DeliverySpec{
+									DeadLetterSink: &duckv1.Destination{
+										Ref: &duckv1.KReference{
+											Kind:       "dlKind",
+											Namespace:  "dlNamespace",
+											Name:       "dlName",
+											APIVersion: "dlAPIVersion",
+										},
+										URI: apis.HTTP("subscriber.dls.example.com"),
+									},
+									Retry:         pointer.Int32Ptr(5),
+									BackoffPolicy: &linear,
+									BackoffDelay:  pointer.StringPtr("5s"),
+								},
+							},
 						},
 					},
 				},
 			},
-		},*/{
-			name: "full configuration",
-			in: &Channel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "channel-name",
-					Namespace:  "channel-ns",
-					Generation: 17,
-				},
-				Spec: ChannelSpec{
-					ChannelTemplate: &ChannelTemplateSpec{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "channelKind",
-							APIVersion: "channelAPIVersion",
-						},
-						// TODO: Add Spec...
-					},
-					ChannelableSpec: v1beta1.ChannelableSpec{
-						SubscribableSpec: v1beta1.SubscribableSpec{
-							Subscribers: []v1beta1.SubscriberSpec{
-								v1beta1.SubscriberSpec{
-									UID:           "uid-1",
-									Generation:    7,
-									SubscriberURI: apis.HTTP("subscriber.example.com"),
-									ReplyURI:      apis.HTTP("reply.example.com"),
-									Delivery: &v1beta1.DeliverySpec{
-										DeadLetterSink: &duckv1.Destination{
-											Ref: &duckv1.KReference{
-												Kind:       "dlKind",
-												Namespace:  "dlNamespace",
-												Name:       "dlName",
-												APIVersion: "dlAPIVersion",
-											},
-											URI: apis.HTTP("subscriber.dls.example.com"),
-										},
-										Retry:         pointer.Int32Ptr(5),
-										BackoffPolicy: &linear,
-										BackoffDelay:  pointer.StringPtr("5s"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Status: ChannelStatus{
-					ChannelableStatus: eventingduck.ChannelableStatus{
-						Status: duckv1.Status{
-							ObservedGeneration: 1,
-							Conditions: duckv1.Conditions{{
-								Type:   "Ready",
-								Status: "True",
-							}},
-						},
-						AddressStatus: duckv1.AddressStatus{
-							Address: &duckv1.Addressable{
-								URL: apis.HTTP("addressstatus.example.com"),
-							},
-						},
-						SubscribableStatus: eventingduck.SubscribableStatus{
-							Subscribers: []eventingduck.SubscriberStatus{
-								eventingduck.SubscriberStatus{
-									UID:                "status-uid-1",
-									ObservedGeneration: 99,
-									Ready:              corev1.ConditionTrue,
-									Message:            "msg",
-								},
-							},
-						},
-					},
-					/*Status: duckv1.Status{
+			Status: ChannelStatus{
+				ChannelableStatus: eventingduck.ChannelableStatus{
+					Status: duckv1.Status{
 						ObservedGeneration: 1,
 						Conditions: duckv1.Conditions{{
 							Type:   "Ready",
 							Status: "True",
 						}},
-					},*/
-					/*AddressStatus: duckv1beta1.AddressStatus{
-						Address: &duckv1beta1.Addressable{
-							Addressable: duckv1.Addressable{
-								URL: apis.HTTP("addressstatus.example.com"),
-							},
-							Hostname: "addressstatus.example.com",
+					},
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: apis.HTTP("addressstatus.example.com"),
 						},
-					},*/
-					/*SubscribableTypeStatus: eventingduck.SubscribableTypeStatus{
-						SubscribableStatus: &eventingduck.SubscribableStatus{
-							Subscribers: []eventingduckv1.SubscriberStatus{
-								{
-									UID:                "status-uid-1",
-									ObservedGeneration: 99,
-									Ready:              corev1.ConditionTrue,
-									Message:            "msg",
-								},
+					},
+					SubscribableStatus: eventingduck.SubscribableStatus{
+						Subscribers: []eventingduck.SubscriberStatus{
+							eventingduck.SubscriberStatus{
+								UID:                "status-uid-1",
+								ObservedGeneration: 99,
+								Ready:              corev1.ConditionTrue,
+								Message:            "msg",
 							},
 						},
-					},*/
-					Channel: &duckv1.KReference{
-						Kind:       "u-channel-kind",
-						APIVersion: "u-channel-apiversion",
-						Name:       "u-channel-name",
-						Namespace:  "u-channel-namespace",
 					},
 				},
+				Channel: &duckv1.KReference{
+					Kind:       "u-channel-kind",
+					APIVersion: "u-channel-apiversion",
+					Name:       "u-channel-name",
+					Namespace:  "u-channel-namespace",
+				},
 			},
-		}}
+		},
+	}}
 	for _, test := range tests {
 		for _, version := range versions {
 			t.Run(test.name, func(t *testing.T) {
@@ -193,7 +166,7 @@ func TestChannelConversion(t *testing.T) {
 }
 
 // Test v1beta1 -> v1 -> v1beta1
-func TestChannelConversionWithV1Beta1(t *testing.T) {
+func TestChannelConversionWithV1(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&Channel{}}
 

@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/duck/v1beta1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 )
@@ -29,14 +30,15 @@ func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) erro
 	case *v1.Channel:
 		sink.ObjectMeta = source.ObjectMeta
 		source.Status.ConvertTo(ctx, &sink.Status)
-		return source.Spec.ConvertTo(ctx, &sink.Spec)
+		source.Spec.ConvertTo(ctx, &sink.Spec)
+		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 }
 
 // ConvertTo helps implement apis.Convertible
-func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) error {
+func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) {
 	if source.ChannelTemplate != nil {
 		sink.ChannelTemplate = &v1.ChannelTemplateSpec{
 			TypeMeta: source.ChannelTemplate.TypeMeta,
@@ -45,12 +47,10 @@ func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) 
 	}
 	sink.ChannelableSpec = eventingduckv1.ChannelableSpec{}
 	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1.DeliverySpec{}
 		source.Delivery.ConvertTo(ctx, sink.Delivery)
 	}
-
 	source.SubscribableSpec.ConvertTo(ctx, &sink.SubscribableSpec)
-
-	return nil
 }
 
 // ConvertTo helps implement apis.Convertible
@@ -59,7 +59,6 @@ func (source *ChannelStatus) ConvertTo(ctx context.Context, sink *v1.ChannelStat
 	sink.AddressStatus.Address = source.AddressStatus.Address
 	source.SubscribableStatus.ConvertTo(ctx, &sink.SubscribableStatus)
 	sink.Channel = source.Channel
-
 }
 
 // ConvertFrom implements apis.Convertible.
@@ -84,21 +83,17 @@ func (sink *ChannelSpec) ConvertFrom(ctx context.Context, source v1.ChannelSpec)
 			Spec:     source.ChannelTemplate.Spec,
 		}
 	}
-
-	//sink.ChannelTemplate = source.ChannelTemplate
-
-	//sink.ChannelableSpec = ChannelableSpec{}
 	if source.Delivery != nil {
+		sink.Delivery = &v1beta1.DeliverySpec{}
 		sink.Delivery.ConvertFrom(ctx, source.Delivery)
 	}
 	sink.ChannelableSpec.SubscribableSpec.ConvertFrom(ctx, source.ChannelableSpec.SubscribableSpec)
 }
 
 // ConvertFrom helps implement apis.Convertible
-func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1.ChannelStatus) error {
+func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1.ChannelStatus) {
 	source.Status.ConvertTo(ctx, &sink.Status)
 	sink.Channel = source.Channel
 	sink.SubscribableStatus.ConvertFrom(ctx, source.SubscribableStatus)
 	sink.AddressStatus.Address = source.AddressStatus.Address
-	return nil
 }
