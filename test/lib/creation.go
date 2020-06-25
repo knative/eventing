@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/test/helpers"
 
@@ -459,8 +460,8 @@ func (c *Client) CreateRBACResourcesForBrokers() {
 	)
 }
 
-// NameForTest generates an object name based on the desired object prefix
-// A random suffix is appended so that each name is unique.
+// NameForTest generates an object name by appending a random suffix
+// to the given prefix.
 // If the resulting name is too long it will be trimmed to 63 characters (the random
 // string is preserved in any case).
 func NameForTest(prefix string) string {
