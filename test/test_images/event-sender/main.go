@@ -144,10 +144,7 @@ func main() {
 			cloudevents.WithTracePropagation,
 		)
 	} else {
-		c, err = cloudevents.NewClient(t,
-			cloudevents.WithTimeNow(),
-			cloudevents.WithUUIDs(),
-		)
+		c, err = cloudevents.NewClient(t)
 	}
 
 	if err != nil {
