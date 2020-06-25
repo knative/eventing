@@ -45,8 +45,8 @@ readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 # Channel Based Broker config.
 readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
 
-# PostInstall script for v0.15, storage migration
-readonly POST_INSTALL_V015="config/post-install/v0.15.0"
+# PreInstall script for v0.16
+readonly PRE_INSTALL_V016="config/pre-install/v0.16.0"
 
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
@@ -111,8 +111,8 @@ function install_latest_release() {
     fail_test "Knative latest release installation failed"
 }
 
-function run_postinstall() {
-  ko apply --strict -f ${POST_INSTALL_V015} || return 1
+function run_preinstall_V016() {
+  ko apply --strict -f ${PRE_INSTALL_V016} || return 1
   wait_until_batch_job_complete knative-eventing || return 1
 }
 
