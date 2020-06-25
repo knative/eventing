@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -46,6 +45,8 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/apis/flows"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
@@ -55,6 +56,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/leaderelection"
+	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
 
@@ -93,6 +95,9 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// v1beta1
 	flowsv1beta1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1beta1.Parallel{},
 	flowsv1beta1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1beta1.Sequence{},
+	// v1
+	flowsv1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1.Parallel{},
+	flowsv1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1.Sequence{},
 
 	// For group configs.knative.dev
 	configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation"): &configsv1alpha1.ConfigMapPropagation{},
@@ -226,6 +231,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		eventingv1_       = eventingv1.SchemeGroupVersion.Version
 		messagingv1beta1_ = messagingv1beta1.SchemeGroupVersion.Version
 		messagingv1_      = messagingv1.SchemeGroupVersion.Version
+		flowsv1beta1_     = flowsv1beta1.SchemeGroupVersion.Version
+		flowsv1_          = flowsv1.SchemeGroupVersion.Version
 		sourcesv1alpha1_  = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_  = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
@@ -261,6 +268,24 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					messagingv1beta1_: &messagingv1beta1.Channel{},
 					messagingv1_:      &messagingv1.Channel{},
+				},
+			},
+
+			// flows
+			flowsv1.Kind("Sequence"): {
+				DefinitionName: flows.SequenceResource.String(),
+				HubVersion:     flowsv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					flowsv1beta1_: &flowsv1beta1.Sequence{},
+					flowsv1_:      &flowsv1.Sequence{},
+				},
+			},
+			flowsv1.Kind("Parallel"): {
+				DefinitionName: flows.ParallelResource.String(),
+				HubVersion:     flowsv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					flowsv1beta1_: &flowsv1beta1.Parallel{},
+					flowsv1_:      &flowsv1.Parallel{},
 				},
 			},
 

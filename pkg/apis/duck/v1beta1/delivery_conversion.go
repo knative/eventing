@@ -31,12 +31,14 @@ func (source *DeliverySpec) ConvertTo(ctx context.Context, to apis.Convertible) 
 	case *eventingduckv1.DeliverySpec:
 		sink.Retry = source.Retry
 		sink.BackoffDelay = source.BackoffDelay
-		if *source.BackoffPolicy == BackoffPolicyLinear {
-			linear := eventingduckv1.BackoffPolicyLinear
-			sink.BackoffPolicy = &linear
-		} else if *source.BackoffPolicy == BackoffPolicyExponential {
-			exponential := eventingduckv1.BackoffPolicyExponential
-			sink.BackoffPolicy = &exponential
+		if source.BackoffPolicy != nil {
+			if *source.BackoffPolicy == BackoffPolicyLinear {
+				linear := eventingduckv1.BackoffPolicyLinear
+				sink.BackoffPolicy = &linear
+			} else if *source.BackoffPolicy == BackoffPolicyExponential {
+				exponential := eventingduckv1.BackoffPolicyExponential
+				sink.BackoffPolicy = &exponential
+			}
 		}
 		sink.DeadLetterSink = source.DeadLetterSink
 		return nil
@@ -51,12 +53,14 @@ func (sink *DeliverySpec) ConvertFrom(ctx context.Context, from apis.Convertible
 	case *eventingduckv1.DeliverySpec:
 		sink.Retry = source.Retry
 		sink.BackoffDelay = source.BackoffDelay
-		if *source.BackoffPolicy == eventingduckv1.BackoffPolicyLinear {
-			linear := BackoffPolicyLinear
-			sink.BackoffPolicy = &linear
-		} else if *source.BackoffPolicy == eventingduckv1.BackoffPolicyExponential {
-			exponential := BackoffPolicyExponential
-			sink.BackoffPolicy = &exponential
+		if source.BackoffPolicy != nil {
+			if *source.BackoffPolicy == eventingduckv1.BackoffPolicyLinear {
+				linear := BackoffPolicyLinear
+				sink.BackoffPolicy = &linear
+			} else if *source.BackoffPolicy == eventingduckv1.BackoffPolicyExponential {
+				exponential := BackoffPolicyExponential
+				sink.BackoffPolicy = &exponential
+			}
 		}
 		sink.DeadLetterSink = source.DeadLetterSink
 		return nil
