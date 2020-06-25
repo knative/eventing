@@ -227,6 +227,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
+<<<<<<< HEAD
 		eventingv1beta1_  = eventingv1beta1.SchemeGroupVersion.Version
 		eventingv1_       = eventingv1.SchemeGroupVersion.Version
 		messagingv1beta1_ = messagingv1beta1.SchemeGroupVersion.Version
@@ -235,6 +236,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		flowsv1_          = flowsv1.SchemeGroupVersion.Version
 		sourcesv1alpha1_  = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_  = sourcesv1alpha2.SchemeGroupVersion.Version
+=======
+		eventingv1beta1_ = eventingv1beta1.SchemeGroupVersion.Version
+		eventingv1_      = eventingv1.SchemeGroupVersion.Version
+		flowsv1beta1_    = flowsv1beta1.SchemeGroupVersion.Version
+		flowsv1_         = flowsv1.SchemeGroupVersion.Version
+		sourcesv1alpha1_ = sourcesv1alpha1.SchemeGroupVersion.Version
+		sourcesv1alpha2_ = sourcesv1alpha2.SchemeGroupVersion.Version
+>>>>>>> v1 <-> v1beta1 flow conversion webhook
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -260,6 +269,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					eventingv1_:      &eventingv1.Broker{},
 				},
 			},
+<<<<<<< HEAD
 
 			// Messaging
 			messagingv1.Kind("Channel"): {
@@ -287,6 +297,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				},
 			},
 
+=======
+>>>>>>> v1 <-> v1beta1 flow conversion webhook
 			// flows
 			flowsv1.Kind("Sequence"): {
 				DefinitionName: flows.SequenceResource.String(),
@@ -304,7 +316,10 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					flowsv1_:      &flowsv1.Parallel{},
 				},
 			},
+<<<<<<< HEAD
 
+=======
+>>>>>>> v1 <-> v1beta1 flow conversion webhook
 			// Sources
 			sourcesv1alpha2.Kind("ApiServerSource"): {
 				DefinitionName: sources.ApiServerSourceResource.String(),
