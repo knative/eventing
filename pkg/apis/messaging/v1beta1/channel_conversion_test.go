@@ -165,7 +165,7 @@ func TestChannelConversion(t *testing.T) {
 	}
 }
 
-// Test v1beta1 -> v1 -> v1beta1
+// Test v1 -> v1beta1 -> v1
 func TestChannelConversionWithV1(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&Channel{}}
