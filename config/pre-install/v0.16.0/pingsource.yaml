@@ -57,6 +57,10 @@ spec:
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
+  - << : *version
+    name: v1alpha1
+    served: false
+    storage: false
   names:
     categories:
     - all
