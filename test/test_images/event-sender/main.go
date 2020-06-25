@@ -31,8 +31,9 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
+	"knative.dev/eventing/pkg/tracing"
 )
 
 var (
@@ -140,8 +141,6 @@ func main() {
 		}
 
 		c, err = cloudevents.NewClientObserved(t,
-			cloudevents.WithTimeNow(),
-			cloudevents.WithUUIDs(),
 			cloudevents.WithTracePropagation,
 		)
 	} else {
