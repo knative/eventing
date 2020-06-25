@@ -88,7 +88,7 @@ func TestChannelConversion(t *testing.T) {
 				ChannelableSpec: v1beta1.ChannelableSpec{
 					SubscribableSpec: v1beta1.SubscribableSpec{
 						Subscribers: []v1beta1.SubscriberSpec{
-							v1beta1.SubscriberSpec{
+							{
 								UID:           "uid-1",
 								Generation:    7,
 								SubscriberURI: apis.HTTP("subscriber.example.com"),
@@ -128,7 +128,7 @@ func TestChannelConversion(t *testing.T) {
 					},
 					SubscribableStatus: eventingduck.SubscribableStatus{
 						Subscribers: []eventingduck.SubscriberStatus{
-							eventingduck.SubscriberStatus{
+							{
 								UID:                "status-uid-1",
 								ObservedGeneration: 99,
 								Ready:              corev1.ConditionTrue,
