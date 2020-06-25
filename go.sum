@@ -1429,8 +1429,8 @@ knative.dev/pkg v0.0.0-20200603222317-b79e4a24ca50/go.mod h1:8IfPj/lpuKHHg82xZCl
 knative.dev/pkg v0.0.0-20200611204322-2ddcfef739a2/go.mod h1:rA+FklsrVahwF4a+D63NyHJlzDoAFH81K4J5CYuE3bA=
 knative.dev/pkg v0.0.0-20200623204627-e0a0d63a9e86 h1:Ihxd/dMGFtVxrURj7NknkQlA7QmgCh63o10eQ8BlO/4=
 knative.dev/pkg v0.0.0-20200623204627-e0a0d63a9e86/go.mod h1:DquzK0hsLDcg2q63Sn+CngAyRwv4cKMpt5F19YzBfb0=
-knative.dev/pkg v0.0.0-20200624155427-5be32bbb99ab h1:Alotvu0cJmIfbSitcmcCe39M2WZ430DO9GnsidpR7CM=
-knative.dev/pkg v0.0.0-20200624155427-5be32bbb99ab/go.mod h1:DquzK0hsLDcg2q63Sn+CngAyRwv4cKMpt5F19YzBfb0=
+knative.dev/pkg v0.0.0-20200624210428-eb05e8dd5b5b h1:NFi5BVmuZ81bWigwn3s/NNaf+GeeOGtNlADAbXPYg+E=
+knative.dev/pkg v0.0.0-20200624210428-eb05e8dd5b5b/go.mod h1:DquzK0hsLDcg2q63Sn+CngAyRwv4cKMpt5F19YzBfb0=
 knative.dev/test-infra v0.0.0-20200407185800-1b88cb3b45a5/go.mod h1:xcdUkMJrLlBswIZqL5zCuBFOC22WIPMQoVX1L35i0vQ=
 knative.dev/test-infra v0.0.0-20200505052144-5ea2f705bb55/go.mod h1:WqF1Azka+FxPZ20keR2zCNtiQA1MP9ZB4BH4HuI+SIU=
 knative.dev/test-infra v0.0.0-20200513011557-d03429a76034/go.mod h1:aMif0KXL4g19YCYwsy4Ocjjz5xgPlseYV+B95Oo4JGE=
@@ -1440,8 +1440,8 @@ knative.dev/test-infra v0.0.0-20200606045118-14ebc4a42974 h1:CrZmlbB+j3ZF/aTrfyy
 knative.dev/test-infra v0.0.0-20200606045118-14ebc4a42974/go.mod h1://I6IZIF0QDgs5wotU243ZZ5cTpm6/GthayjUenBBc0=
 knative.dev/test-infra v0.0.0-20200617235125-6382dba95484 h1:5D1Fm6aA1T1QQXLb1HkJ5t8gB9pTkhLYak1CCqIP+pE=
 knative.dev/test-infra v0.0.0-20200617235125-6382dba95484/go.mod h1:+BfrTJpc++rH30gX/C0QY6NT2eYVzycll52uw6CrQnc=
-knative.dev/test-infra v0.0.0-20200624170028-94d227b0f50c h1:rnbevMO69+CbzbY+hNbariG9k/jicgTIDKPFvfp0hcc=
-knative.dev/test-infra v0.0.0-20200624170028-94d227b0f50c/go.mod h1:6w3uf0+KfozLkrysBm3QqONrEMC6Uo/oEgS2BCdHJXo=
+knative.dev/test-infra v0.0.0-20200624184627-7eae2aae38e4 h1:eB6B7ER/QPKNC2bBtkWmwzcGBp9f0/DQhRdNvxxuEt8=
+knative.dev/test-infra v0.0.0-20200624184627-7eae2aae38e4/go.mod h1:6w3uf0+KfozLkrysBm3QqONrEMC6Uo/oEgS2BCdHJXo=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
 modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=
 modernc.org/mathutil v1.0.0/go.mod h1:wU0vUrJsVWBZ4P6e7xtFJEhFSNsfRLJ8H458uRjg03k=
