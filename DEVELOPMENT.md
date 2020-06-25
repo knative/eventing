@@ -146,6 +146,11 @@ or any of the other Brokers available inside the `config/brokers/` directory.
 ko apply -f config/brokers/channel-broker/
 ```
 
+You may also need to install the MT Channel Based Broker
+```shell
+ko apply -f config/brokers/mt-channel-broker/
+```
+
 Depending on your needs you might want to install other
 [Broker implementations](https://github.com/knative/eventing/tree/master/docs/broker).
 
