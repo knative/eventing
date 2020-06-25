@@ -234,7 +234,7 @@ func (ei *EventInfoStore) Find(matchers ...EventInfoMatcher) ([]EventInfo, Searc
 func (ei *EventInfoStore) AssertAtLeast(min int, matchers ...EventInfoMatcher) []EventInfo {
 	events, err := ei.waitAtLeastNMatch(AllOf(matchers...), min)
 	if err != nil {
-		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %v", min, errors.WithStack(err))
+		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
 	return events
 }
@@ -244,7 +244,7 @@ func (ei *EventInfoStore) AssertAtLeast(min int, matchers ...EventInfoMatcher) [
 func (ei *EventInfoStore) AssertInRange(min int, max int, matchers ...EventInfoMatcher) []EventInfo {
 	events := ei.AssertAtLeast(min, matchers...)
 	if max > 0 && len(events) > max {
-		ei.tb.Fatalf("Assert in range failed: %v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
+		ei.tb.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
 
 	return events
@@ -255,11 +255,11 @@ func (ei *EventInfoStore) AssertInRange(min int, max int, matchers ...EventInfoM
 func (ei *EventInfoStore) AssertNot(matchers ...EventInfoMatcher) []EventInfo {
 	res, recentEvents, _, err := ei.Find(matchers...)
 	if err != nil {
-		ei.tb.Fatalf("Unexpected error during find on recordevents '%s': %v", ei.podName, errors.WithStack(err))
+		ei.tb.Fatalf("Unexpected error during find on recordevents '%s': %+v", ei.podName, errors.WithStack(err))
 	}
 
 	if len(res) != 0 {
-		ei.tb.Fatalf("Assert not failed: %v", errors.WithStack(
+		ei.tb.Fatalf("Assert not failed: %+v", errors.WithStack(
 			fmt.Errorf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
