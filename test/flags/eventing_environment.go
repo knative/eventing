@@ -21,4 +21,6 @@ type EventingEnvironmentFlags struct {
 	BrokerClass string
 	Channels
 	Sources
+	PipeFile  string
+	ReadyFile string
 }

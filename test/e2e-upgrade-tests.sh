@@ -22,6 +22,9 @@ export GO111MODULE=on
 
 source "$(dirname "$0")/e2e-common.sh"
 
+readonly PROBER_READY_FILE="/tmp/prober-ready"
+readonly PROBER_PIPE_FILE="/tmp/prober-signal"
+
 # Overrides
 
 function knative_setup {
@@ -47,12 +50,12 @@ header "Running preupgrade tests"
 go_test_e2e -tags=preupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 header "Starting prober test"
-rm -fv /tmp/prober-ready
-go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade &
+rm -fv ${PROBER_READY_FILE}
+go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade --pipefile="${PROBER_PIPE_FILE}" --readyfile="${PROBER_READY_FILE}" &
 PROBER_PID=$!
 echo "Prober PID is ${PROBER_PID}"
 
-wait_for_file /tmp/prober-ready || fail_test
+wait_for_file ${PROBER_READY_FILE} || fail_test
 
 header "Performing upgrade to HEAD"
 run_preinstall_V016 || fail_test 'Running preinstall 0.16 failed'
@@ -69,8 +72,8 @@ install_latest_release || fail_test 'Installing latest release of Knative Eventi
 header "Running postdowngrade tests"
 go_test_e2e -tags=postdowngrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
-# The prober is blocking on /tmp/prober-signal to know when it should exit.
-echo "done" > /tmp/prober-signal
+# The prober is blocking on ${PROBER_PIPE_FILE} to know when it should exit.
+echo "done" > ${PROBER_PIPE_FILE}
 
 header "Waiting for prober test"
 wait ${PROBER_PID} || fail_test "Prober failed"
