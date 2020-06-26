@@ -101,14 +101,3 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 		},
 	)
 }
-
-// DataContains matches that the data field of the event, converted to a string, contains the provided string
-func DataContains(expectedContainedString string) cetest.EventMatcher {
-	return func(have cloudevents.Event) error {
-		dataAsString := string(have.Data())
-		if !strings.Contains(dataAsString, expectedContainedString) {
-			return fmt.Errorf("data '%s' doesn't contain '%s'", dataAsString, expectedContainedString)
-		}
-		return nil
-	}
-}

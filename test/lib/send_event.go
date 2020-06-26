@@ -17,6 +17,7 @@ limitations under the License.
 package lib
 
 import (
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
@@ -35,11 +36,9 @@ func (c *Client) SendEventToAddressable(
 ) {
 	uri, err := c.GetAddressableURI(addressableName, typemeta)
 	if err != nil {
-		c.T.Fatalf("Failed to get the URI for %v-%s", typemeta, addressableName)
+		c.T.Fatalf("Failed to get the URI for %+v-%s", typemeta, addressableName)
 	}
-	if err = c.SendEvent(senderName, uri, event, option...); err != nil {
-		c.T.Fatalf("Failed to send event %v with tracing to %s: %v", event, uri, err)
-	}
+	c.SendEvent(senderName, uri, event, option...)
 }
 
 // SendEvent will create a sender pod, which will send the given event to the given url.
@@ -48,15 +47,14 @@ func (c *Client) SendEvent(
 	uri string,
 	event cloudevents.Event,
 	option ...sender.EventSenderOption,
-) error {
+) {
 	namespace := c.Namespace
 	pod, err := sender.EventSenderPod("event-sender", senderName, uri, event, option...)
 	if err != nil {
-		return err
+		c.T.Fatalf("Failed to create event-sender pod: %+v", errors.WithStack(err))
 	}
 	c.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(c.Kube, senderName, namespace); err != nil {
-		return err
+		c.T.Fatalf("Failed to send event %v to %s: %+v", event, uri, errors.WithStack(err))
 	}
-	return nil
 }

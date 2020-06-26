@@ -29,7 +29,7 @@ func (r *EventReceiver) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		r.p.ServeHTTP(rw, req)
 	}()
 
-	ctx := context.Background()
+	ctx := req.Context()
 	msg, respFn, err := r.p.Respond(ctx)
 	if err != nil {
 		//lint:ignore SA9003 TODO: Branch left empty

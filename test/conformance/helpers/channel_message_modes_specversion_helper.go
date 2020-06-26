@@ -22,9 +22,9 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	. "github.com/cloudevents/sdk-go/v2/test"
-	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	eventingchannel "knative.dev/eventing/pkg/channel"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -37,40 +37,37 @@ func ChannelMessageModesAndSpecVersionsTestRunner(
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
 ) {
-	testCases := []struct {
+	type testCase struct {
+		event    cloudevents.Event
 		encoding cloudevents.Encoding
 		version  string
-	}{
-		{
-			encoding: cloudevents.EncodingBinary,
-			version:  cloudevents.VersionV03,
-		}, {
-			encoding: cloudevents.EncodingStructured,
-			version:  cloudevents.VersionV03,
-		}, {
-			encoding: cloudevents.EncodingBinary,
-			version:  cloudevents.VersionV1,
-		}, {
-			encoding: cloudevents.EncodingStructured,
-			version:  cloudevents.VersionV1,
-		},
+	}
+
+	var testCases []testCase
+
+	for _, event := range []cloudevents.Event{MinEvent(), FullEvent()} {
+		for _, enc := range []cloudevents.Encoding{cloudevents.EncodingBinary, cloudevents.EncodingStructured} {
+			for _, version := range []string{cloudevents.VersionV03, cloudevents.VersionV1} {
+				testCases = append(testCases, testCase{ConvertEventExtensionsToString(t, event), enc, version})
+			}
+		}
 	}
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		for _, tc := range testCases {
-			t.Run("encoding_"+tc.encoding.String()+"_version_"+tc.version, func(t *testing.T) {
-				messageModeSpecVersionTest(t, channel, tc.encoding, tc.version, options...)
+			t.Run(tc.event.ID()+"_encoding_"+tc.encoding.String()+"_version_"+tc.version, func(t *testing.T) {
+				messageModeSpecVersionTest(t, channel, tc.event, tc.encoding, tc.version, options...)
 			})
 		}
 	})
 }
 
 // Sender -> Channel -> Subscriber -> Record Events
-func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, encoding cloudevents.Encoding, version string, options ...testlib.SetupClientOption) {
+func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event cloudevents.Event, encoding cloudevents.Encoding, version string, options ...testlib.SetupClientOption) {
 	client := testlib.Setup(t, true, options...)
 	defer testlib.TearDown(client)
 
-	resourcesNamePrefix := strings.ReplaceAll(strings.ToLower(encoding.String()+"-"+version), ".", "")
+	resourcesNamePrefix := strings.ReplaceAll(strings.ToLower(event.ID()+"-"+encoding.String()+"-"+version), ".", "")
 
 	channelName := resourcesNamePrefix + "-ch"
 	client.CreateChannelOrFail(channelName, &channel)
@@ -87,9 +84,6 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, encoding 
 
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	event := FullEvent()
-	event.SetID(uuid.New().String())
-
 	switch version {
 	case cloudevents.VersionV1:
 		event.Context = event.Context.AsV1()
@@ -105,9 +99,30 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, encoding 
 		sender.WithEncoding(encoding),
 	)
 
-	eventTracker.AssertExact(1, recordevents.NoError(), recordevents.MatchEvent(
-		HasSpecVersion(version),
-		HasId(event.ID()),
-		IsValid(),
+	matchers := []EventMatcher{HasExactlyAttributesEqualTo(event.Context)}
+	if event.Data() != nil {
+		matchers = append(matchers, HasData(event.Data()))
+	} else {
+		matchers = append(matchers, HasNoData())
+	}
+	// The extension matcher needs to match an eventual extension containing knativehistory extension
+	// (which is not mandatory by the spec)
+	var extKeys []string
+	for k := range event.Extensions() {
+		extKeys = append(extKeys, k)
+	}
+	extKeys = append(extKeys, eventingchannel.EventHistory)
+	matchers = append(matchers, AnyOf(
+		HasExactlyExtensions(event.Extensions()),
+		AllOf(
+			ContainsExactlyExtensions(extKeys...),
+			HasExtensions(event.Extensions()),
+		),
 	))
+
+	eventTracker.AssertExact(
+		1,
+		recordevents.NoError(),
+		recordevents.MatchEvent(matchers...),
+	)
 }

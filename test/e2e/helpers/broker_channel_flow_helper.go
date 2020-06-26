@@ -133,7 +133,7 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		// create trigger3 to receive the transformed event, and send it to the channel
 		channelURL, err := client.GetAddressableURI(channelName, &channel)
 		if err != nil {
-			st.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
+			st.Fatalf("Failed to get the url for the channel %q: %+v", channelName, err)
 		}
 		client.CreateTriggerOrFailV1Beta1(
 			triggerName3,
