@@ -139,11 +139,11 @@ Depending on your needs you might want to install other
 ## Install Brokers
 
 Install the
-[Channel Broker](https://github.com/knative/eventing/tree/master/config/brokers/channel-broker)
+[MT Channel Broker](https://github.com/knative/eventing/tree/master/config/brokers/mt-channel-broker)
 or any of the other Brokers available inside the `config/brokers/` directory.
 
 ```shell
-ko apply -f config/brokers/channel-broker/
+ko apply -f config/brokers/mt-channel-broker/
 ```
 
 Depending on your needs you might want to install other
