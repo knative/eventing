@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.1 // indirect
-	github.com/cloudevents/sdk-go/v2 v2.0.1-0.20200625144206-4e4657232c9e
+	github.com/cloudevents/sdk-go/v2 v2.1.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
