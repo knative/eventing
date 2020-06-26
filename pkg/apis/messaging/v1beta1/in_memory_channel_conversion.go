@@ -20,15 +20,87 @@ import (
 	"context"
 	"fmt"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/messaging"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *InMemoryChannel) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+// Converts source (from v1beta1.InMemoryChannel) into v1.InMemoryChannel
+func (source *InMemoryChannel) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *v1.InMemoryChannel:
+		sink.ObjectMeta = source.ObjectMeta
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
+		source.Status.ConvertTo(ctx, &sink.Status)
+		return source.Spec.ConvertTo(ctx, &sink.Spec)
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
 }
 
-// ConvertFrom implements apis.Convertible
-func (sink *InMemoryChannel) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+// ConvertTo helps implement apis.Convertible
+func (source *InMemoryChannelSpec) ConvertTo(ctx context.Context, sink *v1.InMemoryChannelSpec) error {
+	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1.DeliverySpec{}
+		if err := source.Delivery.ConvertTo(ctx, sink.Delivery); err != nil {
+			return err
+		}
+	}
+	sink.SubscribableSpec = eventingduckv1.SubscribableSpec{}
+	source.SubscribableSpec.ConvertTo(ctx, &sink.SubscribableSpec)
+	return nil
+}
+
+// ConvertTo helps implement apis.Convertible
+func (source *InMemoryChannelStatus) ConvertTo(ctx context.Context, sink *v1.InMemoryChannelStatus) {
+	source.Status.ConvertTo(ctx, &sink.Status)
+	sink.AddressStatus = source.AddressStatus
+	sink.SubscribableStatus = eventingduckv1.SubscribableStatus{}
+	source.SubscribableStatus.ConvertTo(ctx, &sink.SubscribableStatus)
+}
+
+// ConvertFrom implements apis.Convertible.
+// Converts obj v1.InMemoryChannel into v1beta1.InMemoryChannel
+func (sink *InMemoryChannel) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *v1.InMemoryChannel:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Status.ConvertFrom(ctx, source.Status)
+		sink.Spec.ConvertFrom(ctx, source.Spec)
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
+		return nil
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
+	}
+}
+
+// ConvertFrom helps implement apis.Convertible
+func (sink *InMemoryChannelSpec) ConvertFrom(ctx context.Context, source v1.InMemoryChannelSpec) error {
+	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1beta1.DeliverySpec{}
+		if err := sink.Delivery.ConvertFrom(ctx, source.Delivery); err != nil {
+			return err
+		}
+	}
+	sink.SubscribableSpec = eventingduckv1beta1.SubscribableSpec{}
+	sink.SubscribableSpec.ConvertFrom(ctx, source.SubscribableSpec)
+	return nil
+}
+
+// ConvertFrom helps implement apis.Convertible
+func (sink *InMemoryChannelStatus) ConvertFrom(ctx context.Context, source v1.InMemoryChannelStatus) {
+	source.Status.ConvertTo(ctx, &sink.Status)
+	sink.AddressStatus = source.AddressStatus
+	sink.SubscribableStatus = eventingduckv1beta1.SubscribableStatus{}
+	sink.SubscribableStatus.ConvertFrom(ctx, source.SubscribableStatus)
 }
