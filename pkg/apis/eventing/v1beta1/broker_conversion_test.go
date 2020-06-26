@@ -25,7 +25,6 @@ import (
 	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	"knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
