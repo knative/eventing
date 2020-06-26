@@ -19,9 +19,30 @@ package v1beta1
 import (
 	"context"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestSubscriptionConversionBadType(t *testing.T) {
+	good, bad := &Subscription{}, &Channel{}
+
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+	}
+
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}
+
+func TestBrokerConversionBadVersion(t *testing.T) {
 	good, bad := &Subscription{}, &Subscription{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
@@ -30,5 +51,107 @@ func TestSubscriptionConversionBadType(t *testing.T) {
 
 	if err := good.ConvertFrom(context.Background(), bad); err == nil {
 		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}
+
+func TestSubscriptionConversion(t *testing.T) {
+	// Just one for now, just adding the for loop for ease of future changes.
+	versions := []apis.Convertible{&v1.Subscription{}}
+
+	linear := duckv1beta1.BackoffPolicyLinear
+
+	tests := []struct {
+		name string
+		in   *Subscription
+	}{{
+		name: "min configuration",
+		in: &Subscription{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "subscription-name",
+				Namespace:  "subscription-ns",
+				Generation: 17,
+			},
+			Spec: SubscriptionSpec{},
+		},
+	}, {
+		name: "full configuration",
+		in: &Subscription{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "subscription-name",
+				Namespace:  "subscription-ns",
+				Generation: 17,
+			},
+			Spec: SubscriptionSpec{
+				Channel: corev1.ObjectReference{
+					Kind:       "channelKind",
+					Namespace:  "channelNamespace",
+					Name:       "channelName",
+					APIVersion: "channelAPIVersion",
+				},
+				Subscriber: &duckv1.Destination{
+					Ref: &duckv1.KReference{
+						Kind:       "subscriber-dest-kind",
+						Namespace:  "subscriber-dest-ns",
+						Name:       "subscriber-dest-name",
+						APIVersion: "subscriber-dest-version",
+					},
+					URI: apis.HTTP("address"),
+				},
+				Reply: &duckv1.Destination{
+					Ref: &duckv1.KReference{
+						Kind:       "reply-dest-kind",
+						Namespace:  "reply-dest-ns",
+						Name:       "reply-dest-name",
+						APIVersion: "reply-dest-version",
+					},
+					URI: apis.HTTP("address"),
+				},
+				Delivery: &duckv1beta1.DeliverySpec{
+					DeadLetterSink: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Kind:       "dlKind",
+							Namespace:  "dlNamespace",
+							Name:       "dlName",
+							APIVersion: "dlAPIVersion",
+						},
+						URI: apis.HTTP("dls"),
+					},
+					Retry:         pointer.Int32Ptr(5),
+					BackoffPolicy: &linear,
+					BackoffDelay:  pointer.StringPtr("5s"),
+				},
+			},
+			Status: SubscriptionStatus{
+				Status: duckv1.Status{
+					ObservedGeneration: 1,
+					Conditions: duckv1.Conditions{{
+						Type:   "Ready",
+						Status: "True",
+					}},
+				},
+				PhysicalSubscription: SubscriptionStatusPhysicalSubscription{
+					SubscriberURI:     apis.HTTP("subscriber.example.com"),
+					ReplyURI:          apis.HTTP("reply.example.com"),
+					DeadLetterSinkURI: apis.HTTP("dlc.example.com"),
+				},
+			},
+		},
+	}}
+	for _, test := range tests {
+		for _, version := range versions {
+			t.Run(test.name, func(t *testing.T) {
+				ver := version
+				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
+					t.Errorf("ConvertTo() = %v", err)
+				}
+				got := &Subscription{}
+				if err := got.ConvertFrom(context.Background(), ver); err != nil {
+					t.Errorf("ConvertFrom() = %v", err)
+				}
+				if diff := cmp.Diff(test.in, got); diff != "" {
+					t.Errorf("roundtrip (-want, +got) = %v", diff)
+				}
+			})
+		}
 	}
 }
