@@ -19,10 +19,11 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 
-	"knative.dev/eventing/pkg/apis/messaging/v1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 )
 
