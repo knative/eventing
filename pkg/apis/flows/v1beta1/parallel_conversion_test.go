@@ -20,15 +20,15 @@ import (
 	"context"
 	"testing"
 
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -51,8 +51,6 @@ func TestParallelConversionBadType(t *testing.T) {
 func TestParallelRoundTripV1beta1(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1.Parallel{}}
-	one := int32(1)
-	onemn := "1mn"
 	linear := eventingduckv1beta1.BackoffPolicyLinear
 
 	tests := []struct {
@@ -117,9 +115,9 @@ func TestParallelRoundTripV1beta1(t *testing.T) {
 									APIVersion: "d1APIVersion",
 								},
 								URI: apis.HTTP("d1.example.com")},
-							Retry:         &one,
+							Retry:         pointer.Int32Ptr(1),
 							BackoffPolicy: &linear,
-							BackoffDelay:  &onemn,
+							BackoffDelay:  pointer.StringPtr("1m"),
 						},
 					},
 					{
@@ -159,9 +157,9 @@ func TestParallelRoundTripV1beta1(t *testing.T) {
 									APIVersion: "d2APIVersion",
 								},
 								URI: apis.HTTP("d2.example.com")},
-							Retry:         &one,
+							Retry:         pointer.Int32Ptr(1),
 							BackoffPolicy: &linear,
-							BackoffDelay:  &onemn,
+							BackoffDelay:  pointer.StringPtr("1m"),
 						},
 					},
 				},
@@ -262,8 +260,6 @@ func TestParallelRoundTripV1beta1(t *testing.T) {
 func TestParallelRoundTripV1(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&Parallel{}}
-	one := int32(1)
-	onemn := "1mn"
 	linear := eventingduckv1.BackoffPolicyLinear
 
 	tests := []struct {
@@ -328,9 +324,9 @@ func TestParallelRoundTripV1(t *testing.T) {
 									APIVersion: "d1APIVersion",
 								},
 								URI: apis.HTTP("d1.example.com")},
-							Retry:         &one,
+							Retry:         pointer.Int32Ptr(1),
 							BackoffPolicy: &linear,
-							BackoffDelay:  &onemn,
+							BackoffDelay:  pointer.StringPtr("1m"),
 						},
 					},
 					{
@@ -370,9 +366,9 @@ func TestParallelRoundTripV1(t *testing.T) {
 									APIVersion: "d2APIVersion",
 								},
 								URI: apis.HTTP("d2.example.com")},
-							Retry:         &one,
+							Retry:         pointer.Int32Ptr(1),
 							BackoffPolicy: &linear,
-							BackoffDelay:  &onemn,
+							BackoffDelay:  pointer.StringPtr("1m"),
 						},
 					},
 				},

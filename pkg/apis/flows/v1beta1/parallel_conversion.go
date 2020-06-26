@@ -46,7 +46,9 @@ func (source *Parallel) ConvertTo(ctx context.Context, obj apis.Convertible) err
 
 			if b.Delivery != nil {
 				sink.Spec.Branches[i].Delivery = &eventingduckv1.DeliverySpec{}
-				b.Delivery.ConvertTo(ctx, sink.Spec.Branches[i].Delivery)
+				if err := b.Delivery.ConvertTo(ctx, sink.Spec.Branches[i].Delivery); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -108,7 +110,9 @@ func (sink *Parallel) ConvertFrom(ctx context.Context, obj apis.Convertible) err
 			}
 			if b.Delivery != nil {
 				sink.Spec.Branches[i].Delivery = &eventingduckv1beta1.DeliverySpec{}
-				sink.Spec.Branches[i].Delivery.ConvertFrom(ctx, b.Delivery)
+				if err := sink.Spec.Branches[i].Delivery.ConvertFrom(ctx, b.Delivery); err != nil {
+					return err
+				}
 			}
 		}
 		if source.Spec.ChannelTemplate != nil {

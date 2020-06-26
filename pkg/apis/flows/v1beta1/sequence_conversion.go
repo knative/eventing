@@ -44,7 +44,9 @@ func (source *Sequence) ConvertTo(ctx context.Context, obj apis.Convertible) err
 
 			if s.Delivery != nil {
 				sink.Spec.Steps[i].Delivery = &eventingduckv1.DeliverySpec{}
-				s.Delivery.ConvertTo(ctx, sink.Spec.Steps[i].Delivery)
+				if err := s.Delivery.ConvertTo(ctx, sink.Spec.Steps[i].Delivery); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -98,7 +100,9 @@ func (sink *Sequence) ConvertFrom(ctx context.Context, obj apis.Convertible) err
 			}
 			if s.Delivery != nil {
 				sink.Spec.Steps[i].Delivery = &eventingduckv1beta1.DeliverySpec{}
-				sink.Spec.Steps[i].Delivery.ConvertFrom(ctx, s.Delivery)
+				if err := sink.Spec.Steps[i].Delivery.ConvertFrom(ctx, s.Delivery); err != nil {
+					return err
+				}
 			}
 		}
 

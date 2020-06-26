@@ -49,7 +49,6 @@ func TestSequenceConversionBadType(t *testing.T) {
 // Test v1beta1 -> v1 -> v1beta1
 func TestSequenceRoundTripV1beta1(t *testing.T) {
 	versions := []apis.Convertible{&v1.Sequence{}}
-
 	linear := eventingduckv1beta1.BackoffPolicyLinear
 
 	tests := []struct {
