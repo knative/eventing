@@ -246,12 +246,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 			for _, event := range test.eventFilters {
 				// Create event recorder pod and service
 				subscriberName := "dumper-" + event.String()
-				eventRecordPod := resources.EventRecordPod(subscriberName)
-				client.CreatePodOrFail(eventRecordPod, testlib.WithService(subscriberName))
-				eventTracker, err := recordevents.NewEventInfoStore(client, subscriberName)
-				if err != nil {
-					t.Fatalf("Pod tracker failed: %v", err)
-				}
+				eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
 				eventTrackers[subscriberName] = eventTracker
 				defer eventTracker.Cleanup()
 
