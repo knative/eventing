@@ -147,6 +147,7 @@ ko apply -f config/brokers/channel-broker/
 ```
 
 You may also need to install the MT Channel Based Broker
+
 ```shell
 ko apply -f config/brokers/mt-channel-broker/
 ```
