@@ -18,6 +18,7 @@ package helpers
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
@@ -122,6 +123,7 @@ func ParallelTestHelper(t *testing.T,
 			eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 			event.SetSource(eventSource)
 			event.SetType(testlib.DefaultEventType)
+			event.SetTime(time.Now())
 			body := fmt.Sprintf(`{"msg":"TestFlowParallel %s"}`, uuid.New().String())
 			if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 				st.Fatalf("Cannot set the payload of the event: %s", err.Error())
