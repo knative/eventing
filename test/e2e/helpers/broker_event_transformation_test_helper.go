@@ -23,7 +23,6 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -45,13 +44,14 @@ Note: the number denotes the sequence of the event that flows in this test case.
 */
 func EventTransformationForTriggerTestHelper(t *testing.T,
 	brokerClass string,
-	channelTestRunner testlib.ComponentsTestRunner,
+	brokerVersion string,
+	triggerVersion string,
+	componentsTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"
 
-		any                    = v1beta1.TriggerAnyFilter
 		eventType              = "type1"
 		transformedEventType   = "type2"
 		eventSource            = "source1"
@@ -66,7 +66,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 		recordEventsPodName   = "recordevents-pod"
 	)
 
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	componentsTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := testlib.Setup(st, true, options...)
 		defer testlib.TearDown(client)
 
@@ -74,7 +74,11 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 		config := client.CreateBrokerConfigMapOrFail(brokerName, &channel)
 
 		// create a new broker
-		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
+		if brokerVersion == "v1" {
+			client.CreateBrokerV1OrFail(brokerName, resources.WithBrokerClassForBrokerV1(brokerClass), resources.WithConfigForBrokerV1(config))
+		} else {
+			client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
+		}
 		client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 		// create the transformation service
@@ -87,24 +91,42 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create trigger1 for event transformation
-		client.CreateTriggerOrFailV1Beta1(
-			originalTriggerName,
-			resources.WithBrokerV1Beta1(brokerName),
-			resources.WithAttributesTriggerFilterV1Beta1(eventSource, eventType, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(transformationPodName),
-		)
+		if triggerVersion == "v1" {
+			client.CreateTriggerV1OrFail(
+				originalTriggerName,
+				resources.WithBrokerV1(brokerName),
+				resources.WithAttributesTriggerFilterV1(eventSource, eventType, nil),
+				resources.WithSubscriberServiceRefForTriggerV1(transformationPodName),
+			)
+		} else {
+			client.CreateTriggerOrFailV1Beta1(
+				originalTriggerName,
+				resources.WithBrokerV1Beta1(brokerName),
+				resources.WithAttributesTriggerFilterV1Beta1(eventSource, eventType, nil),
+				resources.WithSubscriberServiceRefForTriggerV1Beta1(transformationPodName),
+			)
+		}
 
 		// create logger pod and service
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 
 		// create trigger2 for event receiving
-		client.CreateTriggerOrFailV1Beta1(
-			transformedTriggerName,
-			resources.WithBrokerV1Beta1(brokerName),
-			resources.WithAttributesTriggerFilterV1Beta1(transformedEventSource, transformedEventType, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(recordEventsPodName),
-		)
+		if triggerVersion == "v1" {
+			client.CreateTriggerV1OrFail(
+				transformedTriggerName,
+				resources.WithBrokerV1(brokerName),
+				resources.WithAttributesTriggerFilterV1(transformedEventSource, transformedEventType, nil),
+				resources.WithSubscriberServiceRefForTriggerV1(recordEventsPodName),
+			)
+		} else {
+			client.CreateTriggerOrFailV1Beta1(
+				transformedTriggerName,
+				resources.WithBrokerV1Beta1(brokerName),
+				resources.WithAttributesTriggerFilterV1Beta1(transformedEventSource, transformedEventType, nil),
+				resources.WithSubscriberServiceRefForTriggerV1Beta1(recordEventsPodName),
+			)
+		}
 
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()

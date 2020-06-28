@@ -51,6 +51,8 @@ Trigger3 filters the transformed event and sends it to Channel.
 */
 func BrokerChannelFlowWithTransformation(t *testing.T,
 	brokerClass string,
+	brokerVersion string,
+	triggerVersion string,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -85,7 +87,11 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		//&channel
 
 		// create a new broker
-		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
+		if brokerVersion == "v1" {
+			client.CreateBrokerV1OrFail(brokerName, resources.WithBrokerClassForBrokerV1(brokerClass), resources.WithConfigForBrokerV1(config))
+		} else {
+			client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithConfigForBrokerV1Beta1(config))
+		}
 		client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 		// eventToSend is the event sent as input of the test
@@ -107,25 +113,41 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create trigger1 to receive the original event, and do event transformation
-		client.CreateTriggerOrFailV1Beta1(
-			triggerName1,
-			resources.WithBrokerV1Beta1(brokerName),
-			resources.WithAttributesTriggerFilterV1Beta1(eventSource, eventType, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(transformationPodName),
-		)
-
+		if triggerVersion == "v1" {
+			client.CreateTriggerV1OrFail(
+				triggerName1,
+				resources.WithBrokerV1(brokerName),
+				resources.WithAttributesTriggerFilterV1(eventSource, eventType, nil),
+				resources.WithSubscriberServiceRefForTriggerV1(transformationPodName),
+			)
+		} else {
+			client.CreateTriggerOrFailV1Beta1(
+				triggerName1,
+				resources.WithBrokerV1Beta1(brokerName),
+				resources.WithAttributesTriggerFilterV1Beta1(eventSource, eventType, nil),
+				resources.WithSubscriberServiceRefForTriggerV1Beta1(transformationPodName),
+			)
+		}
 		// create event tracker that should receive all sent events
 		allEventTracker, _ := recordevents.StartEventRecordOrFail(client, allEventsRecorderPodName)
 		defer allEventTracker.Cleanup()
 
 		// create trigger to receive all the events
-		client.CreateTriggerOrFailV1Beta1(
-			triggerName2,
-			resources.WithBrokerV1Beta1(brokerName),
-			resources.WithAttributesTriggerFilterV1Beta1(any, any, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(allEventsRecorderPodName),
-		)
-
+		if triggerVersion == "v1" {
+			client.CreateTriggerV1OrFail(
+				triggerName2,
+				resources.WithBrokerV1(brokerName),
+				resources.WithAttributesTriggerFilterV1(any, any, nil),
+				resources.WithSubscriberServiceRefForTriggerV1(allEventsRecorderPodName),
+			)
+		} else {
+			client.CreateTriggerOrFailV1Beta1(
+				triggerName2,
+				resources.WithBrokerV1Beta1(brokerName),
+				resources.WithAttributesTriggerFilterV1Beta1(any, any, nil),
+				resources.WithSubscriberServiceRefForTriggerV1Beta1(allEventsRecorderPodName),
+			)
+		}
 		// create channel for trigger3
 		client.CreateChannelOrFail(channelName, &channel)
 		client.WaitForResourceReadyOrFail(channelName, &channel)
@@ -135,12 +157,21 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		if err != nil {
 			st.Fatalf("Failed to get the url for the channel %q: %+v", channelName, err)
 		}
-		client.CreateTriggerOrFailV1Beta1(
-			triggerName3,
-			resources.WithBrokerV1Beta1(brokerName),
-			resources.WithAttributesTriggerFilterV1Beta1(transformedEventSource, transformedEventType, nil),
-			resources.WithSubscriberURIForTriggerV1Beta1(channelURL),
-		)
+		if triggerVersion == "v1" {
+			client.CreateTriggerV1OrFail(
+				triggerName3,
+				resources.WithBrokerV1(brokerName),
+				resources.WithAttributesTriggerFilterV1(transformedEventSource, transformedEventType, nil),
+				resources.WithSubscriberURIForTriggerV1(channelURL),
+			)
+		} else {
+			client.CreateTriggerOrFailV1Beta1(
+				triggerName3,
+				resources.WithBrokerV1Beta1(brokerName),
+				resources.WithAttributesTriggerFilterV1Beta1(transformedEventSource, transformedEventType, nil),
+				resources.WithSubscriberURIForTriggerV1Beta1(channelURL),
+			)
+		}
 
 		// create event tracker that should receive only transformed events
 		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(client, transformedEventsRecorderPodName)

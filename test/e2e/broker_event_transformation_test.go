@@ -37,6 +37,15 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 
 Note: the number denotes the sequence of the event that flows in this test case.
 */
-func TestEventTransformationForTrigger(t *testing.T) {
-	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, channelTestRunner)
+func TestEventTransformationForTriggerV1BrokerV1(t *testing.T) {
+	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1", "v1", channelTestRunner)
+}
+func TestEventTransformationForTriggerV1Beta1BrokerV1(t *testing.T) {
+	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1", "v1beta1", channelTestRunner)
+}
+func TestEventTransformationForTriggerV1Beta1BrokerV1Beta1(t *testing.T) {
+	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1beta1", "v1beta1", channelTestRunner)
+}
+func TestEventTransformationForTriggerV1BrokerV1Beta1(t *testing.T) {
+	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1beta1", "v1", channelTestRunner)
 }
