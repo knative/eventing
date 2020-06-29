@@ -23,10 +23,19 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
+	cetypes "github.com/cloudevents/sdk-go/v2/types"
 )
 
 func MatchStatusCode(status int) cetest.EventMatcher {
-	return cetest.AllOf(cetest.HasType(EventType), cetest.HasExtension(ResponseStatusCodeExtension, status))
+	return cetest.AllOf(
+		cetest.HasType(EventType),
+		cetest.AnyOf(
+			// Because extensions could lose type information during serialization
+			// (eg when they're transported as http headers) the assert should match or the string or the int
+			cetest.HasExtension(ResponseStatusCodeExtension, cetypes.FormatInteger(int32(status))),
+			cetest.HasExtension(ResponseStatusCodeExtension, status),
+		),
+	)
 }
 
 func MatchInnerEvent(matchers ...cetest.EventMatcher) cetest.EventMatcher {
