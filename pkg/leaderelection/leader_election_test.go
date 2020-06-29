@@ -37,7 +37,7 @@ func okConfig() *kle.Config {
 		LeaseDuration:     15 * time.Second,
 		RenewDeadline:     10 * time.Second,
 		RetryPeriod:       2 * time.Second,
-		EnabledComponents: sets.NewString("controller", "inmemorychannel-dispatcher", "inmemorychannel-controller", "broker-controller", "webhook"),
+		EnabledComponents: sets.NewString("controller", "inmemorychannel-dispatcher", "inmemorychannel-controller", "broker-controller", "webhook", "pingsource-mt-adapter"),
 	}
 }
 
@@ -50,7 +50,7 @@ func okData() map[string]string {
 		"leaseDuration":     "15s",
 		"renewDeadline":     "10s",
 		"retryPeriod":       "2s",
-		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller,broker-controller,webhook",
+		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller,broker-controller,webhook,pingsource-mt-adapter",
 	}
 }
 
@@ -69,7 +69,7 @@ func TestValidateConfig(t *testing.T) {
 		data: kmeta.UnionMaps(okData(), map[string]string{
 			"enabledComponents": "controller,frobulator",
 		}),
-		err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher" "webhook"]`),
+		err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher" "pingsource-mt-adapter" "webhook"]`),
 	}, {
 		name: "invalid config",
 		data: kmeta.UnionMaps(okData(), map[string]string{

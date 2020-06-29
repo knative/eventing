@@ -18,12 +18,17 @@ package pingsource
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
+
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
@@ -53,11 +58,23 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
+	logger := logging.FromContext(ctx)
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
+
+	// Retrieve leader election config
+	leaderElectionConfig, err := sharedmain.GetLeaderElectionConfig(ctx)
+	if err != nil {
+		logger.Fatalw("Error loading leader election configuration", zap.Error(err))
+	}
+
+	leConfig, err := leComponentConfigToJson(leaderElectionConfig.GetComponentConfig(mtcomponent))
+	if err != nil {
+		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
+	}
 
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
@@ -65,8 +82,8 @@ func NewController(
 		deploymentLister:     deploymentInformer.Lister(),
 		serviceAccountLister: serviceAccountInformer.Lister(),
 		roleBindingLister:    roleBindingInformer.Lister(),
-
-		loggingContext: ctx,
+		leConfig:             leConfig,
+		loggingContext:       ctx,
 	}
 
 	env := &envConfig{}
@@ -80,7 +97,7 @@ func NewController(
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Watch for deployments owned by the source
@@ -106,4 +123,11 @@ func NewController(
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
 
 	return impl
+}
+
+// leComponentConfigToJson converts a ComponentConfig to a json string.
+// TODO: move to pkg
+func leComponentConfigToJson(cfg leaderelection.ComponentConfig) (string, error) {
+	jsonCfg, err := json.Marshal(cfg)
+	return string(jsonCfg), err
 }

@@ -32,6 +32,7 @@ var (
 		"inmemorychannel-dispatcher",
 		"inmemorychannel-controller",
 		"webhook",
+		"pingsource-mt-adapter",
 	)
 )
 
