@@ -71,16 +71,9 @@ spec:
               filter:
                 type: object
                 properties:
-                  sourceAndType:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                      source:
-                        type: string
                   attributes:
                     type: object
-                    description: "Map of CloudEvents attributes used for filtering events."
+                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events"
                     additionalProperties:
                       type: string
               subscriber:
@@ -134,7 +127,7 @@ spec:
                 properties:
                   attributes:
                     type: object
-                    description: "Map of CloudEvents attributes used for filtering events."
+                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events"
                     additionalProperties:
                       type: string
               subscriber:
