@@ -270,6 +270,22 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					messagingv1_:      &messagingv1.Channel{},
 				},
 			},
+			messagingv1.Kind("InMemoryChannel"): {
+				DefinitionName: messaging.InMemoryChannelsResource.String(),
+				HubVersion:     messagingv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					messagingv1beta1_: &messagingv1beta1.InMemoryChannel{},
+					messagingv1_:      &messagingv1.InMemoryChannel{},
+				},
+			},
+			messagingv1.Kind("Subscription"): {
+				DefinitionName: messaging.SubscriptionsResource.String(),
+				HubVersion:     messagingv1beta1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					messagingv1beta1_: &messagingv1beta1.Subscription{},
+					messagingv1_:      &messagingv1.Subscription{},
+				},
+			},
 
 			// flows
 			flowsv1.Kind("Sequence"): {
