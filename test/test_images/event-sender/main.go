@@ -85,15 +85,6 @@ func main() {
 		maxMsg = m
 	}
 
-	defer func() {
-		var err error
-		r := recover()
-		if r != nil {
-			err = r.(error)
-			log.Printf("recovered from panic: %v", err)
-		}
-	}()
-
 	if delay > 0 {
 		log.Printf("will sleep for %s", delay)
 		time.Sleep(delay)
@@ -172,6 +163,8 @@ func main() {
 		if incrementalId {
 			event.SetID(fmt.Sprintf("%d", sequence))
 		}
+
+		log.Printf("I'm going to send\n%s\n", event)
 
 		// TODO(slinkydeveloper) Because of https://github.com/cloudevents/sdk-go/pull/550
 		// we cannot perform this:
