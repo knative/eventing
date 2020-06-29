@@ -23,6 +23,10 @@ spec:
   group: eventing.knative.dev
   versions:
   - &version
+    name: v1alpha1
+    served: false
+    storage: false
+  - << : *version
     name: v1beta1
     served: true
     storage: true

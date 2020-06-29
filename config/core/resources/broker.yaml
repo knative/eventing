@@ -24,6 +24,10 @@ spec:
   group: eventing.knative.dev
   versions:
   - &version
+    name: v1alpha1
+    served: false
+    storage: false
+  - << : *version
     name: v1beta1
     served: true
     storage: true
@@ -53,10 +57,6 @@ spec:
   - << : *version
     name: v1
     served: true
-    storage: false
-  - << : *version
-    name: v1alpha1
-    served: false
     storage: false
   names:
     kind: Broker
