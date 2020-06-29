@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -47,8 +47,8 @@ func (testHelper) FalseSubscriptionCondition() *apis.Condition {
 	}
 }
 
-func (testHelper) ReadySubscriptionStatus() *messagingv1beta1.SubscriptionStatus {
-	ss := &messagingv1beta1.SubscriptionStatus{}
+func (testHelper) ReadySubscriptionStatus() *messagingv1.SubscriptionStatus {
+	ss := &messagingv1.SubscriptionStatus{}
 	ss.MarkChannelReady()
 	ss.MarkReferencesResolved()
 	ss.MarkAddedToChannel()
