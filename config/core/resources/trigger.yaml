@@ -23,9 +23,9 @@ spec:
   group: eventing.knative.dev
   versions:
   - &version
-    name: v1alpha1
-    served: false
-    storage: false
+    name: v1beta1
+    served: true
+    storage: true
     subresources:
       status: {}
     schema:
@@ -102,9 +102,9 @@ spec:
       type: date
       jsonPath: .metadata.creationTimestamp
   - << : *version
-    name: v1beta1
+    name: v1
     served: true
-    storage: true
+    storage: false
     schema:
       openAPIV3Schema:
         type: object
