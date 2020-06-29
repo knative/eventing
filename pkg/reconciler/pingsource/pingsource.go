@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"knative.dev/eventing/pkg/utils/cache"
+
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -64,6 +66,7 @@ const (
 	component                = "pingsource"
 	mtcomponent              = "pingsource-mt-adapter"
 	mtadapterName            = "pingsource-mt-adapter"
+	mtconfigmapName          = "config-pingsource-mt-adapter"
 	stadapterClusterRoleName = "knative-eventing-pingsource-adapter"
 )
 
@@ -108,6 +111,9 @@ type Reconciler struct {
 
 	// Leader election configuration for the mt receive adapter
 	leConfig string
+
+	// Persistent store
+	pstore cache.PersistedStore
 }
 
 // Check that our Reconciler implements ReconcileKind
@@ -170,6 +176,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 			logging.FromContext(ctx).Error("Unable to track the deployment", zap.Error(err))
 			return err
 		}
+
+		// Make sure our persistent store refreshes our deployment pods
+		r.pstore.Mounted(d.Namespace, d.Labels)
+
 	} else {
 		if _, err := r.reconcileServiceAccount(ctx, source); err != nil {
 			logging.FromContext(ctx).Error("Unable to create the receive adapter service account", zap.Error(err))

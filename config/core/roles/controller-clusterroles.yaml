@@ -29,6 +29,7 @@ rules:
       - "endpoints"
       - "events"
       - "serviceaccounts"
+      - "pods"
     verbs: &everything
       - "get"
       - "list"

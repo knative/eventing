@@ -87,6 +87,25 @@ func MakeMTReceiveAdapter(args MTArgs) *v1.Deployment {
 								Name:          "metrics",
 								ContainerPort: 9090,
 							}},
+
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config-resources",
+									MountPath: "/etc/data",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "config-resources",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "config-pingsource-mt-adapter",
+									},
+								},
+							},
 						},
 					},
 				},

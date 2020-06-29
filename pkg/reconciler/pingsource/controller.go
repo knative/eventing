@@ -20,6 +20,10 @@ import (
 	"context"
 	"encoding/json"
 
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingcache "knative.dev/eventing/pkg/utils/cache"
+	"knative.dev/pkg/reconciler"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -76,6 +80,12 @@ func NewController(
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
 
+	// Create PingSource persisted store backed by a ConfigMap
+	store := eventingcache.NewPersistedStore(kubeclient.Get(ctx), system.Namespace(), "config-pingsource-mt-adapter",
+		pingSourceInformer.Informer(), reconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, "cluster", true))
+
+	go store.Run(ctx)
+
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
 		pingLister:           pingSourceInformer.Lister(),
@@ -83,6 +93,7 @@ func NewController(
 		serviceAccountLister: serviceAccountInformer.Lister(),
 		roleBindingLister:    roleBindingInformer.Lister(),
 		leConfig:             leConfig,
+		pstore:               store,
 		loggingContext:       ctx,
 	}
 
@@ -100,7 +111,7 @@ func NewController(
 	logger.Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Watch for deployments owned by the source
+	// Watch for deployments owned by the source (single-tenant)
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(v1alpha2.Kind("PingSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
