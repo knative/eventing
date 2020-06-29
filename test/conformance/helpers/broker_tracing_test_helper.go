@@ -30,7 +30,7 @@ import (
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/eventing/test/lib/resources/sender"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in

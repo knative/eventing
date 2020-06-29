@@ -28,7 +28,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/eventing/test/lib/resources/sender"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 /*
