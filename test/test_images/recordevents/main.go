@@ -32,7 +32,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
-	"knative.dev/eventing/test/lib/tracing"
+	"knative.dev/eventing/test/test_images"
 )
 
 type eventRecorder struct {
@@ -150,7 +150,7 @@ func main() {
 	er.StartServer(recordevents.RecordEventsPort)
 
 	logger, _ := zap.NewDevelopment()
-	if err := tracing.ConfigureTracing(logger.Sugar(), ""); err != nil {
+	if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 

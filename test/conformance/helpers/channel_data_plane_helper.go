@@ -17,7 +17,9 @@ limitations under the License.
 package helpers
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -32,8 +34,8 @@ import (
 	"knative.dev/eventing/test/lib/sender"
 )
 
-// ChannelMessageModesAndSpecVersionsTestRunner tests the support of the channel ingress for different spec versions and message modes
-func ChannelMessageModesAndSpecVersionsTestRunner(
+// ChannelDataPlaneSuccessTestRunner tests the support of the channel ingress for different spec versions and message modes
+func ChannelDataPlaneSuccessTestRunner(
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
@@ -46,6 +48,7 @@ func ChannelMessageModesAndSpecVersionsTestRunner(
 
 	var testCases []testCase
 
+	// Generate matrix events/encoding/spec versions
 	for _, event := range []cloudevents.Event{MinEvent(), FullEvent()} {
 		for _, enc := range []cloudevents.Encoding{cloudevents.EncodingBinary, cloudevents.EncodingStructured} {
 			for _, version := range []string{cloudevents.VersionV03, cloudevents.VersionV1} {
@@ -57,14 +60,14 @@ func ChannelMessageModesAndSpecVersionsTestRunner(
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		for _, tc := range testCases {
 			t.Run(tc.event.ID()+"_encoding_"+tc.encoding.String()+"_version_"+tc.version, func(t *testing.T) {
-				messageModeSpecVersionTest(t, channel, tc.event, tc.encoding, tc.version, options...)
+				channelDataPlaneSuccessTest(t, channel, tc.event, tc.encoding, tc.version, options...)
 			})
 		}
 	})
 }
 
 // Sender -> Channel -> Subscriber -> Record Events
-func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event cloudevents.Event, encoding cloudevents.Encoding, version string, options ...testlib.SetupClientOption) {
+func channelDataPlaneSuccessTest(t *testing.T, channel metav1.TypeMeta, event cloudevents.Event, encoding cloudevents.Encoding, version string, options ...testlib.SetupClientOption) {
 	client := testlib.Setup(t, true, options...)
 	defer testlib.TearDown(client)
 
@@ -131,5 +134,105 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 	eventTracker.AssertExact(
 		1,
 		recordevents.MatchEvent(sender.MatchStatusCode(http.StatusAccepted)),
+	)
+}
+
+// ChannelDataPlaneFailureTestRunner tests some status codes from the spec
+func ChannelDataPlaneFailureTestRunner(
+	t *testing.T,
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption,
+) {
+	testCases := []struct {
+		statusCode int
+		senderFn   func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string)
+		eventId    string
+	}{{
+		statusCode: http.StatusMethodNotAllowed,
+		senderFn: func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string) {
+			c.SendRequestToAddressable(
+				senderName,
+				channelName,
+				&channel,
+				map[string]string{
+					"ce-specversion": "1.0",
+					"ce-type":        "example",
+					"ce-source":      "http://localhost",
+					"ce-id":          eventId,
+					"content-type":   "application/json",
+				},
+				"{}",
+				sender.WithMethod("PUT"),
+				sender.WithResponseSink(responseSink),
+			)
+		},
+	}, {
+		statusCode: http.StatusBadRequest,
+		senderFn: func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string) {
+			c.SendRequestToAddressable(
+				senderName,
+				channelName,
+				&channel,
+				map[string]string{
+					"ce-specversion": "10.0", // <-- Spec version not existing
+					"ce-type":        "example",
+					"ce-source":      "http://localhost",
+					"ce-id":          eventId,
+					"content-type":   "application/json",
+				},
+				"{}",
+				sender.WithResponseSink(responseSink),
+			)
+		},
+	}}
+
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+		for _, tc := range testCases {
+			t.Run("expecting-"+strconv.Itoa(tc.statusCode), func(t *testing.T) {
+				channelDataPlaneFailureTest(t, channel, tc.senderFn, tc.statusCode, options...)
+			})
+		}
+	})
+}
+
+// (Request) Sender -> Channel -> Subscriber -> Record Events
+func channelDataPlaneFailureTest(
+	t *testing.T,
+	channel metav1.TypeMeta,
+	senderFn func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string),
+	expectingStatusCode int,
+	options ...testlib.SetupClientOption,
+) {
+	client := testlib.Setup(t, true, options...)
+	defer testlib.TearDown(client)
+
+	resourcesNamePrefix := fmt.Sprintf("expecting-%d", expectingStatusCode)
+
+	channelName := resourcesNamePrefix + "-ch"
+	client.CreateChannelOrFail(channelName, &channel)
+
+	subscriberName := resourcesNamePrefix + "-recordevents"
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
+
+	client.CreateSubscriptionOrFail(
+		resourcesNamePrefix+"-sub",
+		channelName,
+		&channel,
+		resources.WithSubscriberForSubscription(subscriberName),
+	)
+
+	client.WaitForAllTestResourcesReadyOrFail()
+
+	eventId := "xyz"
+	senderFn(client, resourcesNamePrefix+"-sender", channelName, channel, eventId, "http://"+client.GetServiceHost(subscriberName))
+
+	eventTracker.AssertExact(
+		1,
+		recordevents.MatchEvent(sender.MatchStatusCode(expectingStatusCode)),
+	)
+
+	// Assert the event is not received
+	eventTracker.AssertNot(
+		recordevents.MatchEvent(HasId(eventId)),
 	)
 }

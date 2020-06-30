@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"log"
 	nethttp "net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -34,7 +32,7 @@ import (
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/test/lib/sender"
-	"knative.dev/eventing/test/lib/tracing"
+	"knative.dev/eventing/test/test_images"
 )
 
 var (
@@ -44,7 +42,7 @@ var (
 	eventEncoding     string
 	periodStr         string
 	delayStr          string
-	maxMsgStr         string
+	maxMsg            int
 	addTracing        bool
 	addSequence       bool
 	incrementalId     bool
@@ -58,32 +56,17 @@ func init() {
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event: [binary, structured].")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
 	flag.StringVar(&delayStr, "delay", "5", "The number of seconds to wait before sending messages.")
-	flag.StringVar(&maxMsgStr, "max-messages", "1", "The number of messages to attempt to send. 0 for unlimited.")
+	flag.IntVar(&maxMsg, "max-messages", 1, "The number of messages to attempt to send. 0 for unlimited.")
 	flag.BoolVar(&addTracing, "add-tracing", false, "Should tracing be added to events sent.")
 	flag.BoolVar(&addSequence, "add-sequence-extension", false, "Should add extension 'sequence' identifying the sequence number.")
 	flag.BoolVar(&incrementalId, "incremental-id", false, "Override the event id with an incremental id.")
 	flag.StringVar(&additionalHeaders, "additional-headers", "", "Additional non-CloudEvents headers to send")
 }
 
-func parseDurationStr(durationStr string, defaultDuration int) time.Duration {
-	var duration time.Duration
-	if d, err := strconv.Atoi(durationStr); err != nil {
-		duration = time.Duration(defaultDuration) * time.Second
-	} else {
-		duration = time.Duration(d) * time.Second
-	}
-	return duration
-}
-
 func main() {
 	flag.Parse()
-	period := parseDurationStr(periodStr, 5)
-	delay := parseDurationStr(delayStr, 5)
-
-	maxMsg := 1
-	if m, err := strconv.Atoi(maxMsgStr); err == nil {
-		maxMsg = m
-	}
+	period := test_images.ParseDurationStr(periodStr, 5)
+	delay := test_images.ParseDurationStr(delayStr, 5)
 
 	if delay > 0 {
 		log.Printf("will sleep for %s", delay)
@@ -115,9 +98,8 @@ func main() {
 		)
 	}
 	if additionalHeaders != "" {
-		for _, kv := range strings.Split(additionalHeaders, ",") {
-			splitted := strings.Split(kv, "=")
-			httpOpts = append(httpOpts, cloudevents.WithHeader(splitted[0], splitted[1]))
+		for k, v := range test_images.ParseHeaders(additionalHeaders) {
+			httpOpts = append(httpOpts, cloudevents.WithHeader(k, v[0]))
 		}
 	}
 
@@ -130,7 +112,7 @@ func main() {
 	if addTracing {
 		log.Println("Adding tracing")
 		logger, _ := zap.NewDevelopment()
-		if err := tracing.ConfigureTracing(logger.Sugar(), ""); err != nil {
+		if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
 			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
 
