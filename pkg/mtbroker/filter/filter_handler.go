@@ -218,8 +218,14 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	statusCode, err := writeResponse(ctx, writer, response, ttl, span)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
+		// Ok, so writeResponse will return the HttpStatus of the function. That may have
+		// succeeded (200), but it may have returned a malformed event, so if the
+		// function succeeded, convert this to an StatusInternalServerError instead to indicate
+		// error.
+		if statusCode == 200 {
+			statusCode = http.StatusInternalServerError
+		}
 	}
-
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 	writer.WriteHeader(statusCode)
 }
@@ -259,8 +265,8 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 
 	event, err := binding.ToEvent(ctx, response)
 	if err != nil || event == nil {
-		// No event in response.
-		return resp.StatusCode, nil
+		// Either malformed event, or no event in response.
+		return resp.StatusCode, err
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.

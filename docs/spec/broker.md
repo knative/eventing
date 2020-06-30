@@ -118,6 +118,11 @@ Events contained in delivery responses SHOULD be published to the Broker ingress
 and processed as if the event had been produced to the Broker's addressable
 endpoint.
 
+Events contained in delivery responses that are malformed SHOULD be treated as
+if the event delivery had failed. Reasoning being that if the event was being
+transformed unsuccessfully (programming error for example) it should be treated
+as a failure.
+
 The subscriber MAY receive a confirmation that a reply event was accepted by the
 Broker. If the reply event was not accepted, the initial event SHOULD be
 redelivered to the subscriber.
