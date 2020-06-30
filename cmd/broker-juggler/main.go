@@ -28,14 +28,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 type envConfig struct {
-	SystemNamespace string `envconfig:"SYSTEM_NAMESPACE" default:"knative-eventing"`
-	DryRun          bool   `envconfig:"DRY_RUN" default:"false"`
+	SystemNamespace        string `envconfig:"SYSTEM_NAMESPACE" default:"knative-eventing"`
+	ReplacementBrokerClass string `envconfig:"REPLACEMENT_BROKER_CLASS" default:"MTChannelBroker"`
+	DryRun                 bool   `envconfig:"DRY_RUN" default:"false"`
 }
 
 func main() {
@@ -56,6 +58,7 @@ func main() {
 	}
 
 	var cleanups []corev1.ObjectReference
+	relabel := make([]v1beta1.Broker, 0)
 
 	for i := 0; i < 16; i++ {
 		// Reset.
@@ -99,7 +102,7 @@ func main() {
 	for _, ns := range nss.Items {
 		brokers, err := client.EventingV1beta1().Brokers(ns.Name).List(metav1.ListOptions{})
 		if err != nil {
-			fmt.Printf("# [error] %s\n", err)
+			fmt.Printf("# [error] failed to list brokers in namespace %q, %s\n", ns.Name, err)
 		}
 
 		foundBrokerForCleaning := false
@@ -107,9 +110,10 @@ func main() {
 			clean := false
 
 			if broker.Annotations["eventing.knative.dev/broker.class"] == "ChannelBasedBroker" {
-				fmt.Printf("# Found ChannelBasedBroker, need to clean.\n")
+				fmt.Printf("# Found ChannelBasedBroker %s/%s, need to clean.\n", broker.Namespace, broker.Name)
 				clean = true
 				foundBrokerForCleaning = true
+				relabel = append(relabel, broker)
 			}
 
 			if !clean {
@@ -136,7 +140,7 @@ func main() {
 					APIVersion: ingress.APIVersion,
 				})
 			} else {
-				fmt.Printf("#  Found Ingress Deployment %s, but not owned?\n", ingress.Name)
+				fmt.Printf("#  Found Ingress Deployment %s/%s, but not owned?\n", ingress.Namespace, ingress.Name)
 			}
 
 			if filter, err := k8s.AppsV1().Deployments(ns.Name).Get(filterName, metav1.GetOptions{}); err != nil {
@@ -154,7 +158,7 @@ func main() {
 					APIVersion: filter.APIVersion,
 				})
 			} else {
-				fmt.Printf("#  Found Filter Deployment %s, but not owned?\n", filter.Name)
+				fmt.Printf("#  Found Filter Deployment %s/%s, but not owned?\n", filter.Namespace, filter.Name)
 			}
 		}
 
@@ -228,6 +232,13 @@ func main() {
 	}
 
 	if !env.DryRun {
+		for _, b := range relabel {
+			b.Annotations["eventing.knative.dev/broker.class"] = env.ReplacementBrokerClass
+			if _, err := client.EventingV1beta1().Brokers(b.Namespace).Update(&b); err != nil {
+				fmt.Printf("# [error] failed to update broker class for %s/%s: %s\n", b.Namespace, b.Name, err)
+			}
+		}
+
 		dynamic := dynamicclient.Get(ctx)
 		for _, ref := range cleanups {
 			fmt.Printf("# will delete %v\n", ref)
@@ -236,6 +247,7 @@ func main() {
 				fmt.Printf("# [error] failed to delete %s %s\n", ref.String(), err)
 			}
 		}
+
 	}
 	fmt.Printf("# Done, cleaned %d resources.\n", len(cleanups))
 }
