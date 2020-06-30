@@ -2,8 +2,8 @@
 
 The following is a log of testing commands to try out this job.
 
-The job's log is the yaml of all resources that were deleted.
-The job uses eventing's service account. 
+The job's log is the yaml of all resources that were deleted. The job uses
+eventing's service account.
 
 ---
 
@@ -139,7 +139,6 @@ spec: {}
 EOF
 ```
 
-
 # upgrade to Eventing 0.16 (nightly)
 
 ```
@@ -166,19 +165,18 @@ spec: {}
 EOF
 ```
 
-
 # clean up
- 
+
 ```
 kind delete cluster --name broker
 ```
 
-Notes: 
----
+## Notes:
 
 What needs to be cleaned up:
 
 ### in knative-eventing
+
 ```
 broker-controller       0/0     0            0           10m
 broker-filter           0/0     0            0           10m
@@ -195,6 +193,3 @@ serviceaccount/eventing-broker-ingress   1         10m
 rolebinding.rbac.authorization.k8s.io/eventing-broker-filter    11m
 rolebinding.rbac.authorization.k8s.io/eventing-broker-ingress   11m
 ```
-
-
-
