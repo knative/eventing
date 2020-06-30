@@ -1,6 +1,6 @@
 # Delivery Design
 
-This document synthetizes the
+This document synthesizes the
 [error handling design document](https://docs.google.com/document/d/1qRrzGoHJQO-oc5p-yRK8IRfugd-FM_PXyM7lN5kcqks).
 
 ## Delivery aspects
