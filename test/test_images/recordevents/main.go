@@ -30,9 +30,9 @@ import (
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
+	"knative.dev/eventing/test/lib/tracing"
 )
 
 type eventRecorder struct {
@@ -150,7 +150,7 @@ func main() {
 	er.StartServer(recordevents.RecordEventsPort)
 
 	logger, _ := zap.NewDevelopment()
-	if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
+	if err := tracing.ConfigureTracing(logger.Sugar(), ""); err != nil {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 
