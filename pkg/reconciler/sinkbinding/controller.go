@@ -22,6 +22,7 @@ import (
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
+	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
 	corev1 "k8s.io/api/core/v1"
@@ -57,6 +58,21 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 
 	c := &psbinding.BaseReconciler{
+		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
+			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
+				all, err := sbInformer.Lister().List(labels.Everything())
+				if err != nil {
+					return err
+				}
+				for _, elt := range all {
+					enq(bkt, types.NamespacedName{
+						Namespace: elt.GetNamespace(),
+						Name:      elt.GetName(),
+					})
+				}
+				return nil
+			},
+		},
 		GVR: v1alpha1.SchemeGroupVersion.WithResource("sinkbindings"),
 		Get: func(namespace string, name string) (psbinding.Bindable, error) {
 			return sbInformer.Lister().SinkBindings(namespace).Get(name)
