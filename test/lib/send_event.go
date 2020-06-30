@@ -18,6 +18,7 @@ package lib
 
 import (
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
@@ -32,7 +33,7 @@ func (c *Client) SendEventToAddressable(
 	addressableName string,
 	typemeta *metav1.TypeMeta,
 	event cloudevents.Event,
-	option ...sender.EventSenderOption,
+	option ...func(*corev1.Pod),
 ) {
 	uri, err := c.GetAddressableURI(addressableName, typemeta)
 	if err != nil {
@@ -46,7 +47,7 @@ func (c *Client) SendEvent(
 	senderName string,
 	uri string,
 	event cloudevents.Event,
-	option ...sender.EventSenderOption,
+	option ...func(*corev1.Pod),
 ) {
 	namespace := c.Namespace
 	pod, err := sender.EventSenderPod("event-sender", senderName, uri, event, option...)
@@ -56,5 +57,40 @@ func (c *Client) SendEvent(
 	c.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(c.Kube, senderName, namespace); err != nil {
 		c.T.Fatalf("Failed to send event %v to %s: %+v", event, uri, errors.WithStack(err))
+	}
+}
+
+// SendRequestToAddressable will send the given request to the given Addressable.
+func (c *Client) SendRequestToAddressable(
+	senderName,
+	addressableName string,
+	typemeta *metav1.TypeMeta,
+	headers map[string]string,
+	body string,
+	option ...func(*corev1.Pod),
+) {
+	uri, err := c.GetAddressableURI(addressableName, typemeta)
+	if err != nil {
+		c.T.Fatalf("Failed to get the URI for %+v-%s", typemeta, addressableName)
+	}
+	c.SendRequest(senderName, uri, headers, body, option...)
+}
+
+// SendRequest will create a sender pod, which will send the given request to the given url.
+func (c *Client) SendRequest(
+	senderName string,
+	uri string,
+	headers map[string]string,
+	body string,
+	option ...func(*corev1.Pod),
+) {
+	namespace := c.Namespace
+	pod, err := sender.RequestSenderPod("request-sender", senderName, uri, headers, body, option...)
+	if err != nil {
+		c.T.Fatalf("Failed to create request-sender pod: %+v", errors.WithStack(err))
+	}
+	c.CreatePodOrFail(pod)
+	if err := pkgTest.WaitForPodRunning(c.Kube, senderName, namespace); err != nil {
+		c.T.Fatalf("Failed to send request to %s: %+v", uri, errors.WithStack(err))
 	}
 }

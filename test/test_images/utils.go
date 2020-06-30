@@ -14,16 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tracing
+package test_images
 
 import (
+	"net/http"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"go.uber.org/zap"
-	tracingconfig "knative.dev/pkg/tracing/config"
+	"knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/tracing"
 )
+
+func ParseHeaders(serializedHeaders string) http.Header {
+	h := make(http.Header)
+	for _, kv := range strings.Split(serializedHeaders, ",") {
+		splitted := strings.Split(kv, "=")
+		h.Set(splitted[0], splitted[1])
+	}
+	return h
+}
+
+func ParseDurationStr(durationStr string, defaultDuration int) time.Duration {
+	var duration time.Duration
+	if d, err := strconv.Atoi(durationStr); err != nil {
+		duration = time.Duration(defaultDuration) * time.Second
+	} else {
+		duration = time.Duration(d) * time.Second
+	}
+	return duration
+}
 
 const ConfigTracingEnv = "K_CONFIG_TRACING"
 
@@ -35,7 +58,7 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 		return tracing.SetupStaticPublishing(logger, serviceName, tracing.AlwaysSample)
 	}
 
-	conf, err := tracingconfig.JsonToTracingConfig(tracingEnv)
+	conf, err := config.JsonToTracingConfig(tracingEnv)
 	if err != nil {
 		return err
 	}

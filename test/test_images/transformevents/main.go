@@ -22,7 +22,7 @@ import (
 	"log"
 
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/test/lib/tracing"
+	"knative.dev/eventing/test/test_images"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
@@ -69,7 +69,7 @@ func main() {
 	flag.Parse()
 
 	logger, _ := zap.NewDevelopment()
-	if err := tracing.ConfigureTracing(logger.Sugar(), ""); err != nil {
+	if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 
