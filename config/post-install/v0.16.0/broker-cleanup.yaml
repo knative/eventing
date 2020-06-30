@@ -15,9 +15,14 @@ spec:
       restartPolicy: Never
       containers:
         - name: brokers
-          image: ko://knative.dev/eventing/cmd/broker-juggler
+          image: ko://knative.dev/eventing/cmd/v0.16/broker-cleanup
           env:
             - name: SYSTEM_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+
+# Note the following ENVVAR settings exist:
+# SYSTEM_NAMESPACE - the namespace of the control plane, defaults to knative-eventing
+# REPLACEMENT_BROKER_CLASS - the broker class to update ChannelBroker to, defaults to MTChannelBroker.
+# DRY_RUN - a flag to run the script without deleting or updating, defaults to false.
