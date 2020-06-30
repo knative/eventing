@@ -346,6 +346,11 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 	c.podsCreated = append(c.podsCreated, pod.Name)
 }
 
+// GetServiceHost returns the service hostname for the specified podName
+func (c *Client) GetServiceHost(podName string) string {
+	return fmt.Sprintf("%s.%s.svc", podName, c.Namespace)
+}
+
 // CreateDeploymentOrFail will create a Deployment or fail the test if there is an error.
 func (c *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...func(*appsv1.Deployment, *Client) error) {
 	// set namespace for the deploy in case it's empty

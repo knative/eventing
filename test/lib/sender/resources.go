@@ -61,6 +61,17 @@ func WithEncoding(encoding cloudevents.Encoding) EventSenderOption {
 	}
 }
 
+// WithResponseSink sends the response information as CloudEvent to another sink
+func WithResponseSink(responseSink string) EventSenderOption {
+	return func(pod *corev1.Pod) {
+		pod.Spec.Containers[0].Args = append(
+			pod.Spec.Containers[0].Args,
+			"-response-sink",
+			responseSink,
+		)
+	}
+}
+
 // WithEncoding forces the encoding of the event to send from the sender pod
 func WithAdditionalHeaders(headers map[string]string) EventSenderOption {
 	var kv []string

@@ -25,6 +25,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
+
 	"knative.dev/eventing/pkg/tracing"
 )
 
@@ -82,8 +83,6 @@ func main() {
 	}
 
 	c, err := cloudevents.NewClientObserved(t,
-		cloudevents.WithTimeNow(),
-		cloudevents.WithUUIDs(),
 		cloudevents.WithTracePropagation,
 	)
 	if err != nil {

@@ -23,7 +23,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	"knative.dev/eventing/test/lib/resources/sender"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 // SendEventToAddressable will send the given event to the given Addressable.

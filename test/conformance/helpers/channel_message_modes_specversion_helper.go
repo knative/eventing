@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -28,7 +29,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/eventing/test/lib/resources/sender"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 // ChannelMessageModesAndSpecVersionsTestRunner tests the support of the channel ingress for different spec versions and message modes
@@ -97,6 +98,7 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 		&channel,
 		event,
 		sender.WithEncoding(encoding),
+		sender.WithResponseSink("http://"+client.GetServiceHost(subscriberName)),
 	)
 
 	matchers := []EventMatcher{HasExactlyAttributesEqualTo(event.Context)}
@@ -124,5 +126,10 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 		1,
 		recordevents.NoError(),
 		recordevents.MatchEvent(matchers...),
+	)
+
+	eventTracker.AssertExact(
+		1,
+		recordevents.MatchEvent(sender.MatchStatusCode(http.StatusAccepted)),
 	)
 }

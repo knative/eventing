@@ -18,6 +18,7 @@ package recordevents
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -307,7 +308,8 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 
 func formatErrors(errs []error) string {
 	var sb strings.Builder
-	for _, err := range errs {
+	for i, err := range errs {
+		sb.WriteString(strconv.Itoa(i) + " - ")
 		sb.WriteString(err.Error())
 		sb.WriteRune('\n')
 	}

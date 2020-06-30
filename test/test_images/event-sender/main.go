@@ -34,10 +34,12 @@ import (
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 var (
 	sink              string
+	responseSink      string
 	inputEvent        string
 	eventEncoding     string
 	periodStr         string
@@ -51,6 +53,7 @@ var (
 
 func init() {
 	flag.StringVar(&sink, "sink", "", "The sink url for the message destination.")
+	flag.StringVar(&responseSink, "response-sink", "", "The response sink url to send the response.")
 	flag.StringVar(&inputEvent, "event", "", "Event JSON encoded")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event: [binary, structured].")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
@@ -81,15 +84,6 @@ func main() {
 	if m, err := strconv.Atoi(maxMsgStr); err == nil {
 		maxMsg = m
 	}
-
-	defer func() {
-		var err error
-		r := recover()
-		if r != nil {
-			err = r.(error)
-			log.Printf("recovered from panic: %v", err)
-		}
-	}()
 
 	if delay > 0 {
 		log.Printf("will sleep for %s", delay)
@@ -170,10 +164,35 @@ func main() {
 			event.SetID(fmt.Sprintf("%d", sequence))
 		}
 
-		if responseEvent, result := c.Request(ctx, event); !cloudevents.IsACK(result) {
-			log.Printf("send returned an error: %v\n", result)
-		} else if responseEvent != nil {
-			log.Printf("Got response from %s\n%s\n", sink, *responseEvent)
+		log.Printf("I'm going to send\n%s\n", event)
+
+		responseEvent, responseResult := c.Request(ctx, event)
+		if cloudevents.IsUndelivered(responseResult) {
+			log.Printf("send returned an error: %v\n", responseResult)
+		} else {
+			if responseEvent != nil {
+				log.Printf("Got response from %s\n%s\n%s\n", sink, responseResult, *responseEvent)
+			} else {
+				log.Printf("Got response from %s\n%s\n", sink, responseResult)
+			}
+
+			if responseSink != "" {
+				var httpResult *cehttp.Result
+				cloudevents.ResultAs(responseResult, &httpResult)
+				responseEvent := sender.NewSenderEvent(
+					event.ID(),
+					"https://knative.dev/eventing/test/event-sender",
+					responseEvent,
+					httpResult,
+				)
+
+				result2 := c.Send(cloudevents.ContextWithTarget(context.Background(), responseSink), responseEvent)
+				if cloudevents.IsUndelivered(result2) {
+					log.Printf("send to response sink returned an error: %v\n", result2)
+				} else {
+					log.Printf("Got response from %s\n%s\n", responseSink, result2)
+				}
+			}
 		}
 
 		// Wait for next tick
