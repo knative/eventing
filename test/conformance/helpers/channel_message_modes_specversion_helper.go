@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -129,6 +130,6 @@ func messageModeSpecVersionTest(t *testing.T, channel metav1.TypeMeta, event clo
 
 	eventTracker.AssertExact(
 		1,
-		recordevents.MatchEvent(sender.MatchStatusCode(202)),
+		recordevents.MatchEvent(sender.MatchStatusCode(http.StatusAccepted)),
 	)
 }

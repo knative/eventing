@@ -26,6 +26,7 @@ import (
 	cetypes "github.com/cloudevents/sdk-go/v2/types"
 )
 
+// MatchStatusCode matches the response status code of the sent event
 func MatchStatusCode(status int) cetest.EventMatcher {
 	return cetest.AllOf(
 		cetest.HasType(EventType),
@@ -38,6 +39,7 @@ func MatchStatusCode(status int) cetest.EventMatcher {
 	)
 }
 
+// MatchInnerEvent matches the response event of the sent event
 func MatchInnerEvent(matchers ...cetest.EventMatcher) cetest.EventMatcher {
 	return cetest.AllOf(cetest.HasType(EventType), func(have event.Event) error {
 		if have.Data() != nil {

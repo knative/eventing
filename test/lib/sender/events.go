@@ -28,6 +28,7 @@ const (
 	ResponseStatusCodeExtension = "responsestatuscode"
 )
 
+// NewSenderEvent creates a new sender event assertable with the matchers provided in this package
 func NewSenderEvent(id string, source string, event *cloudevents.Event, result *cehttp.Result) cloudevents.Event {
 	ev := cloudevents.NewEvent()
 	ev.SetID(id)
