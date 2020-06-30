@@ -33,8 +33,8 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/test/lib/sender"
+	"knative.dev/eventing/test/lib/tracing"
 )
 
 var (
@@ -130,7 +130,7 @@ func main() {
 	if addTracing {
 		log.Println("Adding tracing")
 		logger, _ := zap.NewDevelopment()
-		if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
+		if err := tracing.ConfigureTracing(logger.Sugar(), ""); err != nil {
 			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
 
