@@ -6,11 +6,14 @@ This [document](../spec/sources.md) contains the source specification.
 
 ## Implementations
 
-There are various ways to implement Event Sources, as described in the [documentation](https://knative.dev/docs/eventing/samples/writing-receive-adapter-source/).
+There are various ways to implement Event Sources, as described in the
+[documentation](https://knative.dev/docs/eventing/samples/writing-receive-adapter-source/).
  
 ### Receive Adapters
 
-Receive adapter is a common pattern for implementing sources. 
+Receive adapter is a common pattern for implementing sources. See
+the [documentation](https://knative.dev/docs/eventing/samples/writing-receive-adapter-source/)
+for more details. 
 
 #### Multi tenancy
 
@@ -27,5 +30,6 @@ fairly easy to implement and more transparent compare to their multi-tenant equi
 
 #### Installation
 
-Event Source might provide both single-tenant and multi-tenant receive adapters. 
+Event Source might provide both single-tenant and multi-tenant receive adapters.
+ 
 For those event sources, multiple installation artifacts are provided.
