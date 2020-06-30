@@ -53,6 +53,10 @@ spec:
     name: v1beta1
     served: true
     storage: true
+  - <<: *version
+    name: v1
+    served: true
+    storage: false
   names:
     kind: Parallel
     plural: parallels

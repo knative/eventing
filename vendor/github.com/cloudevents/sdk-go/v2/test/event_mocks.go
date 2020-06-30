@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/types"
@@ -54,6 +55,18 @@ func MinEvent() event.Event {
 			ID:     "min-event",
 		}.AsV1(),
 	}
+}
+
+// FullMessage returns the same event of FullEvent but wrapped as Message.
+func FullMessage() binding.Message {
+	ev := FullEvent()
+	return binding.ToMessage(&ev)
+}
+
+// MinMessage returns the same event of MinEvent but wrapped as Message.
+func MinMessage() binding.Message {
+	ev := MinEvent()
+	return binding.ToMessage(&ev)
 }
 
 // AllVersions returns all versions of each event in events.

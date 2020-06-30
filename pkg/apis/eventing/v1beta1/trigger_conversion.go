@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 )
 

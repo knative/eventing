@@ -43,6 +43,15 @@ Trigger2 logs all events,
 Trigger3 filters the transformed event and sends it to Channel.
 
 */
-func TestBrokerChannelFlow(t *testing.T) {
-	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, channelTestRunner)
+func TestBrokerChannelFlowTriggerV1BrokerV1(t *testing.T) {
+	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1", "v1", channelTestRunner)
+}
+func TestBrokerChannelFlowV1Beta1BrokerV1(t *testing.T) {
+	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1", "v1beta1", channelTestRunner)
+}
+func TestBrokerChannelFlowTriggerV1Beta1BrokerV1Beta1(t *testing.T) {
+	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1beta1", "v1beta1", channelTestRunner)
+}
+func TestBrokerChannelFlowTriggerV1BrokerV1Beta1(t *testing.T) {
+	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1beta1", "v1", channelTestRunner)
 }

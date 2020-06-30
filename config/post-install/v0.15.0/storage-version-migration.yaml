@@ -19,7 +19,7 @@ metadata:
   namespace: knative-eventing
   labels:
     app: "storage-version-migration"
-    serving.knative.dev/release: devel
+    eventing.knative.dev/release: devel
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 10

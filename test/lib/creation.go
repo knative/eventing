@@ -28,6 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/reconciler"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
@@ -35,8 +39,6 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/reconciler"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -145,16 +147,16 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 	}
 }
 
-// CreateBrokerV1Beta1OrFail will create a Broker or fail the test if there is an error.
+// CreateBrokerV1Beta1OrFail will create a v1beta1 Broker or fail the test if there is an error.
 func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.BrokerV1Beta1Option) *v1beta1.Broker {
 	namespace := c.Namespace
 	broker := resources.BrokerV1Beta1(name, options...)
 	brokers := c.Eventing.EventingV1beta1().Brokers(namespace)
-	c.T.Logf("Creating broker %s", name)
+	c.T.Logf("Creating v1beta1 broker %s", name)
 	// update broker with the new reference
 	broker, err := brokers.Create(broker)
 	if err != nil {
-		c.T.Fatalf("Failed to create broker %q: %v", name, err)
+		c.T.Fatalf("Failed to create v1beta1 broker %q: %v", name, err)
 	}
 	c.Tracker.AddObj(broker)
 	return broker
@@ -170,6 +172,36 @@ func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.Tr
 	trigger, err := triggers.Create(trigger)
 	if err != nil {
 		c.T.Fatalf("Failed to create v1beta1 trigger %q: %v", name, err)
+	}
+	c.Tracker.AddObj(trigger)
+	return trigger
+}
+
+// CreateBrokerV1OrFail will create a v1 Broker or fail the test if there is an error.
+func (c *Client) CreateBrokerV1OrFail(name string, options ...resources.BrokerV1Option) *eventingv1.Broker {
+	namespace := c.Namespace
+	broker := resources.BrokerV1(name, options...)
+	brokers := c.Eventing.EventingV1().Brokers(namespace)
+	c.T.Logf("Creating v1 broker %s", name)
+	// update broker with the new reference
+	broker, err := brokers.Create(broker)
+	if err != nil {
+		c.T.Fatalf("Failed to create v1 broker %q: %v", name, err)
+	}
+	c.Tracker.AddObj(broker)
+	return broker
+}
+
+// CreateTriggerOrFailV1 will create a v1 Trigger or fail the test if there is an error.
+func (c *Client) CreateTriggerV1OrFail(name string, options ...resources.TriggerOptionV1) *eventingv1.Trigger {
+	namespace := c.Namespace
+	trigger := resources.TriggerV1(name, options...)
+	triggers := c.Eventing.EventingV1().Triggers(namespace)
+	c.T.Logf("Creating v1 trigger %s", name)
+	// update trigger with the new reference
+	trigger, err := triggers.Create(trigger)
+	if err != nil {
+		c.T.Fatalf("Failed to create v1 trigger %q: %v", name, err)
 	}
 	c.Tracker.AddObj(trigger)
 	return trigger
@@ -303,6 +335,9 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 			c.T.Fatalf("Failed to configure pod %q: %v", pod.Name, err)
 		}
 	}
+
+	c.applyTracingEnv(&pod.Spec)
+
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		c.T.Logf("Creating pod %+v", pod)
 		_, e := c.Kube.CreatePod(pod)
@@ -313,6 +348,11 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 	}
 	c.Tracker.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
 	c.podsCreated = append(c.podsCreated, pod.Name)
+}
+
+// GetServiceHost returns the service hostname for the specified podName
+func (c *Client) GetServiceHost(podName string) string {
+	return fmt.Sprintf("%s.%s.svc", podName, c.Namespace)
 }
 
 // CreateDeploymentOrFail will create a Deployment or fail the test if there is an error.
@@ -326,6 +366,9 @@ func (c *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...fu
 			c.T.Fatalf("Failed to configure deploy %q: %v", deploy.Name, err)
 		}
 	}
+
+	c.applyTracingEnv(&deploy.Spec.Template.Spec)
+
 	c.T.Logf("Creating deployment %+v", deploy)
 	if _, err := c.Kube.Kube.AppsV1().Deployments(deploy.Namespace).Create(deploy); err != nil {
 		c.T.Fatalf("Failed to create deploy %q: %v", deploy.Name, err)
@@ -344,6 +387,9 @@ func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...f
 			c.T.Fatalf("Failed to configure cronjob %q: %v", cronjob.Name, err)
 		}
 	}
+
+	c.applyTracingEnv(&cronjob.Spec.JobTemplate.Spec.Template.Spec)
+
 	c.T.Logf("Creating cronjob %+v", cronjob)
 	if _, err := c.Kube.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(cronjob); err != nil {
 		c.T.Fatalf("Failed to create cronjob %q: %v", cronjob.Name, err)
@@ -455,4 +501,10 @@ func (c *Client) CreateRBACResourcesForBrokers() {
 		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
 		c.Namespace,
 	)
+}
+
+func (c *Client) applyTracingEnv(pod *corev1.PodSpec) {
+	for i := 0; i < len(pod.Containers); i++ {
+		pod.Containers[i].Env = append(pod.Containers[i].Env, c.tracingEnv)
+	}
 }

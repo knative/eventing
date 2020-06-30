@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.1 // indirect
-	github.com/cloudevents/sdk-go/v2 v2.1.0
+	github.com/cloudevents/sdk-go/v2 v2.0.1-0.20200630063327-b91da81265fe
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
@@ -38,8 +38,8 @@ require (
 	k8s.io/apiserver v0.17.6
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200124190032-861946025e34
-	knative.dev/pkg v0.0.0-20200627192328-fe0740d31f07
-	knative.dev/test-infra v0.0.0-20200626234928-7fb82ece3d02
+	knative.dev/pkg v0.0.0-20200630170034-2c1a029eb97f
+	knative.dev/test-infra v0.0.0-20200630141629-15f40fe97047
 	sigs.k8s.io/yaml v1.2.0
 )
 

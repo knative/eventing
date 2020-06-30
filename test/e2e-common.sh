@@ -45,6 +45,9 @@ readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 # Channel Based Broker config.
 readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
 
+# Config tracing config.
+readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
+
 # PreInstall script for v0.16
 readonly PRE_INSTALL_V016="config/pre-install/v0.16.0"
 
@@ -86,6 +89,9 @@ function install_knative_eventing() {
     kubectl apply -f "${kne_config}" || return $?
     UNINSTALL_LIST+=( "${kne_config}" )
   fi
+
+  # Setup config tracing for tracing tests
+  kubectl replace -f $CONFIG_TRACING_CONFIG
 
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 

@@ -25,10 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/eventing/test/lib/resources/sender"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 type SubscriptionVersion string

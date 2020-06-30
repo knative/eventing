@@ -25,6 +25,10 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
-func TestChannelEventModesAndSpecVersions(t *testing.T) {
-	helpers.ChannelMessageModesAndSpecVersionsTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
+func TestChannelDataPlaneSuccess(t *testing.T) {
+	helpers.ChannelDataPlaneSuccessTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
+}
+
+func TestChannelDataPlaneFailure(t *testing.T) {
+	helpers.ChannelDataPlaneFailureTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
 }
