@@ -166,14 +166,15 @@ func main() {
 
 		log.Printf("I'm going to send\n%s\n", event)
 
-		// TODO(slinkydeveloper) Because of https://github.com/cloudevents/sdk-go/pull/550
-		// we cannot perform this:
-		//responseEvent, responseResult := c.Request(ctx, event)
-		responseResult := c.Send(ctx, event)
+		responseEvent, responseResult := c.Request(ctx, event)
 		if cloudevents.IsUndelivered(responseResult) {
 			log.Printf("send returned an error: %v\n", responseResult)
 		} else {
-			log.Printf("Got response from %s\n%s\n", sink, responseResult)
+			if responseEvent != nil {
+				log.Printf("Got response from %s\n%s\n%s\n", sink, responseResult, *responseEvent)
+			} else {
+				log.Printf("Got response from %s\n%s\n", sink, responseResult)
+			}
 
 			if responseSink != "" {
 				var httpResult *cehttp.Result
@@ -181,7 +182,7 @@ func main() {
 				responseEvent := sender.NewSenderEvent(
 					event.ID(),
 					"https://knative.dev/eventing/test/event-sender",
-					nil,
+					responseEvent,
 					httpResult,
 				)
 

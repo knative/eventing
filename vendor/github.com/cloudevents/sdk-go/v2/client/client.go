@@ -159,7 +159,7 @@ func (c *ceClient) Request(ctx context.Context, e event.Event) (*event.Event, pr
 		// If the protocol returns no error, it is an ACK on the request, but we had
 		// issues turning the response into an event, so make an ACK Result and pass
 		// down the ToEvent error as well.
-		err = fmt.Errorf("%w; failed to convert response into event: %s", protocol.ResultACK, rserr)
+		err = protocol.NewReceipt(true, "failed to convert response into event: %s\n%w", rserr.Error(), err)
 	} else {
 		resp = rs
 	}
