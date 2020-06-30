@@ -17,6 +17,8 @@ limitations under the License.
 package sender
 
 import (
+	"time"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 )
@@ -31,6 +33,7 @@ func NewSenderEvent(id string, source string, event *cloudevents.Event, result *
 	ev.SetID(id)
 	ev.SetSource(source)
 	ev.SetType(EventType)
+	ev.SetTime(time.Now())
 
 	if result != nil {
 		ev.SetExtension(ResponseStatusCodeExtension, result.StatusCode)
