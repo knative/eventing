@@ -333,9 +333,11 @@ queueing requests (e.g. health checks) are not constrained.
 The HTTP event queueing request's URL MUST correspond to a single, unique
 Channel at any given moment in time. This MAY be done via the host, path, query
 string, or any combination of these. This mapping is handled exclusively by the
-Channel implementation, exposed via the Channel's `status.address`. If an HTTP
-event queueing request's URL does not correspond to an existing Channel, then
-the Channel MUST respond with `404 Not Found`.
+Channel implementation, exposed via the Channel's `status.address`.
+
+If an HTTP event queueing request's URL does not correspond to an existing Channel, then
+the failure behaviour is undefined. For example, the Channel MAY respond with `404 Not Found`
+or the DNS MAY fail to resolve the hostname of the request.
 
 The Channel MUST respond with `202 Accepted` if the event queueing request is
 accepted by the server.
