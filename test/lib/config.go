@@ -64,8 +64,9 @@ const (
 	DefaultEventSource = "http://knative.test"
 	DefaultEventType   = "dev.knative.test.event"
 	// The interval and timeout used for polling pod logs.
-	interval = 1 * time.Second
-	timeout  = 4 * time.Minute
+	interval         = 1 * time.Second
+	timeout          = 4 * time.Minute
+	ConfigTracingEnv = "K_CONFIG_TRACING"
 )
 
 // InterestingHeaders is used by logging pods to decide interesting HTTP headers to log

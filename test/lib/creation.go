@@ -28,6 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/reconciler"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
@@ -36,8 +39,6 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/reconciler"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -334,6 +335,9 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 			c.T.Fatalf("Failed to configure pod %q: %v", pod.Name, err)
 		}
 	}
+
+	c.applyTracingEnv(&pod.Spec)
+
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		c.T.Logf("Creating pod %+v", pod)
 		_, e := c.Kube.CreatePod(pod)
@@ -362,6 +366,9 @@ func (c *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...fu
 			c.T.Fatalf("Failed to configure deploy %q: %v", deploy.Name, err)
 		}
 	}
+
+	c.applyTracingEnv(&deploy.Spec.Template.Spec)
+
 	c.T.Logf("Creating deployment %+v", deploy)
 	if _, err := c.Kube.Kube.AppsV1().Deployments(deploy.Namespace).Create(deploy); err != nil {
 		c.T.Fatalf("Failed to create deploy %q: %v", deploy.Name, err)
@@ -380,6 +387,9 @@ func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...f
 			c.T.Fatalf("Failed to configure cronjob %q: %v", cronjob.Name, err)
 		}
 	}
+
+	c.applyTracingEnv(&cronjob.Spec.JobTemplate.Spec.Template.Spec)
+
 	c.T.Logf("Creating cronjob %+v", cronjob)
 	if _, err := c.Kube.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(cronjob); err != nil {
 		c.T.Fatalf("Failed to create cronjob %q: %v", cronjob.Name, err)
@@ -491,4 +501,10 @@ func (c *Client) CreateRBACResourcesForBrokers() {
 		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
 		c.Namespace,
 	)
+}
+
+func (c *Client) applyTracingEnv(pod *corev1.PodSpec) {
+	for i := 0; i < len(pod.Containers); i++ {
+		pod.Containers[i].Env = append(pod.Containers[i].Env, c.tracingEnv)
+	}
 }
