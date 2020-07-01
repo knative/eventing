@@ -272,6 +272,7 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 		// as delivery failure.
 		body := make([]byte, 1)
 		n, _ := response.BodyReader.Read(body)
+		response.BodyReader.Close()
 		if n != 0 {
 			return resp.StatusCode, errors.New("Received a malformed event in reply")
 		}
