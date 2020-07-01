@@ -30,8 +30,6 @@ readonly POST_INSTALL_V_0_16="post-install-to-v0.16.0.yaml"
 declare -A RELEASES
 RELEASES=(
   ["eventing.yaml"]="${EVENTING_CORE_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL}"
-  # The artifact eventing-upgrade.yaml hosts all the resources necessary to do the upgrade.
-  ["eventing-upgrade.yaml"]="${PRE_INSTALL_V_0_16} ${POST_INSTALL_V_0_16} "
 )
 readonly RELEASES
 
@@ -64,6 +62,7 @@ function build_release() {
 
   # Create v0.16.0 pre-install job yaml. Upgrades Broker storage version from v1alpha1 to v1beta1.
   ko resolve ${KO_FLAGS} -f config/pre-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${PRE_INSTALL_V_0_16}"
+
   # Create v0.16.0 post-install job yaml. Cleans up old broker resources from deleted namespaced brokers.
   ko resolve ${KO_FLAGS} -f config/post-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_V_0_16}"
 
