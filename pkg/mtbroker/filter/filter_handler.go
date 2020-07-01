@@ -220,10 +220,11 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		h.logger.Error("failed to write response", zap.Error(err))
 		// Ok, so writeResponse will return the HttpStatus of the function. That may have
 		// succeeded (200), but it may have returned a malformed event, so if the
-		// function succeeded, convert this to an StatusInternalServerError instead to indicate
-		// error.
+		// function succeeded, convert this to an StatusBadGateway instead to indicate
+		// error. Note that we could just use StatusInternalServerError, but to distinguish
+		// between the two failure cases, we use a different code here.
 		if statusCode == 200 {
-			statusCode = http.StatusInternalServerError
+			statusCode = http.StatusBadGateway
 		}
 	}
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)

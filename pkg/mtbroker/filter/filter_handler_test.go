@@ -284,7 +284,7 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			expectedStatus:            http.StatusInternalServerError,
+			expectedStatus:            http.StatusBadGateway,
 			response:                  makeMalformedEventResponse(),
 		},
 	}
