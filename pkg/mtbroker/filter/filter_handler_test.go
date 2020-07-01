@@ -287,6 +287,26 @@ func TestReceiver(t *testing.T) {
 			expectedStatus:            http.StatusBadGateway,
 			response:                  makeMalformedEventResponse(),
 		},
+		"Returned empty body 200": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusOK,
+			response:                  makeEmptyResponse(200),
+		},
+		"Returned empty body 202": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusAccepted,
+			response:                  makeEmptyResponse(202),
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -478,6 +498,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			h.t.Fatalf("Unable to read body: %v", err)
 		}
+		resp.WriteHeader(h.response.StatusCode)
 		resp.Header().Set("Content-Type", "garbage")
 		resp.Header().Set("Content-Length", fmt.Sprintf("%d", len(body)))
 		resp.Write(body)
@@ -580,5 +601,21 @@ func makeMalformedEventResponse() *http.Response {
 	}
 	r.Header.Set("Content-Type", "garbage")
 	r.Header.Set("Content-Length", fmt.Sprintf("%d", len(invalidEvent)))
+	return r
+}
+
+func makeEmptyResponse(status int) *http.Response {
+	s := fmt.Sprintf("%d OK", status)
+	r := &http.Response{
+		Status:     s,
+		StatusCode: status,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+		Header:     make(http.Header, 0),
+	}
+	r.Header.Set("Content-Type", "garbage")
+	r.Header.Set("Content-Length", "0")
 	return r
 }

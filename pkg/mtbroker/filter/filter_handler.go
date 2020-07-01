@@ -18,6 +18,7 @@ package filter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -264,9 +265,22 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
 
+	if response.ReadEncoding() == binding.EncodingUnknown {
+		// Response doesn't have a ce-specversion header nor a content-type matching a cloudevent event format
+		// Just read a byte out of the reader to see if it's non-empty, we don't care what it is,
+		// just that it is not empty. This means there was a response and it's not valid, so treat
+		// as delivery failure.
+		body := make([]byte, 1)
+		n, _ := response.BodyReader.Read(body)
+		if n != 0 {
+			return resp.StatusCode, errors.New("Received a malformed event in reply")
+		}
+		return resp.StatusCode, nil
+	}
+
 	event, err := binding.ToEvent(ctx, response)
-	if err != nil || event == nil {
-		// Either malformed event, or no event in response.
+	if err != nil {
+		// Malformed event, reply with err
 		return resp.StatusCode, err
 	}
 
