@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -53,6 +54,8 @@ const (
 
 	// Because it's a URL we're comparing to, without protocol it looks like this.
 	toBeReplaced = "//toBeReplaced"
+
+	invalidEvent = `{"id":"1234","knativebrokerttl":1,"source":"/mycontext","specversion":"0.1","type":"com.example.someevent"}`
 )
 
 var (
@@ -73,39 +76,39 @@ func TestReceiver(t *testing.T) {
 		failureStatus               int
 		returnedEvent               *cloudevents.Event
 		expectNewToFail             bool
-		expectedErr                 bool
 		expectedDispatch            bool
 		expectedStatus              int
 		expectedHeaders             http.Header
 		expectedEventCount          bool
 		expectedEventDispatchTime   bool
 		expectedEventProcessingTime bool
+		response                    *http.Response
 	}{
 		"Not POST": {
 			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
 		"Path too short": {
-			request:     httptest.NewRequest(http.MethodPost, "/test-namespace/test-trigger", nil),
-			expectedErr: true,
+			request:        httptest.NewRequest(http.MethodPost, "/test-namespace/test-trigger", nil),
+			expectedStatus: http.StatusBadRequest,
 		},
 		"Path too long": {
-			request:     httptest.NewRequest(http.MethodPost, "/triggers/test-namespace/test-trigger/extra", nil),
-			expectedErr: true,
+			request:        httptest.NewRequest(http.MethodPost, "/triggers/test-namespace/test-trigger/extra", nil),
+			expectedStatus: http.StatusBadRequest,
 		},
 		"Path without prefix": {
-			request:     httptest.NewRequest(http.MethodPost, "/something/test-namespace/test-trigger", nil),
-			expectedErr: true,
+			request:        httptest.NewRequest(http.MethodPost, "/something/test-namespace/test-trigger", nil),
+			expectedStatus: http.StatusBadRequest,
 		},
 		"Trigger.Get fails": {
 			// No trigger exists, so the Get will fail.
-			expectedErr: true,
+			expectedStatus: http.StatusBadRequest,
 		},
 		"Trigger doesn't have SubscriberURI": {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
 			},
-			expectedErr:        true,
+			expectedStatus:     http.StatusBadRequest,
 			expectedEventCount: true,
 		},
 		"Trigger without a Filter": {
@@ -157,7 +160,7 @@ func TestReceiver(t *testing.T) {
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			requestFails:              true,
-			expectedErr:               true,
+			expectedStatus:            http.StatusBadRequest,
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
@@ -239,7 +242,6 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch:          true,
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
-			expectedErr:               true,
 			expectedStatus:            http.StatusTooManyRequests,
 		},
 		"Returned Cloud Event with custom headers": {
@@ -275,6 +277,36 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 			returnedEvent:             makeDifferentEvent(),
 		},
+		"Returned malformed Cloud Event": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusBadGateway,
+			response:                  makeMalformedEventResponse(),
+		},
+		"Returned empty body 200": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusOK,
+			response:                  makeEmptyResponse(200),
+		},
+		"Returned empty body 202": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusAccepted,
+			response:                  makeEmptyResponse(202),
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -285,6 +317,7 @@ func TestReceiver(t *testing.T) {
 				returnedEvent: tc.returnedEvent,
 				headers:       tc.expectedHeaders,
 				t:             t,
+				response:      tc.response,
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Close()
@@ -352,7 +385,7 @@ func TestReceiver(t *testing.T) {
 			}
 			if tc.returnedEvent != nil {
 				if tc.returnedEvent.SpecVersion() != event.CloudEventsVersionV1 {
-					t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
+					t.Errorf("Incorrect spec version. Expected %v, Actual %v", tc.returnedEvent.SpecVersion(), event.CloudEventsVersionV1)
 				}
 			}
 			// Compare the returned event.
@@ -420,9 +453,13 @@ type fakeHandler struct {
 	headers         http.Header
 	returnedEvent   *cloudevents.Event
 	t               *testing.T
+	response        *http.Response
 }
 
 func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	if h.returnedEvent != nil && h.response != nil {
+		h.t.Errorf("Can not specify both returnedEvent and response.")
+	}
 	h.requestReceived = true
 
 	for n, v := range h.headers {
@@ -442,16 +479,29 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	if h.returnedEvent == nil {
+	if h.returnedEvent == nil && h.response == nil {
 		resp.WriteHeader(http.StatusAccepted)
 		return
 	}
 
-	message := binding.ToMessage(h.returnedEvent)
-	defer message.Finish(nil)
-	err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
-	if err != nil {
-		h.t.Fatalf("Unable to write body: %v", err)
+	if h.returnedEvent != nil {
+		message := binding.ToMessage(h.returnedEvent)
+		defer message.Finish(nil)
+		err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
+		if err != nil {
+			h.t.Fatalf("Unable to write body: %v", err)
+		}
+	}
+	if h.response != nil {
+		defer h.response.Body.Close()
+		body, err := ioutil.ReadAll(h.response.Body)
+		if err != nil {
+			h.t.Fatalf("Unable to read body: %v", err)
+		}
+		resp.WriteHeader(h.response.StatusCode)
+		resp.Header().Set("Content-Type", "garbage")
+		resp.Header().Set("Content-Length", fmt.Sprintf("%d", len(body)))
+		resp.Write(body)
 	}
 }
 
@@ -537,4 +587,35 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 	noTTL.SetExtension(extName, extValue)
 	e := addTTLToEvent(*noTTL)
 	return &e
+}
+
+func makeMalformedEventResponse() *http.Response {
+	r := &http.Response{
+		Status:     "200 OK",
+		StatusCode: 200,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Body:       ioutil.NopCloser(bytes.NewBufferString(invalidEvent)),
+		Header:     make(http.Header, 0),
+	}
+	r.Header.Set("Content-Type", "garbage")
+	r.Header.Set("Content-Length", fmt.Sprintf("%d", len(invalidEvent)))
+	return r
+}
+
+func makeEmptyResponse(status int) *http.Response {
+	s := fmt.Sprintf("%d OK", status)
+	r := &http.Response{
+		Status:     s,
+		StatusCode: status,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+		Header:     make(http.Header, 0),
+	}
+	r.Header.Set("Content-Type", "garbage")
+	r.Header.Set("Content-Length", "0")
+	return r
 }

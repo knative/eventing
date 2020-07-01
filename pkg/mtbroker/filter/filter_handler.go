@@ -18,6 +18,7 @@ package filter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -218,8 +219,15 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	statusCode, err := writeResponse(ctx, writer, response, ttl, span)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
+		// Ok, so writeResponse will return the HttpStatus of the function. That may have
+		// succeeded (200), but it may have returned a malformed event, so if the
+		// function succeeded, convert this to an StatusBadGateway instead to indicate
+		// error. Note that we could just use StatusInternalServerError, but to distinguish
+		// between the two failure cases, we use a different code here.
+		if statusCode == 200 {
+			statusCode = http.StatusBadGateway
+		}
 	}
-
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
 	writer.WriteHeader(statusCode)
 }
@@ -257,10 +265,24 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
 
-	event, err := binding.ToEvent(ctx, response)
-	if err != nil || event == nil {
-		// No event in response.
+	if response.ReadEncoding() == binding.EncodingUnknown {
+		// Response doesn't have a ce-specversion header nor a content-type matching a cloudevent event format
+		// Just read a byte out of the reader to see if it's non-empty, we don't care what it is,
+		// just that it is not empty. This means there was a response and it's not valid, so treat
+		// as delivery failure.
+		body := make([]byte, 1)
+		n, _ := response.BodyReader.Read(body)
+		response.BodyReader.Close()
+		if n != 0 {
+			return resp.StatusCode, errors.New("Received a malformed event in reply")
+		}
 		return resp.StatusCode, nil
+	}
+
+	event, err := binding.ToEvent(ctx, response)
+	if err != nil {
+		// Malformed event, reply with err
+		return resp.StatusCode, err
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
