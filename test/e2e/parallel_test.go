@@ -26,3 +26,7 @@ import (
 func TestParallel(t *testing.T) {
 	helpers.ParallelTestHelper(t, channelTestRunner)
 }
+
+func TestParallelV1(t *testing.T) {
+	helpers.ParallelV1TestHelper(t, channelTestRunner)
+}

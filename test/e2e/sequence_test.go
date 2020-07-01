@@ -26,3 +26,7 @@ import (
 func TestSequence(t *testing.T) {
 	helpers.SequenceTestHelper(t, channelTestRunner)
 }
+
+func TestSequenceV1(t *testing.T) {
+	helpers.SequenceV1TestHelper(t, channelTestRunner)
+}
