@@ -23,14 +23,14 @@ import (
 	"syscall"
 	"testing"
 
+	"knative.dev/eventing/test"
+
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	"knative.dev/eventing/test/upgrade/prober"
 )
 
 const (
-	pipe         = "/tmp/prober-signal"
-	ready        = "/tmp/prober-ready"
 	readyMessage = "prober ready"
 )
 
@@ -42,7 +42,7 @@ func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	// create a named pipe and wait for the upgrade script to write to it
 	// to signal that we should stop probing.
 	ensureTempFilesAreCleaned()
-	if err := syscall.Mkfifo(pipe, 0666); err != nil {
+	if err := syscall.Mkfifo(test.EventingFlags.PipeFile, 0666); err != nil {
 		t.Fatalf("Failed to create pipe: %v", err)
 	}
 	defer ensureTempFilesAreCleaned()
@@ -58,13 +58,13 @@ func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	// inline with other logs instead of buffered until the end.
 	log := createLogger()
 	probe := prober.RunEventProber(log, client, config)
-	ensure.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
+	ensure.NoError(ioutil.WriteFile(test.EventingFlags.ReadyFile, []byte(readyMessage), 0666))
 	defer prober.AssertEventProber(t, probe)
 
 	log.Infof("Waiting for file: %v as a signal that "+
 		"upgrade/downgrade is over, at which point we will finish the test "+
-		"and check the prober.", pipe)
-	_, _ = ioutil.ReadFile(pipe)
+		"and check the prober.", test.EventingFlags.PipeFile)
+	_, _ = ioutil.ReadFile(test.EventingFlags.PipeFile)
 }
 
 func createLogger() *zap.SugaredLogger {
@@ -74,7 +74,7 @@ func createLogger() *zap.SugaredLogger {
 }
 
 func ensureTempFilesAreCleaned() {
-	filenames := []string{pipe, ready}
+	filenames := []string{test.EventingFlags.PipeFile, test.EventingFlags.ReadyFile}
 	for _, filename := range filenames {
 		_, err := os.Stat(filename)
 		if err == nil {

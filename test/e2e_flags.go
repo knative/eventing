@@ -71,6 +71,8 @@ func isValid(channel string) bool {
 type EventingEnvironmentFlags struct {
 	BrokerClass string
 	Channels
+	PipeFile  string
+	ReadyFile string
 }
 
 // InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
@@ -78,6 +80,8 @@ type EventingEnvironmentFlags struct {
 func InitializeEventingFlags() {
 	flag.Var(&EventingFlags.Channels, "channels", "The names of the channel type metas, separated by comma. Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\".")
 	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "ChannelBasedBroker", "Which brokerclass to test, requires the proper Broker implementation to have been installed, and only one value. brokerclass can be one of 'ChannelBasedBroker' or 'MTChannelBasedBroker'.")
+	flag.StringVar(&EventingFlags.PipeFile, "pipefile", "/tmp/prober-signal", "Temporary file to write the prober signal into.")
+	flag.StringVar(&EventingFlags.ReadyFile, "readyfile", "/tmp/prober-ready", "Temporary file to get the prober result.")
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
