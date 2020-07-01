@@ -20,13 +20,18 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"knative.dev/eventing/pkg/reconciler/sugar/namespace"
+	"knative.dev/eventing/pkg/reconciler/sugar/trigger"
 	"knative.dev/pkg/injection/sharedmain"
-
-	"knative.dev/eventing/pkg/reconciler/mtbroker"
 )
 
+// Sugar Controller watches resources with magic labels/annotations and reacts.
+
 func main() {
-	sharedmain.Main("mt-broker-controller",
-		mtbroker.NewController,
+	sharedmain.Main("sugar-controller",
+		// Namespaces
+		namespace.NewController,
+		// Triggers
+		trigger.NewController,
 	)
 }

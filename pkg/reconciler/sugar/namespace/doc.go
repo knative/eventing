@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,19 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package namespace
 
-import (
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+/*
 
-	"knative.dev/pkg/injection/sharedmain"
+This package will watch for changes to all namespaces and attempt to react to
 
-	"knative.dev/eventing/pkg/reconciler/mtbroker"
-)
-
-func main() {
-	sharedmain.Main("mt-broker-controller",
-		mtbroker.NewController,
-	)
-}
+*/

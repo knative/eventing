@@ -32,7 +32,7 @@ import (
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
