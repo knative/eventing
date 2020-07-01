@@ -33,6 +33,7 @@ import (
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -219,11 +220,35 @@ func (c *Client) CreateFlowsSequenceOrFail(sequence *flowsv1beta1.Sequence) {
 	c.Tracker.AddObj(sequence)
 }
 
+// CreateFlowsSequenceOrFail will create a Sequence (in flows.knative.dev api group) or
+// fail the test if there is an error.
+func (c *Client) CreateFlowsSequenceV1OrFail(sequence *flowsv1.Sequence) {
+	c.T.Logf("Creating flows sequence %+v", sequence)
+	sequences := c.Eventing.FlowsV1().Sequences(c.Namespace)
+	_, err := sequences.Create(sequence)
+	if err != nil {
+		c.T.Fatalf("Failed to create flows sequence %q: %v", sequence.Name, err)
+	}
+	c.Tracker.AddObj(sequence)
+}
+
 // CreateFlowsParallelOrFail will create a Parallel (in flows.knative.dev api group) or
 // fail the test if there is an error.
 func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1beta1.Parallel) {
 	c.T.Logf("Creating flows parallel %+v", parallel)
 	parallels := c.Eventing.FlowsV1beta1().Parallels(c.Namespace)
+	_, err := parallels.Create(parallel)
+	if err != nil {
+		c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)
+	}
+	c.Tracker.AddObj(parallel)
+}
+
+// CreateFlowsParallelOrFail will create a Parallel (in flows.knative.dev api group) or
+// fail the test if there is an error.
+func (c *Client) CreateFlowsParallelV1OrFail(parallel *flowsv1.Parallel) {
+	c.T.Logf("Creating flows parallel %+v", parallel)
+	parallels := c.Eventing.FlowsV1().Parallels(c.Namespace)
 	_, err := parallels.Create(parallel)
 	if err != nil {
 		c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)
