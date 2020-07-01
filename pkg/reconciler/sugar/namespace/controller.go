@@ -18,6 +18,7 @@ package namespace
 
 import (
 	"context"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"

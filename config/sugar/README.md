@@ -1,7 +1,7 @@
 # Sugar Controller
 
-The sugar controller is an optional reconciler that watches for labels
-and annotations on certain resources to inject eventing components.
+The sugar controller is an optional reconciler that watches for labels and
+annotations on certain resources to inject eventing components.
 
 To enable injection on a single Namespace:
 
@@ -14,7 +14,6 @@ To enable injection based on a single Trigger in a Namespace:
 ```shell script
 kubectl annotate trigger mytrigger eventing.knative.dev/injection=enabled
 ```
-
 
 ---
 

@@ -18,8 +18,9 @@ package namespace
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
+
+	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

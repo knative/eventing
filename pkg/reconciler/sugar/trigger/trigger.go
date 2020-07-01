@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"fmt"
+
 	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/pkg/controller"
