@@ -31,6 +31,7 @@ require (
 	go.uber.org/zap v1.14.1
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	google.golang.org/grpc v1.28.0
+	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d // indirect
 	k8s.io/api v0.17.6
 	k8s.io/apiextensions-apiserver v0.17.6
