@@ -131,6 +131,20 @@ spec:
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true
+  - << : *version
+    name: v1
+    served: true
+    storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   names:
     kind: Channel
     plural: channels

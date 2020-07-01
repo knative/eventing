@@ -35,6 +35,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
@@ -71,7 +72,7 @@ func (c *Client) CreateChannelsOrFail(names []string, channelTypeMeta *metav1.Ty
 
 // CreateChannelWithDefaultOrFail will create a default Channel Resource in Eventing or fail the test if there is an error.
 func (c *Client) CreateChannelWithDefaultOrFail(channel *messagingv1beta1.Channel) {
-	c.T.Logf("Creating default channel %+v", channel)
+	c.T.Logf("Creating default v1beta1 channel %+v", channel)
 	channels := c.Eventing.MessagingV1beta1().Channels(c.Namespace)
 	_, err := channels.Create(channel)
 	if err != nil {
@@ -80,7 +81,18 @@ func (c *Client) CreateChannelWithDefaultOrFail(channel *messagingv1beta1.Channe
 	c.Tracker.AddObj(channel)
 }
 
-// CreateSubscriptionOrFail will create a Subscription or fail the test if there is an error.
+// CreateChannelV1WithDefaultOrFail will create a default Channel Resource in Eventing or fail the test if there is an error.
+func (c *Client) CreateChannelV1WithDefaultOrFail(channel *messagingv1.Channel) {
+	c.T.Logf("Creating default v1 channel %+v", channel)
+	channels := c.Eventing.MessagingV1().Channels(c.Namespace)
+	_, err := channels.Create(channel)
+	if err != nil {
+		c.T.Fatalf("Failed to create channel %q: %v", channel.Name, err)
+	}
+	c.Tracker.AddObj(channel)
+}
+
+// CreateSubscriptionOrFail will create a v1beta1 Subscription or fail the test if there is an error.
 func (c *Client) CreateSubscriptionOrFail(
 	name, channelName string,
 	channelTypeMeta *metav1.TypeMeta,
@@ -99,7 +111,26 @@ func (c *Client) CreateSubscriptionOrFail(
 	return subscription
 }
 
-// CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
+// CreateSubscriptionV1OrFail will create a v1 Subscription or fail the test if there is an error.
+func (c *Client) CreateSubscriptionV1OrFail(
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...resources.SubscriptionOptionV1,
+) *messagingv1.Subscription {
+	namespace := c.Namespace
+	subscription := resources.SubscriptionV1(name, channelName, channelTypeMeta, options...)
+	subscriptions := c.Eventing.MessagingV1().Subscriptions(namespace)
+	c.T.Logf("Creating v1 subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
+	// update subscription with the new reference
+	subscription, err := subscriptions.Create(subscription)
+	if err != nil {
+		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
+	}
+	c.Tracker.AddObj(subscription)
+	return subscription
+}
+
+// CreateSubscriptionsOrFail will create a list of v1beta1 Subscriptions with the same configuration except the name.
 func (c *Client) CreateSubscriptionsOrFail(
 	names []string,
 	channelName string,
@@ -109,6 +140,19 @@ func (c *Client) CreateSubscriptionsOrFail(
 	c.T.Logf("Creating subscriptions %v for channel %+v-%s", names, channelTypeMeta, channelName)
 	for _, name := range names {
 		c.CreateSubscriptionOrFail(name, channelName, channelTypeMeta, options...)
+	}
+}
+
+// CreateSubscriptionsV1OrFail will create a list of v1 Subscriptions with the same configuration except the name.
+func (c *Client) CreateSubscriptionsV1OrFail(
+	names []string,
+	channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...resources.SubscriptionOptionV1,
+) {
+	c.T.Logf("Creating subscriptions %v for channel %+v-%s", names, channelTypeMeta, channelName)
+	for _, name := range names {
+		c.CreateSubscriptionV1OrFail(name, channelName, channelTypeMeta, options...)
 	}
 }
 

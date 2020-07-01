@@ -31,6 +31,7 @@ import (
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
@@ -46,8 +47,11 @@ type BrokerV1Option func(*eventingv1.Broker)
 // TriggerOptionV1 enables further configuration of a v1 Trigger.
 type TriggerOptionV1 func(*eventingv1.Trigger)
 
-// SubscriptionOptionV1Beta1 enables further configuration of a Subscription.
+// SubscriptionOptionV1Beta1 enables further configuration of a v1beta1 Subscription.
 type SubscriptionOptionV1Beta1 func(*messagingv1beta1.Subscription)
+
+// SubscriptionOptionV1 enables further configuration of a v1 Subscription.
+type SubscriptionOptionV1 func(*messagingv1.Subscription)
 
 // DeliveryOption enables further configuration of DeliverySpec.
 type DeliveryOption func(*eventingduckv1beta1.DeliverySpec)
@@ -131,6 +135,71 @@ func SubscriptionV1Beta1(
 			Name: name,
 		},
 		Spec: messagingv1beta1.SubscriptionSpec{
+			Channel: *channelRef(channelName, channelTypeMeta),
+		},
+	}
+	for _, option := range options {
+		option(subscription)
+	}
+	return subscription
+}
+
+// WithSubscriberForSubscriptionV1 returns an option that adds a Subscriber for the given
+// v1 Subscription.
+func WithSubscriberForSubscriptionV1(name string) SubscriptionOptionV1 {
+	return func(s *messagingv1.Subscription) {
+		if name != "" {
+			s.Spec.Subscriber = &duckv1.Destination{
+				Ref: KnativeRefForService(name, ""),
+			}
+		}
+	}
+}
+
+// WithReplyForSubscriptionV1 returns an options that adds a ReplyStrategy for the given v1 Subscription.
+func WithReplyForSubscriptionV1(name string, typemeta *metav1.TypeMeta) SubscriptionOptionV1 {
+	return func(s *messagingv1.Subscription) {
+		if name != "" {
+			s.Spec.Reply = &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Kind:       typemeta.Kind,
+					APIVersion: typemeta.APIVersion,
+					Name:       name,
+					Namespace:  s.Namespace},
+			}
+		}
+	}
+}
+
+// WithDeadLetterSinkForSubscriptionV1 returns an options that adds a DeadLetterSink for the given v1 Subscription.
+func WithDeadLetterSinkForSubscriptionV1(name string) SubscriptionOptionV1 {
+	return func(s *messagingv1.Subscription) {
+		if name != "" {
+			delivery := s.Spec.Delivery
+			if delivery == nil {
+				delivery = &eventingduckv1.DeliverySpec{}
+				s.Spec.Delivery = delivery
+			}
+
+			delivery.DeadLetterSink = &duckv1.Destination{
+				Ref: KnativeRefForService(name, s.Namespace),
+			}
+
+		}
+	}
+}
+
+// SubscriptionV1 returns a v1 Subscription.
+func SubscriptionV1(
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...SubscriptionOptionV1,
+) *messagingv1.Subscription {
+	subscription := &messagingv1.Subscription{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: messagingv1.SubscriptionSpec{
 			Channel: *channelRef(channelName, channelTypeMeta),
 		},
 	}

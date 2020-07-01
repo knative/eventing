@@ -31,5 +31,9 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	helpers.ChannelChainTestHelper(t, channelTestRunner)
+	helpers.ChannelChainTestHelper(t, helpers.SubscriptionV1beta1, channelTestRunner)
+}
+
+func TestChannelChainV1(t *testing.T) {
+	helpers.ChannelChainTestHelper(t, helpers.SubscriptionV1, channelTestRunner)
 }

@@ -32,6 +32,7 @@ import (
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
 func EventTransformationForSubscriptionTestHelper(t *testing.T,
+	subscriptionVersion SubscriptionVersion,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	senderName := "e2e-eventtransformation-sender"
@@ -73,21 +74,43 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 
-		// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames1,
-			channelNames[0],
-			&channel,
-			resources.WithSubscriberForSubscription(transformationPodName),
-			resources.WithReplyForSubscription(channelNames[1], &channel),
-		)
-		// create subscriptions that subscribe the second channel, and forward the received events to the logger service
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames2,
-			channelNames[1],
-			&channel,
-			resources.WithSubscriberForSubscription(recordEventsPodName),
-		)
+		switch subscriptionVersion {
+		case SubscriptionV1:
+			// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
+			client.CreateSubscriptionsV1OrFail(
+				subscriptionNames1,
+				channelNames[0],
+				&channel,
+				resources.WithSubscriberForSubscriptionV1(transformationPodName),
+				resources.WithReplyForSubscriptionV1(channelNames[1], &channel),
+			)
+			// create subscriptions that subscribe the second channel, and forward the received events to the logger service
+			client.CreateSubscriptionsV1OrFail(
+				subscriptionNames2,
+				channelNames[1],
+				&channel,
+				resources.WithSubscriberForSubscriptionV1(recordEventsPodName),
+			)
+		case SubscriptionV1beta1:
+			// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
+			client.CreateSubscriptionsOrFail(
+				subscriptionNames1,
+				channelNames[0],
+				&channel,
+				resources.WithSubscriberForSubscription(transformationPodName),
+				resources.WithReplyForSubscription(channelNames[1], &channel),
+			)
+			// create subscriptions that subscribe the second channel, and forward the received events to the logger service
+			client.CreateSubscriptionsOrFail(
+				subscriptionNames2,
+				channelNames[1],
+				&channel,
+				resources.WithSubscriberForSubscription(recordEventsPodName),
+			)
+
+		default:
+			t.Fatalf("Invalid subscription version")
+		}
 
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()
