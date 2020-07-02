@@ -35,12 +35,11 @@ spec:
   subresources:
     status: {}
   conversion:
-    strategy: None
-#    strategy: Webhook
-#    webhookClientConfig:
-#      service:
-#        name: eventing-webhook
-#        namespace: knative-eventing
+   strategy: Webhook
+   webhookClientConfig:
+     service:
+       name: eventing-webhook
+       namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
