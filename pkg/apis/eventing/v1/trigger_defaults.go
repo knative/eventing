@@ -33,9 +33,6 @@ func (t *Trigger) SetDefaults(ctx context.Context) {
 }
 
 func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
-	if ts.Broker == "" {
-		ts.Broker = "default"
-	}
 	// Make a default filter that allows anything.
 	if ts.Filter == nil {
 		ts.Filter = &TriggerFilter{}
@@ -45,8 +42,10 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 }
 
 func setLabels(t *Trigger) {
-	if len(t.Labels) == 0 {
-		t.Labels = map[string]string{}
+	if t.Spec.Broker != "" {
+		if len(t.Labels) == 0 {
+			t.Labels = map[string]string{}
+		}
+		t.Labels[brokerLabel] = t.Spec.Broker
 	}
-	t.Labels[brokerLabel] = t.Spec.Broker
 }
