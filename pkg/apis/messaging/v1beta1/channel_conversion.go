@@ -35,15 +35,14 @@ func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) erro
 		}
 		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 		source.Status.ConvertTo(ctx, &sink.Status)
-		source.Spec.ConvertTo(ctx, &sink.Spec)
-		return nil
+		return source.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 }
 
 // ConvertTo helps implement apis.Convertible
-func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) {
+func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) error {
 	if source.ChannelTemplate != nil {
 		sink.ChannelTemplate = &v1.ChannelTemplateSpec{
 			TypeMeta: source.ChannelTemplate.TypeMeta,
@@ -51,11 +50,12 @@ func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) 
 		}
 	}
 	sink.ChannelableSpec = eventingduckv1.ChannelableSpec{}
+	source.SubscribableSpec.ConvertTo(ctx, &sink.SubscribableSpec)
 	if source.Delivery != nil {
 		sink.Delivery = &eventingduckv1.DeliverySpec{}
-		source.Delivery.ConvertTo(ctx, sink.Delivery)
+		return source.Delivery.ConvertTo(ctx, sink.Delivery)
 	}
-	source.SubscribableSpec.ConvertTo(ctx, &sink.SubscribableSpec)
+	return nil
 }
 
 // ConvertTo helps implement apis.Convertible
@@ -74,6 +74,10 @@ func (sink *Channel) ConvertFrom(ctx context.Context, obj apis.Convertible) erro
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)

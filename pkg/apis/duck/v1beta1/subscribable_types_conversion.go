@@ -55,10 +55,10 @@ func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *eventingduckv
 	sink.UID = source.UID
 	sink.Generation = source.Generation
 	sink.SubscriberURI = source.SubscriberURI
-	sink.Delivery = &eventingduckv1.DeliverySpec{
-		DeadLetterSink: &duckv1.Destination{},
+	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1.DeliverySpec{}
+		source.Delivery.ConvertTo(ctx, sink.Delivery)
 	}
-	source.Delivery.ConvertTo(ctx, sink.Delivery)
 	sink.ReplyURI = source.ReplyURI
 }
 

@@ -29,7 +29,7 @@ import (
 // +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel represents a geneeric Channel. It is normally used when we want a Channel, but don't need a specific Channel implementation.
+// Channel represents a generic Channel. It is normally used when we want a Channel, but don't need a specific Channel implementation.
 type Channel struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

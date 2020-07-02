@@ -47,14 +47,12 @@ func (source *InMemoryChannel) ConvertTo(ctx context.Context, obj apis.Convertib
 
 // ConvertTo helps implement apis.Convertible
 func (source *InMemoryChannelSpec) ConvertTo(ctx context.Context, sink *v1.InMemoryChannelSpec) error {
-	if source.Delivery != nil {
-		sink.Delivery = &eventingduckv1.DeliverySpec{}
-		if err := source.Delivery.ConvertTo(ctx, sink.Delivery); err != nil {
-			return err
-		}
-	}
 	sink.SubscribableSpec = eventingduckv1.SubscribableSpec{}
 	source.SubscribableSpec.ConvertTo(ctx, &sink.SubscribableSpec)
+	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1.DeliverySpec{}
+		return source.Delivery.ConvertTo(ctx, sink.Delivery)
+	}
 	return nil
 }
 
