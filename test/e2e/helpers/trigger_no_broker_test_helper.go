@@ -33,6 +33,8 @@ import (
 // the Status is correctly reflected as failed with BrokerDoesNotExist. Then it will create
 // the broker and ensure that Trigger / Broker will get to Ready state.
 func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreator) {
+	t.Skipf("triggers no longer get status written to them by the generic trigger controller.")
+
 	client := testlib.Setup(t, true)
 	defer testlib.TearDown(client)
 	brokerName := strings.ToLower(channel)
