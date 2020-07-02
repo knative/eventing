@@ -23,17 +23,15 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/eventing/test/e2e/helpers"
 	testlib "knative.dev/eventing/test/lib"
 )
 
-const defaultBrokerName = pkgResources.DefaultBrokerName
-
 var unsupportedChannelVersions = []string{"v1alpha1"}
 
 func DefaultBrokerCreator(_ *testlib.Client) string {
-	return defaultBrokerName
+	return sugarresources.DefaultBrokerName
 }
 
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {

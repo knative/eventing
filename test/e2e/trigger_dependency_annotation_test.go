@@ -27,7 +27,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -41,7 +41,7 @@ import (
 // This trigger dependency annotation is related on issue #1734.
 func TestTriggerDependencyAnnotation(t *testing.T) {
 	const (
-		defaultBrokerName    = pkgResources.DefaultBrokerName
+		defaultBrokerName    = sugarresources.DefaultBrokerName
 		triggerName          = "trigger-annotation"
 		subscriberName       = "subscriber-annotation"
 		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1alpha2"}`

@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/eventing/test/lib/recordevents"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
@@ -133,7 +133,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 	}
 
 	// Wait for default broker ready.
-	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, testlib.BrokerTypeMeta)
+	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create ping source
 	source := eventingtesting.NewPingSourceV1Alpha2(
