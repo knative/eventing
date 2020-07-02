@@ -19,9 +19,10 @@ package e2e
 
 import (
 	"fmt"
-	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"testing"
 	"time"
+
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	corev1 "k8s.io/api/core/v1"
