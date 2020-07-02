@@ -46,9 +46,6 @@ func TestInMemoryChannelConversionBadType(t *testing.T) {
 
 // Test v1beta1 -> v1 -> v1beta1
 func TestInMemoryChannelConversion(t *testing.T) {
-	// Just one for now, just adding the for loop for ease of future changes.
-	versions := []apis.Convertible{&v1.InMemoryChannel{}}
-
 	linear := eventingduck.BackoffPolicyLinear
 
 	tests := []struct {
@@ -88,7 +85,6 @@ func TestInMemoryChannelConversion(t *testing.T) {
 								Generation:    7,
 								SubscriberURI: apis.HTTP("subscriber.example.com"),
 								ReplyURI:      apis.HTTP("reply.example.com"),
-								//							DeadLetterSinkURI: apis.HTTP("dlc.reply.example.com"),
 								Delivery: &eventingduck.DeliverySpec{
 									DeadLetterSink: &duckv1.Destination{
 										Ref: &duckv1.KReference{
@@ -149,11 +145,122 @@ func TestInMemoryChannelConversion(t *testing.T) {
 				},
 			},
 		},
+	}, {
+		name: "full configuration, no delivery on subscriber",
+		in: &InMemoryChannel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "channel-name",
+				Namespace:  "channel-ns",
+				Generation: 17,
+			},
+			Spec: InMemoryChannelSpec{
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{
+							{
+								UID:           "uid-1",
+								Generation:    7,
+								SubscriberURI: apis.HTTP("subscriber.example.com"),
+								ReplyURI:      apis.HTTP("reply.example.com"),
+							},
+						},
+					},
+					Delivery: &eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "dlKind",
+								Namespace:  "dlNamespace",
+								Name:       "dlName",
+								APIVersion: "dlAPIVersion",
+							},
+							URI: apis.HTTP("dls"),
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
+				},
+			},
+			Status: InMemoryChannelStatus{
+				ChannelableStatus: eventingduck.ChannelableStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: apis.HTTP("addressstatus.example.com"),
+						},
+					},
+					SubscribableStatus: eventingduck.SubscribableStatus{
+						Subscribers: []eventingduck.SubscriberStatus{
+							{
+								UID:                "status-uid-1",
+								ObservedGeneration: 99,
+								Ready:              corev1.ConditionTrue,
+								Message:            "msg",
+							},
+						},
+					},
+				},
+			},
+		},
+	}, {
+		name: "full configuration, no delivery on subscriber or channel",
+		in: &InMemoryChannel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "channel-name",
+				Namespace:  "channel-ns",
+				Generation: 17,
+			},
+			Spec: InMemoryChannelSpec{
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{
+							{
+								UID:           "uid-1",
+								Generation:    7,
+								SubscriberURI: apis.HTTP("subscriber.example.com"),
+								ReplyURI:      apis.HTTP("reply.example.com"),
+							},
+						},
+					},
+				},
+			},
+			Status: InMemoryChannelStatus{
+				ChannelableStatus: eventingduck.ChannelableStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: apis.HTTP("addressstatus.example.com"),
+						},
+					},
+					SubscribableStatus: eventingduck.SubscribableStatus{
+						Subscribers: []eventingduck.SubscriberStatus{
+							{
+								UID:                "status-uid-1",
+								ObservedGeneration: 99,
+								Ready:              corev1.ConditionTrue,
+								Message:            "msg",
+							},
+						},
+					},
+				},
+			},
+		},
 	}}
 	for _, test := range tests {
-		for _, version := range versions {
 			t.Run(test.name, func(t *testing.T) {
-				ver := version
+				ver := &v1.InMemoryChannel{}
 				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
 					t.Errorf("ConvertTo() = %v", err)
 				}
@@ -171,15 +278,11 @@ func TestInMemoryChannelConversion(t *testing.T) {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
 			})
-		}
 	}
 }
 
 // Test v1 -> v1beta1 -> v1
 func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
-	// Just one for now, just adding the for loop for ease of future changes.
-	versions := []apis.Convertible{&InMemoryChannel{}}
-
 	linear := eventingduckv1.BackoffPolicyLinear
 
 	tests := []struct {
@@ -203,6 +306,118 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 			},
 		},
 	}, {
+		name: "full configuration - no delivery on subscriber",
+		in: &v1.InMemoryChannel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "channel-name",
+				Namespace:  "channel-ns",
+				Generation: 17,
+			},
+			Spec: v1.InMemoryChannelSpec{
+				ChannelableSpec: eventingduckv1.ChannelableSpec{
+					SubscribableSpec: eventingduckv1.SubscribableSpec{
+						Subscribers: []eventingduckv1.SubscriberSpec{
+							{
+								UID:           "uid-1",
+								Generation:    7,
+								SubscriberURI: apis.HTTP("subscriber.example.com"),
+								ReplyURI:      apis.HTTP("reply.example.com"),
+							},
+						},
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "dlKind",
+								Namespace:  "dlNamespace",
+								Name:       "dlName",
+								APIVersion: "dlAPIVersion",
+							},
+							URI: apis.HTTP("dls"),
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
+				},
+			},
+			Status: v1.InMemoryChannelStatus{
+				ChannelableStatus: eventingduckv1.ChannelableStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: apis.HTTP("addressstatus.example.com"),
+						},
+					},
+					SubscribableStatus: eventingduckv1.SubscribableStatus{
+						Subscribers: []eventingduckv1.SubscriberStatus{
+							{
+								UID:                "status-uid-1",
+								ObservedGeneration: 99,
+								Ready:              corev1.ConditionTrue,
+								Message:            "msg",
+							},
+						},
+					},
+				},
+			},
+		},
+	}, {
+		name: "full configuration - no delivery on subscriber or channel",
+		in: &v1.InMemoryChannel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "channel-name",
+				Namespace:  "channel-ns",
+				Generation: 17,
+			},
+			Spec: v1.InMemoryChannelSpec{
+				ChannelableSpec: eventingduckv1.ChannelableSpec{
+					SubscribableSpec: eventingduckv1.SubscribableSpec{
+						Subscribers: []eventingduckv1.SubscriberSpec{
+							{
+								UID:           "uid-1",
+								Generation:    7,
+								SubscriberURI: apis.HTTP("subscriber.example.com"),
+								ReplyURI:      apis.HTTP("reply.example.com"),
+							},
+						},
+					},
+				},
+			},
+			Status: v1.InMemoryChannelStatus{
+				ChannelableStatus: eventingduckv1.ChannelableStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: apis.HTTP("addressstatus.example.com"),
+						},
+					},
+					SubscribableStatus: eventingduckv1.SubscribableStatus{
+						Subscribers: []eventingduckv1.SubscriberStatus{
+							{
+								UID:                "status-uid-1",
+								ObservedGeneration: 99,
+								Ready:              corev1.ConditionTrue,
+								Message:            "msg",
+							},
+						},
+					},
+				},
+			},
+		},
+	}, {
 		name: "full configuration",
 		in: &v1.InMemoryChannel{
 			ObjectMeta: metav1.ObjectMeta{
@@ -219,7 +434,6 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 								Generation:    7,
 								SubscriberURI: apis.HTTP("subscriber.example.com"),
 								ReplyURI:      apis.HTTP("reply.example.com"),
-								//							DeadLetterSinkURI: apis.HTTP("dlc.reply.example.com"),
 								Delivery: &eventingduckv1.DeliverySpec{
 									DeadLetterSink: &duckv1.Destination{
 										Ref: &duckv1.KReference{
@@ -282,14 +496,13 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 		},
 	}}
 	for _, test := range tests {
-		for _, version := range versions {
 			t.Run(test.name, func(t *testing.T) {
-				ver := version
+				version := &InMemoryChannel{}
 				if err := version.ConvertFrom(context.Background(), test.in); err != nil {
 					t.Errorf("ConvertTo() = %v", err)
 				}
 				got := &v1.InMemoryChannel{}
-				if err := ver.ConvertTo(context.Background(), got); err != nil {
+				if err := version.ConvertTo(context.Background(), got); err != nil {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
 				// Make sure the annotation specifies the correct duck.
@@ -302,6 +515,6 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
 			})
-		}
+
 	}
 }
