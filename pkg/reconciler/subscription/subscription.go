@@ -281,7 +281,8 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 
 func (r *Reconciler) getSubStatus(subscription *v1beta1.Subscription, channel *eventingduckv1alpha1.ChannelableCombined) (eventingduckv1beta1.SubscriberStatus, error) {
 	if channel.Annotations != nil {
-		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
+		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" ||
+			channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
 			return r.getSubStatusV1Beta1(subscription, channel)
 		}
 	}
@@ -469,7 +470,8 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 
 func (r *Reconciler) updateChannelRemoveSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1beta1.Subscription) {
 	if channel.Annotations != nil {
-		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
+		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" ||
+			channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
 			r.updateChannelRemoveSubscriptionV1Beta1(ctx, channel, sub)
 			return
 		}
@@ -505,7 +507,8 @@ func (r *Reconciler) updateChannelRemoveSubscriptionV1Alpha1(ctx context.Context
 
 func (r *Reconciler) updateChannelAddSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1beta1.Subscription) {
 	if channel.Annotations != nil {
-		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
+		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" ||
+			channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
 			r.updateChannelAddSubscriptionV1Beta1(ctx, channel, sub)
 			return
 		}

@@ -19,6 +19,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
 )
@@ -29,6 +30,10 @@ func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) erro
 	switch sink := obj.(type) {
 	case *v1.Channel:
 		sink.ObjectMeta = source.ObjectMeta
+		if sink.Annotations == nil {
+			sink.Annotations = make(map[string]string)
+		}
+		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 		source.Status.ConvertTo(ctx, &sink.Status)
 		source.Spec.ConvertTo(ctx, &sink.Spec)
 		return nil
