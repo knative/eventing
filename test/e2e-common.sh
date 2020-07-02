@@ -102,6 +102,9 @@ function install_knative_eventing() {
     --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
   if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
     echo ">> Installing Knative Monitoring"
+    # Hack hack hack. Why is this namespace not created as part of monitoring release.
+    # https://github.com/knative/eventing/issues/3469
+    kubectl create ns knative-monitoring
     start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
     UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
   else
