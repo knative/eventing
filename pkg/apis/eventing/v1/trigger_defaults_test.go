@@ -32,15 +32,7 @@ var (
 	otherBroker        = "other_broker"
 	namespace          = "testnamespace"
 	emptyTriggerFilter = &TriggerFilter{}
-	defaultTrigger     = Trigger{
-		ObjectMeta: v1.ObjectMeta{
-			Labels: map[string]string{brokerLabel: defaultBroker},
-		},
-		Spec: TriggerSpec{
-			Broker: defaultBroker,
-			Filter: emptyTriggerFilter,
-		},
-	}
+	defaultTrigger     = Trigger{Spec: TriggerSpec{Filter: emptyTriggerFilter}}
 )
 
 func TestTriggerDefaults(t *testing.T) {
@@ -49,12 +41,8 @@ func TestTriggerDefaults(t *testing.T) {
 		expected Trigger
 	}{
 		"nil broker": {
-			initial: Trigger{Spec: TriggerSpec{Filter: emptyTriggerFilter}},
-			expected: Trigger{
-				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{brokerLabel: defaultBroker},
-				},
-				Spec: TriggerSpec{Broker: defaultBroker, Filter: emptyTriggerFilter}},
+			initial:  Trigger{Spec: TriggerSpec{Filter: emptyTriggerFilter}},
+			expected: defaultTrigger,
 		},
 		"nil filter": {
 			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}},
