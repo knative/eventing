@@ -66,6 +66,11 @@ install_mt_broker || fail_test 'Installing HEAD Broker failed'
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
+# We need to manually patch the Subscription because the newer version has webhook
+# and the older one doesn't have it and simply applying it will not work.
+# https://github.com/knative/eventing/issues/3466
+kubectl patch crd subscriptions.messaging.knative.dev --type='json' -p '[{"op" : "remove", "path" : "/spec/conversion/webhook"},{"op":"replace", "path":"/spec/conversion/strategy","value" : "None"}]'
+
 header "Performing downgrade to latest release"
 install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
 
