@@ -59,8 +59,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reco
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		b := resources.MakeBroker(t.Namespace, t.Spec.Broker)
-		b, err = r.eventingClientSet.EventingV1beta1().Brokers(t.Namespace).Create(b)
+		_, err = r.eventingClientSet.EventingV1beta1().Brokers(t.Namespace).Create(
+			resources.MakeBroker(t.Namespace, t.Spec.Broker))
 		if err != nil {
 			return fmt.Errorf("Unable to create Broker: %w", err)
 		}
