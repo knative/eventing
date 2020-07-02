@@ -43,7 +43,7 @@ func ChannelSpecTestHelperWithChannelTestRunner(
 		defer testlib.TearDown(client)
 
 		t.Run("Channel spec allows subscribers", func(t *testing.T) {
-			if channel == channelv1beta1 {
+			if channel == channelv1beta1 || channel == channelv1 {
 				t.Skip("Not running spec.subscribers array test for generic Channel")
 			}
 			channelSpecAllowsSubscribersArray(st, client, channel)
@@ -88,7 +88,7 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 
 		ch = channelable
 
-	} else if dtsv == "v1beta1" {
+	} else if dtsv == "v1beta1" || dtsv == "v1" {
 		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
 		if err != nil {
 			st.Fatalf("Unable to get channel %s to v1beta1 duck type: %s", channel, err)
