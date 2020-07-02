@@ -101,7 +101,7 @@ func (ss *SubscriptionStatus) MarkReferencesResolvedUnknown(reason, messageForma
 
 // MarkChannelFailed sets the ChannelReady condition to False state.
 func (ss *SubscriptionStatus) MarkChannelFailed(reason, messageFormat string, messageA ...interface{}) {
-	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA...)
 }
 
 // MarkChannelUnknown sets the ChannelReady condition to Unknown state.
