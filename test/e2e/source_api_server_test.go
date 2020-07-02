@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
 	"time"
 
@@ -208,7 +209,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	)
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 

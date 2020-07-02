@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
@@ -128,7 +129,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 	defer tearDown(client)
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 
@@ -144,7 +145,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
-					Ref: resources.KnativeRefForBroker(defaultBrokerName, client.Namespace),
+					Ref: resources.KnativeRefForBroker(sugarresources.DefaultBrokerName, client.Namespace),
 				},
 			},
 		}),

@@ -18,6 +18,7 @@ package helpers
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"net/url"
 	"sort"
 	"strings"
@@ -223,7 +224,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 
 			if shouldLabelNamespace {
 				// Label namespace so that it creates the default broker.
-				if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+				if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 					t.Fatalf("Error annotating namespace: %v", err)
 				}
 			}

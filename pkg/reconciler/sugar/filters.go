@@ -27,7 +27,6 @@ import (
 // LabelFilterFn defines a function to test if the label set passes the filter.
 type LabelFilterFn func(labels map[string]string) bool
 
-// TODO: DO NOT SUBMIT --> e2e tests assume this annotation BROKER_INJECTION_DEFAULT
 type envConfig struct {
 	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"false"`
 }
