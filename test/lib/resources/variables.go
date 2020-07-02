@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,18 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tracing
+package resources
 
-import (
-	"testing"
+import "os"
 
-	"knative.dev/pkg/test/zipkin"
+// SystemNamespace is the namespace where Eventing is installed, it's default to be knative-eventing.
+var SystemNamespace = getenv("TEST_EVENTING_NAMESPACE", "knative-eventing")
 
-	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
-)
-
-// Setup sets up port forwarding to Zipkin.
-func Setup(t *testing.T, client *testlib.Client) {
-	zipkin.SetupZipkinTracingFromConfigTracingOrFail(t, client.Kube.Kube, resources.SystemNamespace)
+func getenv(name, defaultValue string) string {
+	value, set := os.LookupEnv(name)
+	if !set {
+		value = defaultValue
+	}
+	return value
 }

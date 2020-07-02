@@ -21,9 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// SystemNamespace is the namespace where Eventing is installed, it's default to be knative-eventing.
-const SystemNamespace = "knative-eventing"
-
 // API versions for the resources.
 const (
 	CoreAPIVersion      = "v1"
