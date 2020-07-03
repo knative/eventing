@@ -34,6 +34,16 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, source apis.Convertib
 }
 
 // ConvertTo implements apis.Convertible
+func (source *SubscribableSpec) ConvertTo(ctx context.Context, sink apis.Convertible) error {
+	return fmt.Errorf("v1 is the highest known version, got: %T", sink)
+}
+
+// ConvertFrom implements apis.Convertible
+func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, source apis.Convertible) error {
+	return fmt.Errorf("v1 is the highest known version, got: %T", source)
+}
+
+// ConvertTo implements apis.Convertible
 func (source *SubscribableStatus) ConvertTo(ctx context.Context, sink apis.Convertible) error {
 	return fmt.Errorf("v1 is the highest known version, got: %T", sink)
 }
