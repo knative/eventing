@@ -58,7 +58,8 @@ func (p *prober) annotateNamespace() {
 		Get(p.client.Namespace, metav1.GetOptions{})
 	ensure.NoError(err)
 	ns.Labels = map[string]string{
-		sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue,
+		sugar.DeprecatedInjectionLabelKey: sugar.InjectionEnabledLabelValue,
+		sugar.InjectionLabelKey:           sugar.InjectionEnabledLabelValue,
 	}
 	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
 		Update(ns)
