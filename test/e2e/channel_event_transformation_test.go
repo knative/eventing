@@ -36,5 +36,9 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    -----------> Service(Transformation)
 */
 func TestEventTransformationForSubscription(t *testing.T) {
-	helpers.EventTransformationForSubscriptionTestHelper(t, channelTestRunner)
+	helpers.EventTransformationForSubscriptionTestHelper(t, helpers.SubscriptionV1beta1, channelTestRunner)
+}
+
+func TestEventTransformationForSubscriptionV1(t *testing.T) {
+	helpers.EventTransformationForSubscriptionTestHelper(t, helpers.SubscriptionV1, channelTestRunner)
 }

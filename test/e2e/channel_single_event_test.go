@@ -52,3 +52,23 @@ func TestSingleStructuredEventForChannelV1Beta1(t *testing.T) {
 		channelTestRunner,
 	)
 }
+
+func TestSingleBinaryEventForChannelV1(t *testing.T) {
+	helpers.SingleEventForChannelTestHelper(
+		t,
+		cloudevents.EncodingBinary,
+		helpers.SubscriptionV1,
+		"",
+		channelTestRunner,
+	)
+}
+
+func TestSingleStructuredEventForChannelV1(t *testing.T) {
+	helpers.SingleEventForChannelTestHelper(
+		t,
+		cloudevents.EncodingStructured,
+		helpers.SubscriptionV1,
+		"",
+		channelTestRunner,
+	)
+}

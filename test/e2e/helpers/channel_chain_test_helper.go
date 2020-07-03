@@ -32,6 +32,7 @@ import (
 
 // ChannelChainTestHelper is the helper function for channel_chain_test
 func ChannelChainTestHelper(t *testing.T,
+	subscriptionVersion SubscriptionVersion,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -57,21 +58,42 @@ func ChannelChainTestHelper(t *testing.T,
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		defer eventTracker.Cleanup()
 
-		// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames1,
-			channelNames[0],
-			&channel,
-			resources.WithReplyForSubscription(channelNames[1], &channel),
-		)
-		// create subscriptions that subscribe the second channel, and call the logging service
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames2,
-			channelNames[1],
-			&channel,
-			resources.WithSubscriberForSubscription(recordEventsPodName),
-		)
+		// create subscription to subscribe the channel, and forward the received events to the logger service
+		switch subscriptionVersion {
+		case SubscriptionV1:
+			// create subscriptions that subscribe the first channel, and reply events directly to the second channel
+			client.CreateSubscriptionsOrFail(
+				subscriptionNames1,
+				channelNames[0],
+				&channel,
+				resources.WithReplyForSubscription(channelNames[1], &channel),
+			)
+			// create subscriptions that subscribe the second channel, and call the logging service
+			client.CreateSubscriptionsOrFail(
+				subscriptionNames2,
+				channelNames[1],
+				&channel,
+				resources.WithSubscriberForSubscription(recordEventsPodName),
+			)
+		case SubscriptionV1beta1:
+			// create subscriptions that subscribe the first channel, and reply events directly to the second channel
+			client.CreateSubscriptionsV1OrFail(
+				subscriptionNames1,
+				channelNames[0],
+				&channel,
+				resources.WithReplyForSubscriptionV1(channelNames[1], &channel),
+			)
+			// create subscriptions that subscribe the second channel, and call the logging service
+			client.CreateSubscriptionsV1OrFail(
+				subscriptionNames2,
+				channelNames[1],
+				&channel,
+				resources.WithSubscriberForSubscriptionV1(recordEventsPodName),
+			)
 
+		default:
+			t.Fatalf("Invalid subscription version")
+		}
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()
 

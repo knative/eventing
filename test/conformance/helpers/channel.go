@@ -27,6 +27,7 @@ import (
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 
 	"knative.dev/eventing/pkg/apis/messaging"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
@@ -36,6 +37,13 @@ var (
 	channelv1beta1 = metav1.TypeMeta{
 		Kind:       channelv1beta1GVK.Kind,
 		APIVersion: channelv1beta1GVK.GroupVersion().String(),
+	}
+
+	channelv1GVK = (&messagingv1.Channel{}).GetGroupVersionKind()
+
+	channelv1 = metav1.TypeMeta{
+		Kind:       channelv1GVK.Kind,
+		APIVersion: channelv1GVK.GroupVersion().String(),
 	}
 )
 

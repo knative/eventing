@@ -24,6 +24,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 
 	"knative.dev/pkg/apis"
@@ -157,6 +158,11 @@ func TestChannelConversion(t *testing.T) {
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
+				// Make sure the annotation specifies the correct duck.
+				if test.in.Annotations == nil {
+					test.in.Annotations = make(map[string]string)
+				}
+				test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
@@ -295,6 +301,11 @@ func TestChannelConversionWithV1(t *testing.T) {
 				if err := ver.ConvertTo(context.Background(), got); err != nil {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
+				// Make sure the annotation specifies the correct duck.
+				if test.in.Annotations == nil {
+					test.in.Annotations = make(map[string]string)
+				}
+				test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}

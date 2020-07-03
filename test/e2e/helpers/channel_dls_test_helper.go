@@ -32,6 +32,7 @@ import (
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
 func ChannelDeadLetterSinkTestHelper(t *testing.T,
+	subscriptionVersion SubscriptionVersion,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	const (
@@ -55,13 +56,26 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 		defer eventTracker.Cleanup()
 
 		// create subscriptions that subscribe to a service that does not exist
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames,
-			channelNames[0],
-			&channel,
-			resources.WithSubscriberForSubscription("does-not-exist"),
-			resources.WithDeadLetterSinkForSubscription(recordEventsPodName),
-		)
+		switch subscriptionVersion {
+		case SubscriptionV1:
+			client.CreateSubscriptionsV1OrFail(
+				subscriptionNames,
+				channelNames[0],
+				&channel,
+				resources.WithSubscriberForSubscriptionV1("does-not-exist"),
+				resources.WithDeadLetterSinkForSubscriptionV1(recordEventsPodName),
+			)
+		case SubscriptionV1beta1:
+			client.CreateSubscriptionsOrFail(
+				subscriptionNames,
+				channelNames[0],
+				&channel,
+				resources.WithSubscriberForSubscription("does-not-exist"),
+				resources.WithDeadLetterSinkForSubscription(recordEventsPodName),
+			)
+		default:
+			t.Fatalf("Invalid subscription version")
+		}
 
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()

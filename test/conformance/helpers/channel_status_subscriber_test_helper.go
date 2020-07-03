@@ -94,7 +94,7 @@ func channelHasRequiredSubscriberStatus(st *testing.T, client *testlib.Client, c
 		if ss.Ready != corev1.ConditionTrue {
 			st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
 		}
-	} else if dtsv == "v1beta1" {
+	} else if dtsv == "v1beta1" || dtsv == "v1" {
 		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
 		if err != nil {
 			st.Fatalf("Unable to get channel %q to v1beta1 duck type: %q", channel, err)
@@ -114,7 +114,7 @@ func channelHasRequiredSubscriberStatus(st *testing.T, client *testlib.Client, c
 			st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
 		}
 	} else {
-		st.Fatalf("Channel doesn't support v1alpha1 nor v1beta1 Channel duck types: %v", channel)
+		st.Fatalf("Channel doesn't support v1alpha1, v1beta1 or v1 Channel duck types: %v", channel)
 	}
 }
 

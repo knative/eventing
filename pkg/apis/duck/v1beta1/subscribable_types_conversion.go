@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
@@ -51,15 +50,18 @@ func (source *SubscribableSpec) ConvertTo(ctx context.Context, sink *eventingduc
 }
 
 // ConvertTo helps implement apis.Convertible
-func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscriberSpec) {
+func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscriberSpec) error {
 	sink.UID = source.UID
 	sink.Generation = source.Generation
 	sink.SubscriberURI = source.SubscriberURI
-	sink.Delivery = &eventingduckv1.DeliverySpec{
-		DeadLetterSink: &duckv1.Destination{},
+	if source.Delivery != nil {
+		sink.Delivery = &eventingduckv1.DeliverySpec{}
+		if err := source.Delivery.ConvertTo(ctx, sink.Delivery); err != nil {
+			return err
+		}
 	}
-	source.Delivery.ConvertTo(ctx, sink.Delivery)
 	sink.ReplyURI = source.ReplyURI
+	return nil
 }
 
 // ConvertTo helps implement apis.Convertible
@@ -83,33 +85,36 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, from apis.Convertible
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
-		sink.Spec.ConvertFrom(ctx, source.Spec)
-		return nil
+		return sink.Spec.ConvertFrom(ctx, source.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
 }
 
 // ConvertFrom helps implement apis.Convertible
-func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, source eventingduckv1.SubscribableSpec) {
+func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, source eventingduckv1.SubscribableSpec) error {
 	if len(source.Subscribers) > 0 {
 		sink.Subscribers = make([]SubscriberSpec, len(source.Subscribers))
 		for i, s := range source.Subscribers {
-			sink.Subscribers[i].ConvertFrom(ctx, s)
+			if err := sink.Subscribers[i].ConvertFrom(ctx, s); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 // ConvertFrom helps implement apis.Convertible
-func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source eventingduckv1.SubscriberSpec) {
+func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source eventingduckv1.SubscriberSpec) error {
 	sink.UID = source.UID
 	sink.Generation = source.Generation
 	sink.SubscriberURI = source.SubscriberURI
 	sink.ReplyURI = source.ReplyURI
-	sink.Delivery = &DeliverySpec{
-		DeadLetterSink: &duckv1.Destination{},
+	if source.Delivery != nil {
+		sink.Delivery = &DeliverySpec{}
+		return sink.Delivery.ConvertFrom(ctx, source.Delivery)
 	}
-	sink.Delivery.ConvertFrom(ctx, source.Delivery)
+	return nil
 }
 
 // ConvertFrom helps implement apis.Convertible

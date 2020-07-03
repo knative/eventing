@@ -36,6 +36,7 @@ type SubscriptionVersion string
 
 const (
 	SubscriptionV1beta1 SubscriptionVersion = "v1beta1"
+	SubscriptionV1      SubscriptionVersion = "v1"
 )
 
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
@@ -73,6 +74,13 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 		}
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		switch subscriptionVersion {
+		case SubscriptionV1:
+			client.CreateSubscriptionV1OrFail(
+				subscriptionName,
+				channelName,
+				&channel,
+				resources.WithSubscriberForSubscriptionV1(eventRecorder),
+			)
 		case SubscriptionV1beta1:
 			client.CreateSubscriptionOrFail(
 				subscriptionName,
