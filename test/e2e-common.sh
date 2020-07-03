@@ -60,7 +60,7 @@ readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
 
 # This the namespace used to install and test Knative Eventing.
 export TEST_EVENTING_NAMESPACE
-TEST_EVENTING_NAMESPACE=$(uuidgen | tr 'A-Z' 'a-z')
+TEST_EVENTING_NAMESPACE="knative-eventing"
 
 latest_version() {
   local semver=$(git describe --match "v[0-9]*" --abbrev=0)
