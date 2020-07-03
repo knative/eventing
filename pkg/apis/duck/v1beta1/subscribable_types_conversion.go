@@ -96,7 +96,7 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, from apis.Convertible
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, &source.Status)
-		return sink.Spec.ConvertFrom(ctx, source.Spec)
+		return sink.Spec.ConvertFrom(ctx, &source.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
