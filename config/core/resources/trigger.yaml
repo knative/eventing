@@ -56,9 +56,9 @@ spec:
       type: date
       JSONPath: .metadata.creationTimestamp
   versions:
-  - name: v1alpha1
+  - name: v1beta1
     served: true
-    storage: false
+    storage: true
     schema:
       openAPIV3Schema:
         type: object
@@ -74,13 +74,6 @@ spec:
               filter:
                 type: object
                 properties:
-                  sourceAndType:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                      source:
-                        type: string
                   attributes:
                     type: object
                     description: "Map of CloudEvents attributes used for filtering events."
@@ -116,9 +109,9 @@ spec:
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true
-  - name: v1beta1
+  - name: v1alpha1
     served: true
-    storage: true
+    storage: false
     schema:
       openAPIV3Schema:
         type: object
@@ -134,6 +127,13 @@ spec:
               filter:
                 type: object
                 properties:
+                  sourceAndType:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      source:
+                        type: string
                   attributes:
                     type: object
                     description: "Map of CloudEvents attributes used for filtering events."

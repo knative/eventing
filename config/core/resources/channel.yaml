@@ -58,6 +58,19 @@ spec:
       type: date
       JSONPath: .metadata.creationTimestamp
   versions:
+  - name: v1beta1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1alpha1
     served: true
     storage: false
@@ -131,19 +144,6 @@ spec:
                           type: string
                           description: "Endpoint for the reply."
                           minLength: 1
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
-  - name: v1beta1
-    served: true
-    storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true

@@ -62,10 +62,10 @@ spec:
       type: date
       JSONPath: .metadata.creationTimestamp
   versions:
-  - name: v1alpha1
-    served: true
-    storage: false
   - name: v1beta1
     served: true
     storage: true
+  - name: v1alpha1
+    served: true
+    storage: false
 
