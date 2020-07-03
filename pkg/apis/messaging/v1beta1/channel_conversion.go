@@ -103,6 +103,6 @@ func (sink *ChannelSpec) ConvertFrom(ctx context.Context, source v1.ChannelSpec)
 func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1.ChannelStatus) {
 	source.Status.ConvertTo(ctx, &sink.Status)
 	sink.Channel = source.Channel
-	sink.SubscribableStatus.ConvertFrom(ctx, source.SubscribableStatus)
+	sink.SubscribableStatus.ConvertFrom(ctx, &source.SubscribableStatus)
 	sink.AddressStatus.Address = source.AddressStatus.Address
 }

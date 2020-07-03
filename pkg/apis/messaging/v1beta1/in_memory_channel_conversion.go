@@ -100,5 +100,5 @@ func (sink *InMemoryChannelStatus) ConvertFrom(ctx context.Context, source v1.In
 	source.Status.ConvertTo(ctx, &sink.Status)
 	sink.AddressStatus = source.AddressStatus
 	sink.SubscribableStatus = eventingduckv1beta1.SubscribableStatus{}
-	sink.SubscribableStatus.ConvertFrom(ctx, source.SubscribableStatus)
+	sink.SubscribableStatus.ConvertFrom(ctx, &source.SubscribableStatus)
 }

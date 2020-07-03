@@ -107,6 +107,8 @@ var (
 	_ apis.Listable    = (*SubscribableType)(nil)
 
 	_ apis.Convertible = (*SubscribableType)(nil)
+
+	_ apis.Convertible = (*SubscribableTypeStatus)(nil)
 )
 
 // GetSubscribableTypeStatus method Returns the Default SubscribableStatus in this case it's SubscribableStatus
