@@ -375,7 +375,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1beta1.Subscription) 
 		// to the cache we intend to use to pull the Channel from. This linkage
 		// is setup in NewController for r.tracker.
 		if err := r.tracker.TrackReference(tracker.Reference{
-			APIVersion: "messaging.knative.dev/" + gvk.Version,
+			APIVersion: "messaging.knative.dev/v1beta1",
 			Kind:       "Channel",
 			Namespace:  sub.Namespace,
 			Name:       sub.Spec.Channel.Name,
