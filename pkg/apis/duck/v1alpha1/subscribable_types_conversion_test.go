@@ -214,3 +214,15 @@ func TestSubscribableTypeConversionWithV1Beta1(t *testing.T) {
 		}
 	}
 }
+
+func TestSubscribableTypeStatusConversionBadType(t *testing.T) {
+	good, bad := &SubscribableTypeStatus{}, &SubscribableTypeStatus{}
+
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+	}
+
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}

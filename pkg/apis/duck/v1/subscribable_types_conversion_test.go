@@ -21,8 +21,20 @@ import (
 	"testing"
 )
 
-func TestInMemoryChannelConversionBadType(t *testing.T) {
+func TestSubscribableConversionBadType(t *testing.T) {
 	good, bad := &Subscribable{}, &Subscribable{}
+
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+	}
+
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}
+
+func TestSubscribableStatusConversionBadType(t *testing.T) {
+	good, bad := &SubscribableStatus{}, &SubscribableStatus{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)
