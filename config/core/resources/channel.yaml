@@ -25,85 +25,11 @@ spec:
   group: messaging.knative.dev
   versions:
   - &version
-    name: v1alpha1
-    served: false
-    storage: false
+    name: v1beta1
+    served: true
+    storage: true
     subresources:
       status: {}
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              channelTemplate:
-                description: "Channel implementation which dictates the durability guarantees of events. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
-                type: object
-                properties:
-                  apiVersion:
-                    type: string
-                    description: "API version of the channel implementation."
-                    minLength: 1
-                  kind:
-                    type: string
-                    description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
-                    minLength: 1
-                  spec:
-                    type: object
-                    description: "Spec defines the Spec to use for each channel created. Passed in verbatim to the Channel CRD as Spec section."
-                required:
-                  - apiVersion
-                  - kind
-              subscribable:
-                type: object
-                properties:
-                  subscribers:
-                    type: array
-                    description: "Events received on the channel are forwarded to its subscribers."
-                    items:
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                      required:
-                        - uid
-                      properties:
-                        ref:
-                          type: object
-                          description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                          x-kubernetes-preserve-unknown-fields: true
-                          required:
-                            - namespace
-                            - name
-                            - uid
-                          properties:
-                            apiVersion:
-                              type: string
-                            kind:
-                              type: string
-                            name:
-                              type: string
-                              minLength: 1
-                            namespace:
-                              type: string
-                              minLength: 1
-                            uid:
-                              type: string
-                              minLength: 1
-                        uid:
-                          type: string
-                          description: "Used to understand the origin of the subscriber."
-                          minLength: 1
-                        subscriberURI:
-                          type: string
-                          description: "Endpoint for the subscriber."
-                          minLength: 1
-                        replyURI:
-                          type: string
-                          description: "Endpoint for the reply."
-                          minLength: 1
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
     additionalPrinterColumns:
     - name: Ready
       type: string
@@ -117,10 +43,6 @@ spec:
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
-  - << : *version
-    name: v1beta1
-    served: true
-    storage: true
     schema:
       openAPIV3Schema:
         type: object
@@ -135,16 +57,6 @@ spec:
     name: v1
     served: true
     storage: false
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
   names:
     kind: Channel
     plural: channels
