@@ -69,20 +69,26 @@ func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *duckv1beta1.S
 	}
 }
 
-// ConvertTo helps implement apis.Convertible
-func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, sink *duckv1beta1.SubscribableStatus) {
-	if source.SubscribableStatus != nil &&
-		len(source.SubscribableStatus.Subscribers) > 0 {
-		sink.Subscribers = make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
-		for i, ss := range source.SubscribableStatus.Subscribers {
-			sink.Subscribers[i] = duckv1beta1.SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
+// ConvertTo implements apis.Convertible
+func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *duckv1beta1.SubscribableStatus:
+		if source.SubscribableStatus != nil &&
+			len(source.SubscribableStatus.Subscribers) > 0 {
+			sink.Subscribers = make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
+			for i, ss := range source.SubscribableStatus.Subscribers {
+				sink.Subscribers[i] = duckv1beta1.SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
+				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
+	return nil
 }
 
 // ConvertFrom implements apis.Convertible.
@@ -91,7 +97,7 @@ func (sink *SubscribableType) ConvertFrom(ctx context.Context, obj apis.Converti
 	switch source := obj.(type) {
 	case *duckv1beta1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
-		sink.Status.ConvertFrom(ctx, source.Status)
+		sink.Status.ConvertFrom(ctx, &source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
 		return nil
 	default:
@@ -126,20 +132,25 @@ func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source duckv1beta1.
 
 }
 
-// ConvertFrom helps implement apis.Convertible
-func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, source duckv1beta1.SubscribableStatus) error {
-	if len(source.Subscribers) > 0 {
-		sink.SubscribableStatus = &SubscribableStatus{
-			Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.Subscribers)),
-		}
-		for i, ss := range source.Subscribers {
-			sink.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
+// ConvertFrom implements apis.Convertible
+func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *duckv1beta1.SubscribableStatus:
+		if len(source.Subscribers) > 0 {
+			sink.SubscribableStatus = &SubscribableStatus{
+				Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.Subscribers)),
+			}
+			for i, ss := range source.Subscribers {
+				sink.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
+				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 	return nil
 }

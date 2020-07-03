@@ -64,19 +64,25 @@ func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *eventingduckv
 	return nil
 }
 
-// ConvertTo helps implement apis.Convertible
-func (source *SubscribableStatus) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscribableStatus) {
-	if len(source.Subscribers) > 0 {
-		sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.Subscribers))
-		for i, ss := range source.Subscribers {
-			sink.Subscribers[i] = eventingduckv1.SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
+// ConvertTo implements apis.Convertible
+func (source *SubscribableStatus) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *eventingduckv1.SubscribableStatus:
+		if len(source.Subscribers) > 0 {
+			sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.Subscribers))
+			for i, ss := range source.Subscribers {
+				sink.Subscribers[i] = eventingduckv1.SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
+				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
+	return nil
 }
 
 // ConvertFrom implements apis.Convertible.
@@ -84,7 +90,7 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, from apis.Convertible
 	switch source := from.(type) {
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
-		sink.Status.ConvertFrom(ctx, source.Status)
+		sink.Status.ConvertFrom(ctx, &source.Status)
 		return sink.Spec.ConvertFrom(ctx, source.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
@@ -117,18 +123,23 @@ func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source eventingduck
 	return nil
 }
 
-// ConvertFrom helps implement apis.Convertible
-func (sink *SubscribableStatus) ConvertFrom(ctx context.Context, source eventingduckv1.SubscribableStatus) error {
-	if len(source.Subscribers) > 0 {
-		sink.Subscribers = make([]SubscriberStatus, len(source.Subscribers))
-		for i, ss := range source.Subscribers {
-			sink.Subscribers[i] = SubscriberStatus{
-				UID:                ss.UID,
-				ObservedGeneration: ss.ObservedGeneration,
-				Ready:              ss.Ready,
-				Message:            ss.Message,
+// ConvertFrom implements apis.Convertible
+func (sink *SubscribableStatus) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *eventingduckv1.SubscribableStatus:
+		if len(source.Subscribers) > 0 {
+			sink.Subscribers = make([]SubscriberStatus, len(source.Subscribers))
+			for i, ss := range source.Subscribers {
+				sink.Subscribers[i] = SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
+				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 	return nil
 }
