@@ -29,6 +29,8 @@ const (
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 	withNS := apis.AllowDifferentNamespace(apis.WithinParent(ctx, b.ObjectMeta))
+
+	// Make sure a BrokerClassAnnotation exists
 	var errs *apis.FieldError
 	if bc, ok := b.GetAnnotations()[BrokerClassAnnotationKey]; !ok || bc == "" {
 		errs = errs.Also(apis.ErrMissingField(BrokerClassAnnotationKey))
