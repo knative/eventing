@@ -80,11 +80,22 @@ func TestValidate(t *testing.T) {
 		b    Broker
 		want *apis.FieldError
 	}{{
-		name: "valid empty",
+		name: "missing annotation",
 		b:    Broker{},
+		want: apis.ErrMissingField("eventing.knative.dev/broker.class"),
+	}, {
+		name: "valid empty",
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
+		},
 	}, {
 		name: "valid config",
 		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
 			Spec: BrokerSpec{
 				Config: &duckv1.KReference{
 					Namespace:  "namespace",
@@ -97,6 +108,9 @@ func TestValidate(t *testing.T) {
 	}, {
 		name: "valid config, no namespace",
 		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
 			Spec: BrokerSpec{
 				Config: &duckv1.KReference{
 					Name:       "name",
@@ -108,6 +122,9 @@ func TestValidate(t *testing.T) {
 	}, {
 		name: "invalid config, missing name",
 		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
 			Spec: BrokerSpec{
 				Config: &duckv1.KReference{
 					Namespace:  "namespace",
@@ -120,6 +137,9 @@ func TestValidate(t *testing.T) {
 	}, {
 		name: "invalid config, missing apiVersion",
 		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
 			Spec: BrokerSpec{
 				Config: &duckv1.KReference{
 					Namespace: "namespace",
@@ -132,6 +152,9 @@ func TestValidate(t *testing.T) {
 	}, {
 		name: "invalid config, missing kind",
 		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
 			Spec: BrokerSpec{
 				Config: &duckv1.KReference{
 					Namespace:  "namespace",
@@ -144,6 +167,9 @@ func TestValidate(t *testing.T) {
 	}, {
 		name: "invalid delivery, invalid delay string",
 		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
 			Spec: BrokerSpec{
 				Delivery: &eventingduckv1beta1.DeliverySpec{
 					BackoffDelay: &invalidString,
@@ -151,12 +177,12 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		want: apis.ErrInvalidValue(invalidString, "spec.delivery.backoffDelay"),
-	}, {}}
+	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.b.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("BrokerSpec.Validate (-want, +got) = %v", diff)
+				t.Errorf("Broker.Validate (-want, +got) = %v", diff)
 			}
 		})
 	}
