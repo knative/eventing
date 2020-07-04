@@ -84,6 +84,14 @@ func TestValidate(t *testing.T) {
 		b:    Broker{},
 		want: apis.ErrMissingField("eventing.knative.dev/broker.class"),
 	}, {
+		name: "empty annotation",
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": ""},
+			},
+		},
+		want: apis.ErrMissingField("eventing.knative.dev/broker.class"),
+	}, {
 		name: "valid empty",
 		b: Broker{
 			ObjectMeta: metav1.ObjectMeta{
