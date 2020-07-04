@@ -46,11 +46,11 @@ func TestBrokerImmutableFields(t *testing.T) {
 		"nil original": {
 			wantErr: nil,
 		},
-		"no ChannelTemplateSpec mutation": {
+		"no BrokerClassAnnotation mutation": {
 			og:      current,
 			wantErr: nil,
 		},
-		"ChannelTemplateSpec mutated": {
+		"BrokerClassAnnotation mutated": {
 			og: original,
 			wantErr: &apis.FieldError{
 				Message: "Immutable fields changed (-old +new)",
