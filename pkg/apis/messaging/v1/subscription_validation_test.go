@@ -248,12 +248,14 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "valid",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		want: nil,
@@ -331,12 +333,14 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "Channel changed",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: newChannel,
+				Channel:    newChannel,
+				Subscriber: getValidDestination(),
 			},
 		},
 		want: &apis.FieldError{
@@ -351,7 +355,9 @@ func TestSubscriptionImmutable(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.c.CheckImmutableFields(context.TODO(), test.og)
+			ctx := context.Background()
+			ctx = apis.WithinUpdate(ctx, test.og)
+			got := test.c.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 			}
