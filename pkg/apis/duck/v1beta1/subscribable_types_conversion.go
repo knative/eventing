@@ -54,18 +54,23 @@ func (source *SubscribableSpec) ConvertTo(ctx context.Context, obj apis.Converti
 	return nil
 }
 
-// ConvertTo helps implement apis.Convertible
-func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscriberSpec) error {
-	sink.UID = source.UID
-	sink.Generation = source.Generation
-	sink.SubscriberURI = source.SubscriberURI
-	if source.Delivery != nil {
-		sink.Delivery = &eventingduckv1.DeliverySpec{}
-		if err := source.Delivery.ConvertTo(ctx, sink.Delivery); err != nil {
-			return err
+// ConvertTo implements apis.Convertible
+func (source *SubscriberSpec) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *eventingduckv1.SubscriberSpec:
+		sink.UID = source.UID
+		sink.Generation = source.Generation
+		sink.SubscriberURI = source.SubscriberURI
+		if source.Delivery != nil {
+			sink.Delivery = &eventingduckv1.DeliverySpec{}
+			if err := source.Delivery.ConvertTo(ctx, sink.Delivery); err != nil {
+				return err
+			}
 		}
+		sink.ReplyURI = source.ReplyURI
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
-	sink.ReplyURI = source.ReplyURI
 	return nil
 }
 
@@ -109,7 +114,7 @@ func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, obj apis.Converti
 		if len(source.Subscribers) > 0 {
 			sink.Subscribers = make([]SubscriberSpec, len(source.Subscribers))
 			for i, s := range source.Subscribers {
-				if err := sink.Subscribers[i].ConvertFrom(ctx, s); err != nil {
+				if err := sink.Subscribers[i].ConvertFrom(ctx, &s); err != nil {
 					return err
 				}
 			}
@@ -121,14 +126,19 @@ func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, obj apis.Converti
 }
 
 // ConvertFrom helps implement apis.Convertible
-func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source eventingduckv1.SubscriberSpec) error {
-	sink.UID = source.UID
-	sink.Generation = source.Generation
-	sink.SubscriberURI = source.SubscriberURI
-	sink.ReplyURI = source.ReplyURI
-	if source.Delivery != nil {
-		sink.Delivery = &DeliverySpec{}
-		return sink.Delivery.ConvertFrom(ctx, source.Delivery)
+func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *eventingduckv1.SubscriberSpec:
+		sink.UID = source.UID
+		sink.Generation = source.Generation
+		sink.SubscriberURI = source.SubscriberURI
+		sink.ReplyURI = source.ReplyURI
+		if source.Delivery != nil {
+			sink.Delivery = &DeliverySpec{}
+			return sink.Delivery.ConvertFrom(ctx, source.Delivery)
+		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
 	}
 	return nil
 }
