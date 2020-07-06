@@ -110,6 +110,8 @@ var (
 
 	_ apis.Convertible = (*SubscribableTypeSpec)(nil)
 	_ apis.Convertible = (*SubscribableTypeStatus)(nil)
+
+	_ apis.Convertible = (*SubscriberSpec)(nil)
 )
 
 // GetSubscribableTypeStatus method Returns the Default SubscribableStatus in this case it's SubscribableStatus

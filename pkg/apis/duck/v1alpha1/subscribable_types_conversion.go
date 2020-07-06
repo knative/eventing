@@ -55,23 +55,30 @@ func (source *SubscribableTypeSpec) ConvertTo(ctx context.Context, obj apis.Conv
 	return nil
 }
 
-func (source *SubscriberSpec) ConvertTo(ctx context.Context, sink *duckv1beta1.SubscriberSpec) {
-	sink.UID = source.UID
-	sink.Generation = source.Generation
-	sink.SubscriberURI = source.SubscriberURI
-	sink.ReplyURI = source.ReplyURI
+// ConvertTo implements apis.Convertible
+func (source *SubscriberSpec) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *duckv1beta1.SubscriberSpec:
+		sink.UID = source.UID
+		sink.Generation = source.Generation
+		sink.SubscriberURI = source.SubscriberURI
+		sink.ReplyURI = source.ReplyURI
 
-	if source.Delivery != nil {
-		sink.Delivery = source.Delivery
-	} else {
-		// If however, there's a Deprecated DeadLetterSinkURI, convert that up
-		// to DeliverySpec.
-		sink.Delivery = &duckv1beta1.DeliverySpec{
-			DeadLetterSink: &duckv1.Destination{
-				URI: source.DeadLetterSinkURI,
-			},
+		if source.Delivery != nil {
+			sink.Delivery = source.Delivery
+		} else {
+			// If however, there's a Deprecated DeadLetterSinkURI, convert that up
+			// to DeliverySpec.
+			sink.Delivery = &duckv1beta1.DeliverySpec{
+				DeadLetterSink: &duckv1.Destination{
+					URI: source.DeadLetterSinkURI,
+				},
+			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
+	return nil
 }
 
 // ConvertTo implements apis.Convertible
@@ -119,7 +126,7 @@ func (sink *SubscribableTypeSpec) ConvertFrom(ctx context.Context, obj apis.Conv
 				Subscribers: make([]SubscriberSpec, len(source.Subscribers)),
 			}
 			for i, s := range source.Subscribers {
-				sink.Subscribable.Subscribers[i].ConvertFrom(ctx, s)
+				sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &s)
 			}
 		}
 	default:
@@ -128,19 +135,24 @@ func (sink *SubscribableTypeSpec) ConvertFrom(ctx context.Context, obj apis.Conv
 	return nil
 }
 
-// ConvertFrom helps implement apis.Convertible
-func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, source duckv1beta1.SubscriberSpec) {
-	var deadLetterSinkURI *apis.URL
-	if source.Delivery != nil && source.Delivery.DeadLetterSink != nil {
-		deadLetterSinkURI = source.Delivery.DeadLetterSink.URI
+// ConvertFrom implements apis.Convertible
+func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *duckv1beta1.SubscriberSpec:
+		var deadLetterSinkURI *apis.URL
+		if source.Delivery != nil && source.Delivery.DeadLetterSink != nil {
+			deadLetterSinkURI = source.Delivery.DeadLetterSink.URI
+		}
+		sink.UID = source.UID
+		sink.Generation = source.Generation
+		sink.SubscriberURI = source.SubscriberURI
+		sink.ReplyURI = source.ReplyURI
+		sink.Delivery = source.Delivery
+		sink.DeadLetterSinkURI = deadLetterSinkURI
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
-	sink.UID = source.UID
-	sink.Generation = source.Generation
-	sink.SubscriberURI = source.SubscriberURI
-	sink.ReplyURI = source.ReplyURI
-	sink.Delivery = source.Delivery
-	sink.DeadLetterSinkURI = deadLetterSinkURI
-
+	return nil
 }
 
 // ConvertFrom implements apis.Convertible
