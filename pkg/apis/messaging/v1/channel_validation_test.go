@@ -188,42 +188,13 @@ func TestChannelImmutableFields(t *testing.T) {
 	+: "OtherChannel"
 `,
 		},
-	}, {
-		name: "good (subscribable change)",
-		current: &Channel{
-			Spec: ChannelSpec{
-				ChannelTemplate: &ChannelTemplateSpec{
-					TypeMeta: v1.TypeMeta{
-						Kind:       "InMemoryChannel",
-						APIVersion: SchemeGroupVersion.String(),
-					},
-				},
-				ChannelableSpec: eventingduck.ChannelableSpec{
-					SubscribableSpec: eventingduck.SubscribableSpec{
-						Subscribers: []eventingduck.SubscriberSpec{{
-							SubscriberURI: apis.HTTP("subscriberendpoint"),
-							ReplyURI:      apis.HTTP("replyendpoint"),
-						}},
-					},
-				},
-			},
-		},
-		original: &Channel{
-			Spec: ChannelSpec{
-				ChannelTemplate: &ChannelTemplateSpec{
-					TypeMeta: v1.TypeMeta{
-						Kind:       "InMemoryChannel",
-						APIVersion: SchemeGroupVersion.String(),
-					},
-				},
-			},
-		},
-		want: nil,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.current.CheckImmutableFields(context.TODO(), test.original)
+			ctx := context.Background()
+			ctx = apis.WithinUpdate(ctx, test.original)
+			got := test.current.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 			}
