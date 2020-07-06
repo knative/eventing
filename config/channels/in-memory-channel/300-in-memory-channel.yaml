@@ -24,9 +24,9 @@ spec:
   group: messaging.knative.dev
   versions:
   - &version
-    name: v1beta1
-    served: true
-    storage: true
+    name: v1alpha1
+    served: false
+    storage: false
     subresources:
       status: {}
     schema:
@@ -50,6 +50,10 @@ spec:
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
+  - << : *version
+    name: v1beta1
+    served: true
+    storage: true
   - << : *version
     name: v1
     served: true
