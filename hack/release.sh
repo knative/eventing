@@ -66,7 +66,7 @@ function build_release() {
   # Create v0.16.0 post-install job yaml. Cleans up old broker resources from deleted namespaced brokers.
   ko resolve ${KO_FLAGS} -f config/post-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_V_0_16}"
 
-  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${PRE_INSTALL_V_0_16}) ${POST_INSTALL_V_0_16})
+  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${CHANNEL_BROKER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${PRE_INSTALL_V_0_16} ${POST_INSTALL_V_0_16})
 
   # Assemble the release
   for yaml in "${!RELEASES[@]}"; do
