@@ -153,12 +153,12 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	}
 }
 
-func WithInjectionAnnotation(injectionAnnotation string) TriggerOption {
+func WithAnnotation(key, value string) TriggerOption {
 	return func(t *v1beta1.Trigger) {
 		if t.Annotations == nil {
 			t.Annotations = make(map[string]string)
 		}
-		t.Annotations[v1beta1.InjectionAnnotation] = injectionAnnotation
+		t.Annotations[key] = value
 	}
 }
 

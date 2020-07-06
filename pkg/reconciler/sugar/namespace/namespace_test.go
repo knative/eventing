@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mtnamespace
+package namespace
 
 import (
 	"context"
 	"testing"
+
+	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
@@ -50,11 +52,8 @@ func TestEnabledByDefault(t *testing.T) {
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 
-	// Object
-	namespace := NewNamespace(testNS,
-		WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-	)
-	broker := resources.MakeBroker(namespace)
+	// Objects
+	broker := resources.MakeBroker(testNS, resources.DefaultBrokerName)
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -82,14 +81,14 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Namespace is labeled disabled",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionDisabledLabels())),
+				WithNamespaceLabeled(sugar.InjectionDisabledLabels())),
 		},
 		Key: testNS,
 	}, {
 		Name: "Namespace is deleted no resources",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 				WithNamespaceDeleted,
 			),
 		},
@@ -98,7 +97,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Namespace enabled",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 			),
 		},
 		Key:                     testNS,
@@ -114,11 +113,9 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Namespace enabled, broker exists",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 			),
-			resources.MakeBroker(NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-			)),
+			resources.MakeBroker(testNS, resources.DefaultBrokerName),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
@@ -127,7 +124,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Namespace enabled, broker exists with no label",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionDisabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionDisabledLabels()),
 			),
 			&v1beta1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
@@ -145,13 +142,13 @@ func TestEnabledByDefault(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
-			filter:            onByDefault,
+			isEnabled:         sugar.OnByDefault,
 			brokerLister:      listers.GetV1Beta1BrokerLister(),
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,
 			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
-			controller.GetEventRecorder(ctx), r)
+			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
 	}, false, logger))
 }
 
@@ -159,11 +156,7 @@ func TestDisabledByDefault(t *testing.T) {
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 
-	// Object
-	namespace := NewNamespace(testNS,
-		WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-	)
-	broker := resources.MakeBroker(namespace)
+	broker := resources.MakeBroker(testNS, resources.DefaultBrokerName)
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -186,14 +179,14 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Namespace is labeled disabled",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionDisabledLabels())),
+				WithNamespaceLabeled(sugar.InjectionDisabledLabels())),
 		},
 		Key: testNS,
 	}, {
 		Name: "Namespace is deleted no resources",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 				WithNamespaceDeleted,
 			),
 		},
@@ -202,7 +195,7 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Namespace enabled",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 			),
 		},
 		Key:                     testNS,
@@ -218,11 +211,9 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Namespace enabled, broker exists",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 			),
-			resources.MakeBroker(NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-			)),
+			resources.MakeBroker(testNS, resources.DefaultBrokerName),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
@@ -231,7 +222,7 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Namespace enabled, broker exists with no label",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(resources.InjectionDisabledLabels()),
+				WithNamespaceLabeled(sugar.InjectionDisabledLabels()),
 			),
 			&v1beta1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
@@ -249,12 +240,12 @@ func TestDisabledByDefault(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
-			filter:            offByDefault,
+			isEnabled:         sugar.OffByDefault,
 			brokerLister:      listers.GetV1Beta1BrokerLister(),
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,
 			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
-			controller.GetEventRecorder(ctx), r)
+			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
 	}, false, logger))
 }

@@ -17,9 +17,7 @@ limitations under the License.
 package resources
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 )
 
@@ -27,21 +25,13 @@ const (
 	DefaultBrokerName = "default"
 )
 
-// MakeBroker creates a default Broker object for Namespace 'namespace'.
-func MakeBroker(ns *corev1.Namespace) *v1beta1.Broker {
+func MakeBroker(namespace, name string) *v1beta1.Broker {
 	return &v1beta1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   namespace,
+			Name:        name,
+			Labels:      Labels(),
 			Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(ns.GetObjectMeta(), schema.GroupVersionKind{
-					Group:   corev1.SchemeGroupVersion.Group,
-					Version: corev1.SchemeGroupVersion.Version,
-					Kind:    "Namespace",
-				}),
-			},
-			Namespace: ns.Name,
-			Name:      DefaultBrokerName,
-			Labels:    OwnedLabels(),
 		},
 	}
 }

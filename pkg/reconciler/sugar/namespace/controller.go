@@ -14,36 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mtnamespace
+package namespace
 
 import (
 	"context"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
+	"knative.dev/eventing/pkg/reconciler/sugar"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 )
-
-type envConfig struct {
-	InjectionDefault bool `envconfig:"BROKER_INJECTION_DEFAULT" default:"false"`
-}
-
-func onByDefault(labels map[string]string) bool {
-	return labels[resources.InjectionLabelKey] == resources.InjectionDisabledLabelValue
-}
-
-func offByDefault(labels map[string]string) bool {
-	return labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue
-}
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -55,25 +41,17 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 
-	var filter labelFilter
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logging.FromContext(ctx).Fatalf("mtnamespace was unable to process environment: %v", err)
-	} else if env.InjectionDefault {
-		filter = onByDefault
-	} else {
-		filter = offByDefault
-	}
-
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
-		filter:            filter,
+		isEnabled:         sugar.LabelFilterFnOrDie(ctx),
 		brokerLister:      brokerInformer.Lister(),
 	}
 
-	impl := namespacereconciler.NewImpl(ctx, r)
-	// TODO: filter label selector: on InjectionEnabledLabels()
+	impl := namespacereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			SkipStatusUpdates: true,
+		}
+	})
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -83,5 +61,21 @@ func NewController(
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 
+	// When brokers change, change perform a global resync on namespaces.
+	grCb := func(obj interface{}) {
+		logging.FromContext(ctx).Info("Doing a global resync on Namespaces due to Brokers changing.")
+		impl.GlobalResync(namespaceInformer.Informer())
+	}
+	// Resync on deleting of brokers.
+	brokerInformer.Informer().AddEventHandler(HandleOnlyDelete(grCb))
+
 	return impl
+}
+
+func HandleOnlyDelete(h func(interface{})) cache.ResourceEventHandler {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(obj interface{}) {},
+		UpdateFunc: func(oldObj, newObj interface{}) {},
+		DeleteFunc: h,
+	}
 }

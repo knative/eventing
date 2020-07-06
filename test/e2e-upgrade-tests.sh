@@ -62,6 +62,7 @@ run_preinstall_V016 || fail_test 'Running preinstall 0.16 failed'
 install_head || fail_test 'Installing HEAD version of eventing failed'
 install_channel_crds || fail_test 'Installing HEAD channel CRDs failed'
 install_mt_broker || fail_test 'Installing HEAD Broker failed'
+install_sugar || fail_test 'Installing HEAD Sugar failed'
 
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test

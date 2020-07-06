@@ -19,10 +19,11 @@ package e2e
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/eventing/test/lib/recordevents"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
@@ -128,12 +129,12 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 	defer tearDown(client)
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 
 	// Wait for default broker ready.
-	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, testlib.BrokerTypeMeta)
+	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create ping source
 	source := eventingtesting.NewPingSourceV1Alpha2(
@@ -144,7 +145,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
-					Ref: resources.KnativeRefForBroker(defaultBrokerName, client.Namespace),
+					Ref: resources.KnativeRefForBroker(sugarresources.DefaultBrokerName, client.Namespace),
 				},
 			},
 		}),

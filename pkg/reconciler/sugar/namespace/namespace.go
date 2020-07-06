@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mtnamespace
+package namespace
 
 import (
 	"context"
@@ -23,11 +23,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	"knative.dev/eventing/pkg/reconciler/sugar"
+	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/controller"
 	pkgreconciler "knative.dev/pkg/reconciler"
@@ -38,12 +38,10 @@ const (
 	brokerCreated = "BrokerCreated"
 )
 
-type labelFilter func(labels map[string]string) bool
-
 type Reconciler struct {
 	eventingClientSet clientset.Interface
 
-	filter labelFilter
+	isEnabled sugar.LabelFilterFn
 
 	// listers index properties about resources
 	brokerLister eventinglisters.BrokerLister
@@ -53,28 +51,19 @@ type Reconciler struct {
 var _ namespacereconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) pkgreconciler.Event {
-	if r.filter(ns.Labels) {
-		logging.FromContext(ctx).Debug("Not reconciling Namespace")
+	if !r.isEnabled(ns.Labels) {
+		logging.FromContext(ctx).Debug("Injection for Namespace not enabled.")
 		return nil
 	}
 
-	if _, err := r.reconcileBroker(ctx, ns); err != nil {
-		return fmt.Errorf("broker: %v", err)
-	}
-
-	return nil
-}
-
-// reconcileBroker reconciles the default Broker for the Namespace 'ns'.
-func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) (*v1beta1.Broker, error) {
-	current, err := r.brokerLister.Brokers(ns.Name).Get(resources.DefaultBrokerName)
+	_, err := r.brokerLister.Brokers(ns.Name).Get(resources.DefaultBrokerName)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		b := resources.MakeBroker(ns)
-		b, err = r.eventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(b)
+		_, err = r.eventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(
+			resources.MakeBroker(ns.Name, resources.DefaultBrokerName))
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("unable to create Broker: %w", err)
 		}
 		// we want the event created in the namespace, and while ns is a cluster
 		// wide object, if don't do this we'll end with the event created
@@ -82,10 +71,10 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 		ns.SetNamespace(ns.Name)
 		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, brokerCreated,
 			"Default eventing.knative.dev Broker created.")
-		return b, nil
+		return nil
 	} else if err != nil {
-		return nil, err
+		return fmt.Errorf("Unable to list Brokers: %w", err)
 	}
-	// Don't update anything that is already present.
-	return current, nil
+
+	return nil
 }

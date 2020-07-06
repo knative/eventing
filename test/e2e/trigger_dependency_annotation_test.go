@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
@@ -27,7 +28,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -41,7 +42,7 @@ import (
 // This trigger dependency annotation is related on issue #1734.
 func TestTriggerDependencyAnnotation(t *testing.T) {
 	const (
-		defaultBrokerName    = pkgResources.DefaultBrokerName
+		defaultBrokerName    = sugarresources.DefaultBrokerName
 		triggerName          = "trigger-annotation"
 		subscriberName       = "subscriber-annotation"
 		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1alpha2"}`
@@ -53,7 +54,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	defer tearDown(client)
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 	// Wait for default broker ready.

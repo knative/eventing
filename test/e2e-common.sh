@@ -40,6 +40,10 @@ readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
 # MT Channel Based Broker config.
 readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="config/core/configmaps/default-broker.yaml"
 
+# Sugar Controller config. For label/annotation magic.
+readonly SUGAR_CONTROLLER_CONFIG_DIR="config/sugar"
+readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
+
 # Channel Based Broker Controller.
 readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 # Channel Based Broker config.
@@ -131,9 +135,6 @@ function install_knative_eventing() {
     --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
   if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
     echo ">> Installing Knative Monitoring"
-    # Hack hack hack. Why is this namespace not created as part of monitoring release.
-    # https://github.com/knative/eventing/issues/3469
-    kubectl create ns knative-monitoring
     start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
     UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
   else
@@ -178,8 +179,17 @@ function install_mt_broker() {
   find ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || return 1
-  kubectl -n ${TEST_EVENTING_NAMESPACE} set env deployment/mt-broker-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
+}
+
+function install_sugar() {
+  local TMP_SUGAR_CONTROLLER_CONFIG_DIR=${TMP_DIR}/${SUGAR_CONTROLLER_CONFIG_DIR}
+  mkdir -p ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
+  cp -r ${SUGAR_CONTROLLER_CONFIG_DIR}/* ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
+  find ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  ko apply --strict -f ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} || return 1
+  kubectl -n ${TEST_EVENTING_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
+  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing Sugar Controller did not come up"
 }
 
 # Teardown the Knative environment after tests finish.

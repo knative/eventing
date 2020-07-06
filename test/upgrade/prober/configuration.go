@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"path"
 	"runtime"
 	"text/template"
@@ -57,7 +58,8 @@ func (p *prober) annotateNamespace() {
 		Get(p.client.Namespace, metav1.GetOptions{})
 	ensure.NoError(err)
 	ns.Labels = map[string]string{
-		"knative-eventing-injection": "enabled",
+		sugar.DeprecatedInjectionLabelKey: sugar.InjectionEnabledLabelValue,
+		sugar.InjectionLabelKey:           sugar.InjectionEnabledLabelValue,
 	}
 	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
 		Update(ns)

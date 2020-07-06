@@ -17,28 +17,13 @@ limitations under the License.
 package resources
 
 const (
-	// Label to enable knative-eventing in a namespace.
-	InjectionLabelKey           = "knative-eventing-injection"
-	InjectionEnabledLabelValue  = "enabled"
-	InjectionDisabledLabelValue = "disabled"
-	InjectedResourceLabel       = "eventing.knative.dev/namespaceInjected"
+	// InjectedResourceLabel tells us the resource was injected by the sugar controller.
+	InjectedResourceLabel = "eventing.knative.dev/injected"
 )
 
-// OwnedLabels generates the labels present on injected broker resources.
-func OwnedLabels() map[string]string {
+// Labels generates the labels present on injected broker resources.
+func Labels() map[string]string {
 	return map[string]string{
 		InjectedResourceLabel: "true",
-	}
-}
-
-func InjectionEnabledLabels() map[string]string {
-	return map[string]string{
-		InjectionLabelKey: InjectionEnabledLabelValue,
-	}
-}
-
-func InjectionDisabledLabels() map[string]string {
-	return map[string]string{
-		InjectionLabelKey: InjectionDisabledLabelValue,
 	}
 }

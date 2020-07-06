@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 )
 
 const (
@@ -133,7 +133,7 @@ func makeServiceAccount(namespace *corev1.Namespace, name string) *corev1.Servic
 			},
 			Namespace: namespace.Name,
 			Name:      name,
-			Labels:    resources.OwnedLabels(),
+			Labels:    sugarresources.Labels(),
 		},
 	}
 }

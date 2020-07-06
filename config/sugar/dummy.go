@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,19 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
-
-import (
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	"knative.dev/pkg/injection/sharedmain"
-
-	"knative.dev/eventing/pkg/reconciler/mtbroker"
-)
-
-func main() {
-	sharedmain.Main("mt-broker-controller",
-		mtbroker.NewController,
-	)
-}
+// Package sugar is a placeholder that allows us to pull in config files
+// via go mod vendor.
+package sugar

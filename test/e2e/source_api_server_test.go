@@ -19,8 +19,11 @@ package e2e
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
 	"time"
+
+	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +34,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pkgResources "knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -207,12 +209,12 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	)
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 
 	// Wait for default broker ready.
-	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, testlib.BrokerTypeMeta)
+	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
 	apiServerSource := eventingtesting.NewApiServerSource(
@@ -229,7 +231,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 				// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
 			}),
 	)
-	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: pkgResources.DefaultBrokerName, Namespace: client.Namespace}}
+	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: sugarresources.DefaultBrokerName, Namespace: client.Namespace}}
 
 	client.CreateApiServerSourceOrFail(apiServerSource)
 
