@@ -182,7 +182,7 @@ function install_mt_broker() {
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
   ko apply --strict -f ${SUGAR_CONTROLLER_CONFIG_DIR} || return 1
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || return 1
-  kubectl -n ${TEST_EVENTING_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
+  kubectl -n ${KNATIVE_DEFAULT_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
