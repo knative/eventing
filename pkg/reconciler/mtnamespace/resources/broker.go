@@ -31,6 +31,7 @@ const (
 func MakeBroker(ns *corev1.Namespace) *v1beta1.Broker {
 	return &v1beta1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(ns.GetObjectMeta(), schema.GroupVersionKind{
 					Group:   corev1.SchemeGroupVersion.Group,

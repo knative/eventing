@@ -29,7 +29,14 @@ const (
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 	withNS := apis.AllowDifferentNamespace(apis.WithinParent(ctx, b.ObjectMeta))
-	return b.Spec.Validate(withNS).ViaField("spec")
+
+	// Make sure a BrokerClassAnnotation exists
+	var errs *apis.FieldError
+	if bc, ok := b.GetAnnotations()[BrokerClassAnnotationKey]; !ok || bc == "" {
+		errs = errs.Also(apis.ErrMissingField(BrokerClassAnnotationKey))
+	}
+
+	return errs.Also(b.Spec.Validate(withNS).ViaField("spec"))
 }
 
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
