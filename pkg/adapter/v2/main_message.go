@@ -23,11 +23,11 @@ import (
 	"net/http"
 	"time"
 
-	"knative.dev/eventing/pkg/leaderelection"
-
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/leaderelection"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
@@ -117,6 +117,16 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 	adapter := ctor(ctx, env, httpBindingsSender, reporter)
 
 	// Build the leader elector
+	leConfig, err := env.GetLeaderElectionConfig()
+	if err != nil {
+		logger.Error("Error loading the leader election configuration", zap.Error(err))
+	}
+
+	if leConfig.LeaderElect {
+		// Signal that we are executing in a context with leader election.
+		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
+	}
+
 	elector, err := leaderelection.BuildAdapterElector(ctx, adapter)
 	if err != nil {
 		logger.Fatal("Error creating the adapter elector", zap.Error(err))
