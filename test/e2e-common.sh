@@ -42,6 +42,7 @@ readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="config/core/configmaps/default-
 
 # Sugar Controller config. For label/annotation magic.
 readonly SUGAR_CONTROLLER_CONFIG_DIR="config/sugar"
+readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
 
 # Channel Based Broker Controller.
 readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
@@ -179,11 +180,16 @@ function install_mt_broker() {
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || return 1
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
+}
 
-  # Install Sugar Controller
-  ko apply --strict -f ${SUGAR_CONTROLLER_CONFIG_DIR} || return 1
-  kubectl -n ${KNATIVE_DEFAULT_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
-  wait_until_pods_running ${KNATIVE_DEFAULT_NAMESPACE} || return 1
+function install_sugar() {
+  local TMP_SUGAR_CONTROLLER_CONFIG_DIR=${TMP_DIR}/${SUGAR_CONTROLLER_CONFIG_DIR}
+  mkdir -p ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
+  cp -r ${SUGAR_CONTROLLER_CONFIG_DIR}/* ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
+  find ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  ko apply --strict -f ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} || return 1
+  kubectl -n ${TEST_EVENTING_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
+  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing Sugar Controller did not come up"
 }
 
 # Teardown the Knative environment after tests finish.
