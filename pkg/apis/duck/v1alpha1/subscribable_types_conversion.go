@@ -32,11 +32,16 @@ func (source *SubscribableType) ConvertTo(ctx context.Context, obj apis.Converti
 	switch sink := obj.(type) {
 	case *duckv1beta1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
-		source.Status.ConvertTo(ctx, &sink.Status)
-		return source.Spec.ConvertTo(ctx, &sink.Spec)
+		if err := source.Status.ConvertTo(ctx, &sink.Status); err != nil {
+			return err
+		}
+		if err := source.Spec.ConvertTo(ctx, &sink.Spec); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
+	return nil
 }
 
 // ConvertTo implements apis.Convertible
@@ -46,7 +51,9 @@ func (source *SubscribableTypeSpec) ConvertTo(ctx context.Context, obj apis.Conv
 		if source.Subscribable != nil {
 			sink.Subscribers = make([]duckv1beta1.SubscriberSpec, len(source.Subscribable.Subscribers))
 			for i, s := range source.Subscribable.Subscribers {
-				s.ConvertTo(ctx, &sink.Subscribers[i])
+				if err := s.ConvertTo(ctx, &sink.Subscribers[i]); err != nil {
+					return err
+				}
 			}
 		}
 	default:
@@ -89,12 +96,7 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Co
 			len(source.SubscribableStatus.Subscribers) > 0 {
 			sink.Subscribers = make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
 			for i, ss := range source.SubscribableStatus.Subscribers {
-				sink.Subscribers[i] = duckv1beta1.SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
-				}
+				sink.Subscribers[i] = *ss.DeepCopy()
 			}
 		}
 	default:
@@ -109,12 +111,16 @@ func (sink *SubscribableType) ConvertFrom(ctx context.Context, obj apis.Converti
 	switch source := obj.(type) {
 	case *duckv1beta1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
-		sink.Status.ConvertFrom(ctx, &source.Status)
-		sink.Spec.ConvertFrom(ctx, &source.Spec)
-		return nil
+		if err := sink.Status.ConvertFrom(ctx, &source.Status); err != nil {
+			return err
+		}
+		if err := sink.Spec.ConvertFrom(ctx, &source.Spec); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
+	return nil
 }
 
 // ConvertFrom implements apis.Convertible
@@ -126,7 +132,9 @@ func (sink *SubscribableTypeSpec) ConvertFrom(ctx context.Context, obj apis.Conv
 				Subscribers: make([]SubscriberSpec, len(source.Subscribers)),
 			}
 			for i, s := range source.Subscribers {
-				sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &s)
+				if err := sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &s); err != nil {
+					return err
+				}
 			}
 		}
 	default:
@@ -164,12 +172,7 @@ func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Co
 				Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.Subscribers)),
 			}
 			for i, ss := range source.Subscribers {
-				sink.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
-				}
+				sink.SubscribableStatus.Subscribers[i] = *ss.DeepCopy()
 			}
 		}
 	default:
