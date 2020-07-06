@@ -28,9 +28,10 @@ const (
 func MakeBroker(namespace, name string) *v1beta1.Broker {
 	return &v1beta1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    Labels(),
+			Namespace:   namespace,
+			Name:        name,
+			Labels:      Labels(),
+			Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
 		},
 	}
 }

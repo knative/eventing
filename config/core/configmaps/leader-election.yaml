@@ -21,7 +21,7 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/example-checksum: "43edfe90"
   annotations:
-    knative.dev/example-checksum: 0694ae46
+    knative.dev/example-checksum: 882dea41
 data:
   _example: |
     ################################
@@ -63,4 +63,5 @@ data:
     # - broker-controller
     # - inmemorychannel-dispatcher
     # - inmemorychannel-controller
+    # - pingsource-mt-adapter
     enabledComponents: "controller,broker-controller,inmemorychannel-dispatcher,inmemorychannel-controller,webhook,pingsource-mt-adapter"

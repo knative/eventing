@@ -23,11 +23,12 @@ import (
 	"net/http"
 	"time"
 
+	"knative.dev/eventing/pkg/leaderelection"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
-	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
@@ -112,25 +113,13 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 	// Configuring the adapter
 	adapter := ctor(ctx, env, eventsClient)
 
-	run := func(ctx context.Context) {
-		logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
-
-		if err := adapter.Start(ctx); err != nil {
-			logger.Warn("Start returned an error", zap.Error(err))
-		}
-	}
-
-	leConfig, err := env.GetLeaderElectionConfig()
+	// Build the leader elector
+	elector, err := leaderelection.BuildAdapterElector(ctx, adapter)
 	if err != nil {
-		logger.Error("Error loading the leader election configuration", zap.Error(err))
+		logger.Fatal("Error creating the adapter elector", zap.Error(err))
 	}
 
-	if leConfig.LeaderElect {
-		sharedmain.RunLeaderElected(ctx, logger, run, *leConfig)
-	} else {
-		logger.Infof("%v will not run in leader-elected mode", component)
-		run(ctx)
-	}
+	elector.Run(ctx)
 }
 
 func flush(logger *zap.SugaredLogger) {

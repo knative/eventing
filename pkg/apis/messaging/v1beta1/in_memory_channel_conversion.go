@@ -91,7 +91,7 @@ func (sink *InMemoryChannelSpec) ConvertFrom(ctx context.Context, source v1.InMe
 		}
 	}
 	sink.SubscribableSpec = eventingduckv1beta1.SubscribableSpec{}
-	sink.SubscribableSpec.ConvertFrom(ctx, source.SubscribableSpec)
+	sink.SubscribableSpec.ConvertFrom(ctx, &source.SubscribableSpec)
 	return nil
 }
 
