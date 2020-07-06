@@ -38,7 +38,7 @@ func TestMainMessageAdapter(t *testing.T) {
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
-		os.Unsetenv("SINK_URI")
+		os.Unsetenv("K_SINK")
 		os.Unsetenv("NAMESPACE")
 		os.Unsetenv("K_METRICS_CONFIG")
 		os.Unsetenv("K_LOGGING_CONFIG")
