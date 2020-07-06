@@ -247,8 +247,8 @@ func TestTriggerValidation(t *testing.T) {
 			want: func() *apis.FieldError {
 				var errs *apis.FieldError
 				errs = errs.Also(&apis.FieldError{
-					Message: fmt.Sprintf(`The provided injection annotation value can only be "enabled", not "disabled"`),
-					Paths:   []string{"metadata.annotations[knative-eventing-injection]"},
+					Message: fmt.Sprintf(`The provided injection annotation value can only be "enabled" or "disabled", not "wut"`),
+					Paths:   []string{"metadata.annotations[eventing.knative.dev/injection]"},
 				})
 
 				errs = errs.Also(apis.ErrMissingField("metadata.annotations[knative.dev/dependency].apiVersion"))
