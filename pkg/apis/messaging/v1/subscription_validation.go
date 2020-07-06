@@ -27,7 +27,12 @@ import (
 )
 
 func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
-	return s.Spec.Validate(ctx).ViaField("spec")
+	errs := s.Spec.Validate(ctx).ViaField("spec")
+	if apis.IsInUpdate(ctx) {
+		original := apis.GetBaseline(ctx).(*Subscription)
+		errs = errs.Also(s.CheckImmutableFields(ctx, original))
+	}
+	return errs
 }
 
 func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
