@@ -96,7 +96,7 @@ func (sink *ChannelSpec) ConvertFrom(ctx context.Context, source v1.ChannelSpec)
 		sink.Delivery = &v1beta1.DeliverySpec{}
 		sink.Delivery.ConvertFrom(ctx, source.Delivery)
 	}
-	sink.ChannelableSpec.SubscribableSpec.ConvertFrom(ctx, source.ChannelableSpec.SubscribableSpec)
+	sink.ChannelableSpec.SubscribableSpec.ConvertFrom(ctx, &source.ChannelableSpec.SubscribableSpec)
 }
 
 // ConvertFrom helps implement apis.Convertible

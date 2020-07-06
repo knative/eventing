@@ -39,14 +39,19 @@ func (source *Subscribable) ConvertTo(ctx context.Context, to apis.Convertible) 
 }
 
 // ConvertTo helps implement apis.Convertible
-func (source *SubscribableSpec) ConvertTo(ctx context.Context, sink *eventingduckv1.SubscribableSpec) {
-	if len(source.Subscribers) > 0 {
-		sink.Subscribers = make([]eventingduckv1.SubscriberSpec, len(source.Subscribers))
-		for i, s := range source.Subscribers {
-			s.ConvertTo(ctx, &sink.Subscribers[i])
+func (source *SubscribableSpec) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *eventingduckv1.SubscribableSpec:
+		if len(source.Subscribers) > 0 {
+			sink.Subscribers = make([]eventingduckv1.SubscriberSpec, len(source.Subscribers))
+			for i, s := range source.Subscribers {
+				s.ConvertTo(ctx, &sink.Subscribers[i])
+			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
 	}
-
+	return nil
 }
 
 // ConvertTo helps implement apis.Convertible
@@ -91,21 +96,26 @@ func (sink *Subscribable) ConvertFrom(ctx context.Context, from apis.Convertible
 	case *eventingduckv1.Subscribable:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, &source.Status)
-		return sink.Spec.ConvertFrom(ctx, source.Spec)
+		return sink.Spec.ConvertFrom(ctx, &source.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
 }
 
 // ConvertFrom helps implement apis.Convertible
-func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, source eventingduckv1.SubscribableSpec) error {
-	if len(source.Subscribers) > 0 {
-		sink.Subscribers = make([]SubscriberSpec, len(source.Subscribers))
-		for i, s := range source.Subscribers {
-			if err := sink.Subscribers[i].ConvertFrom(ctx, s); err != nil {
-				return err
+func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *eventingduckv1.SubscribableSpec:
+		if len(source.Subscribers) > 0 {
+			sink.Subscribers = make([]SubscriberSpec, len(source.Subscribers))
+			for i, s := range source.Subscribers {
+				if err := sink.Subscribers[i].ConvertFrom(ctx, s); err != nil {
+					return err
+				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", source)
 	}
 	return nil
 }

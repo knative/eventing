@@ -108,6 +108,7 @@ var (
 
 	_ apis.Convertible = (*SubscribableType)(nil)
 
+	_ apis.Convertible = (*SubscribableTypeSpec)(nil)
 	_ apis.Convertible = (*SubscribableTypeStatus)(nil)
 )
 
