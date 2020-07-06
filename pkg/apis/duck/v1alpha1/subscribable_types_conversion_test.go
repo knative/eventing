@@ -215,7 +215,7 @@ func TestSubscribableTypeConversionWithV1Beta1(t *testing.T) {
 	}
 }
 
-func TestSubscribableTypeSpecStatusConversionBadType(t *testing.T) {
+func TestSubscribableTypeSpecConversionBadType(t *testing.T) {
 	good, bad := &SubscribableTypeSpec{}, &SubscribableTypeSpec{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
@@ -239,7 +239,7 @@ func TestSubscribableTypeStatusConversionBadType(t *testing.T) {
 	}
 }
 
-func TestSubscriberSpecStatusConversionBadType(t *testing.T) {
+func TestSubscriberSpecConversionBadType(t *testing.T) {
 	good, bad := &SubscriberSpec{}, &SubscriberSpec{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {

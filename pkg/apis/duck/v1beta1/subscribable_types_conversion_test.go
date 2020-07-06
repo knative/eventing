@@ -301,3 +301,15 @@ func TestSubscriberSpecConversionBadType(t *testing.T) {
 		t.Errorf("ConvertFrom() = %#v, wanted error", good)
 	}
 }
+
+func TestSubscriberStatusConversionBadType(t *testing.T) {
+	good, bad := &SubscriberStatus{}, &SubscriberStatus{}
+
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+	}
+
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}
