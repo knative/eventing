@@ -26,7 +26,12 @@ import (
 
 func (c *Channel) Validate(ctx context.Context) *apis.FieldError {
 	withNS := apis.WithinParent(ctx, c.ObjectMeta)
-	return c.Spec.Validate(withNS).ViaField("spec")
+	errs := c.Spec.Validate(withNS).ViaField("spec")
+	if apis.IsInUpdate(ctx) {
+		original := apis.GetBaseline(ctx).(*Channel)
+		errs = errs.Also(c.CheckImmutableFields(ctx, original))
+	}
+	return errs
 }
 
 func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
