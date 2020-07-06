@@ -111,6 +111,7 @@ var (
 	_ apis.Convertible = (*SubscribableStatus)(nil)
 
 	_ apis.Convertible = (*SubscriberSpec)(nil)
+	_ apis.Convertible = (*SubscriberStatus)(nil)
 )
 
 // GetFullType implements duck.Implementable

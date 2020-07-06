@@ -81,14 +81,26 @@ func (source *SubscribableStatus) ConvertTo(ctx context.Context, obj apis.Conver
 		if len(source.Subscribers) > 0 {
 			sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.Subscribers))
 			for i, ss := range source.Subscribers {
-				sink.Subscribers[i] = eventingduckv1.SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
+				sink.Subscribers[i] = eventingduckv1.SubscriberStatus{}
+				if err := ss.ConvertTo(ctx, &sink.Subscribers[i]); err != nil {
+					return err
 				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
+	return nil
+}
+
+// ConvertTo implements apis.Convertible
+func (source *SubscriberStatus) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *eventingduckv1.SubscriberStatus:
+		sink.UID = source.UID
+		sink.ObservedGeneration = source.ObservedGeneration
+		sink.Ready = source.Ready
+		sink.Message = source.Message
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
@@ -150,14 +162,26 @@ func (sink *SubscribableStatus) ConvertFrom(ctx context.Context, obj apis.Conver
 		if len(source.Subscribers) > 0 {
 			sink.Subscribers = make([]SubscriberStatus, len(source.Subscribers))
 			for i, ss := range source.Subscribers {
-				sink.Subscribers[i] = SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
+				sink.Subscribers[i] = SubscriberStatus{}
+				if err := sink.Subscribers[i].ConvertFrom(ctx, &ss); err != nil {
+					return err
 				}
 			}
 		}
+	default:
+		return fmt.Errorf("unknown version, got: %T", sink)
+	}
+	return nil
+}
+
+// ConvertFrom implements apis.Convertible
+func (sink *SubscriberStatus) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *eventingduckv1.SubscriberStatus:
+		sink.UID = source.UID
+		sink.ObservedGeneration = source.ObservedGeneration
+		sink.Ready = source.Ready
+		sink.Message = source.Message
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
