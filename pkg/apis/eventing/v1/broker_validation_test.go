@@ -65,8 +65,10 @@ func TestBrokerImmutableFields(t *testing.T) {
 
 	for n, test := range tests {
 		t.Run(n, func(t *testing.T) {
-			gotErr := current.CheckImmutableFields(context.Background(), test.og)
-			if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
+			ctx := context.Background()
+			ctx = apis.WithinUpdate(ctx, test.og)
+			got := current.Validate(ctx)
+			if diff := cmp.Diff(test.wantErr.Error(), got.Error()); diff != "" {
 				t.Errorf("Broker.CheckImmutableFields (-want, +got) = %v", diff)
 			}
 		})
