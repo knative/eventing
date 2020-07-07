@@ -62,7 +62,6 @@ spec:
         properties:
           spec:
             required:
-              - broker
               - subscriber
             type: object
             properties:
