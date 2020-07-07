@@ -31,12 +31,19 @@ import (
 type myAdapterBindings struct{}
 
 func TestMainMessageAdapter(t *testing.T) {
-	os.Setenv("SINK_URI", "http://sink")
+	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", "metrics")
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("MODE", "mymode")
-	os.Setenv("K_LEADER_ELECTION_CONFIG", "")
+
+	defer func() {
+		os.Unsetenv("K_SINK")
+		os.Unsetenv("NAMESPACE")
+		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_LOGGING_CONFIG")
+		os.Unsetenv("MODE")
+	}()
 
 	ctx, cancel := context.WithCancel(context.TODO())
 

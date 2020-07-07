@@ -37,6 +37,16 @@ func TestEnvConfig(t *testing.T) {
 	os.Setenv("K_LEADER_ELECTION_CONFIG", "leaderelection")
 	os.Setenv("MODE", "mymode") // note: custom to this test impl
 
+	defer func() {
+		os.Unsetenv("K_SINK")
+		os.Unsetenv("NAMESPACE")
+		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_LOGGING_CONFIG")
+		os.Unsetenv("K_TRACING_CONFIG")
+		os.Unsetenv("K_LEADER_ELECTION_CONFIG")
+		os.Unsetenv("MODE")
+	}()
+
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
 	if err != nil {
@@ -54,4 +64,5 @@ func TestEnvConfig(t *testing.T) {
 	if env.LeaderElectionConfigJson != "leaderelection" {
 		t.Errorf("Expected LeaderElectionConfigJson leaderelection, got: %s", env.LeaderElectionConfigJson)
 	}
+
 }

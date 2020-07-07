@@ -34,7 +34,14 @@ func TestMainWithContext(t *testing.T) {
 	os.Setenv("K_METRICS_CONFIG", "metrics")
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("MODE", "mymode")
-	os.Setenv("K_LEADER_ELECTION_CONFIG", "")
+
+	defer func() {
+		os.Unsetenv("K_SINK")
+		os.Unsetenv("NAMESPACE")
+		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_LOGGING_CONFIG")
+		os.Unsetenv("MODE")
+	}()
 
 	ctx, cancel := context.WithCancel(context.TODO())
 
@@ -43,6 +50,7 @@ func TestMainWithContext(t *testing.T) {
 		func() EnvConfigAccessor { return &myEnvConfig{} },
 		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
 			env := processed.(*myEnvConfig)
+
 			if env.Mode != "mymode" {
 				t.Errorf("Expected mode mymode, got: %s", env.Mode)
 			}
