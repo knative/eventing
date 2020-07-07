@@ -96,7 +96,12 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Co
 			len(source.SubscribableStatus.Subscribers) > 0 {
 			sink.Subscribers = make([]duckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
 			for i, ss := range source.SubscribableStatus.Subscribers {
-				sink.Subscribers[i] = *ss.DeepCopy()
+				sink.Subscribers[i] = duckv1beta1.SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
+				}
 			}
 		}
 	default:
@@ -172,7 +177,12 @@ func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Co
 				Subscribers: make([]duckv1beta1.SubscriberStatus, len(source.Subscribers)),
 			}
 			for i, ss := range source.Subscribers {
-				sink.SubscribableStatus.Subscribers[i] = *ss.DeepCopy()
+				sink.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
+					UID:                ss.UID,
+					ObservedGeneration: ss.ObservedGeneration,
+					Ready:              ss.Ready,
+					Message:            ss.Message,
+				}
 			}
 		}
 	default:
