@@ -117,6 +117,7 @@ spec:
           spec:
             required:
               - subscriber
+              - broker
             type: object
             properties:
               broker:
