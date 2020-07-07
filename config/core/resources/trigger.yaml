@@ -62,13 +62,12 @@ spec:
         properties:
           spec:
             required:
-              - broker
               - subscriber
             type: object
             properties:
               broker:
                 type: string
-                description: "Broker that this trigger receives events from."
+                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
               filter:
                 type: object
                 properties:
@@ -118,11 +117,12 @@ spec:
           spec:
             required:
               - subscriber
+              - broker
             type: object
             properties:
               broker:
                 type: string
-                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
+                description: "Broker that this trigger receives events from."
               filter:
                 type: object
                 properties:
