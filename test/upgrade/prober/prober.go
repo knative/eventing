@@ -137,7 +137,7 @@ func (p *prober) deploy() {
 	if p.config.Serving.Use {
 		p.deployForwarder()
 	}
-	ensure.NoError(testlib.AwaitForAll(p.log))
+	p.client.WaitForAllTestResourcesReadyOrFail()
 
 	p.deploySender()
 	ensure.NoError(testlib.AwaitForAll(p.log))
