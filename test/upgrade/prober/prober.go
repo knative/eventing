@@ -151,8 +151,7 @@ func (p *prober) remove() {
 	if p.config.Serving.Use {
 		p.removeForwarder()
 	}
-	p.removeReceiver()
-	p.removeConfiguration()
+	p.client.Tracker.Clean(true)
 }
 
 func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
