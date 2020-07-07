@@ -19,8 +19,9 @@ package e2e
 
 import (
 	"fmt"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
+
+	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"

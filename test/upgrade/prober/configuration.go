@@ -19,10 +19,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"path"
 	"runtime"
 	"text/template"
+
+	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"

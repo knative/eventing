@@ -18,11 +18,12 @@ package helpers
 
 import (
 	"fmt"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"net/url"
 	"sort"
 	"strings"
 	"testing"
+
+	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"

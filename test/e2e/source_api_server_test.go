@@ -19,9 +19,10 @@ package e2e
 
 import (
 	"fmt"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"testing"
 	"time"
+
+	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 
