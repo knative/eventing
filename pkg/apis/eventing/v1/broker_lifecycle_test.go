@@ -18,8 +18,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -56,6 +58,73 @@ var (
 		Status: corev1.ConditionFalse,
 	}
 )
+
+func TestBrokerGetConditionSet(t *testing.T) {
+
+	customCondition := apis.NewLivingConditionSet(
+		apis.ConditionReady,
+		"ConditionGolangReady",
+	)
+	brokerClass := "Golang"
+
+	RegisterAlternateBrokerConditionSet(brokerClass, customCondition)
+
+	tt := []struct {
+		name                 string
+		broker               Broker
+		expectedConditionSet apis.ConditionSet
+		expectedBrokerStatus duckv1.Status
+	}{
+		{
+			name:                 "default condition set",
+			broker:               Broker{},
+			expectedConditionSet: brokerCondSet,
+			expectedBrokerStatus: duckv1.Status{},
+		},
+		{
+			name: "custom condition set",
+			broker: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: brokerClass,
+					},
+				},
+			},
+			expectedConditionSet: customCondition,
+			expectedBrokerStatus: duckv1.Status{
+				Annotations: map[string]string{
+					eventing.BrokerClassKey: brokerClass,
+				},
+			},
+		},
+		{
+			name: "no status updates for " + eventing.MTChannelBrokerClassValue,
+			broker: Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
+					},
+				},
+			},
+			expectedConditionSet: brokerCondSet,
+			expectedBrokerStatus: duckv1.Status{},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			if diff := cmp.Diff(tc.expectedConditionSet, tc.broker.GetConditionSet(), cmp.AllowUnexported(apis.ConditionSet{})); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) %s", diff)
+			}
+			if diff := cmp.Diff(tc.expectedConditionSet, tc.broker.Status.GetConditionSet(), cmp.AllowUnexported(apis.ConditionSet{})); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) %s", diff)
+			}
+			if diff := cmp.Diff(tc.expectedBrokerStatus, tc.broker.Status.Status); diff != "" {
+				t.Errorf("unexpected duck status (-want, +got) %s", diff)
+			}
+		})
+	}
+}
 
 func TestBrokerGetCondition(t *testing.T) {
 	tests := []struct {

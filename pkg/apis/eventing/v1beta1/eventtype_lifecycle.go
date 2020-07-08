@@ -85,7 +85,7 @@ func (et *EventTypeStatus) MarkBrokerNotConfigured() {
 }
 
 func (et *EventTypeStatus) PropagateBrokerStatus(bs *BrokerStatus) {
-	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
+	bc := bs.GetConditionSet().Manage(bs).GetTopLevelCondition()
 	if bc == nil {
 		et.MarkBrokerNotConfigured()
 		return
