@@ -23,10 +23,7 @@ import (
 	"runtime"
 	"text/template"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	"github.com/wavesoftware/go-ensure"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
@@ -49,22 +46,13 @@ var (
 )
 
 func (p *prober) deployConfiguration() {
-	p.annotateNamespace()
+	p.deployBroker()
 	p.deployConfigMap()
 	p.deployTriggers()
 }
 
-func (p *prober) annotateNamespace() {
-	ns, err := p.client.Kube.Kube.CoreV1().Namespaces().
-		Get(p.client.Namespace, metav1.GetOptions{})
-	ensure.NoError(err)
-	ns.Labels = map[string]string{
-		sugar.DeprecatedInjectionLabelKey: sugar.InjectionEnabledLabelValue,
-		sugar.InjectionLabelKey:           sugar.InjectionEnabledLabelValue,
-	}
-	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
-		Update(ns)
-	ensure.NoError(err)
+func (p *prober) deployBroker() {
+	p.client.CreateBrokerV1Beta1OrFail(brokerName)
 }
 
 func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
@@ -86,28 +74,11 @@ func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 
 func (p *prober) deployConfigMap() {
 	name := configName
-	testlib.WaitFor(fmt.Sprintf("configmap be deployed: %v", name), func() error {
-		p.log.Infof("Deploying config map: %v", name)
-
-		brokerUrl, err := p.fetchBrokerUrl()
-		if err != nil {
-			return err
-		}
-		configData := p.compileTemplate(configFilename, brokerUrl)
-		watholaConfigMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-			Data: map[string]string{
-				configFilename: configData,
-			},
-		}
-		_, err = p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).Create(watholaConfigMap)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
+	brokerUrl, err := p.fetchBrokerUrl()
+	ensure.NoError(err)
+	configData := p.compileTemplate(configFilename, brokerUrl)
+	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{configFilename: configData})
 }
 
 func (p *prober) deployTriggers() {
@@ -118,25 +89,14 @@ func (p *prober) deployTriggers() {
 		if p.config.Serving.Use {
 			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
 		}
-		trigger := resources.TriggerV1Beta1(
-			name,
+		p.client.CreateTriggerOrFailV1Beta1(name,
 			resources.WithBrokerV1Beta1(brokerName),
 			resources.WithAttributesTriggerFilterV1Beta1(
 				eventingv1beta1.TriggerAnyFilter,
 				fullType,
 				map[string]interface{}{},
 			),
-			subscriberOption,
-		)
-		triggers := p.client.Eventing.EventingV1beta1().Triggers(p.config.Namespace)
-		p.log.Infof("Deploying trigger: %v", name)
-		// update trigger with the new reference
-		_, err := triggers.Create(trigger)
-		ensure.NoError(err)
-		testlib.WaitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
-			meta := resources.NewMetaResource(name, p.config.Namespace, testlib.TriggerTypeMeta)
-			return duck.WaitForResourceReady(p.client.Dynamic, meta)
-		})
+			subscriberOption)
 	}
 }
 
