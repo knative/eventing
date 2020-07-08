@@ -25,8 +25,8 @@ readonly CHANNEL_BROKER_YAML="deprecated-channel-broker.yaml"
 readonly SUGAR_CONTROLLER_YAML="eventing-sugar-controller.yaml"
 readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
 readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
-readonly PRE_INSTALL_V_0_16="pre-install-to-v0.16.0.yaml"
-readonly POST_INSTALL_V_0_16="post-install-to-v0.16.0.yaml"
+readonly PRE_INSTALL_V_0_16="eventing-pre-install-jobs.yaml"
+readonly POST_INSTALL_V_0_16="eventing-post-install-jobs.yaml"
 
 declare -A RELEASES
 RELEASES=(
