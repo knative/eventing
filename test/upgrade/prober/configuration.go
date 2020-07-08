@@ -23,8 +23,6 @@ import (
 	"runtime"
 	"text/template"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
@@ -48,22 +46,13 @@ var (
 )
 
 func (p *prober) deployConfiguration() {
-	p.annotateNamespace()
+	p.deployBroker()
 	p.deployConfigMap()
 	p.deployTriggers()
 }
 
-func (p *prober) annotateNamespace() {
-	ns, err := p.client.Kube.Kube.CoreV1().Namespaces().
-		Get(p.client.Namespace, metav1.GetOptions{})
-	ensure.NoError(err)
-	ns.Labels = map[string]string{
-		sugar.DeprecatedInjectionLabelKey: sugar.InjectionEnabledLabelValue,
-		sugar.InjectionLabelKey:           sugar.InjectionEnabledLabelValue,
-	}
-	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
-		Update(ns)
-	ensure.NoError(err)
+func (p *prober) deployBroker() {
+	p.client.CreateBrokerV1Beta1OrFail(brokerName)
 }
 
 func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
