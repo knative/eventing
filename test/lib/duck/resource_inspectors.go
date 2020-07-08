@@ -39,6 +39,10 @@ func GetAddressableURI(dynamicClient dynamic.Interface, obj *resources.MetaResou
 
 	at := untyped.(*duckv1alpha1.AddressableType)
 
+	if at.Status.Address == nil {
+		return url.URL{}, fmt.Errorf("addressable does not have an Address: %+v", at)
+	}
+
 	au := at.Status.Address.GetURL()
 	if au.Host == "" {
 		return url.URL{}, fmt.Errorf("addressable's URL does not have a Host: %+v", at)
