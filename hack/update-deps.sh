@@ -24,7 +24,7 @@ set -o pipefail
 export GO111MODULE=on
 
 # This controls the release branch we track.
-VERSION="release-0.16"
+VERSION="master"
 
 cd "${ROOT_DIR}"
 
