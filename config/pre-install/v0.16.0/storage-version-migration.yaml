@@ -15,10 +15,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: storage-version-migration-v016
+  name: storage-version-migration-eventing
   namespace: knative-eventing
   labels:
-    app: "storage-version-migration"
+    app: "storage-version-migration-eventing"
     eventing.knative.dev/release: devel
 spec:
   ttlSecondsAfterFinished: 600
@@ -26,7 +26,7 @@ spec:
   template:
     metadata:
       labels:
-        app: "storage-version-migration"
+        app: "storage-version-migration-eventing"
     spec:
       serviceAccountName: knative-eventing-pre-install-job
       restartPolicy: OnFailure
