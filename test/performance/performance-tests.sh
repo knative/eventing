@@ -45,9 +45,9 @@ function update_knative() {
 
   echo ">> Update Broker"
   ko apply --selector knative.dev/crd-install=true \
-    -f config/brokers/channel-broker || abort "Failed to apply Broker CRD"
+    -f config/brokers/mt-channel-broker || abort "Failed to apply Broker CRD"
   ko apply \
-    -f config/brokers/channel-broker || abort "Failed to apply Broker resources"
+    -f config/brokers/mt-channel-broker || abort "Failed to apply Broker resources"
 }
 
 function update_benchmark() {

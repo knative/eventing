@@ -44,11 +44,6 @@ readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="config/core/configmaps/default-
 readonly SUGAR_CONTROLLER_CONFIG_DIR="config/sugar"
 readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
 
-# Channel Based Broker Controller.
-readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
-# Channel Based Broker config.
-readonly CHANNEL_BASED_BROKER_DEFAULT_CONFIG="test/config/st-channel-broker.yaml"
-
 # Config tracing config.
 readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
