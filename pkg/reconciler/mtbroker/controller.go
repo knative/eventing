@@ -36,6 +36,7 @@ import (
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/broker"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/names"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	client "knative.dev/pkg/client/injection/kube/client"
@@ -53,6 +54,14 @@ import (
 // controllerAgentName is the string used by this controller to identify itself
 // when creating events.
 const controllerAgentName = "mt-broker-controller"
+
+const (
+	BrokerConditionReady                             = apis.ConditionReady
+	BrokerConditionIngress        apis.ConditionType = "IngressReady"
+	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
+	BrokerConditionFilter         apis.ConditionType = "FilterReady"
+	BrokerConditionAddressable    apis.ConditionType = "Addressable"
+)
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -84,6 +93,13 @@ func NewController(
 			}
 		}()
 	}
+
+	v1beta1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
+		BrokerConditionIngress,
+		BrokerConditionTriggerChannel,
+		BrokerConditionFilter,
+		BrokerConditionAddressable,
+	))
 
 	r := &Reconciler{
 		eventingClientSet:  eventingclient.Get(ctx),

@@ -67,19 +67,15 @@ func TestBrokerGetConditionSet(t *testing.T) {
 	)
 	brokerClass := "Golang"
 
-	RegisterAlternateBrokerConditionSet(brokerClass, customCondition)
-
 	tt := []struct {
 		name                 string
 		broker               Broker
 		expectedConditionSet apis.ConditionSet
-		expectedBrokerStatus duckv1.Status
 	}{
 		{
 			name:                 "default condition set",
 			broker:               Broker{},
 			expectedConditionSet: brokerCondSet,
-			expectedBrokerStatus: duckv1.Status{},
 		},
 		{
 			name: "custom condition set",
@@ -91,36 +87,21 @@ func TestBrokerGetConditionSet(t *testing.T) {
 				},
 			},
 			expectedConditionSet: customCondition,
-			expectedBrokerStatus: duckv1.Status{
-				Annotations: map[string]string{
-					eventing.BrokerClassKey: brokerClass,
-				},
-			},
-		},
-		{
-			name: "no status updates for " + eventing.MTChannelBrokerClassValue,
-			broker: Broker{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
-					},
-				},
-			},
-			expectedConditionSet: brokerCondSet,
-			expectedBrokerStatus: duckv1.Status{},
 		},
 	}
 
 	for _, tc := range tt {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			defer RegisterAlternateBrokerConditionSet(brokerCondSet) // reset to default condition set
+
+			RegisterAlternateBrokerConditionSet(tc.expectedConditionSet)
+
 			if diff := cmp.Diff(tc.expectedConditionSet, tc.broker.GetConditionSet(), cmp.AllowUnexported(apis.ConditionSet{})); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) %s", diff)
 			}
 			if diff := cmp.Diff(tc.expectedConditionSet, tc.broker.Status.GetConditionSet(), cmp.AllowUnexported(apis.ConditionSet{})); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) %s", diff)
-			}
-			if diff := cmp.Diff(tc.expectedBrokerStatus, tc.broker.Status.Status); diff != "" {
-				t.Errorf("unexpected duck status (-want, +got) %s", diff)
 			}
 		})
 	}

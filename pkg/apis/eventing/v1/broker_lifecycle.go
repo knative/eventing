@@ -17,33 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	corev1 "k8s.io/api/core/v1"
-
-	"knative.dev/eventing/pkg/apis/duck"
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
+	"sync"
 
 	"knative.dev/pkg/apis"
 )
-
-var brokerCondSet = apis.NewLivingConditionSet(
-	BrokerConditionIngress,
-	BrokerConditionTriggerChannel,
-	BrokerConditionFilter,
-	BrokerConditionAddressable,
-)
-
-var customConditionSet = map[string]apis.ConditionSet{
-	"":                                 brokerCondSet,
-	eventing.MTChannelBrokerClassValue: brokerCondSet,
-}
-
-// RegisterAlternateBrokerConditionSet register a apis.ConditionSet for the given broker class.
-//
-// Calls to this function need to be synchronized by the caller (not thread-safe).
-func RegisterAlternateBrokerConditionSet(brokerClass string, conditionSet apis.ConditionSet) {
-	customConditionSet[brokerClass] = conditionSet
-}
 
 const (
 	BrokerConditionReady                             = apis.ConditionReady
@@ -53,30 +30,36 @@ const (
 	BrokerConditionAddressable    apis.ConditionType = "Addressable"
 )
 
+var brokerCondSet = apis.NewLivingConditionSet(
+	BrokerConditionIngress,
+	BrokerConditionTriggerChannel,
+	BrokerConditionFilter,
+	BrokerConditionAddressable,
+)
+var brokerCondSetLock = sync.RWMutex{}
+
+// RegisterAlternateBrokerConditionSet register a apis.ConditionSet for the given broker class.
+func RegisterAlternateBrokerConditionSet(conditionSet apis.ConditionSet) {
+	brokerCondSetLock.Lock()
+	defer brokerCondSetLock.Unlock()
+
+	brokerCondSet = conditionSet
+}
+
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
 func (b *Broker) GetConditionSet() apis.ConditionSet {
-
-	annotations := b.GetAnnotations()
-	if annotations != nil {
-		if brokerClass, ok := annotations[eventing.BrokerClassKey]; ok && brokerClass != eventing.MTChannelBrokerClassValue {
-
-			// Set broker class as annotation of the status, so that we can use it.
-			if b.Status.Annotations == nil {
-				b.Status.Annotations = map[string]string{eventing.BrokerClassKey: brokerClass}
-			} else {
-				b.Status.Annotations[eventing.BrokerClassKey] = brokerClass
-			}
-
-			return customConditionSet[brokerClass]
-		}
-	}
+	brokerCondSetLock.RLock()
+	defer brokerCondSetLock.RUnlock()
 
 	return brokerCondSet
 }
 
 // GetConditionSet retrieves the condition set for this resource.
 func (bs *BrokerStatus) GetConditionSet() apis.ConditionSet {
-	return customConditionSet[bs.Annotations[eventing.BrokerClassKey]]
+	brokerCondSetLock.RLock()
+	defer brokerCondSetLock.RUnlock()
+
+	return brokerCondSet
 }
 
 // GetTopLevelCondition returns the top level Condition.
@@ -108,42 +91,4 @@ func (bs *BrokerStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (bs *BrokerStatus) InitializeConditions() {
 	bs.GetConditionSet().Manage(bs).InitializeConditions()
-}
-
-func (bs *BrokerStatus) MarkIngressFailed(reason, format string, args ...interface{}) {
-	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionIngress, reason, format, args...)
-}
-
-func (bs *BrokerStatus) PropagateIngressAvailability(ep *corev1.Endpoints) {
-	if duck.EndpointsAreAvailable(ep) {
-		bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionIngress)
-	} else {
-		bs.MarkIngressFailed("EndpointsUnavailable", "Endpoints %q are unavailable.", ep.Name)
-	}
-}
-
-func (bs *BrokerStatus) MarkTriggerChannelFailed(reason, format string, args ...interface{}) {
-	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionTriggerChannel, reason, format, args...)
-}
-
-func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1.ChannelableStatus) {
-	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
-	address := cs.AddressStatus.Address
-	if address != nil {
-		bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
-	} else {
-		bs.MarkTriggerChannelFailed("ChannelNotReady", "trigger Channel is not ready: not addressable")
-	}
-}
-
-func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interface{}) {
-	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
-}
-
-func (bs *BrokerStatus) PropagateFilterAvailability(ep *corev1.Endpoints) {
-	if duck.EndpointsAreAvailable(ep) {
-		bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionFilter)
-	} else {
-		bs.MarkFilterFailed("EndpointsUnavailable", "Endpoints %q are unavailable.", ep.Name)
-	}
 }
