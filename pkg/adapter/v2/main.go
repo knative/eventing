@@ -44,7 +44,26 @@ type Adapter interface {
 type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client) Adapter
 
 func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
-	MainWithContext(signals.NewContext(), component, ector, ctor)
+
+	ctx := signals.NewContext()
+
+	// TODO(mattmoor): expose a flag that gates this?
+	// ctx = WithHAEnabled(ctx)
+
+	MainWithContext(ctx, component, ector, ctor)
+}
+
+type haEnabledKey struct{}
+
+// WithHAEnabled signals to MainWithContext that it should set up an appropriate leader elector for this component.
+func WithHAEnabled(ctx context.Context) context.Context {
+	return context.WithValue(ctx, haEnabledKey{}, struct{}{})
+}
+
+// IsHAEnabled checks the context for the desire to enable leader elector.
+func IsHAEnabled(ctx context.Context) bool {
+	val := ctx.Value(haEnabledKey{})
+	return val != nil
 }
 
 func MainWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
@@ -124,7 +143,7 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("Error loading the leader election configuration", zap.Error(err))
 	}
 
-	if leConfig.LeaderElect {
+	if IsHAEnabled(ctx) {
 		// Signal that we are executing in a context with leader election.
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
