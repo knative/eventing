@@ -40,6 +40,26 @@ type crStatusEvent struct {
 	component     string
 	kubeEventSink *record.EventSink
 }
+type CRStatusEventClient struct {
+	isEnabledVar bool
+}
+
+func GetDefaultClient() *CRStatusEventClient {
+	return &CRStatusEventClient{}
+}
+
+func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
+	if metricMap == nil {
+		return nil
+	}
+
+	ret := &CRStatusEventClient{}
+	if "true" == metricMap["sink-event-error-reporting.enable"] {
+		ret.isEnabledVar = true
+	}
+	return ret
+
+}
 
 var contextkey struct{}
 
@@ -53,16 +73,17 @@ func ContextWithCRStatus(ctx context.Context, kubeEventSink *record.EventSink, c
 	})
 }
 
-func FromContext(ctx context.Context) (*crStatusEvent, bool) {
-
+func fromContext(ctx context.Context) (*crStatusEvent, bool) {
 	crStatusEvent, ok := ctx.Value(contextkey).(*crStatusEvent)
-
 	return crStatusEvent, ok
 }
 
-func ReportCRStatusEvent(ctx context.Context, result protocol.Result) {
+func (c *CRStatusEventClient) ReportCRStatusEvent(ctx context.Context, result protocol.Result) {
+	if !c.isEnabledVar {
+		return
+	}
 
-	if fromContext, ok := FromContext(ctx); !ok {
+	if fromContext, ok := fromContext(ctx); !ok {
 		return
 	} else {
 		fromContext.createEvent(ctx, result)

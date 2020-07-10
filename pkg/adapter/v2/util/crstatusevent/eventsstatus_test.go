@@ -93,6 +93,7 @@ func TestReportCRStatusEvent(t *testing.T) {
 		fakesink    record.EventSink
 		ctx         context.Context
 		result      protocol.Result
+		enabled     string
 		wantType    string
 		wantReason  string
 		wantMessage string
@@ -104,6 +105,7 @@ func TestReportCRStatusEvent(t *testing.T) {
 		{name: "TestReportCRStatusEvent500", args: args{
 			fakesink:    fakeSink{Name: "TestReportCRStatusEvent500"},
 			result:      http.NewResult(500, "%w"),
+			enabled:     "true",
 			wantType:    "Warning",
 			wantReason:  "SinkSendFailed",
 			wantMessage: "500 Error sending cloud event to sink.",
@@ -111,7 +113,15 @@ func TestReportCRStatusEvent(t *testing.T) {
 		},
 		{name: "TestReportCRStatusEvent200", args: args{
 			fakesink: fakeSink{Name: "TestReportCRStatusEvent200"},
+			enabled:  "true",
 			result:   http.NewResult(200, "%w"),
+			wantType: "",
+		},
+		},
+		{name: "TestReportCRStatusEvent500Disabled", args: args{
+			fakesink: fakeSink{Name: "TestReportCRStatusEvent500"},
+			result:   http.NewResult(500, "%w"),
+			enabled:  "false",
 			wantType: "",
 		},
 		},
@@ -123,7 +133,9 @@ func TestReportCRStatusEvent(t *testing.T) {
 			defer ctx.Done()
 			ctx = ContextWithCRStatus(ctx, &tt.args.fakesink, "mycomponent", src, logF)
 
-			ReportCRStatusEvent(ctx, tt.args.result)
+			crStatusEventClient := NewCRStatusEventClient(map[string]string{"sink-event-error-reporting.enable": tt.args.enabled})
+
+			crStatusEventClient.ReportCRStatusEvent(ctx, tt.args.result)
 
 			time.Sleep(time.Millisecond * 500)
 			mutex.Lock()
