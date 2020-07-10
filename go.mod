@@ -50,4 +50,6 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6
 	k8s.io/client-go => k8s.io/client-go v0.17.6
 	k8s.io/code-generator => k8s.io/code-generator v0.17.6
+
+	knative.dev/pkg => github.com/mattmoor/pkg v0.0.0-20200710171830-5c168df1e1a3
 )

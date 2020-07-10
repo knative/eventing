@@ -945,7 +945,7 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/pkg v0.0.0-20200708171447-5358179e7499
+# knative.dev/pkg v0.0.0-20200708171447-5358179e7499 => github.com/mattmoor/pkg v0.0.0-20200710171830-5c168df1e1a3
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1075,3 +1075,4 @@ sigs.k8s.io/yaml
 # k8s.io/apimachinery => k8s.io/apimachinery v0.17.6
 # k8s.io/client-go => k8s.io/client-go v0.17.6
 # k8s.io/code-generator => k8s.io/code-generator v0.17.6
+# knative.dev/pkg => github.com/mattmoor/pkg v0.0.0-20200710171830-5c168df1e1a3
