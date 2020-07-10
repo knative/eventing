@@ -22,18 +22,15 @@ import (
 	"sync"
 
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/source/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 )
 
 const (
@@ -48,60 +45,20 @@ type runningController struct {
 
 // Reconciler implements controller.Reconciler for Source CRDs resources.
 type Reconciler struct {
-	// Listers index properties about resources
-	crdLister apiextensionsv1beta1.CustomResourceDefinitionLister
-
 	ogctx context.Context
 	ogcmw configmap.Watcher
 
+	// lock guards controllers
+	lock sync.RWMutex
+
 	// controllers keeps a map for GVR to dynamically created controllers.
 	controllers map[schema.GroupVersionResource]runningController
-
-	// Synchronization primitives
-	lock     sync.RWMutex
-	onlyOnce sync.Once
-
-	recorder record.EventRecorder
 }
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements crdreconciler.Interface
+var _ crdreconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Create controllers map only once.
-	r.onlyOnce.Do(func() {
-		r.controllers = make(map[schema.GroupVersionResource]runningController)
-	})
-
-	// Convert the namespace/name string into a distinct namespace and name.
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the CRD resource with this name.
-	original, err := r.crdLister.Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("CRD key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy.
-	crd := original.DeepCopy()
-
-	reconcileErr := r.reconcile(ctx, crd)
-	if reconcileErr != nil {
-		r.recorder.Eventf(crd, corev1.EventTypeWarning, sourceCRDReconcileFailed, "Source CRD reconciliation failed: %v", reconcileErr)
-	}
-	// Requeue if the reconcile failed.
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, crd *v1beta1.CustomResourceDefinition) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDefinition) pkgreconciler.Event {
 	// The reconciliation process is as follows:
 	// 	1. Resolve GVR and GVK from a particular Source CRD (i.e., those labeled with duck.knative.dev/source = "true")
 	//  2. Dynamically create a controller for it, if not present already. Such controller is in charge of reconciling
@@ -131,7 +88,7 @@ func (r *Reconciler) reconcile(ctx context.Context, crd *v1beta1.CustomResourceD
 	return nil
 }
 
-func (r *Reconciler) resolveGroupVersions(ctx context.Context, crd *v1beta1.CustomResourceDefinition) (*schema.GroupVersionResource, *schema.GroupVersionKind, error) {
+func (r *Reconciler) resolveGroupVersions(ctx context.Context, crd *v1.CustomResourceDefinition) (*schema.GroupVersionResource, *schema.GroupVersionKind, error) {
 	var gvr *schema.GroupVersionResource
 	var gvk *schema.GroupVersionKind
 	for _, v := range crd.Spec.Versions {
@@ -174,7 +131,7 @@ func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVers
 	}
 }
 
-func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) error {
+func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) error {
 	r.lock.RLock()
 	_, found := r.controllers[*gvr]
 	r.lock.RUnlock()
