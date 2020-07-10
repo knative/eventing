@@ -19,12 +19,8 @@ package crd
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/scheme"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -32,7 +28,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
-	client "knative.dev/pkg/client/injection/kube/client"
+	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 )
 
 const (
@@ -51,32 +47,16 @@ func NewController(
 	logger := logging.FromContext(ctx)
 	crdInformer := crdinfomer.Get(ctx)
 
-	recorder := controller.GetEventRecorder(ctx)
-	if recorder == nil {
-		// Create event broadcaster
-		logger.Debug("Creating event broadcaster")
-		eventBroadcaster := record.NewBroadcaster()
-		watches := []watch.Interface{
-			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
-			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: client.Get(ctx).CoreV1().Events("")}),
-		}
-		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
-		go func() {
-			<-ctx.Done()
-			for _, w := range watches {
-				w.Stop()
-			}
-		}()
-	}
-
 	r := &Reconciler{
-		crdLister: crdInformer.Lister(),
-		ogctx:     ctx,
-		ogcmw:     cmw,
-		recorder:  recorder,
+		ogctx:       ctx,
+		ogcmw:       cmw,
+		controllers: make(map[schema.GroupVersionResource]runningController),
 	}
-	impl := controller.NewImpl(r, logger, ReconcilerName)
+	impl := crdreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			AgentName: ReconcilerName,
+		}
+	})
 
 	logger.Info("Setting up event handlers")
 	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

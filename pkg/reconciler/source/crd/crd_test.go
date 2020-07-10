@@ -22,7 +22,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/sources"
+	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -33,7 +35,8 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
-	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake"
+	fakeclient "knative.dev/pkg/client/injection/apiextensions/client/fake"
+	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
 )
 
@@ -65,7 +68,7 @@ func TestAllCases(t *testing.T) {
 		Key:     crdName,
 		WantErr: true,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "SourceCRDReconcileFailed", "Source CRD reconciliation failed: unable to find GVR or GVK for %s", crdName),
+			Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
 		},
 	},
 	//}, {
@@ -92,13 +95,14 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = source.WithDuck(ctx)
-		return &Reconciler{
-			crdLister: listers.GetCustomResourceDefinitionLister(),
-			ogctx:     ctx,
-			ogcmw:     cmw,
-			recorder:  controller.GetEventRecorder(ctx),
+		r := &Reconciler{
+			ogctx:       ctx,
+			ogcmw:       cmw,
+			controllers: make(map[schema.GroupVersionResource]runningController),
 		}
-	},
-		false, logger,
-	))
+
+		return crdreconciler.NewReconciler(ctx, logger,
+			fakeclient.Get(ctx), listers.GetCustomResourceDefinitionLister(),
+			controller.GetEventRecorder(ctx), r)
+	}, false, logger))
 }

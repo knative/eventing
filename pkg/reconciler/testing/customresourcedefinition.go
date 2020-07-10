@@ -17,16 +17,16 @@ limitations under the License.
 package testing
 
 import (
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CustomResourceDefinitionOption enables further configuration of a CustomResourceDefinition.
-type CustomResourceDefinitionOption func(*apiextensionsv1beta1.CustomResourceDefinition)
+type CustomResourceDefinitionOption func(*apiextensionsv1.CustomResourceDefinition)
 
 // NewCustomResourceDefinition creates a CustomResourceDefinition with CustomResourceDefinitionOption.
-func NewCustomResourceDefinition(name string, o ...CustomResourceDefinitionOption) *apiextensionsv1beta1.CustomResourceDefinition {
-	crd := &apiextensionsv1beta1.CustomResourceDefinition{
+func NewCustomResourceDefinition(name string, o ...CustomResourceDefinitionOption) *apiextensionsv1.CustomResourceDefinition {
+	crd := &apiextensionsv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
@@ -39,25 +39,25 @@ func NewCustomResourceDefinition(name string, o ...CustomResourceDefinitionOptio
 
 // WithCustomResourceDefinitionLabels sets the CRD's labels.
 func WithCustomResourceDefinitionLabels(labels map[string]string) CustomResourceDefinitionOption {
-	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+	return func(crd *apiextensionsv1.CustomResourceDefinition) {
 		crd.Labels = labels
 	}
 }
 
-func WithCustomResourceDefinitionVersions(versions []apiextensionsv1beta1.CustomResourceDefinitionVersion) CustomResourceDefinitionOption {
-	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+func WithCustomResourceDefinitionVersions(versions []apiextensionsv1.CustomResourceDefinitionVersion) CustomResourceDefinitionOption {
+	return func(crd *apiextensionsv1.CustomResourceDefinition) {
 		crd.Spec.Versions = versions
 	}
 }
 
 func WithCustomResourceDefinitionGroup(group string) CustomResourceDefinitionOption {
-	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+	return func(crd *apiextensionsv1.CustomResourceDefinition) {
 		crd.Spec.Group = group
 	}
 }
 
-func WithCustomResourceDefinitionNames(names apiextensionsv1beta1.CustomResourceDefinitionNames) CustomResourceDefinitionOption {
-	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+func WithCustomResourceDefinitionNames(names apiextensionsv1.CustomResourceDefinitionNames) CustomResourceDefinitionOption {
+	return func(crd *apiextensionsv1.CustomResourceDefinition) {
 		crd.Spec.Names = names
 	}
 }
