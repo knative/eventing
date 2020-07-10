@@ -47,26 +47,29 @@ spec:
     schema:
       openAPIV3Schema:
         type: object
+        description: "This is a trigger description."
         properties:
           spec:
             required:
               - subscriber
             type: object
+            description: "The specification for the trigger"
             properties:
               broker:
                 type: string
                 description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
               filter:
+                description: "Optional filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. If not specified, will default to allowing all events."
                 type: object
                 properties:
                   attributes:
                     type: object
-                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events"
+                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events. Each key in the map is compared with the equivalent key in the event context. An event passes the filter if all values are equal to the specified values."
                     additionalProperties:
                       type: string
               subscriber:
                 type: object
-                description: "the destination that should receive events."
+                description: "Subscriber is the addressable that receives events from the Broker that pass the filter."
                 properties:
                   ref:
                     type: object
@@ -90,10 +93,17 @@ spec:
                         minLength: 1
                   uri:
                     type: string
-                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                    description: "The full target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
           status:
             type: object
-            x-kubernetes-preserve-unknown-fields: true
+            description: "Status of the trigger"
+            properties:
+              subscriberUri:
+                type: string
+                description: "SubscriberURI is the resolved URI of the receiver for this Trigger."
+              observedGeneration:
+                type: integer
+                description: "ObservedGeneration is the 'Generation' of the Trigger that was last processed by the controller."
   - << : *version
     name: v1
     served: true
@@ -101,31 +111,34 @@ spec:
     schema:
       openAPIV3Schema:
         type: object
+        description: "This is a trigger description."
         properties:
           spec:
             required:
-              - subscriber
               - broker
+              - subscriber
             type: object
+            description: "The specification for the trigger"
             properties:
               broker:
                 type: string
                 description: "Broker that this trigger receives events from."
               filter:
+                description: "Optional filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. If not specified, will default to allowing all events."
                 type: object
                 properties:
                   attributes:
                     type: object
-                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events"
+                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events. Each key in the map is compared with the equivalent key in the event context. An event passes the filter if all values are equal to the specified values."
                     additionalProperties:
                       type: string
               subscriber:
                 type: object
-                description: "the destination that should receive events."
+                description: "Subscriber is the addressable that receives events from the Broker that pass the filter. You can use one or both of ref/uri to specify the "
                 properties:
                   ref:
                     type: object
-                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    description: "Reference to a Kubernetes object (addressable) from which to retrieve the target URI."
                     required:
                     - apiVersion
                     - kind
@@ -145,10 +158,17 @@ spec:
                         minLength: 1
                   uri:
                     type: string
-                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                    description: "The full target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
           status:
             type: object
-            x-kubernetes-preserve-unknown-fields: true
+            description: "status of the trigger"
+            properties:
+              subscriberUri:
+                type: string
+                description: "SubscriberURI is the resolved URI of the receiver for this Trigger."
+              observedGeneration:
+                type: integer
+                description: "ObservedGeneration is the 'Generation' of the Trigger that was last processed by the controller."
   names:
     kind: Trigger
     plural: triggers

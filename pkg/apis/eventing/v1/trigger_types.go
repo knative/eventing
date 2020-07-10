@@ -75,9 +75,8 @@ var (
 )
 
 type TriggerSpec struct {
-	// Broker is the broker that this trigger receives events from. If not specified, will default
-	// to 'default'.
-	Broker string `json:"broker,omitempty"`
+	// Broker is the broker that this trigger receives events from.
+	Broker string `json:"broker"`
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
