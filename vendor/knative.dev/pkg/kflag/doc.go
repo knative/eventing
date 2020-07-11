@@ -1,5 +1,3 @@
-// +build tools
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,17 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tools
-
-import (
-	_ "knative.dev/pkg/configmap/hash-gen"
-	_ "knative.dev/pkg/hack"
-	_ "knative.dev/pkg/testutils/clustermanager/perf-tests"
-	_ "knative.dev/test-infra/scripts"
-
-	// Needed for the storage version too.
-	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
-
-	// For chaos testing the leaderelection stuff.
-	_ "knative.dev/pkg/leaderelection/chaosduck"
-)
+// Package kflag contains a variety of non-standard command-line flag types
+package kflag
