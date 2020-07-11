@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"path"
 	"runtime"
 	"text/template"
