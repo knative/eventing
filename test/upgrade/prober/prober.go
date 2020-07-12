@@ -137,7 +137,7 @@ func (p *prober) deploy() {
 	if p.config.Serving.Use {
 		p.deployForwarder()
 	}
-	ensure.NoError(testlib.AwaitForAll(p.log))
+	p.client.WaitForAllTestResourcesReadyOrFail()
 
 	p.deploySender()
 	ensure.NoError(testlib.AwaitForAll(p.log))
@@ -151,8 +151,7 @@ func (p *prober) remove() {
 	if p.config.Serving.Use {
 		p.removeForwarder()
 	}
-	p.removeReceiver()
-	p.removeConfiguration()
+	p.client.Tracker.Clean(true)
 }
 
 func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {

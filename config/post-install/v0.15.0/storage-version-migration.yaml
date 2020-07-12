@@ -27,6 +27,8 @@ spec:
     metadata:
       labels:
         app: "storage-version-migration"
+      annotations:
+        sidecar.istio.io/inject: "false"
     spec:
       serviceAccountName: knative-eventing-post-install-job
       restartPolicy: OnFailure
