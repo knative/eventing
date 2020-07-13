@@ -18,7 +18,6 @@ package ingress
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -45,6 +44,7 @@ const (
 )
 
 type Handler struct {
+	ChannelURI *url.URL
 	// Receiver receives incoming HTTP requests
 	Receiver *kncloudevents.HttpMessageReceiver
 	// Sender sends requests to the broker
@@ -56,21 +56,21 @@ type Handler struct {
 
 	Logger *zap.Logger
 
-	getChannelURL func(string, string, string) url.URL
+	//getChannelURL func(string, string, string) url.URL
 }
 
-func getChannelURL(name, namespace, domain string) url.URL {
-	return url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
-		Path:   "/",
-	}
-}
+//func getChannelURL(name, namespace, domain string) url.URL {
+//	return url.URL{
+//		Scheme: "http",
+//		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
+//		Path:   "/",
+//	}
+//}
 
 func (h *Handler) Start(ctx context.Context) error {
-	if h.getChannelURL == nil {
-		h.getChannelURL = getChannelURL
-	}
+	//if h.getChannelURL == nil {
+	//	h.getChannelURL = getChannelURL
+	//}
 
 	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
 }
@@ -158,9 +158,9 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 
 	// TODO: Today these are pre-deterministic, change this watch for
 	//  	 channels and look up from the channels Status
-	channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	//channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
 
-	return h.send(ctx, headers, event, channelURI.String())
+	return h.send(ctx, headers, event, h.ChannelURI.String())
 }
 
 func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudevents.Event, target string) (int, time.Duration) {

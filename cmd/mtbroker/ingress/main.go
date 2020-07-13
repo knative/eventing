@@ -144,11 +144,12 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		Receiver:  kncloudevents.NewHttpMessageReceiver(env.Port),
-		Sender:    sender,
-		Defaulter: broker.TTLDefaulter(logger, defaultTTL),
-		Reporter:  reporter,
-		Logger:    logger,
+		ChannelURI: //
+		Receiver:  	kncloudevents.NewHttpMessageReceiver(env.Port),
+		Sender:    	sender,
+		Defaulter: 	broker.TTLDefaulter(logger, defaultTTL),
+		Reporter:  	reporter,
+		Logger:    	logger,
 	}
 
 	// configMapWatcher does not block, so start it first.
