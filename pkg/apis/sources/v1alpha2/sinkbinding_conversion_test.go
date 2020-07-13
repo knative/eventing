@@ -18,11 +18,32 @@ package v1alpha2
 
 import (
 	"context"
+	"errors"
+	"reflect"
 	"testing"
+
+	"knative.dev/pkg/tracker"
+
+	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
+type dummy struct{}
+
+func (*dummy) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
+func (*dummy) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
 func TestSinkBindingConversionBadType(t *testing.T) {
-	good, bad := &SinkBinding{}, &SinkBinding{}
+	good, bad := &SinkBinding{}, &dummy{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)
@@ -30,5 +51,251 @@ func TestSinkBindingConversionBadType(t *testing.T) {
 
 	if err := good.ConvertFrom(context.Background(), bad); err == nil {
 		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}
+
+func TestSinkBindingConversionRoundTripUp(t *testing.T) {
+	// Just one for now, just adding the for loop for ease of future changes.
+	versions := []apis.Convertible{&v1beta1.SinkBinding{}}
+
+	path, _ := apis.ParseURL("/path")
+	sink := duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "Foo",
+			Namespace:  "Bar",
+			Name:       "Baz",
+			APIVersion: "Baf",
+		},
+		URI: path,
+	}
+	sinkUri, _ := apis.ParseURL("http://example.com/path")
+
+	subject := tracker.Reference{
+		APIVersion: "API",
+		Kind:       "K",
+		Namespace:  "NS",
+		Name:       "N",
+	}
+
+	tests := []struct {
+		name string
+		in   *SinkBinding
+	}{{name: "empty",
+		in: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: SinkBindingSpec{},
+			Status: SinkBindingStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+				},
+			},
+		},
+	}, {name: "simple configuration",
+		in: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: SinkBindingSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink: sink,
+				},
+				BindingSpec: duckv1alpha1.BindingSpec{
+					Subject: subject,
+				},
+			},
+			Status: SinkBindingStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "Unknown",
+						}},
+					},
+					SinkURI: sinkUri,
+				},
+			},
+		},
+	}, {name: "full",
+		in: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: SinkBindingSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink: sink,
+					CloudEventOverrides: &duckv1.CloudEventOverrides{
+						Extensions: map[string]string{
+							"foo": "bar",
+							"baz": "baf",
+						},
+					},
+				},
+				BindingSpec: duckv1alpha1.BindingSpec{
+					Subject: subject,
+				},
+			},
+			Status: SinkBindingStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI: sinkUri,
+				},
+			},
+		},
+	}}
+	for _, test := range tests {
+		for _, version := range versions {
+			t.Run(test.name, func(t *testing.T) {
+				ver := version
+				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
+					t.Errorf("ConvertTo() = %v", err)
+				}
+
+				got := &SinkBinding{}
+
+				if err := got.ConvertFrom(context.Background(), ver); err != nil {
+					t.Errorf("ConvertFrom() = %v", err)
+				}
+				if diff := cmp.Diff(test.in, got); diff != "" {
+					t.Errorf("roundtrip (-want, +got) = %v", diff)
+				}
+			})
+		}
+	}
+}
+
+// This tests round tripping from a higher version -> v1alpha2 and back to the higher version.
+func TestSinkBindingConversionRoundTripDown(t *testing.T) {
+	// Just one for now, just adding the for loop for ease of future changes.
+
+	path, _ := apis.ParseURL("/path")
+	sink := duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "Foo",
+			Namespace:  "Bar",
+			Name:       "Baz",
+			APIVersion: "Baf",
+		},
+		URI: path,
+	}
+	sinkURI, _ := apis.ParseURL("http://example.com/path")
+
+	ceOverrides := duckv1.CloudEventOverrides{
+		Extensions: map[string]string{
+			"foo": "bar",
+			"baz": "baf",
+		},
+	}
+
+	subject := tracker.Reference{
+		APIVersion: "API",
+		Kind:       "K",
+		Namespace:  "NS",
+		Name:       "N",
+	}
+
+	tests := []struct {
+		name string
+		in   apis.Convertible
+	}{{name: "empty",
+		in: &v1beta1.SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec:   v1beta1.SinkBindingSpec{},
+			Status: v1beta1.SinkBindingStatus{},
+		},
+	}, {name: "simple configuration",
+		in: &v1beta1.SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1beta1.SinkBindingSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink: sink,
+				},
+			},
+			Status: v1beta1.SinkBindingStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI: sinkURI,
+				},
+			},
+		},
+	}, {name: "full",
+		in: &v1beta1.SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1beta1.SinkBindingSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				BindingSpec: duckv1alpha1.BindingSpec{Subject: subject},
+			},
+			Status: v1beta1.SinkBindingStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI: sinkURI,
+				},
+			},
+		},
+	}}
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+			down := &SinkBinding{}
+			if err := down.ConvertFrom(context.Background(), test.in); err != nil {
+				t.Errorf("ConvertTo() = %v", err)
+			}
+
+			got := (reflect.New(reflect.TypeOf(test.in).Elem()).Interface()).(apis.Convertible)
+
+			if err := down.ConvertTo(context.Background(), got); err != nil {
+				t.Errorf("ConvertFrom() = %v", err)
+			}
+			if diff := cmp.Diff(test.in, got); diff != "" {
+				t.Errorf("roundtrip (-want, +got) = %v", diff)
+			}
+		})
 	}
 }

@@ -20,15 +20,36 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
-// ConvertTo implements apis.Convertible
-func (source *SinkBinding) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1alpha2 is the highest known version, got: %T", sink)
+// ConvertTo implements apis.Convertible.
+// Converts source (from v1alpha2.SinkBinding) into v1beta1.SinkBinding.
+func (source *SinkBinding) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *v1beta1.SinkBinding:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec.SourceSpec = source.Spec.SourceSpec
+		sink.Spec.BindingSpec = source.Spec.BindingSpec
+		sink.Status.SourceStatus = source.Status.SourceStatus
+		return nil
+	default:
+		return fmt.Errorf("Unknown conversion, got: %T", sink)
+	}
 }
 
-// ConvertFrom implements apis.Convertible
-func (sink *SinkBinding) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1alpha2 is the highest known version, got: %T", source)
+// ConvertFrom implements apis.Convertible.
+// Converts obj from v1beta1.SinkBinding into v1alpha2.SinkBinding.
+func (sink *SinkBinding) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *v1beta1.SinkBinding:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec.SourceSpec = source.Spec.SourceSpec
+		sink.Spec.BindingSpec = source.Spec.BindingSpec
+		sink.Status.SourceStatus = source.Status.SourceStatus
+		return nil
+	default:
+		return fmt.Errorf("Unknown conversion, got: %T", source)
+	}
 }
