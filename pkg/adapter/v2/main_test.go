@@ -23,12 +23,15 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opencensus.io/stats/view"
+	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/metrics"
+
+	_ "knative.dev/pkg/system/testing"
 )
 
 type myAdapter struct{}
 
-func TestMainWithContext(t *testing.T) {
+func TestMainWithContextNoLeaderElection(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", "metrics")
@@ -59,12 +62,8 @@ func TestMainWithContext(t *testing.T) {
 				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
 			}
 
-			leConfig, err := env.GetLeaderElectionConfig()
-			if err != nil {
-				t.Errorf("Expected no error: %v", err)
-			}
-			if leConfig.LeaderElect {
-				t.Errorf("Expected LeaderElect to be false, got: %t", leConfig.LeaderElect)
+			if leaderelection.HasLeaderElection(ctx) {
+				t.Error("Expected no leader election, but got leader election")
 			}
 			return &myAdapter{}
 		})

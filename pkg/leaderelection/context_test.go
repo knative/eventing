@@ -41,7 +41,6 @@ func (a *fakeAdapter) Start(ctx context.Context) error {
 func TestWithBuilder(t *testing.T) {
 	cc := leaderelection.ComponentConfig{
 		Component:     "component",
-		LeaderElect:   true,
 		ResourceLock:  "leases",
 		LeaseDuration: 15 * time.Second,
 		RenewDeadline: 10 * time.Second,

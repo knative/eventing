@@ -61,10 +61,7 @@ func BuildAdapterElector(ctx context.Context, adapter Adapter) (Elector, error) 
 	if val := ctx.Value(builderKey{}); val != nil {
 		switch builder := val.(type) {
 		case *standardBuilder:
-			// Only use the standard elector is leader election is enabled
-			if builder.lec.LeaderElect {
-				return builder.BuildElector(ctx, adapter)
-			}
+			return builder.BuildElector(ctx, adapter)
 		}
 	}
 
