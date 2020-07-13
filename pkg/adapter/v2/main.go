@@ -27,6 +27,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	"knative.dev/eventing/pkg/leaderelection"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
@@ -66,6 +67,8 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Fatal("Error exporting go memstats view: %v", zap.Error(err))
 	}
 
+	var crStatusEventClient *crstatusevent.CRStatusEventClient
+
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
 	if metricsConfig, err := env.GetMetricsConfig(); err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
@@ -86,7 +89,9 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 					}
 				}()
 			}
+			crStatusEventClient = crstatusevent.NewCRStatusEventClient(metricsConfig.ConfigMap)
 		}
+
 	}
 
 	reporter, err := source.NewStatsReporter()
@@ -105,7 +110,7 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("Error loading cloudevents overrides", zap.Error(err))
 	}
 
-	eventsClient, err := NewCloudEventsClient(env.GetSink(), ceOverrides, reporter)
+	eventsClient, err := NewCloudEventsClientCRStatus(env.GetSink(), ceOverrides, reporter, crStatusEventClient)
 	if err != nil {
 		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
