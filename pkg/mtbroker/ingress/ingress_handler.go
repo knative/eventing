@@ -18,6 +18,7 @@ package ingress
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
@@ -44,7 +46,6 @@ const (
 )
 
 type Handler struct {
-	ChannelURI *url.URL
 	// Receiver receives incoming HTTP requests
 	Receiver *kncloudevents.HttpMessageReceiver
 	// Sender sends requests to the broker
@@ -56,21 +57,27 @@ type Handler struct {
 
 	Logger *zap.Logger
 
-	//getChannelURL func(string, string, string) url.URL
+	getChannelURL func(string, string, string) url.URL
+	channelLister messaginglisters.ChannelLister
 }
 
-//func getChannelURL(name, namespace, domain string) url.URL {
-//	return url.URL{
-//		Scheme: "http",
-//		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
-//		Path:   "/",
-//	}
-//}
+func getChannelURL(name, namespace, domain string) url.URL {
+	return url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
+		Path:   "/",
+	}
+}
+
+func (h *Handler) getChannelURL2(name, namespace string) string {
+	c, err := h.channelLister.Channels(namespace).Get(name)
+	return c.Status.Address.URL.String()
+}
 
 func (h *Handler) Start(ctx context.Context) error {
-	//if h.getChannelURL == nil {
-	//	h.getChannelURL = getChannelURL
-	//}
+	if h.getChannelURL == nil {
+		h.getChannelURL = getChannelURL
+	}
 
 	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
 }
@@ -158,9 +165,10 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 
 	// TODO: Today these are pre-deterministic, change this watch for
 	//  	 channels and look up from the channels Status
-	//channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	h.Logger.Info("CHANNEL URL?" + h.getChannelURL2(brokerName, brokerNamespace))
 
-	return h.send(ctx, headers, event, h.ChannelURI.String())
+	return h.send(ctx, headers, event, channelURI.String())
 }
 
 func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudevents.Event, target string) (int, time.Duration) {

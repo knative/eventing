@@ -47,6 +47,9 @@ import (
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	tracingconfig "knative.dev/pkg/tracing/config"
+
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
 )
 
 var (
@@ -112,6 +115,12 @@ func main() {
 
 	logger.Info("Starting the Broker Ingress")
 
+	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
+	eventingFactory := eventinginformers.NewSharedInformerFactory(eventingClient,
+		controller.GetResyncPeriod(ctx))
+	channelInformer := eventingFactory.Messaging().V1beta1().Channels()
+	channelLister := channelInformer.Lister()
+
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
@@ -144,12 +153,12 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		ChannelURI: //
-		Receiver:  	kncloudevents.NewHttpMessageReceiver(env.Port),
-		Sender:    	sender,
-		Defaulter: 	broker.TTLDefaulter(logger, defaultTTL),
-		Reporter:  	reporter,
-		Logger:    	logger,
+		Receiver:      kncloudevents.NewHttpMessageReceiver(env.Port),
+		Sender:        sender,
+		Defaulter:     broker.TTLDefaulter(logger, defaultTTL),
+		Reporter:      reporter,
+		Logger:        logger,
+		channelLister: channelLister,
 	}
 
 	// configMapWatcher does not block, so start it first.
