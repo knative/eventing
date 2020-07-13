@@ -43,6 +43,8 @@ import (
 	fakesourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha2"
 	fakesourcesv1alpha2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha2/fake"
+	sourcesv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta1"
+	fakesourcesv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1beta1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -135,4 +137,9 @@ func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
 // SourcesV1alpha2 retrieves the SourcesV1alpha2Client
 func (c *Clientset) SourcesV1alpha2() sourcesv1alpha2.SourcesV1alpha2Interface {
 	return &fakesourcesv1alpha2.FakeSourcesV1alpha2{Fake: &c.Fake}
+}
+
+// SourcesV1beta1 retrieves the SourcesV1beta1Client
+func (c *Clientset) SourcesV1beta1() sourcesv1beta1.SourcesV1beta1Interface {
+	return &fakesourcesv1beta1.FakeSourcesV1beta1{Fake: &c.Fake}
 }
