@@ -30,6 +30,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 type dummy struct{}
@@ -264,7 +265,7 @@ func TestSinkBindingConversionRoundTripDown(t *testing.T) {
 					Sink:                sink,
 					CloudEventOverrides: &ceOverrides,
 				},
-				BindingSpec: duckv1alpha1.BindingSpec{Subject: subject},
+				BindingSpec: duckv1beta1.BindingSpec{Subject: subject},
 			},
 			Status: v1beta1.SinkBindingStatus{
 				SourceStatus: duckv1.SourceStatus{
