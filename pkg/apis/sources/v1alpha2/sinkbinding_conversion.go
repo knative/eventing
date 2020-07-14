@@ -22,6 +22,8 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // ConvertTo implements apis.Convertible.
@@ -31,7 +33,9 @@ func (source *SinkBinding) ConvertTo(ctx context.Context, obj apis.Convertible) 
 	case *v1beta1.SinkBinding:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.SourceSpec = source.Spec.SourceSpec
-		sink.Spec.BindingSpec = source.Spec.BindingSpec
+		sink.Spec.BindingSpec = duckv1beta1.BindingSpec{
+			Subject: source.Spec.BindingSpec.Subject,
+		}
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
@@ -46,7 +50,9 @@ func (sink *SinkBinding) ConvertFrom(ctx context.Context, obj apis.Convertible) 
 	case *v1beta1.SinkBinding:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.SourceSpec = source.Spec.SourceSpec
-		sink.Spec.BindingSpec = source.Spec.BindingSpec
+		sink.Spec.BindingSpec = duckv1alpha1.BindingSpec{
+			Subject: source.Spec.BindingSpec.Subject,
+		}
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
