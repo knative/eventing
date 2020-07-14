@@ -30,8 +30,10 @@ func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) erro
 	switch sink := obj.(type) {
 	case *v1.Channel:
 		sink.ObjectMeta = source.ObjectMeta
-		if sink.Annotations == nil {
-			sink.Annotations = make(map[string]string)
+		// Always make a new copy of annotations because we mess with them.
+		sink.Annotations = make(map[string]string)
+		for k, v := range source.Annotations {
+			sink.Annotations[k] = v
 		}
 		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 		source.Status.ConvertTo(ctx, &sink.Status)
@@ -74,8 +76,10 @@ func (sink *Channel) ConvertFrom(ctx context.Context, obj apis.Convertible) erro
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
-		if sink.Annotations == nil {
-			sink.Annotations = make(map[string]string)
+		// Always make a new copy of annotations because we mess with them.
+		sink.Annotations = make(map[string]string)
+		for k, v := range source.Annotations {
+			sink.Annotations[k] = v
 		}
 		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 		return nil

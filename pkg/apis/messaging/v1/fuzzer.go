@@ -20,6 +20,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"knative.dev/eventing/pkg/apis/messaging"
 	pkgfuzzer "knative.dev/pkg/apis/testing/fuzzer"
 )
 
@@ -30,6 +31,22 @@ import (
 var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
+			func(ch *Channel, c fuzz.Continue) {
+				if ch != nil {
+					if ch.Annotations == nil {
+						ch.Annotations = make(map[string]string)
+					}
+					ch.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
+				}
+			},
+			func(imc *InMemoryChannel, c fuzz.Continue) {
+				if imc != nil {
+					if imc.Annotations == nil {
+						imc.Annotations = make(map[string]string)
+					}
+					imc.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
+				}
+			},
 			func(s *ChannelStatus, c fuzz.Continue) {
 				c.FuzzNoCustom(s) // fuzz the status object
 
