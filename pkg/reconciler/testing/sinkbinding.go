@@ -21,6 +21,7 @@ import (
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracker"
 )
@@ -30,6 +31,9 @@ type SinkBindingV1Alpha1Option func(*sourcesv1alpha1.SinkBinding)
 
 // SinkBindingV1Alpha2Option enables further configuration of a SinkBinding.
 type SinkBindingV1Alpha2Option func(*sourcesv1alpha2.SinkBinding)
+
+// SinkBindingV1Beta1Option enables further configuration of a SinkBinding.
+type SinkBindingV1Beta1Option func(*sourcesv1beta1.SinkBinding)
 
 // NewSinkBindingV1Alpha1 creates a SinkBinding with SinkBindingOptions
 func NewSinkBindingV1Alpha1(name, namespace string, o ...SinkBindingV1Alpha1Option) *sourcesv1alpha1.SinkBinding {
@@ -49,6 +53,21 @@ func NewSinkBindingV1Alpha1(name, namespace string, o ...SinkBindingV1Alpha1Opti
 // NewSinkBindingV1Alpha2 creates a SinkBinding with SinkBindingOptions
 func NewSinkBindingV1Alpha2(name, namespace string, o ...SinkBindingV1Alpha2Option) *sourcesv1alpha2.SinkBinding {
 	c := &sourcesv1alpha2.SinkBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	for _, opt := range o {
+		opt(c)
+	}
+	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
+	return c
+}
+
+// NewSinkBindingV1Beta1 creates a SinkBinding with SinkBindingOptions
+func NewSinkBindingV1Beta1(name, namespace string, o ...SinkBindingV1Beta1Option) *sourcesv1beta1.SinkBinding {
+	c := &sourcesv1beta1.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -99,6 +118,27 @@ func WithSinkV1A2(sink duckv1.Destination) SinkBindingV1Alpha2Option {
 // WithCloudEventOverridesV1A1 assigns the CloudEventsOverrides of the SinkBinding.
 func WithCloudEventOverridesV1A2(overrides duckv1.CloudEventOverrides) SinkBindingV1Alpha2Option {
 	return func(sb *sourcesv1alpha2.SinkBinding) {
+		sb.Spec.CloudEventOverrides = &overrides
+	}
+}
+
+// WithSubjectV1B1 assigns the subject of the SinkBinding.
+func WithSubjectV1B1(subject tracker.Reference) SinkBindingV1Beta1Option {
+	return func(sb *sourcesv1beta1.SinkBinding) {
+		sb.Spec.Subject = subject
+	}
+}
+
+// WithSinkV1B1 assigns the sink of the SinkBinding.
+func WithSinkV1B1(sink duckv1.Destination) SinkBindingV1Beta1Option {
+	return func(sb *sourcesv1beta1.SinkBinding) {
+		sb.Spec.Sink = sink
+	}
+}
+
+// WithCloudEventOverridesV1B1 assigns the CloudEventsOverrides of the SinkBinding.
+func WithCloudEventOverridesV1B1(overrides duckv1.CloudEventOverrides) SinkBindingV1Beta1Option {
+	return func(sb *sourcesv1beta1.SinkBinding) {
 		sb.Spec.CloudEventOverrides = &overrides
 	}
 }
