@@ -90,7 +90,11 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 
 func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
 	if IsInjectorEnabled(ctx) {
-		ctx = SetupAndStartInformers(ctx, env.GetLogger())
+		ictx, informers := SetupInformers(ctx, env.GetLogger())
+		if informers != nil {
+			StartInformers(ctx, informers) // none-blocking
+		}
+		ctx = ictx
 	}
 	MainWithInformers(ctx, component, env, ctor)
 }
@@ -136,7 +140,6 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 			}
 			crStatusEventClient = crstatusevent.NewCRStatusEventClient(metricsConfig.ConfigMap)
 		}
-
 	}
 
 	reporter, err := source.NewStatsReporter()
@@ -160,6 +163,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
 
+	// Setup config watcher if enabled.
 	if IsConfigMapWatcherEnabled(ctx) {
 		cmw := SetupConfigMapWatchOrDie(ctx, component, env.GetNamespace())
 		ctx = WithConfigMapWatcher(ctx, cmw)
@@ -168,6 +172,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	// Configuring the adapter
 	adapter := ctor(ctx, env, eventsClient)
 
+	// Start config watcher if enabled.
 	if IsConfigMapWatcherEnabled(ctx) {
 		logger.Info("Starting configuration manager...")
 		if err := ConfigMapWatcherFromContext(ctx).Start(ctx.Done()); err != nil {
@@ -202,7 +207,7 @@ func ConstructEnvOrDie(ector EnvConfigConstructor) EnvConfigAccessor {
 	return env
 }
 
-func SetupAndStartInformers(ctx context.Context, logger *zap.SugaredLogger) context.Context {
+func SetupInformers(ctx context.Context, logger *zap.SugaredLogger) (context.Context, []controller.Informer) {
 	// Run the injectors, but only if strictly necessary to relax the dependency on kubeconfig.
 	if len(injection.Default.GetInformers()) > 0 || len(injection.Default.GetClients()) > 0 ||
 		len(injection.Default.GetDucks()) > 0 || len(injection.Default.GetInformerFactories()) > 0 {
@@ -212,18 +217,18 @@ func SetupAndStartInformers(ctx context.Context, logger *zap.SugaredLogger) cont
 		logger.Infof("Registering %d ducks", len(injection.Default.GetDucks()))
 
 		cfg := sharedmain.ParseAndGetConfigOrDie()
-		ictx, informers := injection.Default.SetupInformers(ctx, cfg)
-		ctx = ictx
-
-		// Start the injection clients and informers.
-		go func(ctx context.Context) {
-			if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-				panic(fmt.Sprintf("Failed to start informers - %s", err))
-			}
-			<-ctx.Done()
-		}(ctx)
+		return injection.Default.SetupInformers(ctx, cfg)
 	}
-	return ctx
+	return ctx, nil
+}
+
+func StartInformers(ctx context.Context, informers []controller.Informer) {
+	go func() {
+		if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+			panic(fmt.Sprintf("Failed to start informers - %s", err))
+		}
+		<-ctx.Done()
+	}()
 }
 
 func flush(logger *zap.SugaredLogger) {

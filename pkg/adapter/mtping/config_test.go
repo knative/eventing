@@ -19,6 +19,8 @@ package mtping
 import (
 	"testing"
 
+	"knative.dev/pkg/apis"
+
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +47,13 @@ func TestProject(t *testing.T) {
 					Schedule: "* * * * ?",
 					JsonData: "some data",
 				},
-				Status: sourcesv1alpha2.PingSourceStatus{},
+				Status: sourcesv1alpha2.PingSourceStatus{
+					duckv1.SourceStatus{
+						SinkURI: &apis.URL{
+							Host: "asink",
+						},
+					},
+				},
 			},
 			expected: PingConfig{
 				ObjectReference: corev1.ObjectReference{
@@ -54,7 +62,7 @@ func TestProject(t *testing.T) {
 				},
 				Schedule: "* * * * ?",
 				JsonData: "some data",
-				SinkURI:  "",
+				SinkURI:  "//asink",
 			}},
 		"TestAddRunRemoveScheduleWithExtensionOverride": {
 			source: sourcesv1alpha2.PingSource{
@@ -71,7 +79,11 @@ func TestProject(t *testing.T) {
 					Schedule: "* * * * ?",
 					JsonData: "some data",
 				},
-				Status: sourcesv1alpha2.PingSourceStatus{},
+				Status: sourcesv1alpha2.PingSourceStatus{
+					duckv1.SourceStatus{
+						SinkURI: &apis.URL{Host: "anothersink"},
+					},
+				},
 			},
 			expected: PingConfig{
 				ObjectReference: corev1.ObjectReference{
@@ -81,7 +93,7 @@ func TestProject(t *testing.T) {
 				Schedule:   "* * * * ?",
 				JsonData:   "some data",
 				Extensions: map[string]string{"1": "one", "2": "two"},
-				SinkURI:    "",
+				SinkURI:    "//anothersink",
 			}},
 	}
 	for n, tc := range testCases {
