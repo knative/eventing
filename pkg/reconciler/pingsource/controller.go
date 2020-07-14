@@ -20,6 +20,9 @@ import (
 	"context"
 	"encoding/json"
 
+	"knative.dev/eventing/pkg/adapter/mtping"
+	eventingcache "knative.dev/eventing/pkg/utils/cache"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,11 +38,9 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	eventingcache "knative.dev/eventing/pkg/utils/cache"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
@@ -78,17 +79,6 @@ func NewController(
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
 
-	// Create PingSource persisted store backed by a ConfigMap
-	store := eventingcache.NewPersistedStore(
-		mtcomponent,
-		kubeclient.Get(ctx),
-		system.Namespace(),
-		"config-pingsource-mt-adapter",
-		pingSourceInformer.Informer(),
-		mtping.Project)
-
-	go store.Run(ctx)
-
 	r := &Reconciler{
 		kubeClientSet:        kubeclient.Get(ctx),
 		pingLister:           pingSourceInformer.Lister(),
@@ -96,7 +86,6 @@ func NewController(
 		serviceAccountLister: serviceAccountInformer.Lister(),
 		roleBindingLister:    roleBindingInformer.Lister(),
 		leConfig:             leConfig,
-		pstore:               store,
 		loggingContext:       ctx,
 	}
 
@@ -135,6 +124,18 @@ func NewController(
 
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
+
+	// Create and start persistent store backed by ConfigMaps
+	// Create PingSource persisted store backed by a ConfigMap
+	store := eventingcache.NewPersistedStore(
+		mtcomponent,
+		kubeclient.Get(ctx),
+		system.Namespace(),
+		"config-pingsource-mt-adapter",
+		pingSourceInformer.Informer(),
+		mtping.Project)
+
+	go store.Run(ctx)
 
 	return impl
 }

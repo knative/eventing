@@ -21,6 +21,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
@@ -37,7 +38,7 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 }
 
 func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
-	runner := NewCronJobsRunner(ceClient, logging.FromContext(ctx))
+	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx))
 
 	cmw := adapter.ConfigMapWatcherFromContext(ctx)
 	cmw.Watch("config-pingsource-mt-adapter", runner.updateFromConfigMap)

@@ -17,15 +17,13 @@ limitations under the License.
 package mtping
 
 import (
+	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
 type PingConfig struct {
-	// Name of the source
-	Name string `json:"name"`
-
-	// Namespace of the source
-	Namespace string `json:"namespace"`
+	corev1.ObjectReference `json:",inline"`
 
 	// Schedule is the cronjob schedule. Defaults to `* * * * *`.
 	Schedule string `json:"schedule"`
@@ -53,11 +51,13 @@ type PingConfigs map[string]PingConfig
 func Project(i interface{}) interface{} {
 	obj := i.(*v1alpha2.PingSource)
 	cfg := &PingConfig{
-		Name:      obj.Name,
-		Namespace: obj.Namespace,
-		Schedule:  obj.Spec.Schedule,
-		JsonData:  obj.Spec.JsonData,
-		SinkURI:   obj.Status.SinkURI.String(),
+		ObjectReference: corev1.ObjectReference{
+			Name:      obj.Name,
+			Namespace: obj.Namespace,
+		},
+		Schedule: obj.Spec.Schedule,
+		JsonData: obj.Spec.JsonData,
+		SinkURI:  obj.Status.SinkURI.String(),
 	}
 	if obj.Spec.CloudEventOverrides != nil {
 		cfg.Extensions = obj.Spec.CloudEventOverrides.Extensions

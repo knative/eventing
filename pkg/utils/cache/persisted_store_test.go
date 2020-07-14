@@ -55,8 +55,8 @@ func (k *KResourceWithSpec) GetUntypedSpec() interface{} {
 
 func TestPersistedStore(t *testing.T) {
 	const (
-		cmNs   = "test-ns"
-		cmName = "test-name"
+		cmNs   = "test-cm-ns"
+		cmName = "test-cm-name"
 	)
 	cs := fake.NewSimpleClientset()
 	created := make(chan struct{})
@@ -103,7 +103,7 @@ func TestPersistedStore(t *testing.T) {
 	select {
 	case obj := <-updated:
 		cm := obj.(*corev1.ConfigMap)
-		if value, ok := cm.Data["resources.json"]; !ok || value != `{"test-ns/test-name":"\"aspec\""}` {
+		if value, ok := cm.Data["resources.json"]; !ok || value != `{"test-ns/test-name":"aspec"}` {
 			t.Fatalf("Unexpected ConfigMap. Got %v", cm)
 		}
 	case <-time.After(1 * time.Second):
@@ -155,8 +155,8 @@ func TestPersistedStoreUnStarted(t *testing.T) {
 
 func TestPersistedStoreInterrupted(t *testing.T) {
 	const (
-		cmNs   = "test-ns"
-		cmName = "test-name"
+		cmNs   = "test-cm-ns"
+		cmName = "test-cm-name"
 	)
 	cs := fake.NewSimpleClientset()
 	created := make(chan struct{})
@@ -204,7 +204,7 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 	select {
 	case obj := <-updated:
 		cm := obj.(*corev1.ConfigMap)
-		if value, ok := cm.Data["resources.json"]; !ok || value != `{"test-ns/test-name":"\"aspec\"","test-ns/test-name-2":"\"aspec\""}` {
+		if value, ok := cm.Data["resources.json"]; !ok || value != `{"test-ns/test-name":"aspec","test-ns/test-name-2":"aspec"}` {
 			t.Fatalf("Unexpected ConfigMap. Got %v", cm)
 		}
 	case <-time.After(1 * time.Second):

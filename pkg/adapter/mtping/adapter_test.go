@@ -30,12 +30,15 @@ import (
 
 func TestStartStopAdapter(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	cmw := pkgadapter.SetupConfigMapWatchOrDie(ctx, "component", "test-ns")
+	ctx = pkgadapter.WithConfigMapWatcher(ctx, cmw)
+
 	envCfg := NewEnvConfig()
+
 	ce := adaptertest.NewTestClient()
 	adapter := NewAdapter(ctx, envCfg, ce)
 
-	ctx, cancel := context.WithCancel(ctx)
-	ctx = pkgadapter.WithConfigMapWatcher(ctx, "component", "ans")
 	done := make(chan bool)
 	go func(ctx context.Context) {
 		err := adapter.Start(ctx)

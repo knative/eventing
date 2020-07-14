@@ -152,7 +152,7 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 
 	// TODO: add support for partitioning
 
-	config := make(map[string]string)
+	config := make(map[string]interface{})
 	objs := p.store.List()
 	for _, obj := range objs {
 		if len(stopCh) > 0 || atomic.LoadInt32(&p.syncing) == 0 {
@@ -168,15 +168,10 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 
 		key := kr.GetNamespace() + "/" + kr.GetName()
 		if projected := p.project(obj); projected != nil {
-			bprojected, err := json.Marshal(projected)
-			if err != nil {
-				return err
-			}
-			config[key] = string(bprojected)
+			config[key] = projected
 		} else {
 			delete(config, key)
 		}
-
 	}
 
 	bconfig, err := json.Marshal(config)

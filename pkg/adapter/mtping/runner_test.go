@@ -22,26 +22,25 @@ import (
 	"testing"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclient "k8s.io/client-go/kubernetes/fake"
+	corev1 "k8s.io/api/core/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	rectesting "knative.dev/pkg/reconciler/testing"
+
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
-<<<<<<< HEAD
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-=======
->>>>>>> adapter support watching configmap. Disabled by default
-	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/eventing/pkg/logging"
 )
 
 func TestAddRunRemoveSchedules(t *testing.T) {
-
 	testCases := map[string]struct {
 		cfg PingConfig
 	}{
 		"TestAddRunRemoveSchedule": {
 			cfg: PingConfig{
-				Name:       "test-name",
-				Namespace:  "test-ns",
+				ObjectReference: corev1.ObjectReference{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
 				Schedule:   "* * * * ?",
 				JsonData:   "some data",
 				Extensions: nil,
@@ -49,8 +48,10 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
 			cfg: PingConfig{
-				Name:       "test-name",
-				Namespace:  "test-ns",
+				ObjectReference: corev1.ObjectReference{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
 				Schedule:   "* * * * ?",
 				JsonData:   "some data",
 				Extensions: map[string]string{"1": "one", "2": "two"},
@@ -60,31 +61,12 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			logger := logtesting.TestLogger(t)
+			ctx, _ := rectesting.SetupFakeContext(t)
+			logger := logging.FromContext(ctx).Sugar()
 			ce := adaptertesting.NewTestClient()
 
-			runner := NewCronJobsRunner(ce, logger)
-
-<<<<<<< HEAD
-			kc := testclient.NewSimpleClientset()
-			x := &v1alpha2.PingSource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "ping-name",
-					Namespace:  "ping-ns",
-					Generation: 17,
-				},
-				Spec:   v1alpha2.PingSourceSpec{},
-				Status: v1alpha2.PingSourceStatus{},
-			}
-
-			entryId, err := runner.AddSchedule(kc, x, "test-ns", "test-name", "* * * * ?", "some data", "a sink", tc.wantCEOverrides)
-
-			if err != nil {
-				t.Errorf("Should not throw error %v", err)
-			}
-=======
+			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
 			entryId := runner.AddSchedule(tc.cfg)
->>>>>>> adapter support watching configmap. Disabled by default
 
 			entry := runner.cron.Entry(entryId)
 			if entry.ID != entryId {
@@ -105,11 +87,40 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 	}
 }
 
+func TestUpdateConfigMap(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	logger := logging.FromContext(ctx).Sugar()
+	ce := adaptertesting.NewTestClient()
+	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+
+	cm := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": `
+{
+  "default/ping": {
+    "namespace": "default",
+    "name":"ping",
+    "schedule": "*/1 * * * *",
+    "jsonData":"{\"msg\": \"hello\"}",
+    "sinkUri": "http://event-display.default.svc.cluster.local"
+  }
+}`},
+	}
+
+	runner.updateFromConfigMap(cm)
+
+	_, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("missing cronjob entry")
+	}
+}
+
 func TestStartStopCron(t *testing.T) {
-	logger := logtesting.TestLogger(t)
+	ctx, _ := rectesting.SetupFakeContext(t)
+	logger := logging.FromContext(ctx).Sugar()
 	ce := adaptertesting.NewTestClient()
 
-	runner := NewCronJobsRunner(ce, logger)
+	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())

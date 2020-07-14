@@ -26,8 +26,12 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/client-go/kubernetes"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/record"
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/utils/cache"
 )
@@ -44,6 +48,9 @@ type cronJobsRunner struct {
 
 	// entryids records created cron jobs with the corresponding config
 	entryids map[string]entryIdConfig // key: resource namespace/name
+
+	// kubeClient for sending k8s events
+	kubeClient kubernetes.Interface
 }
 
 type entryIdConfig struct {
@@ -55,12 +62,13 @@ const (
 	resourceGroup = "pingsources.sources.knative.dev"
 )
 
-func NewCronJobsRunner(ceClient cloudevents.Client, logger *zap.SugaredLogger) *cronJobsRunner {
+func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interface, logger *zap.SugaredLogger) *cronJobsRunner {
 	return &cronJobsRunner{
-		cron:     *cron.New(),
-		Client:   ceClient,
-		Logger:   logger,
-		entryids: make(map[string]entryIdConfig),
+		cron:       *cron.New(),
+		Client:     ceClient,
+		Logger:     logger,
+		entryids:   make(map[string]entryIdConfig),
+		kubeClient: kubeClient,
 	}
 }
 
@@ -78,8 +86,8 @@ func (a *cronJobsRunner) AddSchedule(cfg PingConfig) cron.EntryID {
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, cfg.SinkURI)
 
-	//var kubeEventSink record.EventSink = &typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events(cfg.Namespace)}
-	//ctx = crstatusevent.ContextWithCRStatus(ctx, &kubeEventSink, "ping-source-mt-adapter", source, a.Logger.Infof)
+	var kubeEventSink record.EventSink = &typedcorev1.EventSinkImpl{Interface: a.kubeClient.CoreV1().Events(cfg.Namespace)}
+	ctx = crstatusevent.ContextWithCRStatus(ctx, &kubeEventSink, "ping-source-mt-adapter", &cfg.ObjectReference, a.Logger.Infof)
 
 	// Simple retry configuration to be less than 1mn.
 	// We might want to retry more times for less-frequent schedule.
@@ -151,6 +159,9 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 	}
 
 	for key, cfg := range cfgs {
+		cfg.APIVersion = sourcesv1alpha2.SchemeGroupVersion.String()
+		cfg.Kind = "PingSource"
+
 		// Is the schedule already cached?
 		if cfgid, ok := a.entryids[key]; ok {
 			if !equality.Semantic.DeepEqual(cfgid.config, cfg) {

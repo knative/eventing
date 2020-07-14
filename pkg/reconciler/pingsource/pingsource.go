@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"knative.dev/eventing/pkg/utils/cache"
-
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -111,9 +109,6 @@ type Reconciler struct {
 
 	// Leader election configuration for the mt receive adapter
 	leConfig string
-
-	// Persistent store
-	pstore cache.PersistedStore
 }
 
 // Check that our Reconciler implements ReconcileKind

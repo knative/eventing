@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"time"
 
+	"knative.dev/pkg/signals"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
@@ -35,7 +37,6 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
-	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
@@ -47,16 +48,6 @@ type Adapter interface {
 }
 
 type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client) Adapter
-
-func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
-
-	ctx := signals.NewContext()
-
-	// TODO(mattmoor): expose a flag that gates this?
-	// ctx = WithHAEnabled(ctx)
-
-	MainWithContext(ctx, component, ector, ctor)
-}
 
 type haEnabledKey struct{}
 
@@ -71,36 +62,28 @@ func IsHAEnabled(ctx context.Context) bool {
 	return val != nil
 }
 
+func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
+	ctx := signals.NewContext()
+
+	// TODO(mattmoor): expose a flag that gates this?
+	// ctx = WithHAEnabled(ctx)
+
+	MainWithContext(ctx, component, ector, ctor)
+}
+
 func MainWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
 	MainWithEnv(ctx, component, ConstructEnvOrDie(ector), ctor)
 }
 
 func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
-	// Setting up informers (if any)
-	if len(injection.Default.GetInformers()) > 0 || len(injection.Default.GetClients()) > 0 ||
-		len(injection.Default.GetDucks()) > 0 || len(injection.Default.GetInformerFactories()) > 0 {
-		log.Printf("Registering %d clients", len(injection.Default.GetClients()))
-		log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
-		log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
-		log.Printf("Registering %d ducks", len(injection.Default.GetDucks()))
+	ctx = SetupAndStartInformers(ctx, env.GetLogger())
+	MainWithInformers(ctx, component, env, ctor)
+}
 
-		cfg := sharedmain.ParseAndGetConfigOrDie()
-		ictx, informers := injection.Default.SetupInformers(ctx, cfg)
-		ctx = ictx
-
-		// Start the injection clients and informers.
-		go func(ctx context.Context) {
-			if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-				panic(fmt.Sprintf("Failed to start informers - %s", err))
-			}
-			<-ctx.Done()
-		}(ctx)
-	}
-
+func MainWithInformers(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
 	if !flag.Parsed() {
 		flag.Parse()
 	}
-
 	env.SetComponent(component)
 
 	logger := env.GetLogger()
@@ -202,6 +185,30 @@ func ConstructEnvOrDie(ector EnvConfigConstructor) EnvConfigAccessor {
 		log.Fatalf("Error processing env var: %s", err)
 	}
 	return env
+}
+
+func SetupAndStartInformers(ctx context.Context, logger *zap.SugaredLogger) context.Context {
+	// Run the injectors, but only if strictly necessary to relax the dependency on kubeconfig.
+	if len(injection.Default.GetInformers()) > 0 || len(injection.Default.GetClients()) > 0 ||
+		len(injection.Default.GetDucks()) > 0 || len(injection.Default.GetInformerFactories()) > 0 {
+		logger.Infof("Registering %d clients", len(injection.Default.GetClients()))
+		logger.Infof("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
+		logger.Infof("Registering %d informers", len(injection.Default.GetInformers()))
+		logger.Infof("Registering %d ducks", len(injection.Default.GetDucks()))
+
+		cfg := sharedmain.ParseAndGetConfigOrDie()
+		ictx, informers := injection.Default.SetupInformers(ctx, cfg)
+		ctx = ictx
+
+		// Start the injection clients and informers.
+		go func(ctx context.Context) {
+			if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+				panic(fmt.Sprintf("Failed to start informers - %s", err))
+			}
+			<-ctx.Done()
+		}(ctx)
+	}
+	return ctx
 }
 
 func flush(logger *zap.SugaredLogger) {

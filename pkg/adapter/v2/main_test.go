@@ -47,10 +47,10 @@ func TestMainWithContextNoLeaderElection(t *testing.T) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.TODO())
-
-	MainWithContext(ctx,
+	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
+	MainWithInformers(ctx,
 		"mycomponent",
-		func() EnvConfigAccessor { return &myEnvConfig{} },
+		env,
 		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
 			env := processed.(*myEnvConfig)
 
