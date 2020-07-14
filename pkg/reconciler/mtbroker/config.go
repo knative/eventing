@@ -26,12 +26,12 @@ import (
 	"go.uber.org/zap"
 
 	corev1 "k8s.io/api/core/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/logging"
 )
 
 type Config struct {
-	DefaultChannelTemplate messagingv1beta1.ChannelTemplateSpec
+	DefaultChannelTemplate messagingv1.ChannelTemplateSpec
 }
 
 const (
@@ -41,7 +41,7 @@ const (
 func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.ConfigMap) (*Config, error) {
 	return func(configMap *corev1.ConfigMap) (*Config, error) {
 		config := &Config{
-			DefaultChannelTemplate: messagingv1beta1.ChannelTemplateSpec{},
+			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{},
 		}
 
 		temp, present := configMap.Data[channelTemplateSpec]

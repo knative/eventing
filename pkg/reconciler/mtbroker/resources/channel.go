@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"knative.dev/eventing/pkg/apis/eventing"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -36,9 +36,9 @@ func BrokerChannelName(brokerName, channelType string) string {
 // test
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
 // for a given Broker.
-func NewChannel(channelType string, owner kmeta.OwnerRefable, channelTemplate *messagingv1beta1.ChannelTemplateSpec, l map[string]string) (*unstructured.Unstructured, error) {
+func NewChannel(channelType string, owner kmeta.OwnerRefable, channelTemplate *messagingv1.ChannelTemplateSpec, l map[string]string) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := messagingv1beta1.ChannelTemplateSpecInternal{
+	template := messagingv1.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       channelTemplate.Kind,
 			APIVersion: channelTemplate.APIVersion,

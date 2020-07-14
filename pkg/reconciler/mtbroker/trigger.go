@@ -28,8 +28,8 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
@@ -52,7 +52,7 @@ const (
 	subscriptionDeleted       = "SubscriptionDeleted"
 )
 
-func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1beta1.Broker, t *v1beta1.Trigger, brokerTrigger *corev1.ObjectReference) error {
+func (r *Reconciler) reconcileTrigger(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) error {
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
@@ -99,7 +99,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1beta1.Broker, t 
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1beta1.Broker, t *v1beta1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1beta1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1.Subscription, error) {
 	uri := &apis.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName("broker-filter", system.Namespace()),
@@ -122,14 +122,14 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1beta1.Br
 		// Issue #2842: Subscription name uses kmeta.ChildName. If a subscription by the previous name pattern is found, it should
 		// be deleted. This might cause temporary downtime.
 		if deprecatedName := utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)); deprecatedName != expected.Name {
-			if err := r.eventingClientSet.MessagingV1beta1().Subscriptions(t.Namespace).Delete(deprecatedName, &metav1.DeleteOptions{}); err != nil && !apierrs.IsNotFound(err) {
+			if err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Delete(deprecatedName, &metav1.DeleteOptions{}); err != nil && !apierrs.IsNotFound(err) {
 				return nil, fmt.Errorf("error deleting deprecated named subscription: %v", err)
 			}
 			controller.GetEventRecorder(ctx).Eventf(t, corev1.EventTypeNormal, subscriptionDeleted, "Deprecated subscription removed: \"%s/%s\"", t.Namespace, deprecatedName)
 		}
 
 		logging.FromContext(ctx).Info("Creating subscription")
-		sub, err = r.eventingClientSet.MessagingV1beta1().Subscriptions(t.Namespace).Create(expected)
+		sub, err = r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {
 			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
@@ -150,7 +150,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1beta1.Br
 	return sub, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1beta1.Trigger, expected, actual *messagingv1beta1.Subscription) (*messagingv1beta1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, t *eventingv1.Trigger, expected, actual *messagingv1.Subscription) (*messagingv1.Subscription, error) {
 	// Update Subscription if it has changed.
 	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
 		return actual, nil
@@ -160,14 +160,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1beta1.Trigg
 	// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
 	// it and re-create it instead.
 	logging.FromContext(ctx).Infow("Deleting subscription", zap.String("namespace", actual.Namespace), zap.String("name", actual.Name))
-	err := r.eventingClientSet.MessagingV1beta1().Subscriptions(t.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
+	err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
 		r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
 		return nil, err
 	}
 	logging.FromContext(ctx).Info("Creating subscription")
-	newSub, err := r.eventingClientSet.MessagingV1beta1().Subscriptions(t.Namespace).Create(expected)
+	newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(expected)
 	if err != nil {
 		logging.FromContext(ctx).Infow("Cannot create subscription", zap.Error(err))
 		r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
@@ -176,7 +176,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1beta1.Trigg
 	return newSub, nil
 }
 
-func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1beta1.Trigger) (*v1beta1.Trigger, error) {
+func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *eventingv1.Trigger) (*eventingv1.Trigger, error) {
 	trigger, err := r.triggerLister.Triggers(desired.Namespace).Get(desired.Name)
 	if err != nil {
 		return nil, err
@@ -190,12 +190,12 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1beta1.T
 	existing := trigger.DeepCopy()
 	existing.Status = desired.Status
 
-	return r.eventingClientSet.EventingV1beta1().Triggers(desired.Namespace).UpdateStatus(existing)
+	return r.eventingClientSet.EventingV1().Triggers(desired.Namespace).UpdateStatus(existing)
 }
 
-func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.Trigger, b *v1beta1.Broker) error {
-	if dependencyAnnotation, ok := t.GetAnnotations()[v1beta1.DependencyAnnotation]; ok {
-		dependencyObjRef, err := v1beta1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *eventingv1.Trigger, b *eventingv1.Broker) error {
+	if dependencyAnnotation, ok := t.GetAnnotations()[eventingv1.DependencyAnnotation]; ok {
+		dependencyObjRef, err := eventingv1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {
 			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
 			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
@@ -214,7 +214,7 @@ func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.T
 	return nil
 }
 
-func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1beta1.Trigger, dependencyObjRef corev1.ObjectReference) error {
+func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *eventingv1.Trigger, dependencyObjRef corev1.ObjectReference) error {
 	lister, err := r.kresourceTracker.ListerFor(dependencyObjRef)
 	if err != nil {
 		t.Status.MarkDependencyUnknown("ListerDoesNotExist", "Failed to retrieve lister: %v", err)
