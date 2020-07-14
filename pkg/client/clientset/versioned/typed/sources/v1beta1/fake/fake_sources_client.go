@@ -28,6 +28,10 @@ type FakeSourcesV1beta1 struct {
 	*testing.Fake
 }
 
+func (c *FakeSourcesV1beta1) ContainerSources(namespace string) v1beta1.ContainerSourceInterface {
+	return &FakeContainerSources{c, namespace}
+}
+
 func (c *FakeSourcesV1beta1) SinkBindings(namespace string) v1beta1.SinkBindingInterface {
 	return &FakeSinkBindings{c, namespace}
 }
