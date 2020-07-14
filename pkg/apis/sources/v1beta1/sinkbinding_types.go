@@ -62,7 +62,7 @@ type SinkBindingSpec struct {
 	//   and modifications of the event sent to the sink.
 	duckv1.SourceSpec `json:",inline"`
 
-	// inherits duck/v1alpha1 BindingSpec, which currently provides:
+	// inherits duck/v1beta1 BindingSpec, which currently provides:
 	// * Subject - Subject references the resource(s) whose "runtime contract"
 	//   should be augmented by Binding implementations.
 	duckv1beta1.BindingSpec `json:",inline"`

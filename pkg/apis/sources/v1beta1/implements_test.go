@@ -20,7 +20,7 @@ import (
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestTypesImplements(t *testing.T) {
@@ -31,7 +31,7 @@ func TestTypesImplements(t *testing.T) {
 		// SinkBinding
 		{instance: &SinkBinding{}, iface: &duckv1.Conditions{}},
 		{instance: &SinkBinding{}, iface: &duckv1.Source{}},
-		{instance: &SinkBinding{}, iface: &duckv1alpha1.Binding{}},
+		{instance: &SinkBinding{}, iface: &duckv1beta1.Binding{}},
 	}
 	for _, tc := range testCases {
 		if err := duck.VerifyType(tc.instance, tc.iface); err != nil {
