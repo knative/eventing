@@ -58,7 +58,7 @@ spec:
       storage: false
     - <<: *version
       name: v1beta1
-      served: true
+      served: false
       storage: false
   names:
     categories:
