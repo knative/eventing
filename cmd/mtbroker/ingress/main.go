@@ -158,7 +158,7 @@ func main() {
 		Defaulter:     broker.TTLDefaulter(logger, defaultTTL),
 		Reporter:      reporter,
 		Logger:        logger,
-		channelLister: channelLister,
+		ChannelLister: channelLister,
 	}
 
 	// configMapWatcher does not block, so start it first.

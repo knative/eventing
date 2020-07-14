@@ -67,6 +67,7 @@ func NewController(
 	logger := logging.FromContext(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
 	triggerInformer := triggerinformer.Get(ctx)
+	channelInformer := channelinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
@@ -84,6 +85,7 @@ func NewController(
 		kubeClientSet:      kubeclient.Get(ctx),
 		endpointsLister:    endpointsInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
 		brokerClass:        eventing.MTChannelBrokerClassValue,
 		configmapLister:    configmapInformer.Lister(),
@@ -101,6 +103,21 @@ func NewController(
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: brokerFilter,
 		Handler:    controller.HandleAll(impl.Enqueue),
+	})
+
+	channelInformer.Informer().AddEventHandler(controller.HandleAll(
+		func(obj interface{}) {
+			if channel, ok := obj.(*messagingv1beta1.Channel); ok {
+				impl.EnqueueKey(types.NamespacedName{Namespace: channel.Namespace, Name: channel.Name})
+			}
+		},
+	))
+
+	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
+	// that I own are changed.
+	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterControllerGK(v1beta1.Kind("Broker")),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
