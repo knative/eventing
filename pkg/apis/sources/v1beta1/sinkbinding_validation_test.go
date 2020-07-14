@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/tracker"
 )
 
@@ -40,7 +40,7 @@ func TestSinkBindingValidation(t *testing.T) {
 				Namespace: "moore",
 			},
 			Spec: SinkBindingSpec{
-				BindingSpec: duckv1alpha1.BindingSpec{
+				BindingSpec: duckv1beta1.BindingSpec{
 					Subject: tracker.Reference{
 						APIVersion: "apps/v1",
 						Kind:       "Deployment",
@@ -68,7 +68,7 @@ func TestSinkBindingValidation(t *testing.T) {
 				Namespace: "moore",
 			},
 			Spec: SinkBindingSpec{
-				BindingSpec: duckv1alpha1.BindingSpec{
+				BindingSpec: duckv1beta1.BindingSpec{
 					Subject: tracker.Reference{
 						APIVersion: "apps/v1",
 						Kind:       "Deployment",
@@ -97,7 +97,7 @@ func TestSinkBindingValidation(t *testing.T) {
 				Namespace: "moore",
 			},
 			Spec: SinkBindingSpec{
-				BindingSpec: duckv1alpha1.BindingSpec{
+				BindingSpec: duckv1beta1.BindingSpec{
 					Subject: tracker.Reference{
 						APIVersion: "apps/v1",
 						Kind:       "Deployment",
