@@ -182,7 +182,7 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 
 	if oldconfig, ok := cm.Data[ResourcesKey]; !ok || oldconfig != newconfig {
 		cm.Data[ResourcesKey] = newconfig
-		cm, err = p.kubeClient.CoreV1().ConfigMaps(p.namespace).Update(cm)
+		_, err = p.kubeClient.CoreV1().ConfigMaps(p.namespace).Update(cm)
 
 		if err != nil {
 			return err

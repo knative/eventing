@@ -24,12 +24,11 @@ import (
 	"net/http"
 	"time"
 
-	"knative.dev/pkg/signals"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -37,6 +36,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
+	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
@@ -62,6 +62,19 @@ func IsHAEnabled(ctx context.Context) bool {
 	return val != nil
 }
 
+type injectorEnabledKey struct{}
+
+// WithInjectorEnabled signals to MainWithInjectors that it should try to run injectors.
+func WithInjectorEnabled(ctx context.Context) context.Context {
+	return context.WithValue(ctx, injectorEnabledKey{}, struct{}{})
+}
+
+// IsInjectorEnabled checks the context for the desire to enable injectors
+func IsInjectorEnabled(ctx context.Context) bool {
+	val := ctx.Value(injectorEnabledKey{})
+	return val != nil
+}
+
 func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
 	ctx := signals.NewContext()
 
@@ -76,7 +89,9 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 }
 
 func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
-	ctx = SetupAndStartInformers(ctx, env.GetLogger())
+	if IsInjectorEnabled(ctx) {
+		ctx = SetupAndStartInformers(ctx, env.GetLogger())
+	}
 	MainWithInformers(ctx, component, env, ctor)
 }
 

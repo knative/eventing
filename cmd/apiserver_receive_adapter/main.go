@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"knative.dev/pkg/signals"
+
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/adapter/v2"
 )
@@ -26,5 +28,7 @@ const (
 )
 
 func main() {
-	adapter.Main(component, apiserver.NewEnvConfig, apiserver.NewAdapter)
+	ctx := signals.NewContext()
+	ctx = adapter.WithInjectorEnabled(ctx)
+	adapter.MainWithContext(ctx, component, apiserver.NewEnvConfig, apiserver.NewAdapter)
 }
