@@ -17,7 +17,6 @@ package cache
 
 import (
 	"context"
-
 	"testing"
 	"time"
 
@@ -163,7 +162,7 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 	updated := make(chan runtime.Object)
 	cs.PrependReactor("create", "configmaps",
 		func(action ktesting.Action) (bool, runtime.Object, error) {
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 			close(created)
 			return false, nil, nil
 		},
@@ -191,15 +190,17 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 	kr := newKResource("test-ns", "test-name")
 	informer.Add(kr)
 
-	select {
-	case <-created:
-		// We expect the configmap to be created.
-	case <-time.After(3 * time.Second):
-		t.Fatal("Timed out waiting for configmap creation.")
-	}
+	time.Sleep(500 * time.Millisecond)
 
 	kr2 := newKResource("test-ns", "test-name-2")
 	informer.Add(kr2) // interrupt
+
+	select {
+	case <-created:
+		// We expect the configmap to be created.
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timed out waiting for configmap creation.")
+	}
 
 	select {
 	case obj := <-updated:

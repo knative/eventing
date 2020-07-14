@@ -113,7 +113,7 @@ func NewPersistedStore(
 func (p *persistedStore) Run(ctx context.Context) {
 	logger := logging.FromContext(ctx)
 
-	// Sync now to make sure the ConfigMap resource exists
+	// Trigger a sync to make sure the ConfigMap resource exists
 	p.sync()
 
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
