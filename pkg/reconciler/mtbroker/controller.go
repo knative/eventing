@@ -27,13 +27,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
-	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
-	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
-	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/broker"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
+	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/apis"
@@ -94,7 +94,7 @@ func NewController(
 		}()
 	}
 
-	v1beta1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
+	eventingv1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
 		BrokerConditionIngress,
 		BrokerConditionTriggerChannel,
 		BrokerConditionFilter,
@@ -130,7 +130,7 @@ func NewController(
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
 	// that I own are changed.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1beta1.Kind("Broker")),
+		FilterFunc: controller.FilterControllerGK(eventingv1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
@@ -143,7 +143,7 @@ func NewController(
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
 		func(obj interface{}) {
-			if trigger, ok := obj.(*v1beta1.Trigger); ok {
+			if trigger, ok := obj.(*eventingv1.Trigger); ok {
 				impl.EnqueueKey(types.NamespacedName{Namespace: trigger.Namespace, Name: trigger.Spec.Broker})
 			}
 		},

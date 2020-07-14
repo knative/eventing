@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 func TestBrokerChannelName(t *testing.T) {
@@ -37,11 +37,11 @@ func TestBrokerChannelName(t *testing.T) {
 
 func TestNewChannel(t *testing.T) {
 	testCases := map[string]struct {
-		channelTemplate messagingv1beta1.ChannelTemplateSpec
+		channelTemplate messagingv1.ChannelTemplateSpec
 		expectError     bool
 	}{
 		"InMemoryChannel": {
-			channelTemplate: messagingv1beta1.ChannelTemplateSpec{
+			channelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: v1.TypeMeta{
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "InMemoryChannel",
@@ -49,7 +49,7 @@ func TestNewChannel(t *testing.T) {
 			},
 		},
 		"KafkaChannel": {
-			channelTemplate: messagingv1beta1.ChannelTemplateSpec{
+			channelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: v1.TypeMeta{
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "KafkaChannel",
@@ -57,7 +57,7 @@ func TestNewChannel(t *testing.T) {
 			},
 		},
 		"Bad raw extension": {
-			channelTemplate: messagingv1beta1.ChannelTemplateSpec{
+			channelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: v1.TypeMeta{
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "InMemoryChannel",
