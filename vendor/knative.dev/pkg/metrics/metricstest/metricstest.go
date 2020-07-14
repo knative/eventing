@@ -121,8 +121,15 @@ func CheckDistributionCount(t test.T, name string, wantTags map[string]string, e
 // CheckLastValueData checks the view with a name matching string name to verify that the LastValueData stats
 // reported are tagged with the tags in wantTags and that wantValue matches reported last value.
 func CheckLastValueData(t test.T, name string, wantTags map[string]string, wantValue float64) {
+	CheckLastValueDataWithMeter(t, name, wantTags, wantValue, nil)
+}
+
+// CheckLastValueDataWithMeter checks the  view with a name matching the string name in the
+// specified Meter (resource-specific view) to verify that the LastValueData stats are tagged with
+// the tags in wantTags and that wantValue matches the last reported value.
+func CheckLastValueDataWithMeter(t test.T, name string, wantTags map[string]string, wantValue float64, meter view.Meter) {
 	t.Helper()
-	if row := lastRow(t, name); row != nil {
+	if row := lastRow(t, name, meter); row != nil {
 		checkRowTags(t, row, name, wantTags)
 
 		if s, ok := row.Data.(*view.LastValueData); !ok {
@@ -166,9 +173,15 @@ func Unregister(names ...string) {
 	}
 }
 
-func lastRow(t test.T, name string) *view.Row {
+func lastRow(t test.T, name string, meter view.Meter) *view.Row {
 	t.Helper()
-	d, err := view.RetrieveData(name)
+	var d []*view.Row
+	var err error
+	if meter != nil {
+		d, err = meter.RetrieveData(name)
+	} else {
+		d, err = view.RetrieveData(name)
+	}
 	if err != nil {
 		t.Error("Reporter.Report() error", "metric", name, "error", err)
 		return nil
