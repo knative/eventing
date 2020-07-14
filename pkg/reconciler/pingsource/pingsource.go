@@ -64,7 +64,6 @@ const (
 	component                = "pingsource"
 	mtcomponent              = "pingsource-mt-adapter"
 	mtadapterName            = "pingsource-mt-adapter"
-	mtconfigmapName          = "config-pingsource-mt-adapter"
 	stadapterClusterRoleName = "knative-eventing-pingsource-adapter"
 )
 

@@ -31,5 +31,5 @@ func main() {
 	ctx := signals.NewContext()
 	ctx = adapter.WithConfigMapWatcherEnabled(ctx)
 	ctx = adapter.WithInjectorEnabled(ctx)
-	adapter.MainWithContext(ctx, "pingsource-mt-adapter", mtping.NewEnvConfig, mtping.NewAdapter)
+	adapter.MainWithContext(ctx, component, mtping.NewEnvConfig, mtping.NewAdapter)
 }

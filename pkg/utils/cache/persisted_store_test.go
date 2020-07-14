@@ -58,12 +58,12 @@ func TestPersistedStore(t *testing.T) {
 		cmName = "test-cm-name"
 	)
 	cs := fake.NewSimpleClientset()
-	created := make(chan struct{})
+	created := make(chan runtime.Object)
 	updated := make(chan runtime.Object)
 	done := make(chan bool)
 	cs.PrependReactor("create", "configmaps",
 		func(action ktesting.Action) (bool, runtime.Object, error) {
-			close(created)
+			created <- action.(ktesting.CreateAction).GetObject()
 			return false, nil, nil
 		},
 	)
@@ -93,8 +93,12 @@ func TestPersistedStore(t *testing.T) {
 	informer.Add(kr)
 
 	select {
-	case <-created:
+	case obj := <-created:
 		// We expect the configmap to be created.
+		cm := obj.(*corev1.ConfigMap)
+		if value, ok := cm.Labels[ComponentLabelKey]; !ok || value != "my-component" {
+			t.Fatalf("Missing %s label. Got %v", ComponentLabelKey, cm)
+		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timed out waiting for configmap creation.")
 	}
@@ -158,12 +162,12 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 		cmName = "test-cm-name"
 	)
 	cs := fake.NewSimpleClientset()
-	created := make(chan struct{})
+	created := make(chan runtime.Object)
 	updated := make(chan runtime.Object)
 	cs.PrependReactor("create", "configmaps",
 		func(action ktesting.Action) (bool, runtime.Object, error) {
 			time.Sleep(1 * time.Second)
-			close(created)
+			created <- action.(ktesting.CreateAction).GetObject()
 			return false, nil, nil
 		},
 	)
@@ -196,8 +200,12 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 	informer.Add(kr2) // interrupt
 
 	select {
-	case <-created:
+	case obj := <-created:
 		// We expect the configmap to be created.
+		cm := obj.(*corev1.ConfigMap)
+		if value, ok := cm.Labels[ComponentLabelKey]; !ok || value != "my-component" {
+			t.Fatalf("Missing %s label. Got %v", ComponentLabelKey, cm)
+		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("Timed out waiting for configmap creation.")
 	}

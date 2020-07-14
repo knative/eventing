@@ -52,7 +52,9 @@ func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloud
 // Start implements adapter.Adapter
 func (a *mtpingAdapter) Start(ctx context.Context) error {
 	a.logger.Info("Starting job runner...")
-	a.runner.Start(ctx.Done())
+	if err := a.runner.Start(ctx.Done()); err != nil {
+		return err
+	}
 
 	a.logger.Infof("runner stopped")
 	return nil

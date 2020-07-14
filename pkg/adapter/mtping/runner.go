@@ -138,6 +138,7 @@ func message(body string) interface{} {
 }
 
 func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
+	a.Logger.Info("synchronizing configmap")
 	data, ok := cm.Data[cache.ResourcesKey]
 	if !ok {
 		// Shouldn't happened.
@@ -165,14 +166,17 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 		// Is the schedule already cached?
 		if cfgid, ok := a.entryids[key]; ok {
 			if !equality.Semantic.DeepEqual(cfgid.config, cfg) {
+				a.Logger.Infof("updating schedule", zap.Any("key", key))
 				// Recreate cronjob
 				a.RemoveSchedule(cfgid.entryID)
 				cfgid.entryID = a.AddSchedule(cfg)
 				cfgid.config = &cfg
+
 			} else {
 				// cron jon exists and correctly configure. noop.
 			}
 		} else {
+			a.Logger.Infof("adding schedule", zap.Any("key", key))
 			// Create cronjob
 			a.entryids[key] = entryIdConfig{
 				entryID: a.AddSchedule(cfg),
@@ -185,6 +189,7 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 
 	for key := range keys {
 		if cfgid, ok := a.entryids[key]; ok {
+			a.Logger.Infof("deleting schedule", zap.Any("key", key))
 			a.RemoveSchedule(cfgid.entryID)
 		}
 	}

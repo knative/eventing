@@ -206,7 +206,7 @@ func (p *persistedStore) load() (*corev1.ConfigMap, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      p.name,
 				Namespace: p.namespace,
-				Annotations: map[string]string{
+				Labels: map[string]string{
 					ComponentLabelKey: p.component,
 				},
 			},
