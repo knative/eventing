@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/tracker"
 )
 
@@ -53,7 +53,7 @@ func TestSinkBindingGetGroupVersionKind(t *testing.T) {
 func TestSinkBindingGetters(t *testing.T) {
 	r := &SinkBinding{
 		Spec: SinkBindingSpec{
-			BindingSpec: duckv1alpha1.BindingSpec{
+			BindingSpec: duckv1beta1.BindingSpec{
 				Subject: tracker.Reference{
 					APIVersion: "foo",
 				},
@@ -74,7 +74,7 @@ func TestSinkBindingGetters(t *testing.T) {
 func TestSinkBindingSetObsGen(t *testing.T) {
 	r := &SinkBinding{
 		Spec: SinkBindingSpec{
-			BindingSpec: duckv1alpha1.BindingSpec{
+			BindingSpec: duckv1beta1.BindingSpec{
 				Subject: tracker.Reference{
 					APIVersion: "foo",
 				},
