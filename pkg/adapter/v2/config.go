@@ -191,7 +191,6 @@ func (e *EnvConfig) GetLeaderElectionConfig() (*kle.ComponentConfig, error) {
 
 func defaultLeaderElectionConfig() *kle.ComponentConfig {
 	return &kle.ComponentConfig{
-		ResourceLock:  "leases",
 		Buckets:       1,
 		LeaseDuration: 15 * time.Second,
 		RenewDeadline: 10 * time.Second,
