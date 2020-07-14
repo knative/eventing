@@ -273,7 +273,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		}
 		set := gks[gk]
 		if set == nil {
-			set = sets.NewString()
+			set = make(sets.String, 1)
 		}
 		set.Insert(gv.Version)
 		gks[gk] = set
