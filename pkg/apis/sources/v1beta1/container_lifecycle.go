@@ -19,7 +19,6 @@ package v1beta1
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 )
 
@@ -66,8 +65,7 @@ func (s *ContainerSourceStatus) InitializeConditions() {
 
 // PropagateSinkBindingStatus uses the availability of the provided Deployment to determine if
 // ContainerSourceConditionSinkBindingReady should be marked as true, false or unknown.
-// TODO: Move SinkBindingStatus to v1beta1 once it has newer types: https://github.com/knative/eventing/issues/3544
-func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *v1alpha2.SinkBindingStatus) {
+func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingStatus) {
 	// Do not copy conditions nor observedGeneration
 	conditions := s.Conditions
 	observedGeneration := s.ObservedGeneration
