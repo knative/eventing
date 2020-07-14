@@ -17,6 +17,7 @@ package adapter
 
 import (
 	"encoding/json"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -190,6 +191,10 @@ func (e *EnvConfig) GetLeaderElectionConfig() (*kle.ComponentConfig, error) {
 
 func defaultLeaderElectionConfig() *kle.ComponentConfig {
 	return &kle.ComponentConfig{
-		LeaderElect: false,
+		ResourceLock:  "leases",
+		Buckets:       1,
+		LeaseDuration: 15 * time.Second,
+		RenewDeadline: 10 * time.Second,
+		RetryPeriod:   2 * time.Second,
 	}
 }

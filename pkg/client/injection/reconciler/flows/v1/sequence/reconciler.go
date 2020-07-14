@@ -108,6 +108,10 @@ type reconcilerImpl struct {
 
 	// finalizerName is the name of the finalizer to reconcile.
 	finalizerName string
+
+	// skipStatusUpdates configures whether or not this reconciler automatically updates
+	// the status of the reconciled resource.
+	skipStatusUpdates bool
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -159,6 +163,9 @@ func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client versio
 		}
 		if opts.FinalizerName != "" {
 			rec.finalizerName = opts.FinalizerName
+		}
+		if opts.SkipStatusUpdates {
+			rec.skipStatusUpdates = true
 		}
 	}
 
@@ -259,19 +266,26 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Synchronize the status.
-	if equality.Semantic.DeepEqual(original.Status, resource.Status) {
+	switch {
+	case r.skipStatusUpdates:
+		// This reconciler implementation is configured to skip resource updates.
+		// This may mean this reconciler does not observe spec, but reconciles external changes.
+	case equality.Semantic.DeepEqual(original.Status, resource.Status):
 		// If we didn't change anything then don't call updateStatus.
 		// This is important because the copy we loaded from the injectionInformer's
 		// cache may be stale and we don't want to overwrite a prior update
 		// to status with this stale state.
-	} else if !isLeader {
+	case !isLeader:
+		// High-availability reconcilers may have many replicas watching the resource, but only
+		// the elected leader is expected to write modifications.
 		logger.Warn("Saw status changes when we aren't the leader!")
-		// TODO: Consider logging the diff at Debug?
-	} else if err = r.updateStatus(original, resource); err != nil {
-		logger.Warnw("Failed to update resource status", zap.Error(err))
-		r.Recorder.Eventf(resource, corev1.EventTypeWarning, "UpdateFailed",
-			"Failed to update status for %q: %v", resource.Name, err)
-		return err
+	default:
+		if err = r.updateStatus(original, resource); err != nil {
+			logger.Warnw("Failed to update resource status", zap.Error(err))
+			r.Recorder.Eventf(resource, corev1.EventTypeWarning, "UpdateFailed",
+				"Failed to update status for %q: %v", resource.Name, err)
+			return err
+		}
 	}
 
 	// Report the reconciler event, if any.

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"go.opencensus.io/stats/view"
+	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/source"
 
@@ -60,12 +61,8 @@ func TestMainMessageAdapter(t *testing.T) {
 				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
 			}
 
-			leConfig, err := env.GetLeaderElectionConfig()
-			if err != nil {
-				t.Errorf("Expected no error: %v", err)
-			}
-			if leConfig.LeaderElect {
-				t.Errorf("Expected LeaderElect to be false, got: %t", leConfig.LeaderElect)
+			if leaderelection.HasLeaderElection(ctx) {
+				t.Error("Expected no leader election, but got leader election")
 			}
 			return &myAdapterBindings{}
 		})

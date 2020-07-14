@@ -23,7 +23,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	. "knative.dev/pkg/configmap/testing"
 	"knative.dev/pkg/kmeta"
@@ -32,12 +31,11 @@ import (
 
 func okConfig() *kle.Config {
 	return &kle.Config{
-		ResourceLock:      "leases",
-		Buckets:           1,
-		LeaseDuration:     15 * time.Second,
-		RenewDeadline:     10 * time.Second,
-		RetryPeriod:       2 * time.Second,
-		EnabledComponents: sets.NewString("controller", "inmemorychannel-dispatcher", "inmemorychannel-controller", "broker-controller", "webhook", "pingsource-mt-adapter"),
+		ResourceLock:  "leases",
+		Buckets:       1,
+		LeaseDuration: 15 * time.Second,
+		RenewDeadline: 10 * time.Second,
+		RetryPeriod:   2 * time.Second,
 	}
 }
 
@@ -46,10 +44,9 @@ func okData() map[string]string {
 		// values in this data come from the defaults suggested in the
 		// code:
 		// https://github.com/kubernetes/client-go/blob/kubernetes-1.16.0/tools/leaderelection/leaderelection.go
-		"leaseDuration":     "15s",
-		"renewDeadline":     "10s",
-		"retryPeriod":       "2s",
-		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller,broker-controller,webhook,pingsource-mt-adapter",
+		"leaseDuration": "15s",
+		"renewDeadline": "10s",
+		"retryPeriod":   "2s",
 	}
 }
 
@@ -63,12 +60,6 @@ func TestValidateConfig(t *testing.T) {
 		name:     "OK",
 		data:     okData(),
 		expected: okConfig(),
-	}, {
-		name: "invalid component",
-		data: kmeta.UnionMaps(okData(), map[string]string{
-			"enabledComponents": "controller,frobulator",
-		}),
-		err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher" "pingsource-mt-adapter" "webhook"]`),
 	}, {
 		name: "invalid config",
 		data: kmeta.UnionMaps(okData(), map[string]string{
@@ -91,7 +82,7 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func TestServingConfig(t *testing.T) {
+func TestEventingConfig(t *testing.T) {
 	actual, example := ConfigMapsFromTestFile(t, "config-leader-election")
 	for _, test := range []struct {
 		name string
@@ -110,12 +101,11 @@ func TestServingConfig(t *testing.T) {
 	}, {
 		name: "Example config",
 		want: &kle.Config{
-			ResourceLock:      "leases",
-			Buckets:           1,
-			LeaseDuration:     15 * time.Second,
-			RenewDeadline:     10 * time.Second,
-			RetryPeriod:       2 * time.Second,
-			EnabledComponents: validComponents,
+			ResourceLock:  "leases",
+			Buckets:       1,
+			LeaseDuration: 15 * time.Second,
+			RenewDeadline: 10 * time.Second,
+			RetryPeriod:   2 * time.Second,
 		},
 		data: example,
 	}} {

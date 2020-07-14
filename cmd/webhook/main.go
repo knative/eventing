@@ -27,7 +27,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
-	kle "knative.dev/pkg/leaderelection"
+	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
 	tracingconfig "knative.dev/pkg/tracing/config"
@@ -55,7 +55,6 @@ import (
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	"knative.dev/eventing/pkg/leaderelection"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
@@ -185,8 +184,8 @@ func NewConfigValidationController(ctx context.Context, _ configmap.Watcher) *co
 		configmap.Constructors{
 			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
 			// metrics.ConfigMapName():   metricsconfig.NewObservabilityConfigFromConfigMap,
-			logging.ConfigMapName(): logging.NewConfigFromConfigMap,
-			kle.ConfigMapName():     leaderelection.ValidateConfig,
+			logging.ConfigMapName():        logging.NewConfigFromConfigMap,
+			leaderelection.ConfigMapName(): leaderelection.NewConfigFromConfigMap,
 		},
 	)
 }

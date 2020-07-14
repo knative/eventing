@@ -26,6 +26,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
@@ -34,6 +35,9 @@ import (
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
 // outbound events and report outbound event counts.
 func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (cloudevents.Client, error) {
+	return NewCloudEventsClientCRStatus(target, ceOverrides, reporter, nil)
+}
+func NewCloudEventsClientCRStatus(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (cloudevents.Client, error) {
 	pOpts := make([]http.Option, 0)
 	if len(target) > 0 {
 		pOpts = append(pOpts, cloudevents.WithTarget(target))
@@ -48,20 +52,26 @@ func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides
 	}
 
 	ceClient, err := cloudevents.NewClientObserved(p, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
+
+	if crStatusEventClient == nil {
+		crStatusEventClient = crstatusevent.GetDefaultClient()
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &client{
-		ceClient:    ceClient,
-		ceOverrides: ceOverrides,
-		reporter:    reporter,
+		ceClient:            ceClient,
+		ceOverrides:         ceOverrides,
+		reporter:            reporter,
+		crStatusEventClient: *crStatusEventClient,
 	}, nil
 }
 
 type client struct {
-	ceClient    cloudevents.Client
-	ceOverrides *duckv1.CloudEventOverrides
-	reporter    source.StatsReporter
+	ceClient            cloudevents.Client
+	ceOverrides         *duckv1.CloudEventOverrides
+	reporter            source.StatsReporter
+	crStatusEventClient crstatusevent.CRStatusEventClient
 }
 
 var _ cloudevents.Client = (*client)(nil)
@@ -117,6 +127,8 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 
 		_ = c.reporter.ReportEventCount(reportArgs, res.StatusCode)
 	} else {
+		c.crStatusEventClient.ReportCRStatusEvent(ctx, result)
+
 		var res *http.Result
 		if !cloudevents.ResultAs(result, &res) {
 			return c.reportError(reportArgs, result)

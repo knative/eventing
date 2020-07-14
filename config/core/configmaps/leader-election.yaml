@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
   annotations:
-    knative.dev/example-checksum: "f7320456"
+    knative.dev/example-checksum: "6cf53e10"
 data:
   _example: |
     ################################
@@ -49,13 +49,3 @@ data:
     # retryPeriod is how long the leader election client waits between tries of
     # actions; 2 seconds is the value used by core kuberntes controllers.
     retryPeriod: "2s"
-
-    # enabledComponents is a comma-delimited list of component names for which
-    # leader election is enabled. Valid values are:
-    #
-    # - controller
-    # - broker-controller
-    # - inmemorychannel-dispatcher
-    # - inmemorychannel-controller
-    # - pingsource-mt-adapter
-    enabledComponents: "controller,broker-controller,inmemorychannel-dispatcher,inmemorychannel-controller,webhook,pingsource-mt-adapter"
