@@ -21,7 +21,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
-	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
@@ -30,7 +29,7 @@ import (
 // mtpingAdapter implements the PingSource mt adapter to sinks
 type mtpingAdapter struct {
 	logger *zap.SugaredLogger
-	client cloudevents.Client
+	runner *cronJobsRunner
 }
 
 func NewEnvConfig() adapter.EnvConfigAccessor {
@@ -38,24 +37,22 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 }
 
 func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
+	runner := NewCronJobsRunner(ceClient, logging.FromContext(ctx))
+
+	cmw := adapter.ConfigMapWatcherFromContext(ctx)
+	cmw.Watch("config-pingsource-mt-adapter", runner.updateFromConfigMap)
+
 	return &mtpingAdapter{
 		logger: logging.FromContext(ctx),
-		client: ceClient,
+		runner: runner,
 	}
 }
 
 // Start implements adapter.Adapter
 func (a *mtpingAdapter) Start(ctx context.Context) error {
-	runner := NewCronJobsRunner(a.client, a.logger)
-
-	ctrl := NewController(ctx, runner)
-
-	a.logger.Info("Starting controllers...")
-	go controller.StartAll(ctx, ctrl)
-
 	a.logger.Info("Starting job runner...")
-	runner.Start(ctx.Done())
+	a.runner.Start(ctx.Done())
 
-	a.logger.Infof("controller and runner stopped")
+	a.logger.Infof("runner stopped")
 	return nil
 }

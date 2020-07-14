@@ -25,20 +25,37 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
+<<<<<<< HEAD
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+=======
+>>>>>>> adapter support watching configmap. Disabled by default
 	logtesting "knative.dev/pkg/logging/testing"
 )
 
 func TestAddRunRemoveSchedules(t *testing.T) {
 
 	testCases := map[string]struct {
-		wantCEOverrides *duckv1.CloudEventOverrides
+		cfg PingConfig
 	}{
 		"TestAddRunRemoveSchedule": {
-			wantCEOverrides: nil,
+			cfg: PingConfig{
+				Name:       "test-name",
+				Namespace:  "test-ns",
+				Schedule:   "* * * * ?",
+				JsonData:   "some data",
+				Extensions: nil,
+				SinkURI:    "a sink",
+			},
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
-			wantCEOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"1": "one", "2": "two"}},
+			cfg: PingConfig{
+				Name:       "test-name",
+				Namespace:  "test-ns",
+				Schedule:   "* * * * ?",
+				JsonData:   "some data",
+				Extensions: map[string]string{"1": "one", "2": "two"},
+				SinkURI:    "a sink",
+			},
 		},
 	}
 	for n, tc := range testCases {
@@ -48,6 +65,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			runner := NewCronJobsRunner(ce, logger)
 
+<<<<<<< HEAD
 			kc := testclient.NewSimpleClientset()
 			x := &v1alpha2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -64,6 +82,9 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			if err != nil {
 				t.Errorf("Should not throw error %v", err)
 			}
+=======
+			entryId := runner.AddSchedule(tc.cfg)
+>>>>>>> adapter support watching configmap. Disabled by default
 
 			entry := runner.cron.Entry(entryId)
 			if entry.ID != entryId {
@@ -72,7 +93,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, `{"body":"some data"}`, tc.wantCEOverrides)
+			validateSent(t, ce, `{"body":"some data"}`, tc.cfg.Extensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -112,7 +133,7 @@ func TestStartStopCron(t *testing.T) {
 }
 
 func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string,
-	wantCEOverrides *duckv1.CloudEventOverrides) {
+	extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
@@ -123,20 +144,22 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 
 	gotExtensions := ce.Sent()[0].Context.GetExtensions()
 
-	if wantCEOverrides == nil && gotExtensions != nil {
+	if extensions == nil && gotExtensions != nil {
 		t.Errorf("Expected event with no extension overrides got %v", gotExtensions)
 	}
 
-	if wantCEOverrides != nil && gotExtensions == nil {
+	if extensions != nil && gotExtensions == nil {
 		t.Errorf("Expected event with extension overrides got nil")
 	}
-	if wantCEOverrides != nil {
+
+	if extensions != nil {
 		compareTo := map[string]interface{}{}
-		for k, v := range wantCEOverrides.Extensions {
+		for k, v := range extensions {
 			compareTo[k] = v
 		}
 		if !reflect.DeepEqual(compareTo, gotExtensions) {
-			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", wantCEOverrides, gotExtensions)
+			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", extensions, gotExtensions)
 		}
 	}
+
 }

@@ -25,20 +25,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkglabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/logging"
 )
 
 const (
-	resourcesKey       = "resources.json"
-	configResourcesKey = "eventing.knative.dev/config-resources"
+	// ResourcesKey is the configmap key holding resources
+	ResourcesKey = "resources.json"
+
+	// ComponentLabelKey is the label added to ConfigMaps
+	ComponentLabelKey = "eventing.knative.dev/component"
 )
 
 // PersistedStore persists cache.Store objects to a single ConfigMap.
@@ -46,13 +47,15 @@ type PersistedStore interface {
 
 	// Run starts persisting the cache store to the configmap-backed store
 	Run(ctx context.Context)
-
-	// Mounted tells us that pods with the given labels mount our configmap
-	// We refresh them after a successful update
-	Mounted(namespace string, labels pkglabels.Set)
 }
 
+// Projector projects the given object to the persisted object
+type Projector func(interface{}) interface{}
+
 type persistedStore struct {
+	// Component associated to this store
+	component string
+
 	// kubeClient is the client use to manage kube objects
 	kubeClient kubernetes.Interface
 
@@ -65,38 +68,42 @@ type persistedStore struct {
 	// store is the in-memory cache
 	store cache.Store
 
-	// Filter function
-	filter func(interface{}) bool
+	// Projector function transforms objects before being persisted
+	// If the returned object is nil, it is not persisted.
+	project func(interface{}) interface{}
 
 	// sync channel
 	syncCh chan bool
 
 	// syncing state (idle: 0, syncing: 1)
 	syncing int32
-
-	// Pods to refresh
-	mounted map[string][]string
 }
 
 // NewPersistedStore creates a persisted store for the given informer
-func NewPersistedStore(kubeClient kubernetes.Interface, namespace string, name string, informer cache.SharedInformer,
-	filter func(interface{}) bool) PersistedStore {
+func NewPersistedStore(
+	component string,
+	kubeClient kubernetes.Interface,
+	namespace string,
+	name string,
+	informer cache.SharedInformer,
+	projector Projector) PersistedStore {
 
-	if filter == nil {
-		filter = func(interface{}) bool {
-			return true
+	if projector == nil {
+		// identity projection
+		projector = func(v interface{}) interface{} {
+			return v
 		}
 	}
 
 	pstore := &persistedStore{
+		component:  component,
 		kubeClient: kubeClient,
 		namespace:  namespace,
 		name:       name,
 		store:      informer.GetStore(),
-		filter:     filter,
+		project:    projector,
 		syncCh:     make(chan bool, 1),
 		syncing:    0,
-		mounted:    make(map[string][]string),
 	}
 	informer.AddEventHandler(pstore)
 
@@ -106,7 +113,7 @@ func NewPersistedStore(kubeClient kubernetes.Interface, namespace string, name s
 func (p *persistedStore) Run(ctx context.Context) {
 	logger := logging.FromContext(ctx)
 
-	// Sync now to make sure the configmap exists
+	// Sync now to make sure the ConfigMap resource exists
 	p.sync()
 
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
@@ -126,25 +133,6 @@ func (p *persistedStore) Run(ctx context.Context) {
 	}, 10*time.Millisecond)
 }
 
-func (p *persistedStore) Mounted(namespace string, labels pkglabels.Set) {
-	selector := pkglabels.SelectorFromSet(labels).String()
-
-	// Avoid duplicates
-	selectors, ok := p.mounted[namespace]
-	if !ok {
-		p.mounted[namespace] = []string{selector}
-		return
-	}
-
-	for _, s := range selectors {
-		if s == selector {
-			return
-		}
-	}
-
-	p.mounted[namespace] = append(selectors, selector)
-}
-
 // Sync triggers the synchronization process.
 // If a sync is already taking place, it is interrupted before triggering it.
 func (p *persistedStore) sync() {
@@ -162,16 +150,14 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 		return err
 	}
 
+	// TODO: add support for partitioning
+
 	config := make(map[string]string)
 	objs := p.store.List()
 	for _, obj := range objs {
 		if len(stopCh) > 0 || atomic.LoadInt32(&p.syncing) == 0 {
-			// either cancel or interrupted.
+			// either cancelled or interrupted.
 			return nil
-		}
-
-		if !p.filter(obj) {
-			continue
 		}
 
 		// Only add object that are ready
@@ -180,15 +166,17 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 			continue
 		}
 
-		spec := obj.(apis.HasSpec).GetUntypedSpec()
-		bspec, err := json.Marshal(spec)
-		if err != nil {
-			return err
-		}
-		sspec := string(bspec)
-
 		key := kr.GetNamespace() + "/" + kr.GetName()
-		config[key] = sspec
+		if projected := p.project(obj); projected != nil {
+			bprojected, err := json.Marshal(projected)
+			if err != nil {
+				return err
+			}
+			config[key] = string(bprojected)
+		} else {
+			delete(config, key)
+		}
+
 	}
 
 	bconfig, err := json.Marshal(config)
@@ -197,15 +185,13 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 	}
 	newconfig := string(bconfig)
 
-	if oldconfig, ok := cm.Data[resourcesKey]; !ok || oldconfig != newconfig {
-		cm.Data[resourcesKey] = newconfig
+	if oldconfig, ok := cm.Data[ResourcesKey]; !ok || oldconfig != newconfig {
+		cm.Data[ResourcesKey] = newconfig
 		cm, err = p.kubeClient.CoreV1().ConfigMaps(p.namespace).Update(cm)
 
 		if err != nil {
 			return err
 		}
-
-		return p.refreshPods(stopCh, cm.ResourceVersion)
 	}
 	return nil
 }
@@ -225,6 +211,9 @@ func (p *persistedStore) load() (*corev1.ConfigMap, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      p.name,
 				Namespace: p.namespace,
+				Annotations: map[string]string{
+					ComponentLabelKey: p.component,
+				},
 			},
 			Data: map[string]string{},
 		}
@@ -237,53 +226,14 @@ func (p *persistedStore) load() (*corev1.ConfigMap, error) {
 	return cm, nil
 }
 
-func (p *persistedStore) refreshPods(stopCh <-chan struct{}, version string) error {
-	for namespace, selectors := range p.mounted {
-		for _, selector := range selectors {
-			// TODO: maybe use a lister.
-
-			podsInNamespace := p.kubeClient.CoreV1().Pods(namespace)
-			pods, err := podsInNamespace.List(metav1.ListOptions{
-				LabelSelector: selector,
-			})
-			if err != nil {
-				return err
-			}
-
-			for _, pod := range pods.Items {
-				if len(stopCh) > 0 || atomic.LoadInt32(&p.syncing) == 0 {
-					// either cancel or interrupted.
-					return nil
-				}
-
-				current, ok := pod.Annotations[configResourcesKey]
-				if !ok || current != version {
-					pod.Annotations[configResourcesKey] = version
-					_, err := podsInNamespace.Update(&pod)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	return nil
+func (p *persistedStore) OnAdd(interface{}) {
+	p.sync()
 }
 
-func (p *persistedStore) OnAdd(obj interface{}) {
-	if p.filter(obj) {
-		p.sync()
-	}
+func (p *persistedStore) OnUpdate(interface{}, interface{}) {
+	p.sync()
 }
 
-func (p *persistedStore) OnUpdate(oldObj, newObj interface{}) {
-	if p.filter(newObj) {
-		p.sync()
-	}
-}
-
-func (p *persistedStore) OnDelete(obj interface{}) {
-	if p.filter(obj) {
-		p.sync()
-	}
+func (p *persistedStore) OnDelete(interface{}) {
+	p.sync()
 }

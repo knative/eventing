@@ -19,6 +19,7 @@ package adapter
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -27,14 +28,18 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
-	"knative.dev/eventing/pkg/leaderelection"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	"knative.dev/eventing/pkg/leaderelection"
 )
 
 type Adapter interface {
@@ -67,12 +72,35 @@ func IsHAEnabled(ctx context.Context) bool {
 }
 
 func MainWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
-	flag.Parse()
+	MainWithEnv(ctx, component, ConstructEnvOrDie(ector), ctor)
+}
 
-	env := ector()
-	if err := envconfig.Process("", env); err != nil {
-		log.Fatalf("Error processing env var: %s", err)
+func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
+	// Setting up informers (if any)
+	if len(injection.Default.GetInformers()) > 0 || len(injection.Default.GetClients()) > 0 ||
+		len(injection.Default.GetDucks()) > 0 || len(injection.Default.GetInformerFactories()) > 0 {
+		log.Printf("Registering %d clients", len(injection.Default.GetClients()))
+		log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
+		log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
+		log.Printf("Registering %d ducks", len(injection.Default.GetDucks()))
+
+		cfg := sharedmain.ParseAndGetConfigOrDie()
+		ictx, informers := injection.Default.SetupInformers(ctx, cfg)
+		ctx = ictx
+
+		// Start the injection clients and informers.
+		go func(ctx context.Context) {
+			if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+				panic(fmt.Sprintf("Failed to start informers - %s", err))
+			}
+			<-ctx.Done()
+		}(ctx)
 	}
+
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
 	env.SetComponent(component)
 
 	logger := env.GetLogger()
@@ -134,8 +162,20 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
 
+	if IsConfigMapWatcherEnabled(ctx) {
+		cmw := SetupConfigMapWatchOrDie(ctx, component, env.GetNamespace())
+		ctx = WithConfigMapWatcher(ctx, cmw)
+	}
+
 	// Configuring the adapter
 	adapter := ctor(ctx, env, eventsClient)
+
+	if IsConfigMapWatcherEnabled(ctx) {
+		logger.Info("Starting configuration manager...")
+		if err := ConfigMapWatcherFromContext(ctx).Start(ctx.Done()); err != nil {
+			logger.Fatalw("Failed to start configuration manager", zap.Error(err))
+		}
+	}
 
 	// Build the leader elector
 	leConfig, err := env.GetLeaderElectionConfig()
@@ -154,6 +194,14 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 	}
 
 	elector.Run(ctx)
+}
+
+func ConstructEnvOrDie(ector EnvConfigConstructor) EnvConfigAccessor {
+	env := ector()
+	if err := envconfig.Process("", env); err != nil {
+		log.Fatalf("Error processing env var: %s", err)
+	}
+	return env
 }
 
 func flush(logger *zap.SugaredLogger) {

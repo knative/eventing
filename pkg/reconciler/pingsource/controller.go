@@ -20,10 +20,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingcache "knative.dev/eventing/pkg/utils/cache"
-	"knative.dev/pkg/reconciler"
-
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,9 +35,11 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
+	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
+	eventingcache "knative.dev/eventing/pkg/utils/cache"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
@@ -81,8 +79,13 @@ func NewController(
 	}
 
 	// Create PingSource persisted store backed by a ConfigMap
-	store := eventingcache.NewPersistedStore(kubeclient.Get(ctx), system.Namespace(), "config-pingsource-mt-adapter",
-		pingSourceInformer.Informer(), reconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, "cluster", true))
+	store := eventingcache.NewPersistedStore(
+		mtcomponent,
+		kubeclient.Get(ctx),
+		system.Namespace(),
+		"config-pingsource-mt-adapter",
+		pingSourceInformer.Informer(),
+		mtping.Project)
 
 	go store.Run(ctx)
 

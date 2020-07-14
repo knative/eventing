@@ -80,7 +80,9 @@ func TestPersistedStore(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 
-	pstore := NewPersistedStore(cs, cmNs, cmName, informer, nil)
+	pstore := NewPersistedStore("my-component", cs, cmNs, cmName, informer, func(obj interface{}) interface{} {
+		return obj.(apis.HasSpec).GetUntypedSpec()
+	})
 	ctx := logging.WithLogger(context.Background(), logger)
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
@@ -134,7 +136,7 @@ func TestPersistedStoreUnStarted(t *testing.T) {
 	cs := fake.NewSimpleClientset()
 	store := cache.NewStore(cache.MetaNamespaceKeyFunc)
 	informer := newKResourceInformer(store)
-	pstore := NewPersistedStore(cs, cmNs, cmName, informer, nil).(*persistedStore)
+	pstore := NewPersistedStore("my-component", cs, cmNs, cmName, informer, nil).(*persistedStore)
 
 	done := make(chan bool)
 	go func() {
@@ -177,7 +179,9 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 	informer := newKResourceInformer(store)
 	logger := logtesting.TestLogger(t)
 
-	pstore := NewPersistedStore(cs, cmNs, cmName, informer, nil)
+	pstore := NewPersistedStore("my-component", cs, cmNs, cmName, informer, func(obj interface{}) interface{} {
+		return obj.(apis.HasSpec).GetUntypedSpec()
+	})
 
 	ctx := logging.WithLogger(context.Background(), logger)
 	go func() {
