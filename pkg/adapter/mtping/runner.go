@@ -21,11 +21,14 @@ import (
 	"encoding/json"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
-
-	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"k8s.io/client-go/kubernetes"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/record"
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -54,7 +57,7 @@ func NewCronJobsRunner(ceClient cloudevents.Client, logger *zap.SugaredLogger) *
 	}
 }
 
-func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string, overrides *duckv1.CloudEventOverrides) (cron.EntryID, error) {
+func (a *cronJobsRunner) AddSchedule(kubeClient kubernetes.Interface, source *sourcesv1alpha2.PingSource, namespace, name, spec, data, sink string, overrides *duckv1.CloudEventOverrides) (cron.EntryID, error) {
 	event := cloudevents.NewEvent()
 	event.SetType(sourcesv1alpha2.PingSourceEventType)
 	event.SetSource(sourcesv1alpha2.PingSourceSource(namespace, name))
@@ -65,8 +68,12 @@ func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string, o
 			event.SetExtension(key, override)
 		}
 	}
+
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, sink)
+
+	var kubeEventSink record.EventSink = &typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events(namespace)}
+	ctx = crstatusevent.ContextWithCRStatus(ctx, &kubeEventSink, "ping-source-mt-adapter", source, a.Logger.Infof)
 
 	// Simple retry configuration to be less than 1mn.
 	// We might want to retry more times for less-frequent schedule.

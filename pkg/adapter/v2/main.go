@@ -27,6 +27,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	"knative.dev/eventing/pkg/leaderelection"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
@@ -43,7 +44,26 @@ type Adapter interface {
 type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client) Adapter
 
 func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
-	MainWithContext(signals.NewContext(), component, ector, ctor)
+
+	ctx := signals.NewContext()
+
+	// TODO(mattmoor): expose a flag that gates this?
+	// ctx = WithHAEnabled(ctx)
+
+	MainWithContext(ctx, component, ector, ctor)
+}
+
+type haEnabledKey struct{}
+
+// WithHAEnabled signals to MainWithContext that it should set up an appropriate leader elector for this component.
+func WithHAEnabled(ctx context.Context) context.Context {
+	return context.WithValue(ctx, haEnabledKey{}, struct{}{})
+}
+
+// IsHAEnabled checks the context for the desire to enable leader elector.
+func IsHAEnabled(ctx context.Context) bool {
+	val := ctx.Value(haEnabledKey{})
+	return val != nil
 }
 
 func MainWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
@@ -66,6 +86,8 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Fatal("Error exporting go memstats view: %v", zap.Error(err))
 	}
 
+	var crStatusEventClient *crstatusevent.CRStatusEventClient
+
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
 	if metricsConfig, err := env.GetMetricsConfig(); err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
@@ -86,7 +108,9 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 					}
 				}()
 			}
+			crStatusEventClient = crstatusevent.NewCRStatusEventClient(metricsConfig.ConfigMap)
 		}
+
 	}
 
 	reporter, err := source.NewStatsReporter()
@@ -105,7 +129,7 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("Error loading cloudevents overrides", zap.Error(err))
 	}
 
-	eventsClient, err := NewCloudEventsClient(env.GetSink(), ceOverrides, reporter)
+	eventsClient, err := NewCloudEventsClientCRStatus(env.GetSink(), ceOverrides, reporter, crStatusEventClient)
 	if err != nil {
 		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
@@ -119,7 +143,7 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("Error loading the leader election configuration", zap.Error(err))
 	}
 
-	if leConfig.LeaderElect {
+	if IsHAEnabled(ctx) {
 		// Signal that we are executing in a context with leader election.
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}

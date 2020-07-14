@@ -44,7 +44,12 @@ type MessageAdapter interface {
 type MessageAdapterConstructor func(ctx context.Context, env EnvConfigAccessor, adapter *kncloudevents.HttpMessageSender, reporter source.StatsReporter) MessageAdapter
 
 func MainMessageAdapter(component string, ector EnvConfigConstructor, ctor MessageAdapterConstructor) {
-	MainMessageAdapterWithContext(signals.NewContext(), component, ector, ctor)
+	ctx := signals.NewContext()
+
+	// TODO(mattmoor): expose a flag that gates this?
+	// ctx = WithHAEnabled(ctx)
+
+	MainMessageAdapterWithContext(ctx, component, ector, ctor)
 }
 
 func MainMessageAdapterWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor MessageAdapterConstructor) {
@@ -122,7 +127,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 		logger.Error("Error loading the leader election configuration", zap.Error(err))
 	}
 
-	if leConfig.LeaderElect {
+	if IsHAEnabled(ctx) {
 		// Signal that we are executing in a context with leader election.
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
