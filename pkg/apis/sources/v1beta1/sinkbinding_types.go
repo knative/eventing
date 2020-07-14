@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -65,7 +65,7 @@ type SinkBindingSpec struct {
 	// inherits duck/v1alpha1 BindingSpec, which currently provides:
 	// * Subject - Subject references the resource(s) whose "runtime contract"
 	//   should be augmented by Binding implementations.
-	duckv1alpha1.BindingSpec `json:",inline"`
+	duckv1beta1.BindingSpec `json:",inline"`
 }
 
 const (
