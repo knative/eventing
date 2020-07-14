@@ -29,14 +29,14 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1beta1/channelable"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/broker"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/utils"
@@ -53,9 +53,9 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	rtv1alpha1 "knative.dev/eventing/pkg/reconciler/testing"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
@@ -93,7 +93,7 @@ const (
 	finalizerName = "brokers.eventing.knative.dev"
 
 	imcSpec = `
-apiVersion: "messaging.knative.dev/v1beta1"
+apiVersion: "messaging.knative.dev/v1"
 kind: "InMemoryChannel"
 `
 )
@@ -123,7 +123,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1beta1",
+			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
 	sinkDNS               = "sink.mynamespace.svc." + utils.GetClusterDomainName()
@@ -139,7 +139,7 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = eventingv1.AddToScheme(scheme.Scheme)
 	_ = duckv1.AddToScheme(scheme.Scheme)
 }
 
@@ -1216,7 +1216,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	if ready {
 		return &unstructured.Unstructured{
 			Object: map[string]interface{}{
-				"apiVersion": "messaging.knative.dev/v1beta1",
+				"apiVersion": "messaging.knative.dev/v1",
 				"kind":       "InMemoryChannel",
 				"metadata": map[string]interface{}{
 					"creationTimestamp": nil,
@@ -1224,7 +1224,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 					"name":              name,
 					"ownerReferences": []interface{}{
 						map[string]interface{}{
-							"apiVersion":         "eventing.knative.dev/v1beta1",
+							"apiVersion":         "eventing.knative.dev/v1",
 							"blockOwnerDeletion": true,
 							"controller":         true,
 							"kind":               "Broker",
@@ -1246,7 +1246,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1beta1",
+			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
@@ -1254,7 +1254,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				"name":              name,
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
-						"apiVersion":         "eventing.knative.dev/v1beta1",
+						"apiVersion":         "eventing.knative.dev/v1",
 						"blockOwnerDeletion": true,
 						"controller":         true,
 						"kind":               "Broker",
@@ -1281,7 +1281,7 @@ func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1beta1",
+			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
@@ -1289,7 +1289,7 @@ func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
 				"name":              name,
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
-						"apiVersion":         "eventing.knative.dev/v1beta1",
+						"apiVersion":         "eventing.knative.dev/v1",
 						"blockOwnerDeletion": true,
 						"controller":         true,
 						"kind":               "Broker",
@@ -1311,7 +1311,7 @@ func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
 
 func createTriggerChannelRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1beta1",
+		APIVersion: "messaging.knative.dev/v1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
@@ -1325,14 +1325,14 @@ func makeServiceURI() *apis.URL {
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
-func makeFilterSubscription() *messagingv1beta1.Subscription {
+func makeFilterSubscription() *messagingv1.Subscription {
 	return resources.NewSubscription(makeTrigger(), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
 }
 
-func makeTrigger() *v1beta1.Trigger {
-	return &v1beta1.Trigger{
+func makeTrigger() *eventingv1.Trigger {
+	return &eventingv1.Trigger{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1beta1",
+			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Trigger",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -1340,9 +1340,9 @@ func makeTrigger() *v1beta1.Trigger {
 			Name:      triggerName,
 			UID:       triggerUID,
 		},
-		Spec: v1beta1.TriggerSpec{
+		Spec: eventingv1.TriggerSpec{
 			Broker: brokerName,
-			Filter: &v1beta1.TriggerFilter{
+			Filter: &eventingv1.TriggerFilter{
 				Attributes: map[string]string{"Source": "Any", "Type": "Any"},
 			},
 			Subscriber: duckv1.Destination{
@@ -1359,13 +1359,13 @@ func makeTrigger() *v1beta1.Trigger {
 
 func makeBrokerRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1beta1",
+		APIVersion: "eventing.knative.dev/v1",
 		Kind:       "Broker",
 		Namespace:  testNS,
 		Name:       brokerName,
 	}
 }
-func makeEmptyDelivery() *eventingduckv1beta1.DeliverySpec {
+func makeEmptyDelivery() *eventingduckv1.DeliverySpec {
 	return nil
 }
 
@@ -1392,35 +1392,35 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 }
 
 // Just so we can test subscription updates
-func makeDifferentReadySubscription() *messagingv1beta1.Subscription {
+func makeDifferentReadySubscription() *messagingv1.Subscription {
 	s := makeFilterSubscription()
 	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
-	s.Status = *v1beta1.TestHelper.ReadySubscriptionStatus()
+	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 
-func makeFilterSubscriptionNotOwnedByTrigger() *messagingv1beta1.Subscription {
+func makeFilterSubscriptionNotOwnedByTrigger() *messagingv1.Subscription {
 	sub := makeFilterSubscription()
 	sub.OwnerReferences = []metav1.OwnerReference{}
 	return sub
 }
 
-func makeReadySubscription() *messagingv1beta1.Subscription {
+func makeReadySubscription() *messagingv1.Subscription {
 	s := makeFilterSubscription()
-	s.Status = *v1beta1.TestHelper.ReadySubscriptionStatus()
+	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 
-func makeReadySubscriptionDeprecatedName(triggerName, triggerUID string) *messagingv1beta1.Subscription {
+func makeReadySubscriptionDeprecatedName(triggerName, triggerUID string) *messagingv1.Subscription {
 	s := makeFilterSubscription()
 	t := NewTrigger(triggerName, testNS, brokerName)
 	t.UID = types.UID(triggerUID)
 	s.Name = utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", brokerName, triggerName))
-	s.Status = *v1beta1.TestHelper.ReadySubscriptionStatus()
+	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 
-func makeReadySubscriptionWithCustomData(triggerName, triggerUID string) *messagingv1beta1.Subscription {
+func makeReadySubscriptionWithCustomData(triggerName, triggerUID string) *messagingv1.Subscription {
 	t := makeTrigger()
 	t.Name = triggerName
 	t.UID = types.UID(triggerUID)
@@ -1449,7 +1449,7 @@ func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {
 	}
 }
 
-func makeFalseStatusSubscription() *messagingv1beta1.Subscription {
+func makeFalseStatusSubscription() *messagingv1.Subscription {
 	s := makeFilterSubscription()
 	s.Status.MarkReferencesNotResolved("testInducedError", "test induced error")
 	return s
