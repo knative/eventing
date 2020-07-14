@@ -22,7 +22,7 @@ metadata:
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
   annotations:
-    knative.dev/example-checksum: "429d16f7"
+    knative.dev/example-checksum: "f46cf09d"
 data:
   _example: |
     ################################

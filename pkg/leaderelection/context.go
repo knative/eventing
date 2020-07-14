@@ -108,7 +108,7 @@ func (b *standardBuilder) BuildElector(ctx context.Context, adapter Adapter) (El
 	logger.Infof("%v will run in leader-elected mode with id %v", b.lec.Component, id)
 
 	// rl is the resource used to hold the leader election lock.
-	rl, err := resourcelock.New(b.lec.ResourceLock,
+	rl, err := resourcelock.New(pkgleaderelection.KnativeResourceLock,
 		system.Namespace(), // use namespace we are running in
 		b.lec.Component,    // component is used as the resource name
 		b.kc.CoreV1(),
