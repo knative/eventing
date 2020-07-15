@@ -18,7 +18,6 @@ package v1
 
 import (
 	"math/rand"
-	"time"
 
 	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
@@ -37,13 +36,11 @@ var bops = []*BackoffPolicyType{nil, &linear, &exponential}
 var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
-			func(bop *BackoffPolicyType, c fuzz.Continue) {
-				rand.Seed(time.Now().UnixNano())
-				bop = bops[rand.Intn(3)]
-			},
 			func(ds *DeliverySpec, c fuzz.Continue) {
 				if ds.BackoffPolicy != nil && *ds.BackoffPolicy == "" {
 					ds.BackoffPolicy = nil
+				} else {
+					ds.BackoffPolicy = bops[rand.Intn(3)]
 				}
 			},
 		}
