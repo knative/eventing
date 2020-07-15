@@ -106,13 +106,6 @@ func NewController(
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
 	// that I own are changed.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1beta1.Kind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
-	// that I own are changed.
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(eventingv1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

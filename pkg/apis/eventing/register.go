@@ -29,10 +29,6 @@ const (
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"
 
-	// BrokerChannelAddressKey is the annotation key on Brokers to
-	// specify the address of its channel.
-	BrokerChannelAddressKey = GroupName + "/broker.channel.address"
-
 	// MTChannelBrokerClassValue is the value we use to specify the
 	// Broker using channels, but the resources (ingress,filter) run
 	// in the system namespace. As in Broker from this repository

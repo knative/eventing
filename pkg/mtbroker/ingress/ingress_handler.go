@@ -32,7 +32,6 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/health"
@@ -80,16 +79,20 @@ func guessChannelAddress(name, namespace, domain string) string {
 	return url.String()
 }
 
-func (h *Handler) getChannelAddress(name, namespace, domain string) string {
+func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 	broker, err := h.getBroker(name, namespace)
 	if err != nil {
-		return guessChannelAddress(name, namespace, domain)
+		// If for some reason the BrokerLister fails, we fall back on old behaviour.
+		return "", err
 	}
-	address, present := broker.GetAnnotations()[eventing.BrokerChannelAddressKey]
+	if broker.Status.Annotations == nil {
+		return "", fmt.Errorf("Broker status annotations uninitialized")
+	}
+	address, present := broker.Status.Annotations["channelAddress"]
 	if !present {
-		return guessChannelAddress(name, namespace, domain)
+		return "", fmt.Errorf("Channel address not found in broker status annotations")
 	}
-	return address
+	return address, nil
 }
 
 func (h *Handler) Start(ctx context.Context) error {
@@ -177,7 +180,11 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		return http.StatusBadRequest, noDuration
 	}
 
-	channelAddress := h.getChannelAddress(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	channelAddress, err := h.getChannelAddress(brokerName, brokerNamespace)
+	if err != nil {
+		h.Logger.Warn("Failed to get channel address, falling back on guess", zap.Error(err))
+		channelAddress = guessChannelAddress(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	}
 
 	return h.send(ctx, headers, event, channelAddress)
 }

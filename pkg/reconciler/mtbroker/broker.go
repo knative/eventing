@@ -122,11 +122,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			return fmt.Errorf("Trigger reconcile failed: %v", te)
 		}
 	}
-
-	logging.FromContext(ctx).Infow("Annotations set. Getting annotations")
-	for k, v := range b.GetAnnotations() {
-		logging.FromContext(ctx).Info(k + ":" + v)
-	}
 	return err
 }
 
@@ -167,6 +162,12 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *eventingv1.Broker) (*
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return &chanMan.ref, nil
 	}
+
+	// Attach the channel address as a status annotation.
+	if b.Status.Annotations == nil {
+		b.Status.Annotations = make(map[string]string, 1)
+	}
+	b.Status.Annotations["channelAddress"] = triggerChan.Status.Address.URL.String()
 
 	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
