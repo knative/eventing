@@ -21,15 +21,16 @@ import (
 	"reflect"
 	"testing"
 
-	"knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/tracker"
-
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestSinkBindingConversionBadType(t *testing.T) {
@@ -45,8 +46,7 @@ func TestSinkBindingConversionBadType(t *testing.T) {
 }
 
 func TestSinkBindingConversionRoundTripUp(t *testing.T) {
-	// Just one for now, just adding the for loop for ease of future changes.
-	versions := []apis.Convertible{&v1alpha2.SinkBinding{}}
+	versions := []apis.Convertible{&v1beta1.SinkBinding{}, &v1alpha2.SinkBinding{}}
 
 	path, _ := apis.ParseURL("/path")
 	sink := duckv1.Destination{
@@ -101,7 +101,7 @@ func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 				SourceSpec: duckv1.SourceSpec{
 					Sink: sink,
 				},
-				BindingSpec: v1alpha1.BindingSpec{
+				BindingSpec: duckv1alpha1.BindingSpec{
 					Subject: subject,
 				},
 			},
@@ -135,7 +135,7 @@ func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 						},
 					},
 				},
-				BindingSpec: v1alpha1.BindingSpec{
+				BindingSpec: duckv1alpha1.BindingSpec{
 					Subject: subject,
 				},
 			},
@@ -176,8 +176,6 @@ func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 
 // This tests round tripping from a higher version -> v1alpha1 and back to the higher version.
 func TestSinkBindingConversionRoundTripDown(t *testing.T) {
-	// Just one for now, just adding the for loop for ease of future changes.
-
 	path, _ := apis.ParseURL("/path")
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
@@ -243,20 +241,20 @@ func TestSinkBindingConversionRoundTripDown(t *testing.T) {
 			},
 		},
 	}, {name: "full",
-		in: &v1alpha2.SinkBinding{
+		in: &v1beta1.SinkBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
 				Namespace:  "ping-ns",
 				Generation: 17,
 			},
-			Spec: v1alpha2.SinkBindingSpec{
+			Spec: v1beta1.SinkBindingSpec{
 				SourceSpec: duckv1.SourceSpec{
 					Sink:                sink,
 					CloudEventOverrides: &ceOverrides,
 				},
-				BindingSpec: v1alpha1.BindingSpec{Subject: subject},
+				BindingSpec: duckv1beta1.BindingSpec{Subject: subject},
 			},
-			Status: v1alpha2.SinkBindingStatus{
+			Status: v1beta1.SinkBindingStatus{
 				SourceStatus: duckv1.SourceStatus{
 					Status: duckv1.Status{
 						ObservedGeneration: 1,

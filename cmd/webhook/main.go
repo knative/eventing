@@ -325,18 +325,11 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
 				},
 			},
-			sourcesv1alpha2.Kind("SinkBinding"): {
+			sourcesv1beta1.Kind("SinkBinding"): {
 				DefinitionName: sources.SinkBindingResource.String(),
 				HubVersion:     sourcesv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
-					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
-				},
-			},
-			sourcesv1beta1.Kind("SinkBinding"): {
-				DefinitionName: sources.SinkBindingResource.String(),
-				HubVersion:     sourcesv1alpha2_,
-				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
 					sourcesv1beta1_:  &sourcesv1beta1.SinkBinding{},
 				},
