@@ -65,4 +65,4 @@ update_licenses third_party/VENDOR-LICENSE "./..."
 
 # Patch k8s leader-election fixing graceful release
 # More information: https://github.com/kubernetes/kubernetes/pull/91942
-patch vendor/k8s.io/client-go/tools/leaderelection/leaderelection.go hack/k8s-client-go.patch
+git apply hack/k8s-client-go.patch
