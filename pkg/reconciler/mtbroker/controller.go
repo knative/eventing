@@ -80,7 +80,6 @@ func NewController(
 		eventingClientSet:  eventingclient.Get(ctx),
 		dynamicClientSet:   dynamicclient.Get(ctx),
 		kubeClientSet:      kubeclient.Get(ctx),
-		brokerLister:       brokerInformer.Lister(),
 		endpointsLister:    endpointsInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
