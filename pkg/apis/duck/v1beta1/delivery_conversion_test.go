@@ -27,7 +27,7 @@ import (
 	pkgduck "knative.dev/pkg/apis/duck/v1"
 )
 
-func TestDeliverySpeConversionBadType(t *testing.T) {
+func TestDeliverySpecConversionBadType(t *testing.T) {
 	good, bad := &DeliverySpec{}, &DeliverySpec{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
