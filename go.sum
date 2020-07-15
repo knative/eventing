@@ -1633,8 +1633,8 @@ k8s.io/utils v0.0.0-20200124190032-861946025e34/go.mod h1:sZAwmy6armz5eXlNoLmJcl
 knative.dev/caching v0.0.0-20200116200605-67bca2c83dfa/go.mod h1:dHXFU6CGlLlbzaWc32g80cR92iuBSpsslDNBWI8C7eg=
 knative.dev/eventing-contrib v0.11.2/go.mod h1:SnXZgSGgMSMLNFTwTnpaOH7hXDzTFtw0J8OmHflNx3g=
 knative.dev/pkg v0.0.0-20200207155214-fef852970f43/go.mod h1:pgODObA1dTyhNoFxPZTTjNWfx6F0aKsKzn+vaT9XO/Q=
-knative.dev/pkg v0.0.0-20200714180919-c49f5b61e264 h1:jWAd2WlgkvsJ8ruSZs1SgOheOwaew75z3z+3jta2jcs=
-knative.dev/pkg v0.0.0-20200714180919-c49f5b61e264/go.mod h1:yFXTzV2GIB30Qs6pdJNCbtKaIEhxH9fsmrrltAqfjWE=
+knative.dev/pkg v0.0.0-20200714191819-258f5b86c26e h1:ArGv5Xtx5A/bkZfK8CNUl/euzRSfo4az2B4qKa25beE=
+knative.dev/pkg v0.0.0-20200714191819-258f5b86c26e/go.mod h1:yFXTzV2GIB30Qs6pdJNCbtKaIEhxH9fsmrrltAqfjWE=
 knative.dev/test-infra v0.0.0-20200713220518-5a4c4cad5372 h1:NZzdNmKYP3L7fut/SNOxLgTgXVvQrygXiYpAeIMGMwM=
 knative.dev/test-infra v0.0.0-20200713220518-5a4c4cad5372/go.mod h1:vtT6dLs/iNj8pKcfag8CSVqHKNMgyCFtU/g1pV7Bovs=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=

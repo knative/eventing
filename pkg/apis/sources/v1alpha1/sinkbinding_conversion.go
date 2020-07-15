@@ -18,14 +18,13 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible.
-// Converts source (from v1alpha1.SinkBinding) into v1alpha2.SinkBinding
+// Converts source from v1alpha1.SinkBinding into a higher version.
 func (source *SinkBinding) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1alpha2.SinkBinding:
@@ -35,21 +34,22 @@ func (source *SinkBinding) ConvertTo(ctx context.Context, obj apis.Convertible) 
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", sink)
+		return apis.ConvertToViaProxy(ctx, source, &v1alpha2.SinkBinding{}, sink)
 	}
 }
 
 // ConvertFrom implements apis.Convertible.
-// Converts obj from v1alpha2.SinkBinding into v1alpha1.SinkBinding
+// Converts obj from a higher version into v1alpha1.SinkBinding.
 func (sink *SinkBinding) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1alpha2.SinkBinding:
 		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec.Subject = source.Spec.Subject
 		sink.Spec.SourceSpec = source.Spec.SourceSpec
 		sink.Spec.BindingSpec = source.Spec.BindingSpec
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", source)
+		return apis.ConvertFromViaProxy(ctx, source, &v1alpha2.SinkBinding{}, sink)
 	}
 }
