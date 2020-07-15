@@ -96,6 +96,8 @@ type Reconciler struct {
 var _ inmemorychannelreconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryChannel) pkgreconciler.Event {
+	logging.FromContext(ctx).Infow("Reconciling", zap.Any("IMC", imc))
+
 	// We reconcile the status of the Channel by looking at:
 	// 1. Dispatcher Deployment for it's readiness.
 	// 2. Dispatcher k8s Service for it's existence.

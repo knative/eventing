@@ -210,6 +210,11 @@ function install_sugar() {
 }
 
 function unleash_duck() {
+  echo "enable debug logging"
+  cat test/config/config-logging.yaml | \
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" | \
+    ko apply --strict -f - || return $?
+
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" | \
@@ -289,7 +294,7 @@ function install_channel_crds() {
   ko apply --strict -f ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} || return 1
 
   # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
-  # scale_controlplane imc-controller imc-dispatcher
+  scale_controlplane imc-controller # imc-dispatcher
 
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
 }
