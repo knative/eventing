@@ -165,18 +165,21 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 
 		// Is the schedule already cached?
 		if entry, ok := a.entryids[key]; ok {
-			if !equality.Semantic.DeepEqual(entry.config, cfg) {
-				a.Logger.Info("updating schedule", zap.Any("key", key))
+			if !equality.Semantic.DeepEqual(entry.config, &cfg) {
+				a.Logger.Info("updating schedule ", zap.String("key", key))
 
 				// Recreate cronjob
 				a.RemoveSchedule(entry.entryID)
-				entry.entryID = a.AddSchedule(cfg)
-				entry.config = &cfg
+
+				a.entryids[key] = entryIdConfig{
+					entryID: a.AddSchedule(cfg),
+					config:  &cfg,
+				}
 			} else {
 				// cron jon exists and correctly configure. noop.
 			}
 		} else {
-			a.Logger.Info("adding schedule", zap.Any("key", key))
+			a.Logger.Info("adding schedule ", zap.String("key", key))
 			// Create cronjob
 			a.entryids[key] = entryIdConfig{
 				entryID: a.AddSchedule(cfg),

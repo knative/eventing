@@ -95,23 +95,86 @@ func TestUpdateConfigMap(t *testing.T) {
 
 	cm := &corev1.ConfigMap{
 		Data: map[string]string{
-			"resources.json": `
-{
-  "default/ping": {
-    "namespace": "default",
-    "name":"ping",
-    "schedule": "*/1 * * * *",
-    "jsonData":"{\"msg\": \"hello\"}",
-    "sinkUri": "http://event-display.default.svc.cluster.local"
-  }
-}`},
-	}
+			"resources.json": "{" + configKey("default/ping", "* * * * *") + "}",
+		}}
 
 	runner.updateFromConfigMap(cm)
 
-	_, ok := runner.entryids["default/ping"]
+	if len(runner.entryids) != 1 {
+		t.Errorf("expected only one entry, got %d", len(runner.entryids))
+	}
+
+	pingid, ok := runner.entryids["default/ping"]
 	if !ok {
-		t.Error("missing cronjob entry")
+		t.Error("expected default/ping entry")
+	}
+
+	// Noop update
+
+	cm2 := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" + configKey("default/ping", "* * * * *") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm2)
+
+	if len(runner.entryids) != 1 {
+		t.Errorf("expected only one entry, got %d", len(runner.entryids))
+	}
+
+	pingid2, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	if pingid.entryID != pingid2.entryID {
+		t.Errorf("expected entry ids to be the same. %v != %v", pingid, pingid2)
+	}
+
+	// Same source, different schedule
+
+	cm3 := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" + configKey("default/ping", "* * * * 1") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm3)
+
+	if len(runner.entryids) != 1 {
+		t.Errorf("expected only one entry, got %d", len(runner.entryids))
+	}
+
+	pingid3, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	if pingid2.entryID == pingid3.entryID {
+		t.Errorf("expected entry ids to be different. %v != %v", pingid2, pingid3)
+	}
+
+	// Two sources
+
+	cm4 := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" +
+				configKey("default/ping", "* * * * 1") + "," +
+				configKey("default/ping2", "* * * * 1") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm4)
+
+	if len(runner.entryids) != 2 {
+		t.Errorf("expected two entries, got %d", len(runner.entryids))
+	}
+
+	pingid4, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	if pingid3.entryID != pingid4.entryID {
+		t.Errorf("expected entry ids to be the same. %v != %v", pingid3, pingid4)
 	}
 }
 
@@ -172,5 +235,13 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", extensions, gotExtensions)
 		}
 	}
+}
 
+func configKey(key string, schedule string) string {
+	return `"` + key + `"` + `: {
+		"namespace": "default",
+		"name":"ping",
+		"schedule": "` + schedule + `",
+		"jsonData":"{\"msg\": \"hello\"}",
+		"sinkUri": "http://event-display.default.svc.cluster.local"}`
 }
