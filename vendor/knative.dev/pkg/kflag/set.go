@@ -1,5 +1,3 @@
-// +build tools
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,17 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tools
+package kflag
 
 import (
-	_ "knative.dev/pkg/configmap/hash-gen"
-	_ "knative.dev/pkg/hack"
-	_ "knative.dev/pkg/testutils/clustermanager/perf-tests"
-	_ "knative.dev/test-infra/scripts"
+	"flag"
+	"fmt"
 
-	// Needed for the storage version too.
-	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
-
-	// For chaos testing the leaderelection stuff.
-	_ "knative.dev/pkg/leaderelection/chaosduck"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
+
+type StringSet struct {
+	Value sets.String
+}
+
+var _ flag.Value = (*StringSet)(nil)
+
+func (i *StringSet) String() string {
+	return fmt.Sprintf("%v", i.Value)
+}
+
+func (i *StringSet) Set(value string) error {
+	if i.Value == nil {
+		i.Value = make(sets.String, 1)
+	}
+	i.Value.Insert(value)
+	return nil
+}
