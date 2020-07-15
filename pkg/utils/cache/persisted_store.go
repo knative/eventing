@@ -150,6 +150,10 @@ func (p *persistedStore) doSync(stopCh <-chan struct{}) error {
 		return err
 	}
 
+	if cm.Data == nil {
+		cm.Data = make(map[string]string)
+	}
+
 	// TODO: add support for partitioning
 
 	config := make(map[string]interface{})
@@ -215,9 +219,7 @@ func (p *persistedStore) load() (*corev1.ConfigMap, error) {
 
 		return p.kubeClient.CoreV1().ConfigMaps(p.namespace).Create(cm)
 	}
-	if cm.Data == nil {
-		cm.Data = make(map[string]string)
-	}
+
 	return cm, nil
 }
 

@@ -126,7 +126,6 @@ func NewController(
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
 
 	// Create and start persistent store backed by ConfigMaps
-	// Create PingSource persisted store backed by a ConfigMap
 	store := eventingcache.NewPersistedStore(
 		mtcomponent,
 		kubeclient.Get(ctx),
