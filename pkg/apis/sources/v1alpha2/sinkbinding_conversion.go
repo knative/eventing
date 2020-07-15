@@ -26,7 +26,7 @@ import (
 )
 
 // ConvertTo implements apis.Convertible.
-// Converts source (from v1alpha2.SinkBinding) to higher versions.
+// Converts source from v1alpha2.SinkBinding into a higher version.
 func (source *SinkBinding) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.SinkBinding:
@@ -43,7 +43,7 @@ func (source *SinkBinding) ConvertTo(ctx context.Context, obj apis.Convertible) 
 }
 
 // ConvertFrom implements apis.Convertible.
-// Converts obj from v1alpha1 to higher versions.
+// Converts obj from a higher version into v1alpha2.SinkBinding.
 func (sink *SinkBinding) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.SinkBinding:
