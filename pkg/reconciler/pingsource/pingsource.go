@@ -260,9 +260,9 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Pin
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 
-	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
+	ra, err := r.deploymentLister.Deployments(src.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		// Issue #2842: Adater deployment name uses kmeta.ChildName. If a deployment by the previous name pattern is found, it should
+		// Issue #2842: Adapter deployment name uses kmeta.ChildName. If a deployment by the previous name pattern is found, it should
 		// be deleted. This might cause temporary downtime.
 		if deprecatedName := utils.GenerateFixedName(adapterArgs.Source, fmt.Sprintf("pingsource-%s", adapterArgs.Source.Name)); deprecatedName != expected.Name {
 			if err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Delete(deprecatedName, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
