@@ -26,4 +26,7 @@ import (
 
 	// Needed for the storage version too.
 	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
+
+	// For chaos testing the leaderelection stuff.
+	_ "knative.dev/pkg/leaderelection/chaosduck"
 )

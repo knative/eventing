@@ -64,7 +64,6 @@ type Reconciler struct {
 	kubeClientSet     kubernetes.Interface
 
 	// listers index properties about resources
-	brokerLister       eventinglisters.BrokerLister
 	endpointsLister    corev1listers.EndpointsLister
 	subscriptionLister messaginglisters.SubscriptionLister
 	triggerLister      eventinglisters.TriggerLister

@@ -38,6 +38,8 @@ func (source *DeliverySpec) ConvertTo(ctx context.Context, to apis.Convertible) 
 			} else if *source.BackoffPolicy == BackoffPolicyExponential {
 				exponential := eventingduckv1.BackoffPolicyExponential
 				sink.BackoffPolicy = &exponential
+			} else {
+				return fmt.Errorf("unknown BackoffPolicy, got: %q", *source.BackoffPolicy)
 			}
 		}
 		sink.DeadLetterSink = source.DeadLetterSink
@@ -60,7 +62,10 @@ func (sink *DeliverySpec) ConvertFrom(ctx context.Context, from apis.Convertible
 			} else if *source.BackoffPolicy == eventingduckv1.BackoffPolicyExponential {
 				exponential := BackoffPolicyExponential
 				sink.BackoffPolicy = &exponential
+			} else {
+				return fmt.Errorf("unknown BackoffPolicy, got: %q", *source.BackoffPolicy)
 			}
+
 		}
 		sink.DeadLetterSink = source.DeadLetterSink
 		return nil

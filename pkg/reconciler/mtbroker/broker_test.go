@@ -1165,7 +1165,6 @@ func TestReconcile(t *testing.T) {
 			kubeClientSet:      fakekubeclient.Get(ctx),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			triggerLister:      listers.GetTriggerLister(),
-			brokerLister:       listers.GetBrokerLister(),
 
 			endpointsLister:    listers.GetEndpointsLister(),
 			kresourceTracker:   duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),

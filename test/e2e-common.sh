@@ -50,6 +50,9 @@ readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 # PreInstall script for v0.16
 readonly PRE_INSTALL_V016="config/pre-install/v0.16.0"
 
+# The number of controlplane replicas to run.
+readonly REPLICAS=3
+
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
 
@@ -79,6 +82,17 @@ UNINSTALL_LIST=()
 # Setup the Knative environment for running tests.
 function knative_setup() {
   install_knative_eventing
+}
+
+function scale_controlplane() {
+  for deployment in "$@"; do
+    # Make sure all pods run in leader-elected mode.
+    kubectl -n "${TEST_EVENTING_NAMESPACE}" scale deployment "$deployment" --replicas=0 || failed=1
+    # Give it time to kill the pods.
+    sleep 5
+    # Scale up components for HA tests
+    kubectl -n "${TEST_EVENTING_NAMESPACE}" scale deployment "$deployment" --replicas="${REPLICAS}" || failed=1
+  done
 }
 
 # This installs everything from the config dir but then removes the Channel Based Broker.
@@ -117,6 +131,8 @@ function install_knative_eventing() {
   local TMP_CONFIG_TRACING_CONFIG=${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" ${CONFIG_TRACING_CONFIG} > ${TMP_CONFIG_TRACING_CONFIG}
   kubectl replace -f ${TMP_CONFIG_TRACING_CONFIG}
+
+  scale_controlplane eventing-webhook eventing-controller
 
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing did not come up"
 
@@ -173,7 +189,10 @@ function install_mt_broker() {
   cp -r ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR}/* ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR}
   find ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
-  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || return 1
+
+  # TODO(https://github.com/knative/eventing/issues/3591): Enable once MT Broker chaos issues are fixed.
+  # scale_controlplane mt-broker-controller
+
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
@@ -184,7 +203,17 @@ function install_sugar() {
   find ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} || return 1
   kubectl -n ${TEST_EVENTING_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
+
+  scale_controlplane sugar-controller
+
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing Sugar Controller did not come up"
+}
+
+function unleash_duck() {
+  echo "unleash the duck"
+  cat test/config/chaosduck.yaml | \
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" | \
+    ko apply --strict -f - || return $?
 }
 
 # Teardown the Knative environment after tests finish.
@@ -258,6 +287,10 @@ function install_channel_crds() {
   cp -r ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}/* ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR}
   find ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} || return 1
+
+  # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
+  # scale_controlplane imc-controller imc-dispatcher
+
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
 }
 
