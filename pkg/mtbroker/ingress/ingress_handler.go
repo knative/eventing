@@ -30,16 +30,16 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
-	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -59,61 +59,40 @@ type Handler struct {
 
 	Logger *zap.Logger
 
-	getChannelURL func(string, string, string) url.URL
-
-	ChannelLister messaginglisters.ChannelLister
+	BrokerLister eventinglisters.BrokerLister
 }
 
-func getChannelURL(name, namespace, domain string) url.URL {
-	return url.URL{
+func (h *Handler) getBroker(name, namespace string) (*v1beta1.Broker, error) {
+	broker, err := h.BrokerLister.Brokers(namespace).Get(name)
+	if err != nil {
+		h.Logger.Warn("Broker getter failed")
+		return nil, err
+	}
+	return broker, nil
+}
+
+func guessChannelAddress(name, namespace, domain string) string {
+	url := url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
 		Path:   "/",
 	}
+	return url.String()
 }
 
-func (h *Handler) listChannelURL(name, namespace string) {
-	h.Logger.Warn("Channel lister starting...")
-	carr, err := h.ChannelLister.Channels(namespace).List(labels.Everything())
+func (h *Handler) getChannelAddress(name, namespace, domain string) string {
+	broker, err := h.getBroker(name, namespace)
 	if err != nil {
-		h.Logger.Warn("Channel lister failed: " + err.Error())
-		return
+		return guessChannelAddress(name, namespace, domain)
 	}
-	var url *apis.URL
-	for _, c := range carr {
-		if c.Status.Address == nil {
-			h.Logger.Warn("Channel has no address")
-		} else if url = c.Status.Address.URL; url.Host == "" {
-			h.Logger.Warn("Channel has no address (URL host)")
-		} else {
-			h.Logger.Warn("Channel: " + c.Status.Address.URL.String())
-		}
+	address, present := broker.GetAnnotations()[eventing.BrokerChannelAddressKey]
+	if !present {
+		return guessChannelAddress(name, namespace, domain)
 	}
-	h.Logger.Warn("Channel lister ending...")
-}
-
-func (h *Handler) getChannelURLNew(name, namespace string) (*apis.URL, error) {
-	c, err := h.ChannelLister.Channels(namespace).Get(name)
-	if err != nil {
-		h.Logger.Warn("Channel lister failed")
-		return nil, fmt.Errorf("Failed to get channel address: %v", err)
-	}
-	if c.Status.Address == nil {
-		h.Logger.Warn("Trigger Channel does not have an address")
-		return nil, fmt.Errorf("Failed to get channel address: %v", err)
-	}
-	if url := c.Status.Address.URL; url.Host == "" {
-		h.Logger.Warn("Trigger Channel does not have an address")
-		return nil, fmt.Errorf("Failed to get channel address: %v", err)
-	}
-	return c.Status.Address.URL, nil
+	return address
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	if h.getChannelURL == nil {
-		h.getChannelURL = getChannelURL
-	}
-
 	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
 }
 
@@ -198,18 +177,9 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		return http.StatusBadRequest, noDuration
 	}
 
-	// TODO: Today these are pre-deterministic, change this watch for
-	//  	 channels and look up from the channels Status
-	channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
-	h.listChannelURL(brokerName, brokerNamespace)
-	//url, err := h.getChannelURL2(brokerName, brokerNamespace)
-	//if err == nil {
-	//	h.Logger.Info("CHANNEL URL?" + url.String())
-	//} else {
-	//	h.Logger.Info(err.Error())
-	//}
+	channelAddress := h.getChannelAddress(brokerName, brokerNamespace, utils.GetClusterDomainName())
 
-	return h.send(ctx, headers, event, channelURI.String())
+	return h.send(ctx, headers, event, channelAddress)
 }
 
 func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudevents.Event, target string) (int, time.Duration) {

@@ -122,6 +122,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			return fmt.Errorf("Trigger reconcile failed: %v", te)
 		}
 	}
+
+	logging.FromContext(ctx).Infow("Annotations set. Getting annotations")
+	for k, v := range b.GetAnnotations() {
+		logging.FromContext(ctx).Info(k + ":" + v)
+	}
 	return err
 }
 
@@ -156,7 +161,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *eventingv1.Broker) (*
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return &chanMan.ref, nil
 	}
-	if url := triggerChan.Status.Address.URL; url.Host == "" {
+	if url := triggerChan.Status.Address.URL; url == nil || url.Host == "" {
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.

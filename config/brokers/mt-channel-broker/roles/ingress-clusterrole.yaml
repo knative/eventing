@@ -19,6 +19,14 @@ metadata:
     eventing.knative.dev/release: devel
 rules:
   - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - brokers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - ""
     resources:
       - "configmaps"
