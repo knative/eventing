@@ -28,6 +28,9 @@ func TestTypesImplements(t *testing.T) {
 		instance interface{}
 		iface    duck.Implementable
 	}{
+		// ContainerSource
+		{instance: &ContainerSource{}, iface: &duckv1.Conditions{}},
+		{instance: &ContainerSource{}, iface: &duckv1.Source{}},
 		// SinkBinding
 		{instance: &SinkBinding{}, iface: &duckv1.Conditions{}},
 		{instance: &SinkBinding{}, iface: &duckv1.Source{}},

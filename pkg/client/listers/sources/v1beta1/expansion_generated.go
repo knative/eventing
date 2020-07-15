@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1beta1
 
+// ContainerSourceListerExpansion allows custom methods to be added to
+// ContainerSourceLister.
+type ContainerSourceListerExpansion interface{}
+
+// ContainerSourceNamespaceListerExpansion allows custom methods to be added to
+// ContainerSourceNamespaceLister.
+type ContainerSourceNamespaceListerExpansion interface{}
+
 // SinkBindingListerExpansion allows custom methods to be added to
 // SinkBindingLister.
 type SinkBindingListerExpansion interface{}
