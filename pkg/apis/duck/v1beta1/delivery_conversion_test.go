@@ -19,6 +19,12 @@ package v1beta1
 import (
 	"context"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgduck "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestDeliverySpecConversionBadType(t *testing.T) {
@@ -42,5 +48,235 @@ func TestDeliveryStatusConversionBadType(t *testing.T) {
 
 	if err := good.ConvertFrom(context.Background(), bad); err == nil {
 		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
+}
+
+// Test v1beta1 -> v1 -> v1beta1
+func TestDeliverySpecConversion(t *testing.T) {
+	var retryCount int32 = 10
+	var backoffPolicy BackoffPolicyType = BackoffPolicyLinear
+	var backoffPolicyExp BackoffPolicyType = BackoffPolicyExponential
+	var backoffPolicyBad BackoffPolicyType = "garbage"
+	badPolicyString := `unknown BackoffPolicy, got: "garbage"`
+
+	tests := []struct {
+		name string
+		in   *DeliverySpec
+		err  *string
+	}{{
+		name: "min configuration",
+		in: &DeliverySpec{
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with retry",
+		in: &DeliverySpec{
+			Retry: &retryCount,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with linear backoff",
+		in: &DeliverySpec{
+			Retry:         &retryCount,
+			BackoffPolicy: &backoffPolicy,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with exp backoff",
+		in: &DeliverySpec{
+			Retry:         &retryCount,
+			BackoffPolicy: &backoffPolicyExp,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with bad backoff",
+		in: &DeliverySpec{
+			Retry:         &retryCount,
+			BackoffPolicy: &backoffPolicyBad,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+		err: &badPolicyString,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ver := &v1.DeliverySpec{}
+			err := test.in.ConvertTo(context.Background(), ver)
+			if err != nil {
+				if test.err == nil || *test.err != err.Error() {
+					t.Errorf("ConvertTo() = %v", err)
+				}
+				return
+			}
+			got := &DeliverySpec{}
+			if err := got.ConvertFrom(context.Background(), ver); err != nil {
+				t.Errorf("ConvertFrom() = %v", err)
+			}
+			if diff := cmp.Diff(test.in, got); diff != "" {
+				t.Errorf("roundtrip (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+// Test v1 -> v1beta1 -> v1
+func TestDeliverySpecConversionV1(t *testing.T) {
+	var retryCount int32 = 10
+	var backoffPolicy v1.BackoffPolicyType = v1.BackoffPolicyLinear
+	var backoffPolicyExp v1.BackoffPolicyType = v1.BackoffPolicyExponential
+	var backoffPolicyBad v1.BackoffPolicyType = "garbage"
+	badPolicyString := `unknown BackoffPolicy, got: "garbage"`
+
+	tests := []struct {
+		name string
+		in   *v1.DeliverySpec
+		err  *string
+	}{{
+		name: "min configuration",
+		in: &v1.DeliverySpec{
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with retry",
+		in: &v1.DeliverySpec{
+			Retry: &retryCount,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with linear backoff",
+		in: &v1.DeliverySpec{
+			Retry:         &retryCount,
+			BackoffPolicy: &backoffPolicy,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with exp backoff",
+		in: &v1.DeliverySpec{
+			Retry:         &retryCount,
+			BackoffPolicy: &backoffPolicyExp,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "with bad backoff",
+		in: &v1.DeliverySpec{
+			Retry:         &retryCount,
+			BackoffPolicy: &backoffPolicyBad,
+			DeadLetterSink: &pkgduck.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+		err: &badPolicyString,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ver := &DeliverySpec{}
+			err := ver.ConvertFrom(context.Background(), test.in)
+			if err != nil {
+				if test.err == nil || *test.err != err.Error() {
+					t.Errorf("ConvertFrom() = %v", err)
+				}
+				return
+			}
+			got := &v1.DeliverySpec{}
+			if err := ver.ConvertTo(context.Background(), got); err != nil {
+				t.Errorf("ConvertTo() = %v", err)
+			}
+			if diff := cmp.Diff(test.in, got); diff != "" {
+				t.Errorf("roundtrip (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+// Test v1beta1 -> v1 -> v1beta1
+func TestDeliveryStatusConversion(t *testing.T) {
+	tests := []struct {
+		name string
+		in   *DeliveryStatus
+		err  *string
+	}{{
+		name: "min configuration",
+		in: &DeliveryStatus{
+			DeadLetterChannel: &duckv1.KReference{
+				Kind:       "dlKind",
+				Namespace:  "dlNamespace",
+				Name:       "dlName",
+				APIVersion: "dlAPIVersion",
+			},
+		},
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ver := &v1.DeliveryStatus{}
+			err := test.in.ConvertTo(context.Background(), ver)
+			if err != nil {
+				if test.err == nil || *test.err != err.Error() {
+					t.Errorf("ConvertTo() = %v", err)
+				}
+				return
+			}
+			got := &DeliveryStatus{}
+			if err := got.ConvertFrom(context.Background(), ver); err != nil {
+				t.Errorf("ConvertFrom() = %v", err)
+			}
+			if diff := cmp.Diff(test.in, got); diff != "" {
+				t.Errorf("roundtrip (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+// Test v1 -> v1beta1 -> v1
+func TestDeliveryStatusConversionV1(t *testing.T) {
+	tests := []struct {
+		name string
+		in   *v1.DeliveryStatus
+		err  *string
+	}{{
+		name: "min configuration",
+		in: &v1.DeliveryStatus{
+			DeadLetterChannel: &duckv1.KReference{
+				Kind:       "dlKind",
+				Namespace:  "dlNamespace",
+				Name:       "dlName",
+				APIVersion: "dlAPIVersion",
+			},
+		},
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ver := &DeliveryStatus{}
+			err := ver.ConvertFrom(context.Background(), test.in)
+			if err != nil {
+				if test.err == nil || *test.err != err.Error() {
+					t.Errorf("ConvertFrom() = %v", err)
+				}
+				return
+			}
+			got := &v1.DeliveryStatus{}
+			if err := ver.ConvertTo(context.Background(), got); err != nil {
+				t.Errorf("ConvertTo() = %v", err)
+			}
+			if diff := cmp.Diff(test.in, got); diff != "" {
+				t.Errorf("roundtrip (-want, +got) = %v", diff)
+			}
+		})
 	}
 }
