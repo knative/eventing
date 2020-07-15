@@ -57,6 +57,10 @@ var (
 	// may adjust this process-wide default.  For finer control, invoke
 	// Run on the controller directly.
 	DefaultThreadsPerController = 2
+
+	// DefaultFailoverJitterSeconds is the maxFactor passed to wait.Jitter
+	// when resyncing a bucket because we have been promoted to leader.
+	DefaultFailoverJitterSeconds = 30.0
 )
 
 // Reconciler is the interface that controller implementations are expected
@@ -349,11 +353,16 @@ func (c *Impl) EnqueueKey(key types.NamespacedName) {
 	c.logger.Debugf("Adding to queue %s (depth: %d)", safeKey(key), c.WorkQueue.Len())
 }
 
-// MaybeEnqueueBucketKey takes a Bucket and namespace/name string and puts it onto the work queue.
+// MaybeEnqueueBucketKey takes a Bucket and namespace/name string and puts it onto the work queue
+// with jitter.  This jitters because it is being used to resync and it everything is enqueued
+// without jitter it could lead to starvation of keys enqueued due to informer events.
 func (c *Impl) MaybeEnqueueBucketKey(bkt reconciler.Bucket, key types.NamespacedName) {
 	if bkt.Has(key) {
-		c.WorkQueue.Add(key)
-		c.logger.Debugf("Adding to queue %s (depth: %d)", safeKey(key), c.WorkQueue.Len())
+		if DefaultFailoverJitterSeconds <= 0.0 { // Jitter has been disabled.
+			c.EnqueueKey(key)
+		} else {
+			c.EnqueueKeyAfter(key, wait.Jitter(time.Second, DefaultFailoverJitterSeconds))
+		}
 	}
 }
 
@@ -452,7 +461,7 @@ func (c *Impl) processNextWorkItem() bool {
 		if err != nil {
 			status = falseString
 		}
-		c.statsReporter.ReportReconcile(time.Since(startTime), keyStr, status)
+		c.statsReporter.ReportReconcile(time.Since(startTime), status)
 	}()
 
 	// Embed the key into the logger and attach that to the context we pass

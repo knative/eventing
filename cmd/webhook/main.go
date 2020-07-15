@@ -342,6 +342,9 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 }
 
 func main() {
+	// Disable jitter for the webhook.
+	controller.DefaultFailoverJitterSeconds = 0.0
+
 	sbSelector := psbinding.WithSelector(psbinding.ExclusionSelector)
 	if os.Getenv("SINK_BINDING_SELECTION_MODE") == "inclusion" {
 		sbSelector = psbinding.WithSelector(psbinding.InclusionSelector)
