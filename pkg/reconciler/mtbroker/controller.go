@@ -19,13 +19,8 @@ package mtbroker
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/scheme"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -39,7 +34,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
-	client "knative.dev/pkg/client/injection/kube/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/configmap"
@@ -75,25 +69,6 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 
-	recorder := controller.GetEventRecorder(ctx)
-	if recorder == nil {
-		// Create event broadcaster
-		logger.Debug("Creating event broadcaster")
-		eventBroadcaster := record.NewBroadcaster()
-		watches := []watch.Interface{
-			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
-			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: client.Get(ctx).CoreV1().Events("")}),
-		}
-		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
-		go func() {
-			<-ctx.Done()
-			for _, w := range watches {
-				w.Stop()
-			}
-		}()
-	}
-
 	eventingv1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
 		BrokerConditionIngress,
 		BrokerConditionTriggerChannel,
@@ -110,7 +85,6 @@ func NewController(
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
 		brokerClass:        eventing.MTChannelBrokerClassValue,
-		recorder:           recorder,
 	}
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
 

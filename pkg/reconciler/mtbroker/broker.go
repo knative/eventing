@@ -31,7 +31,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/record"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -47,6 +46,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
@@ -80,7 +80,6 @@ type Reconciler struct {
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
-	recorder    record.EventRecorder
 }
 
 // Check that our Reconciler implements Interface
@@ -315,6 +314,7 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 
 // reconcileTriggers reconciles the Triggers that are pointed to this broker
 func (r *Reconciler) reconcileTriggers(ctx context.Context, b *eventingv1.Broker, triggerChan *corev1.ObjectReference) error {
+	recorder := controller.GetEventRecorder(ctx)
 	triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.Everything())
 	if err != nil {
 		return err
@@ -325,14 +325,14 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *eventingv1.Broker
 			tErr := r.reconcileTrigger(ctx, b, trigger, triggerChan)
 			if tErr != nil {
 				logging.FromContext(ctx).Errorw("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
-				r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconcile failed: %v", tErr)
+				recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconcile failed: %v", tErr)
 			} else {
-				r.recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
+				recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
 			}
 			trigger.Status.ObservedGeneration = t.Generation
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Errorw("Failed to update Trigger status", zap.Error(updateStatusErr))
-				r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 			}
 		}
 	}
@@ -340,6 +340,7 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *eventingv1.Broker
 }
 
 func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namespace, name string, bs *eventingv1.BrokerStatus) error {
+	recorder := controller.GetEventRecorder(ctx)
 	triggers, err := r.triggerLister.Triggers(namespace).List(labels.Everything())
 	if err != nil {
 		return err
@@ -356,7 +357,7 @@ func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namesp
 			}
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Errorw("Failed to update Trigger status", zap.Error(updateStatusErr))
-				r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 				return updateStatusErr
 			}
 		}
