@@ -32,40 +32,34 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
 			func(ch *Channel, c fuzz.Continue) {
+				c.FuzzNoCustom(ch) // fuzz the Channel
 				if ch != nil {
 					if ch.Annotations == nil {
 						ch.Annotations = make(map[string]string)
 					}
 					ch.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 				}
+				// Clear the random fuzzed condition
+				ch.Status.SetConditions(nil)
+
+				// Fuzz the known conditions except their type value
+				ch.Status.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&ch.Status, c)
 			},
 			func(imc *InMemoryChannel, c fuzz.Continue) {
+				c.FuzzNoCustom(imc) // fuzz the InMemoryChannel
 				if imc != nil {
 					if imc.Annotations == nil {
 						imc.Annotations = make(map[string]string)
 					}
 					imc.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 				}
-			},
-			func(s *ChannelStatus, c fuzz.Continue) {
-				c.FuzzNoCustom(s) // fuzz the status object
-
 				// Clear the random fuzzed condition
-				s.Status.SetConditions(nil)
+				imc.Status.SetConditions(nil)
 
 				// Fuzz the known conditions except their type value
-				s.InitializeConditions()
-				pkgfuzzer.FuzzConditions(&s.Status, c)
-			},
-			func(s *InMemoryChannelStatus, c fuzz.Continue) {
-				c.FuzzNoCustom(s) // fuzz the status object
-
-				// Clear the random fuzzed condition
-				s.Status.SetConditions(nil)
-
-				// Fuzz the known conditions except their type value
-				s.InitializeConditions()
-				pkgfuzzer.FuzzConditions(&s.Status, c)
+				imc.Status.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&imc.Status, c)
 			},
 			func(s *SubscriptionStatus, c fuzz.Continue) {
 				c.FuzzNoCustom(s) // fuzz the status object

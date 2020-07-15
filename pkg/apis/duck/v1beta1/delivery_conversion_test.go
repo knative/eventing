@@ -27,7 +27,7 @@ import (
 	pkgduck "knative.dev/pkg/apis/duck/v1"
 )
 
-func TestDeliverySpecConversionBadType(t *testing.T) {
+func TestDeliverySpeConversionBadType(t *testing.T) {
 	good, bad := &DeliverySpec{}, &DeliverySpec{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
@@ -206,7 +206,7 @@ func TestDeliverySpecConversionV1(t *testing.T) {
 }
 
 // Test v1beta1 -> v1 -> v1beta1
-func TestDeliveryStatuscConversion(t *testing.T) {
+func TestDeliveryStatusConversion(t *testing.T) {
 	tests := []struct {
 		name string
 		in   *DeliveryStatus
@@ -244,7 +244,7 @@ func TestDeliveryStatuscConversion(t *testing.T) {
 }
 
 // Test v1 -> v1beta1 -> v1
-func TestDeliveryStatuscConversionV1(t *testing.T) {
+func TestDeliveryStatusConversionV1(t *testing.T) {
 	tests := []struct {
 		name string
 		in   *v1.DeliveryStatus

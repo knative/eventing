@@ -28,7 +28,7 @@ import (
 	"knative.dev/pkg/apis/testing/roundtrip"
 )
 
-func TestEventingRoundTripTypesToJSON(t *testing.T) {
+func TestMessagingRoundTripTypesToJSON(t *testing.T) {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(AddToScheme(scheme))
 
@@ -39,7 +39,7 @@ func TestEventingRoundTripTypesToJSON(t *testing.T) {
 	roundtrip.ExternalTypesViaJSON(t, scheme, fuzzerFuncs)
 }
 
-func TestEventingRoundTripTypesToBetaHub(t *testing.T) {
+func TestMessagingRoundTripTypesToBetaHub(t *testing.T) {
 	scheme := runtime.NewScheme()
 
 	sb := runtime.SchemeBuilder{

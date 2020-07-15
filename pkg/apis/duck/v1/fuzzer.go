@@ -37,6 +37,7 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
 			func(ds *DeliverySpec, c fuzz.Continue) {
+				c.FuzzNoCustom(ds) // fuzz the DeliverySpec
 				if ds.BackoffPolicy != nil && *ds.BackoffPolicy == "" {
 					ds.BackoffPolicy = nil
 				} else {

@@ -22,6 +22,7 @@ import (
 	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmeta"
 )
 
 // ConvertTo implements apis.Convertible
@@ -30,12 +31,9 @@ func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) erro
 	switch sink := obj.(type) {
 	case *v1.Channel:
 		sink.ObjectMeta = source.ObjectMeta
-		// Always make a new copy of annotations because we mess with them.
-		sink.Annotations = make(map[string]string)
-		for k, v := range source.Annotations {
-			sink.Annotations[k] = v
-		}
-		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
+
+		// Does a deep copy, adds our duck version.
+		sink.Annotations = kmeta.UnionMaps(source.Annotations, map[string]string{messaging.SubscribableDuckVersionAnnotation: "v1"})
 		source.Status.ConvertTo(ctx, &sink.Status)
 		return source.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
@@ -62,10 +60,11 @@ func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1.ChannelSpec) 
 
 // ConvertTo helps implement apis.Convertible
 func (source *ChannelStatus) ConvertTo(ctx context.Context, sink *v1.ChannelStatus) {
-	source.Status.ConvertTo(ctx, &sink.Status)
+	sink.Status = source.Status
 	sink.AddressStatus.Address = source.AddressStatus.Address
 	source.SubscribableStatus.ConvertTo(ctx, &sink.SubscribableStatus)
 	sink.Channel = source.Channel
+	sink.DeadLetterChannel = source.DeadLetterChannel
 }
 
 // ConvertFrom implements apis.Convertible.
@@ -76,12 +75,9 @@ func (sink *Channel) ConvertFrom(ctx context.Context, obj apis.Convertible) erro
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Status.ConvertFrom(ctx, source.Status)
 		sink.Spec.ConvertFrom(ctx, source.Spec)
-		// Always make a new copy of annotations because we mess with them.
-		sink.Annotations = make(map[string]string)
-		for k, v := range source.Annotations {
-			sink.Annotations[k] = v
-		}
-		sink.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
+		// Does a deep copy, adds our duck version.
+		sink.Annotations = kmeta.UnionMaps(source.Annotations, map[string]string{messaging.SubscribableDuckVersionAnnotation: "v1beta1"})
+
 		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
@@ -105,8 +101,9 @@ func (sink *ChannelSpec) ConvertFrom(ctx context.Context, source v1.ChannelSpec)
 
 // ConvertFrom helps implement apis.Convertible
 func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1.ChannelStatus) {
-	source.Status.ConvertTo(ctx, &sink.Status)
+	sink.Status = source.Status
 	sink.Channel = source.Channel
 	sink.SubscribableStatus.ConvertFrom(ctx, &source.SubscribableStatus)
 	sink.AddressStatus.Address = source.AddressStatus.Address
+	sink.DeadLetterChannel = source.DeadLetterChannel
 }
