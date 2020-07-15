@@ -164,19 +164,19 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 		cfg.Kind = "PingSource"
 
 		// Is the schedule already cached?
-		if cfgid, ok := a.entryids[key]; ok {
-			if !equality.Semantic.DeepEqual(cfgid.config, cfg) {
-				a.Logger.Infof("updating schedule", zap.Any("key", key))
-				// Recreate cronjob
-				a.RemoveSchedule(cfgid.entryID)
-				cfgid.entryID = a.AddSchedule(cfg)
-				cfgid.config = &cfg
+		if entry, ok := a.entryids[key]; ok {
+			if !equality.Semantic.DeepEqual(entry.config, cfg) {
+				a.Logger.Info("updating schedule", zap.Any("key", key))
 
+				// Recreate cronjob
+				a.RemoveSchedule(entry.entryID)
+				entry.entryID = a.AddSchedule(cfg)
+				entry.config = &cfg
 			} else {
 				// cron jon exists and correctly configure. noop.
 			}
 		} else {
-			a.Logger.Infof("adding schedule", zap.Any("key", key))
+			a.Logger.Info("adding schedule", zap.Any("key", key))
 			// Create cronjob
 			a.entryids[key] = entryIdConfig{
 				entryID: a.AddSchedule(cfg),
@@ -188,9 +188,10 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 	}
 
 	for key := range keys {
-		if cfgid, ok := a.entryids[key]; ok {
-			a.Logger.Infof("deleting schedule", zap.Any("key", key))
-			a.RemoveSchedule(cfgid.entryID)
+		if entry, ok := a.entryids[key]; ok {
+			a.Logger.Info("deleting schedule", zap.Any("key", key))
+			a.RemoveSchedule(entry.entryID)
+			delete(a.entryids, key)
 		}
 	}
 }
