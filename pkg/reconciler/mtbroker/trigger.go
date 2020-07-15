@@ -100,6 +100,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *eventingv1.Broker,
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1.Subscription, error) {
+	recorder := controller.GetEventRecorder(ctx)
 	uri := &apis.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName("broker-filter", system.Namespace()),
@@ -131,13 +132,13 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		logging.FromContext(ctx).Info("Creating subscription")
 		sub, err = r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {
-			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+			recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		return sub, nil
 	} else if err != nil {
 		logging.FromContext(ctx).Errorw("Failed to get subscription", zap.Error(err))
-		r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionGetFailed, "Getting the Trigger's Subscription failed: %v", err)
+		recorder.Eventf(t, corev1.EventTypeWarning, subscriptionGetFailed, "Getting the Trigger's Subscription failed: %v", err)
 		return nil, err
 	} else if !metav1.IsControlledBy(sub, t) {
 		t.Status.MarkNotSubscribed("SubscriptionNotOwnedByTrigger", "trigger %q does not own subscription %q", t.Name, sub.Name)
@@ -155,6 +156,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *eventingv1.Tr
 	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
 		return actual, nil
 	}
+	recorder := controller.GetEventRecorder(ctx)
 	logging.FromContext(ctx).Infow("Differing Subscription", zap.Any("expected", expected.Spec), zap.Any("actual", actual.Spec))
 
 	// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
@@ -163,14 +165,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *eventingv1.Tr
 	err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
-		r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
+		recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
 		return nil, err
 	}
 	logging.FromContext(ctx).Info("Creating subscription")
 	newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(expected)
 	if err != nil {
 		logging.FromContext(ctx).Infow("Cannot create subscription", zap.Error(err))
-		r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+		recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 		return nil, err
 	}
 	return newSub, nil
