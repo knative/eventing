@@ -91,6 +91,9 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	client.Tracker = NewTracker(t, client.Dynamic)
 
 	client.tracingEnv, err = getTracingConfig(client.Kube.Kube)
+	if err != nil {
+		return nil, err
+	}
 
 	return client, nil
 }
