@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -184,7 +183,10 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *eventingv
 		return nil, err
 	}
 
-	if reflect.DeepEqual(trigger.Status, desired.Status) {
+	// Do the postprocessing for unnecessary trigger status changes.
+	groomConditionsTransitionTime(desired, trigger)
+
+	if equality.Semantic.DeepEqual(trigger.Status, desired.Status) {
 		return trigger, nil
 	}
 
