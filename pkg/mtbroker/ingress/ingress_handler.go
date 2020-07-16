@@ -32,8 +32,8 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
@@ -55,13 +55,13 @@ type Handler struct {
 	Defaulter client.EventDefaulter
 	// Reporter reports stats of status code and dispatch time
 	Reporter StatsReporter
+	// BrokerLister gets broker objects
+	BrokerLister eventinglisters.BrokerLister
 
 	Logger *zap.Logger
-
-	BrokerLister eventinglisters.BrokerLister
 }
 
-func (h *Handler) getBroker(name, namespace string) (*v1beta1.Broker, error) {
+func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) {
 	broker, err := h.BrokerLister.Brokers(namespace).Get(name)
 	if err != nil {
 		h.Logger.Warn("Broker getter failed")

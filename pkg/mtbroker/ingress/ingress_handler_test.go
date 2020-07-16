@@ -21,18 +21,26 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/utils"
 
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	v1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	broker "knative.dev/eventing/pkg/mtbroker"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -55,6 +63,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		handler         nethttp.Handler
 		reporter        StatsReporter
 		defaulter       client.EventDefaulter
+		brokers         []runtime.Object
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -115,6 +124,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			handler:    handler(),
 			reporter:   &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter:  broker.TTLDefaulter(logger, 100),
+			brokers: []runtime.Object{
+				makeBroker("name", "ns", "http://name-kne-trigger-kn-channel.ns.svc.cluster.local/"),
+			},
 		},
 		{
 			name:       "no TTL drop event",
@@ -124,6 +136,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
 			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest},
+			brokers: []runtime.Object{
+				makeBroker("name", "ns", "http://name-kne-trigger-kn-channel.ns.svc.cluster.local/"),
+			},
 		},
 		{
 			name:       "malformed request URI",
@@ -133,6 +148,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
 			reporter:   &mockReporter{},
+			brokers: []runtime.Object{
+				makeBroker("name", "ns", "http://name-kne-trigger-kn-channel.ns.svc.cluster.local/"),
+			},
 		},
 		{
 			name:       "root request URI",
@@ -142,6 +160,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			statusCode: nethttp.StatusNotFound,
 			handler:    handler(),
 			reporter:   &mockReporter{},
+			brokers: []runtime.Object{
+				makeBroker("name", "ns", "http://name-kne-trigger-kn-channel.ns.svc.cluster.local/"),
+			},
 		},
 		{
 			name:       "pass headers to handler",
@@ -163,6 +184,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter: broker.TTLDefaulter(logger, 100),
+			brokers: []runtime.Object{
+				makeBroker("name", "ns", "http://name-kne-trigger-kn-channel.ns.svc.cluster.local/"),
+			},
 		},
 	}
 
@@ -185,14 +209,11 @@ func TestHandler_ServeHTTP(t *testing.T) {
 
 			sender, _ := kncloudevents.NewHttpMessageSender(nil, "")
 			h := &Handler{
-				Sender:    sender,
-				Defaulter: tc.defaulter,
-				Reporter:  &mockReporter{},
-				Logger:    logger,
-				getChannelURL: func(name, namespace, domain string) url.URL {
-					u, _ := url.Parse(s.URL)
-					return *u
-				},
+				Sender:       sender,
+				Defaulter:    tc.defaulter,
+				Reporter:     &mockReporter{},
+				Logger:       logger,
+				BrokerLister: &mockBrokerLister{}, //listers.GetV1BrokerLister(),
 			}
 
 			h.ServeHTTP(recorder, request)
@@ -200,6 +221,8 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			result := recorder.Result()
 			if result.StatusCode != tc.statusCode {
 				t.Errorf("expected status code %d got %d", tc.statusCode, result.StatusCode)
+				broker, _ := h.BrokerLister.Brokers("ns").Get("name")
+				t.Errorf(broker.Status.Annotations["channelAddress"])
 			}
 
 			if svc, ok := tc.handler.(*svc); ok {
@@ -256,4 +279,63 @@ func getValidEvent() io.Reader {
 	e.SetID("1234")
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)
+}
+
+type mockBrokerNamespaceLister struct {
+	namespace string
+}
+
+func (r *mockBrokerNamespaceLister) List(selector labels.Selector) ([]*eventingv1.Broker, error) {
+	return nil, nil
+}
+
+func (r *mockBrokerNamespaceLister) Get(name string) (*eventingv1.Broker, error) {
+	address := guessChannelAddress(name, r.namespace, utils.GetClusterDomainName())
+	return makeBroker(name, r.namespace, address), nil
+}
+
+type mockBrokerLister struct {
+}
+
+func (r *mockBrokerLister) List(selector labels.Selector) ([]*eventingv1.Broker, error) {
+	return nil, nil
+}
+
+func (r *mockBrokerLister) Brokers(namespace string) v1.BrokerNamespaceLister {
+	return &mockBrokerNamespaceLister{namespace}
+}
+
+func makeBroker(name, namespace, channelAddress string) *eventingv1.Broker {
+	return &eventingv1.Broker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Broker",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			UID:       "broker-uid",
+			Annotations: map[string]string{
+				eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue,
+			},
+		},
+		Spec: eventingv1.BrokerSpec{
+			Config: &duckv1.KReference{
+				APIVersion: "v1",
+				Kind:       "ConfigMap",
+				Namespace:  "knative-eventing",
+				Name:       "imc-channel",
+			},
+		},
+		Status: eventingv1.BrokerStatus{
+			Status: duckv1.Status{
+				Annotations: map[string]string{
+					"channelAddress": channelAddress,
+				},
+			},
+			Address: duckv1.Addressable{
+				URL: apis.HTTP(""),
+			},
+		},
+	}
 }

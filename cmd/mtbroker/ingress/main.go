@@ -31,7 +31,7 @@ import (
 	"go.uber.org/zap"
 
 	cmdbroker "knative.dev/eventing/cmd/mtbroker"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/mtbroker/ingress"

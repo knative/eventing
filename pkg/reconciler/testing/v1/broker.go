@@ -174,3 +174,12 @@ func WithBrokerClass(bc string) BrokerOption {
 		b.SetAnnotations(annotations)
 	}
 }
+
+func WithChannelAddressAnnotation(address string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations["channelAddress"] = address
+	}
+}
