@@ -232,11 +232,11 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithBrokerConfig(config()),
-					WithTriggerChannelFailed("ChannelTemplateFailed", `Error on setting up the ChannelTemplate: configmaps "test-configmap" not found`)),
+					WithTriggerChannelFailed("ChannelTemplateFailed", `Error on setting up the ChannelTemplate: configmap "test-configmap" not found`)),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", `configmaps "test-configmap" not found`),
+				Eventf(corev1.EventTypeWarning, "InternalError", `configmap "test-configmap" not found`),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
@@ -1167,6 +1167,7 @@ func TestReconcile(t *testing.T) {
 			triggerLister:      listers.GetTriggerLister(),
 
 			endpointsLister:    listers.GetEndpointsLister(),
+			configmapLister:    listers.GetConfigMapLister(),
 			kresourceTracker:   duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),

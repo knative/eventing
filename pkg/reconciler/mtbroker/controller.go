@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -68,6 +69,7 @@ func NewController(
 	triggerInformer := triggerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
+	configmapInformer := configmapinformer.Get(ctx)
 
 	eventingv1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
 		BrokerConditionIngress,
@@ -84,6 +86,7 @@ func NewController(
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
 		brokerClass:        eventing.MTChannelBrokerClassValue,
+		configmapLister:    configmapInformer.Lister(),
 	}
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
 

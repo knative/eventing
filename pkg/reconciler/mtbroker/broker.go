@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -67,6 +69,7 @@ type Reconciler struct {
 	endpointsLister    corev1listers.EndpointsLister
 	subscriptionLister messaginglisters.SubscriptionLister
 	triggerLister      eventinglisters.TriggerLister
+	configmapLister    corev1listers.ConfigMapLister
 
 	channelableTracker duck.ListableTracker
 
@@ -213,7 +216,8 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *eventingv1.Broke
 					zap.String("namespace", b.Namespace), zap.String("name", b.Name))
 				return nil, errors.New("Broker.Spec.Config name and namespace are required")
 			}
-			cm, err := r.kubeClientSet.CoreV1().ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name, metav1.GetOptions{})
+
+			cm, err := r.configmapLister.ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -362,4 +366,25 @@ func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namesp
 		}
 	}
 	return nil
+}
+
+// lifted from pkg/reconciler/reconcile_common for now...
+// groomConditionsTransitionTime ensures that the LastTransitionTime only advances for resources
+// where the condition has changed during reconciliation. This also ensures that all advanced
+// conditions share the same timestamp.
+func groomConditionsTransitionTime(resource, oldResource pkgduckv1.KRShaped) {
+	now := apis.VolatileTime{Inner: metav1.NewTime(time.Now())}
+	sts := resource.GetStatus()
+	for i := range sts.Conditions {
+		cond := &sts.Conditions[i]
+
+		if oldCond := oldResource.GetStatus().GetCondition(cond.Type); oldCond != nil {
+			cond.LastTransitionTime = oldCond.LastTransitionTime
+			if reflect.DeepEqual(cond, oldCond) {
+				continue
+			}
+		}
+
+		cond.LastTransitionTime = now
+	}
 }
