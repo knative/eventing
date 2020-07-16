@@ -173,7 +173,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		newEvent := h.Defaulter(ctx, *event)
 		event = &newEvent
 	}
-
+	//
 	if ttl, err := broker.GetTTL(event.Context); err != nil || ttl <= 0 {
 		h.Logger.Debug("dropping event based on TTL status.", zap.Int32("TTL", ttl), zap.String("event.id", event.ID()), zap.Error(err))
 		return http.StatusBadRequest, noDuration
