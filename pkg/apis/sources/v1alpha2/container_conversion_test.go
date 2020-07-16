@@ -18,6 +18,7 @@ package v1alpha2
 
 import (
 	"context"
+	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"testing"
 
@@ -89,6 +90,14 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 				SourceSpec: duckv1.SourceSpec{
 					Sink: sink,
 				},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name: "test",
+							Image: "test-image",
+						}},
+					},
+				},
 			},
 			Status: ContainerSourceStatus{
 				SourceStatus: duckv1.SourceStatus{
@@ -118,6 +127,14 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 							"foo": "bar",
 							"baz": "baf",
 						},
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name: "test",
+							Image: "test-image",
+						}},
 					},
 				},
 			},
@@ -191,6 +208,14 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 				SourceSpec: duckv1.SourceSpec{
 					Sink:                sink,
 					CloudEventOverrides: &ceOverrides,
+				},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name: "test",
+							Image: "test-image",
+						}},
+					},
 				},
 			},
 			Status: v1beta1.ContainerSourceStatus{
