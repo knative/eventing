@@ -104,7 +104,6 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkEventTypes()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -158,14 +157,13 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		wantConditionStatus: corev1.ConditionUnknown,
 		want:                false,
 	}, {
-		name: "mark sink and sufficient permissions and deployed and event types",
+		name: "mark sink and sufficient permissions and deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
-			s.MarkEventTypes()
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -273,7 +271,6 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
-			s.MarkEventTypes()
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -289,7 +286,6 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.MarkSink(nil)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
-			s.MarkEventTypes()
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
