@@ -20,7 +20,10 @@ package e2e
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/test/e2e/helpers"
+	"knative.dev/eventing/test/lib"
 )
 
 /*
@@ -38,14 +41,28 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTriggerV1BrokerV1(t *testing.T) {
-	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1", "v1", channelTestRunner)
+	runTest(t, "v1", "v1")
 }
+
 func TestEventTransformationForTriggerV1Beta1BrokerV1(t *testing.T) {
-	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1", "v1beta1", channelTestRunner)
+	runTest(t, "v1", "v1beta1")
 }
 func TestEventTransformationForTriggerV1Beta1BrokerV1Beta1(t *testing.T) {
-	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1beta1", "v1beta1", channelTestRunner)
+	runTest(t, "v1beta1", "v1beta1")
 }
 func TestEventTransformationForTriggerV1BrokerV1Beta1(t *testing.T) {
-	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, "v1beta1", "v1", channelTestRunner)
+	runTest(t, "v1beta1", "v1")
+}
+
+func runTest(t *testing.T, brokerVersion string, triggerVersion string) {
+
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
+		helpers.EventTransformationForTriggerTestHelper(
+			t,
+			brokerVersion,
+			triggerVersion,
+			helpers.ChannelBasedBrokerCreator(component, brokerClass),
+		)
+	})
+
 }
