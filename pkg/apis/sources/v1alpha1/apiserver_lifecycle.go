@@ -126,7 +126,7 @@ func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deploy
 		}
 	}
 	if !deploymentAvailableFound {
-		PingSourceCondSet.Manage(s).MarkUnknown(PingSourceConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+		apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
 }
 
