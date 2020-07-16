@@ -82,7 +82,6 @@ func guessChannelAddress(name, namespace, domain string) string {
 func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 	broker, err := h.getBroker(name, namespace)
 	if err != nil {
-		// If for some reason the BrokerLister fails, we fall back on old behaviour.
 		return "", err
 	}
 	if broker.Status.Annotations == nil {

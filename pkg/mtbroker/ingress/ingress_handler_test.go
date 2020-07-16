@@ -211,7 +211,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			}
 
 			// TODO: use broker lister from "knative.dev/pkg/reconciler/testing" once
-			// v1 broker listers are implemented
+			// v1 broker listers are implemented in testing
 			brokerLister := makeBrokerLister(tc.brokers)
 
 			sender, _ := kncloudevents.NewHttpMessageSender(nil, "")
