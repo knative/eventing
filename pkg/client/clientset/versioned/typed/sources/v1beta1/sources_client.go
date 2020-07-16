@@ -26,6 +26,7 @@ import (
 
 type SourcesV1beta1Interface interface {
 	RESTClient() rest.Interface
+	ApiServerSourcesGetter
 	ContainerSourcesGetter
 	SinkBindingsGetter
 }
@@ -33,6 +34,10 @@ type SourcesV1beta1Interface interface {
 // SourcesV1beta1Client is used to interact with features provided by the sources.knative.dev group.
 type SourcesV1beta1Client struct {
 	restClient rest.Interface
+}
+
+func (c *SourcesV1beta1Client) ApiServerSources(namespace string) ApiServerSourceInterface {
+	return newApiServerSources(c, namespace)
 }
 
 func (c *SourcesV1beta1Client) ContainerSources(namespace string) ContainerSourceInterface {
