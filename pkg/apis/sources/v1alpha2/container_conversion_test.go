@@ -18,9 +18,10 @@ package v1alpha2
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,7 +94,7 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: "test",
+							Name:  "test",
 							Image: "test-image",
 						}},
 					},
@@ -132,7 +133,7 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: "test",
+							Name:  "test",
 							Image: "test-image",
 						}},
 					},
@@ -212,7 +213,7 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: "test",
+							Name:  "test",
 							Image: "test-image",
 						}},
 					},
