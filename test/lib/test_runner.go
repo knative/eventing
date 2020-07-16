@@ -49,6 +49,7 @@ const (
 type ComponentsTestRunner struct {
 	ComponentFeatureMap map[metav1.TypeMeta][]Feature
 	ComponentsToTest    []metav1.TypeMeta
+	componentOptions map[metav1.TypeMeta][]SetupClientOption
 }
 
 // RunTests will use all components that support the given feature, to run
@@ -71,6 +72,47 @@ func (tr *ComponentsTestRunner) RunTests(
 			})
 		}
 	}
+}
+
+// RunTestsWithComponentOptions will use all components that support the given
+// feature, to run a test for the testFunc while passing the component specific
+// SetupClientOptions to testFunc. You should used this method instead of
+// RunTests if you have used AddComponentSetupClientOption to add some component
+// specific initialization code.
+func (tr *ComponentsTestRunner) RunTestsWithComponentOptions(
+	t *testing.T,
+	feature Feature,
+	testFunc func(st *testing.T, component metav1.TypeMeta, options ...SetupClientOption),
+) {
+	t.Parallel()
+	for _, component := range tr.ComponentsToTest {
+		// If a component is not present in the map, then assume it has all properties. This is so an
+		// unknown component (e.g. a Channel) can be specified via a dedicated flag (e.g. --channels) and have tests run.
+		// TODO Use a flag to specify the features of the flag based component, rather than assuming
+		// it supports all features.
+		features, present := tr.ComponentFeatureMap[component]
+		if !present || contains(features, feature) {
+			t.Run(fmt.Sprintf("%s-%s", component.Kind, component.APIVersion), func(st *testing.T) {
+				testFunc(st, component, tr.componentOptions[component]...)
+			})
+		}
+	}
+}
+
+// AddComponentSetupClientOption adds a SetupClientOption that should only run when
+// component gets selected to run. This should be used when there's an expensive
+// initialization code should take place conditionally (e.g. create an instance
+// of a source or a channel) as opposed to other cheap initialization code that
+// is safe to be called in all cases (e.g. installation of a CRD)
+func (tr *ComponentsTestRunner) AddComponentSetupClientOption(component metav1.TypeMeta,
+	options ...SetupClientOption){
+	if tr.componentOptions == nil {
+		tr.componentOptions = make(map[metav1.TypeMeta][]SetupClientOption)
+	}
+	if _, ok := tr.componentOptions[component]; !ok {
+		tr.componentOptions[component] = make([]SetupClientOption, 0)
+	}
+	tr.componentOptions[component] = append(tr.componentOptions[component], options...)
 }
 
 func contains(features []Feature, feature Feature) bool {

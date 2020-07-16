@@ -74,7 +74,7 @@ func channelCRDHasRequiredLabels(client *testlib.Client, channel metav1.TypeMeta
 	//   label of messaging.knative.dev/subscribable: "true"
 	//   label of duck.knative.dev/addressable: "true"
 
-	validateRequiredLabels(client, channel, channelLabels)
+	ValidateRequiredLabels(client, channel, channelLabels)
 }
 
 func channelCRDHasProperCategory(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {

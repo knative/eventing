@@ -77,3 +77,47 @@ func newChannel(obj *resources.MetaResource) (*unstructured.Unstructured, error)
 	}
 	return u, nil
 }
+
+// CreateGenericSourceObject create a generic source object with the dynamic client and source's meta data.
+func CreateGenericSourceObject(dynamicClient dynamic.Interface,
+obj *resources.MetaResource,
+) ( schema.GroupVersionResource, error) {
+	// get the resource's gvr
+	gvr, _ := meta.UnsafeGuessKindToResource(obj.GroupVersionKind())
+	src, err := newSource(obj)
+	if err != nil {
+		return gvr, err
+	}
+
+	sourceResourceInterface := dynamicClient.Resource(gvr).Namespace(obj.Namespace)
+	_, err = sourceResourceInterface.Create(src, metav1.CreateOptions{})
+	return gvr, err
+}
+
+// newSource returns an unstructured.Unstructured based on the ChannelTemplateSpec for a given meta resource.
+func newSource(obj *resources.MetaResource) (*unstructured.Unstructured, error) {
+	// Set the name of the resource we're creating as well as the namespace, etc.
+	template := sourcesv1Alp.ChannelTemplateSpecInternal{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       obj.Kind,
+			APIVersion: obj.APIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      obj.Name,
+			Namespace: obj.Namespace,
+		},
+		Spec: messagingv1beta1.ChannelTemplateSpec{
+			TypeMeta: obj.TypeMeta,
+		}.Spec,
+	}
+	raw, err := json.Marshal(template)
+	if err != nil {
+		return nil, err
+	}
+	u := &unstructured.Unstructured{}
+	err = json.Unmarshal(raw, u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
