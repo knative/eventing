@@ -19,7 +19,7 @@ package sinkbinding
 import (
 	"context"
 
-	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/sinkbinding"
+	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/reconciler"
@@ -31,7 +31,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -73,7 +73,7 @@ func NewController(
 				return nil
 			},
 		},
-		GVR: v1alpha1.SchemeGroupVersion.WithResource("sinkbindings"),
+		GVR: v1beta1.SchemeGroupVersion.WithResource("sinkbindings"),
 		Get: func(namespace string, name string) (psbinding.Bindable, error) {
 			return sbInformer.Lister().SinkBindings(namespace).Get(name)
 		},
@@ -125,12 +125,12 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 	r := resolver.NewURIResolver(ctx, handler)
 
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		sb := b.(*v1alpha1.SinkBinding)
+		sb := b.(*v1beta1.SinkBinding)
 		uri, err := r.URIFromDestinationV1(sb.Spec.Sink, sb)
 		if err != nil {
 			return nil, err
 		}
 		sb.Status.SinkURI = uri
-		return v1alpha1.WithSinkURI(ctx, sb.Status.SinkURI), nil
+		return v1beta1.WithSinkURI(ctx, sb.Status.SinkURI), nil
 	}
 }
