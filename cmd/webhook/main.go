@@ -92,7 +92,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha2.ContainerSource{},
 	// v1beta1
 	sourcesv1beta1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1beta1.SinkBinding{},
-	sourcesv1beta1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1beta1.SinkBinding{},
+	sourcesv1beta1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1beta1.ContainerSource{},
 
 	// For group flows.knative.dev
 	// v1beta1
