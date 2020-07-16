@@ -21,17 +21,19 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"knative.dev/pkg/apis"
-
-	"knative.dev/eventing/pkg/apis/eventing"
 )
 
 func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
-	errs := c.Spec.Validate(ctx).ViaField("spec")
-	return ValidateAnnotations(errs, c.Annotations)
+	return c.Spec.Validate(ctx).ViaField("spec")
 }
 
 func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
+
+	schedule := cs.Schedule
+	if cs.Timezone != "" {
+		schedule = "CRON_TZ=" + cs.Timezone + " " + schedule
+	}
 
 	if _, err := cron.ParseStandard(cs.Schedule); err != nil {
 		fe := apis.ErrInvalidValue(cs.Schedule, "schedule")
@@ -40,19 +42,6 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if fe := cs.Sink.Validate(ctx); fe != nil {
 		errs = errs.Also(fe.ViaField("sink"))
-	}
-	return errs
-}
-
-func ValidateAnnotations(errs *apis.FieldError, annotations map[string]string) *apis.FieldError {
-	if annotations != nil {
-		if scope, ok := annotations[eventing.ScopeAnnotationKey]; ok {
-			if scope != eventing.ScopeResource && scope != eventing.ScopeCluster {
-				iv := apis.ErrInvalidValue(scope, "")
-				iv.Details = "expected either 'cluster' or 'resource'"
-				errs = errs.Also(iv.ViaFieldKey("annotations", eventing.ScopeAnnotationKey).ViaField("metadata"))
-			}
-		}
 	}
 	return errs
 }

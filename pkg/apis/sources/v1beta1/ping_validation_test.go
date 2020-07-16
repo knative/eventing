@@ -20,9 +20,6 @@ import (
 	"context"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
-
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -39,6 +36,42 @@ func TestPingSourceValidation(t *testing.T) {
 		source: PingSource{
 			Spec: PingSourceSpec{
 				Schedule: "*/2 * * * *",
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1alpha1",
+							Kind:       "broker",
+							Name:       "default",
+						},
+					},
+				},
+			},
+		},
+		want: nil,
+	}, {
+		name: "valid spec with timezone",
+		source: PingSource{
+			Spec: PingSourceSpec{
+				Schedule: "*/2 * * * *",
+				Timezone: "Europe/Paris",
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1alpha1",
+							Kind:       "broker",
+							Name:       "default",
+						},
+					},
+				},
+			},
+		},
+		want: nil,
+	}, {
+		name: "valid spec with invalid timezone",
+		source: PingSource{
+			Spec: PingSourceSpec{
+				Schedule: "*/2 * * * *",
+				Timezone: "Knative/Land",
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
 						Ref: &duckv1.KReference{
@@ -80,34 +113,6 @@ func TestPingSourceValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrInvalidValue("2", "spec.schedule")
-			errs = errs.Also(fe)
-			return errs
-		}(),
-	}, {
-		name: "invalid annotation",
-		source: PingSource{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					eventing.ScopeAnnotationKey: "notvalid",
-				},
-			},
-			Spec: PingSourceSpec{
-				Schedule: "*/2 * * * *",
-				SourceSpec: duckv1.SourceSpec{
-					Sink: duckv1.Destination{
-						Ref: &duckv1.KReference{
-							APIVersion: "v1alpha1",
-							Kind:       "broker",
-							Name:       "default",
-							Namespace:  "namespace",
-						},
-					},
-				},
-			},
-		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrInvalidValue("notvalid", "metadata.annotations.[eventing.knative.dev/scope]\nexpected either 'cluster' or 'resource'")
 			errs = errs.Also(fe)
 			return errs
 		}(),
