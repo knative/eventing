@@ -14,45 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mtping
+package adapter
 
 import (
 	"context"
 	"testing"
-	"time"
 
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	rectesting "knative.dev/pkg/reconciler/testing"
-
-	pkgadapter "knative.dev/eventing/pkg/adapter/v2"
-	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 )
 
-func TestStartStopAdapter(t *testing.T) {
+func TestConfigMapWatcherEnabled(t *testing.T) {
+	ctx := WithConfigMapWatcherEnabled(context.TODO())
+	if !IsConfigMapWatcherEnabled(ctx) {
+		t.Error("expected config watcher to be enabled")
+	}
+}
+
+func TestConfigMapWatcher(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
-	ctx, cancel := context.WithCancel(ctx)
-	cmw := pkgadapter.SetupConfigMapWatchOrDie(ctx, "component", "test-ns")
-	ctx = pkgadapter.WithConfigMapWatcher(ctx, cmw)
+	watcher := SetupConfigMapWatchOrDie(ctx, "component", "test-ns")
+	ctx = WithConfigMapWatcher(ctx, watcher)
 
-	envCfg := NewEnvConfig()
-
-	ce := adaptertest.NewTestClient()
-	adapter := NewAdapter(ctx, envCfg, ce)
-
-	done := make(chan bool)
-	go func(ctx context.Context) {
-		err := adapter.Start(ctx)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		done <- true
-	}(ctx)
-
-	cancel()
-
-	select {
-	case <-time.After(2 * time.Second):
-		t.Fatal("expected adapter to be stopped after 2 seconds")
-	case <-done:
+	if ConfigMapWatcherFromContext(ctx) == nil {
+		t.Error("expected config watcher, got nothing")
 	}
 }

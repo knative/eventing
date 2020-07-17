@@ -170,6 +170,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 			logging.FromContext(ctx).Error("Unable to track the deployment", zap.Error(err))
 			return err
 		}
+
 	} else {
 		if _, err := r.reconcileServiceAccount(ctx, source); err != nil {
 			logging.FromContext(ctx).Error("Unable to create the receive adapter service account", zap.Error(err))

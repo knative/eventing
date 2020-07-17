@@ -20,6 +20,9 @@ import (
 	"context"
 	"encoding/json"
 
+	"knative.dev/eventing/pkg/adapter/mtping"
+	eventingcache "knative.dev/eventing/pkg/utils/cache"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -100,7 +103,7 @@ func NewController(
 	logger.Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Watch for deployments owned by the source
+	// Watch for deployments owned by the source (single-tenant)
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(v1alpha2.Kind("PingSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
@@ -121,6 +124,17 @@ func NewController(
 
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
+
+	// Create and start persistent store backed by ConfigMaps
+	store := eventingcache.NewPersistedStore(
+		mtcomponent,
+		kubeclient.Get(ctx),
+		system.Namespace(),
+		"config-pingsource-mt-adapter",
+		pingSourceInformer.Informer(),
+		mtping.Project)
+
+	go store.Run(ctx)
 
 	return impl
 }

@@ -22,48 +22,51 @@ import (
 	"testing"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclient "k8s.io/client-go/kubernetes/fake"
+	corev1 "k8s.io/api/core/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	rectesting "knative.dev/pkg/reconciler/testing"
+
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/eventing/pkg/logging"
 )
 
 func TestAddRunRemoveSchedules(t *testing.T) {
-
 	testCases := map[string]struct {
-		wantCEOverrides *duckv1.CloudEventOverrides
+		cfg PingConfig
 	}{
 		"TestAddRunRemoveSchedule": {
-			wantCEOverrides: nil,
+			cfg: PingConfig{
+				ObjectReference: corev1.ObjectReference{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Schedule:   "* * * * ?",
+				JsonData:   "some data",
+				Extensions: nil,
+				SinkURI:    "a sink",
+			},
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
-			wantCEOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{"1": "one", "2": "two"}},
+			cfg: PingConfig{
+				ObjectReference: corev1.ObjectReference{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Schedule:   "* * * * ?",
+				JsonData:   "some data",
+				Extensions: map[string]string{"1": "one", "2": "two"},
+				SinkURI:    "a sink",
+			},
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			logger := logtesting.TestLogger(t)
+			ctx, _ := rectesting.SetupFakeContext(t)
+			logger := logging.FromContext(ctx).Sugar()
 			ce := adaptertesting.NewTestClient()
 
-			runner := NewCronJobsRunner(ce, logger)
-
-			kc := testclient.NewSimpleClientset()
-			x := &v1alpha2.PingSource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "ping-name",
-					Namespace:  "ping-ns",
-					Generation: 17,
-				},
-				Spec:   v1alpha2.PingSourceSpec{},
-				Status: v1alpha2.PingSourceStatus{},
-			}
-
-			entryId, err := runner.AddSchedule(kc, x, "test-ns", "test-name", "* * * * ?", "some data", "a sink", tc.wantCEOverrides)
-
-			if err != nil {
-				t.Errorf("Should not throw error %v", err)
-			}
+			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+			entryId := runner.AddSchedule(tc.cfg)
 
 			entry := runner.cron.Entry(entryId)
 			if entry.ID != entryId {
@@ -72,7 +75,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, `{"body":"some data"}`, tc.wantCEOverrides)
+			validateSent(t, ce, `{"body":"some data"}`, tc.cfg.Extensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -84,11 +87,103 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 	}
 }
 
+func TestUpdateConfigMap(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	logger := logging.FromContext(ctx).Sugar()
+	ce := adaptertesting.NewTestClient()
+	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+
+	cm := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" + configKey("default/ping", "* * * * *") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm)
+
+	if len(runner.entryids) != 1 {
+		t.Errorf("expected only one entry, got %d", len(runner.entryids))
+	}
+
+	pingid, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	// Noop update
+
+	cm2 := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" + configKey("default/ping", "* * * * *") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm2)
+
+	if len(runner.entryids) != 1 {
+		t.Errorf("expected only one entry, got %d", len(runner.entryids))
+	}
+
+	pingid2, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	if pingid.entryID != pingid2.entryID {
+		t.Errorf("expected entry ids to be the same. %v != %v", pingid, pingid2)
+	}
+
+	// Same source, different schedule
+
+	cm3 := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" + configKey("default/ping", "* * * * 1") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm3)
+
+	if len(runner.entryids) != 1 {
+		t.Errorf("expected only one entry, got %d", len(runner.entryids))
+	}
+
+	pingid3, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	if pingid2.entryID == pingid3.entryID {
+		t.Errorf("expected entry ids to be different. %v != %v", pingid2, pingid3)
+	}
+
+	// Two sources
+
+	cm4 := &corev1.ConfigMap{
+		Data: map[string]string{
+			"resources.json": "{" +
+				configKey("default/ping", "* * * * 1") + "," +
+				configKey("default/ping2", "* * * * 1") + "}",
+		}}
+
+	runner.updateFromConfigMap(cm4)
+
+	if len(runner.entryids) != 2 {
+		t.Errorf("expected two entries, got %d", len(runner.entryids))
+	}
+
+	pingid4, ok := runner.entryids["default/ping"]
+	if !ok {
+		t.Error("expected default/ping entry")
+	}
+
+	if pingid3.entryID != pingid4.entryID {
+		t.Errorf("expected entry ids to be the same. %v != %v", pingid3, pingid4)
+	}
+}
+
 func TestStartStopCron(t *testing.T) {
-	logger := logtesting.TestLogger(t)
+	ctx, _ := rectesting.SetupFakeContext(t)
+	logger := logging.FromContext(ctx).Sugar()
 	ce := adaptertesting.NewTestClient()
 
-	runner := NewCronJobsRunner(ce, logger)
+	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())
@@ -112,7 +207,7 @@ func TestStartStopCron(t *testing.T) {
 }
 
 func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string,
-	wantCEOverrides *duckv1.CloudEventOverrides) {
+	extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
@@ -123,20 +218,30 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 
 	gotExtensions := ce.Sent()[0].Context.GetExtensions()
 
-	if wantCEOverrides == nil && gotExtensions != nil {
+	if extensions == nil && gotExtensions != nil {
 		t.Errorf("Expected event with no extension overrides got %v", gotExtensions)
 	}
 
-	if wantCEOverrides != nil && gotExtensions == nil {
+	if extensions != nil && gotExtensions == nil {
 		t.Errorf("Expected event with extension overrides got nil")
 	}
-	if wantCEOverrides != nil {
+
+	if extensions != nil {
 		compareTo := map[string]interface{}{}
-		for k, v := range wantCEOverrides.Extensions {
+		for k, v := range extensions {
 			compareTo[k] = v
 		}
 		if !reflect.DeepEqual(compareTo, gotExtensions) {
-			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", wantCEOverrides, gotExtensions)
+			t.Errorf("Expected event with extension overrides to be the same want: %v, but got: %v", extensions, gotExtensions)
 		}
 	}
+}
+
+func configKey(key string, schedule string) string {
+	return `"` + key + `"` + `: {
+		"namespace": "default",
+		"name":"ping",
+		"schedule": "` + schedule + `",
+		"jsonData":"{\"msg\": \"hello\"}",
+		"sinkUri": "http://event-display.default.svc.cluster.local"}`
 }
