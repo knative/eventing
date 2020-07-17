@@ -36,6 +36,7 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 const (
@@ -176,10 +177,24 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 		reply = sub.ReplyURI.URL()
 	}
 
-	delivery := &eventingduckv1.DeliverySpec{}
-	if sub.Delivery != nil {
-		_ = sub.Delivery.ConvertTo(ctx, delivery)
+	var deadLetterURL *url.URL
+	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+		deadLetterURL = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 
-	return f.dispatcher.Dispatch(ctx, message, additionalHeaders, destination, reply, delivery)
+	retriesConfigs := kncloudevents.NoRetries()
+	if sub.Delivery != nil {
+
+		delivery := &eventingduckv1.DeliverySpec{}
+		if sub.Delivery != nil {
+			_ = sub.Delivery.ConvertTo(ctx, delivery)
+		}
+
+		_retriesConfigs, err := kncloudevents.RetryConfigFromDeliverySpec(*delivery)
+		if err == nil {
+			retriesConfigs = _retriesConfigs
+		}
+	}
+
+	return f.dispatcher.DispatchMessage(ctx, message, additionalHeaders, destination, reply, deadLetterURL, retriesConfigs)
 }

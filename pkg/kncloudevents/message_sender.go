@@ -32,8 +32,6 @@ import (
 )
 
 const (
-	defaultRetryMax = 4
-
 	defaultRetryWaitMin = 1 * time.Second
 	defaultRetryWaitMax = 30 * time.Second
 )
@@ -102,7 +100,7 @@ type CheckRetry func(ctx context.Context, resp *nethttp.Response, err error) (bo
 // that should pass before trying again.
 type Backoff func(attemptNum int, resp *nethttp.Response) time.Duration
 
-type RetryConfig struct {
+type RetriesConfig struct {
 
 	// Maximum number of retries
 	RetryMax int
@@ -112,7 +110,7 @@ type RetryConfig struct {
 	Backoff Backoff
 }
 
-func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config RetryConfig) (*nethttp.Response, error) {
+func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config RetriesConfig) (*nethttp.Response, error) {
 
 	retryableClient := retryablehttp.Client{
 		HTTPClient:   s.Client,
@@ -131,8 +129,8 @@ func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config RetryCo
 	return retryableClient.Do(&retryablehttp.Request{Request: req})
 }
 
-func NoRetries() RetryConfig {
-	return RetryConfig{
+func NoRetries() RetriesConfig {
+	return RetriesConfig{
 		RetryMax: 0,
 		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
 			return false, nil
@@ -143,7 +141,7 @@ func NoRetries() RetryConfig {
 	}
 }
 
-func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) {
+func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetriesConfig, error) {
 
 	retryConfig := NoRetries()
 
