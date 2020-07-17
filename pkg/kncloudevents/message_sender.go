@@ -84,16 +84,7 @@ func (s *HttpMessageSender) NewCloudEventRequestWithTarget(ctx context.Context, 
 }
 
 func (s *HttpMessageSender) Send(req *nethttp.Request) (*nethttp.Response, error) {
-	return s.SendWithRetries(req, RetryConfig{
-		RetryMax: defaultRetryMax,
-		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
-			// TODO(https://github.com/knative/eventing/issues/2411) Retryable status codes
-			return resp.StatusCode >= nethttp.StatusMultipleChoices, nil
-		},
-		Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
-			return retryablehttp.DefaultBackoff(time.Second, time.Minute, attemptNum, resp)
-		},
-	})
+	return s.Client.Do(req)
 }
 
 // CheckRetry specifies a policy for handling retries. It is called
