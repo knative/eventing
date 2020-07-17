@@ -58,8 +58,10 @@ func Project(i interface{}) interface{} {
 
 	cfg := &PingConfig{
 		ObjectReference: corev1.ObjectReference{
-			Name:      obj.Name,
-			Namespace: obj.Namespace,
+			Name:            obj.Name,
+			Namespace:       obj.Namespace,
+			UID:             obj.UID,
+			ResourceVersion: obj.ResourceVersion,
 		},
 		Schedule: obj.Spec.Schedule,
 		JsonData: obj.Spec.JsonData,
