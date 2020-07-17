@@ -262,6 +262,11 @@ github.com/prometheus/procfs/internal/util
 # github.com/prometheus/statsd_exporter v0.15.0
 github.com/prometheus/statsd_exporter/pkg/mapper
 github.com/prometheus/statsd_exporter/pkg/mapper/fsm
+# github.com/rickb777/date v1.13.0
+## explicit
+github.com/rickb777/date/period
+# github.com/rickb777/plural v1.2.1
+github.com/rickb777/plural
 # github.com/robfig/cron/v3 v3.0.1
 ## explicit
 github.com/robfig/cron/v3

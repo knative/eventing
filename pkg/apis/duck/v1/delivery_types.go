@@ -18,8 +18,8 @@ package v1
 
 import (
 	"context"
-	"time"
 
+	"github.com/rickb777/date/period"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -42,7 +42,9 @@ type DeliverySpec struct {
 	BackoffPolicy *BackoffPolicyType `json:"backoffPolicy,omitempty"`
 
 	// BackoffDelay is the delay before retrying.
-	// More information on Duration format: https://www.ietf.org/rfc/rfc3339.txt
+	// More information on Duration format:
+	//  - https://www.iso.org/iso-8601-date-and-time-format.html
+	//  - https://en.wikipedia.org/wiki/ISO_8601
 	//
 	// For linear policy, backoff delay is the time interval between retries.
 	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>.
@@ -67,7 +69,7 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 	if ds.BackoffDelay != nil {
-		_, te := time.Parse(time.RFC3339, *ds.BackoffDelay)
+		_, te := period.Parse(*ds.BackoffDelay)
 		if te != nil {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
 		}
