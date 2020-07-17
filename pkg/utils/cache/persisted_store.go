@@ -119,7 +119,6 @@ func (p *persistedStore) Run(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
 		select {
 		case <-ctx.Done():
-			return
 		case <-p.syncCh:
 			atomic.StoreInt32(&p.syncing, 1)
 			if err := p.doSync(ctx.Done()); err != nil {
