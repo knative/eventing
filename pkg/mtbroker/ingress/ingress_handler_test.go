@@ -32,10 +32,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	v1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	broker "knative.dev/eventing/pkg/mtbroker"
+	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -202,25 +202,23 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 
+			annotatedBrokers := make([]runtime.Object, 0, len(tc.brokers))
 			for _, b := range tc.brokers {
 				// Write the channel address in the broker status annotation
 				if b.Status.Annotations == nil {
 					b.Status.Annotations = make(map[string]string, 1)
 				}
 				b.Status.Annotations["channelAddress"] = s.URL
+				annotatedBrokers = append(annotatedBrokers, b)
 			}
-
-			// TODO: use broker lister from "knative.dev/pkg/reconciler/testing" once
-			// v1 broker listers are implemented in testing
-			brokerLister := makeBrokerLister(tc.brokers)
-
+			listers := reconcilertestingv1.NewListers(annotatedBrokers)
 			sender, _ := kncloudevents.NewHttpMessageSender(nil, "")
 			h := &Handler{
 				Sender:       sender,
 				Defaulter:    tc.defaulter,
 				Reporter:     &mockReporter{},
 				Logger:       logger,
-				BrokerLister: brokerLister,
+				BrokerLister: listers.GetBrokerLister(),
 			}
 
 			h.ServeHTTP(recorder, request)
@@ -284,48 +282,6 @@ func getValidEvent() io.Reader {
 	e.SetID("1234")
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)
-}
-
-type mockBrokerNamespaceLister struct {
-	brokerMap map[string]*eventingv1.Broker
-}
-
-func (r *mockBrokerNamespaceLister) List(selector labels.Selector) ([]*eventingv1.Broker, error) {
-	// Placeholder to allow the mockBrokerNamespaceLister to implement BrokerNamespaceLister
-	return nil, nil
-}
-
-func (r *mockBrokerNamespaceLister) Get(name string) (*eventingv1.Broker, error) {
-	return r.brokerMap[name], nil
-}
-
-type mockBrokerLister struct {
-	namespaceLister map[string]*mockBrokerNamespaceLister
-}
-
-func makeBrokerLister(brokers []*eventingv1.Broker) *mockBrokerLister {
-	lister := &mockBrokerLister{
-		namespaceLister: make(map[string]*mockBrokerNamespaceLister, 1),
-	}
-	for _, b := range brokers {
-		_, present := lister.namespaceLister[b.Namespace]
-		if !present {
-			lister.namespaceLister[b.Namespace] = &mockBrokerNamespaceLister{
-				brokerMap: make(map[string]*eventingv1.Broker, 1),
-			}
-		}
-		lister.namespaceLister[b.Namespace].brokerMap[b.Name] = b
-	}
-	return lister
-}
-
-func (r *mockBrokerLister) List(selector labels.Selector) ([]*eventingv1.Broker, error) {
-	// Placeholder to allow the mockBrokerLister to implement BrokerLister
-	return nil, nil
-}
-
-func (r *mockBrokerLister) Brokers(namespace string) v1.BrokerNamespaceLister {
-	return r.namespaceLister[namespace]
 }
 
 func makeBroker(name, namespace string) *eventingv1.Broker {
