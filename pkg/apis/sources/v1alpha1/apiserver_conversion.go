@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
@@ -32,7 +31,7 @@ import (
 )
 
 // ConvertTo implements apis.Convertible.
-// Converts source (from v1alpha1.ApiServerSource) into v1alpha2.ApiServerSource
+// Converts source (from v1alpha1.ApiServerSource) into into a higher version.
 func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1alpha2.ApiServerSource:
@@ -95,12 +94,12 @@ func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 		source.Status.SourceStatus.DeepCopyInto(&sink.Status.SourceStatus)
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", sink)
+		return apis.ConvertToViaProxy(ctx, source, &v1alpha2.ApiServerSource{}, sink)
 	}
 }
 
 // ConvertFrom implements apis.Convertible.
-// Converts obj from v1alpha2.ApiServerSource into v1alpha1.ApiServerSource
+// Converts obj from a higher version into v1alpha1.ApiServerSource.
 func (sink *ApiServerSource) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1alpha2.ApiServerSource:
@@ -158,6 +157,6 @@ func (sink *ApiServerSource) ConvertFrom(ctx context.Context, obj apis.Convertib
 
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", source)
+		return apis.ConvertFromViaProxy(ctx, source, &v1alpha2.ApiServerSource{}, sink)
 	}
 }

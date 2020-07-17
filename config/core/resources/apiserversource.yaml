@@ -67,12 +67,16 @@ spec:
     name: v1alpha2
     served: true
     storage: false
+  - <<: *version
+    name: v1beta1
+    served: true
+    storage: false
   names:
     categories:
-    - all
-    - knative
-    - eventing
-    - sources
+     - all
+     - knative
+     - eventing
+     - sources
     kind: ApiServerSource
     plural: apiserversources
   scope: Namespaced
