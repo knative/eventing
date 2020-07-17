@@ -186,9 +186,7 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 	if sub.Delivery != nil {
 
 		delivery := &eventingduckv1.DeliverySpec{}
-		if sub.Delivery != nil {
-			_ = sub.Delivery.ConvertTo(ctx, delivery)
-		}
+		_ = sub.Delivery.ConvertTo(ctx, delivery)
 
 		_retriesConfigs, err := kncloudevents.RetryConfigFromDeliverySpec(*delivery)
 		if err == nil {
