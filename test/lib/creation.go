@@ -333,10 +333,21 @@ func (c *Client) CreateSinkBindingV1Beta1OrFail(sb *sourcesv1beta1.SinkBinding) 
 	c.Tracker.AddObj(sb)
 }
 
-// CreateApiServerSourceOrFail will create an ApiServerSource
-func (c *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha2.ApiServerSource) {
+// CreateApiServerSourceV1Alpha2OrFail will create an v1alpha2 ApiServerSource
+func (c *Client) CreateApiServerSourceV1Alpha2OrFail(apiServerSource *sourcesv1alpha2.ApiServerSource) {
 	c.T.Logf("Creating apiserversource %+v", apiServerSource)
 	apiServerInterface := c.Eventing.SourcesV1alpha2().ApiServerSources(c.Namespace)
+	_, err := apiServerInterface.Create(apiServerSource)
+	if err != nil {
+		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
+	}
+	c.Tracker.AddObj(apiServerSource)
+}
+
+// CreateApiServerSourceV1Beta1OrFail will create an v1beta1 ApiServerSource
+func (c *Client) CreateApiServerSourceV1Beta1OrFail(apiServerSource *sourcesv1beta1.ApiServerSource) {
+	c.T.Logf("Creating apiserversource %+v", apiServerSource)
+	apiServerInterface := c.Eventing.SourcesV1beta1().ApiServerSources(c.Namespace)
 	_, err := apiServerInterface.Create(apiServerSource)
 	if err != nil {
 		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)

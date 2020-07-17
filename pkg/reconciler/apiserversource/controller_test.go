@@ -30,7 +30,7 @@ import (
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/apiserversource/fake"
 )
 
 func TestNew(t *testing.T) {

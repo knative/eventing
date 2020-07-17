@@ -18,44 +18,44 @@ package apiserver
 import (
 	"testing"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func TestRefAddEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Add(simplePod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
+	validateSent(t, ce, sourcesv1beta1.ApiServerSourceAddRefEventType)
 }
 
 func TestRefUpdateEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Update(simplePod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
+	validateSent(t, ce, sourcesv1beta1.ApiServerSourceUpdateRefEventType)
 }
 
 func TestRefDeleteEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Delete(simplePod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
+	validateSent(t, ce, sourcesv1beta1.ApiServerSourceDeleteRefEventType)
 
 }
 
 func TestRefAddEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Add(nil)
-	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
+	validateNotSent(t, ce, sourcesv1beta1.ApiServerSourceAddRefEventType)
 }
 
 func TestRefUpdateEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Update(nil)
-	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
+	validateNotSent(t, ce, sourcesv1beta1.ApiServerSourceUpdateRefEventType)
 }
 
 func TestRefDeleteEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Delete(nil)
-	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
+	validateNotSent(t, ce, sourcesv1beta1.ApiServerSourceDeleteRefEventType)
 }
 
 // HACKHACKHACK For test coverage.

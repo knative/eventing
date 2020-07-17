@@ -34,14 +34,14 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
-func TestApiServerSource(t *testing.T) {
+func TestApiServerSourceV1Beta1(t *testing.T) {
 	const (
 		baseApiServerSourceName = "e2e-api-server-source"
 
@@ -54,14 +54,14 @@ func TestApiServerSource(t *testing.T) {
 	mode := "Reference"
 	table := []struct {
 		name     string
-		spec     sourcesv1alpha2.ApiServerSourceSpec
+		spec     sourcesv1beta1.ApiServerSourceSpec
 		pod      func(name string) *corev1.Pod
 		expected string
 	}{
 		{
 			name: "event-ref",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1beta1.ApiServerSourceSpec{
+				Resources: []sourcesv1beta1.APIVersionKindSelector{{
 					APIVersion: "v1",
 					Kind:       "Event",
 				}},
@@ -73,8 +73,8 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-unmatch-label",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1beta1.ApiServerSourceSpec{
+				Resources: []sourcesv1beta1.APIVersionKindSelector{{
 					APIVersion:    "v1",
 					Kind:          "Pod",
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
@@ -86,8 +86,8 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1beta1.ApiServerSourceSpec{
+				Resources: []sourcesv1beta1.APIVersionKindSelector{{
 					APIVersion:    "v1",
 					Kind:          "Pod",
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
@@ -102,8 +102,8 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label-expr",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1beta1.ApiServerSourceSpec{
+				Resources: []sourcesv1beta1.APIVersionKindSelector{{
 					APIVersion: "v1",
 					Kind:       "Pod",
 					LabelSelector: &metav1.LabelSelector{
@@ -152,13 +152,13 @@ func TestApiServerSource(t *testing.T) {
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
-			apiServerSource := eventingtesting.NewApiServerSource(
+			apiServerSource := eventingtesting.NewApiServerSourceV1Beta1(
 				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 				client.Namespace,
-				eventingtesting.WithApiServerSourceSpec(spec),
+				eventingtesting.WithApiServerSourceSpecV1B1(spec),
 			)
 
-			client.CreateApiServerSourceOrFail(apiServerSource)
+			client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
 
 			// wait for all test resources to be ready
 			client.WaitForAllTestResourcesReadyOrFail()
@@ -183,7 +183,7 @@ func TestApiServerSource(t *testing.T) {
 	}
 }
 
-func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
+func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 	const (
 		sourceName         = "e2e-apiserver-source-eventtypes"
 		serviceAccountName = "event-watcher-sa"
@@ -218,12 +218,12 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
-	apiServerSource := eventingtesting.NewApiServerSource(
+	apiServerSource := eventingtesting.NewApiServerSourceV1Beta1(
 		sourceName,
 		client.Namespace,
-		eventingtesting.WithApiServerSourceSpec(
-			sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+		eventingtesting.WithApiServerSourceSpecV1B1(
+			sourcesv1beta1.ApiServerSourceSpec{
+				Resources: []sourcesv1beta1.APIVersionKindSelector{{
 					APIVersion: "v1",
 					Kind:       "Event",
 				}},
@@ -234,7 +234,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	)
 	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: sugarresources.DefaultBrokerName, Namespace: client.Namespace}}
 
-	client.CreateApiServerSourceOrFail(apiServerSource)
+	client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
 
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
@@ -244,14 +244,14 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error retrieving EventTypes: %v", err)
 	}
-	if len(eventTypes.Items) != len(sourcesv1alpha2.ApiServerSourceEventTypes) {
-		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1alpha2.ApiServerSourceEventTypes), len(eventTypes.Items))
+	if len(eventTypes.Items) != len(sourcesv1beta1.ApiServerSourceEventTypes) {
+		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1beta1.ApiServerSourceEventTypes), len(eventTypes.Items))
 	}
 
-	expectedCeTypes := sets.NewString(sourcesv1alpha2.ApiServerSourceEventTypes...)
+	expectedCeTypes := sets.NewString(sourcesv1beta1.ApiServerSourceEventTypes...)
 	for _, et := range eventTypes.Items {
 		if !expectedCeTypes.Has(et.Spec.Type) {
-			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1alpha2.ApiServerSourceEventTypes, et.Spec.Type)
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1beta1.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
 }

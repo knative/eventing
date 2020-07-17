@@ -18,43 +18,43 @@ package apiserver
 import (
 	"testing"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func TestResourceAddEvent(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Add(simplePod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddEventType)
+	validateSent(t, ce, sourcesv1beta1.ApiServerSourceAddEventType)
 }
 
 func TestResourceUpdateEvent(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Update(simplePod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateEventType)
+	validateSent(t, ce, sourcesv1beta1.ApiServerSourceUpdateEventType)
 }
 
 func TestResourceDeleteEvent(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Delete(simplePod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteEventType)
+	validateSent(t, ce, sourcesv1beta1.ApiServerSourceDeleteEventType)
 }
 
 func TestResourceAddEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Add(nil)
-	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceAddEventType)
+	validateNotSent(t, ce, sourcesv1beta1.ApiServerSourceAddEventType)
 }
 
 func TestResourceUpdateEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Update(nil)
-	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateEventType)
+	validateNotSent(t, ce, sourcesv1beta1.ApiServerSourceUpdateEventType)
 }
 
 func TestResourceDeleteEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Delete(nil)
-	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteEventType)
+	validateNotSent(t, ce, sourcesv1beta1.ApiServerSourceDeleteEventType)
 }
 
 // HACKHACKHACK For test coverage.

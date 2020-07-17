@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/eventing/pkg/reconciler/source"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -40,14 +40,14 @@ func TestMakeReceiveAdapters(t *testing.T) {
 	one := int32(1)
 	trueValue := true
 
-	src := &v1alpha2.ApiServerSource{
+	src := &v1beta1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "source-namespace",
 			UID:       "1234",
 		},
-		Spec: v1alpha2.ApiServerSourceSpec{
-			Resources: []v1alpha2.APIVersionKindSelector{{
+		Spec: v1beta1.ApiServerSourceSpec{
+			Resources: []v1beta1.APIVersionKindSelector{{
 				APIVersion: "",
 				Kind:       "Namespace",
 			}, {
@@ -60,7 +60,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 					MatchLabels: map[string]string{"test-key1": "test-value1"},
 				},
 			}},
-			ResourceOwner: &v1alpha2.APIVersionKind{
+			ResourceOwner: &v1beta1.APIVersionKind{
 				APIVersion: "custom/v1",
 				Kind:       "Parent",
 			},
@@ -79,7 +79,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion:         "sources.knative.dev/v1alpha2",
+					APIVersion:         "sources.knative.dev/v1beta1",
 					Kind:               "ApiServerSource",
 					Name:               name,
 					UID:                "1234",
@@ -167,7 +167,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 
 	testCases := map[string]struct {
 		want *appsv1.Deployment
-		src  *v1alpha2.ApiServerSource
+		src  *v1beta1.ApiServerSource
 	}{
 		"TestMakeReceiveAdapter": {
 
