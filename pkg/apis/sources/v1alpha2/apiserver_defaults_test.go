@@ -19,10 +19,118 @@ package v1alpha2
 import (
 	"context"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// No-op test because method does nothing.
-func TestAPIServerSourceDefaults(t *testing.T) {
-	s := ApiServerSource{}
-	s.SetDefaults(context.TODO())
+func TestApiServerSourceDefaults(t *testing.T) {
+	testCases := map[string]struct {
+		initial  ApiServerSource
+		expected ApiServerSource
+	}{
+		"no EventMode": {
+			initial: ApiServerSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-namespace",
+				},
+				Spec: ApiServerSourceSpec{
+					Resources: []APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Foo",
+					}},
+					ServiceAccountName: "default",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1alpha1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			expected: ApiServerSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-namespace",
+				},
+				Spec: ApiServerSourceSpec{
+					EventMode: ReferenceMode,
+					Resources: []APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Foo",
+					}},
+					ServiceAccountName: "default",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1alpha1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+		},
+		"no ServiceAccountName": {
+			initial: ApiServerSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-namespace",
+				},
+				Spec: ApiServerSourceSpec{
+					Resources: []APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Foo",
+					}},
+					EventMode: ReferenceMode,
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1alpha1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			expected: ApiServerSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-namespace",
+				},
+				Spec: ApiServerSourceSpec{
+					EventMode: ReferenceMode,
+					Resources: []APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Foo",
+					}},
+					ServiceAccountName: "default",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1alpha1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			tc.initial.SetDefaults(context.Background())
+			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
+				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
+			}
+		})
+	}
 }
