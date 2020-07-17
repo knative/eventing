@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1beta1
 
 import (
 	"reflect"
@@ -40,7 +40,7 @@ func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
 	r := &ApiServerSource{}
 	want := schema.GroupVersionKind{
 		Group:   "sources.knative.dev",
-		Version: "v1alpha2",
+		Version: "v1beta1",
 		Kind:    "ApiServerSource",
 	}
 	if got := r.GetGroupVersionKind(); got != want {
