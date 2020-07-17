@@ -111,6 +111,9 @@ func TestBrokerConversionRoundTripV1beta1(t *testing.T) {
 						Type:   "Ready",
 						Status: "True",
 					}},
+					Annotations: map[string]string{
+						"channelAddress": "http://foo.bar.svc.cluster.local/",
+					},
 				},
 				Address: duckv1.Addressable{
 					URL: apis.HTTP("address"),
@@ -196,6 +199,9 @@ func TestBrokerConversionRoundTripV1(t *testing.T) {
 						Type:   "Ready",
 						Status: "True",
 					}},
+					Annotations: map[string]string{
+						"channelAddress": "http://foo.bar.svc.cluster.local/",
+					},
 				},
 				Address: duckv1.Addressable{
 					URL: apis.HTTP("address"),

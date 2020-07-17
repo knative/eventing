@@ -32,6 +32,8 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
@@ -53,25 +55,46 @@ type Handler struct {
 	Defaulter client.EventDefaulter
 	// Reporter reports stats of status code and dispatch time
 	Reporter StatsReporter
+	// BrokerLister gets broker objects
+	BrokerLister eventinglisters.BrokerLister
 
 	Logger *zap.Logger
-
-	getChannelURL func(string, string, string) url.URL
 }
 
-func getChannelURL(name, namespace, domain string) url.URL {
-	return url.URL{
+func (h *Handler) getBroker(name, namespace string) (*eventingv1.Broker, error) {
+	broker, err := h.BrokerLister.Brokers(namespace).Get(name)
+	if err != nil {
+		h.Logger.Warn("Broker getter failed")
+		return nil, err
+	}
+	return broker, nil
+}
+
+func guessChannelAddress(name, namespace, domain string) string {
+	url := url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", name, namespace, domain),
 		Path:   "/",
 	}
+	return url.String()
+}
+
+func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
+	broker, err := h.getBroker(name, namespace)
+	if err != nil {
+		return "", err
+	}
+	if broker.Status.Annotations == nil {
+		return "", fmt.Errorf("Broker status annotations uninitialized")
+	}
+	address, present := broker.Status.Annotations["channelAddress"]
+	if !present {
+		return "", fmt.Errorf("Channel address not found in broker status annotations")
+	}
+	return address, nil
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	if h.getChannelURL == nil {
-		h.getChannelURL = getChannelURL
-	}
-
 	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
 }
 
@@ -156,11 +179,13 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 		return http.StatusBadRequest, noDuration
 	}
 
-	// TODO: Today these are pre-deterministic, change this watch for
-	//  	 channels and look up from the channels Status
-	channelURI := h.getChannelURL(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	channelAddress, err := h.getChannelAddress(brokerName, brokerNamespace)
+	if err != nil {
+		h.Logger.Warn("Failed to get channel address, falling back on guess", zap.Error(err))
+		channelAddress = guessChannelAddress(brokerName, brokerNamespace, utils.GetClusterDomainName())
+	}
 
-	return h.send(ctx, headers, event, channelURI.String())
+	return h.send(ctx, headers, event, channelAddress)
 }
 
 func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudevents.Event, target string) (int, time.Duration) {

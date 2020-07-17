@@ -102,6 +102,7 @@ var (
 	testKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
+	triggerChannelURL      = fmt.Sprintf("http://%s", triggerChannelHostname)
 
 	filterServiceName  = "broker-filter"
 	ingressServiceName = "broker-ingress"
@@ -389,6 +390,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
+					WithChannelAddressAnnotation(triggerChannelURL),
 					WithFilterFailed("ServiceFailure", `endpoints "broker-filter" not found`)),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -421,7 +423,8 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReady,
-					WithBrokerAddressURI(brokerAddress)),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL)),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
@@ -454,7 +457,8 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReady,
-					WithBrokerAddressURI(brokerAddress)),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL)),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
@@ -501,7 +505,8 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithBrokerReady,
-					WithBrokerAddressURI(brokerAddress)),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL)),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
@@ -1202,7 +1207,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	var labels map[string]interface{}
 	var annotations map[string]interface{}
 	var name string
-	var url string
 	name = fmt.Sprintf("%s-kne-trigger", brokerName)
 	labels = map[string]interface{}{
 		eventing.BrokerLabelKey:                 brokerName,
@@ -1211,7 +1215,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	annotations = map[string]interface{}{
 		"eventing.knative.dev/scope": "cluster",
 	}
-	url = fmt.Sprintf("http://%s", triggerChannelHostname)
 	if ready {
 		return &unstructured.Unstructured{
 			Object: map[string]interface{}{
@@ -1236,7 +1239,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 				},
 				"status": map[string]interface{}{
 					"address": map[string]interface{}{
-						"url": url,
+						"url": triggerChannelURL,
 					},
 				},
 			},
@@ -1377,7 +1380,8 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithBrokerReady,
 			WithBrokerFinalizers("brokers.eventing.knative.dev"),
 			WithBrokerResourceVersion(""),
-			WithBrokerAddressURI(brokerAddress)),
+			WithBrokerAddressURI(brokerAddress),
+			WithChannelAddressAnnotation(triggerChannelURL)),
 		createChannel(testNS, true),
 		imcConfigMap(),
 		NewEndpoints(filterServiceName, systemNS,

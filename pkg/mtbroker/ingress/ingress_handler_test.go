@@ -21,7 +21,6 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
@@ -32,7 +31,11 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	broker "knative.dev/eventing/pkg/mtbroker"
+	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -55,6 +58,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		handler         nethttp.Handler
 		reporter        StatsReporter
 		defaulter       client.EventDefaulter
+		brokers         []*eventingv1.Broker
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -115,6 +119,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			handler:    handler(),
 			reporter:   &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter:  broker.TTLDefaulter(logger, 100),
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
 		},
 		{
 			name:       "no TTL drop event",
@@ -124,6 +131,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
 			reporter:   &mockReporter{StatusCode: nethttp.StatusBadRequest},
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
 		},
 		{
 			name:       "malformed request URI",
@@ -133,6 +143,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			statusCode: nethttp.StatusBadRequest,
 			handler:    handler(),
 			reporter:   &mockReporter{},
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
 		},
 		{
 			name:       "root request URI",
@@ -142,6 +155,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			statusCode: nethttp.StatusNotFound,
 			handler:    handler(),
 			reporter:   &mockReporter{},
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
 		},
 		{
 			name:       "pass headers to handler",
@@ -163,6 +179,9 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 			reporter:  &mockReporter{StatusCode: senderResponseStatusCode, EventDispatchTimeReported: true},
 			defaulter: broker.TTLDefaulter(logger, 100),
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
 		},
 	}
 
@@ -183,16 +202,23 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 
+			annotatedBrokers := make([]runtime.Object, 0, len(tc.brokers))
+			for _, b := range tc.brokers {
+				// Write the channel address in the broker status annotation
+				if b.Status.Annotations == nil {
+					b.Status.Annotations = make(map[string]string, 1)
+				}
+				b.Status.Annotations["channelAddress"] = s.URL
+				annotatedBrokers = append(annotatedBrokers, b)
+			}
+			listers := reconcilertestingv1.NewListers(annotatedBrokers)
 			sender, _ := kncloudevents.NewHttpMessageSender(nil, "")
 			h := &Handler{
-				Sender:    sender,
-				Defaulter: tc.defaulter,
-				Reporter:  &mockReporter{},
-				Logger:    logger,
-				getChannelURL: func(name, namespace, domain string) url.URL {
-					u, _ := url.Parse(s.URL)
-					return *u
-				},
+				Sender:       sender,
+				Defaulter:    tc.defaulter,
+				Reporter:     &mockReporter{},
+				Logger:       logger,
+				BrokerLister: listers.GetBrokerLister(),
 			}
 
 			h.ServeHTTP(recorder, request)
@@ -256,4 +282,18 @@ func getValidEvent() io.Reader {
 	e.SetID("1234")
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)
+}
+
+func makeBroker(name, namespace string) *eventingv1.Broker {
+	return &eventingv1.Broker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1",
+			Kind:       "Broker",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Spec: eventingv1.BrokerSpec{},
+	}
 }

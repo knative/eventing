@@ -156,12 +156,18 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *eventingv1.Broker) (*
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return &chanMan.ref, nil
 	}
-	if url := triggerChan.Status.Address.URL; url.Host == "" {
+	if url := triggerChan.Status.Address.URL; url == nil || url.Host == "" {
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return &chanMan.ref, nil
 	}
+
+	// Attach the channel address as a status annotation.
+	if b.Status.Annotations == nil {
+		b.Status.Annotations = make(map[string]string, 1)
+	}
+	b.Status.Annotations["channelAddress"] = triggerChan.Status.Address.URL.String()
 
 	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)

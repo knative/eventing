@@ -31,6 +31,7 @@ import (
 	"go.uber.org/zap"
 
 	cmdbroker "knative.dev/eventing/cmd/mtbroker"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/mtbroker/ingress"
@@ -112,6 +113,8 @@ func main() {
 
 	logger.Info("Starting the Broker Ingress")
 
+	brokerLister := brokerinformer.Get(ctx).Lister()
+
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
@@ -144,11 +147,12 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		Receiver:  kncloudevents.NewHttpMessageReceiver(env.Port),
-		Sender:    sender,
-		Defaulter: broker.TTLDefaulter(logger, defaultTTL),
-		Reporter:  reporter,
-		Logger:    logger,
+		Receiver:     kncloudevents.NewHttpMessageReceiver(env.Port),
+		Sender:       sender,
+		Defaulter:    broker.TTLDefaulter(logger, defaultTTL),
+		Reporter:     reporter,
+		Logger:       logger,
+		BrokerLister: brokerLister,
 	}
 
 	// configMapWatcher does not block, so start it first.
