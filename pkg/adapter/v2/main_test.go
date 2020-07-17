@@ -23,19 +23,57 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opencensus.io/stats/view"
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/metrics"
-
+	rectesting "knative.dev/pkg/reconciler/testing"
 	_ "knative.dev/pkg/system/testing"
 )
 
 type myAdapter struct{}
 
-func TestMainWithContextNoLeaderElection(t *testing.T) {
+func TestMainWithNothing(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "metrics")
-	os.Setenv("K_LOGGING_CONFIG", "logging")
+	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_LOGGING_CONFIG", "error config")
+	os.Setenv("MODE", "mymode")
+
+	defer func() {
+		os.Unsetenv("K_SINK")
+		os.Unsetenv("NAMESPACE")
+		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_LOGGING_CONFIG")
+		os.Unsetenv("MODE")
+	}()
+
+	Main("mycomponent",
+		func() EnvConfigAccessor { return &myEnvConfig{} },
+		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+			env := processed.(*myEnvConfig)
+
+			if env.Mode != "mymode" {
+				t.Errorf("Expected mode mymode, got: %s", env.Mode)
+			}
+
+			if env.Sink != "http://sink" {
+				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
+			}
+
+			if leaderelection.HasLeaderElection(ctx) {
+				t.Error("Expected no leader election, but got leader election")
+			}
+			return &myAdapter{}
+		})
+
+	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
+}
+
+func TestMainWithInformerNoLeaderElection(t *testing.T) {
+	os.Setenv("K_SINK", "http://sink")
+	os.Setenv("NAMESPACE", "ns")
+	os.Setenv("K_METRICS_CONFIG", "error config")
+	os.Setenv("K_LOGGING_CONFIG", "error config")
 	os.Setenv("MODE", "mymode")
 
 	defer func() {
@@ -47,6 +85,50 @@ func TestMainWithContextNoLeaderElection(t *testing.T) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.TODO())
+	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
+	MainWithInformers(ctx,
+		"mycomponent",
+		env,
+		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+			env := processed.(*myEnvConfig)
+
+			if env.Mode != "mymode" {
+				t.Errorf("Expected mode mymode, got: %s", env.Mode)
+			}
+
+			if env.Sink != "http://sink" {
+				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
+			}
+
+			if leaderelection.HasLeaderElection(ctx) {
+				t.Error("Expected no leader election, but got leader election")
+			}
+			return &myAdapter{}
+		})
+
+	cancel()
+
+	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
+}
+
+func TestMainWithContextWithConfigWatcher(t *testing.T) {
+	os.Setenv("K_SINK", "http://sink")
+	os.Setenv("NAMESPACE", "ns")
+	os.Setenv("K_METRICS_CONFIG", "{}")
+	os.Setenv("K_LOGGING_CONFIG", "{}")
+	os.Setenv("MODE", "mymode")
+
+	defer func() {
+		os.Unsetenv("K_SINK")
+		os.Unsetenv("NAMESPACE")
+		os.Unsetenv("K_METRICS_CONFIG")
+		os.Unsetenv("K_LOGGING_CONFIG")
+		os.Unsetenv("MODE")
+	}()
+
+	ctx, _ := rectesting.SetupFakeContext(t)
+	WithConfigMapWatcherEnabled(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 
 	MainWithContext(ctx,
 		"mycomponent",
@@ -69,8 +151,13 @@ func TestMainWithContextNoLeaderElection(t *testing.T) {
 		})
 
 	cancel()
-
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
+}
+
+func TestStartInformers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	StartInformers(ctx, nil)
+	cancel()
 }
 
 func (m *myAdapter) Start(_ context.Context) error {

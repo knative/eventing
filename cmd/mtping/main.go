@@ -17,30 +17,19 @@ limitations under the License.
 package main
 
 import (
-	"context"
-	"fmt"
-
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 )
 
+const (
+	component = "pingsource-mt-adapter"
+)
+
 func main() {
 	ctx := signals.NewContext()
-	cfg := sharedmain.ParseAndGetConfigOrDie()
-	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
-
-	// Start the injection clients and informers.
-	go func(ctx context.Context) {
-		if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-			panic(fmt.Sprintf("Failed to start informers - %s", err))
-		}
-		<-ctx.Done()
-	}(ctx)
-
-	adapter.MainWithContext(ctx, "pingsource-mt-adapter", mtping.NewEnvConfig, mtping.NewAdapter)
+	ctx = adapter.WithConfigMapWatcherEnabled(ctx)
+	ctx = adapter.WithInjectorEnabled(ctx)
+	adapter.MainWithContext(ctx, component, mtping.NewEnvConfig, mtping.NewAdapter)
 }

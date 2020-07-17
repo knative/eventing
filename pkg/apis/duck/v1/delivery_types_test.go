@@ -27,6 +27,8 @@ import (
 func TestDeliverySpecValidation(t *testing.T) {
 	invalidString := "invalid time"
 	bop := BackoffPolicyExponential
+	validBackoffDelay := "PT2S"
+	invalidBackoffDelay := "1985-04-12T23:20:50.52Z"
 	tests := []struct {
 		name string
 		spec *DeliverySpec
@@ -51,6 +53,16 @@ func TestDeliverySpecValidation(t *testing.T) {
 		name: "valid backoffPolicy",
 		spec: &DeliverySpec{BackoffPolicy: &bop},
 		want: nil,
+	}, {
+		name: "valid backoffDelay",
+		spec: &DeliverySpec{BackoffDelay: &validBackoffDelay},
+		want: nil,
+	}, {
+		name: "invalid backoffDelay",
+		spec: &DeliverySpec{BackoffDelay: &invalidBackoffDelay},
+		want: func() *apis.FieldError {
+			return apis.ErrGeneric("invalid value: "+invalidBackoffDelay, "backoffDelay")
+		}(),
 	}}
 
 	for _, test := range tests {
