@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
@@ -37,10 +37,10 @@ func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, 
 	var eventType string
 	if ref {
 		data = getRef(object)
-		eventType = sourcesv1alpha2.ApiServerSourceAddRefEventType
+		eventType = sourcesv1beta1.ApiServerSourceAddRefEventType
 	} else {
 		data = object
-		eventType = sourcesv1alpha2.ApiServerSourceAddEventType
+		eventType = sourcesv1beta1.ApiServerSourceAddEventType
 	}
 
 	return makeEvent(source, eventType, object, data)
@@ -56,10 +56,10 @@ func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 	var eventType string
 	if ref {
 		data = getRef(object)
-		eventType = sourcesv1alpha2.ApiServerSourceUpdateRefEventType
+		eventType = sourcesv1beta1.ApiServerSourceUpdateRefEventType
 	} else {
 		data = object
-		eventType = sourcesv1alpha2.ApiServerSourceUpdateEventType
+		eventType = sourcesv1beta1.ApiServerSourceUpdateEventType
 	}
 
 	return makeEvent(source, eventType, object, data)
@@ -74,10 +74,10 @@ func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 	var eventType string
 	if ref {
 		data = getRef(object)
-		eventType = sourcesv1alpha2.ApiServerSourceDeleteRefEventType
+		eventType = sourcesv1beta1.ApiServerSourceDeleteRefEventType
 	} else {
 		data = object
-		eventType = sourcesv1alpha2.ApiServerSourceDeleteEventType
+		eventType = sourcesv1beta1.ApiServerSourceDeleteEventType
 	}
 
 	return makeEvent(source, eventType, object, data)

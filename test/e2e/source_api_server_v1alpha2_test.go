@@ -41,7 +41,7 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-func TestApiServerSource(t *testing.T) {
+func TestApiServerSourceV1Alpha2(t *testing.T) {
 	const (
 		baseApiServerSourceName = "e2e-api-server-source"
 
@@ -152,13 +152,13 @@ func TestApiServerSource(t *testing.T) {
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
-			apiServerSource := eventingtesting.NewApiServerSource(
+			apiServerSource := eventingtesting.NewApiServerSourceV1Alpha2(
 				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 				client.Namespace,
-				eventingtesting.WithApiServerSourceSpec(spec),
+				eventingtesting.WithApiServerSourceSpecV1A2(spec),
 			)
 
-			client.CreateApiServerSourceOrFail(apiServerSource)
+			client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
 
 			// wait for all test resources to be ready
 			client.WaitForAllTestResourcesReadyOrFail()
@@ -218,10 +218,10 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
-	apiServerSource := eventingtesting.NewApiServerSource(
+	apiServerSource := eventingtesting.NewApiServerSourceV1Alpha2(
 		sourceName,
 		client.Namespace,
-		eventingtesting.WithApiServerSourceSpec(
+		eventingtesting.WithApiServerSourceSpecV1A2(
 			sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion: "v1",
@@ -234,7 +234,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	)
 	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: sugarresources.DefaultBrokerName, Namespace: client.Namespace}}
 
-	client.CreateApiServerSourceOrFail(apiServerSource)
+	client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
 
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
