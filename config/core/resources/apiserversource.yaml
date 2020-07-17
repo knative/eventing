@@ -73,10 +73,10 @@ spec:
     storage: false
   names:
     categories:
-    - all
-    - knative
-    - eventing
-    - sources
+     - all
+     - knative
+     - eventing
+     - sources
     kind: ApiServerSource
     plural: apiserversources
   scope: Namespaced
