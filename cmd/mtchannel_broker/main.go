@@ -28,6 +28,7 @@ import (
 )
 
 func main() {
+	// TODO(https://github.com/knative/eventing/issues/3591): switch back to sharedmain.Main
 	clientQPS := flag.Float64("clientQPS", 5.0, "Overrides rest.Config.DefaultQPS.")
 	clientBurst := flag.Int("clientBurst", 10.0, "Overrides rest.Config.Burst.")
 
