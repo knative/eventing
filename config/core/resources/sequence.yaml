@@ -60,7 +60,6 @@ spec:
     categories:
     - all
     - knative
-    - eventing
     - flows
   scope: Namespaced
   conversion:

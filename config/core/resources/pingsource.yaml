@@ -65,7 +65,6 @@ spec:
     categories:
     - all
     - knative
-    - eventing
     - sources
     kind: PingSource
     plural: pingsources
