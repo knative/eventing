@@ -21,6 +21,7 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"flag"
 
+	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
 
@@ -29,8 +30,8 @@ import (
 
 func main() {
 	// TODO(https://github.com/knative/eventing/issues/3591): switch back to sharedmain.Main
-	clientQPS := flag.Float64("clientQPS", 5.0, "Overrides rest.Config.DefaultQPS.")
-	clientBurst := flag.Int("clientBurst", 10.0, "Overrides rest.Config.Burst.")
+	clientQPS := flag.Float64("clientQPS", float64(rest.DefaultQPS), "Overrides rest.Config.DefaultQPS.")
+	clientBurst := flag.Int("clientBurst", rest.DefaultBurst, "Overrides rest.Config.Burst.")
 
 	// This parses flags.
 	cfg := sharedmain.ParseAndGetConfigOrDie()
