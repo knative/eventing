@@ -19,14 +19,21 @@ package main
 import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"flag"
 
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/reconciler/mtbroker"
 )
 
 func main() {
-	sharedmain.Main("mt-broker-controller",
-		mtbroker.NewController,
-	)
+	clientQPS := flag.Float64("clientQPS", 5.0, "Overrides rest.Config.DefaultQPS.")
+	clientBurst := flag.Int("clientBurst", 10.0, "Overrides rest.Config.Burst.")
+
+	// This parses flags.
+	cfg := sharedmain.ParseAndGetConfigOrDie()
+	cfg.QPS = float32(*clientQPS)
+	cfg.Burst = *clientBurst
+	sharedmain.MainWithConfig(signals.NewContext(), "mt-broker-controller", cfg, mtbroker.NewController)
 }
