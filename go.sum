@@ -1665,12 +1665,12 @@ k8s.io/utils v0.0.0-20200124190032-861946025e34/go.mod h1:sZAwmy6armz5eXlNoLmJcl
 knative.dev/caching v0.0.0-20200116200605-67bca2c83dfa/go.mod h1:dHXFU6CGlLlbzaWc32g80cR92iuBSpsslDNBWI8C7eg=
 knative.dev/eventing-contrib v0.11.2/go.mod h1:SnXZgSGgMSMLNFTwTnpaOH7hXDzTFtw0J8OmHflNx3g=
 knative.dev/pkg v0.0.0-20200207155214-fef852970f43/go.mod h1:pgODObA1dTyhNoFxPZTTjNWfx6F0aKsKzn+vaT9XO/Q=
-knative.dev/pkg v0.0.0-20200716235533-0f78f8a8cccf h1:kGCVdSLQZp56x5idc+BxauU/FAPB/9hK5BicMkNd3vs=
-knative.dev/pkg v0.0.0-20200716235533-0f78f8a8cccf/go.mod h1:3mm5ZffkmyYnqN+SOq1cN9TX0KTjhEbiZL8YBpP4C4Y=
+knative.dev/pkg v0.0.0-20200718042534-e193c4be24bb h1:0+6xt01+h9P8+83UEn1rYbiRnZe829eEfK5exnORtZ4=
+knative.dev/pkg v0.0.0-20200718042534-e193c4be24bb/go.mod h1:3mm5ZffkmyYnqN+SOq1cN9TX0KTjhEbiZL8YBpP4C4Y=
 knative.dev/test-infra v0.0.0-20200715185233-6964ba126fee h1:SH4N5kSRiEgmOcgjFwsyLMipS3sPJlN6dpp783C/ILQ=
 knative.dev/test-infra v0.0.0-20200715185233-6964ba126fee/go.mod h1:mAsPDmFmlsTJjRWplWBz8xtEiarSgvGiiOjkGj4Or1g=
-knative.dev/test-infra v0.0.0-20200716222033-3c06d840fc70 h1:1510826l+2CBQMaNcDqQeSzz1H6g90hLdWArf5L+SVo=
-knative.dev/test-infra v0.0.0-20200716222033-3c06d840fc70/go.mod h1:mAsPDmFmlsTJjRWplWBz8xtEiarSgvGiiOjkGj4Or1g=
+knative.dev/test-infra v0.0.0-20200718013433-a19b8b74cc35 h1:HeB4f6l/HmRtadbchy+xH/gKsJpFwp+gL7xXLBPNd3A=
+knative.dev/test-infra v0.0.0-20200718013433-a19b8b74cc35/go.mod h1:mAsPDmFmlsTJjRWplWBz8xtEiarSgvGiiOjkGj4Or1g=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
 modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=
 modernc.org/mathutil v1.0.0/go.mod h1:wU0vUrJsVWBZ4P6e7xtFJEhFSNsfRLJ8H458uRjg03k=
