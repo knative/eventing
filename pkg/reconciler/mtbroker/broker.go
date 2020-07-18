@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -63,7 +62,6 @@ const (
 type Reconciler struct {
 	eventingClientSet clientset.Interface
 	dynamicClientSet  dynamic.Interface
-	kubeClientSet     kubernetes.Interface
 
 	// listers index properties about resources
 	endpointsLister    corev1listers.EndpointsLister

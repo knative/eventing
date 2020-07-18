@@ -34,7 +34,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/configmap"
@@ -81,7 +80,6 @@ func NewController(
 	r := &Reconciler{
 		eventingClientSet:  eventingclient.Get(ctx),
 		dynamicClientSet:   dynamicclient.Get(ctx),
-		kubeClientSet:      kubeclient.Get(ctx),
 		endpointsLister:    endpointsInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
