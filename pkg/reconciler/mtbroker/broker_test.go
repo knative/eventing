@@ -509,7 +509,6 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
@@ -631,9 +630,6 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerSubscriberURI(subscriberURI)),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 		}, {
 			Name: "Trigger subscription create fails",
 			Key:  testKey,
@@ -800,9 +796,6 @@ func TestReconcile(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeFilterSubscription(),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 		}, {
 			Name: "Trigger has subscriber ref exists",
 			Key:  testKey,
@@ -813,9 +806,6 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitTriggerConditions)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -843,9 +833,6 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -873,9 +860,6 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -925,9 +909,6 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -952,9 +933,6 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1009,8 +987,6 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled")},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1038,8 +1014,6 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled")},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1068,8 +1042,6 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled")},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1097,9 +1069,6 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1131,7 +1100,6 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, subscriptionDeleted, `Deprecated subscription removed: "%s/%s"`, testNS, makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name),
-				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerNameLong, testNS, brokerName,
