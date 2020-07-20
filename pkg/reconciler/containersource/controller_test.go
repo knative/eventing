@@ -23,8 +23,8 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/containersource/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/sinkbinding/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/containersource/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/sinkbinding/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )

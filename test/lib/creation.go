@@ -355,10 +355,21 @@ func (c *Client) CreateApiServerSourceV1Beta1OrFail(apiServerSource *sourcesv1be
 	c.Tracker.AddObj(apiServerSource)
 }
 
-// CreateContainerSourceV1Alpha2OrFail will create a ContainerSource.
+// CreateContainerSourceV1Alpha2OrFail will create a v1alpha2 ContainerSource.
 func (c *Client) CreateContainerSourceV1Alpha2OrFail(containerSource *sourcesv1alpha2.ContainerSource) {
 	c.T.Logf("Creating containersource %+v", containerSource)
 	containerInterface := c.Eventing.SourcesV1alpha2().ContainerSources(c.Namespace)
+	_, err := containerInterface.Create(containerSource)
+	if err != nil {
+		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
+	}
+	c.Tracker.AddObj(containerSource)
+}
+
+// CreateContainerSourceV1Beta1OrFail will create a v1beta1 ContainerSource.
+func (c *Client) CreateContainerSourceV1Beta1OrFail(containerSource *sourcesv1beta1.ContainerSource) {
+	c.T.Logf("Creating containersource %+v", containerSource)
+	containerInterface := c.Eventing.SourcesV1beta1().ContainerSources(c.Namespace)
 	_, err := containerInterface.Create(containerSource)
 	if err != nil {
 		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)

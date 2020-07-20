@@ -20,11 +20,11 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/containersource"
-	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/sinkbinding"
-	v1alpha2containersource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/containersource"
+	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/containersource"
+	sinkbindinginformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/sinkbinding"
+	v1beta1containersource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/containersource"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
@@ -51,18 +51,18 @@ func NewController(
 		deploymentLister:      deploymentInformer.Lister(),
 		sinkBindingLister:     sinkbindingInformer.Lister(),
 	}
-	impl := v1alpha2containersource.NewImpl(ctx, r)
+	impl := v1beta1containersource.NewImpl(ctx, r)
 
 	logging.FromContext(ctx).Info("Setting up event handlers.")
 	containersourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGVK(v1alpha2.SchemeGroupVersion.WithKind("ContainerSource")),
+		FilterFunc: controller.FilterControllerGVK(v1beta1.SchemeGroupVersion.WithKind("ContainerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	sinkbindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1alpha2.Kind("ContainerSource")),
+		FilterFunc: controller.FilterControllerGK(v1beta1.Kind("ContainerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

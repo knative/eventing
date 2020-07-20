@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+
 	"github.com/google/go-cmp/cmp"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -39,14 +40,14 @@ func TestMakeDeployment(t *testing.T) {
 	yes := true
 	tests := []struct {
 		name   string
-		source *v1alpha2.ContainerSource
+		source *v1beta1.ContainerSource
 		want   *appsv1.Deployment
 	}{
 		{
 			name: "valid container source with one container",
-			source: &v1alpha2.ContainerSource{
+			source: &v1beta1.ContainerSource{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
-				Spec: v1alpha2.ContainerSourceSpec{
+				Spec: v1beta1.ContainerSourceSpec{
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							ServiceAccountName: "test-service-account",
@@ -90,7 +91,7 @@ func TestMakeDeployment(t *testing.T) {
 					Name:      fmt.Sprintf("%s-deployment", name),
 					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion:         "sources.knative.dev/v1alpha2",
+						APIVersion:         "sources.knative.dev/v1beta1",
 						Kind:               "ContainerSource",
 						Name:               name,
 						UID:                uid,
@@ -149,9 +150,9 @@ func TestMakeDeployment(t *testing.T) {
 
 		{
 			name: "valid container source with two containers",
-			source: &v1alpha2.ContainerSource{
+			source: &v1beta1.ContainerSource{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
-				Spec: v1alpha2.ContainerSourceSpec{
+				Spec: v1beta1.ContainerSourceSpec{
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							ServiceAccountName: "test-service-account",
@@ -212,7 +213,7 @@ func TestMakeDeployment(t *testing.T) {
 					Name:      fmt.Sprintf("%s-deployment", name),
 					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion:         "sources.knative.dev/v1alpha2",
+						APIVersion:         "sources.knative.dev/v1beta1",
 						Kind:               "ContainerSource",
 						Name:               name,
 						UID:                uid,
