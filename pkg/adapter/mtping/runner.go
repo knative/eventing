@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/eventing/pkg/logging"
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
@@ -99,6 +100,9 @@ func (a *cronJobsRunner) AddSchedule(cfg PingConfig) cron.EntryID {
 		ResourceGroup: resourceGroup,
 	}
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+	ctx = logging.ContextWithMTLoggerFromLogger(ctx, a.Logger, cfg.Namespace)
+	logger := logging.MTLoggerFromContext(ctx)
+	logger.TenantInfof("Created pingsource %s with schedule %s", cfg.Name, cfg.Schedule)
 	id, _ := a.cron.AddFunc(cfg.Schedule, a.cronTick(ctx, event))
 	return id
 }
@@ -115,11 +119,13 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) error {
 }
 
 func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
+	logger := logging.MTLoggerFromContext(ctx)
 	return func() {
 		if result := a.Client.Send(ctx, event); !cloudevents.IsACK(result) {
 			// Exhausted number of retries. Event is lost.
-			a.Logger.Error("failed to send cloudevent", zap.Any("result", result))
+			logger.TenantError("failed to send cloudevent", zap.Any("result", result))
 		}
+		logger.TenantDebugf("Sent cloudevent %s", event.Source())
 	}
 }
 
