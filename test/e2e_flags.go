@@ -41,7 +41,6 @@ const (
 	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
 		"won't create their own."
 	BrokerNamespaceUsage = "When testing a pre-existing broker, this variable specifies the namespace the broker can be found in."
-	
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
