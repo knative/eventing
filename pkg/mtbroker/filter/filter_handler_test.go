@@ -41,6 +41,7 @@ import (
 	broker "knative.dev/eventing/pkg/mtbroker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/logging"
 )
 
 const (
@@ -618,4 +619,56 @@ func makeEmptyResponse(status int) *http.Response {
 	r.Header.Set("Content-Type", "garbage")
 	r.Header.Set("Content-Length", "0")
 	return r
+}
+
+func Test_filterEventByAttributes(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		attrs map[string]string
+		event *cloudevents.Event
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want FilterResult
+	}{
+		{
+			name: "extension any value",
+			args: args{
+				attrs: map[string]string{
+					"extname1": "",
+				},
+				event: func() *cloudevents.Event {
+					event := cloudevents.NewEvent()
+					event.SetType("type1")
+					return &event
+				}(),
+			},
+			want: passFilter,
+		},
+		{
+			name: "subject any value",
+			args: args{
+				attrs: map[string]string{
+					"subject": "",
+				},
+				event: func() *cloudevents.Event {
+					event := cloudevents.NewEvent()
+					event.SetType("type1")
+					return &event
+				}(),
+			},
+			want: passFilter,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := filterEventByAttributes(logging.WithLogger(context.Background(), zap.NewNop().Sugar()), tt.args.attrs, tt.args.event); got != tt.want {
+				t.Errorf("filterEventByAttributes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
