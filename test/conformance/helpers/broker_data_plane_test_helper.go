@@ -83,7 +83,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		event := ce.NewEvent()
 		event.SetID(eventID)
 		event.SetType(testlib.DefaultEventType)
-		event.SetSource("CE0.3")
+		event.SetSource("0.3.event.sender.test.knative.dev")
 		body := fmt.Sprintf(`{"msg":%q}`, eventID)
 
 		if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
@@ -93,7 +93,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		event.SetSpecVersion("0.3")
 		client.SendEventToAddressable("v03-test-sender", broker.Name, testlib.BrokerTypeMeta, event)
 		originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
-			cetest.HasSource(event.Source()),
+			cetest.HasId(eventID),
 			cetest.HasSpecVersion("0.3"),
 		))
 		eventTracker.AssertAtLeast(1, originalEventMatcher)
@@ -104,7 +104,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		event := ce.NewEvent()
 		event.SetID(eventID)
 		event.SetType(testlib.DefaultEventType)
-		event.SetSource("CE1.0")
+		event.SetSource("1.0.event.sender.test.knative.dev")
 		body := fmt.Sprintf(`{"msg":%q}`, eventID)
 		if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
@@ -112,7 +112,8 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 
 		client.SendEventToAddressable("v10-test-sender", broker.Name, testlib.BrokerTypeMeta, event)
 		originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
-			cetest.HasSource(event.Source()),
+			cetest.HasId(eventID),
+			cetest.HasSpecVersion("1.0"),
 		))
 		eventTracker.AssertAtLeast(1, originalEventMatcher)
 
@@ -122,15 +123,15 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		event := ce.NewEvent()
 		event.SetID(eventID)
 		event.SetType(testlib.DefaultEventType)
-		event.SetSource("CEStructured Mode")
+		event.SetSource("structured.mode.event.sender.test.knative.dev")
 		body := fmt.Sprintf(`{"msg":%q}`, eventID)
-		if err := event.SetData(ce.EncodingStructured.String(), []byte(body)); err != nil {
+		if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 
-		client.SendEventToAddressable("structured-test-sender", broker.Name, testlib.BrokerTypeMeta, event)
+		client.SendEventToAddressable("structured-test-sender", broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 		originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
-			cetest.HasSource(event.Source()),
+			cetest.HasId(eventID),
 		))
 		eventTracker.AssertAtLeast(1, originalEventMatcher)
 	})
@@ -140,15 +141,15 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		event := ce.NewEvent()
 		event.SetID(eventID)
 		event.SetType(testlib.DefaultEventType)
-		event.SetSource("CEBindary Mode")
+		event.SetSource("binary.mode.event.sender.test.knative.dev")
 		body := fmt.Sprintf(`{"msg":%q}`, eventID)
-		if err := event.SetData(ce.EncodingBinary.String(), []byte(body)); err != nil {
+		if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 
-		client.SendEventToAddressable("binary-test-sender", broker.Name, testlib.BrokerTypeMeta, event)
+		client.SendEventToAddressable("binary-test-sender", broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingBinary))
 		originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
-			cetest.HasSource(event.Source()),
+			cetest.HasId(eventID),
 		))
 		eventTracker.AssertAtLeast(1, originalEventMatcher)
 	})
@@ -161,7 +162,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			map[string]string{
 				"ce-specversion": "1.0",
 				"ce-type":        testlib.DefaultEventType,
-				"ce-source":      "2XX on good CE",
+				"ce-source":      "2xx.request.sender.test.knative.dev",
 				"ce-id":          eventID,
 				"content-type":   ce.ApplicationJSON,
 			},
@@ -181,7 +182,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			map[string]string{
 				"ce-specversion": "9000.1", //its over 9,000!
 				"ce-type":        testlib.DefaultEventType,
-				"ce-source":      "400 on bad CE",
+				"ce-source":      "400.request.sender.test.knative.dev",
 				"ce-id":          eventID,
 				"content-type":   ce.ApplicationJSON,
 			},
@@ -238,7 +239,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 	baseEvent.SetSource(baseSource)
 	baseEvent.SetSpecVersion("1.0")
 	body := fmt.Sprintf(`{"msg":%q}`, eventID)
-	if err := baseEvent.SetData(ce.EncodingStructured.String(), []byte(body)); err != nil {
+	if err := baseEvent.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
 		t.Fatalf("Cannot set the payload of the baseEvent: %s", err.Error())
 	}
 
@@ -248,7 +249,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		event.SetID(source)
 		event.Context = event.Context.AsV03()
 
-		client.SendEventToAddressable(source+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
+		client.SendEventToAddressable(source+"-sender", broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 		originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 			cetest.HasSpecVersion("0.3"),
 			cetest.HasId("no-upgrade"),
@@ -262,12 +263,12 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		id := "identical-attibutes"
 		event.SetID(id)
 		client.SendEventToAddressable(id+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
-		originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
+		originalEventMatcher := recordevents.MatchEvent(
 			cetest.HasId(id),
 			cetest.HasType(testlib.DefaultEventType),
 			cetest.HasSource(baseSource),
 			cetest.HasSpecVersion("1.0"),
-		))
+		)
 		eventTracker.AssertExact(1, originalEventMatcher)
 	})
 
@@ -279,9 +280,9 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 
 		client.SendEventToAddressable("first-"+source+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
 		client.SendEventToAddressable("second-"+source+"-sender", broker.Name, testlib.BrokerTypeMeta, secondEvent)
-		filteredEventMatcher := recordevents.MatchEvent(cetest.AllOf(
+		filteredEventMatcher := recordevents.MatchEvent(
 			cetest.HasSource(source),
-		))
+		)
 		nonEventMatcher := recordevents.MatchEvent(
 			cetest.HasSource(baseSource),
 		)
@@ -294,9 +295,9 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		source := "filtered-event"
 		event.SetSource(source)
 		client.SendEventToAddressable(source+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
-		filteredEventMatcher := recordevents.MatchEvent(cetest.AllOf(
+		filteredEventMatcher := recordevents.MatchEvent(
 			cetest.HasSource(source),
-		))
+		)
 		eventTracker.AssertAtLeast(1, filteredEventMatcher)
 		secondTracker.AssertAtLeast(1, filteredEventMatcher)
 	})
@@ -342,11 +343,11 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		)
 		client.WaitForResourceReadyOrFail(replyTrigger.Name, testlib.TriggerTypeMeta)
 		client.SendEventToAddressable(source+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
-		transformedEventMatcher := recordevents.MatchEvent(cetest.AllOf(
+		transformedEventMatcher := recordevents.MatchEvent(
 			cetest.HasSource("reply-check-source"),
 			cetest.HasType("reply-check-type"),
 			cetest.HasData(msg),
-		))
+		)
 		eventTracker.AssertAtLeast(2, transformedEventMatcher)
 	})
 }
