@@ -22,12 +22,20 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/lib"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestBrokerV1Beta1DataPlaneIngress(t *testing.T) {
-	helpers.BrokerV1Beta1IngressDataPlaneTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, lib.SetupClientOptionNoop)
+	client := testlib.Setup(t, true, testlib.SetupClientOptionNoop)
+	defer testlib.TearDown(client)
+
+	broker := helpers.BrokerDataPlaneSetupHelper(client, brokerName, brokerNamespace, brokerClass)
+	helpers.BrokerV1Beta1IngressDataPlaneTestHelper(t, client, broker)
 }
 func TestBrokerV1Beta1DataPlaneConsumer(t *testing.T) {
-	helpers.BrokerV1Beta1ConsumerDataPlaneTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, lib.SetupClientOptionNoop)
+	client := testlib.Setup(t, true, testlib.SetupClientOptionNoop)
+	defer testlib.TearDown(client)
+
+	broker := helpers.BrokerDataPlaneSetupHelper(client, brokerName, brokerNamespace, brokerClass)
+	helpers.BrokerV1Beta1ConsumerDataPlaneTestHelper(t, client, broker)
 }

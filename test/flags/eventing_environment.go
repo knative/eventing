@@ -23,4 +23,7 @@ type EventingEnvironmentFlags struct {
 	Sources
 	PipeFile  string
 	ReadyFile string
+	BrokerName      string
+	BrokerNamespace string
+
 }
