@@ -36,6 +36,16 @@ const (
 	defaultRetryWaitMax = 30 * time.Second
 )
 
+var noRetries = RetriesConfig{
+	RetryMax: 0,
+	CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+		return false, nil
+	},
+	Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+		return 0
+	},
+}
+
 // ConnectionArgs allow to configure connection parameters to the underlying
 // HTTP Client transport.
 type ConnectionArgs struct {
@@ -130,15 +140,7 @@ func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config Retries
 }
 
 func NoRetries() RetriesConfig {
-	return RetriesConfig{
-		RetryMax: 0,
-		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
-			return false, nil
-		},
-		Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
-			return 0
-		},
-	}
+	return noRetries
 }
 
 func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetriesConfig, error) {
