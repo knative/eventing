@@ -36,7 +36,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
-func TestContainerSource(t *testing.T) {
+func TestContainerSourceV1Alpha2(t *testing.T) {
 	const (
 		containerSourceName = "e2e-container-source"
 		templateName        = "e2e-container-source-template"
@@ -65,10 +65,10 @@ func TestContainerSource(t *testing.T) {
 		Name:  "POD_NAMESPACE",
 		Value: client.Namespace,
 	}}
-	containerSource := eventingtesting.NewContainerSource(
+	containerSource := eventingtesting.NewContainerSourceV1Alpha2(
 		containerSourceName,
 		client.Namespace,
-		eventingtesting.WithContainerSourceSpec(sourcesv1alpha2.ContainerSourceSpec{
+		eventingtesting.WithContainerSourceSpecV1A2(sourcesv1alpha2.ContainerSourceSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: templateName,

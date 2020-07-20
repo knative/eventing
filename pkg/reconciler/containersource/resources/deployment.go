@@ -19,11 +19,11 @@ package resources
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
-func MakeDeployment(source *v1alpha2.ContainerSource) *appsv1.Deployment {
+func MakeDeployment(source *v1beta1.ContainerSource) *appsv1.Deployment {
 	template := source.Spec.Template
 	if template.Labels == nil {
 		template.Labels = make(map[string]string)

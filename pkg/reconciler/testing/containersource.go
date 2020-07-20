@@ -20,17 +20,23 @@ import (
 	"context"
 	"time"
 
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
-// ContainerSourceOption enables further configuration of a ContainerSource.
-type ContainerSourceOption func(*sourcesv1alpha2.ContainerSource)
+// ContainerSourceV1Alpha2Option enables further configuration of a ContainerSource.
+type ContainerSourceV1Alpha2Option func(*sourcesv1alpha2.ContainerSource)
 
-// NewContainerSource creates a ContainerSource with ContainerSourceOptions
-func NewContainerSource(name, namespace string, o ...ContainerSourceOption) *sourcesv1alpha2.ContainerSource {
+// ContainerSourceV1Beta1Option enables further configuration of a ContainerSource.
+type ContainerSourceV1Beta1Option func(*sourcesv1beta1.ContainerSource)
+
+// NewContainerSource creates a v1alpha2 ContainerSource with ContainerSourceOptions
+func NewContainerSourceV1Alpha2(name, namespace string, o ...ContainerSourceV1Alpha2Option) *sourcesv1alpha2.ContainerSource {
 	c := &sourcesv1alpha2.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -44,66 +50,87 @@ func NewContainerSource(name, namespace string, o ...ContainerSourceOption) *sou
 	return c
 }
 
-func WithContainerSourceUID(uid types.UID) ContainerSourceOption {
-	return func(s *sourcesv1alpha2.ContainerSource) {
+// NewContainerSource creates a v1beta1 ContainerSource with ContainerSourceOptions
+func NewContainerSourceV1Beta1(name, namespace string, o ...ContainerSourceV1Beta1Option) *sourcesv1beta1.ContainerSource {
+	c := &sourcesv1beta1.ContainerSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	for _, opt := range o {
+		opt(c)
+	}
+	c.SetDefaults(context.Background())
+	return c
+}
+
+func WithContainerSourceUIDV1B1(uid types.UID) ContainerSourceV1Beta1Option {
+	return func(s *sourcesv1beta1.ContainerSource) {
 		s.UID = uid
 	}
 }
 
 // WithInitContainerSourceConditions initializes the ContainerSource's conditions.
-func WithInitContainerSourceConditions(s *sourcesv1alpha2.ContainerSource) {
+func WithInitContainerSourceConditionsV1B1(s *sourcesv1beta1.ContainerSource) {
 	s.Status.InitializeConditions()
 }
 
-func WithContainerSourcePropagateReceiveAdapterStatus(d *appsv1.Deployment) ContainerSourceOption {
-	return func(s *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourcePropagateReceiveAdapterStatusV1B1(d *appsv1.Deployment) ContainerSourceV1Beta1Option {
+	return func(s *sourcesv1beta1.ContainerSource) {
 		s.Status.PropagateReceiveAdapterStatus(d)
 	}
 }
 
-func WithContainerSourcePropagateSinkbindingStatus(status *sourcesv1alpha2.SinkBindingStatus) ContainerSourceOption {
-	return func(s *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourcePropagateSinkbindingStatusV1B1(status *sourcesv1beta1.SinkBindingStatus) ContainerSourceV1Beta1Option {
+	return func(s *sourcesv1beta1.ContainerSource) {
 		s.Status.PropagateSinkBindingStatus(status)
 	}
 }
 
-func WithContainerSourceDeleted(c *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourceDeleted(c *sourcesv1beta1.ContainerSource) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-func WithContainerSourceSpec(spec sourcesv1alpha2.ContainerSourceSpec) ContainerSourceOption {
+func WithContainerSourceSpecV1A2(spec sourcesv1alpha2.ContainerSourceSpec) ContainerSourceV1Alpha2Option {
 	return func(c *sourcesv1alpha2.ContainerSource) {
 		c.Spec = spec
 	}
 }
 
-func WithContainerSourceLabels(labels map[string]string) ContainerSourceOption {
-	return func(c *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourceSpecV1B1(spec sourcesv1beta1.ContainerSourceSpec) ContainerSourceV1Beta1Option {
+	return func(c *sourcesv1beta1.ContainerSource) {
+		c.Spec = spec
+	}
+}
+
+func WithContainerSourceLabelsV1B1(labels map[string]string) ContainerSourceV1Beta1Option {
+	return func(c *sourcesv1beta1.ContainerSource) {
 		c.Labels = labels
 	}
 }
 
-func WithContainerSourceAnnotations(annotations map[string]string) ContainerSourceOption {
-	return func(c *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourceAnnotationsV1B1(annotations map[string]string) ContainerSourceV1Beta1Option {
+	return func(c *sourcesv1beta1.ContainerSource) {
 		c.Annotations = annotations
 	}
 }
 
-func WithContainerSourceStatusObservedGeneration(generation int64) ContainerSourceOption {
-	return func(c *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourceStatusObservedGenerationV1B1(generation int64) ContainerSourceV1Beta1Option {
+	return func(c *sourcesv1beta1.ContainerSource) {
 		c.Status.ObservedGeneration = generation
 	}
 }
 
-func WithContainerSourceObjectMetaGeneration(generation int64) ContainerSourceOption {
-	return func(c *sourcesv1alpha2.ContainerSource) {
+func WithContainerSourceObjectMetaGenerationV1B1(generation int64) ContainerSourceV1Beta1Option {
+	return func(c *sourcesv1beta1.ContainerSource) {
 		c.ObjectMeta.Generation = generation
 	}
 }
 
-func WithContainerUnobservedGeneration() ContainerSourceOption {
-	return func(c *sourcesv1alpha2.ContainerSource) {
+func WithContainerUnobservedGenerationV1B1() ContainerSourceV1Beta1Option {
+	return func(c *sourcesv1beta1.ContainerSource) {
 		condSet := c.GetConditionSet()
 		condSet.Manage(&c.Status).MarkUnknown(
 			condSet.GetTopLevelConditionType(), "NewObservedGenFailure", "unsuccessfully observed a new generation")

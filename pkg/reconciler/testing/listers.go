@@ -37,6 +37,7 @@ import (
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
@@ -44,6 +45,7 @@ import (
 	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	sourcev1beta1listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
 )
@@ -170,12 +172,20 @@ func (l *Listers) GetPingSourceV1alpha2Lister() sourcev1alpha2listers.PingSource
 	return sourcev1alpha2listers.NewPingSourceLister(l.indexerFor(&sourcesv1alpha2.PingSource{}))
 }
 
-func (l *Listers) GetContainerSourceLister() sourcev1alpha2listers.ContainerSourceLister {
+func (l *Listers) GetContainerSourceV1alpha2Lister() sourcev1alpha2listers.ContainerSourceLister {
 	return sourcev1alpha2listers.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha2.ContainerSource{}))
+}
+
+func (l *Listers) GetContainerSourceV1beta1Lister() sourcev1beta1listers.ContainerSourceLister {
+	return sourcev1beta1listers.NewContainerSourceLister(l.indexerFor(&sourcesv1beta1.ContainerSource{}))
 }
 
 func (l *Listers) GetSinkBindingV1alpha2Lister() sourcev1alpha2listers.SinkBindingLister {
 	return sourcev1alpha2listers.NewSinkBindingLister(l.indexerFor(&sourcesv1alpha2.SinkBinding{}))
+}
+
+func (l *Listers) GetSinkBindingV1beta1Lister() sourcev1beta1listers.SinkBindingLister {
+	return sourcev1beta1listers.NewSinkBindingLister(l.indexerFor(&sourcesv1beta1.SinkBinding{}))
 }
 
 func (l *Listers) GetApiServerSourceV1alpha2Lister() sourcev1alpha2listers.ApiServerSourceLister {
