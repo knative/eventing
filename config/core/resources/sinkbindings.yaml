@@ -64,7 +64,6 @@ spec:
     categories:
       - all
       - knative
-      - eventing
       - sources
       - bindings
     kind: SinkBinding

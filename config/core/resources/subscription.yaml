@@ -56,7 +56,7 @@ spec:
     categories:
     - all
     - knative
-    - eventing
+    - messaging
     shortNames:
     - sub
   scope: Namespaced

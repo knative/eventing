@@ -75,7 +75,6 @@ spec:
     categories:
      - all
      - knative
-     - eventing
      - sources
     kind: ApiServerSource
     plural: apiserversources

@@ -59,7 +59,6 @@ spec:
     categories:
       - all
       - knative
-      - eventing
       - sources
     kind: ContainerSource
     plural: containersources
