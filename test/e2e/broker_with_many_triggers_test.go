@@ -30,7 +30,7 @@ import (
 
 var unsupportedChannelVersions = []string{"v1alpha1"}
 
-func DefaultBrokerCreator(_ *testlib.Client) string {
+func DefaultBrokerCreator(_ *testlib.Client, _ string) string {
 	return sugarresources.DefaultBrokerName
 }
 

@@ -94,21 +94,30 @@ func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
 
 // BrokerCreator creates a broker and returns its broker name.
 // TestBrokerWithManyTriggers will wait for the broker to become ready.
-type BrokerCreator func(client *testlib.Client) string
+type BrokerCreator func(client *testlib.Client, version string) string
 
 // ChannelBasedBrokerCreator creates a BrokerCreator that creates a broker based on the channel parameter.
 func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) BrokerCreator {
-	return func(client *testlib.Client) string {
+	return func(client *testlib.Client, version string) string {
 		brokerName := strings.ToLower(channel.Kind)
 
 		// create a ConfigMap used by the broker.
 		config := client.CreateBrokerConfigMapOrFail("config-"+brokerName, &channel)
 
-		// create a new broker.
-		client.CreateBrokerV1Beta1OrFail(brokerName,
-			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
-			resources.WithConfigForBrokerV1Beta1(config),
-		)
+		switch version {
+		case "v1":
+			client.CreateBrokerV1OrFail(brokerName,
+				resources.WithBrokerClassForBrokerV1(brokerClass),
+				resources.WithConfigForBrokerV1(config),
+			)
+		case "v1beta1":
+			client.CreateBrokerV1Beta1OrFail(brokerName,
+				resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+				resources.WithConfigForBrokerV1Beta1(config),
+			)
+		default:
+			panic("unknown version: " + version)
+		}
 
 		return brokerName
 	}
@@ -143,7 +152,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 		// to set in the subscriber and services pod
 		// The attributes in these test cases will be used as assertions on the receivers
 		eventFilters []eventTestCase
-		//TriggerFilter with DeprecatedSourceAndType or not
+		// TriggerFilter with DeprecatedSourceAndType or not
 		deprecatedTriggerFilter bool
 		// Use v1beta1 trigger
 		v1beta1 bool
@@ -230,7 +239,7 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				}
 			}
 
-			brokerName := brokerCreator(client)
+			brokerName := brokerCreator(client, "v1beta1")
 
 			// Wait for broker ready.
 			client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
