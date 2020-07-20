@@ -173,7 +173,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 
 	})
 	//Respond with 400 on bad CE
-	t.Run("Repsond with 400 on bad CE", func(t *testing.T) {
+	t.Run("Respond with 400 on bad CE", func(t *testing.T) {
 		eventID := "four-hundred-on-bad-ce"
 		body := ";la}{kjsdf;oai2095{}{}8234092349807asdfashdf"
 		responseSink := "http://" + client.GetServiceHost(loggerName)
