@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"testing"
 
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/tracker"
 
