@@ -89,16 +89,22 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberURI: apis.HTTP("event-changer.default.svc." + utils.GetClusterDomainName()),
-									ReplyURI:      apis.HTTP("message-dumper-bar.default.svc." + utils.GetClusterDomainName()),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										SubscriberURI: apis.HTTP("event-changer.default.svc." + utils.GetClusterDomainName()),
+										ReplyURI:      apis.HTTP("message-dumper-bar.default.svc." + utils.GetClusterDomainName()),
+									},
 								},
 								{
-									SubscriberURI: apis.HTTP("message-dumper-foo.default.svc." + utils.GetClusterDomainName()),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										SubscriberURI: apis.HTTP("message-dumper-foo.default.svc." + utils.GetClusterDomainName()),
+									},
 								},
 								{
-									ReplyURI: apis.HTTP("message-dumper-bar.default.svc." + utils.GetClusterDomainName()),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										ReplyURI: apis.HTTP("message-dumper-bar.default.svc." + utils.GetClusterDomainName()),
+									},
 								},
 							},
 						},
@@ -107,9 +113,11 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "default",
 						Name:      "c2",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									ReplyURI: apis.HTTP("message-dumper-foo.default.svc." + utils.GetClusterDomainName()),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										ReplyURI: apis.HTTP("message-dumper-foo.default.svc." + utils.GetClusterDomainName()),
+									},
 								},
 							},
 						},
@@ -118,9 +126,11 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "other",
 						Name:      "c3",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									ReplyURI: apis.HTTP("message-dumper-foo.default.svc." + utils.GetClusterDomainName()),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										ReplyURI: apis.HTTP("message-dumper-foo.default.svc." + utils.GetClusterDomainName()),
+									},
 								},
 							},
 						},
@@ -141,8 +151,8 @@ func TestConfigMapData(t *testing.T) {
 				}
 				return
 			}
-			if !cmp.Equal(c, tc.expected) {
-				t.Errorf("Unexpected config. Expected '%v'. Actual '%v'.", tc.expected, c)
+			if diff := cmp.Diff(c, tc.expected); diff != "" {
+				t.Errorf("Unexpected config. Expected '%v'. Actual '%v'. - diff: %s", tc.expected, c, diff)
 			}
 		})
 	}

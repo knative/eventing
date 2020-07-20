@@ -29,12 +29,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
@@ -81,7 +84,16 @@ func NewMessageHandler(ctx context.Context, logger *zap.Logger, messageDispatche
 // empty string is returned. If there are differences, then a non-empty string is returned
 // describing the differences.
 func (h *MessageHandler) ConfigDiff(updated Config) string {
-	return cmp.Diff(h.config, updated)
+	return cmp.Diff(h.config, updated, ignoreCheckRetryAndBackFunctions())
+}
+
+func ignoreCheckRetryAndBackFunctions() cmp.Option {
+	return cmp.FilterPath(func(path cmp.Path) bool {
+		// is of type kncloudevents.Backoff?
+		return path.Last().Type().Kind() == reflect.TypeOf(kncloudevents.Backoff(func(attemptNum int, resp *http.Response) time.Duration { return 0 })).Kind() ||
+			// is of type kncloudevents.CheckRetry?
+			path.Last().Type().Kind() == reflect.TypeOf(kncloudevents.CheckRetry(func(ctx context.Context, resp *http.Response, err error) (bool, error) { return false, nil })).Kind()
+	}, cmp.Ignore())
 }
 
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
