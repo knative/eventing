@@ -20,6 +20,9 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/utils/pointer"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/channel"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
@@ -63,6 +66,8 @@ func TestAllCases(t *testing.T) {
 		ReplyURI:      apis.HTTP("sink2"),
 	}}
 
+	backoffPolicy := duckv1beta1.BackoffPolicyLinear
+
 	imcKey := testNS + "/" + imcName
 	table := TableTest{
 		{
@@ -100,7 +105,36 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WantErr: false,
-		}, {},
+		}, {
+			Name: "subscriber with delivery spec",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers([]duckv1beta1.SubscriberSpec{
+						{
+							UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+							Generation:    1,
+							SubscriberURI: apis.HTTP("call1"),
+							ReplyURI:      apis.HTTP("sink2"),
+							Delivery: &duckv1beta1.DeliverySpec{
+								DeadLetterSink: &duckv1.Destination{
+									URI: apis.HTTP("http://www.example.com"),
+								},
+								Retry:         pointer.Int32Ptr(10),
+								BackoffPolicy: &backoffPolicy,
+								BackoffDelay:  pointer.StringPtr("PT1S"),
+							},
+						},
+					}),
+					WithInMemoryChannelAddress(channelServiceAddress)),
+			},
+			WantErr: false,
+		},
 	}
 
 	logger := logtesting.TestLogger(t)

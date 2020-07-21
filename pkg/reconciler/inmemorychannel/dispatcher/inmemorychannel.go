@@ -18,18 +18,21 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 
 	"knative.dev/pkg/reconciler"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/inmemorychannel"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/logging"
 )
 
@@ -59,7 +62,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 		}
 	}
 
-	config := r.newConfigFromInMemoryChannels(inmemoryChannels)
+	config, err := r.newConfigFromInMemoryChannels(inmemoryChannels)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error creating config from in memory channels")
+		return err
+	}
 	err = r.dispatcher.UpdateConfig(ctx, r.eventDispatcherConfigStore.GetConfig(), config)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
@@ -70,21 +77,45 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 }
 
 // newConfigFromInMemoryChannels creates a new Config from the list of inmemory channels.
-func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1beta1.InMemoryChannel) *multichannelfanout.Config {
+func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1beta1.InMemoryChannel) (*multichannelfanout.Config, error) {
 	cc := make([]multichannelfanout.ChannelConfig, 0)
 	for _, c := range channels {
+
+		subs := make([]fanout.Subscription, len(c.Spec.Subscribers))
+		for _, sub := range c.Spec.Subscribers {
+
+			retriesConfig := kncloudevents.NoRetries()
+			if sub.Delivery != nil && sub.Delivery.Retry != nil {
+				delivery := eventingduckv1.DeliverySpec{}
+				err := sub.Delivery.ConvertTo(context.Background(), &delivery)
+				if err != nil {
+					return nil, err
+				}
+				_retriesConfig, err := kncloudevents.RetryConfigFromDeliverySpec(delivery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create retries config: %w", err)
+				}
+				retriesConfig = _retriesConfig
+			}
+
+			subs = append(subs, fanout.Subscription{
+				SubscriberSpec: sub,
+				RetriesConfig:  retriesConfig,
+			})
+		}
+
 		channelConfig := multichannelfanout.ChannelConfig{
 			Namespace: c.Namespace,
 			Name:      c.Name,
 			HostName:  c.Status.Address.URL.Host,
 			FanoutConfig: fanout.Config{
 				AsyncHandler:  true,
-				Subscriptions: c.Spec.Subscribers,
+				Subscriptions: subs,
 			},
 		}
 		cc = append(cc, channelConfig)
 	}
 	return &multichannelfanout.Config{
 		ChannelConfigs: cc,
-	}
+	}, nil
 }

@@ -72,11 +72,13 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 				HostName:  "channela.svc",
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
-					Subscriptions: []eventingduck.SubscriberSpec{{
-						UID:           "aaaa",
-						Generation:    1,
-						SubscriberURI: transformationsUrl,
-						ReplyURI:      channelBUrl,
+					Subscriptions: []fanout.Subscription{{
+						SubscriberSpec: eventingduck.SubscriberSpec{
+							UID:           "aaaa",
+							Generation:    1,
+							SubscriberURI: transformationsUrl,
+							ReplyURI:      channelBUrl,
+						},
 					}},
 				},
 			},
@@ -86,10 +88,12 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 				HostName:  "channelb.svc",
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
-					Subscriptions: []eventingduck.SubscriberSpec{{
-						UID:           "bbbb",
-						Generation:    1,
-						SubscriberURI: receiverUrl,
+					Subscriptions: []fanout.Subscription{{
+						SubscriberSpec: eventingduck.SubscriberSpec{
+							UID:           "bbbb",
+							Generation:    1,
+							SubscriberURI: receiverUrl,
+						},
 					}},
 				},
 			},

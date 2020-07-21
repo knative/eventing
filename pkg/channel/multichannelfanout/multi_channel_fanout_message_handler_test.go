@@ -92,9 +92,11 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.SubscriberSpec{
+					Subscriptions: []fanout.Subscription{
 						{
-							SubscriberURI: apis.HTTP("subscriberdomain"),
+							SubscriberSpec: eventingduck.SubscriberSpec{
+								SubscriberURI: apis.HTTP("subscriberdomain"),
+							},
 						},
 					},
 				},
@@ -107,9 +109,11 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "somethingdifferent",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.SubscriberSpec{
+					Subscriptions: []fanout.Subscription{
 						{
-							ReplyURI: apis.HTTP("replydomain"),
+							SubscriberSpec: eventingduck.SubscriberSpec{
+								ReplyURI: apis.HTTP("replydomain"),
+							},
 						},
 					},
 				},
@@ -129,18 +133,23 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to create handler, %v", err)
 	}
-	if !cmp.Equal(h.config, orig) {
-		t.Errorf("Incorrect config. Expected '%v'. Actual '%v'", orig, h.config)
+
+	option := ignoreCheckRetryAndBackFunctions()
+	if diff := cmp.Diff(h.config, orig, option); diff != "" {
+		t.Errorf("Incorrect config. Expected '%v'. Actual '%v' - diff: %s", orig, h.config, diff)
 	}
+
 	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated)
 	if err != nil {
 		t.Errorf("Unable to copy handler: %v", err)
 	}
+
 	if h.logger != newH.logger {
 		t.Errorf("Did not copy logger")
 	}
-	if !cmp.Equal(newH.config, updated) {
-		t.Errorf("Incorrect copied config. Expected '%v'. Actual '%v'", updated, newH.config)
+
+	if diff := cmp.Diff(newH.config, updated, option); diff != "" {
+		t.Errorf("Incorrect copied config. Expected '%v'. Actual '%v' - diff: %s", updated, newH.config, diff)
 	}
 }
 
@@ -151,9 +160,11 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.SubscriberSpec{
+					Subscriptions: []fanout.Subscription{
 						{
-							SubscriberURI: apis.HTTP("subscriberdomain"),
+							SubscriberSpec: eventingduck.SubscriberSpec{
+								SubscriberURI: apis.HTTP("subscriberdomain"),
+							},
 						},
 					},
 				},
@@ -181,9 +192,11 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberURI: apis.HTTP("different"),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										SubscriberURI: apis.HTTP("different"),
+									},
 								},
 							},
 						},
@@ -203,7 +216,7 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 			diff := h.ConfigDiff(tc.updated)
 
 			if hasDiff := diff != ""; hasDiff != tc.expectedDiff {
-				t.Errorf("Unexpected diff result. Expected %v. Actual %v", tc.expectedDiff, hasDiff)
+				t.Errorf("Unexpected diff result. Expected %v. Actual %v - diff: %s", tc.expectedDiff, hasDiff, diff)
 			}
 		})
 	}
@@ -235,9 +248,11 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						Name:      "name",
 						HostName:  "first-channel.default",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									ReplyURI: replaceDomain,
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										ReplyURI: replaceDomain,
+									},
 								},
 							},
 						},
@@ -257,9 +272,11 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						Name:      "name",
 						HostName:  "first-channel.default",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									ReplyURI: apis.HTTP("first-to-domain"),
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										ReplyURI: apis.HTTP("first-to-domain"),
+									},
 								},
 							},
 						},
@@ -269,9 +286,11 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						Name:      "second-channel",
 						HostName:  "second-channel.default",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.SubscriberSpec{
+							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberURI: replaceDomain,
+									SubscriberSpec: eventingduck.SubscriberSpec{
+										SubscriberURI: replaceDomain,
+									},
 								},
 							},
 						},

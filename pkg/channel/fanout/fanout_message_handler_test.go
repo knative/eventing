@@ -48,7 +48,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		receiverFunc        channel.UnbufferedMessageReceiverFunc
 		timeout             time.Duration
-		subs                []eventingduck.SubscriberSpec
+		subs                []Subscription
 		subscriber          func(http.ResponseWriter, *http.Request)
 		subscriberReqs      int
 		replier             func(http.ResponseWriter, *http.Request)
@@ -75,9 +75,11 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		},
 		"fanout times out": {
 			timeout: time.Millisecond,
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					SubscriberURI: replaceSubscriber,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+					},
 				},
 			},
 			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
@@ -89,21 +91,23 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"zero subs succeed": {
-			subs:                []eventingduck.SubscriberSpec{},
+			subs:                []Subscription{},
 			expectedStatus:      http.StatusAccepted,
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"empty sub succeeds": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{},
 			},
 			expectedStatus:      http.StatusAccepted,
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"reply fails": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					ReplyURI: replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						ReplyURI: replaceReplier,
+					},
 				},
 			},
 			replier: func(writer http.ResponseWriter, _ *http.Request) {
@@ -114,9 +118,11 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"subscriber fails": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					SubscriberURI: replaceSubscriber,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+					},
 				},
 			},
 			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
@@ -127,10 +133,12 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"subscriber succeeds, result fails": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 			},
 			subscriber: callableSucceed,
@@ -143,10 +151,12 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 			},
 			subscriber: callableSucceed,
@@ -159,14 +169,18 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 			},
 			subscriber:          callableSucceed,
@@ -177,18 +191,24 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			asyncExpectedStatus: http.StatusAccepted,
 		},
 		"all subs succeed": {
-			subs: []eventingduck.SubscriberSpec{
+			subs: []Subscription{
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 				{
-					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceReplier,
+					SubscriberSpec: eventingduck.SubscriberSpec{
+						SubscriberURI: replaceSubscriber,
+						ReplyURI:      replaceReplier,
+					},
 				},
 			},
 			subscriber: callableSucceed,
@@ -211,7 +231,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	}
 }
 
-func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.UnbufferedMessageReceiverFunc, timeout time.Duration, inSubs []eventingduck.SubscriberSpec, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
+func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.UnbufferedMessageReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
 	var subscriberServerWg *sync.WaitGroup
 	if subscriberReqs != 0 {
 		subscriberServerWg = &sync.WaitGroup{}
@@ -235,7 +255,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	defer replyServer.Close()
 
 	// Rewrite the subs to use the servers we just started.
-	subs := make([]eventingduck.SubscriberSpec, 0)
+	subs := make([]Subscription, 0)
 	for _, sub := range inSubs {
 		if sub.SubscriberURI == replaceSubscriber {
 			sub.SubscriberURI = apis.HTTP(subscriberServer.URL[7:]) // strip the leading 'http://'

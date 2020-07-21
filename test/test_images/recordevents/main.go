@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -31,6 +32,7 @@ import (
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/dropevents"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/test_images"
 )
@@ -154,7 +156,24 @@ func main() {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 
-	err := http.ListenAndServe(":8080", kncloudevents.CreateHandler(er))
+	algorithm, ok := os.LookupEnv(dropevents.SkipAlgorithmKey)
+	handler := kncloudevents.CreateHandler(er)
+	if ok {
+		skipper := dropevents.SkipperAlgorithm(algorithm)
+		counter := dropevents.CounterHandler{
+			Skipper: skipper,
+		}
+		next := handler
+		handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			if counter.Skip() {
+				writer.WriteHeader(http.StatusConflict)
+				return
+			}
+			next.ServeHTTP(writer, request)
+		})
+	}
+
+	err := http.ListenAndServe(":8080", handler)
 	if err != nil {
 		panic(err)
 	}
