@@ -136,7 +136,7 @@ ko apply -f config/channels/in-memory-channel/
 Depending on your needs you might want to install other
 [channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
 
-## Install Brokers
+## Install Broker
 
 Install the
 [MT Channel Broker](https://github.com/knative/eventing/tree/master/config/brokers/mt-channel-broker)
@@ -148,6 +148,15 @@ ko apply -f config/brokers/mt-channel-broker/
 
 Depending on your needs you might want to install other
 [Broker implementations](https://github.com/knative/eventing/tree/master/docs/broker).
+
+## (Optional) Install Sugar controller
+
+If you are running full set of e2e tests, you will need to install the
+[sugar controller](config/sugar/README.md).
+
+```shell
+ko apply -f config/sugar/
+```
 
 ## Iterating
 
