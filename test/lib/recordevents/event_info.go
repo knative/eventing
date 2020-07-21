@@ -161,7 +161,15 @@ func (eg *eventGetter) forwardPort() error {
 			return false, nil
 		}
 
-		pid, err := monitoring.PortForward(eg.logf, pods, localPort, eg.podPort, eg.podNamespace)
+		pid, err := monitoring.PortForward(
+			eg.logf,
+			pods,
+			localPort,
+			eg.podPort,
+			eg.podNamespace,
+			logging.NewLoggerWriter(eg.podName+"-stdout: ", eg.logf),
+			logging.NewLoggerWriter(eg.podName+"-stderr: ", eg.logf),
+		)
 		if err != nil {
 			internalErr = err
 			return false, nil
