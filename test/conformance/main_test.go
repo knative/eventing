@@ -29,6 +29,8 @@ import (
 var channelTestRunner testlib.ComponentsTestRunner
 var sourcesTestRunner testlib.ComponentsTestRunner
 var brokerClass string
+var brokerName string
+var brokerNamespace string
 
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
@@ -41,6 +43,8 @@ func TestMain(m *testing.M) {
 			ComponentsToTest: test.EventingFlags.Sources,
 		}
 		brokerClass = test.EventingFlags.BrokerClass
+		brokerName = test.EventingFlags.BrokerName
+		brokerNamespace = test.EventingFlags.BrokerNamespace
 
 		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
 		// place that cleans it up. If an individual test calls this instead, then it will break other

@@ -38,6 +38,9 @@ const (
 	SourceUsage = "The names of the source type metas, separated by comma. " +
 		"Example: \"sources.knative.dev/v1alpha1:ApiServerSource," +
 		"sources.knative.dev/v1alpha1:PingSource\"."
+	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
+		"won't create their own."
+	BrokerNamespaceUsage = "When testing a pre-existing broker, this variable specifies the namespace the broker can be found in."
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
@@ -52,6 +55,8 @@ func InitializeEventingFlags() {
 	flag.Var(&EventingFlags.Sources, "sources", SourceUsage)
 	flag.StringVar(&EventingFlags.PipeFile, "pipefile", "/tmp/prober-signal", "Temporary file to write the prober signal into.")
 	flag.StringVar(&EventingFlags.ReadyFile, "readyfile", "/tmp/prober-ready", "Temporary file to get the prober result.")
+	flag.StringVar(&EventingFlags.BrokerName, "brokername", "", BrokerNameUsage)
+	flag.StringVar(&EventingFlags.BrokerNamespace, "brokernamespace", "", BrokerNamespaceUsage)
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
