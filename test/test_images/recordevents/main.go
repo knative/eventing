@@ -50,6 +50,7 @@ func (er *eventRecorder) StartServer(port int) {
 	http.HandleFunc(recordevents.GetMinMaxPath, er.handleMinMax)
 	http.HandleFunc(recordevents.GetEntryPath, er.handleGetEntry)
 	http.HandleFunc(recordevents.TrimThroughPath, er.handleTrim)
+	log.Printf("Starting recordevents REST api server")
 	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
@@ -173,6 +174,7 @@ func main() {
 		})
 	}
 
+	log.Printf("Starting event receiver")
 	err := http.ListenAndServe(":8080", handler)
 	if err != nil {
 		panic(err)
