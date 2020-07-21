@@ -47,7 +47,7 @@ const (
 
 type Subscription struct {
 	eventingduck.SubscriberSpec
-	RetriesConfig kncloudevents.RetryConfig
+	RetryConfig kncloudevents.RetryConfig
 }
 
 func (s *Subscription) MarshalJSON() ([]byte, error) {
@@ -101,7 +101,7 @@ func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDisp
 		if err != nil {
 			return nil, fmt.Errorf("failed to create retries config from SubscriberSpec: %w", err)
 		}
-		config.Subscriptions[i].RetriesConfig = retriesConfig
+		config.Subscriptions[i].RetryConfig = retriesConfig
 	}
 
 	return handler, nil
@@ -214,5 +214,5 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 		deadLetterURL = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 
-	return f.dispatcher.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetterURL, &sub.RetriesConfig)
+	return f.dispatcher.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetterURL, &sub.RetryConfig)
 }

@@ -100,7 +100,7 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1beta1.InMemoryC
 
 			subs = append(subs, fanout.Subscription{
 				SubscriberSpec: sub,
-				RetriesConfig:  retriesConfig,
+				RetryConfig:    retriesConfig,
 			})
 		}
 
