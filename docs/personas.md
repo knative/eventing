@@ -1,7 +1,7 @@
 # Knative Personas
 
 When discussing user actions, it is often helpful to
-[define specific user roles](<https://en.wikipedia.org/wiki/Persona_(user_experience)>)
+[define specific user roles](https://en.wikipedia.org/wiki/Persona_(user_experience))
 who might want to do the action.
 
 ## Knative Events
@@ -35,7 +35,7 @@ User stories:
 
 System Integrators are typically of three varieties. They are producing new
 Channel implementations, or new Event Source implementations, or new Broker
-implementations .
+implementations.
 
 User stories:
 
