@@ -25,4 +25,5 @@ type EventingEnvironmentFlags struct {
 	ReadyFile       string
 	BrokerName      string
 	BrokerNamespace string
+	SystemNamespace string
 }

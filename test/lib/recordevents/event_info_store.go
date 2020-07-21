@@ -246,7 +246,7 @@ func (ei *EventInfoStore) AssertAtLeast(min int, matchers ...EventInfoMatcher) [
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertInRange(min int, max int, matchers ...EventInfoMatcher) []EventInfo {
 	events := ei.AssertAtLeast(min, matchers...)
-	if max > 0 && len(events) > max {
+	if len(events) > max {
 		ei.tb.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
 

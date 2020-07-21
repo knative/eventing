@@ -22,6 +22,9 @@ package test
 import (
 	"flag"
 	"log"
+	"os"
+
+	"knative.dev/pkg/system"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testflags "knative.dev/eventing/test/flags"
@@ -41,6 +44,7 @@ const (
 	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
 		"won't create their own."
 	BrokerNamespaceUsage = "When testing a pre-existing broker, this variable specifies the namespace the broker can be found in."
+	SystemNsUsage        = "The namespace where Knative Eventing is installed"
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
@@ -57,6 +61,7 @@ func InitializeEventingFlags() {
 	flag.StringVar(&EventingFlags.ReadyFile, "readyfile", "/tmp/prober-ready", "Temporary file to get the prober result.")
 	flag.StringVar(&EventingFlags.BrokerName, "brokername", "", BrokerNameUsage)
 	flag.StringVar(&EventingFlags.BrokerNamespace, "brokernamespace", "", BrokerNamespaceUsage)
+	flag.StringVar(&EventingFlags.SystemNamespace, "systemns", "", SystemNsUsage)
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
@@ -70,5 +75,8 @@ func InitializeEventingFlags() {
 
 	if EventingFlags.BrokerClass != "MTChannelBasedBroker" {
 		log.Fatalf("Invalid Brokerclass specified, got %q must be %q", EventingFlags.BrokerClass, "MTChannelBasedBroker")
+	}
+	if EventingFlags.SystemNamespace != "" {
+		os.Setenv(system.NamespaceEnvKey, EventingFlags.SystemNamespace)
 	}
 }

@@ -72,7 +72,7 @@ func withHADisabled(ctx context.Context) context.Context {
 
 // isHADisabled checks the context for the desired to disable leader elector.
 func isHADisabled(ctx context.Context) bool {
-	val := ctx.Value(haEnabledKey{})
+	val := ctx.Value(haDisabledKey{})
 	return val != nil
 }
 
@@ -211,6 +211,8 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	}
 
 	if !isHADisabled(ctx) && IsHAEnabled(ctx) {
+		logger.Info("running in leader elected mode")
+
 		// Signal that we are executing in a context with leader election.
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
