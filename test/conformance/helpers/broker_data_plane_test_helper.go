@@ -351,3 +351,85 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		eventTracker.AssertAtLeast(2, transformedEventMatcher)
 	})
 }
+
+//Metrics
+//Trace header on incoming event is preserved for subscribers and propagated to reply events
+//Metrics are supported (Difficult to test, can be ignored)
+func BrokerV1Beta1MetricsDataPlaneTestHelper(
+	t *testing.T,
+	client *testlib.Client,
+	broker *eventingv1beta1.Broker,
+) {
+	triggerName := "trigger"
+	loggerName := "logger-pod"
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, loggerName)
+	defer eventTracker.Cleanup()
+
+	trigger := client.CreateTriggerOrFailV1Beta1(
+		triggerName,
+		resources.WithBrokerV1Beta1(broker.Name),
+		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter, nil),
+		resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
+	)
+
+	client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
+	eventID := "metrics-broker-tests"
+	baseSource := "metrics.event.sender.test.knative.dev"
+	baseEvent := ce.NewEvent()
+	baseEvent.SetID(eventID)
+	baseEvent.SetType(testlib.DefaultEventType)
+	baseEvent.SetSource(baseSource)
+	baseEvent.SetSpecVersion("1.0")
+	body := fmt.Sprintf(`{"msg":%q}`, eventID)
+	if err := baseEvent.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
+		t.Fatalf("Cannot set the payload of the baseEvent: %s", err.Error())
+	}
+
+	t.Run("Trace header on incoming event is preserved for subscribers and propagated to reply events", func(t *testing.T) {
+		event := baseEvent
+		source := "trace.header.preserved.event.sender.test.knative.dev"
+		replySource := "reply.check.source.event.sender.test.knative.dev"
+		replyType := "reply-check-type"
+		responseSink := "http://" + client.GetServiceHost(loggerName)
+		event.SetSource(source)
+
+		msg := []byte(`{"msg":"Transformed!"}`)
+		transformPod := resources.EventTransformationPod(
+			"tranformer-pod",
+			replyType,
+			replySource,
+			msg,
+		)
+		client.CreatePodOrFail(transformPod, testlib.WithService("transformer-pod"))
+		transformTrigger := client.CreateTriggerOrFailV1Beta1(
+			"transform-trigger",
+			resources.WithBrokerV1Beta1(broker.Name),
+			resources.WithAttributesTriggerFilterV1Beta1(source, baseEvent.Type(), nil),
+			resources.WithSubscriberServiceRefForTriggerV1Beta1("transformer-pod"),
+		)
+		client.WaitForResourceReadyOrFail(transformTrigger.Name, testlib.TriggerTypeMeta)
+
+		replyTrigger := client.CreateTriggerOrFailV1Beta1(
+			"reply-trigger",
+			resources.WithBrokerV1Beta1(broker.Name),
+			resources.WithAttributesTriggerFilterV1Beta1(replySource, replyType, nil),
+			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
+		)
+		client.WaitForResourceReadyOrFail(replyTrigger.Name, testlib.TriggerTypeMeta)
+		client.SendEventToAddressable(source+"-sender", broker.Name, testlib.BrokerTypeMeta, event, sender.EnableTracing(), sender.WithResponseSink(responseSink))
+		tracerHeaderMatcher := recordevents.AllOf(
+			recordevents.AdditionalHeaderExists("Traceparent"),
+		)
+		traceHeader := eventTracker.AssertAtLeast(1, tracerHeaderMatcher)[0].HTTPHeaders["Traceparent"]
+		transformEventTracker, _ := recordevents.StartEventRecordOrFail(client, "transform-events-logger")
+		defer transformEventTracker.Cleanup()
+		traceHeaderEventMatcher := recordevents.AllOf(
+			recordevents.HasAdditionalHeader("traceparent", traceHeader[0]),
+			recordevents.MatchEvent(cetest.HasSource(replySource),
+				cetest.HasType(replyType),
+				cetest.HasData(msg),
+			),
+		)
+		eventTracker.AssertAtLeast(2, traceHeaderEventMatcher)
+	})
+}

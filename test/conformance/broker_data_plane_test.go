@@ -39,3 +39,11 @@ func TestBrokerV1Beta1DataPlaneConsumer(t *testing.T) {
 	broker := helpers.BrokerDataPlaneSetupHelper(client, brokerName, brokerNamespace, brokerClass)
 	helpers.BrokerV1Beta1ConsumerDataPlaneTestHelper(t, client, broker)
 }
+func TestBrokerV1Beta1DataPlaneMetrics(t *testing.T) {
+	client := testlib.Setup(t, true, testlib.SetupClientOptionNoop)
+	defer testlib.TearDown(client)
+
+	broker := helpers.BrokerDataPlaneSetupHelper(client, brokerName, brokerNamespace, brokerClass)
+	helpers.BrokerV1Beta1MetricsDataPlaneTestHelper(t, client, broker)
+
+}

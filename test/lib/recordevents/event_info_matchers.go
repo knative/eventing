@@ -69,6 +69,19 @@ func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatcher {
 	}
 }
 
+// Convert a matcher to check that a Header exists
+func AdditionalHeaderExists(key string) EventInfoMatcher {
+	key = strings.ToLower(key)
+	return func(ei EventInfo) error {
+		for k := range ei.HTTPHeaders {
+			if strings.ToLower(k) == key {
+				return nil
+			}
+		}
+		return fmt.Errorf("cannot find header '%s'", key)
+	}
+}
+
 // Convert a matcher that checks valid messages to a function
 // that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
