@@ -120,7 +120,10 @@ type RetriesConfig struct {
 	Backoff Backoff
 }
 
-func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config RetriesConfig) (*nethttp.Response, error) {
+func (s *HttpMessageSender) SendWithRetries(req *nethttp.Request, config *RetriesConfig) (*nethttp.Response, error) {
+	if config == nil {
+		return s.Send(req)
+	}
 
 	retryableClient := retryablehttp.Client{
 		HTTPClient:   s.Client,

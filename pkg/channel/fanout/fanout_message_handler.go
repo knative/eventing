@@ -214,5 +214,5 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 		deadLetterURL = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 
-	return f.dispatcher.DispatchMessage(ctx, message, additionalHeaders, destination, reply, deadLetterURL, sub.RetriesConfig)
+	return f.dispatcher.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetterURL, &sub.RetriesConfig)
 }

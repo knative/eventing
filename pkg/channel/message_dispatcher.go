@@ -38,7 +38,12 @@ type MessageDispatcher interface {
 	// DispatchMessage dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
-	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, retriesConfig ...kncloudevents.RetriesConfig) error
+	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error
+
+	// DispatchMessageWithRetries dispatches an event to a destination over HTTP.
+	//
+	// The destination and reply are URLs.
+	DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, config *kncloudevents.RetriesConfig) error
 }
 
 // MessageDispatcherImpl is the 'real' MessageDispatcher used everywhere except unit tests.
@@ -76,15 +81,11 @@ func NewMessageDispatcherFromSender(logger *zap.Logger, sender *kncloudevents.Ht
 	}
 }
 
-func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, retriesConfig ...kncloudevents.RetriesConfig) error {
+func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error {
+	return d.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetter, nil)
+}
 
-	retriesConfiguration := kncloudevents.NoRetries()
-
-	if len(retriesConfig) > 1 {
-		return fmt.Errorf("too many retries configurations")
-	} else if len(retriesConfig) == 1 {
-		retriesConfiguration = retriesConfig[0]
-	}
+func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, retriesConfig *kncloudevents.RetriesConfig) error {
 
 	// All messages that should be finished at the end of this function
 	// are placed in this slice
@@ -110,12 +111,12 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message clo
 		// Try to send to destination
 		messagesToFinish = append(messagesToFinish, message)
 
-		ctx, responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfiguration)
+		ctx, responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfig)
 		if err != nil {
 			// DeadLetter is configured, send the message to it
 			if deadLetter != nil {
 
-				_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfiguration)
+				_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig)
 				if deadLetterErr != nil {
 					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
@@ -146,11 +147,11 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message clo
 		return nil
 	}
 
-	ctx, responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfiguration)
+	ctx, responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig)
 	if err != nil {
 		// DeadLetter is configured, send the message to it
 		if deadLetter != nil {
-			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfiguration)
+			_, deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig)
 			if deadLetterErr != nil {
 				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
@@ -170,7 +171,7 @@ func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message clo
 	return nil
 }
 
-func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header, configs kncloudevents.RetriesConfig) (context.Context, cloudevents.Message, nethttp.Header, error) {
+func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header, configs *kncloudevents.RetriesConfig) (context.Context, cloudevents.Message, nethttp.Header, error) {
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	ctx, span := trace.StartSpan(ctx, "knative.dev", trace.WithSpanKind(trace.SpanKindClient))
