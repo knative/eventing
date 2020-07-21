@@ -152,7 +152,7 @@ Depending on your needs you might want to install other
 ## (Optional) Install Sugar controller
 
 If you are running full set of e2e tests, you will need to install the
-[sugar controller](config/sugar/README.md). 
+[sugar controller](config/sugar/README.md).
 
 ```shell
 ko apply -f config/sugar/
