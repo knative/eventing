@@ -47,7 +47,7 @@ const (
 
 type Subscription struct {
 	eventingduck.SubscriberSpec
-	RetriesConfig kncloudevents.RetriesConfig
+	RetriesConfig kncloudevents.RetryConfig
 }
 
 func (s *Subscription) MarshalJSON() ([]byte, error) {
@@ -107,7 +107,7 @@ func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDisp
 	return handler, nil
 }
 
-func retriesOf(spec eventingduck.SubscriberSpec) (kncloudevents.RetriesConfig, error) {
+func retriesOf(spec eventingduck.SubscriberSpec) (kncloudevents.RetryConfig, error) {
 	delivery := &eventingduckv1.DeliverySpec{}
 
 	_ = spec.ConvertTo(context.Background(), delivery)
