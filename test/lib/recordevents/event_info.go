@@ -167,8 +167,6 @@ func (eg *eventGetter) forwardPort() error {
 			localPort,
 			eg.podPort,
 			eg.podNamespace,
-			logging.NewLoggerWriter(eg.podName+"-stdout: ", eg.logf),
-			logging.NewLoggerWriter(eg.podName+"-stderr: ", eg.logf),
 		)
 		if err != nil {
 			internalErr = err
