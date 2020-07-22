@@ -19,13 +19,15 @@ import (
 	"bytes"
 	"io"
 	"strings"
+	"sync"
 )
 
 type loggerWriter struct {
 	prepend string
 	logf    FormatLogger
 
-	buf bytes.Buffer
+	buf  bytes.Buffer
+	lock sync.Mutex
 }
 
 func NewLoggerWriter(prepend string, logf FormatLogger) io.Writer {
@@ -36,6 +38,8 @@ func NewLoggerWriter(prepend string, logf FormatLogger) io.Writer {
 }
 
 func (l *loggerWriter) Write(p []byte) (n int, err error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
 	s := string(p)
 	splitted := strings.Split(s, "\n")
 

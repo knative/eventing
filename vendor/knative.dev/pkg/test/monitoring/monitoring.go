@@ -21,6 +21,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -60,19 +61,23 @@ func GetPods(kubeClientset *kubernetes.Clientset, app, namespace string) (*v1.Po
 // To close the port forwarding, just close the channel
 func PortForward(logf logging.FormatLogger, config *rest.Config, clientSet *kubernetes.Clientset, pod *v1.Pod, localPort, remotePort int) (chan struct{}, error) {
 	req := clientSet.RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
+	portForwardUrl := req.URL()
+	if !strings.HasPrefix(portForwardUrl.Path, "/api/v1") {
+		portForwardUrl.Path = "/api/v1" + portForwardUrl.Path
+	}
 
 	stopChan := make(chan struct{})
 	readyChan := make(chan struct{})
 
 	transport, upgrader, err := spdy.RoundTripperFor(config)
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, portForwardUrl)
 	fw, err := portforward.New(
 		dialer,
 		[]string{fmt.Sprintf("%d:%d", localPort, remotePort)},
 		stopChan,
 		readyChan,
-		logging.NewLoggerWriter("port-forward-"+pod.Name, logf),
-		logging.NewLoggerWriter("port-forward-"+pod.Name, logf),
+		logging.NewLoggerWriter("port-forward-out-"+pod.Name+": ", logf),
+		logging.NewLoggerWriter("port-forward-err-"+pod.Name+": ", logf),
 	)
 	if err != nil {
 		return nil, err
