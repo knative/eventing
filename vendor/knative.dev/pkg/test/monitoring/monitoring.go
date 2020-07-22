@@ -80,7 +80,7 @@ func PortForward(logf logging.FormatLogger, config *rest.Config, clientSet *kube
 	go func() {
 		err := fw.ForwardPorts()
 		if err != nil {
-			log.Fatalf("Error opening the port forward for pod %s in ns %s with ports %d:%d", pod.Name, pod.Namespace, localPort, remotePort)
+			log.Fatalf("Error opening the port forward for pod %s in ns %s with ports %d:%d, cause: %v", pod.Name, pod.Namespace, localPort, remotePort, err)
 		}
 	}()
 
