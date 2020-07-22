@@ -92,10 +92,15 @@ func (tr *ComponentsTestRunner) RunTestsWithComponentOptions(
 		// If in strict mode and a component is not present in the map, then
 		// don't run the tests
 		features, present := tr.ComponentFeatureMap[component]
+		subTestName := fmt.Sprintf("%s-%s", component.Kind, component.APIVersion)
 		if !strict || ( present && contains(features, feature)) {
-			t.Run(fmt.Sprintf("%s-%s", component.Kind, component.APIVersion), func(st *testing.T) {
+			t.Run(subTestName, func(st *testing.T) {
 				testFunc(st, component, tr.componentOptions[component]...)
 			})
+		} else {
+			t.Skipf("Skipping %s for component %s since it did not " +
+				"match the feature %s and we are in strict mode", t.Name(),
+				subTestName, feature)
 		}
 	}
 }

@@ -70,12 +70,19 @@ func TestMain(m *testing.M) {
 }
 
 func addSourcesInitializers() {
-	name := strings.ToLower(fmt.Sprintf("%s",
+	apiSrcName := strings.ToLower(fmt.Sprintf("%s",
 		testlib.ApiServerSourceTypeMeta.Kind))
+	pingSrcName := strings.ToLower(fmt.Sprintf("%s",
+		testlib.PingSourceTypeMeta.Kind))
 	sourcesTestRunner.AddComponentSetupClientOption(
 		testlib.ApiServerSourceTypeMeta,
-		setupclientoptions.ApiServerSourceClientSetupOption(name,
+		setupclientoptions.ApiServerSourceClientSetupOption(apiSrcName,
 			"Reference",
 			recordEventsPodName, roleName, serviceAccountName),
-	)
+			)
+	sourcesTestRunner.AddComponentSetupClientOption(
+		testlib.PingSourceTypeMeta,
+		setupclientoptions.PingSourceClientSetupOption(pingSrcName,
+			recordEventsPodName),
+			)
 }
