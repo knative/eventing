@@ -38,9 +38,8 @@ func ApiServerSourceClientSetupOption(name string, mode string, recordEventsPodN
 		createRbacObjects(client, roleName, serviceAccountName)
 
 		// create event record
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client,
+		recordevents.StartEventRecordOrFail(client,
 			recordEventsPodName)
-		defer eventTracker.Cleanup()
 
 		spec := sourcesv1beta1.ApiServerSourceSpec{
 			Resources: []sourcesv1beta1.APIVersionKindSelector{{
