@@ -51,6 +51,7 @@ const (
 )
 
 func (r *Reconciler) reconcileTrigger(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) error {
+	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
@@ -193,6 +194,7 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *eventingv
 	existing := trigger.DeepCopy()
 	existing.Status = desired.Status
 
+	logging.FromContext(ctx).Infow("Updating Trigger Status", zap.Any("Trigger", desired))
 	return r.eventingClientSet.EventingV1().Triggers(desired.Namespace).UpdateStatus(existing)
 }
 

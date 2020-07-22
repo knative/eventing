@@ -196,7 +196,6 @@ function install_mt_broker() {
   find ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
 
-  # TODO(https://github.com/knative/eventing/issues/3591): Enable once MT Broker chaos issues are fixed.
   scale_controlplane mt-broker-controller
 
   wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"

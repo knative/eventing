@@ -43,4 +43,4 @@ data:
       }
     }
   # Log level overrides
-  loglevel.my-broker-controller: "debug"
+  loglevel.mt-broker-controller: "debug"
