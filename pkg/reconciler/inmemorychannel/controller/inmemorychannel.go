@@ -43,9 +43,9 @@ import (
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/logging"
 )
 
 const (
@@ -55,12 +55,6 @@ const (
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
 )
-
-// newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason InMemoryChannelReconciled.
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "InMemoryChannelReconciled", "InMemoryChannel reconciled: \"%s/%s\"", namespace, name)
-}
 
 func newDeploymentWarn(err error) pkgreconciler.Event {
 	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "DispatcherDeploymentFailed", "Reconciling dispatcher Deployment failed with: %s", err)
@@ -96,6 +90,8 @@ type Reconciler struct {
 var _ inmemorychannelreconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryChannel) pkgreconciler.Event {
+	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
+
 	// We reconcile the status of the Channel by looking at:
 	// 1. Dispatcher Deployment for it's readiness.
 	// 2. Dispatcher k8s Service for it's existence.
@@ -116,6 +112,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 	// For namespace-scope dispatcher, make sure configuration files exist and RBAC is properly configured.
 	d, err := r.reconcileDispatcher(ctx, scope, dispatcherNamespace, imc)
 	if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to reconcile InMemoryChannel dispatcher", zap.Error(err))
 		return err
 	}
 	imc.Status.PropagateDispatcherStatus(&d.Status)
@@ -125,6 +122,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 	// an existence check. Then below we check the endpoints targeting it.
 	_, err = r.reconcileDispatcherService(ctx, scope, dispatcherNamespace, imc)
 	if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to reconcile InMemoryChannel dispatcher service", zap.Error(err))
 		return err
 	}
 	imc.Status.MarkServiceTrue()
@@ -134,6 +132,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 	e, err := r.endpointsLister.Endpoints(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Error("Endpoints do not exist for dispatcher service")
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
@@ -154,6 +153,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, dispatcherNamespace, imc)
 	if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to reconcile channel service", zap.Error(err))
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
@@ -170,7 +170,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
-	return newReconciledNormal(imc.Namespace, imc.Name)
+	logging.FromContext(ctx).Debugw("Reconciled InMemoryChannel", zap.Any("InMemoryChannel", imc))
+	return nil
 }
 
 func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1beta1.InMemoryChannel) (*appsv1.Deployment, error) {

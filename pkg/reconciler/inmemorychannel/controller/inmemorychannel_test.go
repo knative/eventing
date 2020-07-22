@@ -143,9 +143,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
-			},
 		}, {
 			Name: "the status of deployment is unknown",
 			Key:  imcKey,
@@ -168,9 +165,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
-			},
 		}, {
 			Name: "Service does not exist",
 			Key:  imcKey,
@@ -254,9 +248,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
-			},
 		}, {
 			Name: "Works, channel exists",
 			Key:  imcKey,
@@ -278,9 +269,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
-			},
 		}, {
 			Name: "channel exists, not owned by us",
 			Key:  imcKey,
@@ -328,9 +316,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
-			},
 		}, {
 			Name: "channel does not exist, fails to create",
 			Key:  imcKey,
@@ -417,7 +402,6 @@ func TestInNamespace(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "DispatcherRoleBindingCreated", "Dispatcher RoleBinding created"),
 				Eventf(corev1.EventTypeNormal, "DispatcherDeploymentCreated", "Dispatcher Deployment created"),
 				Eventf(corev1.EventTypeNormal, "DispatcherServiceCreated", "Dispatcher Service created"),
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		},
 		{
@@ -446,9 +430,6 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
-			},
 		},
 	}
 
