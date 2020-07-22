@@ -78,20 +78,21 @@ func (tr *ComponentsTestRunner) RunTests(
 // feature, to run a test for the testFunc while passing the component specific
 // SetupClientOptions to testFunc. You should used this method instead of
 // RunTests if you have used AddComponentSetupClientOption to add some component
-// specific initialization code.
+// specific initialization code. If strict is set to true, tests will not run
+// for components that don't exist in the ComponentFeatureMap.
 func (tr *ComponentsTestRunner) RunTestsWithComponentOptions(
 	t *testing.T,
 	feature Feature,
-	testFunc func(st *testing.T, component metav1.TypeMeta, options ...SetupClientOption),
+	strict bool,
+	testFunc func(st *testing.T, component metav1.TypeMeta,
+		options ...SetupClientOption),
 ) {
 	t.Parallel()
 	for _, component := range tr.ComponentsToTest {
-		// If a component is not present in the map, then assume it has all properties. This is so an
-		// unknown component (e.g. a Channel) can be specified via a dedicated flag (e.g. --channels) and have tests run.
-		// TODO Use a flag to specify the features of the flag based component, rather than assuming
-		// it supports all features.
+		// If in strict mode and a component is not present in the map, then
+		// don't run the tests
 		features, present := tr.ComponentFeatureMap[component]
-		if !present || contains(features, feature) {
+		if !strict || ( present && contains(features, feature)) {
 			t.Run(fmt.Sprintf("%s-%s", component.Kind, component.APIVersion), func(st *testing.T) {
 				testFunc(st, component, tr.componentOptions[component]...)
 			})

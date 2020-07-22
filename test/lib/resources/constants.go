@@ -28,7 +28,7 @@ const (
 	MessagingAPIVersion = "messaging.knative.dev/v1beta1"
 	FlowsAPIVersion     = "flows.knative.dev/v1beta1"
 	ServingAPIVersion   = "serving.knative.dev/v1"
-	SourcesAPIVersion	= "sources.knative.dev/v1alpha2"
+	SourcesAPIVersion	= "sources.knative.dev/v1beta1"
 )
 
 // Kind for Knative resources.

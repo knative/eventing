@@ -42,7 +42,7 @@ func SourceCRDMetadataTestHelperWithChannelTestRunner(
 		// From spec:
 		// Each source MUST have the following:
 		//   label of duck.knative.dev/source: "true"
-		t.Run("Source CRD has required label", func(t *testing.T) {
+		st.Run("Source CRD has required label", func(t *testing.T) {
 			helpers.ValidateRequiredLabels(client, source, sourceLabels)
 		})
 

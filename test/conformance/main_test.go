@@ -18,14 +18,10 @@ limitations under the License.
 package conformance
 
 import (
-	rbacv1 "k8s.io/api/rbac/v1"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"knative.dev/pkg/test/zipkin"
@@ -33,6 +29,12 @@ import (
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/setupclientoptions"
+)
+const (
+	roleName           	= "event-watcher-r"
+	serviceAccountName	= "event-watcher-sa"
+	recordEventsPodName	= "api-server-source-logger-pod"
 )
 
 var channelTestRunner testlib.ComponentsTestRunner
@@ -50,7 +52,7 @@ func TestMain(m *testing.M) {
 		}
 		sourcesTestRunner = testlib.ComponentsTestRunner{
 			ComponentFeatureMap: testlib.SourceFeatureMap,
-			ComponentsToTest: test.EventingFlags.Sources,
+			ComponentsToTest:    test.EventingFlags.Sources,
 		}
 		brokerClass = test.EventingFlags.BrokerClass
 		brokerName = test.EventingFlags.BrokerName
@@ -67,52 +69,13 @@ func TestMain(m *testing.M) {
 	}())
 }
 
-func addSourcesInitializers(){
+func addSourcesInitializers() {
+	name := strings.ToLower(fmt.Sprintf("%s",
+		testlib.ApiServerSourceTypeMeta.Kind))
 	sourcesTestRunner.AddComponentSetupClientOption(
-		testlib.ApiServerSourceTypeMeta, func(t *testing.T, client *testlib.Client) {
-			const (
-				baseApiServerSourceName = "conf-api-server-source"
-				roleName              	= "event-watcher-r"
-				serviceAccountName    	= "event-watcher-sa"
-				sinkPodName				= "conf-source-sink"
-			)
-
-			// creates ServiceAccount and RoleBinding with a role for reading pods and events
-			r := resources.Role(roleName,
-				resources.WithRuleForRole(&rbacv1.PolicyRule{
-					APIGroups: []string{""},
-					Resources: []string{"events", "pods"},
-					Verbs:     []string{"get", "list", "watch"}}))
-			client.CreateServiceAccountOrFail(serviceAccountName)
-			client.CreateRoleOrFail(r)
-			client.CreateRoleBindingOrFail(
-				serviceAccountName,
-				testlib.RoleKind,
-				roleName,
-				fmt.Sprintf("%s-%s", serviceAccountName, roleName),
-				client.Namespace,
-			)
-
-			spec := sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-					APIVersion: "v1",
-					Kind:       "Event",
-				}},
-				ServiceAccountName: serviceAccountName,
-			}
-			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(sinkPodName)}
-
-			apiServerSource := eventingtesting.NewApiServerSource(
-				baseApiServerSourceName,
-				client.Namespace,
-				eventingtesting.WithApiServerSourceSpec(spec),
-			)
-
-			client.CreateApiServerSourceOrFail(apiServerSource)
-
-			// wait for all test resources to be ready
-			client.WaitForAllTestResourcesReadyOrFail()
-	})
-
-
+		testlib.ApiServerSourceTypeMeta,
+		setupclientoptions.ApiServerSourceClientSetupOption(name,
+			"Reference",
+			recordEventsPodName, roleName, serviceAccountName),
+	)
 }
