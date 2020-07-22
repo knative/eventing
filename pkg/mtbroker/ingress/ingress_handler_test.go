@@ -33,6 +33,7 @@ import (
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -208,7 +209,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				if b.Status.Annotations == nil {
 					b.Status.Annotations = make(map[string]string, 1)
 				}
-				b.Status.Annotations["channelAddress"] = s.URL
+				b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey] = s.URL
 				annotatedBrokers = append(annotatedBrokers, b)
 			}
 			listers := reconcilertestingv1.NewListers(annotatedBrokers)

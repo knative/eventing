@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -112,7 +113,7 @@ func TestBrokerConversionRoundTripV1beta1(t *testing.T) {
 						Status: "True",
 					}},
 					Annotations: map[string]string{
-						"channelAddress": "http://foo.bar.svc.cluster.local/",
+						eventing.BrokerChannelAddressStatusAnnotationKey: "http://foo.bar.svc.cluster.local/",
 					},
 				},
 				Address: duckv1.Addressable{
@@ -200,7 +201,7 @@ func TestBrokerConversionRoundTripV1(t *testing.T) {
 						Status: "True",
 					}},
 					Annotations: map[string]string{
-						"channelAddress": "http://foo.bar.svc.cluster.local/",
+						eventing.BrokerChannelAddressStatusAnnotationKey: "http://foo.bar.svc.cluster.local/",
 					},
 				},
 				Address: duckv1.Addressable{
