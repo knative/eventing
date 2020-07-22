@@ -33,7 +33,7 @@ func (source *Trigger) ConvertTo(_ context.Context, to apis.Convertible) error {
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		if source.Spec.Filter != nil {
 			sink.Spec.Filter = &v1.TriggerFilter{
-				Attributes: make(v1.TriggerFilterAttributes, 0),
+				Attributes: make(v1.TriggerFilterAttributes),
 			}
 			for k, v := range source.Spec.Filter.Attributes {
 				sink.Spec.Filter.Attributes[k] = v

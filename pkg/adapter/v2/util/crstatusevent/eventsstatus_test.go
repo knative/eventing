@@ -91,7 +91,6 @@ func (f fakeSink) Patch(oldEvent *v1beta1.Event, data []byte) (*v1beta1.Event, e
 func TestReportCRStatusEvent(t *testing.T) {
 	type args struct {
 		fakesink    record.EventSink
-		ctx         context.Context
 		result      protocol.Result
 		enabled     string
 		wantType    string

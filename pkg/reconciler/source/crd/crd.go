@@ -33,11 +33,6 @@ import (
 	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 )
 
-const (
-	// Name of the corev1.Events emitted from the Source CRDs reconciliation process.
-	sourceCRDReconcileFailed = "SourceCRDReconcileFailed"
-)
-
 type runningController struct {
 	controller *controller.Impl
 	cancel     context.CancelFunc

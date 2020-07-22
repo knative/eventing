@@ -597,7 +597,7 @@ func makeMalformedEventResponse() *http.Response {
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 		Body:       ioutil.NopCloser(bytes.NewBufferString(invalidEvent)),
-		Header:     make(http.Header, 0),
+		Header:     make(http.Header),
 	}
 	r.Header.Set("Content-Type", "garbage")
 	r.Header.Set("Content-Length", fmt.Sprintf("%d", len(invalidEvent)))
@@ -613,7 +613,7 @@ func makeEmptyResponse(status int) *http.Response {
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
-		Header:     make(http.Header, 0),
+		Header:     make(http.Header),
 	}
 	r.Header.Set("Content-Type", "garbage")
 	r.Header.Set("Content-Length", "0")

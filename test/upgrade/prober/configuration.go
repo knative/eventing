@@ -100,28 +100,6 @@ func (p *prober) deployTriggers() {
 	}
 }
 
-func (p *prober) removeConfiguration() {
-	p.removeConfigMap()
-	p.removeTriggers()
-}
-
-func (p *prober) removeConfigMap() {
-	p.log.Infof("Removing config map: %v", configName)
-	err := p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).
-		Delete(configName, &metav1.DeleteOptions{})
-	ensure.NoError(err)
-}
-
-func (p *prober) removeTriggers() {
-	for _, eventType := range eventTypes {
-		name := fmt.Sprintf("wathola-trigger-%v", eventType)
-		p.log.Infof("Removing trigger: %v", name)
-		err := p.client.Eventing.EventingV1beta1().Triggers(p.config.Namespace).
-			Delete(name, &metav1.DeleteOptions{})
-		ensure.NoError(err)
-	}
-}
-
 func (p *prober) compileTemplate(templateName string, brokerUrl *apis.URL) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)

@@ -112,8 +112,9 @@ func channelDataPlaneSuccessTest(t *testing.T, channel metav1.TypeMeta, event cl
 	}
 	// The extension matcher needs to match an eventual extension containing knativehistory extension
 	// (which is not mandatory by the spec)
-	var extKeys []string
-	for k := range event.Extensions() {
+	extensions := event.Extensions()
+	extKeys := make([]string, 0, len(extensions))
+	for k := range extensions {
 		extKeys = append(extKeys, k)
 	}
 	extKeys = append(extKeys, eventingchannel.EventHistory)

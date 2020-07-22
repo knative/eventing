@@ -54,7 +54,6 @@ var (
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 	// Create default broker annotation
-	validInjectionAnnotation   = "enabled"
 	invalidInjectionAnnotation = "wut"
 	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )

@@ -48,7 +48,7 @@ func TestProject(t *testing.T) {
 					JsonData: "some data",
 				},
 				Status: sourcesv1alpha2.PingSourceStatus{
-					duckv1.SourceStatus{
+					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{
 							Host: "asink",
 						},
@@ -80,7 +80,7 @@ func TestProject(t *testing.T) {
 					JsonData: "some data",
 				},
 				Status: sourcesv1alpha2.PingSourceStatus{
-					duckv1.SourceStatus{
+					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{Host: "anothersink"},
 					},
 				},
