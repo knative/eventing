@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"knative.dev/pkg/test/monitoring"
 
 	"knative.dev/pkg/test/logging"
@@ -100,19 +101,20 @@ type eventGetter struct {
 	podName       string
 	podNamespace  string
 	podPort       int
-	kubeClientset kubernetes.Interface
+	kubeClientset *kubernetes.Clientset
+	kubeconfig    *rest.Config
 	logf          logging.FormatLogger
 
-	host       string
-	port       int
-	forwardPID int
+	host    string
+	port    int
+	closeCh chan struct{}
 }
 
 // Creates a forwarded port to the specified recordevents pod and waits until
 // it can successfully talk to the REST API.  Times out after timeoutEvRetry
 func newEventGetter(podName string, client *testlib.Client, logf logging.FormatLogger) (eventGetterInterface, error) {
 	egi := &eventGetter{podName: podName, podNamespace: client.Namespace,
-		kubeClientset: client.Kube.Kube, podPort: RecordEventsPort, logf: logf}
+		kubeClientset: client.Kube.Kube, kubeconfig: client.Config, podPort: RecordEventsPort, logf: logf}
 	err := egi.forwardPort()
 	if err != nil {
 		return nil, err
@@ -161,12 +163,13 @@ func (eg *eventGetter) forwardPort() error {
 			return false, nil
 		}
 
-		pid, err := monitoring.PortForward(
+		closeCh, err := monitoring.PortForward(
 			eg.logf,
-			pods,
+			eg.kubeconfig,
+			eg.kubeClientset,
+			&pods.Items[0],
 			localPort,
 			eg.podPort,
-			eg.podNamespace,
 		)
 		if err != nil {
 			internalErr = err
@@ -174,7 +177,7 @@ func (eg *eventGetter) forwardPort() error {
 		}
 		internalErr = nil
 
-		eg.forwardPID = pid
+		eg.closeCh = closeCh
 		eg.port = localPort
 		eg.host = "localhost"
 		return true, nil
@@ -264,10 +267,9 @@ func (eg *eventGetter) trimThrough(seqno int) error {
 
 // Clean up the getter by tearing down the port forward.
 func (eg *eventGetter) cleanup() {
-	pid := eg.forwardPID
-	eg.forwardPID = 0
-	if pid != 0 {
-		monitoring.Cleanup(pid)
+	if eg.closeCh != nil {
+		close(eg.closeCh)
+		eg.closeCh = nil
 	}
 }
 

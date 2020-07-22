@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2015 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,18 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tracing
-
-import (
-	"testing"
-
-	"knative.dev/pkg/test/zipkin"
-
-	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
-)
-
-// Setup sets up port forwarding to Zipkin.
-func Setup(t *testing.T, client *testlib.Client) {
-	zipkin.SetupZipkinTracingFromConfigTracingOrFail(t, client.Config, client.Kube.Kube, resources.SystemNamespace)
-}
+// Package portforward adds support for SSH-like port forwarding from the client's
+// local host to remote containers.
+package portforward // import "k8s.io/client-go/tools/portforward"

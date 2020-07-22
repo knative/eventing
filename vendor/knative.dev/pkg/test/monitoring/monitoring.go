@@ -17,17 +17,19 @@ limitations under the License.
 package monitoring
 
 import (
-	"bufio"
 	"fmt"
-	"io"
+	"log"
 	"net"
-	"os"
-	"os/exec"
-	"strings"
+	"net/http"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
 	"knative.dev/pkg/test/logging"
 )
 
@@ -54,54 +56,35 @@ func GetPods(kubeClientset *kubernetes.Clientset, app, namespace string) (*v1.Po
 	return pods, err
 }
 
-// Cleanup will clean the background process used for port forwarding
-func Cleanup(pid int) error {
-	ps := os.Process{Pid: pid}
-	return ps.Kill()
-}
-
 // PortForward sets up local port forward to the pod specified by the "app" label in the given namespace
-func PortForward(logf logging.FormatLogger, podList *v1.PodList, localPort, remotePort int, namespace string) (int, error) {
-	podName := podList.Items[0].Name
-	portFwdCmd := fmt.Sprintf("kubectl port-forward %s %d:%d -n %s", podName, localPort, remotePort, namespace)
-	portFwdProcess, err := executeCmdBackground(func(template string, args ...interface{}) {
-		logf("port-forward-"+podName+": "+template, args...)
-	}, portFwdCmd)
+// To close the port forwarding, just close the channel
+func PortForward(logf logging.FormatLogger, config *rest.Config, clientSet *kubernetes.Clientset, pod *v1.Pod, localPort, remotePort int) (chan struct{}, error) {
+	req := clientSet.RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 
+	stopChan := make(chan struct{})
+	readyChan := make(chan struct{})
+
+	transport, upgrader, err := spdy.RoundTripperFor(config)
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
+	fw, err := portforward.New(
+		dialer,
+		[]string{fmt.Sprintf("%d:%d", localPort, remotePort)},
+		stopChan,
+		readyChan,
+		logging.NewLoggerWriter("port-forward-"+pod.Name, logf),
+		logging.NewLoggerWriter("port-forward-"+pod.Name, logf),
+	)
 	if err != nil {
-		return 0, fmt.Errorf("failed to port forward: %w", err)
+		return nil, err
 	}
+	go func() {
+		err := fw.ForwardPorts()
+		if err != nil {
+			log.Fatalf("Error opening the port forward for pod %s in ns %s with ports %d:%d", pod.Name, pod.Namespace, localPort, remotePort)
+		}
+	}()
 
-	logf("running %s port-forward in background, pid = %d", podName, portFwdProcess.Pid)
-	return portFwdProcess.Pid, nil
-}
-
-// RunBackground starts a background process and returns the Process if succeed
-func executeCmdBackground(logf logging.FormatLogger, format string, args ...interface{}) (*os.Process, error) {
-	cmd := fmt.Sprintf(format, args...)
-	logf("Executing command: %s", cmd)
-	parts := strings.Split(cmd, " ")
-	c := exec.Command(parts[0], parts[1:]...) // #nosec
-	outPipe, err := c.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("%s cannot get stdout pipe: %w", cmd, err)
-	}
-	go printPipe(logf, outPipe)
-	errPipe, err := c.StderrPipe()
-	if err != nil {
-		return nil, fmt.Errorf("%s cannot get stderr pipe: %w", cmd, err)
-	}
-	go printPipe(logf, errPipe)
-	if err := c.Start(); err != nil {
-		return nil, fmt.Errorf("%s command failed: %w", cmd, err)
-	}
-	return c.Process, nil
-}
-
-func printPipe(logf logging.FormatLogger, reader io.ReadCloser) {
-	defer reader.Close()
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		logf(scanner.Text())
-	}
+	<-readyChan
+	logf("Started port forwarding for pod %s in ns %s with ports %d:%d", pod.Name, pod.Namespace, localPort, remotePort)
+	return stopChan, nil
 }
