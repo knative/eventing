@@ -36,12 +36,12 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d // indirect
 	k8s.io/api v0.17.6
 	k8s.io/apiextensions-apiserver v0.17.6
-	k8s.io/apimachinery v0.18.5
+	k8s.io/apimachinery v0.18.6
 	k8s.io/apiserver v0.17.6
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200124190032-861946025e34
-	knative.dev/pkg v0.0.0-20200719221534-601c9ff3832e
-	knative.dev/test-infra v0.0.0-20200719034534-5adf654f5ed5
+	knative.dev/pkg v0.0.0-20200722085354-ba0f3cb7cf84
+	knative.dev/test-infra v0.0.0-20200721175154-c98db9bd4d5d
 	sigs.k8s.io/yaml v1.2.0
 )
 
