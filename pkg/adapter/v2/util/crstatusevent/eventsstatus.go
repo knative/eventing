@@ -27,13 +27,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 )
 
 type crStatusEvent struct {
-	kubeClient    *kubernetes.Clientset
 	Recorder      record.EventRecorder
 	Logf          func(format string, args ...interface{})
 	source        runtime.Object

@@ -37,11 +37,6 @@ func (p *prober) deployReceiver() {
 	p.deployReceiverService()
 }
 
-func (p *prober) removeReceiver() {
-	p.removeReceiverService()
-	p.removeReceiverPod()
-}
-
 func (p *prober) deployReceiverPod() {
 	p.log.Infof("Deploy of receiver pod: %v", receiverName)
 	pod := &corev1.Pod{
@@ -132,18 +127,4 @@ func (p *prober) deployReceiverService() {
 	} else {
 		p.log.Debugf("Node port for service: %v is %v", receiverName, receiverNodePort)
 	}
-}
-
-func (p *prober) removeReceiverPod() {
-	p.log.Infof("Remove of receiver pod: %v", receiverName)
-	err := p.client.Kube.Kube.CoreV1().Pods(p.config.Namespace).
-		Delete(receiverName, &metav1.DeleteOptions{})
-	ensure.NoError(err)
-}
-
-func (p *prober) removeReceiverService() {
-	p.log.Infof("Remove of receiver service: %v", receiverName)
-	err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
-		Delete(receiverName, &metav1.DeleteOptions{})
-	ensure.NoError(err)
 }

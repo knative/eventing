@@ -1170,15 +1170,12 @@ func imcConfigMap() *corev1.ConfigMap {
 }
 
 func createChannel(namespace string, ready bool) *unstructured.Unstructured {
-	var labels map[string]interface{}
-	var annotations map[string]interface{}
-	var name string
-	name = fmt.Sprintf("%s-kne-trigger", brokerName)
-	labels = map[string]interface{}{
+	name := fmt.Sprintf("%s-kne-trigger", brokerName)
+	labels := map[string]interface{}{
 		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
-	annotations = map[string]interface{}{
+	annotations := map[string]interface{}{
 		"eventing.knative.dev/scope": "cluster",
 	}
 	if ready {

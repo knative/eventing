@@ -45,10 +45,6 @@ import (
 	"knative.dev/pkg/system"
 )
 
-// controllerAgentName is the string used by this controller to identify itself
-// when creating events.
-const controllerAgentName = "mt-broker-controller"
-
 const (
 	BrokerConditionReady                             = apis.ConditionReady
 	BrokerConditionIngress        apis.ConditionType = "IngressReady"

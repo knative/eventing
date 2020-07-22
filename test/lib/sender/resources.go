@@ -164,7 +164,7 @@ func RequestSenderPod(imageName string, name string, sink string, headers map[st
 }
 
 func serializeHeaders(headers map[string]string) string {
-	var kv []string
+	kv := make([]string, 0, len(headers))
 	for k, v := range headers {
 		kv = append(kv, k+"="+v)
 	}

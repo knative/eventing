@@ -42,7 +42,6 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
-	triggerReconciled         = "TriggerReconciled"
 	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"

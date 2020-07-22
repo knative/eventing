@@ -21,8 +21,5 @@ type First struct {
 }
 
 func (f First) Skip(counter uint64) bool {
-	if f.N >= counter {
-		return true
-	}
-	return false
+	return f.N >= counter
 }
