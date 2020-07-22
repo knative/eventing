@@ -57,8 +57,10 @@ var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 // Because tests currently fail immediately on any creation failure, this
 // is problematic. On the reconcilers it's not an issue because they recover,
 // but tests need this retry.
+//
+// https://github.com/knative/eventing/issues/3681
 func isWebhookError(err error) bool {
-	return strings.HasSuffix(err.Error(), "EOF")
+	return strings.Contains(err.Error(), "eventing-webhook.knative-eventing")
 }
 
 func (c *Client) RetryWebhookErrors(updater func(int) error) error {
