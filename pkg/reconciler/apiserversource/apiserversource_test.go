@@ -164,9 +164,6 @@ func TestReconcile(t *testing.T) {
 			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
 				rttesting.WithApiServerSourceSpecV1B1(sourcesv1beta1.ApiServerSourceSpec{
@@ -215,9 +212,6 @@ func TestReconcile(t *testing.T) {
 			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
 				rttesting.WithApiServerSourceSpecV1B1(sourcesv1beta1.ApiServerSourceSpec{
@@ -271,9 +265,6 @@ func TestReconcile(t *testing.T) {
 			makeAvailableReceiveAdapterWithTargetURI(t),
 		},
 		Key: testNS + "/" + sourceName,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
 				rttesting.WithApiServerSourceSpecV1B1(sourcesv1beta1.ApiServerSourceSpec{
@@ -329,7 +320,6 @@ func TestReconcile(t *testing.T) {
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
@@ -387,7 +377,6 @@ func TestReconcile(t *testing.T) {
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
@@ -445,7 +434,6 @@ func TestReconcile(t *testing.T) {
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
@@ -498,9 +486,6 @@ func TestReconcile(t *testing.T) {
 			makeAvailableReceiveAdapter(t),
 		},
 		Key: testNS + "/" + sourceName,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttesting.NewApiServerSourceV1Beta1(sourceName, testNS,
 				rttesting.WithApiServerSourceSpecV1B1(sourcesv1beta1.ApiServerSourceSpec{

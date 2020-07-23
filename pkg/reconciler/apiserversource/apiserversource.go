@@ -55,12 +55,6 @@ const (
 	component = "apiserversource"
 )
 
-// newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason ApiServerSourceReconciled.
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ApiServerSourceReconciled", "ApiServerSource reconciled: \"%s/%s\"", namespace, name)
-}
-
 func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 	b, _ := json.Marshal(sink)
 	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "SinkNotFound", "Sink not found: %s", string(b))
@@ -125,7 +119,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.ApiServe
 
 	source.Status.CloudEventAttributes = r.createCloudEventAttributes()
 
-	return newReconciledNormal(source.Namespace, source.Name)
+	return nil
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
