@@ -44,9 +44,9 @@ spec:
 
         args:
           - "clientQPS"
-          - "10.0"
-          - "clientBurst"
           - "20.0"
+          - "clientBurst"
+          - "40.0"
         env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
