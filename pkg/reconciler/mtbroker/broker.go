@@ -165,7 +165,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *eventingv1.Broker) (*
 	if b.Status.Annotations == nil {
 		b.Status.Annotations = make(map[string]string, 1)
 	}
-	b.Status.Annotations["channelAddress"] = triggerChan.Status.Address.URL.String()
+	b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey] = triggerChan.Status.Address.URL.String()
 
 	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)

@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/health"
@@ -87,7 +88,7 @@ func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 	if broker.Status.Annotations == nil {
 		return "", fmt.Errorf("Broker status annotations uninitialized")
 	}
-	address, present := broker.Status.Annotations["channelAddress"]
+	address, present := broker.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey]
 	if !present {
 		return "", fmt.Errorf("Channel address not found in broker status annotations")
 	}

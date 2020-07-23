@@ -19,6 +19,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/pkg/apis"
@@ -180,6 +181,6 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 		if b.Status.Annotations == nil {
 			b.Status.Annotations = make(map[string]string, 1)
 		}
-		b.Status.Annotations["channelAddress"] = address
+		b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey] = address
 	}
 }
