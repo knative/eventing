@@ -29,7 +29,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
-	"knative.dev/pkg/controller"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
@@ -69,9 +68,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) pk
 		// wide object, if don't do this we'll end with the event created
 		// in the default namespace, which is a bad UX in our case.
 		ns.SetNamespace(ns.Name)
-		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, brokerCreated,
+		return pkgreconciler.NewEvent(corev1.EventTypeNormal, brokerCreated,
 			"Default eventing.knative.dev Broker created.")
-		return nil
 	} else if err != nil {
 		return fmt.Errorf("Unable to list Brokers: %w", err)
 	}
