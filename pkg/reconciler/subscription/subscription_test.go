@@ -208,9 +208,6 @@ func TestAllCases(t *testing.T) {
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", `Subscription reconciled: "testnamespace/testsubscription"`),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
