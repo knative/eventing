@@ -1,3 +1,5 @@
+// +build e2e
+
 /*
 Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +26,7 @@ import (
 
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 var channelTestRunner testlib.ComponentsTestRunner
@@ -50,6 +53,7 @@ func TestMain(m *testing.M) {
 		// place that cleans it up. If an individual test calls this instead, then it will break other
 		// tests that need the tracing in place.
 		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
+		defer testlib.ExportLogs(testlib.SystemLogsDir, resources.SystemNamespace)
 
 		return m.Run()
 	}())

@@ -66,6 +66,8 @@ const (
 	// The interval and timeout used for polling pod logs.
 	interval = 1 * time.Second
 	timeout  = 4 * time.Minute
+
+	SystemLogsDir = "knative-eventing-logs"
 )
 
 // InterestingHeaders is used by logging pods to decide interesting HTTP headers to log
