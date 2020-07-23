@@ -143,11 +143,12 @@ func (c *Client) CreateSubscriptionOrFail(
 	namespace := c.Namespace
 	subscription := resources.SubscriptionV1Beta1(name, channelName, channelTypeMeta, options...)
 	subscriptions := c.Eventing.MessagingV1beta1().Subscriptions(namespace)
+	var retSubscription *messagingv1beta1.Subscription
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating v1beta1 subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
 		// update subscription with the new reference
 		var e error
-		subscription, e = subscriptions.Create(subscription)
+		retSubscription, e = subscriptions.Create(subscription)
 		if e != nil {
 			c.T.Errorf("Failed to create subscription %q: %v", name, e)
 		}
@@ -156,8 +157,8 @@ func (c *Client) CreateSubscriptionOrFail(
 	if err != nil {
 		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
-	c.Tracker.AddObj(subscription)
-	return subscription
+	c.Tracker.AddObj(retSubscription)
+	return retSubscription
 }
 
 // CreateSubscriptionV1OrFail will create a v1 Subscription or fail the test if there is an error.
@@ -168,12 +169,13 @@ func (c *Client) CreateSubscriptionV1OrFail(
 ) *messagingv1.Subscription {
 	namespace := c.Namespace
 	subscription := resources.SubscriptionV1(name, channelName, channelTypeMeta, options...)
+	var retSubscription *messagingv1.Subscription
 	subscriptions := c.Eventing.MessagingV1().Subscriptions(namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating v1 subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
 		// update subscription with the new reference
 		var e error
-		subscription, e = subscriptions.Create(subscription)
+		retSubscription, e = subscriptions.Create(subscription)
 		if e != nil {
 			c.T.Errorf("Failed to create subscription %q: %v", name, e)
 		}
@@ -182,8 +184,8 @@ func (c *Client) CreateSubscriptionV1OrFail(
 	if err != nil {
 		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
-	c.Tracker.AddObj(subscription)
-	return subscription
+	c.Tracker.AddObj(retSubscription)
+	return retSubscription
 }
 
 // CreateSubscriptionsOrFail will create a list of v1beta1 Subscriptions with the same configuration except the name.
@@ -252,12 +254,13 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.BrokerV1Beta1Option) *v1beta1.Broker {
 	namespace := c.Namespace
 	broker := resources.BrokerV1Beta1(name, options...)
+	var retBroker *v1beta1.Broker
 	brokers := c.Eventing.EventingV1beta1().Brokers(namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating v1beta1 broker %s", name)
 		// update broker with the new reference
 		var e error
-		broker, e = brokers.Create(broker)
+		retBroker, e = brokers.Create(broker)
 		if e != nil {
 			c.T.Errorf("Failed to create v1beta1 broker %q: %v", name, e)
 		}
@@ -266,20 +269,21 @@ func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.Bro
 	if err != nil {
 		c.T.Fatalf("Failed to create v1beta1 broker %q: %v", name, err)
 	}
-	c.Tracker.AddObj(broker)
-	return broker
+	c.Tracker.AddObj(retBroker)
+	return retBroker
 }
 
 // CreateTriggerOrFailV1Beta1 will create a v1beta1 Trigger or fail the test if there is an error.
 func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.TriggerOptionV1Beta1) *v1beta1.Trigger {
 	namespace := c.Namespace
 	trigger := resources.TriggerV1Beta1(name, options...)
+	var retTrigger *v1beta1.Trigger
 	triggers := c.Eventing.EventingV1beta1().Triggers(namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating v1beta1 trigger %s", name)
 		// update trigger with the new reference
 		var e error
-		trigger, e = triggers.Create(trigger)
+		retTrigger, e = triggers.Create(trigger)
 		if e != nil {
 			c.T.Errorf("Failed to create v1beta1 trigger %q: %v", name, e)
 		}
@@ -289,20 +293,21 @@ func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.Tr
 	if err != nil {
 		c.T.Fatalf("Failed to create v1beta1 trigger %q: %v", name, err)
 	}
-	c.Tracker.AddObj(trigger)
-	return trigger
+	c.Tracker.AddObj(retTrigger)
+	return retTrigger
 }
 
 // CreateBrokerV1OrFail will create a v1 Broker or fail the test if there is an error.
 func (c *Client) CreateBrokerV1OrFail(name string, options ...resources.BrokerV1Option) *eventingv1.Broker {
 	namespace := c.Namespace
 	broker := resources.BrokerV1(name, options...)
+	var retBroker *eventingv1.Broker
 	brokers := c.Eventing.EventingV1().Brokers(namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating v1 broker %s", name)
 		// update broker with the new reference
 		var e error
-		broker, e = brokers.Create(broker)
+		retBroker, e = brokers.Create(broker)
 		if e != nil {
 			c.T.Errorf("Failed to create v1 broker %q: %v", name, e)
 		}
@@ -311,20 +316,21 @@ func (c *Client) CreateBrokerV1OrFail(name string, options ...resources.BrokerV1
 	if err != nil {
 		c.T.Fatalf("Failed to create v1 broker %q: %v", name, err)
 	}
-	c.Tracker.AddObj(broker)
-	return broker
+	c.Tracker.AddObj(retBroker)
+	return retBroker
 }
 
 // CreateTriggerOrFailV1 will create a v1 Trigger or fail the test if there is an error.
 func (c *Client) CreateTriggerV1OrFail(name string, options ...resources.TriggerOptionV1) *eventingv1.Trigger {
 	namespace := c.Namespace
 	trigger := resources.TriggerV1(name, options...)
+	var retTrigger *eventingv1.Trigger
 	triggers := c.Eventing.EventingV1().Triggers(namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating v1 trigger %s", name)
 		// update trigger with the new reference
 		var e error
-		trigger, e = triggers.Create(trigger)
+		retTrigger, e = triggers.Create(trigger)
 		if e != nil {
 			c.T.Errorf("Failed to create v1 trigger %q: %v", name, e)
 		}
@@ -333,8 +339,8 @@ func (c *Client) CreateTriggerV1OrFail(name string, options ...resources.Trigger
 	if err != nil {
 		c.T.Fatalf("Failed to create v1 trigger %q: %v", name, err)
 	}
-	c.Tracker.AddObj(trigger)
-	return trigger
+	c.Tracker.AddObj(retTrigger)
+	return retTrigger
 }
 
 // CreateFlowsSequenceOrFail will create a Sequence (in flows.knative.dev api group) or
