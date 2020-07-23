@@ -167,9 +167,6 @@ func TestReconcile(t *testing.T) {
 					WithBrokerDeletionTimestamp),
 				imcConfigMap(),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "BrokerReconciled", `Broker reconciled: "test-namespace/test-broker"`),
-			},
 		}, {
 			Name: "nil config",
 			Key:  testKey,
@@ -582,7 +579,6 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeNormal, "BrokerReconciled", `Broker reconciled: "test-namespace/test-broker"`),
 			},
 		}, {
 			Name: "Broker being deleted, marks trigger as not ready due to broker missing, fails",
