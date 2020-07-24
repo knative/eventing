@@ -1,7 +1,7 @@
 # Knative Personas
 
 When discussing user actions, it is often helpful to
-[define specific user roles](<https://en.wikipedia.org/wiki/Persona_\(user_experience\)>)
+[define specific user roles](<https://en.wikipedia.org/wiki/Persona_(user_experience)>)
 who might want to do the action.
 
 ## Knative Events
