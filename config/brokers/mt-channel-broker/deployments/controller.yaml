@@ -42,11 +42,11 @@ spec:
             cpu: 100m
             memory: 100Mi
 
-        args:
-          - "clientQPS"
-          - "20.0"
-          - "clientBurst"
-          - "40.0"
+#        args:
+#          - "clientQPS"
+#          - "5.0"
+#          - "clientBurst"
+#          - "10"
         env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
