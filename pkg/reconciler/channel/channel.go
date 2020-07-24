@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,12 +38,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
-
-// newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason ChannelReconciled.
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: \"%s/%s\"", namespace, name)
-}
 
 type Reconciler struct {
 	// listers index properties about resources
@@ -92,7 +85,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgr
 	bCS := r.getChannelableStatus(ctx, &backingChannel.Status, backingChannel.Annotations)
 	c.Status.PropagateStatuses(bCS)
 
-	return newReconciledNormal(c.Namespace, c.Name)
+	return nil
 }
 
 func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) *duckv1beta1.ChannelableStatus {
