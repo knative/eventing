@@ -164,7 +164,6 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
 				MakeServiceAccount(sourceName, sourceUID),
@@ -216,7 +215,6 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
 				MakeServiceAccount(sourceName, sourceUID),
@@ -268,7 +266,6 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
 				MakeServiceAccount(sourceName, sourceUID),
@@ -345,9 +342,6 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceV1A2StatusObservedGeneration(generation),
 				),
 			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-			},
 		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
@@ -373,7 +367,6 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceServiceAccountCreated", `PingSource ServiceAccount created`),
 				Eventf(corev1.EventTypeNormal, "PingSourceRoleBindingCreated", `PingSource RoleBinding created`),
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
 				MakeServiceAccount(sourceName, sourceUID),
@@ -422,9 +415,6 @@ func TestAllCases(t *testing.T) {
 				makeAvailableMTAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSourceV1Alpha2(sourceName, testNS,
 					WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
@@ -471,7 +461,6 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Cluster-scoped deployment created`),
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantCreates: []runtime.Object{
 				MakeMTAdapter(),
@@ -525,7 +514,6 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, pingSourceDeploymentDeleted, `Deprecated deployment removed: "%s/%s"`, testNS, makeAvailableReceiveAdapterDeprecatedName(sourceNameLong, sourceUIDLong, sinkDest).Name),
 				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Deployment created`),
-				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceNameLong),
 			},
 			WantCreates: []runtime.Object{
 				// makeJobRunner(),
