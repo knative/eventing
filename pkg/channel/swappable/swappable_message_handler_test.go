@@ -29,13 +29,12 @@ import (
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
 
-var replaceDomain = apis.HTTP("replaceDomain")
+var replaceDomain = apis.HTTP("replaceDomain").URL()
 
 const (
 	hostName = "a.b.c.d"
@@ -54,9 +53,7 @@ func TestMessageHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []fanout.Subscription{
 									{
-										SubscriberSpec: eventingduck.SubscriberSpec{
-											SubscriberURI: replaceDomain,
-										},
+										Subscriber: replaceDomain,
 									},
 								},
 							},
@@ -70,9 +67,7 @@ func TestMessageHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []fanout.Subscription{
 									{
-										SubscriberSpec: eventingduck.SubscriberSpec{
-											ReplyURI: replaceDomain,
-										},
+										Reply: replaceDomain,
 									},
 								},
 							},
@@ -109,9 +104,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberSpec: eventingduck.SubscriberSpec{
-										SubscriberURI: replaceDomain,
-									},
+									Subscriber: replaceDomain,
 								},
 							},
 						},
@@ -222,11 +215,11 @@ func successHandler(w http.ResponseWriter, r *http.Request) {
 func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
 	for i, cc := range c.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.ReplyURI == replaceDomain {
-				sub.ReplyURI = apis.HTTP(replacement)
+			if sub.Subscriber == replaceDomain {
+				sub.Subscriber = apis.HTTP(replacement).URL()
 			}
-			if sub.SubscriberURI == replaceDomain {
-				sub.SubscriberURI = apis.HTTP(replacement)
+			if sub.Reply == replaceDomain {
+				sub.Reply = apis.HTTP(replacement).URL()
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}
