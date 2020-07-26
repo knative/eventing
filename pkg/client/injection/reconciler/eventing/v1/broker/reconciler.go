@@ -406,8 +406,8 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 		r.Recorder.Eventf(resource, corev1.EventTypeWarning, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resourceName, err)
 	} else {
-		//		r.Recorder.Eventf(resource, corev1.EventTypeNormal, "FinalizerUpdate",
-		//			"Updated %q finalizers", resource.GetName())
+		r.Recorder.Eventf(resource, corev1.EventTypeNormal, "FinalizerUpdate",
+			"Updated %q finalizers", resource.GetName())
 	}
 	return resource, err
 }
