@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
@@ -44,7 +43,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
@@ -120,13 +118,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 
 	brokerTrigger, err := getBrokerChannelRef(ctx, b)
 	if err != nil {
+		t.Status.MarkBrokerFailed("MissingBrokerChannel", "Failed to get broker %q annotations: %s", t.Spec.Broker, err)
 		return fmt.Errorf("failed to find Broker's Trigger channel: %s", err)
 	}
-	if brokerTrigger == nil {
-		// Should not happen because Broker is ready to go if we get here
-		return errors.New("failed to find Broker's Trigger channel")
-	}
-
 	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// We will use the Namespace of Trigger as the Namespace of dest.Ref
@@ -208,7 +202,6 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		logging.FromContext(ctx).Info("Creating subscription")
 		sub, err = r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {
-			recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		return sub, nil
@@ -303,29 +296,6 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *eventi
 	}
 	t.Status.PropagateDependencyStatus(dependency)
 	return nil
-}
-
-func (r *Reconciler) EnqueueTriggersForBroker(obj interface{}) {
-	object, err := kmeta.DeletionHandlingAccessor(obj)
-	if err != nil {
-		return
-	}
-	b, err := r.brokerLister.Brokers(object.GetNamespace()).Get(object.GetName())
-	if err != nil {
-		return
-	}
-	// If it's not my brokerclass, ignore
-	if b.Annotations[eventing.BrokerClassKey] != eventing.MTChannelBrokerClassValue {
-		return
-	}
-
-	triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.Everything())
-	for _, t := range triggers {
-		if t.Spec.Broker == b.Name {
-			fmt.Printf("Enqueuing: %s/%s\n", t.Namespace, t.Name)
-			r.impl.Enqueue(t)
-		}
-	}
 }
 
 func getBrokerChannelRef(ctx context.Context, b *eventingv1.Broker) (*corev1.ObjectReference, error) {

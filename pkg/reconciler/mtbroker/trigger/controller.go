@@ -66,11 +66,6 @@ func NewController(
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// When a broker changes, enqueue a function to see which triggers it may affect
-	// and then enqueue them as necessary.
-	// TODO: Should this instead be a tracker that we create within trigger.
-	//	brokerInformer.Informer().AddEventHandler(controller.HandleAll(r.EnqueueTriggersForBroker))
-
 	// Reconcile Trigger when my Subscription changes
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(eventingv1.Kind("Trigger")),

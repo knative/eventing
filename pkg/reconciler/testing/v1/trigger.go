@@ -115,6 +115,13 @@ func WithTriggerBrokerFailed(reason, message string) TriggerOption {
 	}
 }
 
+// WithTriggerBrokerNotConfigured marks the Broker as not having been reconciled.
+func WithTriggerBrokerNotConfigured() TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkBrokerNotConfigured()
+	}
+}
+
 // WithTriggerBrokerUnknown marks the Broker as unknown
 func WithTriggerBrokerUnknown(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
@@ -207,7 +214,6 @@ func WithTriggerSubscriberResolvedUnknown(reason, message string) TriggerOption 
 	}
 }
 
-// TODO: this can be a runtime object
 func WithTriggerDeleted(t *v1.Trigger) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	t.ObjectMeta.SetDeletionTimestamp(&deleteTime)

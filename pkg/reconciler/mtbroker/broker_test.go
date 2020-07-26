@@ -71,6 +71,10 @@ const (
 	triggerNameLong = "test-trigger-name-is-a-long-name"
 	triggerUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
 
+	triggerChannelAPIVersion = "messaging.knative.dev/v1"
+	triggerChannelKind       = "InMemoryChannel"
+	triggerChannelName       = "test-broker-kne-trigger"
+
 	subscriberURI     = "http://example.com/subscriber/"
 	subscriberKind    = "Service"
 	subscriberName    = "subscriber-name"
@@ -88,8 +92,6 @@ const (
 	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
 	currentGeneration     = 1
 	outdatedGeneration    = 0
-
-	finalizerName = "brokers.eventing.knative.dev"
 
 	imcSpec = `
 apiVersion: "messaging.knative.dev/v1"
@@ -126,10 +128,8 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
-	sinkDNS               = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI               = "http://" + sinkDNS
-	finalizerUpdatedEvent = Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-broker" finalizers`)
-
+	sinkDNS       = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI       = "http://" + sinkDNS
 	brokerAddress = &apis.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, utils.GetClusterDomainName()),
@@ -176,11 +176,7 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "InternalError", "failed to find channelTemplate"),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -200,11 +196,7 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": missing field(s): spec.config.name`),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -232,11 +224,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelFailed("ChannelTemplateFailed", `Error on setting up the ChannelTemplate: configmap "test-configmap" not found`)),
 			}},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "InternalError", `configmap "test-configmap" not found`),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
 			},
 			WantErr: true,
 		}, {
@@ -263,11 +251,7 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "InternalError", "Failed to reconcile trigger channel: %v", "inducing failure for create inmemorychannels"),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
 			},
 			WantErr: true,
 		}, {
@@ -290,12 +274,6 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-			},
 		}, {
 			Name: "Trigger Channel.Create no host in the url",
 			Key:  testKey,
@@ -314,12 +292,6 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
 		}, {
 			Name: "nil config, not a configmap",
 			Key:  testKey,
@@ -330,11 +302,7 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "InternalError", `Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]`),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -363,12 +331,6 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-			},
 		}, {
 			Name: "Trigger Channel endpoints fails",
 			Key:  testKey,
@@ -387,13 +349,12 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
 					WithFilterFailed("ServiceFailure", `endpoints "broker-filter" not found`)),
 			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "InternalError", `endpoints "broker-filter" not found`),
 			},
 			WantErr: true,
@@ -420,14 +381,11 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithBrokerReady,
 					WithBrokerAddressURI(brokerAddress),
-					WithChannelAddressAnnotation(triggerChannelURL)),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
 			}},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
 		}, {
 			Name: "Successful Reconciliation, status update fails",
 			Key:  testKey,
@@ -454,669 +412,15 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithBrokerReady,
 					WithBrokerAddressURI(brokerAddress),
-					WithChannelAddressAnnotation(triggerChannelURL)),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
 			}},
 			WantEvents: []string{
-				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": inducing failure for update brokers`),
 			},
 			WantErr: true,
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
-		}, {
-			Name: "Successful Reconciliation, with single trigger",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewBroker(brokerName, testNS,
-					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithBrokerConfig(config()),
-					WithInitBrokerConditions),
-				createChannel(testNS, true),
-				imcConfigMap(),
-				NewEndpoints(filterServiceName, systemNS,
-					WithEndpointsLabels(FilterLabels()),
-					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
-				NewEndpoints(ingressServiceName, systemNS,
-					WithEndpointsLabels(IngressLabels()),
-					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-			},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerBrokerReady(),
-					WithTriggerDependencyReady(),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
-					WithTriggerStatusSubscriberURI(subscriberURI)),
-			}, {
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithBrokerConfig(config()),
-					WithBrokerReady,
-					WithBrokerAddressURI(brokerAddress),
-					WithChannelAddressAnnotation(triggerChannelURL)),
-			}},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
-		}, {
-			Name: "Fail Reconciliation, with single trigger, trigger status updated",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewBroker(brokerName, testNS,
-					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithInitBrokerConditions),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerDependencyReady(),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
-					WithTriggerStatusSubscriberURI(subscriberURI)),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerDependencyReady(),
-					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
-					WithTriggerBrokerFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: failed to find channelTemplate"),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerStatusSubscriberURI(subscriberURI)),
-			}, {
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithInitBrokerConditions,
-					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: failed to find channelTemplate")),
-			}},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "failed to find channelTemplate"),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, brokerName),
-			},
-			WantErr: true,
-		}, {
-			Name: "Broker being deleted, marks trigger as not ready due to broker missing",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewBroker(brokerName, testNS,
-					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithBrokerConfig(config()),
-					WithInitBrokerConditions,
-					WithBrokerFinalizers("brokers.eventing.knative.dev"),
-					WithBrokerResourceVersion(""),
-					WithBrokerDeletionTimestamp),
-				imcConfigMap(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchRemoveFinalizers(testNS, brokerName),
-			},
-			WantEvents: []string{
-				finalizerUpdatedEvent,
-			},
-		}, {
-			Name: "Broker being deleted, marks trigger as not ready due to broker missing, fails",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewBroker(brokerName, testNS,
-					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithBrokerConfig(config()),
-					WithInitBrokerConditions,
-					WithBrokerFinalizers("brokers.eventing.knative.dev"),
-					WithBrokerResourceVersion(""),
-					WithBrokerDeletionTimestamp),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-				imcConfigMap(),
-			},
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("update", "triggers"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerUpdateStatusFailed", `Failed to update Trigger's status: inducing failure for update triggers`),
-				Eventf(corev1.EventTypeWarning, "InternalError", "Trigger reconcile failed: inducing failure for update triggers"),
-			},
-			WantErr: true,
-		}, {
-			Name: "Trigger being deleted",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerDeleted,
-					WithTriggerSubscriberURI(subscriberURI))}...),
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerDeleted,
-					WithInitTriggerConditions,
-					WithTriggerSubscriberURI(subscriberURI)),
-			}},
-		}, {
-			Name: "Trigger subscription create fails",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI))}...),
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("create", "subscriptions"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for create subscriptions"),
-			},
-		}, {
-			Name: "Trigger subscription create fails, update status fails",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI))}...),
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("create", "subscriptions"),
-				InduceFailure("update", "triggers"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeWarning, "TriggerUpdateStatusFailed", "Failed to update Trigger's status: inducing failure for update triggers"),
-			},
-		}, {
-			Name: "Trigger subscription delete fails",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-				makeDifferentReadySubscription()}...),
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("delete", "subscriptions"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for delete subscriptions"))},
-			},
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: subscriptionName,
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SubscriptionDeleteFailed", "Delete Trigger's subscription failed: inducing failure for delete subscriptions"),
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for delete subscriptions"),
-			},
-		}, {
-			Name: "Trigger subscription create after delete fails",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-				makeDifferentReadySubscription()}...),
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("create", "subscriptions"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
-			}},
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: subscriptionName,
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for create subscriptions"),
-			},
-		}, {
-			Name: "Trigger subscription not owned by Trigger",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-				makeFilterSubscriptionNotOwnedByTrigger()}...),
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerUID(triggerUID),
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerNotSubscribed("NotSubscribed", `trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
-					WithTriggerStatusSubscriberURI(subscriberURI)),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", `Trigger reconcile failed: trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
-			},
-		}, {
-			Name: "Trigger subscription update works",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
-				makeDifferentReadySubscription()}...),
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriptionNotConfigured(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady()),
-			}},
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: subscriptionName,
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-		}, {
-			Name: "Trigger has subscriber ref exists",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeSubscriberAddressableAsUnstructured(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithInitTriggerConditions)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriptionNotConfigured(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-		}, {
-			Name: "Trigger has subscriber ref exists and URI",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeSubscriberAddressableAsUnstructured(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
-					WithInitTriggerConditions,
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriptionNotConfigured(),
-					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-		}, {
-			Name: "Trigger has subscriber ref exists kubernetes Service",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeSubscriberKubernetesServiceAsUnstructured(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
-					WithInitTriggerConditions,
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriptionNotConfigured(),
-					WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
-			},
-		}, {
-			Name: "Trigger has subscriber ref doesn't exist",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithInitTriggerConditions,
-				)}...),
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", `Trigger reconcile failed: failed to get ref &ObjectReference{Kind:Service,Namespace:test-namespace,Name:subscriber-name,UID:,APIVersion:serving.knative.dev/v1,ResourceVersion:,FieldPath:,}: services.serving.knative.dev "subscriber-name" not found`),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriberResolvedFailed("Unable to get the Subscriber's URI", `failed to get ref &ObjectReference{Kind:Service,Namespace:test-namespace,Name:subscriber-name,UID:,APIVersion:serving.knative.dev/v1,ResourceVersion:,FieldPath:,}: services.serving.knative.dev "subscriber-name" not found`),
-				),
-			}},
-		}, {
-			Name: "Subscription not ready, trigger marked not ready",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeFalseStatusSubscription(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerNotSubscribed("testInducedError", "test induced error"),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-		}, {
-			Name: "Subscription ready, trigger marked ready",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribed(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-		}, {
-			Name: "Dependency doesn't exist",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-				)}...),
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: propagating dependency readiness: getting the dependency: pingsources.sources.knative.dev \"test-ping-source\" not found"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribed(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: pingsources.sources.knative.dev \"test-ping-source\" not found"),
-				),
-			}},
-		}, {
-			Name: "The status of Dependency is False",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
-				makeFalseStatusPingSource(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribed(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyFailed("NotFound", ""),
-				),
-			}},
-		}, {
-			Name: "The status of Dependency is Unknown",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
-				makeUnknownStatusCronJobSource(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribed(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyUnknown("", ""),
-				),
-			}},
-		},
-		{
-			Name: "Dependency generation not equal",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
-				makeGenerationNotEqualPingSource(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribed(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", currentGeneration, outdatedGeneration))),
-			}},
-		},
-		{
-			Name: "Dependency ready",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
-				makeReadyPingSource(),
-				NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-				)}...),
-			WantErr: false,
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerName, testNS, brokerName,
-					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribed(),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-		},
-
-		{
-			Name: "Trigger has deprecated named subscriber",
-			Key:  testKey,
-			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong),
-				makeReadyPingSource(),
-				NewTrigger(triggerNameLong, testNS, brokerName,
-					WithTriggerUID(triggerUIDLong),
-					WithTriggerSubscriberURI(subscriberURI),
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-				)}...),
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, subscriptionDeleted, `Deprecated subscription removed: "%s/%s"`, testNS, makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewTrigger(triggerNameLong, testNS, brokerName,
-					WithTriggerUID(triggerUIDLong),
-					WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					WithInitTriggerConditions,
-					WithDependencyAnnotation(dependencyAnnotation),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyReady(),
-				),
-			}},
-			WantCreates: []runtime.Object{
-				makeReadySubscriptionWithCustomData(triggerNameLong, triggerUIDLong),
-			},
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name,
-			}},
 		},
 	}
 
@@ -1340,7 +644,10 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithBrokerFinalizers("brokers.eventing.knative.dev"),
 			WithBrokerResourceVersion(""),
 			WithBrokerAddressURI(brokerAddress),
-			WithChannelAddressAnnotation(triggerChannelURL)),
+			WithChannelAddressAnnotation(triggerChannelURL),
+			WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+			WithChannelKindAnnotation(triggerChannelKind),
+			WithChannelNameAnnotation(triggerChannelName)),
 		createChannel(testNS, true),
 		imcConfigMap(),
 		NewEndpoints(filterServiceName, systemNS,
@@ -1463,24 +770,6 @@ func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured 
 			},
 		},
 	}
-}
-
-func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
-	action.Patch = []byte(patch)
-	return action
-}
-
-func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
-	action.Patch = []byte(patch)
-	return action
 }
 
 // FilterLabels generates the labels present on all resources representing the filter of the given
