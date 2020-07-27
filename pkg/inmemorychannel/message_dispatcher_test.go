@@ -34,9 +34,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
@@ -232,22 +230,12 @@ func TestDispatcher_dispatch(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						SubscriberSpec: eventingduck.SubscriberSpec{
-							UID:           "aaaa",
-							Generation:    1,
-							SubscriberURI: mustParseUrl(t, transformationsServer.URL),
-							ReplyURI:      mustParseUrl(t, channelBProxy.URL),
-						},
+						Subscriber: mustParseUrl(t, transformationsServer.URL).URL(),
+						Reply:      mustParseUrl(t, channelBProxy.URL).URL(),
 					}, {
-						SubscriberSpec: eventingduck.SubscriberSpec{
-							UID:           "cccc",
-							Generation:    1,
-							SubscriberURI: mustParseUrl(t, transformationsFailureServer.URL),
-							ReplyURI:      mustParseUrl(t, channelBProxy.URL),
-							Delivery: &eventingduck.DeliverySpec{
-								DeadLetterSink: &duckv1.Destination{URI: mustParseUrl(t, deadLetterServer.URL)},
-							},
-						},
+						Subscriber: mustParseUrl(t, transformationsFailureServer.URL).URL(),
+						Reply:      mustParseUrl(t, channelBProxy.URL).URL(),
+						DeadLetter: mustParseUrl(t, deadLetterServer.URL).URL(),
 					}},
 				},
 			},
@@ -258,11 +246,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						SubscriberSpec: eventingduck.SubscriberSpec{
-							UID:           "bbbb",
-							Generation:    1,
-							SubscriberURI: mustParseUrl(t, receiverServer.URL),
-						},
+						Subscriber: mustParseUrl(t, receiverServer.URL).URL(),
 					}},
 				},
 			},

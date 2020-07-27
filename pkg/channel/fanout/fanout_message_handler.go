@@ -23,9 +23,7 @@ package fanout
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	nethttp "net/http"
 	"net/url"
 	"time"
@@ -36,7 +34,6 @@ import (
 	"go.uber.org/zap"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
@@ -46,16 +43,10 @@ const (
 )
 
 type Subscription struct {
-	eventingduck.SubscriberSpec
-	RetryConfig kncloudevents.RetryConfig
-}
-
-func (s *Subscription) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.SubscriberSpec)
-}
-
-func (s *Subscription) UnmarshalJSON(bytes []byte) error {
-	return json.Unmarshal(bytes, &s.SubscriberSpec)
+	Subscriber  *url.URL
+	Reply       *url.URL
+	DeadLetter  *url.URL
+	RetryConfig *kncloudevents.RetryConfig
 }
 
 // Config for a fanout.MessageHandler.
@@ -96,23 +87,35 @@ func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDisp
 	}
 	handler.receiver = receiver
 
-	for i := range config.Subscriptions {
-		retriesConfig, err := retriesOf(config.Subscriptions[i].SubscriberSpec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create retries config from SubscriberSpec: %w", err)
-		}
-		config.Subscriptions[i].RetryConfig = retriesConfig
-	}
-
 	return handler, nil
 }
 
-func retriesOf(spec eventingduck.SubscriberSpec) (kncloudevents.RetryConfig, error) {
-	delivery := &eventingduckv1.DeliverySpec{}
+func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscription, error) {
+	var destination *url.URL
+	if sub.SubscriberURI != nil {
+		destination = sub.SubscriberURI.URL()
+	}
 
-	_ = spec.ConvertTo(context.Background(), delivery)
+	var reply *url.URL
+	if sub.ReplyURI != nil {
+		reply = sub.ReplyURI.URL()
+	}
 
-	return kncloudevents.RetryConfigFromDeliverySpec(*delivery)
+	var deadLetter *url.URL
+	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
+	}
+
+	var retryConfig *kncloudevents.RetryConfig
+	if sub.Delivery != nil {
+		if rc, err := kncloudevents.RetryConfigFromDeliverySpec(*sub.Delivery); err != nil {
+			return nil, err
+		} else {
+			retryConfig = &rc
+		}
+	}
+
+	return &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig}, nil
 }
 
 func createMessageReceiverFunction(f *MessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error {
@@ -198,21 +201,13 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) error {
-
-	var destination *url.URL
-	if sub.SubscriberURI != nil {
-		destination = sub.SubscriberURI.URL()
-	}
-
-	var reply *url.URL
-	if sub.ReplyURI != nil {
-		reply = sub.ReplyURI.URL()
-	}
-
-	var deadLetterURL *url.URL
-	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
-		deadLetterURL = sub.Delivery.DeadLetterSink.URI.URL()
-	}
-
-	return f.dispatcher.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetterURL, &sub.RetryConfig)
+	return f.dispatcher.DispatchMessageWithRetries(
+		ctx,
+		message,
+		additionalHeaders,
+		sub.Subscriber,
+		sub.Reply,
+		sub.DeadLetter,
+		sub.RetryConfig,
+	)
 }

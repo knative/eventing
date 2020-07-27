@@ -30,14 +30,13 @@ import (
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
 var (
 	// The httptest.Server's host name will replace this value in all ChannelConfigs.
-	replaceDomain = apis.HTTP("replaceDomain")
+	replaceDomain = apis.HTTP("replaceDomain").URL()
 )
 
 func TestNewMessageHandler(t *testing.T) {
@@ -94,9 +93,7 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []fanout.Subscription{
 						{
-							SubscriberSpec: eventingduck.SubscriberSpec{
-								SubscriberURI: apis.HTTP("subscriberdomain"),
-							},
+							Subscriber: apis.HTTP("subscriberdomain").URL(),
 						},
 					},
 				},
@@ -111,9 +108,7 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []fanout.Subscription{
 						{
-							SubscriberSpec: eventingduck.SubscriberSpec{
-								ReplyURI: apis.HTTP("replydomain"),
-							},
+							Reply: apis.HTTP("replydomain").URL(),
 						},
 					},
 				},
@@ -162,9 +157,7 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []fanout.Subscription{
 						{
-							SubscriberSpec: eventingduck.SubscriberSpec{
-								SubscriberURI: apis.HTTP("subscriberdomain"),
-							},
+							Subscriber: apis.HTTP("subscriberdomain").URL(),
 						},
 					},
 				},
@@ -194,9 +187,7 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberSpec: eventingduck.SubscriberSpec{
-										SubscriberURI: apis.HTTP("different"),
-									},
+									Subscriber: apis.HTTP("different").URL(),
 								},
 							},
 						},
@@ -250,9 +241,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberSpec: eventingduck.SubscriberSpec{
-										ReplyURI: replaceDomain,
-									},
+									Reply: replaceDomain,
 								},
 							},
 						},
@@ -274,9 +263,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberSpec: eventingduck.SubscriberSpec{
-										ReplyURI: apis.HTTP("first-to-domain"),
-									},
+									Reply: apis.HTTP("first-to-domain").URL(),
 								},
 							},
 						},
@@ -288,9 +275,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []fanout.Subscription{
 								{
-									SubscriberSpec: eventingduck.SubscriberSpec{
-										SubscriberURI: replaceDomain,
-									},
+									Subscriber: replaceDomain,
 								},
 							},
 						},
@@ -360,11 +345,11 @@ func fakeHandler(statusCode int) http.HandlerFunc {
 func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.SubscriberURI == replaceDomain {
-				sub.SubscriberURI = apis.HTTP(replacement)
+			if sub.Subscriber == replaceDomain {
+				sub.Subscriber = apis.HTTP(replacement).URL()
 			}
-			if sub.ReplyURI == replaceDomain {
-				sub.ReplyURI = apis.HTTP(replacement)
+			if sub.Reply == replaceDomain {
+				sub.Reply = apis.HTTP(replacement).URL()
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}
