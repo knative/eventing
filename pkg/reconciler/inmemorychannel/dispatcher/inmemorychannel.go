@@ -18,7 +18,6 @@ package dispatcher
 
 import (
 	"context"
-	"fmt"
 
 	"knative.dev/pkg/reconciler"
 
@@ -32,7 +31,6 @@ import (
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/logging"
 )
 
@@ -84,24 +82,17 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1beta1.InMemoryC
 		subs := make([]fanout.Subscription, len(c.Spec.Subscribers))
 		for _, sub := range c.Spec.Subscribers {
 
-			retriesConfig := kncloudevents.NoRetries()
-			if sub.Delivery != nil && sub.Delivery.Retry != nil {
-				delivery := eventingduckv1.DeliverySpec{}
-				err := sub.Delivery.ConvertTo(context.Background(), &delivery)
-				if err != nil {
-					return nil, err
-				}
-				_retriesConfig, err := kncloudevents.RetryConfigFromDeliverySpec(delivery)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create retries config: %w", err)
-				}
-				retriesConfig = _retriesConfig
+			subSpecV1 := eventingduckv1.SubscriberSpec{}
+			if err := sub.ConvertTo(context.TODO(), &subSpecV1); err != nil {
+				return nil, err
 			}
 
-			subs = append(subs, fanout.Subscription{
-				SubscriberSpec: sub,
-				RetryConfig:    retriesConfig,
-			})
+			conf, err := fanout.SubscriberSpecToFanoutConfig(subSpecV1)
+			if err != nil {
+				return nil, err
+			}
+
+			subs = append(subs, *conf)
 		}
 
 		channelConfig := multichannelfanout.ChannelConfig{

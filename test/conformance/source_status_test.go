@@ -25,6 +25,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
-func TestSourceCRDMetadata(t *testing.T) {
-	srchelpers.SourceCRDMetadataTestHelperWithChannelTestRunner(t, sourcesTestRunner, testlib.SetupClientOptionNoop)
+func TestSourceStatus(t *testing.T) {
+	srchelpers.SourceStatusTestHelperWithComponentsTestRunner(t,
+		sourcesTestRunner, testlib.SetupClientOptionNoop)
 }

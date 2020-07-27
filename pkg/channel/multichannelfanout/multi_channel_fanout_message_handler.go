@@ -56,7 +56,7 @@ type MessageHandler struct {
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(ctx context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config) (*MessageHandler, error) {
+func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config) (*MessageHandler, error) {
 	handlers := make(map[string]*fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {

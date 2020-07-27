@@ -33,15 +33,14 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
 // servers.
 var (
-	replaceSubscriber = apis.HTTP("replaceSubscriber")
-	replaceReplier    = apis.HTTP("replaceReplier")
+	replaceSubscriber = apis.HTTP("replaceSubscriber").URL()
+	replaceReplier    = apis.HTTP("replaceReplier").URL()
 )
 
 func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
@@ -77,9 +76,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 			timeout: time.Millisecond,
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-					},
+					Subscriber: replaceSubscriber,
 				},
 			},
 			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
@@ -105,9 +102,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"reply fails": {
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						ReplyURI: replaceReplier,
-					},
+					Reply: replaceReplier,
 				},
 			},
 			replier: func(writer http.ResponseWriter, _ *http.Request) {
@@ -120,9 +115,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"subscriber fails": {
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-					},
+					Subscriber: replaceSubscriber,
 				},
 			},
 			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
@@ -135,10 +128,8 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"subscriber succeeds, result fails": {
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -153,10 +144,8 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"one sub succeeds": {
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -171,16 +160,12 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"one sub succeeds, one sub fails": {
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 			},
 			subscriber:          callableSucceed,
@@ -193,22 +178,16 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		"all subs succeed": {
 			subs: []Subscription{
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 				{
-					SubscriberSpec: eventingduck.SubscriberSpec{
-						SubscriberURI: replaceSubscriber,
-						ReplyURI:      replaceReplier,
-					},
+					Subscriber: replaceSubscriber,
+					Reply:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -257,11 +236,11 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	// Rewrite the subs to use the servers we just started.
 	subs := make([]Subscription, 0)
 	for _, sub := range inSubs {
-		if sub.SubscriberURI == replaceSubscriber {
-			sub.SubscriberURI = apis.HTTP(subscriberServer.URL[7:]) // strip the leading 'http://'
+		if sub.Subscriber == replaceSubscriber {
+			sub.Subscriber = apis.HTTP(subscriberServer.URL[7:]).URL() // strip the leading 'http://'
 		}
-		if sub.ReplyURI == replaceReplier {
-			sub.ReplyURI = apis.HTTP(replyServer.URL[7:]) // strip the leading 'http://'
+		if sub.Reply == replaceReplier {
+			sub.Reply = apis.HTTP(replyServer.URL[7:]).URL() // strip the leading 'http://'
 		}
 		subs = append(subs, sub)
 	}

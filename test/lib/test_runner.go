@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/utils"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"knative.dev/eventing/pkg/utils"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/prow"
@@ -49,6 +49,7 @@ const (
 type ComponentsTestRunner struct {
 	ComponentFeatureMap map[metav1.TypeMeta][]Feature
 	ComponentsToTest    []metav1.TypeMeta
+	componentOptions    map[metav1.TypeMeta][]SetupClientOption
 }
 
 // RunTests will use all components that support the given feature, to run
@@ -71,6 +72,53 @@ func (tr *ComponentsTestRunner) RunTests(
 			})
 		}
 	}
+}
+
+// RunTestsWithComponentOptions will use all components that support the given
+// feature, to run a test for the testFunc while passing the component specific
+// SetupClientOptions to testFunc. You should used this method instead of
+// RunTests if you have used AddComponentSetupClientOption to add some component
+// specific initialization code. If strict is set to true, tests will not run
+// for components that don't exist in the ComponentFeatureMap.
+func (tr *ComponentsTestRunner) RunTestsWithComponentOptions(
+	t *testing.T,
+	feature Feature,
+	strict bool,
+	testFunc func(st *testing.T, component metav1.TypeMeta,
+		options ...SetupClientOption),
+) {
+	t.Parallel()
+	for _, component := range tr.ComponentsToTest {
+		// If in strict mode and a component is not present in the map, then
+		// don't run the tests
+		features, present := tr.ComponentFeatureMap[component]
+		subTestName := fmt.Sprintf("%s-%s", component.Kind, component.APIVersion)
+		if !strict || (present && contains(features, feature)) {
+			t.Run(subTestName, func(st *testing.T) {
+				testFunc(st, component, tr.componentOptions[component]...)
+			})
+		} else {
+			t.Skipf("Skipping %s for component %s since it did not "+
+				"match the feature %s and we are in strict mode", t.Name(),
+				subTestName, feature)
+		}
+	}
+}
+
+// AddComponentSetupClientOption adds a SetupClientOption that should only run when
+// component gets selected to run. This should be used when there's an expensive
+// initialization code should take place conditionally (e.g. create an instance
+// of a source or a channel) as opposed to other cheap initialization code that
+// is safe to be called in all cases (e.g. installation of a CRD)
+func (tr *ComponentsTestRunner) AddComponentSetupClientOption(component metav1.TypeMeta,
+	options ...SetupClientOption) {
+	if tr.componentOptions == nil {
+		tr.componentOptions = make(map[metav1.TypeMeta][]SetupClientOption)
+	}
+	if _, ok := tr.componentOptions[component]; !ok {
+		tr.componentOptions[component] = make([]SetupClientOption, 0)
+	}
+	tr.componentOptions[component] = append(tr.componentOptions[component], options...)
 }
 
 func contains(features []Feature, feature Feature) bool {

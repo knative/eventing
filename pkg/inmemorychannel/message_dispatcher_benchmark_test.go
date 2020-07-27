@@ -28,7 +28,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/test"
 	"go.uber.org/zap"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
@@ -73,12 +72,8 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						SubscriberSpec: eventingduck.SubscriberSpec{
-							UID:           "aaaa",
-							Generation:    1,
-							SubscriberURI: transformationsUrl,
-							ReplyURI:      channelBUrl,
-						},
+						Subscriber: transformationsUrl.URL(),
+						Reply:      channelBUrl.URL(),
 					}},
 				},
 			},
@@ -89,11 +84,7 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 				FanoutConfig: fanout.Config{
 					AsyncHandler: false,
 					Subscriptions: []fanout.Subscription{{
-						SubscriberSpec: eventingduck.SubscriberSpec{
-							UID:           "bbbb",
-							Generation:    1,
-							SubscriberURI: receiverUrl,
-						},
+						Subscriber: receiverUrl.URL(),
 					}},
 				},
 			},

@@ -25,7 +25,7 @@ import (
 	"k8s.io/klog"
 )
 
-// reconcilerStateGenerator produces a reconciler state object to manage reconcilation runs.
+// reconcilerStateGenerator produces a reconciler state object to manage reconciliation runs.
 type reconcilerStateGenerator struct {
 	generator.DefaultGen
 	outputPackage  string
