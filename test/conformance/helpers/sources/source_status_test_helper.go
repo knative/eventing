@@ -91,7 +91,7 @@ func validateSourceStatus(st *testing.T, client *testlib.Client,
 
 	// SPEC: Sources MUST implement conditions with a Ready condition for long lived sources, and Succeeded for batch style sources.
 	if !hasCondition(v1beta1Src, successCondition) {
-		st.Fatalf("Source %q does not have %q", source, successCondition)
+		st.Fatalf("Source %q does not have condition %q", source, successCondition)
 	}
 
 	// SPEC: Sources MUST propagate the sinkUri to their status to signal to the cluster where their events are being sent.
