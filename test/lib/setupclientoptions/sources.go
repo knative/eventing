@@ -18,8 +18,10 @@ package setupclientoptions
 
 import (
 	"fmt"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -34,7 +36,7 @@ import (
 // RoleBinding, a RecordEvents pod and an ApiServerSource object with the event
 // mode and RecordEvent pod as its sink.
 func ApiServerSourceClientSetupOption(name string, mode string, recordEventsPodName string,
-	roleName string, serviceAccountName string) testlib.SetupClientOption{
+	roleName string, serviceAccountName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 		// create needed RBAC SA, Role & RoleBinding
 		createRbacObjects(client, roleName, serviceAccountName)
@@ -69,7 +71,7 @@ func ApiServerSourceClientSetupOption(name string, mode string, recordEventsPodN
 // PingSourceClientSetupOption returns a ClientSetupOption that can be used
 // to create a new PingSource. It creates a RecordEvents pod and a
 // PingSource object with the RecordEvent pod as its sink.
-func PingSourceClientSetupOption(name string, recordEventsPodName string,) testlib.SetupClientOption {
+func PingSourceClientSetupOption(name string, recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 
 		// create event logger pod and service
