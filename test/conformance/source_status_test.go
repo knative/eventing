@@ -19,12 +19,12 @@ limitations under the License.
 package conformance
 
 import (
-	"testing"
-
 	srchelpers "knative.dev/eventing/test/conformance/helpers/sources"
 	testlib "knative.dev/eventing/test/lib"
+	"testing"
 )
 
-func TestSourceCRDMetadata(t *testing.T) {
-	srchelpers.SourceCRDMetadataTestHelperWithChannelTestRunner(t, sourcesTestRunner, testlib.SetupClientOptionNoop)
+func TestSourceStatus(t *testing.T) {
+	srchelpers.SourceStatusTestHelperWithComponentsTestRunner(t,
+		sourcesTestRunner, testlib.SetupClientOptionNoop)
 }

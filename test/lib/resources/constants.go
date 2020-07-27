@@ -28,6 +28,7 @@ const (
 	MessagingAPIVersion = "messaging.knative.dev/v1beta1"
 	FlowsAPIVersion     = "flows.knative.dev/v1beta1"
 	ServingAPIVersion   = "serving.knative.dev/v1"
+	SourcesAPIVersion	= "sources.knative.dev/v1beta1"
 )
 
 // Kind for Knative resources.
@@ -75,4 +76,10 @@ const (
 const (
 	FlowsSequenceKind string = "Sequence"
 	FlowsParallelKind string = "Parallel"
+)
+
+//Kind for sources resources that exist in Eventing core
+const(
+	ApiServerSourceKind string = "ApiServerSource"
+	PingSourceKind 		string = "PingSource"
 )

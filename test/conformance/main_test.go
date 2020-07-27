@@ -18,8 +18,10 @@ limitations under the License.
 package conformance
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"knative.dev/pkg/test/zipkin"
@@ -27,6 +29,12 @@ import (
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/setupclientoptions"
+)
+const (
+	roleName           	= "event-watcher-r"
+	serviceAccountName	= "event-watcher-sa"
+	recordEventsPodName	= "api-server-source-logger-pod"
 )
 
 var channelTestRunner testlib.ComponentsTestRunner
@@ -43,12 +51,14 @@ func TestMain(m *testing.M) {
 			ComponentsToTest:    test.EventingFlags.Channels,
 		}
 		sourcesTestRunner = testlib.ComponentsTestRunner{
-			ComponentsToTest: test.EventingFlags.Sources,
+			ComponentFeatureMap: testlib.SourceFeatureMap,
+			ComponentsToTest:    test.EventingFlags.Sources,
 		}
 		brokerClass = test.EventingFlags.BrokerClass
 		brokerName = test.EventingFlags.BrokerName
 		brokerNamespace = test.EventingFlags.BrokerNamespace
 
+		addSourcesInitializers()
 		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
 		// place that cleans it up. If an individual test calls this instead, then it will break other
 		// tests that need the tracing in place.
@@ -57,4 +67,15 @@ func TestMain(m *testing.M) {
 
 		return m.Run()
 	}())
+}
+
+func addSourcesInitializers() {
+	name := strings.ToLower(fmt.Sprintf("%s",
+		testlib.ApiServerSourceTypeMeta.Kind))
+	sourcesTestRunner.AddComponentSetupClientOption(
+		testlib.ApiServerSourceTypeMeta,
+		setupclientoptions.ApiServerSourceClientSetupOption(name,
+			"Reference",
+			recordEventsPodName, roleName, serviceAccountName),
+	)
 }

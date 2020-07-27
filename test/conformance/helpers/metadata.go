@@ -22,7 +22,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
-func validateRequiredLabels(client *testlib.Client, object metav1.TypeMeta, labels map[string]string) {
+func ValidateRequiredLabels(client *testlib.Client, object metav1.TypeMeta, labels map[string]string) {
 	for k, v := range labels {
 		if !objectHasRequiredLabel(client, object, k, v) {
 			client.T.Fatalf("can't find label '%s=%s' in CRD %q", k, v, object)
