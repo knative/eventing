@@ -21,7 +21,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
@@ -87,12 +86,12 @@ func validateSourceStatus(st *testing.T, client *testlib.Client,
 
 	v1beta1Src, err := getSourceAsV1Beta1Source(client, source)
 	if err != nil {
-		st.Fatalf("unable to get source %q with v1beta1 duck type: %v", source, err)
+		st.Fatalf("Unable to get source %q with v1beta1 duck type: %v", source, err)
 	}
 
 	// SPEC: Sources MUST implement conditions with a Ready condition for long lived sources, and Succeeded for batch style sources.
 	if !hasCondition(v1beta1Src, successCondition) {
-		st.Fatalf("%q does not have %q", source, successCondition)
+		st.Fatalf("Source %q does not have %q", source, successCondition)
 	}
 
 	// SPEC: Sources MUST propagate the sinkUri to their status to signal to the cluster where their events are being sent.
@@ -109,12 +108,13 @@ func getSourceAsV1Beta1Source(client *testlib.Client,
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource,
 		&duckv1beta1.Source{})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get the source as v1beta1 Source duck type: %q", source)
+		return nil, fmt.Errorf("unable to get the source as v1beta1 "+
+			"Source duck type: %q: %w", source, err)
 	}
 	srcObj, ok := obj.(*duckv1beta1.Source)
 	if !ok {
-		return nil, errors.Errorf("unable to cast source %q to v1beta1 Source"+
-			" duck type", source)
+		return nil, fmt.Errorf("unable to cast source %q to v1beta1 "+
+			"Source duck type", source)
 	}
 	return srcObj, nil
 }
