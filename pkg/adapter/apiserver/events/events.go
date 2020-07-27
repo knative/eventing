@@ -35,6 +35,7 @@ func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, 
 
 	var data interface{}
 	var eventType string
+	name := object.GetName()
 	if ref {
 		data = getRef(object)
 		eventType = sourcesv1beta1.ApiServerSourceAddRefEventType
@@ -42,8 +43,7 @@ func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, 
 		data = object
 		eventType = sourcesv1beta1.ApiServerSourceAddEventType
 	}
-
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, eventType, object, data, name)
 }
 
 func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
@@ -54,6 +54,7 @@ func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 
 	var data interface{}
 	var eventType string
+	name := object.GetName()
 	if ref {
 		data = getRef(object)
 		eventType = sourcesv1beta1.ApiServerSourceUpdateRefEventType
@@ -62,7 +63,7 @@ func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 		eventType = sourcesv1beta1.ApiServerSourceUpdateEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, eventType, object, data, name)
 }
 
 func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
@@ -72,6 +73,7 @@ func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 	object := obj.(*unstructured.Unstructured)
 	var data interface{}
 	var eventType string
+	name := object.GetName()
 	if ref {
 		data = getRef(object)
 		eventType = sourcesv1beta1.ApiServerSourceDeleteRefEventType
@@ -80,7 +82,7 @@ func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 		eventType = sourcesv1beta1.ApiServerSourceDeleteEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, eventType, object, data, name)
 }
 
 func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
@@ -92,7 +94,7 @@ func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 	}
 }
 
-func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (cloudevents.Event, error) {
+func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}, resourceName string) (cloudevents.Event, error) {
 	subject := createSelfLink(corev1.ObjectReference{
 		APIVersion: obj.GetAPIVersion(),
 		Kind:       obj.GetKind(),
@@ -104,7 +106,8 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 	event.SetType(eventType)
 	event.SetSource(source)
 	event.SetSubject(subject)
-
+	// We copy the resource name as an attribute so that triggers can filter based on the resource name
+	event.SetExtension("name", resourceName)
 	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
 		return event, err
 	}
