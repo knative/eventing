@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"context"
+	"strings"
 
 	"github.com/robfig/cron/v3"
 	"knative.dev/pkg/apis"
@@ -35,9 +36,14 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		schedule = "CRON_TZ=" + cs.Timezone + " " + schedule
 	}
 
-	if _, err := cron.ParseStandard(cs.Schedule); err != nil {
-		fe := apis.ErrInvalidValue(cs.Schedule, "schedule")
-		errs = errs.Also(fe)
+	if _, err := cron.ParseStandard(schedule); err != nil {
+		if strings.HasPrefix(err.Error(), "provided bad location") {
+			fe := apis.ErrInvalidValue(err, "timezone")
+			errs = errs.Also(fe)
+		} else {
+			fe := apis.ErrInvalidValue(err, "schedule")
+			errs = errs.Also(fe)
+		}
 	}
 
 	if fe := cs.Sink.Validate(ctx); fe != nil {

@@ -83,7 +83,12 @@ func TestPingSourceValidation(t *testing.T) {
 				},
 			},
 		},
-		want: nil,
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrInvalidValue("provided bad location Knative/Land: unknown time zone Knative/Land", "spec.timezone")
+			errs = errs.Also(fe)
+			return errs
+		}(),
 	}, {
 		name: "empty sink",
 		source: PingSource{
@@ -112,7 +117,7 @@ func TestPingSourceValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrInvalidValue("2", "spec.schedule")
+			fe := apis.ErrInvalidValue("expected exactly 5 fields, found 1: [2]", "spec.schedule")
 			errs = errs.Also(fe)
 			return errs
 		}(),
@@ -122,7 +127,7 @@ func TestPingSourceValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.source.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("ContainerSourceSpec.Validate (-want, +got) = %v", diff)
+				t.Errorf("PingSourceSpec.Validate (-want, +got) = %v", diff)
 			}
 		})
 	}
