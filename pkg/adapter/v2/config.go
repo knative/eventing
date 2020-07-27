@@ -70,12 +70,12 @@ type EnvConfig struct {
 	// This is used to configure the metrics exporter options,
 	// the config is stored in a config map inside the controllers
 	// namespace and copied here.
-	MetricsConfigJson string `envconfig:"K_METRICS_CONFIG" default:""`
+	MetricsConfigJson string `envconfig:"K_METRICS_CONFIG" default:"{}"`
 
 	// LoggingConfigJson is a json string of logging.Config.
 	// This is used to configure the logging config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
-	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" default:""`
+	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" default:"{}"`
 
 	// TracingConfigJson is a json string of tracing.Config.
 	// This is used to configure the tracing config, the config is stored in
