@@ -17,8 +17,9 @@ limitations under the License.
 package sources
 
 import (
-	"knative.dev/eventing/test/conformance/helpers"
 	"testing"
+
+	"knative.dev/eventing/test/conformance/helpers"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testlib "knative.dev/eventing/test/lib"

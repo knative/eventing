@@ -48,17 +48,17 @@ var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
 
 var ApiServerSourceTypeMeta = metav1.TypeMeta{
 	APIVersion: resources.SourcesV1B1APIVersion,
-	Kind: 		resources.ApiServerSourceKind,
+	Kind:       resources.ApiServerSourceKind,
 }
 
 var PingSourceTypeMeta = metav1.TypeMeta{
 	APIVersion: resources.SourcesV1A2APIVersion,
-	Kind: 		resources.PingSourceKind,
+	Kind:       resources.PingSourceKind,
 }
 
 var SourceFeatureMap = map[metav1.TypeMeta][]Feature{
 	ApiServerSourceTypeMeta: {FeatureBasic, FeatureLongLiving},
-	PingSourceTypeMeta: {FeatureBasic, FeatureLongLiving},
+	PingSourceTypeMeta:      {FeatureBasic, FeatureLongLiving},
 }
 
 // Feature is the feature supported by the channel.
