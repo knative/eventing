@@ -78,6 +78,7 @@ func channelDataPlaneSuccessTest(t *testing.T, channel metav1.TypeMeta, event cl
 
 	subscriberName := resourcesNamePrefix + "-recordevents"
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
+	defer eventTracker.Cleanup()
 
 	client.CreateSubscriptionOrFail(
 		resourcesNamePrefix+"-sub",
@@ -214,6 +215,7 @@ func channelDataPlaneFailureTest(
 
 	subscriberName := resourcesNamePrefix + "-recordevents"
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
+	defer eventTracker.Cleanup()
 
 	client.CreateSubscriptionOrFail(
 		resourcesNamePrefix+"-sub",
