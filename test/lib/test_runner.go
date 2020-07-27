@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/utils"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"knative.dev/eventing/pkg/utils"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/prow"
@@ -49,7 +49,7 @@ const (
 type ComponentsTestRunner struct {
 	ComponentFeatureMap map[metav1.TypeMeta][]Feature
 	ComponentsToTest    []metav1.TypeMeta
-	componentOptions map[metav1.TypeMeta][]SetupClientOption
+	componentOptions    map[metav1.TypeMeta][]SetupClientOption
 }
 
 // RunTests will use all components that support the given feature, to run
@@ -92,10 +92,15 @@ func (tr *ComponentsTestRunner) RunTestsWithComponentOptions(
 		// If in strict mode and a component is not present in the map, then
 		// don't run the tests
 		features, present := tr.ComponentFeatureMap[component]
-		if !strict || ( present && contains(features, feature)) {
-			t.Run(fmt.Sprintf("%s-%s", component.Kind, component.APIVersion), func(st *testing.T) {
+		subTestName := fmt.Sprintf("%s-%s", component.Kind, component.APIVersion)
+		if !strict || (present && contains(features, feature)) {
+			t.Run(subTestName, func(st *testing.T) {
 				testFunc(st, component, tr.componentOptions[component]...)
 			})
+		} else {
+			t.Skipf("Skipping %s for component %s since it did not "+
+				"match the feature %s and we are in strict mode", t.Name(),
+				subTestName, feature)
 		}
 	}
 }
@@ -106,7 +111,7 @@ func (tr *ComponentsTestRunner) RunTestsWithComponentOptions(
 // of a source or a channel) as opposed to other cheap initialization code that
 // is safe to be called in all cases (e.g. installation of a CRD)
 func (tr *ComponentsTestRunner) AddComponentSetupClientOption(component metav1.TypeMeta,
-	options ...SetupClientOption){
+	options ...SetupClientOption) {
 	if tr.componentOptions == nil {
 		tr.componentOptions = make(map[metav1.TypeMeta][]SetupClientOption)
 	}

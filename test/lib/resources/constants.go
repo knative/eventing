@@ -23,12 +23,13 @@ import (
 
 // API versions for the resources.
 const (
-	CoreAPIVersion      = "v1"
-	EventingAPIVersion  = "eventing.knative.dev/v1beta1"
-	MessagingAPIVersion = "messaging.knative.dev/v1beta1"
-	FlowsAPIVersion     = "flows.knative.dev/v1beta1"
-	ServingAPIVersion   = "serving.knative.dev/v1"
-	SourcesAPIVersion	= "sources.knative.dev/v1beta1"
+	CoreAPIVersion        = "v1"
+	EventingAPIVersion    = "eventing.knative.dev/v1beta1"
+	MessagingAPIVersion   = "messaging.knative.dev/v1beta1"
+	FlowsAPIVersion       = "flows.knative.dev/v1beta1"
+	ServingAPIVersion     = "serving.knative.dev/v1"
+	SourcesV1A2APIVersion = "sources.knative.dev/v1alpha2"
+	SourcesV1B1APIVersion = "sources.knative.dev/v1beta1"
 )
 
 // Kind for Knative resources.

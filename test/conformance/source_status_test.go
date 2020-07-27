@@ -19,9 +19,10 @@ limitations under the License.
 package conformance
 
 import (
+	"testing"
+
 	srchelpers "knative.dev/eventing/test/conformance/helpers/sources"
 	testlib "knative.dev/eventing/test/lib"
-	"testing"
 )
 
 func TestSourceStatus(t *testing.T) {

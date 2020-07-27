@@ -47,12 +47,12 @@ var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
 }
 
 var ApiServerSourceTypeMeta = metav1.TypeMeta{
-	APIVersion: resources.SourcesAPIVersion,
+	APIVersion: resources.SourcesV1B1APIVersion,
 	Kind: 		resources.ApiServerSourceKind,
 }
 
 var PingSourceTypeMeta = metav1.TypeMeta{
-	APIVersion: resources.SourcesAPIVersion,
+	APIVersion: resources.SourcesV1A2APIVersion,
 	Kind: 		resources.PingSourceKind,
 }
 

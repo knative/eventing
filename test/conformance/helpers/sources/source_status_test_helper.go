@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,23 +18,22 @@ package sources
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"knative.dev/eventing/test/lib/duck"
-	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // SourceStatusTestHelperWithComponentsTestRunner runs the Source status
 // conformance tests for all sources in the ComponentsTestRunner. This test
-// needs an instance created of each source which should be initialized via
-// ComponentsTestRunner.AddComponentSetupClientOption.
+// needs an already created instance of each source which should be initialized
+//via ComponentsTestRunner.AddComponentSetupClientOption.
 //
 // Note: The source object name must be the lower case Kind name (e.g.
 // apiserversource for the Kind: ApiServerSource source)
@@ -43,24 +42,24 @@ func SourceStatusTestHelperWithComponentsTestRunner(
 	componentsTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
 ) {
-	table := [] struct {
+	table := []struct {
 		name    string
 		feature testlib.Feature
 		// Sources report success via either a Ready condition or a Succeeded condition
-		want    apis.ConditionType
-	} {
+		want apis.ConditionType
+	}{
 		{
-			"Long living sources have Ready status condition",
-			testlib.FeatureLongLiving,
-			apis.ConditionReady,
+			name:    "Long living sources have Ready status condition",
+			feature: testlib.FeatureLongLiving,
+			want:    apis.ConditionReady,
 		},
 		{
-			"Batch sources have Succeeded status condition",
-			testlib.FeatureBatch,
-			apis.ConditionSucceeded,
+			name:    "Batch sources have Succeeded status condition",
+			feature: testlib.FeatureBatch,
+			want:    apis.ConditionSucceeded,
 		},
-
 	}
+
 	for _, tc := range table {
 		n := tc.name
 		f := tc.feature
@@ -73,27 +72,26 @@ func SourceStatusTestHelperWithComponentsTestRunner(
 					options = append(options, componentOptions...)
 					client := testlib.Setup(st, true, options...)
 					defer testlib.TearDown(client)
-					validateSourceStatus(st, client, source, w, options...)
-			})
+					validateSourceStatus(st, client, source, w)
+				})
 		})
 	}
 }
 
-func validateSourceStatus(st *testing.T, client *testlib.Client, source metav1.TypeMeta, successCondition apis.ConditionType, options ...testlib.SetupClientOption) {
-	const(
-		sourceName = "source-req-status"
-	)
+func validateSourceStatus(st *testing.T, client *testlib.Client,
+	source metav1.TypeMeta,
+	successCondition apis.ConditionType) {
 
 	st.Logf("Running source status conformance test with source %q", source)
 
 	v1beta1Src, err := getSourceAsV1Beta1Source(client, source)
 	if err != nil {
-		st.Fatalf("unable to get source %q with v1beta1 duck type: %v", source, err)
+		st.Fatalf("Unable to get source %q with v1beta1 duck type: %v", source, err)
 	}
 
 	// SPEC: Sources MUST implement conditions with a Ready condition for long lived sources, and Succeeded for batch style sources.
-	if ! hasCondition(v1beta1Src, successCondition){
-		st.Fatalf("%q does not have %q", source, successCondition)
+	if !hasCondition(v1beta1Src, successCondition) {
+		st.Fatalf("Source %q does not have condition %q", source, successCondition)
 	}
 
 	// SPEC: Sources MUST propagate the sinkUri to their status to signal to the cluster where their events are being sent.
@@ -103,25 +101,26 @@ func validateSourceStatus(st *testing.T, client *testlib.Client, source metav1.T
 }
 
 func getSourceAsV1Beta1Source(client *testlib.Client,
-	source metav1.TypeMeta) (*duckv1beta1.Source, error){
+	source metav1.TypeMeta) (*duckv1beta1.Source, error) {
 	srcName := strings.ToLower(fmt.Sprintf("%s", source.Kind))
 	metaResource := resources.NewMetaResource(srcName, client.Namespace,
 		&source)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource,
 		&duckv1beta1.Source{})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get the source as v1beta1 Source duck type: %q", source)
+		return nil, fmt.Errorf("unable to get the source as v1beta1 "+
+			"Source duck type: %q: %w", source, err)
 	}
 	srcObj, ok := obj.(*duckv1beta1.Source)
 	if !ok {
-		return nil, errors.Errorf("unable to cast source %q to v1beta1 Source" +
-			" duck type", source)
+		return nil, fmt.Errorf("unable to cast source %q to v1beta1 "+
+			"Source duck type", source)
 	}
 	return srcObj, nil
 }
 
-func hasCondition(src *duckv1beta1.Source, t apis.ConditionType) bool{
-	if src.Status.GetCondition(t) == nil{
+func hasCondition(src *duckv1beta1.Source, t apis.ConditionType) bool {
+	if src.Status.GetCondition(t) == nil {
 		return false
 	}
 	return true
