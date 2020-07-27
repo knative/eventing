@@ -23,13 +23,13 @@ import (
 // Config for a multichannelfanout.Handler.
 type Config struct {
 	// The configuration of each channel in this handler.
-	ChannelConfigs []ChannelConfig `json:"channelConfigs"`
+	ChannelConfigs []ChannelConfig
 }
 
 // ChannelConfig is the configuration for a single Channel.
 type ChannelConfig struct {
-	Namespace    string        `json:"namespace"`
-	Name         string        `json:"name"`
-	HostName     string        `json:"hostname"`
-	FanoutConfig fanout.Config `json:"fanoutConfig"`
+	Namespace    string
+	Name         string
+	HostName     string
+	FanoutConfig fanout.Config
 }

@@ -23,7 +23,6 @@ package fanout
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	nethttp "net/http"
 	"net/url"
@@ -44,59 +43,10 @@ const (
 )
 
 type Subscription struct {
-	Subscriber  *url.URL `json:"subscriber,omitempty"`
-	Reply       *url.URL `json:"reply,omitempty"`
-	DeadLetter  *url.URL `json:"deadLetter,omitempty"`
+	Subscriber  *url.URL
+	Reply       *url.URL
+	DeadLetter  *url.URL
 	RetryConfig *kncloudevents.RetryConfig
-}
-
-func (s Subscription) MarshalJSON() ([]byte, error) {
-	rawStrings := make(map[string]string)
-
-	if s.Subscriber != nil {
-		rawStrings["subscriber"] = s.Subscriber.String()
-	}
-	if s.Reply != nil {
-		rawStrings["reply"] = s.Reply.String()
-	}
-	if s.DeadLetter != nil {
-		rawStrings["deadLetter"] = s.DeadLetter.String()
-	}
-
-	return json.Marshal(rawStrings)
-}
-
-func (s *Subscription) UnmarshalJSON(j []byte) error {
-	var rawStrings map[string]string
-	if err := json.Unmarshal(j, &rawStrings); err != nil {
-		return err
-	}
-
-	if subscriberStr, ok := rawStrings["subscriber"]; ok {
-		if subscriberUrl, err := url.Parse(subscriberStr); err == nil {
-			s.Subscriber = subscriberUrl
-		} else {
-			return err
-		}
-	}
-
-	if replyStr, ok := rawStrings["reply"]; ok {
-		if replyUrl, err := url.Parse(replyStr); err == nil {
-			s.Reply = replyUrl
-		} else {
-			return err
-		}
-	}
-
-	if deadLetterStr, ok := rawStrings["deadLetter"]; ok {
-		if deadLetterUrl, err := url.Parse(deadLetterStr); err == nil {
-			s.DeadLetter = deadLetterUrl
-		} else {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // Config for a fanout.MessageHandler.
