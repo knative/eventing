@@ -62,6 +62,8 @@ func GetPods(kubeClientset *kubernetes.Clientset, app, namespace string) (*v1.Po
 func PortForward(logf logging.FormatLogger, config *rest.Config, clientSet *kubernetes.Clientset, pod *v1.Pod, localPort, remotePort int) (chan struct{}, error) {
 	req := clientSet.RESTClient().Post().Resource("pods").Namespace(pod.Namespace).Name(pod.Name).SubResource("portforward")
 	portForwardUrl := req.URL()
+
+	// req could be generated without the /api/v1 prefix
 	if !strings.HasPrefix(portForwardUrl.Path, "/api/v1") {
 		portForwardUrl.Path = "/api/v1" + portForwardUrl.Path
 	}

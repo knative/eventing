@@ -50,5 +50,5 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6
 	k8s.io/client-go => k8s.io/client-go v0.17.6
 	k8s.io/code-generator => k8s.io/code-generator v0.17.6
-	knative.dev/pkg => github.com/slinkydeveloper/pkg v0.0.0-20200722145014-6b75fe294d3a
+	knative.dev/pkg => github.com/slinkydeveloper/pkg v0.0.0-20200724072217-fc14798189e0
 )

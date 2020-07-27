@@ -92,7 +92,7 @@ func dialBackOffHelper(ctx context.Context, network, address string, bo wait.Bac
 	return nil, fmt.Errorf("timed out dialing after %.2fs", elapsed.Seconds())
 }
 
-func newHTTPTransport(disableKeepAlives bool, maxIdle, maxIdlePerHost int) http.RoundTripper {
+func newHTTPTransport(disableKeepAlives bool) http.RoundTripper {
 	return &http.Transport{
 		// Those match net/http/transport.go
 		Proxy:                 http.ProxyFromEnvironment,
@@ -103,8 +103,8 @@ func newHTTPTransport(disableKeepAlives bool, maxIdle, maxIdlePerHost int) http.
 
 		// Those are bespoke.
 		DialContext:         DialWithBackOff,
-		MaxIdleConns:        maxIdle,
-		MaxIdleConnsPerHost: maxIdlePerHost,
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 100,
 	}
 }
 
@@ -112,17 +112,17 @@ func newHTTPTransport(disableKeepAlives bool, maxIdle, maxIdlePerHost int) http.
 // since it will not cache connections.
 func NewProberTransport() http.RoundTripper {
 	return newAutoTransport(
-		newHTTPTransport(true /*disable keep-alives*/, 0, 0 /*no caching*/),
+		newHTTPTransport(true /*disable keep-alives*/),
 		NewH2CTransport())
 }
 
 // NewAutoTransport creates a RoundTripper that can use appropriate transport
 // based on the request's HTTP version.
-func NewAutoTransport(maxIdle, maxIdlePerHost int) http.RoundTripper {
+func NewAutoTransport() http.RoundTripper {
 	return newAutoTransport(
-		newHTTPTransport(false /*disable keep-alives*/, maxIdle, maxIdlePerHost),
+		newHTTPTransport(false /*disable keep-alives*/),
 		NewH2CTransport())
 }
 
 // AutoTransport uses h2c for HTTP2 requests and falls back to `http.DefaultTransport` for all others
-var AutoTransport = NewAutoTransport(1000, 100)
+var AutoTransport = NewAutoTransport()
