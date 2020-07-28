@@ -124,9 +124,6 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -165,9 +162,6 @@ func TestAllBranches(t *testing.T) {
 						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -204,9 +198,6 @@ func TestAllBranches(t *testing.T) {
 						{Filter: createFilter(0), Subscriber: createSubscriber(0), Delivery: createDelivery(subscriberGVK, "dlc", testNS)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -244,9 +235,6 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -287,9 +275,6 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0), Reply: createBranchReplyChannel(0)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -330,9 +315,6 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(1)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -390,9 +372,6 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(1)},
 					}))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
 				createBranchChannel(parallelName, 0),
@@ -456,9 +435,6 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0)},
 					})))},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
-			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: resources.ParallelBranchChannelName(parallelName, 0)},
 			},

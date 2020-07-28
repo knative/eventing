@@ -43,10 +43,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "SequenceReconciled", "Sequence reconciled: \"%s/%s\"", namespace, name)
-}
-
 type Reconciler struct {
 	// listers index properties about resources
 	sequenceLister     listers.SequenceLister
@@ -114,7 +110,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1beta1.Sequence) pkg
 	}
 	s.Status.PropagateSubscriptionStatuses(subs)
 
-	return newReconciledNormal(s.Namespace, s.Name)
+	return nil
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1beta1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1beta1.Channelable, error) {

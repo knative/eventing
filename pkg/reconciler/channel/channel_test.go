@@ -132,9 +132,6 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname)),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
-		},
 	}, {
 		Name: "Already reconciled",
 		Key:  testKey,
@@ -154,9 +151,6 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelSubscribers(subscribers()),
 				WithInMemoryChannelAddress(backingChannelHostname)),
 		},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
-		},
 	}, {
 		Name: "Backing channel created",
 		Key:  testKey,
@@ -170,9 +164,6 @@ func TestReconcile(t *testing.T) {
 		},
 		WantCreates: []runtime.Object{
 			createChannel(testNS, channelName, false),
-		},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -213,9 +204,6 @@ func TestReconcile(t *testing.T) {
 				// Updates
 				WithChannelObservedGeneration(42)),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
-		},
 	}, {
 		Name: "Updating subscribers statuses",
 		Key:  testKey,
@@ -246,9 +234,6 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(backingChannelHostname),
 				WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
-		},
 	}, {
 		Name: "Updating v1alpha1 channelable subscribers statuses",
 		Key:  testKey,
@@ -274,9 +259,6 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(backingChannelHostname),
 				WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
-		},
 	}}
 
 	logger := logtesting.TestLogger(t)

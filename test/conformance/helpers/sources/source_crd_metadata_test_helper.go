@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package helpers
+package sources
 
 import (
 	"testing"
+
+	"knative.dev/eventing/test/conformance/helpers"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testlib "knative.dev/eventing/test/lib"
@@ -41,8 +43,8 @@ func SourceCRDMetadataTestHelperWithChannelTestRunner(
 		// From spec:
 		// Each source MUST have the following:
 		//   label of duck.knative.dev/source: "true"
-		t.Run("Source CRD has required label", func(t *testing.T) {
-			validateRequiredLabels(client, source, sourceLabels)
+		st.Run("Source CRD has required label", func(t *testing.T) {
+			helpers.ValidateRequiredLabels(client, source, sourceLabels)
 		})
 
 	})

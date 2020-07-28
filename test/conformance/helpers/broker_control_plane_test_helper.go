@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/pkg/reconciler"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
@@ -130,7 +131,11 @@ func TriggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, bro
 		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
 	}
 	tr.Spec.Broker = brokerName
-	_, err = client.Eventing.EventingV1beta1().Triggers(client.Namespace).Update(tr)
+	err = reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		_, e := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Update(tr)
+		return e
+	})
+
 	if err != nil {
 		t.Fatalf("Error: Could not update trigger %s: %v", triggerName, err)
 	}

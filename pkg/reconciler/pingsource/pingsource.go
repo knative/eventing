@@ -67,12 +67,6 @@ const (
 	stadapterClusterRoleName = "knative-eventing-pingsource-adapter"
 )
 
-// newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason PingSourceReconciled.
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PingSourceReconciled", "PingSource reconciled: \"%s/%s\"", namespace, name)
-}
-
 func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 	b, _ := json.Marshal(sink)
 	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "SinkNotFound", "Sink not found: %s", string(b))
@@ -195,7 +189,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 		Source: v1alpha2.PingSourceSource(source.Namespace, source.Name),
 	}}
 
-	return newReconciledNormal(source.Namespace, source.Name)
+	return nil
 }
 
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1alpha2.PingSource) (*corev1.ServiceAccount, error) {

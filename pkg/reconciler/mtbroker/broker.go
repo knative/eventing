@@ -54,11 +54,6 @@ import (
 	"knative.dev/pkg/system"
 )
 
-const (
-	// Name of the corev1.Events emitted from the Broker reconciliation process.
-	brokerReconciled = "BrokerReconciled"
-)
-
 type Reconciler struct {
 	eventingClientSet clientset.Interface
 	dynamicClientSet  dynamic.Interface
@@ -94,10 +89,6 @@ type ReconcilerArgs struct {
 	IngressServiceAccountName string
 	FilterImage               string
 	FilterServiceAccountName  string
-}
-
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, brokerReconciled, "Broker reconciled: \"%s/%s\"", namespace, name)
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pkgreconciler.Event {
@@ -268,7 +259,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, b *eventingv1.Broker) pkg
 	if err := r.propagateBrokerStatusToTriggers(ctx, b.Namespace, b.Name, nil); err != nil {
 		return fmt.Errorf("Trigger reconcile failed: %v", err)
 	}
-	return newReconciledNormal(b.Namespace, b.Name)
+	return nil
 }
 
 // reconcileChannel reconciles Broker's 'b' underlying channel.

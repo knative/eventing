@@ -44,12 +44,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
-// newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason ParallelReconciled.
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ParallelReconciled", "Parallel reconciled: \"%s/%s\"", namespace, name)
-}
-
 type Reconciler struct {
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
@@ -130,7 +124,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1beta1.Parallel) pkg
 	}
 	p.Status.PropagateSubscriptionStatuses(filterSubs, subs)
 
-	return newReconciledNormal(p.Namespace, p.Name)
+	return nil
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1beta1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1beta1.Channelable, error) {

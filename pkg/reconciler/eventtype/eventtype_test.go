@@ -124,9 +124,6 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeBrokerFailed("DeploymentFailure", "inducing failure for create deployments"),
 			),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "EventTypeReconciled", `EventType reconciled: "test-namespace/test-eventtype"`),
-		},
 	}, {
 		Name: "The status of Broker is Unknown",
 		Key:  testKey,
@@ -149,9 +146,6 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeBrokerUnknown("", ""),
 			),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "EventTypeReconciled", `EventType reconciled: "test-namespace/test-eventtype"`),
-		},
 	}, {
 		Name: "Successful reconcile, became ready",
 		Key:  testKey,
@@ -174,9 +168,6 @@ func TestReconcile(t *testing.T) {
 				WithEventTypeBrokerReady,
 			),
 		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "EventTypeReconciled", `EventType reconciled: "test-namespace/test-eventtype"`),
-		},
 	}}
 
 	logger := logtesting.TestLogger(t)

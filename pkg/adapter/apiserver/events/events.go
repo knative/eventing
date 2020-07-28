@@ -72,6 +72,7 @@ func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 	object := obj.(*unstructured.Unstructured)
 	var data interface{}
 	var eventType string
+
 	if ref {
 		data = getRef(object)
 		eventType = sourcesv1beta1.ApiServerSourceDeleteRefEventType
@@ -93,18 +94,24 @@ func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 }
 
 func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (cloudevents.Event, error) {
+	resourceName := obj.GetName()
+	kind := obj.GetKind()
+	namespace := obj.GetNamespace()
 	subject := createSelfLink(corev1.ObjectReference{
 		APIVersion: obj.GetAPIVersion(),
-		Kind:       obj.GetKind(),
-		Name:       obj.GetName(),
-		Namespace:  obj.GetNamespace(),
+		Kind:       kind,
+		Name:       resourceName,
+		Namespace:  namespace,
 	})
 
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType(eventType)
 	event.SetSource(source)
 	event.SetSubject(subject)
-
+	// We copy the resource kind, name and namespace as extensions so that triggers can do the filter based on these attributes
+	event.SetExtension("kind", kind)
+	event.SetExtension("name", resourceName)
+	event.SetExtension("namespace", namespace)
 	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
 		return event, err
 	}

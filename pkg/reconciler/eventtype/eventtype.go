@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
@@ -29,12 +28,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/tracker"
 )
-
-// newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason EventTypeReconciled.
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "EventTypeReconciled", "EventType reconciled: \"%s/%s\"", namespace, name)
-}
 
 type Reconciler struct {
 	// listers index properties about resources
@@ -81,7 +74,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 
 	et.Status.PropagateBrokerStatus(&b.Status)
 
-	return newReconciledNormal(et.Namespace, et.Name)
+	return nil
 }
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.

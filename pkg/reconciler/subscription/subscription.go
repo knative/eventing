@@ -62,10 +62,6 @@ var (
 	v1ChannelGVK      = v1.SchemeGroupVersion.WithKind("Channel")
 )
 
-func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: \"%s/%s\"", namespace, name)
-}
-
 func newChannelWarnEvent(messageFmt string, args ...interface{}) pkgreconciler.Event {
 	return pkgreconciler.NewEvent(corev1.EventTypeWarning, channelReferenceFailed, messageFmt, args...)
 }
@@ -117,7 +113,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1beta1.Su
 		return event
 	}
 
-	return newReconciledNormal(subscription.Namespace, subscription.Name)
+	return nil
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1beta1.Subscription) pkgreconciler.Event {

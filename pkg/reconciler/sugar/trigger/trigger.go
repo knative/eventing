@@ -20,16 +20,14 @@ import (
 	"context"
 	"fmt"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-	"knative.dev/eventing/pkg/reconciler/sugar/resources"
-	"knative.dev/pkg/controller"
-
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	"knative.dev/eventing/pkg/reconciler/sugar"
+	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 )
@@ -64,9 +62,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reco
 		if err != nil {
 			return fmt.Errorf("Unable to create Broker: %w", err)
 		}
-		controller.GetEventRecorder(ctx).Event(t, corev1.EventTypeNormal, brokerCreated,
+		return reconciler.NewEvent(corev1.EventTypeNormal, brokerCreated,
 			fmt.Sprintf("Default eventing.knative.dev Broker %q created.", t.Spec.Broker))
-		return nil
 	} else if err != nil {
 		return fmt.Errorf("Unable to list Brokers: %w", err)
 	}

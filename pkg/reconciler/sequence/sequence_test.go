@@ -174,9 +174,6 @@ func TestAllCases(t *testing.T) {
 				rt.WithSequenceChannelTemplateSpec(imc),
 				rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}))},
 		WantErr: false,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
-		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
 			resources.NewSubscription(0,
@@ -301,9 +298,6 @@ func TestAllCases(t *testing.T) {
 				rt.WithSequenceReply(createReplyChannel(replyChannelName)),
 				rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}))},
 		WantErr: false,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
-		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
 			resources.NewSubscription(0, rt.NewSequence(sequenceName, testNS,
@@ -360,9 +354,6 @@ func TestAllCases(t *testing.T) {
 					{Destination: createDestination(1)},
 					{Destination: createDestination(2)}}))},
 		WantErr: false,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
-		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
 			createChannel(sequenceName, 1),
@@ -481,9 +472,6 @@ func TestAllCases(t *testing.T) {
 					{Destination: createDestination(1), Delivery: createDelivery(subscriberGVK, "dlc1", testNS)},
 					{Destination: createDestination(2), Delivery: createDelivery(subscriberGVK, "dlc2", testNS)}}))},
 		WantErr: false,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
-		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
 			createChannel(sequenceName, 1),
@@ -602,9 +590,6 @@ func TestAllCases(t *testing.T) {
 					{Destination: createDestination(1)},
 					{Destination: createDestination(2)}}))},
 		WantErr: false,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
-		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
 			createChannel(sequenceName, 1),
@@ -728,9 +713,6 @@ func TestAllCases(t *testing.T) {
 					rt.WithSequenceSteps([]v1beta1.SequenceStep{{Destination: createDestination(0)}}))),
 			},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
-			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: resources.SequenceChannelName(sequenceName, 0)},
 			},

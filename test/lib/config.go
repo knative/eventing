@@ -46,17 +46,36 @@ var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
 	MessagingChannelTypeMeta: {FeatureBasic},
 }
 
+var ApiServerSourceTypeMeta = metav1.TypeMeta{
+	APIVersion: resources.SourcesV1B1APIVersion,
+	Kind:       resources.ApiServerSourceKind,
+}
+
+var PingSourceTypeMeta = metav1.TypeMeta{
+	APIVersion: resources.SourcesV1A2APIVersion,
+	Kind:       resources.PingSourceKind,
+}
+
+var SourceFeatureMap = map[metav1.TypeMeta][]Feature{
+	ApiServerSourceTypeMeta: {FeatureBasic, FeatureLongLiving},
+	PingSourceTypeMeta:      {FeatureBasic, FeatureLongLiving},
+}
+
 // Feature is the feature supported by the channel.
 type Feature string
 
 const (
-	// FeatureBasic is the feature that should be supported by all channels.
+	// FeatureBasic is the feature that should be supported by all components.
 	FeatureBasic Feature = "basic"
 	// FeatureRedelivery means if downstream rejects an event, that request will be attempted again.
 	FeatureRedelivery Feature = "redelivery"
 	// FeaturePersistence means if channel's Pod goes down, all events already ACKed by the channel
 	// will persist and be retransmitted when the Pod restarts.
 	FeaturePersistence Feature = "persistence"
+	// A long living component
+	FeatureLongLiving Feature = "longliving"
+	// A batch style of components that run once and complete
+	FeatureBatch Feature = "batch"
 )
 
 const (
