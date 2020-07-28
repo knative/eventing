@@ -27,7 +27,7 @@ func (e Event) Validate() error {
 
 	errs := map[string]error{}
 	if e.FieldErrors != nil {
-		for k, v := range errs {
+		for k, v := range e.FieldErrors {
 			errs[k] = v
 		}
 	}
