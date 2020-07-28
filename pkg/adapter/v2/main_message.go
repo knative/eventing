@@ -46,9 +46,6 @@ type MessageAdapterConstructor func(ctx context.Context, env EnvConfigAccessor, 
 func MainMessageAdapter(component string, ector EnvConfigConstructor, ctor MessageAdapterConstructor) {
 	ctx := signals.NewContext()
 
-	// TODO(mattmoor): expose a flag that gates this?
-	// ctx = WithHAEnabled(ctx)
-
 	MainMessageAdapterWithContext(ctx, component, ector, ctor)
 }
 

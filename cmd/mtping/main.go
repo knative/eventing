@@ -31,5 +31,6 @@ func main() {
 	ctx := signals.NewContext()
 	ctx = adapter.WithConfigMapWatcherEnabled(ctx)
 	ctx = adapter.WithInjectorEnabled(ctx)
+	ctx = adapter.WithHAEnabled(ctx)
 	adapter.MainWithContext(ctx, component, mtping.NewEnvConfig, mtping.NewAdapter)
 }
