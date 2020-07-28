@@ -31,11 +31,11 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// ApiServerSourceClientSetupOption returns a ClientSetupOption that can be used
+// ApiServerSourceV1B1ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new ApiServerSource. It creates a ServiceAccount, a Role, a
 // RoleBinding, a RecordEvents pod and an ApiServerSource object with the event
 // mode and RecordEvent pod as its sink.
-func ApiServerSourceClientSetupOption(name string, mode string, recordEventsPodName string,
+func ApiServerSourceV1B1ClientSetupOption(name string, mode string, recordEventsPodName string,
 	roleName string, serviceAccountName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 		// create needed RBAC SA, Role & RoleBinding
@@ -68,10 +68,10 @@ func ApiServerSourceClientSetupOption(name string, mode string, recordEventsPodN
 	}
 }
 
-// PingSourceClientSetupOption returns a ClientSetupOption that can be used
+// PingSourceV1A2ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new PingSource. It creates a RecordEvents pod and a
 // PingSource object with the RecordEvent pod as its sink.
-func PingSourceClientSetupOption(name string, recordEventsPodName string) testlib.SetupClientOption {
+func PingSourceV1A2ClientSetupOption(name string, recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 
 		// create event logger pod and service
