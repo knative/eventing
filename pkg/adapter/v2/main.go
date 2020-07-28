@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -62,6 +63,19 @@ func IsHAEnabled(ctx context.Context) bool {
 	return val != nil
 }
 
+type haDisabledKey struct{}
+
+// withHADisabled signals to MainWithConfig that it should not set up an appropriate leader elector for this component.
+func withHADisabled(ctx context.Context) context.Context {
+	return context.WithValue(ctx, haDisabledKey{}, struct{}{})
+}
+
+// isHADisabled checks the context for the desired to disable leader elector.
+func isHADisabled(ctx context.Context) bool {
+	val := ctx.Value(haEnabledKey{})
+	return val != nil
+}
+
 type injectorEnabledKey struct{}
 
 // WithInjectorEnabled signals to MainWithInjectors that it should try to run injectors.
@@ -77,10 +91,6 @@ func IsInjectorEnabled(ctx context.Context) bool {
 
 func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
 	ctx := signals.NewContext()
-
-	// TODO(mattmoor): expose a flag that gates this?
-	// ctx = WithHAEnabled(ctx)
-
 	MainWithContext(ctx, component, ector, ctor)
 }
 
@@ -89,6 +99,10 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 }
 
 func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
+	if flag.Lookup("disable-ha") == nil {
+		flag.Bool("disable-ha", false, "Whether to disable high-availability functionality for this component.")
+	}
+
 	if IsInjectorEnabled(ctx) {
 		ictx, informers := SetupInformers(ctx, env.GetLogger())
 		if informers != nil {
@@ -96,6 +110,16 @@ func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, c
 		}
 		ctx = ictx
 	}
+
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	b, err := strconv.ParseBool(flag.Lookup("disable-ha").Value.String())
+	if err != nil || b {
+		ctx = withHADisabled(ctx)
+	}
+
 	MainWithInformers(ctx, component, env, ctor)
 }
 
@@ -186,7 +210,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Error("Error loading the leader election configuration", zap.Error(err))
 	}
 
-	if IsHAEnabled(ctx) {
+	if !isHADisabled(ctx) && IsHAEnabled(ctx) {
 		// Signal that we are executing in a context with leader election.
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
