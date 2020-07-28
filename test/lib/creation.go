@@ -107,7 +107,7 @@ func (c *Client) CreateChannelWithDefaultOrFail(channel *messagingv1beta1.Channe
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := channels.Create(channel)
 		if e != nil {
-			c.T.Fatalf("Failed to create channel %q: %v", channel.Name, e)
+			c.T.Errorf("Failed to create channel %q: %v", channel.Name, e)
 		}
 		return err
 	})
@@ -405,7 +405,7 @@ func (c *Client) CreateFlowsParallelV1OrFail(parallel *flowsv1.Parallel) {
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := parallels.Create(parallel)
 		if e != nil {
-			c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, e)
+			c.T.Errorf("Failed to create flows parallel %q: %v", parallel.Name, e)
 		}
 		return e
 	})
@@ -439,7 +439,7 @@ func (c *Client) CreateSinkBindingV1Alpha2OrFail(sb *sourcesv1alpha2.SinkBinding
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := sbInterface.Create(sb)
 		if e != nil {
-			c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, e)
+			c.T.Errorf("Failed to create sinkbinding %q: %v", sb.Name, e)
 		}
 		return e
 	})
