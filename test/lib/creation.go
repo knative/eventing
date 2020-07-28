@@ -109,7 +109,7 @@ func (c *Client) CreateChannelWithDefaultOrFail(channel *messagingv1beta1.Channe
 		if e != nil {
 			c.T.Errorf("Failed to create channel %q: %v", channel.Name, e)
 		}
-		return err
+		return e
 	})
 	if err != nil {
 		c.T.Fatalf("Failed to create channel %q: %v", channel.Name, err)
