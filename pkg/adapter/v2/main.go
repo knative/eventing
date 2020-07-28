@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -98,7 +99,9 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 }
 
 func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, ctor AdapterConstructor) {
-	disableHighAvailability := flag.Bool("disable-ha", false, "Whether to disable high-availability functionality for this component.")
+	if flag.Lookup("disable-ha") == nil {
+		flag.Bool("disable-ha", false, "Whether to disable high-availability functionality for this component.")
+	}
 
 	if IsInjectorEnabled(ctx) {
 		ictx, informers := SetupInformers(ctx, env.GetLogger())
@@ -112,7 +115,8 @@ func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, c
 		flag.Parse()
 	}
 
-	if *disableHighAvailability {
+	b, err := strconv.ParseBool(flag.Lookup("disable-ha").Value.String())
+	if err != nil || b {
 		ctx = withHADisabled(ctx)
 	}
 
