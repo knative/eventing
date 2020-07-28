@@ -82,6 +82,12 @@ UNINSTALL_LIST=()
 # Setup the Knative environment for running tests.
 function knative_setup() {
   install_knative_eventing
+
+  install_mt_broker || fail_test "Could not install MT Channel Based Broker"
+
+  install_sugar || fail_test "Could not install Sugar Controller"
+
+  unleash_duck || fail_test "Could not unleash the chaos duck"
 }
 
 function scale_controlplane() {
