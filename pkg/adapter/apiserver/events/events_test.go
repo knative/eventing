@@ -72,6 +72,9 @@ func TestMakeAddEvent(t *testing.T) {
 					Source:          *cloudevents.ParseURIRef("unit-test"),
 					Subject:         simpleSubject("unit", "test"),
 					DataContentType: &contentType,
+					Extensions: map[string]interface{}{
+						"name": string("unit"),
+					},
 				}.AsV1(),
 			},
 			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
@@ -108,6 +111,9 @@ func TestMakeUpdateEvent(t *testing.T) {
 					Source:          *cloudevents.ParseURIRef("unit-test"),
 					Subject:         simpleSubject("unit", "test"),
 					DataContentType: &contentType,
+					Extensions: map[string]interface{}{
+						"name": string("unit"),
+					},
 				}.AsV1(),
 			},
 			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
@@ -144,6 +150,9 @@ func TestMakeDeleteEvent(t *testing.T) {
 					Source:          *cloudevents.ParseURIRef("unit-test"),
 					Subject:         simpleSubject("unit", "test"),
 					DataContentType: &contentType,
+					Extensions: map[string]interface{}{
+						"name": string("unit"),
+					},
 				}.AsV1(),
 			},
 			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
@@ -180,6 +189,9 @@ func TestMakeAddRefEvent(t *testing.T) {
 					Source:          *cloudevents.ParseURIRef("unit-test"),
 					Subject:         simpleSubject("unit", "test"),
 					DataContentType: &contentType,
+					Extensions: map[string]interface{}{
+						"name": string("unit"),
+					},
 				}.AsV1(),
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
@@ -216,6 +228,9 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 					Source:          *cloudevents.ParseURIRef("unit-test"),
 					Subject:         simpleSubject("unit", "test"),
 					DataContentType: &contentType,
+					Extensions: map[string]interface{}{
+						"name": string("unit"),
+					},
 				}.AsV1(),
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
@@ -252,6 +267,9 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 					Source:          *cloudevents.ParseURIRef("unit-test"),
 					Subject:         simpleSubject("unit", "test"),
 					DataContentType: &contentType,
+					Extensions: map[string]interface{}{
+						"name": string("unit"),
+					},
 				}.AsV1(),
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
