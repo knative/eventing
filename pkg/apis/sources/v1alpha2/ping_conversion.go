@@ -52,7 +52,7 @@ func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) e
 
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", sink)
+		return apis.ConvertToViaProxy(ctx, source, &v1beta1.PingSource{}, sink)
 	}
 }
 
@@ -77,6 +77,6 @@ func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) e
 		}
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", source)
+		return apis.ConvertFromViaProxy(ctx, source, &v1beta1.PingSource{}, sink)
 	}
 }
