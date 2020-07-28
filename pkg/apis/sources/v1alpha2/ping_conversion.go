@@ -19,16 +19,64 @@ package v1alpha2
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
 // ConvertTo implements apis.Convertible
-func (source *PingSource) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1alpha2 is the highest known version, got: %T", sink)
+// Converts source from v1alpha2.PingSource into a higher version.
+func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *v1beta1.PingSource:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec = v1beta1.PingSourceSpec{
+			JsonData:   source.Spec.JsonData,
+			SourceSpec: source.Spec.SourceSpec,
+		}
+		sink.Status = v1beta1.PingSourceStatus{
+			SourceStatus: source.Status.SourceStatus,
+		}
+
+		// in v1beta1, timezone has its own field
+		schedule := source.Spec.Schedule
+		if strings.HasPrefix(schedule, "TZ=") || strings.HasPrefix(schedule, "CRON_TZ=") {
+			i := strings.Index(schedule, " ")
+			eq := strings.Index(schedule, "=")
+			sink.Spec.Timezone = schedule[eq+1 : i]
+			sink.Spec.Schedule = strings.TrimSpace(schedule[i:])
+		} else {
+			sink.Spec.Schedule = schedule
+		}
+
+		return nil
+	default:
+		return apis.ConvertToViaProxy(ctx, source, &v1beta1.PingSource{}, sink)
+	}
 }
 
 // ConvertFrom implements apis.Convertible
-func (sink *PingSource) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1alpha2 is the highest known version, got: %T", source)
+// Converts obj from a higher version into v1alpha2.PingSource.
+func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *v1beta1.PingSource:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec = PingSourceSpec{
+			JsonData:   source.Spec.JsonData,
+			SourceSpec: source.Spec.SourceSpec,
+		}
+		sink.Status = PingSourceStatus{
+			SourceStatus: source.Status.SourceStatus,
+		}
+
+		if source.Spec.Timezone != "" {
+			sink.Spec.Schedule = fmt.Sprintf("CRON_TZ=%s %s", source.Spec.Timezone, source.Spec.Schedule)
+		} else {
+			sink.Spec.Schedule = source.Spec.Schedule
+		}
+		return nil
+	default:
+		return apis.ConvertFromViaProxy(ctx, source, &v1beta1.PingSource{}, sink)
+	}
 }

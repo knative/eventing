@@ -61,6 +61,10 @@ spec:
     name: v1alpha2
     served: true
     storage: true
+  - <<: *version
+    name: v1beta1
+    served: true
+    storage: false
   names:
     categories:
     - all
