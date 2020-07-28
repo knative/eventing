@@ -130,6 +130,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1beta1().ApiServerSources().Informer()}, nil
 	case sourcesv1beta1.SchemeGroupVersion.WithResource("containersources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1beta1().ContainerSources().Informer()}, nil
+	case sourcesv1beta1.SchemeGroupVersion.WithResource("pingsources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1beta1().PingSources().Informer()}, nil
 	case sourcesv1beta1.SchemeGroupVersion.WithResource("sinkbindings"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1beta1().SinkBindings().Informer()}, nil
 
