@@ -95,19 +95,23 @@ func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 
 func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (cloudevents.Event, error) {
 	resourceName := obj.GetName()
+	kind := obj.GetKind()
+	namespace := obj.GetNamespace()
 	subject := createSelfLink(corev1.ObjectReference{
 		APIVersion: obj.GetAPIVersion(),
-		Kind:       obj.GetKind(),
+		Kind:       kind,
 		Name:       resourceName,
-		Namespace:  obj.GetNamespace(),
+		Namespace:  namespace,
 	})
 
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType(eventType)
 	event.SetSource(source)
 	event.SetSubject(subject)
-	// We copy the resource name as an attribute so that triggers can filter based on the resource name
+	// We copy the resource kind, name and namespace as extensions so that triggers can do the filter based on these attributes
+	event.SetExtension("kind", kind)
 	event.SetExtension("name", resourceName)
+	event.SetExtension("namespace", namespace)
 	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
 		return event, err
 	}
