@@ -82,7 +82,7 @@ func (c *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMe
 		var e error
 		gvr, e = duck.CreateGenericChannelObject(c.Dynamic, metaResource)
 		if e != nil {
-			c.T.Errorf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, e)
+			c.T.Logf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, e)
 		}
 		return e
 	})
@@ -107,9 +107,9 @@ func (c *Client) CreateChannelWithDefaultOrFail(channel *messagingv1beta1.Channe
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := channels.Create(channel)
 		if e != nil {
-			c.T.Fatalf("Failed to create channel %q: %v", channel.Name, e)
+			c.T.Logf("Failed to create channel %q: %v", channel.Name, e)
 		}
-		return err
+		return e
 	})
 	if err != nil {
 		c.T.Fatalf("Failed to create channel %q: %v", channel.Name, err)
@@ -124,7 +124,7 @@ func (c *Client) CreateChannelV1WithDefaultOrFail(channel *messagingv1.Channel) 
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := channels.Create(channel)
 		if e != nil {
-			c.T.Errorf("Failed to create channel %q: %v", channel.Name, e)
+			c.T.Logf("Failed to create channel %q: %v", channel.Name, e)
 		}
 		return e
 	})
@@ -150,7 +150,7 @@ func (c *Client) CreateSubscriptionOrFail(
 		var e error
 		retSubscription, e = subscriptions.Create(subscription)
 		if e != nil {
-			c.T.Errorf("Failed to create subscription %q: %v", name, e)
+			c.T.Logf("Failed to create subscription %q: %v", name, e)
 		}
 		return e
 	})
@@ -177,7 +177,7 @@ func (c *Client) CreateSubscriptionV1OrFail(
 		var e error
 		retSubscription, e = subscriptions.Create(subscription)
 		if e != nil {
-			c.T.Errorf("Failed to create subscription %q: %v", name, e)
+			c.T.Logf("Failed to create subscription %q: %v", name, e)
 		}
 		return e
 	})
@@ -262,7 +262,7 @@ func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.Bro
 		var e error
 		retBroker, e = brokers.Create(broker)
 		if e != nil {
-			c.T.Errorf("Failed to create v1beta1 broker %q: %v", name, e)
+			c.T.Logf("Failed to create v1beta1 broker %q: %v", name, e)
 		}
 		return e
 	})
@@ -285,7 +285,7 @@ func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.Tr
 		var e error
 		retTrigger, e = triggers.Create(trigger)
 		if e != nil {
-			c.T.Errorf("Failed to create v1beta1 trigger %q: %v", name, e)
+			c.T.Logf("Failed to create v1beta1 trigger %q: %v", name, e)
 		}
 		return e
 	})
@@ -309,7 +309,7 @@ func (c *Client) CreateBrokerV1OrFail(name string, options ...resources.BrokerV1
 		var e error
 		retBroker, e = brokers.Create(broker)
 		if e != nil {
-			c.T.Errorf("Failed to create v1 broker %q: %v", name, e)
+			c.T.Logf("Failed to create v1 broker %q: %v", name, e)
 		}
 		return e
 	})
@@ -332,7 +332,7 @@ func (c *Client) CreateTriggerV1OrFail(name string, options ...resources.Trigger
 		var e error
 		retTrigger, e = triggers.Create(trigger)
 		if e != nil {
-			c.T.Errorf("Failed to create v1 trigger %q: %v", name, e)
+			c.T.Logf("Failed to create v1 trigger %q: %v", name, e)
 		}
 		return e
 	})
@@ -351,7 +351,7 @@ func (c *Client) CreateFlowsSequenceOrFail(sequence *flowsv1beta1.Sequence) {
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := sequences.Create(sequence)
 		if e != nil {
-			c.T.Errorf("Failed to create flows sequence %q: %v", sequence.Name, e)
+			c.T.Logf("Failed to create flows sequence %q: %v", sequence.Name, e)
 		}
 		return e
 	})
@@ -369,7 +369,7 @@ func (c *Client) CreateFlowsSequenceV1OrFail(sequence *flowsv1.Sequence) {
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := sequences.Create(sequence)
 		if e != nil {
-			c.T.Errorf("Failed to create flows sequence %q: %v", sequence.Name, e)
+			c.T.Logf("Failed to create flows sequence %q: %v", sequence.Name, e)
 		}
 		return e
 	})
@@ -387,7 +387,7 @@ func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1beta1.Parallel) {
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := parallels.Create(parallel)
 		if e != nil {
-			c.T.Errorf("Failed to create flows parallel %q: %v", parallel.Name, e)
+			c.T.Logf("Failed to create flows parallel %q: %v", parallel.Name, e)
 		}
 		return e
 	})
@@ -405,7 +405,7 @@ func (c *Client) CreateFlowsParallelV1OrFail(parallel *flowsv1.Parallel) {
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := parallels.Create(parallel)
 		if e != nil {
-			c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, e)
+			c.T.Logf("Failed to create flows parallel %q: %v", parallel.Name, e)
 		}
 		return e
 	})
@@ -422,7 +422,7 @@ func (c *Client) CreateSinkBindingV1Alpha1OrFail(sb *sourcesv1alpha1.SinkBinding
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := sbInterface.Create(sb)
 		if e != nil {
-			c.T.Errorf("Failed to create sinkbinding %q: %v", sb.Name, e)
+			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
 		}
 		return e
 	})
@@ -439,7 +439,7 @@ func (c *Client) CreateSinkBindingV1Alpha2OrFail(sb *sourcesv1alpha2.SinkBinding
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := sbInterface.Create(sb)
 		if e != nil {
-			c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, e)
+			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
 		}
 		return e
 	})
@@ -456,7 +456,7 @@ func (c *Client) CreateSinkBindingV1Beta1OrFail(sb *sourcesv1beta1.SinkBinding) 
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := sbInterface.Create(sb)
 		if e != nil {
-			c.T.Errorf("Failed to create sinkbinding %q: %v", sb.Name, e)
+			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
 		}
 		return e
 	})
@@ -473,7 +473,7 @@ func (c *Client) CreateApiServerSourceV1Alpha2OrFail(apiServerSource *sourcesv1a
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := apiServerInterface.Create(apiServerSource)
 		if e != nil {
-			c.T.Errorf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
+			c.T.Logf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
 		}
 		return e
 	})
@@ -490,7 +490,7 @@ func (c *Client) CreateApiServerSourceV1Beta1OrFail(apiServerSource *sourcesv1be
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := apiServerInterface.Create(apiServerSource)
 		if e != nil {
-			c.T.Errorf("Failed to create apiserversource %q: %v", apiServerSource.Name, e)
+			c.T.Logf("Failed to create apiserversource %q: %v", apiServerSource.Name, e)
 		}
 		return e
 	})
@@ -507,7 +507,7 @@ func (c *Client) CreateContainerSourceV1Alpha2OrFail(containerSource *sourcesv1a
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := containerInterface.Create(containerSource)
 		if e != nil {
-			c.T.Errorf("Failed to create containersource %q: %v", containerSource.Name, e)
+			c.T.Logf("Failed to create containersource %q: %v", containerSource.Name, e)
 		}
 		return e
 	})
@@ -524,7 +524,7 @@ func (c *Client) CreateContainerSourceV1Beta1OrFail(containerSource *sourcesv1be
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := containerInterface.Create(containerSource)
 		if e != nil {
-			c.T.Errorf("Failed to create containersource %q: %v", containerSource.Name, e)
+			c.T.Logf("Failed to create containersource %q: %v", containerSource.Name, e)
 		}
 		return e
 	})
@@ -541,7 +541,7 @@ func (c *Client) CreatePingSourceV1Alpha1OrFail(pingSource *sourcesv1alpha1.Ping
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := pingInterface.Create(pingSource)
 		if e != nil {
-			c.T.Errorf("Failed to create pingsource %q: %v", pingSource.Name, e)
+			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
 		}
 		return e
 	})
@@ -558,7 +558,7 @@ func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.Ping
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := pingInterface.Create(pingSource)
 		if e != nil {
-			c.T.Errorf("Failed to create pingsource %q: %v", pingSource.Name, e)
+			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
 		}
 		return e
 	})
