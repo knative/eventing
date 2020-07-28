@@ -80,7 +80,7 @@ const (
 )
 
 //Kind for sources resources that exist in Eventing core
-const(
+const (
 	ApiServerSourceKind string = "ApiServerSource"
-	PingSourceKind 		string = "PingSource"
+	PingSourceKind      string = "PingSource"
 )
