@@ -78,8 +78,6 @@ spec:
         image: ko://knative.dev/pkg/leaderelection/chaosduck
 
         args: [
-          # TODO(https://github.com/knative/eventing/issues/3591): Enable once MT Broker chaos issues are fixed.
-          "-disable=mt-broker-controller",
           # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
           "-disable=imc-controller", "-disable=imc-dispatcher",
         ]

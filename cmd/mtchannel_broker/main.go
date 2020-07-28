@@ -26,6 +26,7 @@ import (
 	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/reconciler/mtbroker"
+	mttrigger "knative.dev/eventing/pkg/reconciler/mtbroker/trigger"
 )
 
 func main() {
@@ -37,5 +38,5 @@ func main() {
 	cfg := sharedmain.ParseAndGetConfigOrDie()
 	cfg.QPS = float32(*clientQPS)
 	cfg.Burst = *clientBurst
-	sharedmain.MainWithConfig(signals.NewContext(), "mt-broker-controller", cfg, mtbroker.NewController)
+	sharedmain.MainWithConfig(signals.NewContext(), "mt-broker-controller", cfg, mtbroker.NewController, mttrigger.NewController)
 }

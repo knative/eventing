@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mtbroker
+package mttrigger
 
 import (
 	"context"
@@ -26,9 +26,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
+	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
@@ -37,8 +44,12 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 )
+
+var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
@@ -50,21 +61,66 @@ const (
 	subscriptionDeleted       = "SubscriptionDeleted"
 )
 
-func (r *Reconciler) reconcileTrigger(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger, brokerTrigger *corev1.ObjectReference) error {
+type Reconciler struct {
+	eventingClientSet clientset.Interface
+	dynamicClientSet  dynamic.Interface
+
+	// listers index properties about resources
+	subscriptionLister messaginglisters.SubscriptionLister
+	brokerLister       eventinglisters.BrokerLister
+	triggerLister      eventinglisters.TriggerLister
+	configmapLister    corev1listers.ConfigMapLister
+
+	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
+	kresourceTracker duck.ListableTracker
+
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
+	uriResolver *resolver.URIResolver
+	impl        *controller.Impl
+}
+
+func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
+	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
+	// Start tracking the broker
+	r.trackBroker(ctx, t)
 
-	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
-
-	if brokerTrigger == nil {
-		// Should not happen because Broker is ready to go if we get here
-		return errors.New("failed to find Broker's Trigger channel")
+	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Errorw(fmt.Sprintf("Trigger %s/%s has no broker %q", t.Namespace, t.Name, t.Spec.Broker))
+			t.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", t.Spec.Broker)
+			// Ok to return nil here. Once the Broker comes available, or Trigger changes, we get requeued.
+			return nil
+		} else {
+			t.Status.MarkBrokerFailed("FailedToGetBroker", "Failed to get broker %q : %s", t.Spec.Broker, err)
+			return err
+		}
 	}
 
+	// If it's not my brokerclass, ignore
+	if b.Annotations[eventing.BrokerClassKey] != eventing.MTChannelBrokerClassValue {
+		logging.FromContext(ctx).Infow("Ignoring trigger %s/%s", t.Namespace, t.Name)
+		return nil
+	}
+	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
+
+	// If Broker is not ready, we're done, but once it becomes ready, we'll get requeued.
+	if !b.Status.IsReady() {
+		logging.FromContext(ctx).Errorw("Broker is not ready", zap.Any("Broker", b))
+		return nil
+	}
+
+	brokerTrigger, err := getBrokerChannelRef(ctx, b)
+	if err != nil {
+		t.Status.MarkBrokerFailed("MissingBrokerChannel", "Failed to get broker %q annotations: %s", t.Spec.Broker, err)
+		return fmt.Errorf("failed to find Broker's Trigger channel: %s", err)
+	}
 	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// We will use the Namespace of Trigger as the Namespace of dest.Ref
@@ -93,6 +149,22 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *eventingv1.Broker,
 		return err
 	}
 
+	return nil
+}
+
+func (r *Reconciler) trackBroker(ctx context.Context, t *eventingv1.Trigger) error {
+	trackKResource := r.kresourceTracker.TrackInNamespace(t)
+	brokerObjRef := corev1.ObjectReference{
+		Kind:       brokerGVK.Kind,
+		APIVersion: brokerGVK.GroupVersion().String(),
+		Name:       t.Spec.Broker,
+		Namespace:  t.Namespace,
+	}
+
+	if err := trackKResource(brokerObjRef); err != nil {
+		return fmt.Errorf("Failed to track broker %q : %s", t.Spec.Broker, err)
+	}
+	logging.FromContext(ctx).Infow("Tracking:", zap.Any("Broker", brokerObjRef))
 	return nil
 }
 
@@ -130,7 +202,6 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		logging.FromContext(ctx).Info("Creating subscription")
 		sub, err = r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {
-			recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		return sub, nil
@@ -174,26 +245,6 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *eventingv1.Tr
 		return nil, err
 	}
 	return newSub, nil
-}
-
-func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *eventingv1.Trigger) (*eventingv1.Trigger, error) {
-	trigger, err := r.triggerLister.Triggers(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Do the postprocessing for unnecessary trigger status changes.
-	groomConditionsTransitionTime(desired, trigger)
-
-	if equality.Semantic.DeepEqual(trigger.Status, desired.Status) {
-		return trigger, nil
-	}
-
-	// Don't modify the informers copy.
-	existing := trigger.DeepCopy()
-	existing.Status = desired.Status
-
-	return r.eventingClientSet.EventingV1().Triggers(desired.Namespace).UpdateStatus(existing)
 }
 
 func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *eventingv1.Trigger, b *eventingv1.Broker) error {
@@ -245,4 +296,19 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *eventi
 	}
 	t.Status.PropagateDependencyStatus(dependency)
 	return nil
+}
+
+func getBrokerChannelRef(ctx context.Context, b *eventingv1.Broker) (*corev1.ObjectReference, error) {
+	if b.Status.Annotations != nil {
+		ref := &corev1.ObjectReference{
+			Kind:       b.Status.Annotations[eventing.BrokerChannelKindStatusAnnotationKey],
+			APIVersion: b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey],
+			Name:       b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey],
+			Namespace:  b.Namespace,
+		}
+		if ref.Kind != "" && ref.APIVersion != "" && ref.Name != "" && ref.Namespace != "" {
+			return ref, nil
+		}
+	}
+	return nil, errors.New("Broker.Status.Annotations nil or missing values")
 }

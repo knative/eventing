@@ -19,7 +19,6 @@ package mtbroker
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -96,28 +95,6 @@ func NewController(
 		FilterFunc: brokerFilter,
 		Handler:    controller.HandleAll(impl.Enqueue),
 	})
-
-	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
-	// that I own are changed.
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(eventingv1.Kind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	// Reconcile trigger (by enqueuing the broker specified in the label) when subscriptions
-	// of triggers change.
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.LabelExistsFilterFunc(eventing.BrokerLabelKey),
-		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("" /*any namespace*/, eventing.BrokerLabelKey)),
-	})
-
-	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
-		func(obj interface{}) {
-			if trigger, ok := obj.(*eventingv1.Trigger); ok {
-				impl.EnqueueKey(types.NamespacedName{Namespace: trigger.Namespace, Name: trigger.Spec.Broker})
-			}
-		},
-	))
 
 	// When the endpoints in our multi-tenant filter/ingress change, do a global resync.
 	// During installation, we might reconcile Brokers before our shared filter/ingress is

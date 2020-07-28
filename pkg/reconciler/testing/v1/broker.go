@@ -184,3 +184,30 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 		b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey] = address
 	}
 }
+
+func WithChannelAPIVersionAnnotation(apiVersion string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey] = apiVersion
+	}
+}
+
+func WithChannelKindAnnotation(kind string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations[eventing.BrokerChannelKindStatusAnnotationKey] = kind
+	}
+}
+
+func WithChannelNameAnnotation(name string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Status.Annotations == nil {
+			b.Status.Annotations = make(map[string]string, 1)
+		}
+		b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = name
+	}
+}
