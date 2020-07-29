@@ -1,17 +1,14 @@
 # Receive adapter
 
-A _receive adapter_ is a data-plane component which either
-
-- produces [CloudEvents](https://github.com/cloudevents/spec),
-- or imports events and convert them to
-  [CloudEvents](https://github.com/cloudevents/spec),
-
-and forwards those events to one or several consumers (aka _sink_),
-depending upon whether it supports multiple resources (see below for more information).
+A _receive adapter_ is a data-plane component which either produces
+[CloudEvents](https://github.com/cloudevents/spec) or imports events and convert
+them to [CloudEvents](https://github.com/cloudevents/spec) and forwards those events
+to one or several consumers (aka _sink_), depending upon whether it supports multiple
+resources (see below for more information).
 
 ## Implementating receive adapter
 
-Knative Eventing provides a library (refer later as *the library*) for bootstrapping receive adapter implementations.
+Knative Eventing provides a library (later referred as *the library*) for bootstrapping receive adapter implementations.
 
 The main code should be something like this:
 
@@ -33,16 +30,16 @@ func main() {
 `adapter.Main` is responsible for:
 
 - parsing the command flags and initializing the environment configuration
-returned by `youradapter.NewEnvConfig`,
-- setting up the logger,
-- setting up the profiler server (when enabled),
-- setting up the metrics server,
-- setting up tracing,
-- setting up a ConfigMap watcher (when enabled),
+returned by `youradapter.NewEnvConfig`
+- setting up the logger
+- setting up the profiler server (when enabled)
+- setting up the metrics server
+- setting up tracing
+- setting up a ConfigMap watcher (when enabled)
 - setting up a CloudEvent client, targeting a single sink, for single resource adapter,
-or otherwise targeting no sink,
-- and finally running *your adapter* in leader election mode (when enabled) for being
-highly-available and scalable.
+or otherwise targeting no sink
+- running *your adapter* in leader election mode (when enabled) for being
+highly-available and scalable
 
 ## Push vs pull models
 
@@ -55,33 +52,32 @@ The receive adapter library can be used to implement either type of receive adap
 For pull-based receive adapters, the library provides a mechanism for making your adapter
 highly-available and scalable.
 
-## Handling multiple resources (aka multi-tenancy)
+## Multiple resources (aka multi-tenancy)
 
-### Overview
-
-Single-resource receive adapters handle one source instance (CR) at a time, i.e.
-there is a one-to-one mapping between the receive adapter, and the source
-instance specification. Multi-resource receive adapters can handle more than one
-source instance at a time, either all CRs in one namespace or all CRs in the
-cluster.
-
-While single-resource receive adapters work well for high volume, always "on"
-event sources, it is not optimal (i.e. waste precious resources, cpu and memory)
-for sources producing "few" events, such as `PingSource`, `APIServerSource` and
-`GitHubSource`, or for small applications. On the other hand, single-resource
-receive adapters are fairly easy to implement and more transparent compare to
-their multi-resources equivalent.
-
-The multiple resources feature can be enabled to both pull-based and push-based
-receive adapters.
+As described in the [source specification](../spec/sources.md), a source
+is configured by creating an instance of the resource described by a CRD (e.g. the PingSource CRD).
+The receive adapter library provide some flexibility with regards to how many custom
+resources are handled by a single receive adapter instance (i.e. a pod).
 
 ### Single resource
+
+Single-resource receive adapters handle one source instance at a time,
+i.e. there is a one-to-one mapping between the receive adapter, and the source
+instance specification. They are fairly easy to implement and more transparent
+compare to their multi-resources equivalent (see below).
 
 The receive adapter library automatically configures the CloudEvent client with
 the target defined in the `K_SINK` environment variable when defined, in conformance
 with the [SinkBinding runtime contract](../spec/sources.md#sinkbinding).
 
 ### Multiple resources
+
+While single-resource receive adapters work well for high volume, always "on"
+event sources, it is not optimal (i.e. waste precious resources, cpu and memory)
+for sources producing "few" events, such as `PingSource`, `APIServerSource` and
+`GitHubSource`, or for small applications. Multi-resource receive adapters can
+handle more than one source instance at a time, either all source instances in one
+namespace or all source instances in the cluster.
 
 In order to support multi-resources per receive adapter, you need to enable the
 ConfigMap watcher feature, as follows:
@@ -114,9 +110,9 @@ func NewAdapter(ctx context.Context,
 }
 ```
 
-## Enabling high-availability
+## High-availability
 
-### For push-based receive adapter
+### Push-based receive adapter
 
 To make your push-based adapter highly-available, you can deploy it either as a
 Kubernetes Service, or as a Knative Service. In both cases you can increase the number of
@@ -125,7 +121,7 @@ receive adapter replicas for increase reliablity and reducing downtime.
 The [GithubSource](https://github.com/knative/eventing-contrib/tree/master/github) is a good example
 of a highly-available push-based receive adapter leveraging Knative Service.
 
-### For pull-based receive adapter
+### Pull-based receive adapter
 
 The library supports highly-available receive adapter via the leader election pattern.
 
