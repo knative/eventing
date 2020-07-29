@@ -114,7 +114,7 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) {
 
 func (a *cronJobsRunner) Stop() {
 	ctx := a.cron.Stop() // no more ticks
-	if ctx != nil {      // ctx.Done has channel that gets done when all jobs completed.
+	if ctx != nil {      // ctx gets done when all jobs complete
 		<-ctx.Done() // wait for all to be done.
 	}
 }
