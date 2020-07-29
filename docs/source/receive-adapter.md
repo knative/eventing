@@ -140,6 +140,28 @@ func main() {
 Similar to Knative controller, HA can be disable by passing the `--disable-ha` flag on the
 command line.
 
+For instance this flag can be set on the ping source adapter deployment as follows:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pingsource-mt-adapter
+  namespace: knative-eventing
+spec:
+  template:
+    metadata:
+      labels:
+        eventing.knative.dev/source: ping-source-controller
+        sources.knative.dev/role: adapter
+    spec:
+      containers:
+      - args:
+        - --disable-ha
+        env: ...
+        image: ...
+```
+
 ## Scalability
 
 ### Push-based receive adapter
