@@ -85,7 +85,7 @@ func NewTestClient() *TestCloudEventsClient {
 
 func NewTestClientWithDelay(delay time.Duration) *TestCloudEventsClient {
 	c := &TestCloudEventsClient{
-		sent:  make([]cloudevents.Event, 0),
+		sent:  make([]cloudevents.Event),
 		delay: delay,
 	}
 	return c
