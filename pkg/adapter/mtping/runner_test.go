@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 )
 
-const THREE_SECONDS_TILL_NEXT_MIN_CRON_JOB = 60 - 3
+const threeSecondsTillNextMinCronJob = 60 - 3
 
 func TestAddRunRemoveSchedules(t *testing.T) {
 	testCases := map[string]struct {
@@ -209,7 +209,7 @@ func TestStartStopCron(t *testing.T) {
 func TestStartStopCronDelayWait(t *testing.T) {
 	tn := time.Now()
 	seconds := tn.Second()
-	if seconds > THREE_SECONDS_TILL_NEXT_MIN_CRON_JOB {
+	if seconds > threeSecondsTillNextMinCronJob {
 		time.Sleep(time.Second * 4) // ward off edge cases
 	}
 	ctx, _ := rectesting.SetupFakeContext(t)
