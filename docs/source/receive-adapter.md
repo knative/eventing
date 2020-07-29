@@ -1,4 +1,4 @@
-# Receive adapter
+# Receive Adapter
 
 A _receive adapter_ is a data-plane component which either produces
 [CloudEvents](https://github.com/cloudevents/spec) or imports events and convert
@@ -6,7 +6,7 @@ them to [CloudEvents](https://github.com/cloudevents/spec) and forwards those ev
 to one or several consumers (aka _sink_), depending upon whether it supports multiple
 resources (see below for more information).
 
-## Implementating receive adapter
+## Implementation
 
 Knative Eventing provides a library (later referred as *the library*) for bootstrapping receive adapter implementations.
 
@@ -29,17 +29,17 @@ func main() {
 
 `adapter.Main` is responsible for:
 
-- parsing the command flags and initializing the environment configuration
-returned by `youradapter.NewEnvConfig`
-- setting up the logger
-- setting up the profiler server (when enabled)
-- setting up the metrics server
-- setting up tracing
-- setting up a ConfigMap watcher (when enabled)
-- setting up a CloudEvent client, targeting a single sink, for single resource adapter,
-or otherwise targeting no sink
-- running *your adapter* in leader election mode (when enabled) for being
-highly-available and scalable
+- Parsing the command flags and initializing the environment configuration
+returned by `youradapter.NewEnvConfig`.
+- Setting up the logger.
+- Setting up the profiler server (when enabled).
+- Setting up the metrics server.
+- Setting up tracing.
+- Setting up a ConfigMap watcher (when enabled).
+- Setting up a CloudEvent client, targeting a single sink, for single resource adapter,
+or otherwise targeting no sink.
+- Running *your adapter* in leader election mode (when enabled) for being
+highly-available and scalable.
 
 ## Push vs pull models
 
@@ -112,7 +112,7 @@ func NewAdapter(ctx context.Context,
 
 ## High-availability
 
-### Push-based receive adapter
+### Push model
 
 To make your push-based adapter highly-available, you can deploy it either as a
 Kubernetes Service, or as a Knative Service. In both cases you can increase the number of
@@ -121,7 +121,7 @@ receive adapter replicas for increase reliablity and reducing downtime.
 The [GithubSource](https://github.com/knative/eventing-contrib/tree/master/github) is a good example
 of a highly-available push-based receive adapter leveraging Knative Service.
 
-### Pull-based receive adapter
+### Pull model
 
 The library supports highly-available receive adapter via the leader election pattern.
 
@@ -164,11 +164,11 @@ spec:
 
 ## Scalability
 
-### Push-based receive adapter
+### Push model
 
 Push-based receive adapters scalability relies on Kubernetes service
 or Knative serving.
 
-### Pull-based receive adapter
+### Pull model
 
 Currently, pull-based receive adapters don't scale yet. Stay tuned.
