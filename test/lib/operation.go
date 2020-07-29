@@ -88,7 +88,14 @@ func (c *Client) WaitForResourcesReadyOrFail(typemeta *metav1.TypeMeta) {
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
 func (c *Client) WaitForAllTestResourcesReady() error {
 	// wait for all Knative resources created in this test to become ready.
-	if err := c.Tracker.WaitForKResourcesReady(); err != nil {
+	err := c.RetryWebhookErrors(func(attempts int) (err error) {
+		e := c.Tracker.WaitForKResourcesReady()
+		if e != nil {
+			c.T.Logf("Failed to get all KResources ready %v", e)
+		}
+		return e
+	})
+	if err != nil {
 		return err
 	}
 	// Explicitly wait for all pods that were created directly by this test to become ready.
