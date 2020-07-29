@@ -109,7 +109,7 @@ func (a *cronJobsRunner) RemoveSchedule(id cron.EntryID) {
 
 func (a *cronJobsRunner) Start(stopCh <-chan struct{}) {
 	a.cron.Start()
-	<-stopCh // main channel that gets ready once term signal is received!
+	<-stopCh // main channel that gets closed once term signal is received
 }
 
 func (a *cronJobsRunner) Stop() {
