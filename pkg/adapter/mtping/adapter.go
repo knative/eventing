@@ -18,6 +18,9 @@ package mtping
 
 import (
 	"context"
+	"flag"
+
+	"github.com/robfig/cron/v3"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
@@ -26,6 +29,15 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/v2"
 )
+
+var (
+	// withSeconds enables schedules with seconds.
+	withSeconds bool
+)
+
+func init() {
+	flag.BoolVar(&withSeconds, "with-seconds", false, "Enables schedule with seconds")
+}
 
 // mtpingAdapter implements the PingSource mt adapter to sinks
 type mtpingAdapter struct {
@@ -38,13 +50,19 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 }
 
 func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
-	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx))
+	logger := logging.FromContext(ctx)
+	var opts []cron.Option
+	if withSeconds {
+		logger.Info("enable schedule with a seconds field")
+		opts = append(opts, cron.WithSeconds())
+	}
+	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx), opts...)
 
 	cmw := adapter.ConfigMapWatcherFromContext(ctx)
 	cmw.Watch("config-pingsource-mt-adapter", runner.updateFromConfigMap)
 
 	return &mtpingAdapter{
-		logger: logging.FromContext(ctx),
+		logger: logger,
 		runner: runner,
 	}
 }

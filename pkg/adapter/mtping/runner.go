@@ -62,9 +62,9 @@ const (
 	resourceGroup = "pingsources.sources.knative.dev"
 )
 
-func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interface, logger *zap.SugaredLogger) *cronJobsRunner {
+func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interface, logger *zap.SugaredLogger, opts ...cron.Option) *cronJobsRunner {
 	return &cronJobsRunner{
-		cron:       *cron.New(),
+		cron:       *cron.New(opts...),
 		Client:     ceClient,
 		Logger:     logger,
 		entryids:   make(map[string]entryIdConfig),

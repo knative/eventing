@@ -337,18 +337,8 @@ func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1al
 }
 
 func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
-	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
-		return true
-	}
-	if len(oldPodSpec.Containers) != len(newPodSpec.Containers) {
-		return true
-	}
-	for i := range newPodSpec.Containers {
-		if !equality.Semantic.DeepEqual(newPodSpec.Containers[i].Env, oldPodSpec.Containers[i].Env) {
-			return true
-		}
-	}
-	return false
+	// We really care about the fields we set and ignore the test.
+	return !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec)
 }
 
 // TODO determine how to push the updated logging config to existing data plane Pods.
