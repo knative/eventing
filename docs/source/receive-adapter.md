@@ -146,11 +146,11 @@ command line.
 
 ## Scalability
 
-### For push-based receive adapter
+### Push-based receive adapter
 
 Push-based receive adapters scalability relies on Kubernetes service
 or Knative serving.
 
-### For pull-based receive adapter
+### Pull-based receive adapter
 
 Currently, pull-based receive adapters don't scale yet. Stay tuned.
