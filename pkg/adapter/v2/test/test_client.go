@@ -18,6 +18,7 @@ package test
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
@@ -27,13 +28,17 @@ import (
 )
 
 type TestCloudEventsClient struct {
-	lock sync.Mutex
-	sent []cloudevents.Event
+	lock  sync.Mutex
+	sent  []cloudevents.Event
+	delay time.Duration
 }
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
 
 func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) protocol.Result {
+	if c.delay > 0 {
+		time.Sleep(c.delay)
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
@@ -42,6 +47,9 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 }
 
 func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
+	if c.delay > 0 {
+		time.Sleep(c.delay)
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
@@ -72,8 +80,13 @@ func (c *TestCloudEventsClient) Sent() []cloudevents.Event {
 }
 
 func NewTestClient() *TestCloudEventsClient {
+	return NewTestClientWithDelay(0)
+}
+
+func NewTestClientWithDelay(delay time.Duration) *TestCloudEventsClient {
 	c := &TestCloudEventsClient{
-		sent: make([]cloudevents.Event, 0),
+		sent:  make([]cloudevents.Event, 0),
+		delay: delay,
 	}
 	return c
 }

@@ -31,9 +31,12 @@ import (
 	"knative.dev/eventing/pkg/logging"
 )
 
+const threeSecondsTillNextMinCronJob = 60 - 3
+
 func TestAddRunRemoveSchedules(t *testing.T) {
 	testCases := map[string]struct {
-		cfg PingConfig
+		cfg   PingConfig
+		delay time.Duration
 	}{
 		"TestAddRunRemoveSchedule": {
 			cfg: PingConfig{
@@ -189,10 +192,7 @@ func TestStartStopCron(t *testing.T) {
 	wctx, wcancel := context.WithCancel(context.Background())
 
 	go func() {
-		err := runner.Start(ctx.Done())
-		if err != nil {
-			t.Errorf("Cron job runner couldn't start %v", err)
-		}
+		runner.Start(ctx.Done())
 		wcancel()
 	}()
 
@@ -203,6 +203,45 @@ func TestStartStopCron(t *testing.T) {
 		t.Fatal("expected cron to be stopped after 2 seconds")
 	case <-wctx.Done():
 	}
+
+}
+
+func TestStartStopCronDelayWait(t *testing.T) {
+	tn := time.Now()
+	seconds := tn.Second()
+	if seconds > threeSecondsTillNextMinCronJob {
+		time.Sleep(time.Second * 4) // ward off edge cases
+	}
+	ctx, _ := rectesting.SetupFakeContext(t)
+	logger := logging.FromContext(ctx).Sugar()
+	ce := adaptertesting.NewTestClientWithDelay(time.Second * 5)
+
+	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
+
+	ctx, _ = context.WithCancel(context.Background())
+
+	go func() {
+		runner.AddSchedule(PingConfig{
+			ObjectReference: corev1.ObjectReference{
+				Name:      "test-name",
+				Namespace: "test-ns",
+			},
+			Schedule: "* * * * *",
+			JsonData: "some delayed data",
+			SinkURI:  "a delayed sink",
+		})
+		runner.Start(ctx.Done())
+
+	}()
+
+	tn = time.Now()
+	seconds = tn.Second()
+
+	time.Sleep(time.Second * (61 - time.Duration(seconds))) // one second past the minute
+
+	runner.Stop() // cron job because of delay is still running.
+
+	validateSent(t, ce, `{"body":"some delayed data"}`, nil)
 
 }
 
