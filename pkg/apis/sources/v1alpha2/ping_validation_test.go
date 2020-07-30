@@ -111,6 +111,28 @@ func TestPingSourceValidation(t *testing.T) {
 			errs = errs.Also(fe)
 			return errs
 		}(),
+	}, {
+		name: "invalid spec with seconds",
+		source: PingSource{
+			Spec: PingSourceSpec{
+				Schedule: "* * * * * *",
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1alpha1",
+							Kind:       "broker",
+							Name:       "default",
+						},
+					},
+				},
+			},
+		},
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrInvalidValue("* * * * * *", "spec.schedule")
+			errs = errs.Also(fe)
+			return errs
+		}(),
 	}}
 
 	for _, test := range tests {

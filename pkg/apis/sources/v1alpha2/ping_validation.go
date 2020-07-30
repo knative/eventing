@@ -18,6 +18,7 @@ package v1alpha2
 
 import (
 	"context"
+	"os"
 
 	"github.com/robfig/cron/v3"
 	"knative.dev/pkg/apis"
@@ -33,7 +34,15 @@ func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
 func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	if _, err := cron.ParseStandard(cs.Schedule); err != nil {
+	// Standard parse options
+	parseOptions := cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
+
+	if os.Getenv("PINGSOURCE_ENABLE_SECONDS") == "true" {
+		parseOptions |= cron.Second
+	}
+	parser := cron.NewParser(parseOptions)
+
+	if _, err := parser.Parse(cs.Schedule); err != nil {
 		fe := apis.ErrInvalidValue(cs.Schedule, "schedule")
 		errs = errs.Also(fe)
 	}

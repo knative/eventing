@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/robfig/cron/v3"
@@ -36,7 +37,15 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		schedule = "CRON_TZ=" + cs.Timezone + " " + schedule
 	}
 
-	if _, err := cron.ParseStandard(schedule); err != nil {
+	// Standard parse options
+	parseOptions := cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
+
+	if os.Getenv("PINGSOURCE_ENABLE_SECONDS") == "true" {
+		parseOptions |= cron.Second
+	}
+	parser := cron.NewParser(parseOptions)
+
+	if _, err := parser.Parse(schedule); err != nil {
 		if strings.HasPrefix(err.Error(), "provided bad location") {
 			fe := apis.ErrInvalidValue(err, "timezone")
 			errs = errs.Also(fe)
