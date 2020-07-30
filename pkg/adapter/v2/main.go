@@ -63,16 +63,16 @@ func IsHAEnabled(ctx context.Context) bool {
 	return val != nil
 }
 
-type haDisabledKey struct{}
+type haDisabledFlagKey struct{}
 
-// withHADisabled signals to MainWithConfig that it should not set up an appropriate leader elector for this component.
-func withHADisabled(ctx context.Context) context.Context {
-	return context.WithValue(ctx, haDisabledKey{}, struct{}{})
+// withHADisabledFlag signals to MainWithConfig that it should not set up an appropriate leader elector for this component.
+func withHADisabledFlag(ctx context.Context) context.Context {
+	return context.WithValue(ctx, haDisabledFlagKey{}, struct{}{})
 }
 
-// isHADisabled checks the context for the desired to disable leader elector.
-func isHADisabled(ctx context.Context) bool {
-	val := ctx.Value(haEnabledKey{})
+// isHADisabledFlag checks the context for the desired to disable leader elector.
+func isHADisabledFlag(ctx context.Context) bool {
+	val := ctx.Value(haDisabledFlagKey{})
 	return val != nil
 }
 
@@ -117,7 +117,7 @@ func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, c
 
 	b, err := strconv.ParseBool(flag.Lookup("disable-ha").Value.String())
 	if err != nil || b {
-		ctx = withHADisabled(ctx)
+		ctx = withHADisabledFlag(ctx)
 	}
 
 	MainWithInformers(ctx, component, env, ctor)
@@ -210,7 +210,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Error("Error loading the leader election configuration", zap.Error(err))
 	}
 
-	if !isHADisabled(ctx) && IsHAEnabled(ctx) {
+	if !isHADisabledFlag(ctx) && IsHAEnabled(ctx) {
 		// Signal that we are executing in a context with leader election.
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
