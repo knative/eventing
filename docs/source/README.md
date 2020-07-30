@@ -7,30 +7,23 @@ This [document](../spec/sources.md) contains the source specification.
 ## Implementations
 
 There are various ways to implement Event Sources, as described in the
-[documentation](https://knative.dev/docs/eventing/samples/writing-receive-adapter-source/).
+[documentation](https://knative.dev/docs/eventing/samples/writing-event-source/).
 
 ### Receive Adapters
 
-Receive adapter is a common pattern for implementing sources. See the
-[documentation](https://knative.dev/docs/eventing/samples/writing-receive-adapter-source/)
-for more details.
+Receive adapter is a reusable pattern for implementing sources.
 
-#### Multi tenancy
+There is a [tutorial](https://knative.dev/docs/eventing/samples/writing-event-source/)
+on how to implement single-resource receive adapter.
 
-Single-tenant receive adapters handle one source instance (CR) at a time, i.e.
-there is a one-to-one mapping between the receive adapter, and the source
-instance specification. Multi-tenant receive adapters can handle more than one
-source instance at a time, either all CRs in one namespace or all CRs in the
-cluster.
+This [document](./receive-adapter.md) provides a deep-dive on receive adapter.
 
-While single-tenant receive adapters work well for high volume, always "on"
-event sources, it is not optimal (i.e. waste precious resources, cpu and memory)
-for sources producing "few" events, such as PingSource, APIServerSource and
-GitHubSource, or for small applications. On the other hand, single-tenant
-receive adapters are fairly easy to implement and more transparent compare to
-their multi-tenant equivalent.
+### SinkBinding
 
-#### Installation
+The documentation contains an [example](https://knative.dev/docs/eventing/samples/sinkbinding/)
+on how to use `SinkBinding` to implement an event source.
 
-Event Source might provide both single-tenant and multi-tenant receive adapters.
-For those event sources, multiple installation artifacts are provided.
+### ContainerSource
+
+The documentation contains an [example](https://knative.dev/docs/eventing/samples/container-source/)
+on how to use `ContainerSource` to implement an event source.
