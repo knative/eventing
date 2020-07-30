@@ -9,7 +9,7 @@ This [document](../spec/sources.md) contains the source specification.
 There are various ways to implement Event Sources, as described in the
 [documentation](https://knative.dev/docs/eventing/samples/writing-event-source/).
 
-### Receive adapters
+### Receive Adapters
 
 Receive adapter is a reusable pattern for implementing sources.
 
