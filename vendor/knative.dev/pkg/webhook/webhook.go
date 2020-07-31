@@ -21,7 +21,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	// Injection stuff
@@ -174,14 +176,29 @@ func (wh *Webhook) Run(stop <-chan struct{}) error {
 	logger := wh.Logger
 	ctx := logging.WithLogger(context.Background(), logger)
 
+	count := int32(0)
+
 	drainer := &handlers.Drainer{
 		Inner:       wh,
 		QuietPeriod: wh.gracePeriod,
 	}
 
+	counter := func(res http.ResponseWriter, req *http.Request) {
+		c := atomic.AddInt32(&count, 1)
+		wh.Logger.Infof("request count (+) %d ", c)
+
+		drainer.ServeHTTP(res, req)
+
+		c = atomic.AddInt32(&count, -1)
+		wh.Logger.Infof("request count (-) %d ", c)
+	}
+
 	server := &http.Server{
-		Handler: drainer,
+		Handler: http.HandlerFunc(counter),
 		Addr:    fmt.Sprintf(":%d", wh.Options.Port),
+		ConnState: func(c net.Conn, state http.ConnState) {
+			wh.Logger.Infof("conn state %s %s", c.RemoteAddr(), state.String())
+		},
 		TLSConfig: &tls.Config{
 			GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 				secret, err := wh.secretlister.Secrets(system.Namespace()).Get(wh.Options.SecretName)
@@ -224,8 +241,11 @@ func (wh *Webhook) Run(stop <-chan struct{}) error {
 			// Start failing readiness probes immediately.
 			logger.Info("Starting to fail readiness probes...")
 			drainer.Drain()
+			logger.Info("Draining finished")
 
-			return server.Shutdown(context.Background())
+			err := server.Shutdown(context.Background())
+			logger.Info("Shutdown finished")
+			return err
 		})
 
 		// Wait for all outstanding go routined to terminate, including our new one.
