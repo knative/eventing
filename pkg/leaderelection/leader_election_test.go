@@ -17,7 +17,7 @@ limitations under the License.
 package leaderelection
 
 import (
-	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,7 +54,7 @@ func TestValidateConfig(t *testing.T) {
 		name     string
 		data     map[string]string
 		expected *kle.Config
-		err      error
+		err      string
 	}{{
 		name:     "OK",
 		data:     okData(),
@@ -64,18 +64,22 @@ func TestValidateConfig(t *testing.T) {
 		data: kmeta.UnionMaps(okData(), map[string]string{
 			"leaseDuration": "this-is-the-end",
 		}),
-		err: errors.New(`failed to parse "leaseDuration": time: invalid duration this-is-the-end`),
+		err: `failed to parse "leaseDuration": time: invalid duration`,
 	}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			actualConfig, actualErr := ValidateConfig(&corev1.ConfigMap{Data: tc.data})
-			if tc.err != nil && tc.err.Error() != actualErr.Error() {
-				t.Fatalf("err = %v, want: %v", actualErr, tc.err)
+			if actualErr != nil {
+				// Different versions of Go quote input differently, so check prefix.
+				if got, want := actualErr.Error(), tc.err; !strings.HasPrefix(got, want) {
+					t.Fatalf("Err = '%s', want: '%s'", got, want)
+				}
+			} else if tc.err != "" {
+				t.Fatal("Expected an error, got none")
 			}
-
 			if got, want := actualConfig, tc.expected; !cmp.Equal(got, want) {
-				t.Errorf("LEConfig mismatch, diff(-want,+got):\n%s", cmp.Diff(want, got))
+				t.Errorf("Config = %v, want: %v, diff(-want,+got):\n%s", got, want, cmp.Diff(want, got))
 			}
 		})
 	}
