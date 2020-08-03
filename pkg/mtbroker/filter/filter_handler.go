@@ -332,6 +332,16 @@ func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, eve
 	if filter.Attributes != nil && len(filter.Attributes) != 0 {
 		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
 	}
+
+	//		//TODO check on webhook side if the provided js is a correct expression
+	//		//TODO cache the already parsed ast
+	//
+	//		program, err := ParseFilterExpr(filter.Expression)
+	//		if err != nil {
+	//			return failFilter, err
+	//		}
+	//		res, err := RunFilter(*event, program)
+
 	return filters.Filter(ctx, event)
 }
 

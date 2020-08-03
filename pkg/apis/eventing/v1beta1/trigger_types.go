@@ -99,6 +99,9 @@ type TriggerFilter struct {
 	//
 	// +optional
 	Attributes TriggerFilterAttributes `json:"attributes,omitempty"`
+
+	// +optional
+	Expression string `json:"expression,omitempty"`
 }
 
 // TriggerFilterAttributes is a map of context attribute names to values for

@@ -271,6 +271,15 @@ github.com/prometheus/statsd_exporter/pkg/mapper/fsm
 github.com/rickb777/date/period
 # github.com/rickb777/plural v1.2.1
 github.com/rickb777/plural
+# github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff
+## explicit
+github.com/robertkrimen/otto
+github.com/robertkrimen/otto/ast
+github.com/robertkrimen/otto/dbg
+github.com/robertkrimen/otto/file
+github.com/robertkrimen/otto/parser
+github.com/robertkrimen/otto/registry
+github.com/robertkrimen/otto/token
 # github.com/robfig/cron/v3 v3.0.1
 ## explicit
 github.com/robfig/cron/v3
@@ -560,6 +569,10 @@ gopkg.in/alecthomas/kingpin.v2
 gopkg.in/evanphx/json-patch.v4
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
+# gopkg.in/sourcemap.v1 v1.0.5
+## explicit
+gopkg.in/sourcemap.v1
+gopkg.in/sourcemap.v1/base64vlq
 # gopkg.in/yaml.v2 v2.3.0
 ## explicit
 gopkg.in/yaml.v2
