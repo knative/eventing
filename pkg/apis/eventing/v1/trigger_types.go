@@ -96,6 +96,12 @@ type TriggerFilter struct {
 	//
 	// +optional
 	Attributes TriggerFilterAttributes `json:"attributes,omitempty"`
+
+	// Javascript Expression to evaluate.
+	// Event fields are available using the dot operator, eg:
+	//   event.id === "aaa" || event.type === "my.type"
+	// +optional
+	Expression string `json:"expression,omitempty"`
 }
 
 // TriggerFilterAttributes is a map of context attribute names to values for

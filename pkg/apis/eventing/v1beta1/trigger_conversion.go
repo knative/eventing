@@ -20,8 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
+
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 // ConvertTo implements apis.Convertible
@@ -38,6 +39,7 @@ func (source *Trigger) ConvertTo(_ context.Context, to apis.Convertible) error {
 			for k, v := range source.Spec.Filter.Attributes {
 				sink.Spec.Filter.Attributes[k] = v
 			}
+			sink.Spec.Filter.Expression = source.Spec.Filter.Expression
 		}
 		sink.Status.Status = source.Status.Status
 		sink.Status.SubscriberURI = source.Status.SubscriberURI
@@ -61,6 +63,7 @@ func (sink *Trigger) ConvertFrom(_ context.Context, from apis.Convertible) error
 			}
 			sink.Spec.Filter = &TriggerFilter{
 				Attributes: attributes,
+				Expression: source.Spec.Filter.Expression,
 			}
 		}
 		sink.Status.Status = source.Status.Status

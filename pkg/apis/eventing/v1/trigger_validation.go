@@ -26,6 +26,8 @@ import (
 	"knative.dev/pkg/kmp"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"knative.dev/eventing/pkg/eventfilter"
 )
 
 var (
@@ -59,6 +61,16 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 				fe := &apis.FieldError{
 					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
 					Paths:   []string{"filter.attributes"},
+				}
+				errs = errs.Also(fe)
+			}
+		}
+		if ts.Filter.Expression != "" {
+			_, err := eventfilter.ParseFilterExpr(ts.Filter.Expression)
+			if err != nil {
+				fe := &apis.FieldError{
+					Message: fmt.Sprintf("Invalid filter expression: %q", err),
+					Paths:   []string{"filter.expression"},
 				}
 				errs = errs.Also(fe)
 			}
