@@ -25,7 +25,7 @@ import (
 
 	"knative.dev/eventing/pkg/channel"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
@@ -36,10 +36,10 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -50,11 +50,11 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
-	subscribers := []duckv1beta1.SubscriberSpec{{
+	subscribers := []eventingduckv1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
@@ -66,7 +66,7 @@ func TestAllCases(t *testing.T) {
 		ReplyURI:      apis.HTTP("sink2"),
 	}}
 
-	backoffPolicy := duckv1beta1.BackoffPolicyLinear
+	backoffPolicy := eventingduckv1.BackoffPolicyLinear
 
 	imcKey := testNS + "/" + imcName
 	table := TableTest{
@@ -115,13 +115,13 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelSubscribers([]duckv1beta1.SubscriberSpec{
+					WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{
 						{
 							UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 							Generation:    1,
 							SubscriberURI: apis.HTTP("call1"),
 							ReplyURI:      apis.HTTP("sink2"),
-							Delivery: &duckv1beta1.DeliverySpec{
+							Delivery: &eventingduckv1.DeliverySpec{
 								DeadLetterSink: &duckv1.Destination{
 									URI: apis.HTTP("http://www.example.com"),
 								},

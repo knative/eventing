@@ -22,7 +22,7 @@ import (
 
 	"knative.dev/pkg/logging"
 
-	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
@@ -35,7 +35,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/swappable"
-	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel"
+	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/tracing"
 )
