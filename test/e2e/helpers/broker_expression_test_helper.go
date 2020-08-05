@@ -62,10 +62,6 @@ func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator, 
 	eventTrackerPass, _ := recordevents.StartEventRecordOrFail(client, subscriberNamePass)
 	defer eventTrackerPass.Cleanup()
 
-	subscriberNameFail := "recordevents-expression-fail"
-	eventTrackerFail, _ := recordevents.StartEventRecordOrFail(client, subscriberNameFail)
-	defer eventTrackerFail.Cleanup()
-
 	triggerNameOk := "trigger-expression-pass"
 	client.CreateTriggerOrFailV1Beta1(triggerNameOk,
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberNamePass),
@@ -73,9 +69,13 @@ func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator, 
 		resources.WithBrokerV1Beta1(brokerName),
 	)
 
+	subscriberNameFail := "recordevents-expression-fail"
+	eventTrackerFail, _ := recordevents.StartEventRecordOrFail(client, subscriberNameFail)
+	defer eventTrackerFail.Cleanup()
+
 	triggerNameFail := "trigger-expression-fail"
 	client.CreateTriggerOrFailV1Beta1(triggerNameFail,
-		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberNamePass),
+		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberNameFail),
 		resources.WithExpressionTriggerFilterV1Beta1("event.id == null"),
 		resources.WithBrokerV1Beta1(brokerName),
 	)
@@ -85,6 +85,6 @@ func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator, 
 
 	client.SendEventToAddressable("sender", brokerName, testlib.BrokerTypeMeta, cetest.FullEvent())
 
-	eventTrackerPass.AssertExact(1, recordevents.MatchEvent(cetest.HasSpecVersion(cloudevents.VersionV1)))
+	eventTrackerPass.AssertAtLeast(1, recordevents.MatchEvent(cetest.HasSpecVersion(cloudevents.VersionV1)))
 	eventTrackerFail.AssertNot(recordevents.MatchEvent(cetest.HasSpecVersion(cloudevents.VersionV1)))
 }

@@ -21,6 +21,12 @@ func TestParseFilterExpr(t *testing.T) {
 	require.True(t, b)
 }
 
+func TestParseFilterFailure(t *testing.T) {
+	program, err := ParseFilterExpr(`function helloWorld() {}`)
+	require.Error(t, err)
+	require.Nil(t, program)
+}
+
 func TestEventKeys(t *testing.T) {
 	event := test.FullEvent()
 
