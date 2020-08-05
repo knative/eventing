@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -49,7 +49,7 @@ func TestCreateChannelServiceAddress(t *testing.T) {
 }
 
 func TestNewK8sService(t *testing.T) {
-	imc := &v1beta1.InMemoryChannel{
+	imc := &v1.InMemoryChannel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      imcName,
 			Namespace: testNS,
@@ -92,7 +92,7 @@ func TestNewK8sService(t *testing.T) {
 }
 
 func TestNewK8sServiceWithExternal(t *testing.T) {
-	imc := &v1beta1.InMemoryChannel{
+	imc := &v1.InMemoryChannel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      imcName,
 			Namespace: testNS,
@@ -130,7 +130,7 @@ func TestNewK8sServiceWithExternal(t *testing.T) {
 }
 
 func TestNewK8sServiceWithFailingOption(t *testing.T) {
-	imc := &v1beta1.InMemoryChannel{
+	imc := &v1.InMemoryChannel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      imcName,
 			Namespace: testNS,

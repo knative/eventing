@@ -24,12 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/logging"
 )
@@ -42,7 +41,7 @@ type Reconciler struct {
 	inmemorychannelInformer    cache.SharedIndexInformer
 }
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryChannel) reconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	// This is a special Reconciler that does the following:
 	// 1. Lists the inmemory channels.
 	// 2. Creates a multi-channel-fanout-config.
@@ -53,7 +52,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 		return err
 	}
 
-	inmemoryChannels := make([]*v1beta1.InMemoryChannel, 0)
+	inmemoryChannels := make([]*v1.InMemoryChannel, 0)
 	for _, imc := range channels {
 		if imc.Status.IsReady() {
 			inmemoryChannels = append(inmemoryChannels, imc)
@@ -75,19 +74,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1beta1.InMemoryCha
 }
 
 // newConfigFromInMemoryChannels creates a new Config from the list of inmemory channels.
-func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1beta1.InMemoryChannel) (*multichannelfanout.Config, error) {
+func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1.InMemoryChannel) (*multichannelfanout.Config, error) {
 	cc := make([]multichannelfanout.ChannelConfig, 0)
 	for _, c := range channels {
 
 		subs := make([]fanout.Subscription, len(c.Spec.Subscribers))
 		for _, sub := range c.Spec.Subscribers {
-
-			subSpecV1 := eventingduckv1.SubscriberSpec{}
-			if err := sub.ConvertTo(context.TODO(), &subSpecV1); err != nil {
-				return nil, err
-			}
-
-			conf, err := fanout.SubscriberSpecToFanoutConfig(subSpecV1)
+			conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
 			if err != nil {
 				return nil, err
 			}

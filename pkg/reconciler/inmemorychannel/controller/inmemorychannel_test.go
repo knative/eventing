@@ -26,7 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/inmemorychannel"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,13 +35,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
@@ -61,14 +61,14 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
-	_ = duckv1beta1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
+	_ = duckv1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
 	imcKey := testNS + "/" + imcName
 
-	subscribers := []eventingduckv1beta1.SubscriberSpec{{
+	subscribers := []eventingduckv1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
@@ -80,7 +80,7 @@ func TestAllCases(t *testing.T) {
 		ReplyURI:      apis.HTTP("sink2"),
 	}}
 
-	subscriberStatuses := []eventingduckv1beta1.SubscriberStatus{{
+	subscriberStatuses := []eventingduckv1.SubscriberStatus{{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              "True",
@@ -502,15 +502,15 @@ func makeService() *corev1.Service {
 	}
 }
 
-func makeServiceAccount(imc *v1beta1.InMemoryChannel) *corev1.ServiceAccount {
+func makeServiceAccount(imc *v1.InMemoryChannel) *corev1.ServiceAccount {
 	return resources.MakeServiceAccount(imc.Namespace, dispatcherName)
 }
 
-func makeRoleBinding(ns, name, clusterRoleName string, imc *v1beta1.InMemoryChannel) *rbacv1.RoleBinding {
+func makeRoleBinding(ns, name, clusterRoleName string, imc *v1.InMemoryChannel) *rbacv1.RoleBinding {
 	return resources.MakeRoleBinding(ns, name, makeServiceAccount(imc), clusterRoleName)
 }
 
-func makeDispatcherDeployment(imc *v1beta1.InMemoryChannel) *appsv1.Deployment {
+func makeDispatcherDeployment(imc *v1.InMemoryChannel) *appsv1.Deployment {
 	return resources.MakeDispatcher(resources.DispatcherArgs{
 		DispatcherName:      dispatcherName,
 		DispatcherNamespace: testNS,
@@ -523,7 +523,7 @@ func makeDispatcherService(ns string) *corev1.Service {
 	return resources.MakeDispatcherService(dispatcherName, ns)
 }
 
-func makeChannelService(imc *v1beta1.InMemoryChannel) *corev1.Service {
+func makeChannelService(imc *v1.InMemoryChannel) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -546,7 +546,7 @@ func makeChannelService(imc *v1beta1.InMemoryChannel) *corev1.Service {
 	}
 }
 
-func makeChannelServiceNotOwnedByUs(imc *v1beta1.InMemoryChannel) *corev1.Service {
+func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
