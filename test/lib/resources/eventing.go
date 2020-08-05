@@ -344,6 +344,15 @@ func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extension
 	}
 }
 
+// WithExpressionTriggerFilterV1Beta1 returns an option that adds a TriggerFilter with Expression for the given Trigger.
+func WithExpressionTriggerFilterV1Beta1(expr string) TriggerOptionV1Beta1 {
+	return func(t *eventingv1beta1.Trigger) {
+		t.Spec.Filter = &eventingv1beta1.TriggerFilter{
+			Expression: expr,
+		}
+	}
+}
+
 // WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
 func WithAttributesTriggerFilterV1(eventSource, eventType string, extensions map[string]interface{}) TriggerOptionV1 {
 	attrs := make(map[string]string)
