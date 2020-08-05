@@ -31,9 +31,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
@@ -51,8 +52,6 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	defer eventTracker.Cleanup()
-
 	// create cron job source
 	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
 	source := eventingtesting.NewPingSourceV1Alpha2(
@@ -92,8 +91,6 @@ func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
 
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	defer eventTracker.Cleanup()
-
 	// create cron job source
 	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
 	source := eventingtesting.NewPingSourceV1Alpha2(

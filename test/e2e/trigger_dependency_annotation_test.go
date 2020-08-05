@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	"knative.dev/pkg/apis"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
@@ -34,7 +36,6 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/pkg/apis"
 )
 
 // This test is for avoiding regressions on the trigger dependency annotation functionality.
@@ -63,8 +64,6 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 
 	// Create subscribers.
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
-	defer eventTracker.Cleanup()
-
 	// Wait for subscriber to become ready
 	client.WaitForAllTestResourcesReadyOrFail()
 

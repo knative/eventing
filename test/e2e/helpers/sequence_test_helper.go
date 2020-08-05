@@ -97,7 +97,6 @@ func SequenceTestHelper(t *testing.T,
 		client.CreateChannelOrFail(channelName, &channel)
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-		defer eventTracker.Cleanup()
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
@@ -211,7 +210,6 @@ func SequenceV1TestHelper(t *testing.T,
 		client.CreateChannelOrFail(channelName, &channel)
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-		defer eventTracker.Cleanup()
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,

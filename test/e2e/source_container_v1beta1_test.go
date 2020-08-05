@@ -52,8 +52,6 @@ func TestContainerSourceV1Beta1(t *testing.T) {
 
 	// create event record pod
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	defer eventTracker.Cleanup()
-
 	// create container source
 	message := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
 	// args are the arguments passing to the container, msg is used in the heartbeats image

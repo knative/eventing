@@ -90,7 +90,6 @@ func brokerRedelivery(t *testing.T, creator BrokerCreatorWithRetries, numRetries
 		eventRecord,
 		options...,
 	)
-	defer allEventTracker.Cleanup()
 
 	// Create a Broker.
 	brokerName := creator(client, numRetries)

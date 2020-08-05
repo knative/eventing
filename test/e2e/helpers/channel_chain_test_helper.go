@@ -56,8 +56,6 @@ func ChannelChainTestHelper(t *testing.T,
 
 		// create loggerPod and expose it as a service
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-		defer eventTracker.Cleanup()
-
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		switch subscriptionVersion {
 		case SubscriptionV1:

@@ -147,8 +147,6 @@ func TestApiServerSourceV1Beta1(t *testing.T) {
 			// create event record
 			recordEventPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
 			eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-			defer eventTracker.Cleanup()
-
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 

@@ -53,8 +53,6 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T,
 
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-		defer eventTracker.Cleanup()
-
 		// create subscriptions that subscribe to a service that does not exist
 		switch subscriptionVersion {
 		case SubscriptionV1:

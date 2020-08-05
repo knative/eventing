@@ -65,8 +65,6 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding cloudevents.Encoding
 
 		// create event logger pod and service
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
-		defer eventTracker.Cleanup()
-
 		// If the caller specified a different version, override it here.
 		if channelVersion != "" {
 			st.Logf("Changing API version from: %q to %q", channel.APIVersion, channelVersion)
