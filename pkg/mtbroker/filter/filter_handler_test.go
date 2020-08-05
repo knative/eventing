@@ -151,6 +151,30 @@ func TestReceiver(t *testing.T) {
 			},
 			expectedEventCount: false,
 		},
+		"Attributes match but expression doesn't match": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(&eventingv1beta1.TriggerFilter{
+					Attributes: eventingv1beta1.TriggerFilterAttributes{
+						"type":   eventType,
+						"source": eventSource,
+					},
+					Expression: "event.id == null",
+				}),
+			},
+			expectedEventCount: false,
+		},
+		"Attributes doesn't match but expression match": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(&eventingv1beta1.TriggerFilter{
+					Attributes: eventingv1beta1.TriggerFilterAttributes{
+						"type":   "blabla",
+						"source": eventSource,
+					},
+					Expression: "event.id != null",
+				}),
+			},
+			expectedEventCount: false,
+		},
 		"Wrong extension": {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
@@ -175,6 +199,14 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
+		"Dispatch succeeded - Has id": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithExpression("event.id != null")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+		},
 		"Dispatch succeeded - Any with attribs": {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
@@ -194,6 +226,20 @@ func TestReceiver(t *testing.T) {
 		"Dispatch succeeded - Specific with attribs": {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+		},
+		"Dispatch succeeded - Specific with attribs and expression": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(&eventingv1beta1.TriggerFilter{
+					Attributes: eventingv1beta1.TriggerFilterAttributes{
+						"type":   eventType,
+						"source": eventSource,
+					},
+					Expression: "event.id != null",
+				}),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -544,6 +590,12 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			}
 			resp.Write(body)
 		}
+	}
+}
+
+func makeTriggerFilterWithExpression(expr string) *eventingv1beta1.TriggerFilter {
+	return &eventingv1beta1.TriggerFilter{
+		Expression: expr,
 	}
 }
 
