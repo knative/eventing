@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	v1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -60,7 +61,8 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
+	//_ = apiv1beta1.AddToScheme(scheme.Scheme)
+	_ = apiv1.AddToScheme(scheme.Scheme)
 	_ = eventingduckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
@@ -236,7 +238,7 @@ func TestReconcile(t *testing.T) {
 				WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
 	}, {
-		Name: "Updating v1alpha1 channelable subscribers statuses",
+		Name: "Updating channelable subscribers statuses",
 		Key:  testKey,
 		Objects: []runtime.Object{
 			NewChannel(channelName, testNS,
@@ -248,8 +250,8 @@ func TestReconcile(t *testing.T) {
 			NewChannelable(channelName, testNS,
 				WithChannelableReady(),
 				WithChannelableAddress(backingChannelHostname),
-				WithChannelableSubscribers(subscribersV1Alpha1()),
-				WithChannelableStatusSubscribers(subscriberStatusesV1beta1())),
+				WithChannelableSubscribers(subscribers()),
+				WithChannelableStatusSubscribers(subscriberStatuses())),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -257,8 +259,8 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
-				WithChannelSubscriberStatuses(subscriberStatuses())),
+				WithChannelAddress(backingChannelHostname)),
+			//WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
 	}}
 
@@ -307,8 +309,8 @@ func subscribers() []eventingduckv1.SubscriberSpec {
 	}}
 }
 
-func subscribersV1Alpha1() []eventingduckv1alpha1.SubscriberSpec {
-	return []eventingduckv1alpha1.SubscriberSpec{{
+func subscribersV1Alpha1() []v1alpha1.SubscriberSpec {
+	return []v1alpha1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),

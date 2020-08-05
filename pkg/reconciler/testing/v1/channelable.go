@@ -20,28 +20,27 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/pkg/apis"
-	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	pkgduckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // Channelable allows us to have a fake channel for testinv1alpha1
 
-// ChannelableOption enables further configuration of a v1alpha1.Channelable.
-type ChannelableOption func(*v1alpha1.Channelable)
+// ChannelableOption enables further configuration of a v1.Channelable.
+type ChannelableOption func(*v1.Channelable)
 
 // NewChannelable creates an Channelable with ChannelableOptions.
-func NewChannelable(name, namespace string, imcopt ...ChannelableOption) *v1alpha1.Channelable {
-	c := &v1alpha1.Channelable{
+func NewChannelable(name, namespace string, imcopt ...ChannelableOption) *v1.Channelable {
+	c := &v1.Channelable{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   namespace,
-			Annotations: map[string]string{messaging.SubscribableDuckVersionAnnotation: "v1alpha1"},
+			Annotations: map[string]string{messaging.SubscribableDuckVersionAnnotation: "v1"},
 		},
-		Spec: v1alpha1.ChannelableSpec{},
+		Spec: v1.ChannelableSpec{},
 	}
 	for _, opt := range imcopt {
 		opt(c)
@@ -50,25 +49,25 @@ func NewChannelable(name, namespace string, imcopt ...ChannelableOption) *v1alph
 }
 
 func WithChannelableGeneration(gen int64) ChannelableOption {
-	return func(s *v1alpha1.Channelable) {
+	return func(s *v1.Channelable) {
 		s.Generation = gen
 	}
 }
 
 func WithChannelableStatusObservedGeneration(gen int64) ChannelableOption {
-	return func(s *v1alpha1.Channelable) {
+	return func(s *v1.Channelable) {
 		s.Status.ObservedGeneration = gen
 	}
 }
 
-func WithChannelableDeleted(imc *v1alpha1.Channelable) {
+func WithChannelableDeleted(imc *v1.Channelable) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	imc.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithChannelableSubscribers(subscribers []v1alpha1.SubscriberSpec) ChannelableOption {
-	return func(c *v1alpha1.Channelable) {
-		c.Spec.Subscribable = &v1alpha1.Subscribable{Subscribers: subscribers}
+func WithChannelableSubscribers(subscribers []v1.SubscriberSpec) ChannelableOption {
+	return func(c *v1.Channelable) {
+		c.Spec.SubscribableSpec = v1.SubscribableSpec{Subscribers: subscribers}
 	}
 }
 
@@ -77,37 +76,33 @@ func WithChannelableReadySubscriber(uid string) ChannelableOption {
 }
 
 func WithChannelableReadySubscriberAndGeneration(uid string, observedGeneration int64) ChannelableOption {
-	return func(c *v1alpha1.Channelable) {
-		if c.Status.GetSubscribableTypeStatus() == nil { // Both the SubscribableStatus fields are nil
-			c.Status.SetSubscribableTypeStatus(v1alpha1.SubscribableStatus{})
+	return func(c *v1.Channelable) {
+		c.Status.SubscribableStatus = duckv1.SubscribableStatus{
+			Subscribers: []v1.SubscriberStatus{v1.SubscriberStatus{
+				UID:                types.UID(uid),
+				ObservedGeneration: observedGeneration,
+				Ready:              corev1.ConditionTrue,
+			}},
 		}
-		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(duckv1beta1.SubscriberStatus{
-			UID:                types.UID(uid),
-			ObservedGeneration: observedGeneration,
-			Ready:              corev1.ConditionTrue,
-		})
 	}
 }
 
-func WithChannelableStatusSubscribers(subscriberStatuses []duckv1beta1.SubscriberStatus) ChannelableOption {
-	return func(c *v1alpha1.Channelable) {
-		c.Status.SetSubscribableTypeStatus(v1alpha1.SubscribableStatus{
-			Subscribers: subscriberStatuses})
+func WithChannelableStatusSubscribers(subscriberStatuses []duckv1.SubscriberStatus) ChannelableOption {
+	return func(c *v1.Channelable) {
+		c.Status.SubscribableStatus = v1.SubscribableStatus{Subscribers: subscriberStatuses}
 	}
 }
 
 func WithChannelableReady() ChannelableOption {
-	return func(c *v1alpha1.Channelable) {
+	return func(c *v1.Channelable) {
 		c.Status.Conditions = []apis.Condition{{Type: apis.ConditionReady, Status: corev1.ConditionTrue}}
 	}
 }
 
 func WithChannelableAddress(a string) ChannelableOption {
-	return func(c *v1alpha1.Channelable) {
-		c.Status.Address = &pkgduckv1alpha1.Addressable{
-			Addressable: pkgduckv1beta1.Addressable{
-				URL: apis.HTTP(a),
-			},
+	return func(c *v1.Channelable) {
+		c.Status.Address = &pkgduckv1.Addressable{
+			URL: apis.HTTP(a),
 		}
 	}
 }
