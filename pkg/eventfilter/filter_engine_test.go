@@ -5,6 +5,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/dop251/goja"
+	"github.com/dop251/goja/parser"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,9 +22,20 @@ func TestParseFilterExpr(t *testing.T) {
 	require.True(t, b)
 }
 
+func TestTimeout(t *testing.T) {
+	program, err := parser.ParseFile(nil, "", "while(true) {}", 0)
+	require.NoError(t, err)
+
+	compiled, err := goja.CompileAST(program, false)
+	require.NoError(t, err)
+
+	_, err = RunFilter(test.MinEvent(), compiled)
+	require.IsType(t, &goja.InterruptedError{}, err, "error is an interrupted error")
+}
+
 func TestParseFilterFailure(t *testing.T) {
 	program, err := ParseFilterExpr(`function helloWorld() {}`)
-	require.Error(t, err)
+	require.EqualError(t, err, "program body should be just an expression: function helloWorld() {}")
 	require.Nil(t, program)
 }
 

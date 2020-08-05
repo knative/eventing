@@ -16,7 +16,7 @@ const timeout = time.Second * 2
 func ParseFilterExpr(src string) (*goja.Program, error) {
 	program, err := parser.ParseFile(nil, "", src, 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(errors.Wrap(err, "error while parsing filter expression"))
 	}
 
 	if _, ok := program.Body[0].(*ast.ExpressionStatement); !ok {
@@ -43,7 +43,7 @@ func RunFilter(event cloudevents.Event, program *goja.Program) (bool, error) {
 
 func configureEventObject(vm *goja.Runtime, event cloudevents.Event) (*goja.Object, error) {
 	obj := vm.NewObject()
-	for name, fn := range map[string]func() interface{}{
+	attributeGetters := map[string]func() interface{}{
 		"specversion": func() interface{} {
 			return event.SpecVersion()
 		},
@@ -68,14 +68,15 @@ func configureEventObject(vm *goja.Runtime, event cloudevents.Event) (*goja.Obje
 		"datacontenttype": func() interface{} {
 			return event.DataContentType()
 		},
-	} {
+	}
+	for name, fn := range attributeGetters {
 		if err := bindValueExtractor(vm, name, fn, obj); err != nil {
-			return nil, errors.Wrap(err, "Error while binding event object")
+			return nil, errors.Wrap(err, "error while binding attribute getter "+name)
 		}
 	}
 	for name, val := range event.Extensions() {
 		if err := bindValue(vm, name, val, obj); err != nil {
-			return nil, errors.Wrap(err, "Error while binding event object")
+			return nil, errors.Wrap(err, "error while binding extension getter "+name)
 		}
 	}
 	return obj, nil

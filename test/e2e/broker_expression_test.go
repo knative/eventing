@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,14 +33,6 @@ func TestDefaultBrokerWithExpressionTrigger(t *testing.T) {
 
 func TestChannelBasedBrokerWithExpressionTrigger(t *testing.T) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		for _, version := range unsupportedChannelVersions {
-			if strings.HasSuffix(channel.APIVersion, version) {
-				t.Skipf("unsupported %s channel version", version)
-			}
-		}
-
-		brokerCreator := helpers.ChannelBasedBrokerCreator(channel, brokerClass)
-
-		helpers.TestBrokerWithExpressionTrigger(t, brokerCreator, false)
+		helpers.TestBrokerWithExpressionTrigger(t, helpers.ChannelBasedBrokerCreator(channel, brokerClass), false)
 	})
 }

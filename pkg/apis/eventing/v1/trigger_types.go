@@ -77,6 +77,7 @@ type TriggerSpec struct {
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
+	// If multiple filter types are specified, the event will pass only if all filters pass
 	//
 	// +optional
 	Filter *TriggerFilter `json:"filter,omitempty"`
