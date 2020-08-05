@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	roleName            = "event-watcher-r"
-	serviceAccountName  = "event-watcher-sa"
-	recordEventsPodName = "api-server-source-logger-pod"
+	roleName                = "event-watcher-r"
+	serviceAccountName      = "event-watcher-sa"
+	recordEventsAPIPodName  = "api-server-source-logger-pod"
+	recordEventsPingPodName = "ping-source-logger-pod"
 )
 
 var channelTestRunner testlib.ComponentsTestRunner
@@ -78,11 +79,11 @@ func addSourcesInitializers() {
 		testlib.ApiServerSourceTypeMeta,
 		setupclientoptions.ApiServerSourceV1B1ClientSetupOption(apiSrcName,
 			"Reference",
-			recordEventsPodName, roleName, serviceAccountName),
+			recordEventsAPIPodName, roleName, serviceAccountName),
 	)
 	sourcesTestRunner.AddComponentSetupClientOption(
 		testlib.PingSourceTypeMeta,
 		setupclientoptions.PingSourceV1A2ClientSetupOption(pingSrcName,
-			recordEventsPodName),
+			recordEventsPingPodName),
 	)
 }
