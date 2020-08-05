@@ -23,9 +23,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 func TestTriggerConversionBadType(t *testing.T) {
@@ -114,6 +115,30 @@ func TestTriggerConversionRoundTripV1beta1(t *testing.T) {
 				Broker: "default",
 				Filter: &TriggerFilter{
 					Attributes: TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
+				},
+			},
+			Status: TriggerStatus{
+				Status: duckv1.Status{
+					ObservedGeneration: 1,
+					Conditions: duckv1.Conditions{{
+						Type:   "Ready",
+						Status: "True",
+					}},
+				},
+			},
+		},
+	}, {name: "filter rules with expressions",
+		in: &Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "trigger-name",
+				Namespace:  "trigger-ns",
+				Generation: 17,
+			},
+			Spec: TriggerSpec{
+				Broker: "default",
+				Filter: &TriggerFilter{
+					Attributes: TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
+					Expression: "event.id == 1234",
 				},
 			},
 			Status: TriggerStatus{
@@ -243,6 +268,30 @@ func TestTriggerConversionRoundTripV1(t *testing.T) {
 				Broker: "default",
 				Filter: &v1.TriggerFilter{
 					Attributes: v1.TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
+				},
+			},
+			Status: v1.TriggerStatus{
+				Status: duckv1.Status{
+					ObservedGeneration: 1,
+					Conditions: duckv1.Conditions{{
+						Type:   "Ready",
+						Status: "True",
+					}},
+				},
+			},
+		},
+	}, {name: "filter rules, many",
+		in: &v1.Trigger{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "trigger-name",
+				Namespace:  "trigger-ns",
+				Generation: 17,
+			},
+			Spec: v1.TriggerSpec{
+				Broker: "default",
+				Filter: &v1.TriggerFilter{
+					Attributes: v1.TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
+					Expression: "event.id == 1234",
 				},
 			},
 			Status: v1.TriggerStatus{

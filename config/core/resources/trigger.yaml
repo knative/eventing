@@ -59,6 +59,9 @@ spec:
               filter:
                 type: object
                 properties:
+                  expression:
+                    type: string
+                    description: "Javascript Expression to evaluate to filter the events. If not specified, the behaviour is the same as an expression always true"
                   attributes:
                     type: object
                     description: 'Map of CloudEvents attributes used for filtering events. If not specified, will default to all events'
@@ -120,6 +123,9 @@ spec:
                     the Subscriber. If not specified, will default to allowing all
                     events.'
                 properties:
+                  expression:
+                    type: string
+                    description: "Javascript Expression to evaluate to filter the events. If not specified, the behaviour is the same as an expression always true"
                   attributes:
                     type: object
                     description: 'Map of CloudEvents attributes used for filtering events. If not specified, will default to all events'
