@@ -23,7 +23,6 @@ func TestParseFilterExpr(t *testing.T) {
 
 func TestEventKeys(t *testing.T) {
 	event := test.FullEvent()
-	event.SetExtension("someint", 10)
 
 	program, err := ParseFilterExpr("Object.keys(event)")
 	require.NoError(t, err)
@@ -37,9 +36,21 @@ func TestEventKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	s := val.Export()
-	require.Contains(t, s, "someint")
+	require.Contains(t, s, "specversion")
 	require.Contains(t, s, "id")
+	require.Contains(t, s, "type")
+	require.Contains(t, s, "source")
+	require.Contains(t, s, "subject")
+	require.Contains(t, s, "time")
+	require.Contains(t, s, "dataschema")
 	require.Contains(t, s, "datacontenttype")
+
+	require.Contains(t, s, "exbool")
+	require.Contains(t, s, "exint")
+	require.Contains(t, s, "exstring")
+	require.Contains(t, s, "exbinary")
+	require.Contains(t, s, "exurl")
+	require.Contains(t, s, "extime")
 }
 
 func TestAccessExtension(t *testing.T) {
