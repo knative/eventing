@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	apiv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -30,14 +29,18 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	testingv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -61,9 +64,12 @@ var (
 
 func init() {
 	// Add types to scheme
-	//_ = apiv1beta1.AddToScheme(scheme.Scheme)
-	_ = apiv1.AddToScheme(scheme.Scheme)
+	// TODO(nlopezgi): figure out what is the right list to have here.
+	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
+	_ = messagingv1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
 	_ = eventingduckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingduckv1.AddToScheme(scheme.Scheme)
 }
 
 func TestReconcile(t *testing.T) {
@@ -238,7 +244,7 @@ func TestReconcile(t *testing.T) {
 				WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
 	}, {
-		Name: "Updating channelable subscribers statuses",
+		Name: "Updating v1alpha1 channelable subscribers statuses",
 		Key:  testKey,
 		Objects: []runtime.Object{
 			NewChannel(channelName, testNS,
@@ -247,11 +253,11 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname)),
-			NewChannelable(channelName, testNS,
-				WithChannelableReady(),
-				WithChannelableAddress(backingChannelHostname),
-				WithChannelableSubscribers(subscribers()),
-				WithChannelableStatusSubscribers(subscriberStatuses())),
+			testingv1beta1.NewChannelable(channelName, testNS,
+				testingv1beta1.WithChannelableReady(),
+				testingv1beta1.WithChannelableAddress(backingChannelHostname),
+				testingv1beta1.WithChannelableSubscribers(subscribersV1Alpha1()),
+				testingv1beta1.WithChannelableStatusSubscribers(subscriberStatusesV1beta1())),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -259,8 +265,8 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname)),
-			//WithChannelSubscriberStatuses(subscriberStatuses())),
+				WithChannelAddress(backingChannelHostname),
+				WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
 	}}
 
