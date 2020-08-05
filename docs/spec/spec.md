@@ -243,6 +243,7 @@ retrieved from ref.
 
 ### TriggerFilter
 
-| Field      | Type              | Description                                                                         | Constraints |
-| ---------- | ----------------- | ----------------------------------------------------------------------------------- | ----------- |
-| attributes | map[string]string | A filter specifying which events match this trigger. Matches exactly on the fields. |             |
+| Field      | Type              | Description                                                                                                               | Constraints |
+| ---------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| attributes | map[string]string | A filter specifying which events match this trigger. Matches exactly on the fields.                                       |             |
+| expression | string            | Javascript expression used for filtering events. If not specified, the behaviour is the same as an expression always true |             |
