@@ -42,14 +42,14 @@ progress to Ready when its assigned Broker exists and is Ready.
 
 #### Event filters
 
-Implementations of Trigger MUST support both attributes filter and expression
+Implementations of Trigger MUST support both attributes filter and jsExpression
 filter.
 
 The attributes filter specifying a list of key-value pairs MUST be supported by
 Trigger. Events that pass the attributes filter MUST include context or
 extension attributes that match all key-value pairs exactly.
 
-The expression filter specifying a Javascript expression MUST be supported by
+The jsExpression filter specifying a Javascript expression MUST be supported by
 Trigger. If the evaluation of the expression returns a Javascript value
 coercible to the boolean `true`, then the trigger filter MUST pass the event.
 Implementations MUST make the event accessible, within the expression, through
@@ -59,8 +59,8 @@ should be accessible with `event.id`. Implementations MUST coerce CloudEvent
 types to JS types. For example the value of an attribute with type `Timestamp`
 should be translated to the JS type `Date`.
 
-If a Trigger specify both attributes and expression filters, then the event MUST
-pass only and only if both filters pass the event.
+If a Trigger specify both attributes and jsExpression filters, then the event
+MUST pass only and only if both filters pass the event.
 
 ## Data Plane
 
