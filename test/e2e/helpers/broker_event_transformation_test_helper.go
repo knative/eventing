@@ -97,8 +97,6 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 
 	// create logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-	defer eventTracker.Cleanup()
-
 	// create trigger2 for event receiving
 	if triggerVersion == "v1" {
 		client.CreateTriggerV1OrFail(

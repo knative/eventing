@@ -72,8 +72,6 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-		defer eventTracker.Cleanup()
-
 		switch subscriptionVersion {
 		case SubscriptionV1:
 			// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -66,7 +67,6 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 	triggerName := "trigger"
 	loggerName := "logger-pod"
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, loggerName)
-	defer eventTracker.Cleanup()
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	trigger := client.CreateTriggerOrFailV1Beta1(
@@ -211,9 +211,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 	loggerName := "logger-pod"
 	secondLoggerName := "second-logger-pod"
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, loggerName)
-	defer eventTracker.Cleanup()
 	secondTracker, _ := recordevents.StartEventRecordOrFail(client, secondLoggerName)
-	defer secondTracker.Cleanup()
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	trigger := client.CreateTriggerOrFailV1Beta1(
@@ -332,8 +330,6 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			resources.WithSubscriberServiceRefForTriggerV1Beta1("transformer-pod"),
 		)
 		client.WaitForResourceReadyOrFail(transformTrigger.Name, testlib.TriggerTypeMeta)
-		transformEventTracker, _ := recordevents.StartEventRecordOrFail(client, "transform-events-logger")
-		defer transformEventTracker.Cleanup()
 
 		replyTrigger := client.CreateTriggerOrFailV1Beta1(
 			"reply-trigger",

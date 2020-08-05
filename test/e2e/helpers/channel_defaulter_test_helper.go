@@ -28,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	reconciler "knative.dev/pkg/reconciler"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
@@ -35,7 +37,6 @@ import (
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	reconciler "knative.dev/pkg/reconciler"
 )
 
 const (
@@ -98,8 +99,6 @@ func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChan
 
 	// create event logger pod and service as the subscriber
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
-	defer eventTracker.Cleanup()
-
 	// create subscription to subscribe the channel, and forward the received events to the logger service
 	client.CreateSubscriptionOrFail(
 		subscriptionName,

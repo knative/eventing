@@ -130,7 +130,6 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		}
 		// create event tracker that should receive all sent events
 		allEventTracker, _ := recordevents.StartEventRecordOrFail(client, allEventsRecorderPodName)
-		defer allEventTracker.Cleanup()
 
 		// create trigger to receive all the events
 		if triggerVersion == "v1" {
@@ -175,7 +174,6 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 
 		// create event tracker that should receive only transformed events
 		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(client, transformedEventsRecorderPodName)
-		defer transformedEventTracker.Cleanup()
 
 		// create subscription
 		client.CreateSubscriptionOrFail(

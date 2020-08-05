@@ -69,7 +69,6 @@ func tracingTest(
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
-	defer targetTracker.Cleanup()
 	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
 
 	// Match the trace

@@ -157,7 +157,7 @@ func TestSequentialAndTrim(t *testing.T) {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:19])
-	ei.Cleanup()
+	ei.cleanup()
 }
 
 // Test that Finds where the server gives overlapping updates
@@ -181,7 +181,7 @@ func TestOverlap(t *testing.T) {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:19])
-	ei.Cleanup()
+	ei.cleanup()
 }
 
 // Test that we see an error if repeated Finds see a gap in the sequence
@@ -204,7 +204,7 @@ func TestGap(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Unexpected success from find")
 	}
-	ei.Cleanup()
+	ei.cleanup()
 }
 
 // Test that two finds, with the second one having
@@ -228,7 +228,7 @@ func TestSequentialNoOp(t *testing.T) {
 		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
-	ei.Cleanup()
+	ei.cleanup()
 }
 
 // Test that wait for N Works
@@ -275,5 +275,5 @@ func TestWaitForN(t *testing.T) {
 	if tCalls < 2 {
 		t.Fatalf("Expected at least %d trim calls, saw %d", 2, tCalls)
 	}
-	ei.Cleanup()
+	ei.cleanup()
 }

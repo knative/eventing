@@ -259,8 +259,6 @@ func TestBrokerWithManyTriggers(t *testing.T, brokerCreator BrokerCreator, shoul
 				subscriberName := "dumper-" + event.String()
 				eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
 				eventTrackers[subscriberName] = eventTracker
-				defer eventTracker.Cleanup()
-
 				// Create trigger.
 				triggerName := "trigger-" + event.String()
 				client.CreateTriggerOrFailV1Beta1(triggerName,

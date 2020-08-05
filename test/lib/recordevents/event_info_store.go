@@ -93,6 +93,7 @@ func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore,
 	ei := newTestableEventInfoStore(egi, -1, -1)
 	ei.podName = podName
 	ei.tb = client.T
+	client.T.Cleanup(ei.cleanup)
 	return ei, nil
 }
 
@@ -173,9 +174,13 @@ func (ei *EventInfoStore) doRetrieveData() error {
 
 // Clean up any background resources used by the store.  Must be called exactly once after
 // the last use.
-func (ei *EventInfoStore) Cleanup() {
+func (ei *EventInfoStore) cleanup() {
 	close(ei.closeCh)
 }
+
+//TODO remove it, this is not useful anymore
+// Deprecated: you can remove the manual cleanup of the event getter, since now it's done at test tear down automatically
+func (ei *EventInfoStore) Cleanup() {}
 
 // Called internally by functions wanting the current list of all
 // known events.  This calls for an update from the REST server and

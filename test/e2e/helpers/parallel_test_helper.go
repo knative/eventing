@@ -144,8 +144,6 @@ func ParallelTestHelper(t *testing.T,
 				HasSource(eventSource),
 				DataContains(tc.expected),
 			))
-
-			eventTracker.Cleanup()
 		}
 	})
 }
@@ -252,8 +250,6 @@ func ParallelV1TestHelper(t *testing.T,
 				HasSource(eventSource),
 				DataContains(tc.expected),
 			))
-
-			eventTracker.Cleanup()
 		}
 	})
 }

@@ -54,8 +54,6 @@ func TestSinkBindingV1Beta1Deployment(t *testing.T) {
 
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	defer eventTracker.Cleanup()
-
 	extensionSecret := string(uuid.NewUUID())
 
 	// create sink binding
@@ -138,8 +136,6 @@ func TestSinkBindingV1Beta1CronJob(t *testing.T) {
 
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	defer eventTracker.Cleanup()
-
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBindingV1Beta1(
 		sinkBindingName,
