@@ -86,7 +86,7 @@ func (c *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMe
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 	}
 	c.Tracker.Add(gvr.Group, gvr.Version, gvr.Resource, namespace, name)
@@ -111,7 +111,7 @@ func (c *Client) CreateChannelWithDefaultOrFail(channel *messagingv1beta1.Channe
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create channel %q: %v", channel.Name, err)
 	}
 	c.Tracker.AddObj(channel)
@@ -128,7 +128,7 @@ func (c *Client) CreateChannelV1WithDefaultOrFail(channel *messagingv1.Channel) 
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create channel %q: %v", channel.Name, err)
 	}
 	c.Tracker.AddObj(channel)
@@ -154,7 +154,7 @@ func (c *Client) CreateSubscriptionOrFail(
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
 	c.Tracker.AddObj(retSubscription)
@@ -181,7 +181,7 @@ func (c *Client) CreateSubscriptionV1OrFail(
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
 	c.Tracker.AddObj(retSubscription)
@@ -266,7 +266,7 @@ func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.Bro
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create v1beta1 broker %q: %v", name, err)
 	}
 	c.Tracker.AddObj(retBroker)
@@ -290,7 +290,7 @@ func (c *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.Tr
 		return e
 	})
 
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create v1beta1 trigger %q: %v", name, err)
 	}
 	c.Tracker.AddObj(retTrigger)
@@ -313,7 +313,7 @@ func (c *Client) CreateBrokerV1OrFail(name string, options ...resources.BrokerV1
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create v1 broker %q: %v", name, err)
 	}
 	c.Tracker.AddObj(retBroker)
@@ -336,7 +336,7 @@ func (c *Client) CreateTriggerV1OrFail(name string, options ...resources.Trigger
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create v1 trigger %q: %v", name, err)
 	}
 	c.Tracker.AddObj(retTrigger)
@@ -355,7 +355,7 @@ func (c *Client) CreateFlowsSequenceOrFail(sequence *flowsv1beta1.Sequence) {
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create flows sequence %q: %v", sequence.Name, err)
 	}
 	c.Tracker.AddObj(sequence)
@@ -373,7 +373,7 @@ func (c *Client) CreateFlowsSequenceV1OrFail(sequence *flowsv1.Sequence) {
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create flows sequence %q: %v", sequence.Name, err)
 	}
 	c.Tracker.AddObj(sequence)
@@ -391,7 +391,7 @@ func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1beta1.Parallel) {
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)
 	}
 	c.Tracker.AddObj(parallel)
@@ -409,7 +409,7 @@ func (c *Client) CreateFlowsParallelV1OrFail(parallel *flowsv1.Parallel) {
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)
 	}
 	c.Tracker.AddObj(parallel)
@@ -426,7 +426,7 @@ func (c *Client) CreateSinkBindingV1Alpha1OrFail(sb *sourcesv1alpha1.SinkBinding
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
 	}
 	c.Tracker.AddObj(sb)
@@ -443,7 +443,7 @@ func (c *Client) CreateSinkBindingV1Alpha2OrFail(sb *sourcesv1alpha2.SinkBinding
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
 	}
 	c.Tracker.AddObj(sb)
@@ -460,7 +460,7 @@ func (c *Client) CreateSinkBindingV1Beta1OrFail(sb *sourcesv1beta1.SinkBinding) 
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
 	}
 	c.Tracker.AddObj(sb)
@@ -477,7 +477,7 @@ func (c *Client) CreateApiServerSourceV1Alpha2OrFail(apiServerSource *sourcesv1a
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
 	}
 	c.Tracker.AddObj(apiServerSource)
@@ -494,7 +494,7 @@ func (c *Client) CreateApiServerSourceV1Beta1OrFail(apiServerSource *sourcesv1be
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
 	}
 	c.Tracker.AddObj(apiServerSource)
@@ -511,7 +511,7 @@ func (c *Client) CreateContainerSourceV1Alpha2OrFail(containerSource *sourcesv1a
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
 	}
 	c.Tracker.AddObj(containerSource)
@@ -528,7 +528,7 @@ func (c *Client) CreateContainerSourceV1Beta1OrFail(containerSource *sourcesv1be
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
 	}
 	c.Tracker.AddObj(containerSource)
@@ -545,7 +545,7 @@ func (c *Client) CreatePingSourceV1Alpha1OrFail(pingSource *sourcesv1alpha1.Ping
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
 	}
 	c.Tracker.AddObj(pingSource)
@@ -562,7 +562,7 @@ func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.Ping
 		}
 		return e
 	})
-	if err != nil {
+	if err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
 	}
 	c.Tracker.AddObj(pingSource)
