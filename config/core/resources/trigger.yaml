@@ -61,7 +61,7 @@ spec:
                 properties:
                   expression:
                     type: string
-                    description: "Javascript Expression to evaluate to filter the events. If not specified, the behaviour is the same as an expression always true"
+                    description: "Javascript Expression used for filtering events. If not specified, the behaviour is the same as an expression always true"
                   attributes:
                     type: object
                     description: 'Map of CloudEvents attributes used for filtering events. If not specified, will default to all events'
@@ -125,7 +125,7 @@ spec:
                 properties:
                   expression:
                     type: string
-                    description: "Javascript Expression to evaluate to filter the events. If not specified, the behaviour is the same as an expression always true"
+                    description: "Javascript Expression used for filtering events. If not specified, the behaviour is the same as an expression always true"
                   attributes:
                     type: object
                     description: 'Map of CloudEvents attributes used for filtering events. If not specified, will default to all events'
