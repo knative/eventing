@@ -59,6 +59,19 @@ should be accessible with `event.id`. Implementations MUST coerce CloudEvent
 types to JS types. For example the value of an attribute with type `Timestamp`
 should be translated to the JS type `Date`.
 
+An example jsExpression is:
+
+```js
+event.id.indexOf("francesco") != -1 &&
+  event.time != null &&
+  event.time.getFullYear() >= 2020 &&
+  event.exta != null;
+```
+
+This expression MUST pass the event iff the event id contains the string
+`francesco`, event time has a year greater or equal to 2020 and event contains
+an extension named `exta`.
+
 If a Trigger specify both attributes and jsExpression filters, then the event
 MUST pass only and only if both filters pass the event.
 
