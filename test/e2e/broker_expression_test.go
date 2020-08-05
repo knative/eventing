@@ -28,11 +28,11 @@ import (
 )
 
 func TestDefaultBrokerWithExpressionTrigger(t *testing.T) {
-	helpers.TestBrokerWithExpressionTrigger(t, DefaultBrokerCreator, true)
+	helpers.TestBrokerWithExpressionTrigger(t, DefaultBrokerCreator)
 }
 
 func TestChannelBasedBrokerWithExpressionTrigger(t *testing.T) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		helpers.TestBrokerWithExpressionTrigger(t, helpers.ChannelBasedBrokerCreator(channel, brokerClass), false)
+		helpers.TestBrokerWithExpressionTrigger(t, helpers.ChannelBasedBrokerCreator(channel, brokerClass))
 	})
 }

@@ -19,44 +19,23 @@ package helpers
 import (
 	"testing"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
-// TestBrokerWithExpressionTrigger If shouldLabelNamespace is set to true this test annotates the testing namespace so that a default broker is created.
-// It then binds many triggers with different filtering patterns to the broker created by brokerCreator, and sends
-// different events to the broker's address.
-// Finally, it verifies that only the appropriate events are routed to the subscribers.
-func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator, shouldLabelNamespace bool) {
+// TestBrokerWithExpressionTrigger tests broker filter using JS expressions
+func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator) {
 	client := testlib.Setup(t, true)
 	defer testlib.TearDown(client)
-
-	if shouldLabelNamespace {
-		// Label namespace so that it creates the default broker.
-		if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-			t.Fatalf("Error annotating namespace: %v", err)
-		}
-	}
 
 	brokerName := brokerCreator(client, "v1beta1")
 
 	// Wait for broker ready.
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
-
-	if shouldLabelNamespace {
-		// Test if namespace reconciler would recreate broker once broker was deleted.
-		if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(brokerName, &metav1.DeleteOptions{}); err != nil {
-			t.Fatalf("Can't delete default broker in namespace: %v", client.Namespace)
-		}
-		client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
-	}
 
 	subscriberNamePass := "recordevents-expression-pass"
 	eventTrackerPass, _ := recordevents.StartEventRecordOrFail(client, subscriberNamePass)
