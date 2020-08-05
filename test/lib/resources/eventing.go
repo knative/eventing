@@ -348,7 +348,7 @@ func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extension
 func WithExpressionTriggerFilterV1Beta1(expr string) TriggerOptionV1Beta1 {
 	return func(t *eventingv1beta1.Trigger) {
 		t.Spec.Filter = &eventingv1beta1.TriggerFilter{
-			Expression: expr,
+			JsExpression: expr,
 		}
 	}
 }

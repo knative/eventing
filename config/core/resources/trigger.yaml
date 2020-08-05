@@ -59,7 +59,7 @@ spec:
               filter:
                 type: object
                 properties:
-                  expression:
+                  jsExpression:
                     type: string
                     description: "Javascript Expression used for filtering events. If not specified, the behaviour is the same as an expression always true"
                   attributes:
@@ -123,7 +123,7 @@ spec:
                     the Subscriber. If not specified, will default to allowing all
                     events.'
                 properties:
-                  expression:
+                  jsExpression:
                     type: string
                     description: "Javascript Expression used for filtering events. If not specified, the behaviour is the same as an expression always true"
                   attributes:

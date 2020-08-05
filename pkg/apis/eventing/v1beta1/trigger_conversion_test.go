@@ -137,8 +137,8 @@ func TestTriggerConversionRoundTripV1beta1(t *testing.T) {
 			Spec: TriggerSpec{
 				Broker: "default",
 				Filter: &TriggerFilter{
-					Attributes: TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
-					Expression: "event.id == 1234",
+					Attributes:   TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
+					JsExpression: "event.id == 1234",
 				},
 			},
 			Status: TriggerStatus{
@@ -290,8 +290,8 @@ func TestTriggerConversionRoundTripV1(t *testing.T) {
 			Spec: v1.TriggerSpec{
 				Broker: "default",
 				Filter: &v1.TriggerFilter{
-					Attributes: v1.TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
-					Expression: "event.id == 1234",
+					Attributes:   v1.TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
+					JsExpression: "event.id == 1234",
 				},
 			},
 			Status: v1.TriggerStatus{

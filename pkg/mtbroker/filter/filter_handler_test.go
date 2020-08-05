@@ -158,7 +158,7 @@ func TestReceiver(t *testing.T) {
 						"type":   eventType,
 						"source": eventSource,
 					},
-					Expression: "event.id == null",
+					JsExpression: "event.id == null",
 				}),
 			},
 			expectedEventCount: false,
@@ -170,7 +170,7 @@ func TestReceiver(t *testing.T) {
 						"type":   "blabla",
 						"source": eventSource,
 					},
-					Expression: "event.id != null",
+					JsExpression: "event.id != null",
 				}),
 			},
 			expectedEventCount: false,
@@ -238,7 +238,7 @@ func TestReceiver(t *testing.T) {
 						"type":   eventType,
 						"source": eventSource,
 					},
-					Expression: "event.id != null",
+					JsExpression: "event.id != null",
 				}),
 			},
 			expectedDispatch:          true,
@@ -595,7 +595,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 func makeTriggerFilterWithExpression(expr string) *eventingv1beta1.TriggerFilter {
 	return &eventingv1beta1.TriggerFilter{
-		Expression: expr,
+		JsExpression: expr,
 	}
 }
 

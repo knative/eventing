@@ -65,8 +65,8 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 				errs = errs.Also(fe)
 			}
 		}
-		if ts.Filter.Expression != "" {
-			_, err := eventfilter.ParseFilterExpr(ts.Filter.Expression)
+		if ts.Filter.JsExpression != "" {
+			_, err := eventfilter.ParseFilterExpr(ts.Filter.JsExpression)
 			if err != nil {
 				fe := &apis.FieldError{
 					Message: fmt.Sprintf("Invalid filter expression: %q", err),

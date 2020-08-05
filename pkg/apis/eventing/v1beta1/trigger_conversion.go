@@ -39,7 +39,7 @@ func (source *Trigger) ConvertTo(_ context.Context, to apis.Convertible) error {
 			for k, v := range source.Spec.Filter.Attributes {
 				sink.Spec.Filter.Attributes[k] = v
 			}
-			sink.Spec.Filter.Expression = source.Spec.Filter.Expression
+			sink.Spec.Filter.JsExpression = source.Spec.Filter.JsExpression
 		}
 		sink.Status.Status = source.Status.Status
 		sink.Status.SubscriberURI = source.Status.SubscriberURI
@@ -62,8 +62,8 @@ func (sink *Trigger) ConvertFrom(_ context.Context, from apis.Convertible) error
 				attributes[k] = v
 			}
 			sink.Spec.Filter = &TriggerFilter{
-				Attributes: attributes,
-				Expression: source.Spec.Filter.Expression,
+				Attributes:   attributes,
+				JsExpression: source.Spec.Filter.JsExpression,
 			}
 		}
 		sink.Status.Status = source.Status.Status
