@@ -178,6 +178,10 @@ func (ei *EventInfoStore) cleanup() {
 	close(ei.closeCh)
 }
 
+//TODO remove it, this is not useful anymore
+// Deprecated: you can remove the manual cleanup of the event getter, since now it's done at test tear down automatically
+func (ei *EventInfoStore) Cleanup() {}
+
 // Called internally by functions wanting the current list of all
 // known events.  This calls for an update from the REST server and
 // returns the summary of all locally and remotely known events.

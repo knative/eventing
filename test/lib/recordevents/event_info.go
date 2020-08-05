@@ -265,10 +265,6 @@ func (eg *eventGetter) cleanup() {
 	}
 }
 
-//TODO remove it, this is not useful anymore
-// Deprecated: you can remove the manual cleanup of the event getter, since now it's done at test tear down automatically
-func (eg *eventGetter) Cleanup() {}
-
 // Wait (up to timeoutEvRetry) for the pod to RestAPI to answer request.
 func (eg *eventGetter) waitTillUp() error {
 	var internalErr error
