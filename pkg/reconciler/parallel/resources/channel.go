@@ -24,8 +24,8 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/flows/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/flows/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // ParallelChannelName creates a name for the Channel fronting parallel.
@@ -40,9 +40,9 @@ func ParallelBranchChannelName(parallelName string, branchNumber int) string {
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
 // for a given parallel.
-func NewChannel(name string, p *v1beta1.Parallel) (*unstructured.Unstructured, error) {
+func NewChannel(name string, p *v1.Parallel) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := messagingv1beta1.ChannelTemplateSpecInternal{
+	template := messagingv1.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       p.Spec.ChannelTemplate.Kind,
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
