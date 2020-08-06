@@ -66,7 +66,7 @@ type PingSourceSpec struct {
 	// Defaults to the system time zone.
 	// More general information about time zones: https://www.iana.org/time-zones
 	// List of valid timezone values: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-	Timezone string `json:"timezone,omitempty`
+	Timezone string `json:"timezone,omitempty"`
 
 	// JsonData is json encoded data used as the body of the event posted to
 	// the sink. Default is empty. If set, datacontenttype will also be set
