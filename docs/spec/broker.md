@@ -50,7 +50,11 @@ Trigger. Events that pass the attributes filter MUST include context or
 extension attributes that match all key-value pairs exactly.
 
 The jsExpression filter specifying a Javascript expression MUST be supported by
-Trigger. If the evaluation of the expression returns a Javascript value
+Trigger. Implementations MUST support evaluation of Javascript expressions
+following the standard
+[EcmaScript 5.1](http://www.ecma-international.org/ecma-262/5.1/), although they
+MAY support [EcmaScript 6](http://www.ecma-international.org/ecma-262/6.0/) or
+greater. If the evaluation of the expression returns a Javascript value
 coercible to the boolean `true`, then the trigger filter MUST pass the event.
 Implementations MUST make the event accessible, within the expression, through
 the variable `event` and its context attributes and extensions through the
