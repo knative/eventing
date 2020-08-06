@@ -37,6 +37,9 @@ Continue on fixing test flakes and answer
   [link](https://app.slack.com/client/T93ELUK42/browse-user-groups/user_groups/S0191HUK2Q0).
   If you don't have permission, ask in the Slack channel
   #steering-toc-questions.
+- Remove yourself from 'Eventing Triage' Peribolos group
+  https://github.com/knative/community/blob/509d00841920181611a8457da3f655ef014ff9bf/peribolos/knative.yaml#L669
+  and add the next contact in the rotation. Include them in the PR as a reminder.
 - Email the next contacts, cc'ing knative-dev@ with a short summaries of the
   user questions encountered and links to them.
 - File issue or document suggested improvements to this process.
