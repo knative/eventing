@@ -43,8 +43,8 @@ Continue on fixing test flakes and answer
 
 ## SLO
 
-Participation is voluntary and based on good faith. We are only expected to
-participate during our local office hour.
+Participation is voluntary and based on good faith. The community contacts are
+only expected to participate during their local office hour.
 
 # Roster
 
