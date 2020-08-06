@@ -30,6 +30,17 @@ spec:
         app: mt-broker-controller
         eventing.knative.dev/release: devel
     spec:
+      # To avoid node becoming SPOF, spread our replicas to different nodes.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: mt-broker-controller
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+
       serviceAccountName: eventing-controller
 
       containers:

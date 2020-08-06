@@ -29,6 +29,17 @@ spec:
     metadata:
       labels: *labels
     spec:
+      # To avoid node becoming SPOF, spread our replicas to different nodes.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: eventing-webhook
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+
       serviceAccountName: eventing-webhook
 
       containers:
