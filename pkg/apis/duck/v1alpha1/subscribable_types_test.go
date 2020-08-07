@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 )
@@ -78,6 +79,17 @@ func TestSubscribablePopulate(t *testing.T) {
 					Ready:              corev1.ConditionFalse,
 					Message:            "Some message",
 				}},
+				Subscribersv1: []eventingduckv1.SubscriberStatus{{
+					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 1,
+					Ready:              corev1.ConditionTrue,
+					Message:            "Some message",
+				}, {
+					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 2,
+					Ready:              corev1.ConditionFalse,
+					Message:            "Some message",
+				}},
 			},
 		},
 	}
@@ -94,6 +106,17 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	s := &SubscribableStatus{
 		// Populate ALL fields
 		Subscribers: []eventingduckv1beta1.SubscriberStatus{{
+			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+			ObservedGeneration: 1,
+			Ready:              corev1.ConditionTrue,
+			Message:            "This is new field",
+		}, {
+			UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+			ObservedGeneration: 2,
+			Ready:              corev1.ConditionFalse,
+			Message:            "This is new field",
+		}},
+		Subscribersv1: []eventingduckv1.SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
@@ -128,6 +151,14 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 
 	/* Test AddSubscriberToSubscribableStatus */
 	subscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1beta1.SubscriberStatus{
+		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              corev1.ConditionTrue,
+		Message:            "This is new field",
+	})
+
+	/* Test AddSubscriberV1ToSubscribableStatus */
+	subscribableTypeStatus.AddSubscriberV1ToSubscribableStatus(eventingduckv1.SubscriberStatus{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              corev1.ConditionTrue,
