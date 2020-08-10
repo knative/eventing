@@ -18,12 +18,12 @@ package helpers
 
 import (
 	"testing"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/pkg/reconciler"
+
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
@@ -120,21 +120,22 @@ func triggerV1Beta1ReadyBrokerReadyHelper(triggerName, brokerName string, client
 }
 
 func triggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
-	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
-	}
-	tr.Spec.Broker = brokerName
-	err = reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
+		}
+		tr.Spec.Broker = brokerName
 		_, e := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Update(tr)
 		return e
 	})
-
 	if err != nil {
 		t.Fatalf("Error: Could not update trigger %s: %v", triggerName, err)
 	}
-	time.Sleep(5 * time.Second)
-	tr, err = client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
+
+	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
+
+	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(triggerName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
 	}
