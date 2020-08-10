@@ -92,6 +92,6 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", flows.knative.dev]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
