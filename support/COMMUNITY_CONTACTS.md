@@ -18,6 +18,9 @@ community contact's duty (subject to change) is as followed:
 
 ### Monday
 
+- Check 'Eventing Triage' Peribolos group
+  https://github.com/knative/community/blob/509d00841920181611a8457da3f655ef014ff9bf/peribolos/knative.yaml#L669
+  and send a PR to add yourself if you aren't already in there.
 - Check the [Eventing test grid](https://testgrid.knative.dev/eventing) for
   flakiness to pick a test and focus on fixing it during your week. Once you
   pick the test flake, assign the corresponding bug filed by flakiness test
@@ -37,9 +40,6 @@ Continue on fixing test flakes and answer
   [link](https://app.slack.com/client/T93ELUK42/browse-user-groups/user_groups/S0191HUK2Q0).
   If you don't have permission, ask in the Slack channel
   #steering-toc-questions.
-- Remove yourself from 'Eventing Triage' Peribolos group
-  https://github.com/knative/community/blob/509d00841920181611a8457da3f655ef014ff9bf/peribolos/knative.yaml#L669
-  and add the next contact in the rotation. Include them in the PR as a reminder.
 - Email the next contacts, cc'ing knative-dev@ with a short summaries of the
   user questions encountered and links to them.
 - File issue or document suggested improvements to this process.
@@ -54,7 +54,8 @@ only expected to participate during their local office hour.
 We seed this rotation with all approvers from all the Eventing workgroups,
 excluding productivity. If you are no longer active in Knative, or if you are
 contributing on personal capacity and do not have time to contribute in the
-rotation, feel free to send a PR to remove yourself.
+rotation, feel free to send a PR to remove yourself. Similarly you can trade
+your timeslot with others by sending PRs.
 
 - evankanderson
 - grantr
