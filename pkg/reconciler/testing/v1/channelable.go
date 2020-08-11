@@ -24,8 +24,8 @@ import (
 	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/pkg/apis"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	pkgduckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // Channelable allows us to have a fake channel for testinv1alpha1
@@ -105,7 +105,7 @@ func WithChannelableReady() ChannelableOption {
 func WithChannelableAddress(a string) ChannelableOption {
 	return func(c *v1alpha1.Channelable) {
 		c.Status.Address = &pkgduckv1alpha1.Addressable{
-			Addressablev1: pkgduckv1.Addressable{
+			Addressable: pkgduckv1beta1.Addressable{
 				URL: apis.HTTP(a),
 			},
 		}

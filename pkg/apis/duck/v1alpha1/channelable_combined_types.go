@@ -53,7 +53,7 @@ type ChannelableCombinedSpec struct {
 	SubscribableTypeSpec `json:",inline"`
 
 	// SubscribableSpec is for the v1beta1 spec compatibility.
-	//SubscribableSpec eventingduckv1beta1.SubscribableSpec `json:",inline"`
+	SubscribableSpecv1beta1 eventingduckv1beta1.SubscribableSpec `json:",inline"`
 
 	// DeliverySpec contains options controlling the event delivery
 	// for the v1beta1 spec compatibility.
@@ -80,7 +80,7 @@ type ChannelableCombinedStatus struct {
 	// SubscribableTypeStatus is the v1alpha1 part of the Subscribers status
 	SubscribableTypeStatus `json:",inline"`
 	// SubscribableStatus is the v1beta1 part of the Subscribers status.
-	//eventingduckv1beta1.SubscribableStatus `json:",inline"`
+	SubscribableStatusv1beta1 eventingduckv1beta1.SubscribableStatus `json:",inline"`
 	// SubscribableStatusv1 is the v1 part of the Subscribers status.
 	eventingduckv1.SubscribableStatus `json:",inline"`
 	// ErrorChannel is set by the channel when it supports native error handling via a channel
@@ -111,7 +111,7 @@ func (c *ChannelableCombined) Populate() {
 			ReplyURI:      apis.HTTP("sink2"),
 		}},
 	}
-	/*c.Spec.SubscribableSpec = eventingduckv1beta1.SubscribableSpec{
+	c.Spec.SubscribableSpecv1beta1 = eventingduckv1beta1.SubscribableSpec{
 		// Populate ALL fields
 		Subscribers: []eventingduckv1beta1.SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -124,7 +124,7 @@ func (c *ChannelableCombined) Populate() {
 			SubscriberURI: apis.HTTP("call2"),
 			ReplyURI:      apis.HTTP("sink2"),
 		}},
-	}*/
+	}
 	c.Spec.SubscribableSpec = eventingduckv1.SubscribableSpec{
 		// Populate ALL fields
 		Subscribers: []eventingduckv1.SubscriberSpec{{
@@ -199,9 +199,9 @@ func (c *ChannelableCombined) Populate() {
 				Hostname: "test-domain",
 			},
 		},
-		/*SubscribableStatus: eventingduckv1beta1.SubscribableStatus{
-			Subscribers: subscribers,
-		},*/
+		SubscribableStatusv1beta1: eventingduckv1beta1.SubscribableStatus{
+			Subscribers: subscribersv1beta1,
+		},
 		SubscribableStatus: eventingduckv1.SubscribableStatus{
 			Subscribers: subscribers,
 		},

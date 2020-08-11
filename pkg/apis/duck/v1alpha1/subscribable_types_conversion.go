@@ -128,7 +128,7 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Co
 		if source.SubscribableStatus != nil &&
 			len(source.SubscribableStatus.Subscribersv1beta1) > 0 {
 			sink.Subscribers = make([]eventingduckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribersv1beta1))
-			for i, ss := range source.SubscribableStatus.Subscribers {
+			for i, ss := range source.SubscribableStatus.Subscribersv1beta1 {
 				sink.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{
 					UID:                ss.UID,
 					ObservedGeneration: ss.ObservedGeneration,

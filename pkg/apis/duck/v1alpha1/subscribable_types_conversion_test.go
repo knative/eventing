@@ -109,14 +109,6 @@ func TestSubscribableTypeConversionV1alphaV1beta1(t *testing.T) {
 			},
 			Status: SubscribableTypeStatus{
 				SubscribableStatus: &SubscribableStatus{
-					Subscribers: []v1.SubscriberStatus{
-						{
-							UID:                "status-uid-1",
-							ObservedGeneration: 99,
-							Ready:              corev1.ConditionTrue,
-							Message:            "msg",
-						},
-					},
 					Subscribersv1beta1: []v1beta1.SubscriberStatus{
 						{
 							UID:                "status-uid-1",

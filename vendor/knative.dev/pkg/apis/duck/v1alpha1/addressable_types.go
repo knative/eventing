@@ -40,8 +40,6 @@ import (
 type Addressable struct {
 	v1beta1.Addressable `json:",omitempty"`
 
-	Addressablev1 v1.Addressable `json:",omitempty"`
-
 	Hostname string `json:"hostname,omitempty"`
 }
 
@@ -129,12 +127,6 @@ func (t *AddressableType) Populate() {
 		&Addressable{
 			// Populate ALL fields
 			Addressable: v1beta1.Addressable{
-				URL: &apis.URL{
-					Scheme: "http",
-					Host:   "foo.bar.svc.cluster.local",
-				},
-			},
-			Addressablev1: v1.Addressable{
 				URL: &apis.URL{
 					Scheme: "http",
 					Host:   "foo.bar.svc.cluster.local",
