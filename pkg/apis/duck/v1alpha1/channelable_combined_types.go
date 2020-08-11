@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
@@ -31,8 +32,8 @@ import (
 // +genduck
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChannelableCombined is a skeleton type wrapping Subscribable and Addressable of both
-// v1alpha1 and v1beta1 duck types. This is not to be used by resource writers and is
+// ChannelableCombined is a skeleton type wrapping Subscribable and Addressable of
+// v1alpha1, v1beta1 and v1 duck types. This is not to be used by resource writers and is
 // only used by Subscription Controller to synthesize patches and read the Status
 // of the Channelable Resources.
 // This is not a real resource.
@@ -55,8 +56,17 @@ type ChannelableCombinedSpec struct {
 	eventingduckv1beta1.SubscribableSpec `json:",inline"`
 
 	// DeliverySpec contains options controlling the event delivery
+	// for the v1beta1 spec compatibility.
 	// +optional
 	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
+
+	// SubscribableSpecv1 is for the v1 spec compatibility.
+	SubscribableSpecv1 eventingduckv1.SubscribableSpec `json:",inline"`
+
+	// DeliverySpecv1 contains options controlling the event delivery
+	// for the v1 spec compatibility.
+	// +optional
+	Deliveryv1 *eventingduckv1.DeliverySpec `json:"deliveryv1,omitempty"`
 }
 
 // ChannelableStatus contains the Status of a Channelable object.
@@ -71,6 +81,8 @@ type ChannelableCombinedStatus struct {
 	SubscribableTypeStatus `json:",inline"`
 	// SubscribableStatus is the v1beta1 part of the Subscribers status.
 	eventingduckv1beta1.SubscribableStatus `json:",inline"`
+	// SubscribableStatusv1 is the v1 part of the Subscribers status.
+	SubscribableStatusv1 eventingduckv1.SubscribableStatus `json:",inline"`
 	// ErrorChannel is set by the channel when it supports native error handling via a channel
 	// +optional
 	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
@@ -113,23 +125,67 @@ func (c *ChannelableCombined) Populate() {
 			ReplyURI:      apis.HTTP("sink2"),
 		}},
 	}
+	c.Spec.SubscribableSpecv1 = eventingduckv1.SubscribableSpec{
+		// Populate ALL fields
+		Subscribers: []eventingduckv1.SubscriberSpec{{
+			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+			Generation:    1,
+			SubscriberURI: apis.HTTP("call1"),
+			ReplyURI:      apis.HTTP("sink2"),
+		}, {
+			UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+			Generation:    2,
+			SubscriberURI: apis.HTTP("call2"),
+			ReplyURI:      apis.HTTP("sink2"),
+		}},
+	}
 	retry := int32(5)
 	linear := eventingduckv1beta1.BackoffPolicyLinear
+	linearv1 := eventingduckv1.BackoffPolicyLinear
 	delay := "5s"
-	c.Spec.Delivery = &eventingduckv1beta1.DeliverySpec{
-		DeadLetterSink: &duckv1.Destination{
-			Ref: &duckv1.KReference{
-				Name: "aname",
-			},
-			URI: &apis.URL{
-				Scheme: "http",
-				Host:   "test-error-domain",
-			},
+	deadLetterSink := duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name: "aname",
 		},
-		Retry:         &retry,
-		BackoffPolicy: &linear,
-		BackoffDelay:  &delay,
+		URI: &apis.URL{
+			Scheme: "http",
+			Host:   "test-error-domain",
+		},
 	}
+	c.Spec.Delivery = &eventingduckv1beta1.DeliverySpec{
+		DeadLetterSink: &deadLetterSink,
+		Retry:          &retry,
+		BackoffPolicy:  &linear,
+		BackoffDelay:   &delay,
+	}
+	c.Spec.Deliveryv1 = &eventingduckv1.DeliverySpec{
+		DeadLetterSink: &deadLetterSink,
+		Retry:          &retry,
+		BackoffPolicy:  &linearv1,
+		BackoffDelay:   &delay,
+	}
+	subscribers := []eventingduckv1beta1.SubscriberStatus{{
+		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              corev1.ConditionTrue,
+		Message:            "Some message",
+	}, {
+		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 2,
+		Ready:              corev1.ConditionFalse,
+		Message:            "Some message",
+	}}
+	subscribersv1 := []eventingduckv1.SubscriberStatus{{
+		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              corev1.ConditionTrue,
+		Message:            "Some message",
+	}, {
+		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 2,
+		Ready:              corev1.ConditionFalse,
+		Message:            "Some message",
+	}}
 	c.Status = ChannelableCombinedStatus{
 		AddressStatus: v1alpha1.AddressStatus{
 			Address: &v1alpha1.Addressable{
@@ -144,31 +200,15 @@ func (c *ChannelableCombined) Populate() {
 			},
 		},
 		SubscribableStatus: eventingduckv1beta1.SubscribableStatus{
-			Subscribers: []eventingduckv1beta1.SubscriberStatus{{
-				UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-				ObservedGeneration: 1,
-				Ready:              corev1.ConditionTrue,
-				Message:            "Some message",
-			}, {
-				UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-				ObservedGeneration: 2,
-				Ready:              corev1.ConditionFalse,
-				Message:            "Some message",
-			}},
+			Subscribers: subscribers,
+		},
+		SubscribableStatusv1: eventingduckv1.SubscribableStatus{
+			Subscribers: subscribersv1,
 		},
 		SubscribableTypeStatus: SubscribableTypeStatus{
 			SubscribableStatus: &SubscribableStatus{
-				Subscribers: []eventingduckv1beta1.SubscriberStatus{{
-					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 1,
-					Ready:              corev1.ConditionTrue,
-					Message:            "Some message",
-				}, {
-					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 2,
-					Ready:              corev1.ConditionFalse,
-					Message:            "Some message",
-				}},
+				Subscribers:   subscribers,
+				Subscribersv1: subscribersv1,
 			},
 		},
 	}

@@ -147,7 +147,7 @@ func TestSubscribableTypeConversionV1alphaV1(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1.Subscribable{}}
 
-	linear := v1beta1.BackoffPolicyLinear
+	linear := v1.BackoffPolicyLinear
 
 	tests := []struct {
 		name string
@@ -180,7 +180,7 @@ func TestSubscribableTypeConversionV1alphaV1(t *testing.T) {
 							SubscriberURI:     apis.HTTP("subscriber.example.com"),
 							ReplyURI:          apis.HTTP("reply.example.com"),
 							DeadLetterSinkURI: apis.HTTP("subscriber.dls.example.com"),
-							Delivery: &v1beta1.DeliverySpec{
+							Deliveryv1: &v1.DeliverySpec{
 								DeadLetterSink: &pkgduckv1.Destination{
 									Ref: &pkgduckv1.KReference{
 										Kind:       "dlKind",
@@ -201,14 +201,14 @@ func TestSubscribableTypeConversionV1alphaV1(t *testing.T) {
 							SubscriberURI:     apis.HTTP("subscriber2.example.com"),
 							ReplyURI:          apis.HTTP("reply2.example.com"),
 							DeadLetterSinkURI: apis.HTTP("subscriber2.dls.example.com"),
-							Delivery:          nil,
+							Deliveryv1:        nil,
 						},
 					},
 				},
 			},
 			Status: SubscribableTypeStatus{
 				SubscribableStatus: &SubscribableStatus{
-					Subscribers: []v1beta1.SubscriberStatus{
+					Subscribersv1: []v1.SubscriberStatus{
 						{
 							UID:                "status-uid-1",
 							ObservedGeneration: 99,
@@ -232,7 +232,7 @@ func TestSubscribableTypeConversionV1alphaV1(t *testing.T) {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
 
-				fixed := fixSubscribableTypeDeprecated(test.in)
+				fixed := fixSubscribableTypeDeprecatedv1(test.in)
 				if diff := cmp.Diff(fixed, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
@@ -451,6 +451,23 @@ func fixSubscribableTypeDeprecated(in *SubscribableType) *SubscribableType {
 		for i := range in.Spec.Subscribable.Subscribers {
 			if in.Spec.Subscribable.Subscribers[i].Delivery == nil {
 				in.Spec.Subscribable.Subscribers[i].Delivery = &v1beta1.DeliverySpec{
+					DeadLetterSink: &pkgduckv1.Destination{
+						URI: in.Spec.Subscribable.Subscribers[i].DeadLetterSinkURI,
+					},
+				}
+			}
+		}
+	}
+
+	return in
+}
+
+// Since v1 to v1alpha1 is lossy.
+func fixSubscribableTypeDeprecatedv1(in *SubscribableType) *SubscribableType {
+	if in.Spec.Subscribable != nil && len(in.Spec.Subscribable.Subscribers) > 0 {
+		for i := range in.Spec.Subscribable.Subscribers {
+			if in.Spec.Subscribable.Subscribers[i].Deliveryv1 == nil {
+				in.Spec.Subscribable.Subscribers[i].Deliveryv1 = &v1.DeliverySpec{
 					DeadLetterSink: &pkgduckv1.Destination{
 						URI: in.Spec.Subscribable.Subscribers[i].DeadLetterSinkURI,
 					},
