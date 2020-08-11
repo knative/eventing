@@ -40,6 +40,11 @@ var PingSourceCondSet = apis.NewLivingConditionSet(
 	PingSourceConditionSinkProvided,
 	PingSourceConditionDeployed)
 
+const (
+	// PingSourceEventType is the default PingSource CloudEvent type.
+	PingSourceEventType = "dev.knative.sources.ping"
+)
+
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
 func (*PingSource) GetConditionSet() apis.ConditionSet {
 	return PingSourceCondSet

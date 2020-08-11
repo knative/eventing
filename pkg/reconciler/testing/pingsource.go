@@ -20,16 +20,15 @@ import (
 	"context"
 	"time"
 
-	"knative.dev/eventing/pkg/apis/eventing"
-
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 // PingSourceOption enables further configuration of a CronJob.
@@ -37,6 +36,9 @@ type PingSourceOption func(*v1alpha1.PingSource)
 
 // PingSourceV1A2Option enables further configuration of a CronJob.
 type PingSourceV1A2Option func(*v1alpha2.PingSource)
+
+// PingSourceV1B1Option enables further configuration of a CronJob.
+type PingSourceV1B1Option func(*v1beta1.PingSource)
 
 // NewPingSourceV1Alpha1 creates a PingSource with PingSourceOption.
 func NewPingSourceV1Alpha1(name, namespace string, o ...PingSourceOption) *v1alpha1.PingSource {
@@ -56,6 +58,21 @@ func NewPingSourceV1Alpha1(name, namespace string, o ...PingSourceOption) *v1alp
 // NewPingSourceV1Alpha2 creates a PingSource with PingSourceOption.
 func NewPingSourceV1Alpha2(name, namespace string, o ...PingSourceV1A2Option) *v1alpha2.PingSource {
 	c := &v1alpha2.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	for _, opt := range o {
+		opt(c)
+	}
+	c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
+	return c
+}
+
+// NewPingSourceV1Beta1 creates a PingSource with PingSourceOption.
+func NewPingSourceV1Beta1(name, namespace string, o ...PingSourceV1B1Option) *v1beta1.PingSource {
+	c := &v1beta1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -204,6 +221,12 @@ func WithPingSourceSpec(spec v1alpha1.PingSourceSpec) PingSourceOption {
 
 func WithPingSourceV1A2Spec(spec v1alpha2.PingSourceSpec) PingSourceV1A2Option {
 	return func(c *v1alpha2.PingSource) {
+		c.Spec = spec
+	}
+}
+
+func WithPingSourceV1B1Spec(spec v1beta1.PingSourceSpec) PingSourceV1B1Option {
+	return func(c *v1beta1.PingSource) {
 		c.Spec = spec
 	}
 }
