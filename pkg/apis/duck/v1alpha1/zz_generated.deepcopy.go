@@ -127,7 +127,7 @@ func (in *ChannelableCombinedSpec) DeepCopyInto(out *ChannelableCombinedSpec) {
 		*out = new(v1beta1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
-	in.SubscribableSpecv1.DeepCopyInto(&out.SubscribableSpecv1)
+	//in.SubscribableSpecv1.DeepCopyInto(&out.SubscribableSpecv1)
 	if in.Deliveryv1 != nil {
 		in, out := &in.Deliveryv1, &out.Deliveryv1
 		*out = new(v1.DeliverySpec)
@@ -153,7 +153,7 @@ func (in *ChannelableCombinedStatus) DeepCopyInto(out *ChannelableCombinedStatus
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
-	in.SubscribableStatusv1.DeepCopyInto(&out.SubscribableStatusv1)
+	//in.SubscribableStatusv1.DeepCopyInto(&out.SubscribableStatusv1)
 	if in.ErrorChannel != nil {
 		in, out := &in.ErrorChannel, &out.ErrorChannel
 		*out = new(corev1.ObjectReference)

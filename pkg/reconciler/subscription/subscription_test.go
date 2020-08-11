@@ -22,23 +22,23 @@ import (
 	"fmt"
 	"testing"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
@@ -50,9 +50,9 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel/fake"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -139,11 +139,11 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = eventingv1beta1.AddToScheme(scheme.Scheme)
+	_ = eventingv1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 	_ = eventingduckv1alpha1.AddToScheme(scheme.Scheme)
-	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
-	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
+	_ = apiextensionsv1.AddToScheme(scheme.Scheme)
+	_ = messagingv1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {

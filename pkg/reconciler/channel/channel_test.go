@@ -30,7 +30,6 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -40,7 +39,6 @@ import (
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	testingv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -68,7 +66,7 @@ func init() {
 	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
 	_ = messagingv1.AddToScheme(scheme.Scheme)
 	_ = v1.AddToScheme(scheme.Scheme)
-	_ = eventingduckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1alpha1.AddToScheme(scheme.Scheme)
 	_ = eventingduckv1.AddToScheme(scheme.Scheme)
 }
 
@@ -253,11 +251,11 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname)),
-			testingv1beta1.NewChannelable(channelName, testNS,
-				testingv1beta1.WithChannelableReady(),
-				testingv1beta1.WithChannelableAddress(backingChannelHostname),
-				testingv1beta1.WithChannelableSubscribers(subscribersV1Alpha1()),
-				testingv1beta1.WithChannelableStatusSubscribers(subscriberStatusesV1beta1())),
+			NewChannelable(channelName, testNS,
+				WithChannelableReady(),
+				WithChannelableAddress(backingChannelHostname),
+				WithChannelableSubscribers(subscribersV1Alpha1()),
+				WithChannelableStatusSubscribers(subscriberStatuses())),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,

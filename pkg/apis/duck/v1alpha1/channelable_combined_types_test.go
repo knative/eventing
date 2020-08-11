@@ -49,7 +49,7 @@ func TestChannelableCombinedPopulate(t *testing.T) {
 	delay := "5s"
 	want := &ChannelableCombined{
 		Spec: ChannelableCombinedSpec{
-			SubscribableSpec: eventingduckv1beta1.SubscribableSpec{
+			/*SubscribableSpec: eventingduckv1beta1.SubscribableSpec{
 				// Populate ALL fields
 				Subscribers: []eventingduckv1beta1.SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -62,8 +62,8 @@ func TestChannelableCombinedPopulate(t *testing.T) {
 					SubscriberURI: apis.HTTP("call2"),
 					ReplyURI:      apis.HTTP("sink2"),
 				}},
-			},
-			SubscribableSpecv1: eventingduckv1.SubscribableSpec{
+			},*/
+			SubscribableSpec: eventingduckv1.SubscribableSpec{
 				// Populate ALL fields
 				Subscribers: []eventingduckv1.SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -135,7 +135,7 @@ func TestChannelableCombinedPopulate(t *testing.T) {
 					Hostname: "test-domain",
 				},
 			},
-			SubscribableStatus: eventingduckv1beta1.SubscribableStatus{
+			/*SubscribableStatus: eventingduckv1beta1.SubscribableStatus{
 				Subscribers: []eventingduckv1beta1.SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					ObservedGeneration: 1,
@@ -147,8 +147,8 @@ func TestChannelableCombinedPopulate(t *testing.T) {
 					Ready:              corev1.ConditionFalse,
 					Message:            "Some message",
 				}},
-			},
-			SubscribableStatusv1: eventingduckv1.SubscribableStatus{
+			},*/
+			SubscribableStatus: eventingduckv1.SubscribableStatus{
 				Subscribers: []eventingduckv1.SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					ObservedGeneration: 1,
