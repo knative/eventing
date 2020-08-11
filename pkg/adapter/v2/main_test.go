@@ -163,3 +163,20 @@ func TestStartInformers(t *testing.T) {
 func (m *myAdapter) Start(_ context.Context) error {
 	return nil
 }
+
+func TestHAContext(t *testing.T) {
+	ctx := context.Background()
+	ctx = WithHAEnabled(ctx)
+	if !IsHAEnabled(ctx) {
+		t.Error("Expected HA to be enabled")
+	}
+
+	ctx = withHADisabledFlag(ctx)
+	if !IsHAEnabled(ctx) {
+		t.Error("Expected HA to be enabled")
+	}
+	if !isHADisabledFlag(ctx) {
+		t.Error("Expected HA to be disabled via commandline flag")
+	}
+
+}
