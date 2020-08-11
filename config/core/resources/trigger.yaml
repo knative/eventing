@@ -29,12 +29,6 @@ spec:
     subresources:
       status: {}
     additionalPrinterColumns:
-    - name: Ready
-      type: string
-      jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
-    - name: Reason
-      type: string
-      jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
     - name: Broker
       type: string
       jsonPath: .spec.broker
@@ -44,6 +38,12 @@ spec:
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
+    - name: Ready
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
     schema:
       openAPIV3Schema:
         type: object

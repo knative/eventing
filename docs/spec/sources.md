@@ -97,15 +97,15 @@ resource.
 
 ```yaml
 additionalPrinterColumns:
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp
   - name: Ready
     type: string
     JSONPath: '.status.conditions[?(@.type=="Ready")].status'
   - name: Reason
     type: string
     JSONPath: '.status.conditions[?(@.type=="Ready")].reason'
-  - name: Age
-    type: date
-    JSONPath: .metadata.creationTimestamp
 ```
 
 ### Source Validation

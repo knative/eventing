@@ -38,18 +38,18 @@ spec:
         # see issue: https://github.com/knative/serving/issues/912
         x-kubernetes-preserve-unknown-fields: true
     additionalPrinterColumns:
-    - name: Ready
-      type: string
-      jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
-    - name: Reason
-      type: string
-      jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
     - name: URL
       type: string
       jsonPath: .status.address.url
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
+    - name: Ready
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
   - << : *version
     name: v1
     served: true
