@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -93,7 +94,18 @@ func TestChannelablePopulate(t *testing.T) {
 			},
 			SubscribableTypeStatus: SubscribableTypeStatus{
 				SubscribableStatus: &SubscribableStatus{
-					Subscribers: []eventingduckv1beta1.SubscriberStatus{{
+					Subscribersv1beta1: []eventingduckv1beta1.SubscriberStatus{{
+						UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 1,
+						Ready:              corev1.ConditionTrue,
+						Message:            "Some message",
+					}, {
+						UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 2,
+						Ready:              corev1.ConditionFalse,
+						Message:            "Some message",
+					}},
+					Subscribers: []eventingduckv1.SubscriberStatus{{
 						UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 						ObservedGeneration: 1,
 						Ready:              corev1.ConditionTrue,

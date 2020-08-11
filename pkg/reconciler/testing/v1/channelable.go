@@ -81,7 +81,7 @@ func WithChannelableReadySubscriberAndGeneration(uid string, observedGeneration 
 		if c.Status.GetSubscribableTypeStatus() == nil { // Both the SubscribableStatus fields are nil
 			c.Status.SetSubscribableTypeStatus(v1alpha1.SubscribableStatus{})
 		}
-		c.Status.SubscribableTypeStatus.AddSubscriberV1ToSubscribableStatus(duckv1.SubscriberStatus{
+		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(duckv1.SubscriberStatus{
 			UID:                types.UID(uid),
 			ObservedGeneration: observedGeneration,
 			Ready:              corev1.ConditionTrue,
@@ -92,7 +92,7 @@ func WithChannelableReadySubscriberAndGeneration(uid string, observedGeneration 
 func WithChannelableStatusSubscribers(subscriberStatuses []duckv1.SubscriberStatus) ChannelableOption {
 	return func(c *v1alpha1.Channelable) {
 		c.Status.SetSubscribableTypeStatus(v1alpha1.SubscribableStatus{
-			Subscribersv1: subscriberStatuses})
+			Subscribers: subscriberStatuses})
 	}
 }
 

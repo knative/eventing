@@ -126,8 +126,8 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Co
 	switch sink := obj.(type) {
 	case *eventingduckv1beta1.SubscribableStatus:
 		if source.SubscribableStatus != nil &&
-			len(source.SubscribableStatus.Subscribers) > 0 {
-			sink.Subscribers = make([]eventingduckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
+			len(source.SubscribableStatus.Subscribersv1beta1) > 0 {
+			sink.Subscribers = make([]eventingduckv1beta1.SubscriberStatus, len(source.SubscribableStatus.Subscribersv1beta1))
 			for i, ss := range source.SubscribableStatus.Subscribers {
 				sink.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{
 					UID:                ss.UID,
@@ -139,9 +139,9 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Co
 		}
 	case *eventingduckv1.SubscribableStatus:
 		if source.SubscribableStatus != nil &&
-			len(source.SubscribableStatus.Subscribersv1) > 0 {
-			sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.SubscribableStatus.Subscribersv1))
-			for i, ss := range source.SubscribableStatus.Subscribersv1 {
+			len(source.SubscribableStatus.Subscribers) > 0 {
+			sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
+			for i, ss := range source.SubscribableStatus.Subscribers {
 				sink.Subscribers[i] = eventingduckv1.SubscriberStatus{
 					UID:                ss.UID,
 					ObservedGeneration: ss.ObservedGeneration,
@@ -250,10 +250,10 @@ func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Co
 	case *eventingduckv1beta1.SubscribableStatus:
 		if len(source.Subscribers) > 0 {
 			sink.SubscribableStatus = &SubscribableStatus{
-				Subscribers: make([]eventingduckv1beta1.SubscriberStatus, len(source.Subscribers)),
+				Subscribersv1beta1: make([]eventingduckv1beta1.SubscriberStatus, len(source.Subscribers)),
 			}
 			for i, ss := range source.Subscribers {
-				sink.SubscribableStatus.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{
+				sink.SubscribableStatus.Subscribersv1beta1[i] = eventingduckv1beta1.SubscriberStatus{
 					UID:                ss.UID,
 					ObservedGeneration: ss.ObservedGeneration,
 					Ready:              ss.Ready,
@@ -264,10 +264,10 @@ func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Co
 	case *eventingduckv1.SubscribableStatus:
 		if len(source.Subscribers) > 0 {
 			sink.SubscribableStatus = &SubscribableStatus{
-				Subscribersv1: make([]eventingduckv1.SubscriberStatus, len(source.Subscribers)),
+				Subscribers: make([]eventingduckv1.SubscriberStatus, len(source.Subscribers)),
 			}
 			for i, ss := range source.Subscribers {
-				sink.SubscribableStatus.Subscribersv1[i] = eventingduckv1.SubscriberStatus{
+				sink.SubscribableStatus.Subscribers[i] = eventingduckv1.SubscriberStatus{
 					UID:                ss.UID,
 					ObservedGeneration: ss.ObservedGeneration,
 					Ready:              ss.Ready,

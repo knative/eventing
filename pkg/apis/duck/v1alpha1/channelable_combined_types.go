@@ -164,7 +164,7 @@ func (c *ChannelableCombined) Populate() {
 		BackoffPolicy:  &linearv1,
 		BackoffDelay:   &delay,
 	}
-	subscribers := []eventingduckv1beta1.SubscriberStatus{{
+	subscribersv1beta1 := []eventingduckv1beta1.SubscriberStatus{{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              corev1.ConditionTrue,
@@ -175,7 +175,7 @@ func (c *ChannelableCombined) Populate() {
 		Ready:              corev1.ConditionFalse,
 		Message:            "Some message",
 	}}
-	subscribersv1 := []eventingduckv1.SubscriberStatus{{
+	subscribers := []eventingduckv1.SubscriberStatus{{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              corev1.ConditionTrue,
@@ -203,12 +203,12 @@ func (c *ChannelableCombined) Populate() {
 			Subscribers: subscribers,
 		},*/
 		SubscribableStatus: eventingduckv1.SubscribableStatus{
-			Subscribers: subscribersv1,
+			Subscribers: subscribers,
 		},
 		SubscribableTypeStatus: SubscribableTypeStatus{
 			SubscribableStatus: &SubscribableStatus{
-				Subscribers:   subscribers,
-				Subscribersv1: subscribersv1,
+				Subscribers:        subscribers,
+				Subscribersv1beta1: subscribersv1beta1,
 			},
 		},
 	}

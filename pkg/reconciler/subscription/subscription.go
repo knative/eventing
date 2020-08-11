@@ -291,7 +291,7 @@ func (r *Reconciler) getSubStatusV1Alpha1(subscription *v1.Subscription, channel
 	if subscribableStatus == nil {
 		return eventingduckv1.SubscriberStatus{}, fmt.Errorf("channel.Status.SubscribableStatus is nil")
 	}
-	for _, sub := range subscribableStatus.Subscribersv1 {
+	for _, sub := range subscribableStatus.Subscribers {
 		if sub.UID == subscription.GetUID() &&
 			sub.ObservedGeneration == subscription.GetGeneration() {
 			return sub, nil

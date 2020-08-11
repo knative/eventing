@@ -103,8 +103,8 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 		}
 	} else { //we assume v1alpha1 if no tag according to the spec
 		if bc.SubscribableTypeStatus.SubscribableStatus != nil &&
-			len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribersv1) > 0 {
-			channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableTypeStatus.SubscribableStatus.Subscribersv1
+			len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
+			channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableTypeStatus.SubscribableStatus.Subscribers
 		}
 	}
 	return channelableStatus

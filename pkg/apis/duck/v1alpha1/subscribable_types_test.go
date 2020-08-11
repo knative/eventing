@@ -68,7 +68,7 @@ func TestSubscribablePopulate(t *testing.T) {
 		Status: SubscribableTypeStatus{
 			SubscribableStatus: &SubscribableStatus{
 				// Populate ALL fields
-				Subscribers: []eventingduckv1beta1.SubscriberStatus{{
+				Subscribersv1beta1: []eventingduckv1beta1.SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					ObservedGeneration: 1,
 					Ready:              corev1.ConditionTrue,
@@ -79,7 +79,7 @@ func TestSubscribablePopulate(t *testing.T) {
 					Ready:              corev1.ConditionFalse,
 					Message:            "Some message",
 				}},
-				Subscribersv1: []eventingduckv1.SubscriberStatus{{
+				Subscribers: []eventingduckv1.SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					ObservedGeneration: 1,
 					Ready:              corev1.ConditionTrue,
@@ -105,7 +105,7 @@ func TestSubscribablePopulate(t *testing.T) {
 func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	s := &SubscribableStatus{
 		// Populate ALL fields
-		Subscribers: []eventingduckv1beta1.SubscriberStatus{{
+		Subscribersv1beta1: []eventingduckv1beta1.SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
@@ -116,7 +116,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 			Ready:              corev1.ConditionFalse,
 			Message:            "This is new field",
 		}},
-		Subscribersv1: []eventingduckv1.SubscriberStatus{{
+		Subscribers: []eventingduckv1.SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
@@ -150,7 +150,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	}
 
 	/* Test AddSubscriberToSubscribableStatus */
-	subscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1beta1.SubscriberStatus{
+	subscribableTypeStatus.AddSubscriberv1beta1ToSubscribableStatus(eventingduckv1beta1.SubscriberStatus{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              corev1.ConditionTrue,
@@ -158,7 +158,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	})
 
 	/* Test AddSubscriberV1ToSubscribableStatus */
-	subscribableTypeStatus.AddSubscriberV1ToSubscribableStatus(eventingduckv1.SubscriberStatus{
+	subscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1.SubscriberStatus{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              corev1.ConditionTrue,
