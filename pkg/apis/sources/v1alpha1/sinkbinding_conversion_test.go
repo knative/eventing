@@ -48,7 +48,8 @@ func TestSinkBindingConversionBadType(t *testing.T) {
 func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 	versions := []apis.Convertible{&v1beta1.SinkBinding{}, &v1alpha2.SinkBinding{}}
 
-	path, _ := apis.ParseURL("/path")
+	path := apis.HTTP("")
+	path.Path = "/path"
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       "Foo",
@@ -58,7 +59,8 @@ func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 		},
 		URI: path,
 	}
-	sinkUri, _ := apis.ParseURL("http://example.com/path")
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
 
 	subject := tracker.Reference{
 		APIVersion: "API",
@@ -176,7 +178,8 @@ func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 
 // This tests round tripping from a higher version -> v1alpha1 and back to the higher version.
 func TestSinkBindingConversionRoundTripDown(t *testing.T) {
-	path, _ := apis.ParseURL("/path")
+	path := apis.HTTP("")
+	path.Path = "/path"
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       "Foo",
@@ -186,7 +189,8 @@ func TestSinkBindingConversionRoundTripDown(t *testing.T) {
 		},
 		URI: path,
 	}
-	sinkURI, _ := apis.ParseURL("http://example.com/path")
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
 
 	ceOverrides := duckv1.CloudEventOverrides{
 		Extensions: map[string]string{
@@ -236,7 +240,7 @@ func TestSinkBindingConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI: sinkUri,
 				},
 			},
 		},
@@ -263,7 +267,7 @@ func TestSinkBindingConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI: sinkUri,
 				},
 			},
 		},

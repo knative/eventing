@@ -50,7 +50,7 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1beta1.Tr
 }
 
 func WithTriggerSubscriberURI(rawurl string) TriggerOption {
-	uri, _ := apis.ParseURL(rawurl)
+	uri := apis.HTTP(rawurl)
 	return func(t *v1beta1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{URI: uri}
 	}
@@ -70,7 +70,7 @@ func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name, namespace strin
 }
 
 func WithTriggerSubscriberRefAndURIReference(gvk metav1.GroupVersionKind, name, namespace string, rawuri string) TriggerOption {
-	uri, _ := apis.ParseURL(rawuri)
+	uri := apis.HTTP(rawuri)
 	return func(t *v1beta1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{
 			Ref: &duckv1.KReference{
@@ -148,7 +148,7 @@ func WithTriggerSubscribed() TriggerOption {
 
 func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	return func(t *v1beta1.Trigger) {
-		u, _ := apis.ParseURL(uri)
+		u := apis.HTTP(uri)
 		t.Status.SubscriberURI = u
 	}
 }

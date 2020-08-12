@@ -45,7 +45,8 @@ func TestContainerSourceConversionBadType(t *testing.T) {
 func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 	versions := []apis.Convertible{&v1beta1.ContainerSource{}}
 
-	path, _ := apis.ParseURL("/path")
+	path := apis.HTTP("")
+	path.Path = "/path"
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       "Foo",
@@ -55,7 +56,8 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 		},
 		URI: path,
 	}
-	sinkUri, _ := apis.ParseURL("http://example.com/path")
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
 
 	tests := []struct {
 		name string
@@ -176,7 +178,8 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 
 // This tests round tripping from a higher version -> v1alpha2 and back to the higher version.
 func TestContainerSourceConversionRoundTripDown(t *testing.T) {
-	path, _ := apis.ParseURL("/path")
+	path := apis.HTTP("")
+	path.Path = "/path"
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       "Foo",
@@ -186,7 +189,8 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 		},
 		URI: path,
 	}
-	sinkURI, _ := apis.ParseURL("http://example.com/path")
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
 
 	ceOverrides := duckv1.CloudEventOverrides{
 		Extensions: map[string]string{
@@ -228,7 +232,7 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI: sinkUri,
 				},
 			},
 		},
