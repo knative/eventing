@@ -31,7 +31,7 @@ spec:
     spec:
       serviceAccountName: mt-broker-ingress
       containers:
-      - name: ingress
+      - name: mt-broker-ingress
         terminationMessagePolicy: FallbackToLogsOnError
         image: ko://knative.dev/eventing/cmd/mtbroker/ingress
         livenessProbe:
