@@ -22,6 +22,9 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+
 	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
@@ -237,19 +240,38 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	// verify that EventTypes were created.
-	eventTypes, err := client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	eventTypes, err := waitForEventTypes(client, len(sourcesv1beta1.ApiServerSourceEventTypes))
 	if err != nil {
-		t.Fatalf("Error retrieving EventTypes: %v", err)
+		t.Fatalf("Waiting for EventTypes: %v", err)
 	}
-	if len(eventTypes.Items) != len(sourcesv1beta1.ApiServerSourceEventTypes) {
-		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1beta1.ApiServerSourceEventTypes), len(eventTypes.Items))
-	}
-
 	expectedCeTypes := sets.NewString(sourcesv1beta1.ApiServerSourceEventTypes...)
-	for _, et := range eventTypes.Items {
+	for _, et := range eventTypes {
 		if !expectedCeTypes.Has(et.Spec.Type) {
 			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1beta1.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
+}
+
+// waitForEventTypes waits for the expected number of EventTypes to exist in client.Namespace.
+func waitForEventTypes(client *testlib.Client, expectedNumEventTypes int) ([]v1beta1.EventType, error) {
+	eventTypes := &v1beta1.EventTypeList{}
+	// Interval and timeout were chosen arbitrarily.
+	err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
+		var err error
+		eventTypes, err = client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return false, fmt.Errorf("error listing EventTypes: %w", err)
+		}
+		if len(eventTypes.Items) == expectedNumEventTypes {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return []v1beta1.EventType{}, fmt.Errorf("error polling for EventTypes: %w", err)
+	}
+	if actual := len(eventTypes.Items); actual != expectedNumEventTypes {
+		return []v1beta1.EventType{}, fmt.Errorf("invalid number of EventTypes registered, expected: %d, got: %d", expectedNumEventTypes, actual)
+	}
+	return eventTypes.Items, nil
 }
