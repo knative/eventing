@@ -237,17 +237,13 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	// verify that EventTypes were created.
-	eventTypes, err := client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	// Verify that EventTypes were created.
+	eventTypes, err := waitForEventTypes(client, len(sourcesv1alpha2.ApiServerSourceEventTypes))
 	if err != nil {
-		t.Fatalf("Error retrieving EventTypes: %v", err)
+		t.Fatalf("Waiting for EventTypes: %v", err)
 	}
-	if len(eventTypes.Items) != len(sourcesv1alpha2.ApiServerSourceEventTypes) {
-		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1alpha2.ApiServerSourceEventTypes), len(eventTypes.Items))
-	}
-
 	expectedCeTypes := sets.NewString(sourcesv1alpha2.ApiServerSourceEventTypes...)
-	for _, et := range eventTypes.Items {
+	for _, et := range eventTypes {
 		if !expectedCeTypes.Has(et.Spec.Type) {
 			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1alpha2.ApiServerSourceEventTypes, et.Spec.Type)
 		}
