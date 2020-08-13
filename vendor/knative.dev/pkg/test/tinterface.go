@@ -24,7 +24,6 @@ type T interface {
 	Name() string
 	Helper()
 	SkipNow()
-	Cleanup(func())
 	Log(args ...interface{})
 	Error(args ...interface{})
 }

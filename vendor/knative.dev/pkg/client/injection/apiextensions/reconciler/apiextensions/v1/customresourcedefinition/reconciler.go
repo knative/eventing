@@ -37,7 +37,6 @@ import (
 	sets "k8s.io/apimachinery/pkg/util/sets"
 	record "k8s.io/client-go/tools/record"
 	controller "knative.dev/pkg/controller"
-	kmp "knative.dev/pkg/kmp"
 	logging "knative.dev/pkg/logging"
 	reconciler "knative.dev/pkg/reconciler"
 )
@@ -85,6 +84,13 @@ type ReadOnlyFinalizer interface {
 }
 
 type doReconcile func(ctx context.Context, o *v1.CustomResourceDefinition) reconciler.Event
+
+const (
+	doReconcileKind       = "ReconcileKind"
+	doFinalizeKind        = "FinalizeKind"
+	doObserveKind         = "ObserveKind"
+	doObserveFinalizeKind = "ObserveFinalizeKind"
+)
 
 // reconcilerImpl implements controller.Reconciler for v1.CustomResourceDefinition resources.
 type reconcilerImpl struct {
@@ -225,7 +231,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	// Append the target method to the logger.
 	logger = logger.With(zap.String("targetMethod", name))
 	switch name {
-	case reconciler.DoReconcileKind:
+	case doReconcileKind:
 		// Append the target method to the logger.
 		logger = logger.With(zap.String("targetMethod", "ReconcileKind"))
 
@@ -239,7 +245,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 		// updates regardless of whether the reconciliation errored out.
 		reconcileEvent = do(ctx, resource)
 
-	case reconciler.DoFinalizeKind:
+	case "FinalizeKind":
 		// For finalizing reconcilers, if this resource being marked for deletion
 		// and reconciled cleanly (nil or normal event), remove the finalizer.
 		reconcileEvent = do(ctx, resource)
@@ -248,7 +254,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 			return fmt.Errorf("failed to clear finalizers: %w", err)
 		}
 
-	case reconciler.DoObserveKind, reconciler.DoObserveFinalizeKind:
+	case "ObserveKind", "ObserveFinalizeKind":
 		// Observe any changes to this resource, since we are not the leader.
 		reconcileEvent = do(ctx, resource)
 
@@ -269,7 +275,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 		// the elected leader is expected to write modifications.
 		logger.Warn("Saw status changes when we aren't the leader!")
 	default:
-		if err = r.updateStatus(ctx, original, resource); err != nil {
+		if err = r.updateStatus(original, resource); err != nil {
 			logger.Warnw("Failed to update resource status", zap.Error(err))
 			r.Recorder.Eventf(resource, corev1.EventTypeWarning, "UpdateFailed",
 				"Failed to update status for %q: %v", resource.Name, err)
@@ -299,7 +305,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *reconcilerImpl) updateStatus(ctx context.Context, existing *v1.CustomResourceDefinition, desired *v1.CustomResourceDefinition) error {
+func (r *reconcilerImpl) updateStatus(existing *v1.CustomResourceDefinition, desired *v1.CustomResourceDefinition) error {
 	existing = existing.DeepCopy()
 	return reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
@@ -316,10 +322,6 @@ func (r *reconcilerImpl) updateStatus(ctx context.Context, existing *v1.CustomRe
 		// If there's nothing to update, just return.
 		if reflect.DeepEqual(existing.Status, desired.Status) {
 			return nil
-		}
-
-		if diff, err := kmp.SafeDiff(existing.Status, desired.Status); err == nil && diff != "" {
-			logging.FromContext(ctx).Debugf("Updating status with: %s", diff)
 		}
 
 		existing.Status = desired.Status

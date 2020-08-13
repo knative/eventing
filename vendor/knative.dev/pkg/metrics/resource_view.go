@@ -50,7 +50,10 @@ type ResourceExporterFactory func(*resource.Resource) (view.Exporter, error)
 type meters struct {
 	meters  map[string]*meterExporter
 	factory ResourceExporterFactory
-	lock    sync.Mutex
+	// Cache of Resource pointers from metricskey to Meters, to avoid
+	// unnecessary stringify operations
+	resourceToKey map[*resource.Resource]string
+	lock          sync.Mutex
 }
 
 // Lock regime: lock allMeters before resourceViews. The critical path is in
@@ -58,7 +61,8 @@ type meters struct {
 // resourceViews if a new meter needs to be created.
 var resourceViews = storedViews{}
 var allMeters = meters{
-	meters: map[string]*meterExporter{"": &defaultMeter},
+	meters:        map[string]*meterExporter{"": &defaultMeter},
+	resourceToKey: map[*resource.Resource]string{nil: ""},
 }
 
 // RegisterResourceView is similar to view.Register(), except that it will
@@ -155,19 +159,6 @@ func setFactory(f ResourceExporterFactory) error {
 	return retErr
 }
 
-func setReportingPeriod(mc *metricsConfig) {
-	allMeters.lock.Lock()
-	defer allMeters.lock.Unlock()
-
-	rp := time.Duration(0)
-	if mc != nil {
-		rp = mc.reportingPeriod
-	}
-	for _, meter := range allMeters.meters {
-		meter.m.SetReportingPeriod(rp)
-	}
-}
-
 func flushResourceExporters() {
 	allMeters.lock.Lock()
 	defer allMeters.lock.Unlock()
@@ -177,23 +168,13 @@ func flushResourceExporters() {
 	}
 }
 
-// ClearMetersForTest clears the internal set of metrics being exported,
-// including cleaning up background threads.
-func ClearMetersForTest() {
-	allMeters.lock.Lock()
-	defer allMeters.lock.Unlock()
-
-	for k, meter := range allMeters.meters {
-		if k == "" {
-			continue
-		}
-		meter.m.Stop()
-		delete(allMeters.meters, k)
-	}
-}
-
 func meterExporterForResource(r *resource.Resource) *meterExporter {
-	key := resourceToKey(r)
+	key, ok := allMeters.resourceToKey[r]
+	if !ok {
+		key = resourceToKey(r)
+		allMeters.resourceToKey[r] = key
+	}
+
 	mE := allMeters.meters[key]
 	if mE == nil {
 		mE = &meterExporter{}
@@ -205,11 +186,6 @@ func meterExporterForResource(r *resource.Resource) *meterExporter {
 	mE.m = view.NewMeter()
 	mE.m.SetResource(r)
 	mE.m.Start()
-
-	mc := getCurMetricsConfig()
-	if mc != nil {
-		mE.m.SetReportingPeriod(mc.reportingPeriod)
-	}
 	resourceViews.lock.Lock()
 	defer resourceViews.lock.Unlock()
 	// make a copy of views to avoid data races
@@ -258,9 +234,6 @@ func optionForResource(r *resource.Resource) (stats.Options, error) {
 }
 
 func resourceToKey(r *resource.Resource) string {
-	if r == nil {
-		return ""
-	}
 	var s strings.Builder
 	l := len(r.Type)
 	kvs := make([]string, 0, len(r.Labels))

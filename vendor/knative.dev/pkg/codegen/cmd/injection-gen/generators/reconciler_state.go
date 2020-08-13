@@ -72,22 +72,6 @@ func (g *reconcilerStateGenerator) GenerateType(c *generator.Context, t *types.T
 			Package: "k8s.io/apimachinery/pkg/types",
 			Name:    "NamespacedName",
 		}),
-		"doReconcileKind": c.Universe.Type(types.Name{
-			Package: "knative.dev/pkg/reconciler",
-			Name:    "DoReconcileKind",
-		}),
-		"doObserveKind": c.Universe.Type(types.Name{
-			Package: "knative.dev/pkg/reconciler",
-			Name:    "DoObserveKind",
-		}),
-		"doFinalizeKind": c.Universe.Type(types.Name{
-			Package: "knative.dev/pkg/reconciler",
-			Name:    "DoFinalizeKind",
-		}),
-		"doObserveFinalizeKind": c.Universe.Type(types.Name{
-			Package: "knative.dev/pkg/reconciler",
-			Name:    "DoObserveFinalizeKind",
-		}),
 	}
 
 	sw.Do(reconcilerStateType, m)
@@ -165,14 +149,14 @@ func (s *state) isNotLeaderNorObserver() bool {
 func (s *state) reconcileMethodFor(o *{{.type|raw}}) (string, doReconcile) {
 	if o.GetDeletionTimestamp().IsZero() {
 		if s.isLeader {
-			return {{.doReconcileKind|raw}}, s.reconciler.ReconcileKind
+			return doReconcileKind, s.reconciler.ReconcileKind
 		} else if s.isROI {
-			return {{.doObserveKind|raw}}, s.roi.ObserveKind
+			return doObserveKind, s.roi.ObserveKind
 		}
 	} else if fin, ok := s.reconciler.(Finalizer); s.isLeader && ok {
-		return {{.doFinalizeKind|raw}}, fin.FinalizeKind
+		return doFinalizeKind, fin.FinalizeKind
 	} else if !s.isLeader && s.isROF {
-		return {{.doObserveFinalizeKind|raw}}, s.rof.ObserveFinalizeKind
+		return doObserveFinalizeKind, s.rof.ObserveFinalizeKind
 	}
 	return "unknown", nil
 }

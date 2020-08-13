@@ -240,7 +240,12 @@ func setCurMetricsConfig(c *metricsConfig) {
 }
 
 func setCurMetricsConfigUnlocked(c *metricsConfig) {
-	setReportingPeriod(c)
+	if c != nil {
+		view.SetReportingPeriod(c.reportingPeriod)
+	} else {
+		// Setting to 0 enables the default behavior.
+		view.SetReportingPeriod(0)
+	}
 	curMetricsConfig = c
 }
 
