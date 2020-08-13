@@ -32,10 +32,6 @@ func (c *FakeSourcesV1alpha1) ApiServerSources(namespace string) v1alpha1.ApiSer
 	return &FakeApiServerSources{c, namespace}
 }
 
-func (c *FakeSourcesV1alpha1) PingSources(namespace string) v1alpha1.PingSourceInterface {
-	return &FakePingSources{c, namespace}
-}
-
 func (c *FakeSourcesV1alpha1) SinkBindings(namespace string) v1alpha1.SinkBindingInterface {
 	return &FakeSinkBindings{c, namespace}
 }

@@ -534,23 +534,6 @@ func (c *Client) CreateContainerSourceV1Beta1OrFail(containerSource *sourcesv1be
 	c.Tracker.AddObj(containerSource)
 }
 
-// CreatePingSourceV1Alpha1OrFail will create an PingSource
-func (c *Client) CreatePingSourceV1Alpha1OrFail(pingSource *sourcesv1alpha1.PingSource) {
-	c.T.Logf("Creating pingsource %+v", pingSource)
-	pingInterface := c.Eventing.SourcesV1alpha1().PingSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := pingInterface.Create(pingSource)
-		if e != nil {
-			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
-	}
-	c.Tracker.AddObj(pingSource)
-}
-
 // CreatePingSourceV1Alpha2OrFail will create an PingSource
 func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.PingSource) {
 	c.T.Logf("Creating pingsource %+v", pingSource)

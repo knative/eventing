@@ -31,9 +31,9 @@ spec:
   group: sources.knative.dev
   versions:
   - &version
-    name: v1alpha1
-    served: false
-    storage: false
+    name: v1alpha2
+    served: true
+    storage: true
     subresources:
       status: {}
     schema:
@@ -57,10 +57,6 @@ spec:
     - name: Reason
       type: string
       jsonPath: ".status.conditions[?(@.type=='Ready')].reason"
-  - << : *version
-    name: v1alpha2
-    served: true
-    storage: true
   - <<: *version
     name: v1beta1
     served: true
