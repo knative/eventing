@@ -39,7 +39,6 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/apiserversource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
@@ -66,12 +65,8 @@ type Reconciler struct {
 
 	receiveAdapterImage string
 
-	// listers index properties about resources
-	apiserversourceLister listers.ApiServerSourceLister
-
-	ceSource       string
-	sinkResolver   *resolver.URIResolver
-	loggingContext context.Context
+	ceSource     string
+	sinkResolver *resolver.URIResolver
 
 	configs reconcilersource.ConfigAccessor
 }
