@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: v0.17.0-pingsource-cleanup
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: eventing-controller
+      restartPolicy: Never
+      containers:
+        - name: pingsource
+          image: ko://knative.dev/eventing/cmd/v0.17/pingsource-cleanup
+          env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+# Note the following ENVVAR settings exist:
+# SYSTEM_NAMESPACE - the namespace of the control plane, defaults to knative-eventing
+# DRY_RUN - a flag to run the script without deleting or updating, defaults to false.

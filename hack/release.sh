@@ -26,6 +26,7 @@ readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
 readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
 readonly PRE_INSTALL_V_0_16="eventing-pre-install-jobs.yaml"
 readonly POST_INSTALL_V_0_16="eventing-post-install-jobs.yaml"
+readonly POST_INSTALL_V_0_17="eventing-post-install-jobs.yaml"
 
 declare -A RELEASES
 RELEASES=(
@@ -66,7 +67,10 @@ function build_release() {
   # Create v0.16.0 post-install job yaml. Cleans up old broker resources from deleted namespaced brokers.
   ko resolve ${KO_FLAGS} -f config/post-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_V_0_16}"
 
-  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${SUGAR_CONTROLLER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${PRE_INSTALL_V_0_16} ${POST_INSTALL_V_0_16})
+  # Create v0.17.0 post-install job yaml. Cleans up pingsources with finalizers
+  ko resolve ${KO_FLAGS} -f config/post-install/v0.17.0/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_V_0_17}"
+
+  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${SUGAR_CONTROLLER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${PRE_INSTALL_V_0_16} ${POST_INSTALL_V_0_16} ${POST_INSTALL_V_0_17})
 
   # Assemble the release
   for yaml in "${!RELEASES[@]}"; do
