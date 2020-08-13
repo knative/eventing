@@ -101,8 +101,10 @@ spec:
     schema:
       openAPIV3Schema:
         type: object
+        description: "Trigger represents a request to have events delivered to a consumer from a Broker's event pool."
         properties:
           spec:
+            description: Spec defines the desired state of the Trigger.
             required:
               - subscriber
               - broker
@@ -147,6 +149,7 @@ spec:
                     type: string
                     description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
           status:
+            description: "Status represents the current state of the Trigger. This data may be out of date."
             type: object
             x-kubernetes-preserve-unknown-fields: true
   names:
