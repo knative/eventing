@@ -93,7 +93,7 @@ func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore,
 	ei := newTestableEventInfoStore(egi, -1, -1)
 	ei.podName = podName
 	ei.tb = client.T
-	client.T.Cleanup(ei.cleanup)
+	client.Cleanup(ei.cleanup)
 	return ei, nil
 }
 
