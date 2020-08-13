@@ -28,10 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	"knative.dev/eventing/pkg/utils"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/prow"
+
+	"knative.dev/eventing/pkg/utils"
 
 	// Mysteriously required to support GCP auth (required by k8s libs).
 	// Apparently just importing it is enough. @_@ side effects @_@.
@@ -179,6 +180,10 @@ func makeK8sNamespace(baseFuncName string) string {
 
 // TearDown will delete created names using clients.
 func TearDown(client *Client) {
+	if err := client.runCleanup(); err != nil {
+		client.T.Logf("Cleanup error: %+v", err)
+	}
+
 	// Dump the events in the namespace
 	el, err := client.Kube.Kube.CoreV1().Events(client.Namespace).List(metav1.ListOptions{})
 	if err != nil {
