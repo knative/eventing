@@ -26,34 +26,15 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
-
-// PingSourceOption enables further configuration of a CronJob.
-type PingSourceOption func(*v1alpha1.PingSource)
 
 // PingSourceV1A2Option enables further configuration of a CronJob.
 type PingSourceV1A2Option func(*v1alpha2.PingSource)
 
 // PingSourceV1B1Option enables further configuration of a CronJob.
 type PingSourceV1B1Option func(*v1beta1.PingSource)
-
-// NewPingSourceV1Alpha1 creates a PingSource with PingSourceOption.
-func NewPingSourceV1Alpha1(name, namespace string, o ...PingSourceOption) *v1alpha1.PingSource {
-	c := &v1alpha1.PingSource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	for _, opt := range o {
-		opt(c)
-	}
-	c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
-	return c
-}
 
 // NewPingSourceV1Alpha2 creates a PingSource with PingSourceOption.
 func NewPingSourceV1Alpha2(name, namespace string, o ...PingSourceV1A2Option) *v1alpha2.PingSource {
@@ -85,23 +66,10 @@ func NewPingSourceV1Beta1(name, namespace string, o ...PingSourceV1B1Option) *v1
 	return c
 }
 
-func WithPingSourceUID(uid string) PingSourceOption {
-	return func(c *v1alpha1.PingSource) {
-		c.UID = types.UID(uid)
-	}
-}
-
 func WithPingSourceV1A2UID(uid string) PingSourceV1A2Option {
 	return func(c *v1alpha2.PingSource) {
 		c.UID = types.UID(uid)
 	}
-}
-
-func WithPingSourceResourceScopeAnnotation(c *v1alpha1.PingSource) {
-	if c.Annotations == nil {
-		c.Annotations = make(map[string]string)
-	}
-	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
 }
 
 func WithPingSourceV1A2ResourceScopeAnnotation(c *v1alpha2.PingSource) {
@@ -111,13 +79,6 @@ func WithPingSourceV1A2ResourceScopeAnnotation(c *v1alpha2.PingSource) {
 	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
 }
 
-func WithPingSourceClusterScopeAnnotation(c *v1alpha1.PingSource) {
-	if c.Annotations == nil {
-		c.Annotations = make(map[string]string)
-	}
-	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
-}
-
 func WithPingSourceV1A2ClusterScopeAnnotation(c *v1alpha2.PingSource) {
 	if c.Annotations == nil {
 		c.Annotations = make(map[string]string)
@@ -125,50 +86,21 @@ func WithPingSourceV1A2ClusterScopeAnnotation(c *v1alpha2.PingSource) {
 	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
 }
 
-// WithInitPingSourceConditions initializes the PingSource's conditions.
-func WithInitPingSourceConditions(s *v1alpha1.PingSource) {
-	s.Status.InitializeConditions()
-}
-
 func WithInitPingSourceV1A2Conditions(s *v1alpha2.PingSource) {
 	s.Status.InitializeConditions()
-}
-
-func WithValidPingSourceSchedule(s *v1alpha1.PingSource) {
-	s.Status.MarkSchedule()
 }
 
 func WithValidPingSourceV1A2Schedule(s *v1alpha2.PingSource) {
 	s.Status.MarkSchedule()
 }
 
-func WithInvalidPingSourceSchedule(s *v1alpha1.PingSource) {
-	s.Status.MarkInvalidSchedule("Invalid", "")
-}
-
-func WithPingSourceSinkNotFound(s *v1alpha1.PingSource) {
-	s.Status.MarkNoSink("NotFound", "")
-}
-
 func WithPingSourceV1A2SinkNotFound(s *v1alpha2.PingSource) {
 	s.Status.MarkNoSink("NotFound", "")
-}
-
-func WithPingSourceSink(uri *apis.URL) PingSourceOption {
-	return func(s *v1alpha1.PingSource) {
-		s.Status.MarkSink(uri)
-	}
 }
 
 func WithPingSourceV1A2Sink(uri *apis.URL) PingSourceV1A2Option {
 	return func(s *v1alpha2.PingSource) {
 		s.Status.MarkSink(uri)
-	}
-}
-
-func WithPingSourceNotDeployed(name string) PingSourceOption {
-	return func(s *v1alpha1.PingSource) {
-		s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
 	}
 }
 
@@ -178,19 +110,8 @@ func WithPingSourceV1A2NotDeployed(name string) PingSourceV1A2Option {
 	}
 }
 
-func WithPingSourceDeployed(s *v1alpha1.PingSource) {
-	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
-}
-
 func WithPingSourceV1A2Deployed(s *v1alpha2.PingSource) {
 	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
-}
-
-func WithPingSourceEventType(s *v1alpha1.PingSource) {
-	s.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
-		Type:   v1alpha1.PingSourceEventType,
-		Source: v1alpha1.PingSourceSource(s.Namespace, s.Name),
-	}}
 }
 
 func WithPingSourceV1A2CloudEventAttributes(s *v1alpha2.PingSource) {
@@ -200,23 +121,8 @@ func WithPingSourceV1A2CloudEventAttributes(s *v1alpha2.PingSource) {
 	}}
 }
 
-func WithValidPingSourceResources(s *v1alpha1.PingSource) {
-	s.Status.MarkResourcesCorrect()
-}
-
 func WithValidPingSourceV1A2Resources(s *v1alpha2.PingSource) {
 	s.Status.MarkResourcesCorrect()
-}
-
-func WithPingSourceDeleted(c *v1alpha1.PingSource) {
-	t := metav1.NewTime(time.Unix(1e9, 0))
-	c.ObjectMeta.SetDeletionTimestamp(&t)
-}
-
-func WithPingSourceSpec(spec v1alpha1.PingSourceSpec) PingSourceOption {
-	return func(c *v1alpha1.PingSource) {
-		c.Spec = spec
-	}
 }
 
 func WithPingSourceV1A2Spec(spec v1alpha2.PingSourceSpec) PingSourceV1A2Option {
@@ -231,27 +137,9 @@ func WithPingSourceV1B1Spec(spec v1beta1.PingSourceSpec) PingSourceV1B1Option {
 	}
 }
 
-func WithPingSourceApiVersion(apiVersion string) PingSourceOption {
-	return func(c *v1alpha1.PingSource) {
-		c.APIVersion = apiVersion
-	}
-}
-
-func WithPingSourceStatusObservedGeneration(generation int64) PingSourceOption {
-	return func(c *v1alpha1.PingSource) {
-		c.Status.ObservedGeneration = generation
-	}
-}
-
 func WithPingSourceV1A2StatusObservedGeneration(generation int64) PingSourceV1A2Option {
 	return func(c *v1alpha2.PingSource) {
 		c.Status.ObservedGeneration = generation
-	}
-}
-
-func WithPingSourceObjectMetaGeneration(generation int64) PingSourceOption {
-	return func(c *v1alpha1.PingSource) {
-		c.ObjectMeta.Generation = generation
 	}
 }
 

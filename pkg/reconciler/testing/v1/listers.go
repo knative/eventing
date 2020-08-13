@@ -148,10 +148,6 @@ func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister
 	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha1.ApiServerSource{}))
 }
 
-func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
-	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1alpha1.PingSource{}))
-}
-
 func (l *Listers) GetSinkBindingLister() sourcelisters.SinkBindingLister {
 	return sourcelisters.NewSinkBindingLister(l.indexerFor(&sourcesv1alpha1.SinkBinding{}))
 }

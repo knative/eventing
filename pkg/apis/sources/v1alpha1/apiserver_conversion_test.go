@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -32,6 +33,18 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
+
+// TODO: Replace dummy some other Eventing object once they
+// implement apis.Convertible
+type dummy struct{}
+
+func (*dummy) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
+func (*dummy) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
 
 func TestApiServerSourceConversionBadType(t *testing.T) {
 	good, bad := &ApiServerSource{}, &dummy{}
