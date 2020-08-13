@@ -54,11 +54,9 @@ func NewController(
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:         kubeclient.Get(ctx),
-		apiserversourceLister: apiServerSourceInformer.Lister(),
-		ceSource:              GetCfgHost(ctx),
-		loggingContext:        ctx,
-		configs:               reconcilersource.WatchConfigurations(ctx, component, cmw),
+		kubeClientSet: kubeclient.Get(ctx),
+		ceSource:      GetCfgHost(ctx),
+		configs:       reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
 	env := &envConfig{}

@@ -519,13 +519,11 @@ func TestReconcile(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:         fakekubeclient.Get(ctx),
-			apiserversourceLister: listers.GetApiServerSourceV1beta1Lister(),
-			ceSource:              source,
-			receiveAdapterImage:   image,
-			sinkResolver:          resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
-			loggingContext:        ctx,
-			configs:               &reconcilersource.EmptyVarsGenerator{},
+			kubeClientSet:       fakekubeclient.Get(ctx),
+			ceSource:            source,
+			receiveAdapterImage: image,
+			sinkResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			configs:             &reconcilersource.EmptyVarsGenerator{},
 		}
 		return apiserversource.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetApiServerSourceV1beta1Lister(),
