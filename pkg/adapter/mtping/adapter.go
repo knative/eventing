@@ -19,15 +19,21 @@ package mtping
 import (
 	"context"
 	"flag"
-
-	"github.com/robfig/cron/v3"
+	"os"
+	"strconv"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/prometheus/common/log"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
+)
+
+const (
+	EnvNoShutdownAfter = "K_NO_SHUTDOWN_AFTER"
 )
 
 var (
@@ -75,4 +81,17 @@ func (a *mtpingAdapter) Start(ctx context.Context) error {
 
 	a.logger.Infof("runner stopped")
 	return nil
+}
+
+func GetNoShutDownAfterValue() int {
+	str := os.Getenv(EnvNoShutdownAfter)
+	if str != "" {
+		second, err := strconv.Atoi(str)
+		if err != nil || second < 0 || second > 59 {
+			log.Warnf("%s environment value is invalid. It must be a integer between 0 and 59. (got %s)", EnvNoShutdownAfter, str)
+		} else {
+			return second
+		}
+	}
+	return 55 // seems a reasonable default
 }

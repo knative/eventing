@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"knative.dev/eventing/pkg/adapter/mtping"
+
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -308,6 +310,7 @@ func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1al
 		LoggingConfig:      loggingConfig,
 		MetricsConfig:      metricsConfig,
 		LeConfig:           r.leConfig,
+		NoShutdownAfter:    mtping.GetNoShutDownAfterValue(),
 	}
 	expected := resources.MakeMTReceiveAdapter(args)
 

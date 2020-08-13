@@ -38,7 +38,7 @@ func main() {
 	// or for the passive pod to become active (when HA is enabled and replicas > 1).
 	// So when receiving a SIGTEM signal, delay the cancellation of the adapter,
 	// which under the cover delays the release of the lease.
-	ctx = mtping.WithDelayedCancellation(ctx, 55)
+	ctx = mtping.WithDelayedCancellation(ctx, mtping.GetNoShutDownAfterValue())
 
 	adapter.MainWithContext(ctx, component, mtping.NewEnvConfig, mtping.NewAdapter)
 }

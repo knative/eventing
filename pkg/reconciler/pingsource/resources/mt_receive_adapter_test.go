@@ -37,6 +37,7 @@ func TestMakeMTPingAdapter(t *testing.T) {
 		Image:              "test-image",
 		MetricsConfig:      "metrics",
 		LoggingConfig:      "logging",
+		NoShutdownAfter:    40,
 	}
 
 	want := &v1.Deployment{
@@ -82,6 +83,9 @@ func TestMakeMTPingAdapter(t *testing.T) {
 							}, {
 								Name:  "K_LEADER_ELECTION_CONFIG",
 								Value: "",
+							}, {
+								Name:  "K_NO_SHUTDOWN_AFTER",
+								Value: "40",
 							}},
 							// Set low resource requests and limits.
 							// This should be configurable.
