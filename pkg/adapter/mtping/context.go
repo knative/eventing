@@ -21,10 +21,10 @@ import (
 	"time"
 )
 
-// WithDelayedCancellation returns a context which the cancellation
-// is delayed so that it does not happens after the given second
-func WithDelayedCancellation(ctx context.Context, afterSecond int) context.Context {
-	delayed, cancel := context.WithCancel(context.Background())
+// NewDelayingContext returns a new context delaying the
+// cancellation of the given context.
+func NewDelayingContext(ctx context.Context, afterSecond int) context.Context {
+	delayCtx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-ctx.Done()
 
@@ -36,5 +36,5 @@ func WithDelayedCancellation(ctx context.Context, afterSecond int) context.Conte
 
 		cancel()
 	}()
-	return delayed
+	return delayCtx
 }

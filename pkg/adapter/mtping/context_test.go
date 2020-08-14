@@ -26,7 +26,7 @@ import (
 func TestWithDelayedCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	delayedCtx := WithDelayedCancellation(ctx, 55)
+	delayedCtx := NewDelayingContext(ctx, 55)
 	go func() {
 		<-delayedCtx.Done()
 	}()
