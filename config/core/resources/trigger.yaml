@@ -55,22 +55,22 @@ spec:
             properties:
               broker:
                 type: string
-                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
+                description: 'Broker that this trigger receives events from. If not specified, will default to ''default''.'
               filter:
                 type: object
                 properties:
                   attributes:
                     type: object
-                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events"
+                    description: 'Map of CloudEvents attributes used for filtering events. If not specified, will default to all events'
                     additionalProperties:
                       type: string
               subscriber:
                 type: object
-                description: "the destination that should receive events."
+                description: 'the destination that should receive events.'
                 properties:
                   ref:
                     type: object
-                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    description: 'a reference to a Kubernetes object from which to retrieve the target URI.'
                     required:
                     - apiVersion
                     - kind
@@ -90,7 +90,7 @@ spec:
                         minLength: 1
                   uri:
                     type: string
-                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                    description: 'the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI.'
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true
@@ -101,8 +101,10 @@ spec:
     schema:
       openAPIV3Schema:
         type: object
+        description: 'Trigger represents a request to have events delivered to a subscriber from a Broker''s event pool.'
         properties:
           spec:
+            description: 'Spec defines the desired state of the Trigger.'
             required:
               - subscriber
               - broker
@@ -110,22 +112,26 @@ spec:
             properties:
               broker:
                 type: string
-                description: "Broker that this trigger receives events from."
+                description: 'Broker that this trigger receives events from.'
               filter:
                 type: object
+                description: 'Filter is the filter to apply against all events from
+                    the Broker. Only events that pass this filter will be sent to
+                    the Subscriber. If not specified, will default to allowing all
+                    events.'
                 properties:
                   attributes:
                     type: object
-                    description: "Map of CloudEvents attributes used for filtering events. If not specified, will default to all events"
+                    description: 'Map of CloudEvents attributes used for filtering events. If not specified, will default to all events'
                     additionalProperties:
                       type: string
               subscriber:
                 type: object
-                description: "the destination that should receive events."
+                description: 'the destination that should receive events.'
                 properties:
                   ref:
                     type: object
-                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    description: 'a reference to a Kubernetes object from which to retrieve the target URI.'
                     required:
                     - apiVersion
                     - kind
@@ -145,8 +151,9 @@ spec:
                         minLength: 1
                   uri:
                     type: string
-                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                    description: 'the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI.'
           status:
+            description: 'Status represents the current state of the Trigger. This data may be out of date.'
             type: object
             x-kubernetes-preserve-unknown-fields: true
   names:

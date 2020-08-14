@@ -41,7 +41,7 @@ const (
 // +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Trigger represents a request to have events delivered to a consumer from a
+// Trigger represents a request to have events delivered to a subscriber from a
 // Broker's event pool.
 type Trigger struct {
 	metav1.TypeMeta `json:",inline"`
@@ -75,8 +75,7 @@ var (
 )
 
 type TriggerSpec struct {
-	// Broker is the broker that this trigger receives events from. If not specified, will default
-	// to 'default'.
+	// Broker is the broker that this trigger receives events from.
 	Broker string `json:"broker,omitempty"`
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this

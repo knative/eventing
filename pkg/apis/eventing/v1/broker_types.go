@@ -33,7 +33,7 @@ import (
 
 // Broker collects a pool of events that are consumable using Triggers. Brokers
 // provide a well-known endpoint for event delivery that senders can use with
-// minimal knowledge of the event routing strategy. Receivers use Triggers to
+// minimal knowledge of the event routing strategy. Subscribers use Triggers to
 // request delivery of events from a Broker's pool to a specific URL or
 // Addressable endpoint.
 type Broker struct {
