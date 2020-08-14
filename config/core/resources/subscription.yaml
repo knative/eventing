@@ -229,9 +229,6 @@ spec:
                 type: array
                 items:
                   type: object
-                  required:
-                    - type
-                    - status
                   properties:
                     lastTransitionTime:
                       description: 'LastTransitionTime is the last time the condition
@@ -268,10 +265,6 @@ spec:
                   description: 'PhysicalSubscription is the fully resolved values that
                       this Subscription represents.'
                   type: object
-                  required:
-                    - subscriberUri
-                    - replyUri
-                    - deadLetterSinkUri
                   properties:
                     deadLetterSinkUri:
                       description: 'ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.'
