@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	nethttp "net/http"
+	"strings"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
@@ -90,9 +91,19 @@ func WithShutdownTimeout(ctx context.Context, timeout time.Duration) context.Con
 	return context.WithValue(ctx, shutdownTimeoutKey{}, timeout)
 }
 
+func formatSpanName(request *nethttp.Request) string {
+	// Path should be in the form of "/<ns>/<broker>".
+	pieces := strings.Split(request.URL.Path, "/")
+	if len(pieces) != 3 {
+		return ""
+	}
+	return "broker:" + pieces[1] + "." + pieces[2]
+}
+
 func CreateHandler(handler nethttp.Handler) nethttp.Handler {
 	return &ochttp.Handler{
-		Propagation: tracecontextb3.TraceContextEgress,
-		Handler:     handler,
+		Propagation:    tracecontextb3.TraceContextEgress,
+		Handler:        handler,
+		FormatSpanName: formatSpanName,
 	}
 }
