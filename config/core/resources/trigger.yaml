@@ -55,7 +55,7 @@ spec:
             properties:
               broker:
                 type: string
-                description: 'Broker that this trigger receives events from. If not specified, will default to "default".'
+                description: 'Broker that this trigger receives events from.'
               filter:
                 type: object
                 properties:
