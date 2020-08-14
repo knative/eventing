@@ -55,6 +55,8 @@ spec:
                                 overridden on the outbound event. Each `Extensions` key-value
                                 pair are set on the event as an attribute extension independently.'
                             type: object
+                            additionalProperties:
+                              type: string
                             x-kubernetes-preserve-unknown-fields: true
                 jsonData:
                     description: 'JsonData is json encoded data used as the body of the
@@ -200,6 +202,8 @@ spec:
                                 overridden on the outbound event. Each `Extensions` key-value
                                 pair are set on the event as an attribute extension independently.'
                             type: object
+                            additionalProperties:
+                              type: string                            
                             x-kubernetes-preserve-unknown-fields: true
                 jsonData:
                     description: 'JsonData is json encoded data used as the body of the
