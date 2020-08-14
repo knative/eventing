@@ -174,7 +174,7 @@ spec:
                               and the values array contains only "value". The
                               requirements are ANDed.'
                           type: object
-                           x-kubernetes-preserve-unknown-fields: true
+                          x-kubernetes-preserve-unknown-fields: true
             status:
               type: object
               description: 'SinkBindingStatus communicates the observed state of the SinkBinding (from the controller).'
