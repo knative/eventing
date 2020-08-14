@@ -63,7 +63,6 @@ spec:
                                 type: object
                                 additionalProperties:
                                   type: string
-                                x-kubernetes-preserve-unknown-fields: true
                     mode:
                         description: 'Mode is the mode the receive adapter controller runs
                             under: Ref or Resource. `Ref` sends only the reference to the
@@ -353,7 +352,6 @@ spec:
                                 type: object
                                 additionalProperties:
                                   type: string                            
-                                x-kubernetes-preserve-unknown-fields: true
                     mode:
                         description: 'EventMode controls the format of the event. `Reference`
                             sends a dataref event type for the resource under watch. `Resource`
