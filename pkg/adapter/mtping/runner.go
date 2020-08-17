@@ -109,13 +109,14 @@ func (a *cronJobsRunner) RemoveSchedule(id cron.EntryID) {
 
 func (a *cronJobsRunner) Start(stopCh <-chan struct{}) {
 	a.cron.Start()
-	<-stopCh // main channel that gets closed once term signal is received
+	<-stopCh
 }
 
 func (a *cronJobsRunner) Stop() {
 	ctx := a.cron.Stop() // no more ticks
-	if ctx != nil {      // ctx gets done when all jobs complete
-		<-ctx.Done() // wait for all to be done.
+	if ctx != nil {
+		// wait for all jobs to be done.
+		<-ctx.Done()
 	}
 }
 

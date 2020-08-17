@@ -17,10 +17,13 @@ limitations under the License.
 package resources
 
 import (
+	"strconv"
+
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/system"
 )
@@ -39,6 +42,7 @@ type MTArgs struct {
 	MetricsConfig      string
 	LoggingConfig      string
 	LeConfig           string
+	NoShutdownAfter    int
 }
 
 // MakeMTReceiveAdapter generates the mtping deployment for pingsources
@@ -115,5 +119,8 @@ func makeEnv(args MTArgs) []corev1.EnvVar {
 	}, {
 		Name:  adapter.EnvConfigLeaderElectionConfig,
 		Value: args.LeConfig,
+	}, {
+		Name:  mtping.EnvNoShutdownAfter,
+		Value: strconv.Itoa(args.NoShutdownAfter),
 	}}
 }

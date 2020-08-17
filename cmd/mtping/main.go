@@ -28,7 +28,15 @@ const (
 )
 
 func main() {
-	ctx := signals.NewContext()
+	sctx := signals.NewContext()
+
+	// When cancelling the adapter to close to the minute, there is
+	// a risk of losing events due to either the delay of starting a new pod
+	// or for the passive pod to become active (when HA is enabled and replicas > 1).
+	// So when receiving a SIGTEM signal, delay the cancellation of the adapter,
+	// which under the cover delays the release of the lease.
+	ctx := mtping.NewDelayingContext(sctx, mtping.GetNoShutDownAfterValue())
+
 	ctx = adapter.WithConfigMapWatcherEnabled(ctx)
 	ctx = adapter.WithInjectorEnabled(ctx)
 	ctx = adapter.WithHAEnabled(ctx)
