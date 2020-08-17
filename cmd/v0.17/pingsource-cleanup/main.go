@@ -16,7 +16,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -38,8 +37,7 @@ func main() {
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Printf("[ERROR] Failed to process env var: %s", err)
-		os.Exit(1)
+		log.Fatalf("[ERROR] Failed to process env var: %s", err)
 	}
 
 	k8s := kubeclient.Get(ctx)
@@ -47,7 +45,7 @@ func main() {
 
 	nss, err := k8s.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
-		panic(err)
+		log.Fatalf("[ERROR] Failed to list namespaces: %s", err)
 	}
 
 	var cleanups []sourcesv1alpha2.PingSource
