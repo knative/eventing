@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"log"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"github.com/kelseyhightower/envconfig"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,8 +62,11 @@ func main() {
 
 		for _, pingsource := range pingsources.Items {
 			if len(pingsource.Finalizers) > 0 {
-				fmt.Printf("# Found PingSource %s/%s, need to remove finalizer.\n", pingsource.Namespace, pingsource.Name)
-				cleanups = append(cleanups, pingsource)
+				finalizers := sets.NewString(pingsource.Finalizers...)
+				if finalizers.Has("pingsources.sources.knative.dev") {
+					fmt.Printf("# Found PingSource %s/%s, need to remove finalizer.\n", pingsource.Namespace, pingsource.Name)
+					cleanups = append(cleanups, pingsource)
+				}
 			}
 		}
 	}
@@ -69,7 +74,10 @@ func main() {
 	if !env.DryRun {
 		for _, ref := range cleanups {
 			fmt.Printf("# will remove finalizer for %s/%s\n", ref.Namespace, ref.Name)
-			ref.Finalizers = []string{}
+
+			finalizers := sets.NewString(ref.Finalizers...)
+			finalizers.Delete("pingsources.sources.knative.dev")
+			ref.Finalizers = finalizers.List()
 
 			if _, err := client.SourcesV1alpha2().PingSources(ref.Namespace).Update(&ref); err != nil {
 				fmt.Printf("# [error] failed to update %s/%s %s\n", ref.Namespace, ref.Name, err)
