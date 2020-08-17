@@ -407,7 +407,7 @@ spec:
                                                         type: string
                                                     operator:
                                                         description: 'operator represents a
-                                                            key's relationship to a set of
+                                                            key''s relationship to a set of
                                                             values. Valid operators are In,
                                                             NotIn, Exists and DoesNotExist.'
                                                         type: string
@@ -559,4 +559,3 @@ spec:
         service:
           name: eventing-webhook
           namespace: knative-eventing
-          
