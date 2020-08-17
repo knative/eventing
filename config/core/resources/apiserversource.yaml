@@ -45,11 +45,273 @@ spec:
     schema:
       openAPIV3Schema:
         type: object
-        # this is a work around so we don't need to flush out the
-        # schema for each version at this time
-        #
-        # see issue: https://github.com/knative/serving/issues/912
-        x-kubernetes-preserve-unknown-fields: true
+        description: 'ApiServerSource is an event source that brings Kubernetes API server events into Knative.'
+        properties:
+            spec:
+                type: object
+                description: 'ApiServerSourceSpec defines the desired state of ApiServerSource (from the client).'           
+                properties:
+                    ceOverrides:
+                        description: 'CloudEventOverrides defines overrides to control the
+                            output format and modifications of the event sent to the sink.'
+                        type: object
+                        properties:
+                            extensions:
+                                description: 'Extensions specify what attribute are added or
+                                    overridden on the outbound event. Each `Extensions` key-value
+                                    pair are set on the event as an attribute extension independently.'
+                                type: object
+                                additionalProperties:
+                                  type: string
+                    mode:
+                        description: 'Mode is the mode the receive adapter controller runs
+                            under: Ref or Resource. `Ref` sends only the reference to the
+                            resource. `Resource` send the full resource.'
+                        type: string
+                    owner:
+                        description: 'ResourceOwner is an additional filter to only track resources
+                            that are owned by a specific resource type. If ResourceOwner matches
+                            Resources[n] then Resources[n] is allowed to pass the ResourceOwner
+                            filter.'
+                        type: object
+                        properties:
+                            apiVersion:
+                                description: 'APIVersion - the API version of the resource
+                                    to watch.'
+                                type: string
+                            kind:
+                                description: 'Kind of the resource to watch. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                type: string
+                    resources:
+                        description: 'Resources is the list of resources to watch'
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                apiVersion:
+                                    description: 'API version of the resource to watch.'
+                                    type: string
+                                controller:
+                                    description: 'If true, send an event referencing the object
+                                        controlling the resource Deprecated: Per-resource
+                                        controller flag will no longer be supported in v1alpha2,
+                                        please use Spec.Owner as a GKV.'
+                                    type: boolean
+                                controllerSelector:
+                                    description: 'ControllerSelector restricts this source
+                                        to objects with a controlling owner reference of the
+                                        specified kind. Only apiVersion and kind are used.
+                                        Both are optional. Deprecated: Per-resource owner
+                                        refs will no longer be supported in v1alpha2, please
+                                        use Spec.Owner as a GKV.'
+                                    type: object
+                                    properties:
+                                        apiVersion:
+                                            description: 'API version of the referent.'
+                                            type: string
+                                        blockOwnerDeletion:
+                                            description: 'If true, AND if the owner has the
+                                                "foregroundDeletion" finalizer, then the owner
+                                                cannot be deleted from the key-value store
+                                                until this reference is removed. Defaults
+                                                to false. To set this field, a user needs
+                                                "delete" permission of the owner, otherwise
+                                                422 (Unprocessable Entity) will be returned.'
+                                            type: boolean
+                                        controller:
+                                            description: 'If true, this reference points to
+                                                the managing controller.'
+                                            type: boolean
+                                        kind:
+                                            description: 'Kind of the referent. More info:
+                                                https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                            type: string
+                                        name:
+                                            description: 'Name of the referent. More info:
+                                                http://kubernetes.io/docs/user-guide/identifiers#names'
+                                            type: string
+                                        uid:
+                                            description: 'UID of the referent. More info:
+                                                http://kubernetes.io/docs/user-guide/identifiers#uids'
+                                            type: string
+                                kind:
+                                    description: 'Kind of the resource to watch. More info:
+                                        https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                    type: string
+                                labelSelector:
+                                    description: 'LabelSelector restricts this source to objects
+                                        with the selected labels More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                                    type: object
+                                    properties:
+                                        matchExpressions:
+                                            description: 'matchExpressions is a list of label
+                                                selector requirements. The requirements are
+                                                ANDed.'
+                                            type: array
+                                            items:
+                                                type: object
+                                                properties:
+                                                    key:
+                                                        description: 'key is the label key
+                                                            that the selector applies to.'
+                                                        type: string
+                                                    operator:
+                                                        description: 'operator represents a
+                                                            key''s relationship to a set of
+                                                            values. Valid operators are In,
+                                                            NotIn, Exists and DoesNotExist.'
+                                                        type: string
+                                                    values:
+                                                        description: 'values is an array of
+                                                            string values. If the operator
+                                                            is In or NotIn, the values array
+                                                            must be non-empty. If the operator
+                                                            is Exists or DoesNotExist, the
+                                                            values array must be empty. This
+                                                            array is replaced during a strategic
+                                                            merge patch.'
+                                                        type: array
+                                                        items:
+                                                            type: string
+                                        matchLabels:
+                                            description: 'matchLabels is a map of {key,value}
+                                                pairs. A single {key,value} in the matchLabels
+                                                map is equivalent to an element of matchExpressions,
+                                                whose key field is "key", the operator is
+                                                "In", and the values array contains only "value".
+                                                The requirements are ANDed.'
+                                            type: object
+                                            x-kubernetes-preserve-unknown-fields: true
+                    serviceAccountName:
+                        description: 'ServiceAccountName is the name of the ServiceAccount
+                            to use to run this source.'
+                        type: string
+                    sink:
+                        description: 'Sink is a reference to an object that will resolve to
+                            a domain name to use as the sink.'
+                        type: object
+                        properties:
+                            apiVersion:
+                                type: string
+                            kind:
+                                type: string
+                            name:
+                                type: string
+                            namespace:
+                                type: string
+                            ref:
+                                description: 'Ref points to an Addressable.'
+                                type: object
+                                properties:
+                                    apiVersion:
+                                        description: 'API version of the referent.'
+                                        type: string
+                                    fieldPath:
+                                        description: 'If referring to a piece of an object
+                                            instead of an entire object, this string should
+                                            contain a valid JSON/Go field access statement,
+                                            such as desiredState.manifest.containers[2]. For
+                                            example, if the object reference is to a container
+                                            within a pod, this would take on a value like:
+                                            "spec.containers{name}" (where "name" refers to
+                                            the name of the container that triggered the event)
+                                            or if no container name is specified "spec.containers[2]"
+                                            (container with index 2 in this pod). This syntax
+                                            is chosen only to have some well-defined way of
+                                            referencing a part of an object.'
+                                        type: string
+                                    kind:
+                                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                        type: string
+                                    name:
+                                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                        type: string
+                                    namespace:
+                                        description: 'Namespace of the referent. More info:
+                                            https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                        type: string
+                                    resourceVersion:
+                                        description: 'Specific resourceVersion to which this
+                                            reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                        type: string
+                                    uid:
+                                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                        type: string
+                            uri:
+                                description: 'URI can be an absolute URL(non-empty scheme and
+                                    non-empty host) pointing to the target or a relative URI.
+                                    Relative URIs will be resolved using the base URI retrieved
+                                    from Ref.'
+                                type: string
+            status:
+                type: object
+                description: 'ApiServerSourceStatus defines the observed state of ApiServerSource (from the controller).'
+                properties:
+                    annotations:
+                        description: 'Annotations is additional Status fields for the Resource
+                            to save some additional State as well as convey more information
+                            to the user. This is roughly akin to Annotations on any k8s resource,
+                            just the reconciler conveying richer information outwards.'
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                    ceAttributes:
+                        description: 'CloudEventAttributes are the specific attributes that
+                            the Source uses as part of its CloudEvents.'
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                source:
+                                    description: 'Source is the CloudEvents source attribute.'
+                                    type: string
+                                type:
+                                    description: Type refers to the CloudEvent type attribute.'
+                                    type: string
+                    conditions:
+                        description: 'Conditions the latest available observations of a resource''s
+                            current state.'
+                        type: array
+                        items:
+                            type: object
+                            required:
+                              - type
+                              - status
+                            properties:
+                                lastTransitionTime:
+                                    description: 'LastTransitionTime is the last time the condition
+                                        transitioned from one status to another. We use VolatileTime
+                                        in place of metav1.Time to exclude this from creating
+                                        equality.Semantic differences (all other things held
+                                        constant).'
+                                    type: string
+                                message:
+                                    description: 'A human readable message indicating details
+                                        about the transition.'
+                                    type: string
+                                reason:
+                                    description: 'The reason for the condition''s last transition.'
+                                    type: string
+                                severity:
+                                    description: 'Severity with which to treat failures of
+                                        this type of condition. When this is not specified,
+                                        it defaults to Error.'
+                                    type: string
+                                status:
+                                    description: 'Status of the condition, one of True, False,
+                                        Unknown.'
+                                    type: string
+                                type:
+                                    description: 'Type of condition.'
+                                    type: string
+                    observedGeneration:
+                        description: 'ObservedGeneration is the "Generation" of the Service
+                            that was last processed by the controller.'
+                        type: integer
+                        format: int64
+                    sinkUri:
+                        description: 'SinkURI is the current active sink URI that has been
+                            configured for the Source.'
+                        type: string        
     additionalPrinterColumns:
     - name: Sink
       type: string
@@ -67,10 +329,220 @@ spec:
     name: v1alpha2
     served: true
     storage: false
+    schema:
+      openAPIV3Schema: &openAPIV3Schema
+        type: object
+        description: 'ApiServerSource is an event source that brings Kubernetes API server events into Knative.'
+        properties:
+            spec:
+                type: object
+                description: 'ApiServerSourceSpec defines the desired state of ApiServerSource (from the client).' 
+                required:
+                  - resources
+                properties:
+                    ceOverrides:
+                        description: 'CloudEventOverrides defines overrides to control the
+                            output format and modifications of the event sent to the sink.'
+                        type: object
+                        properties:
+                            extensions:
+                                description: 'Extensions specify what attribute are added or
+                                    overridden on the outbound event. Each `Extensions` key-value
+                                    pair are set on the event as an attribute extension independently.'
+                                type: object
+                                additionalProperties:
+                                  type: string                            
+                    mode:
+                        description: 'EventMode controls the format of the event. `Reference`
+                            sends a dataref event type for the resource under watch. `Resource`
+                            send the full resource lifecycle event. Defaults to `Reference`'
+                        type: string
+                    owner:
+                        description: 'ResourceOwner is an additional filter to only track resources
+                            that are owned by a specific resource type. If ResourceOwner matches
+                            Resources[n] then Resources[n] is allowed to pass the ResourceOwner
+                            filter.'
+                        type: object
+                        properties:
+                            apiVersion:
+                                description: 'APIVersion - the API version of the resource
+                                    to watch.'
+                                type: string
+                            kind:
+                                description: 'Kind of the resource to watch. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                type: string
+                    resources:
+                        description: 'Resource are the resources this source will track and
+                            send related lifecycle events from the Kubernetes ApiServer, with
+                            an optional label selector to help filter.'
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                apiVersion:
+                                    description: 'APIVersion - the API version of the resource
+                                        to watch.'
+                                    type: string
+                                kind:
+                                    description: 'Kind of the resource to watch. More info:
+                                        https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                    type: string
+                                selector:
+                                    description: 'LabelSelector filters this source to objects
+                                        to those resources pass the label selector. More info:
+                                        http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                                    type: object
+                                    properties:
+                                        matchExpressions:
+                                            description: 'matchExpressions is a list of label
+                                                selector requirements. The requirements are
+                                                ANDed.'
+                                            type: array
+                                            items:
+                                                type: object
+                                                properties:
+                                                    key:
+                                                        description: 'key is the label key
+                                                            that the selector applies to.'
+                                                        type: string
+                                                    operator:
+                                                        description: 'operator represents a
+                                                            key''s relationship to a set of
+                                                            values. Valid operators are In,
+                                                            NotIn, Exists and DoesNotExist.'
+                                                        type: string
+                                                    values:
+                                                        description: 'values is an array of
+                                                            string values. If the operator
+                                                            is In or NotIn, the values array
+                                                            must be non-empty. If the operator
+                                                            is Exists or DoesNotExist, the
+                                                            values array must be empty. This
+                                                            array is replaced during a strategic
+                                                            merge patch.'
+                                                        type: array
+                                                        items:
+                                                            type: string
+                                        matchLabels:
+                                            description: 'matchLabels is a map of {key,value}
+                                                pairs. A single {key,value} in the matchLabels
+                                                map is equivalent to an element of matchExpressions,
+                                                whose key field is "key", the operator is
+                                                "In", and the values array contains only "value".
+                                                The requirements are ANDed.'
+                                            type: object
+                                            x-kubernetes-preserve-unknown-fields: true
+                    serviceAccountName:
+                        description: 'ServiceAccountName is the name of the ServiceAccount
+                            to use to run this source. Defaults to default if not set.'
+                        type: string
+                    sink:
+                        description: 'Sink is a reference to an object that will resolve to
+                            a uri to use as the sink.'
+                        type: object
+                        properties:
+                            ref:
+                                description: 'Ref points to an Addressable.'
+                                type: object
+                                properties:
+                                    apiVersion:
+                                        description: 'API version of the referent.'
+                                        type: string
+                                    kind:
+                                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                        type: string
+                                    name:
+                                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                        type: string
+                                    namespace:
+                                        description: 'Namespace of the referent. More info:
+                                            https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                            This is optional field, it gets defaulted to the
+                                            object holding it if left out.'
+                                        type: string
+                            uri:
+                                description: 'URI can be an absolute URL(non-empty scheme and
+                                    non-empty host) pointing to the target or a relative URI.
+                                    Relative URIs will be resolved using the base URI retrieved
+                                    from Ref.'
+                                type: string
+            status:
+                type: object
+                description: 'ApiServerSourceStatus defines the observed state of ApiServerSource (from the controller).'
+                properties:
+                    annotations:
+                        description: 'Annotations is additional Status fields for the Resource
+                            to save some additional State as well as convey more information
+                            to the user. This is roughly akin to Annotations on any k8s resource,
+                            just the reconciler conveying richer information outwards.'
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                    ceAttributes:
+                        description: 'CloudEventAttributes are the specific attributes that
+                            the Source uses as part of its CloudEvents.'
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                source:
+                                    description: 'Source is the CloudEvents source attribute.'
+                                    type: string
+                                type:
+                                    description: 'Type refers to the CloudEvent type attribute.'
+                                    type: string
+                    conditions:
+                        description: 'Conditions the latest available observations of a resource''s
+                            current state.'
+                        type: array
+                        items:
+                            type: object
+                            required:
+                              - type
+                              - status
+                            properties:
+                                lastTransitionTime:
+                                    description: 'LastTransitionTime is the last time the condition
+                                        transitioned from one status to another. We use VolatileTime
+                                        in place of metav1.Time to exclude this from creating
+                                        equality.Semantic differences (all other things held
+                                        constant).'
+                                    type: string
+                                message:
+                                    description: 'A human readable message indicating details
+                                        about the transition.'
+                                    type: string
+                                reason:
+                                    description: 'The reason for the condition''s last transition.'
+                                    type: string
+                                severity:
+                                    description: 'Severity with which to treat failures of
+                                        this type of condition. When this is not specified,
+                                        it defaults to Error.'
+                                    type: string
+                                status:
+                                    description: 'Status of the condition, one of True, False,
+                                        Unknown.'
+                                    type: string
+                                type:
+                                    description: 'Type of condition.'
+                                    type: string
+                    observedGeneration:
+                        description: 'ObservedGeneration is the "Generation" of the Service
+                            that was last processed by the controller.'
+                        type: integer
+                        format: int64
+                    sinkUri:
+                        description: 'SinkURI is the current active sink URI that has been
+                            configured for the Source.'
+                        type: string    
   - <<: *version
     name: v1beta1
     served: true
     storage: false
+    # the schema of v1beta1 is exactly the same as v1alpha2 schema
+    schema:
+      openAPIV3Schema:
+        <<: *openAPIV3Schema
   names:
     categories:
      - all
