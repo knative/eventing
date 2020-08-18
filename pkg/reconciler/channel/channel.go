@@ -98,15 +98,19 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 	channelableStatus.Status = bc.Status
 	if cAnnotations != nil &&
 		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
+		subs := make([]eventingduckv1.SubscriberStatus, len(bc.SubscribableStatus.Subscribers))
+		for i, sub := range bc.SubscribableStatus.Subscribers {
+			sub.ConvertTo(ctx, &subs[i])
+		}
 		if len(bc.SubscribableStatus.Subscribers) > 0 {
-			channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableStatus.Subscribers
+			channelableStatus.SubscribableStatus.Subscribers = subs
 		}
 	} else { //we assume v1alpha1 if no tag according to the spec
 		if bc.SubscribableTypeStatus.SubscribableStatus != nil &&
 			len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
-			channelableStatus.SubscribableStatus.Subscribers = make([]duckv1beta1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
+			channelableStatus.SubscribableStatus.Subscribers = make([]eventingduckv1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
 			for i, ss := range bc.SubscribableTypeStatus.SubscribableStatus.Subscribers {
-				channelableStatus.SubscribableStatus.Subscribers[i] = duckv1beta1.SubscriberStatus{
+				channelableStatus.SubscribableStatus.Subscribers[i] = eventingduckv1.SubscriberStatus{
 					UID:                ss.UID,
 					ObservedGeneration: ss.ObservedGeneration,
 					Ready:              ss.Ready,

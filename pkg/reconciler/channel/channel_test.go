@@ -238,31 +238,6 @@ func TestReconcile(t *testing.T) {
 				WithChannelAddress(backingChannelHostname),
 				WithChannelSubscriberStatuses(subscriberStatuses())),
 		}},
-	}, {
-		Name: "Updating v1alpha1 channelable subscribers statuses",
-		Key:  testKey,
-		Objects: []runtime.Object{
-			NewChannel(channelName, testNS,
-				WithChannelTemplate(channelableV1Alpha1CRD()),
-				WithInitChannelConditions,
-				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
-				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname)),
-			NewChannelable(channelName, testNS,
-				WithChannelableReady(),
-				WithChannelableAddress(backingChannelHostname),
-				WithChannelableSubscribers(subscribersV1Alpha1()),
-				WithChannelableStatusSubscribers(subscriberStatuses())),
-		},
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewChannel(channelName, testNS,
-				WithChannelTemplate(channelableV1Alpha1CRD()),
-				WithInitChannelConditions,
-				WithBackingChannelObjRef(backingChannelObjRefV1Alpha1()),
-				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
-				WithChannelSubscriberStatuses(subscriberStatuses())),
-		}},
 	}}
 
 	logger := logtesting.TestLogger(t)
