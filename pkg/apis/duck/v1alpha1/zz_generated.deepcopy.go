@@ -121,13 +121,13 @@ func (in *ChannelableCombinedList) DeepCopyObject() runtime.Object {
 func (in *ChannelableCombinedSpec) DeepCopyInto(out *ChannelableCombinedSpec) {
 	*out = *in
 	in.SubscribableTypeSpec.DeepCopyInto(&out.SubscribableTypeSpec)
-	in.SubscribableSpec.DeepCopyInto(&out.SubscribableSpec)
+	in.SubscribableSpecv1beta1.DeepCopyInto(&out.SubscribableSpecv1beta1)
 	if in.Delivery != nil {
 		in, out := &in.Delivery, &out.Delivery
 		*out = new(v1beta1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
-	//in.SubscribableSpecv1.DeepCopyInto(&out.SubscribableSpecv1)
+	in.SubscribableSpec.DeepCopyInto(&out.SubscribableSpec)
 	if in.Deliveryv1 != nil {
 		in, out := &in.Deliveryv1, &out.Deliveryv1
 		*out = new(v1.DeliverySpec)
@@ -152,8 +152,8 @@ func (in *ChannelableCombinedStatus) DeepCopyInto(out *ChannelableCombinedStatus
 	in.Status.DeepCopyInto(&out.Status)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
+	in.SubscribableStatusv1beta1.DeepCopyInto(&out.SubscribableStatusv1beta1)
 	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
-	//in.SubscribableStatusv1.DeepCopyInto(&out.SubscribableStatusv1)
 	if in.ErrorChannel != nil {
 		in, out := &in.ErrorChannel, &out.ErrorChannel
 		*out = new(corev1.ObjectReference)
