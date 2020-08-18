@@ -53,6 +53,15 @@ func BrokerDataPlaneSetupHelper(client *testlib.Client, brokerName, brokerNamesp
 	return broker
 }
 
+func BrokerDataPlaneNamespaceSetupOption(namespace string) testlib.SetupClientOption {
+	return func(client *testlib.Client) {
+		if namespace != "" {
+			client.Kube.Kube.CoreV1().Namespaces().Delete(client.Namespace, nil)
+			client.Namespace = namespace
+		}
+	}
+}
+
 //At ingress
 //Supports CE 0.3 or CE 1.0 via HTTP
 //Supports structured or Binary mode
@@ -72,6 +81,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 	trigger := client.CreateTriggerOrFailV1Beta1(
 		triggerName,
 		resources.WithBrokerV1Beta1(broker.Name),
+		resources.WithNamespaceTriggerV1Beta1(broker.Namespace),
 		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter, nil),
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
 	)

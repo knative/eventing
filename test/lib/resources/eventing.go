@@ -321,6 +321,12 @@ func BrokerV1(name string, options ...BrokerV1Option) *eventingv1.Broker {
 	return broker
 }
 
+func WithNamespaceTriggerV1Beta1(namespace string) TriggerOptionV1Beta1 {
+	return func(t *eventingv1beta1.Trigger) {
+		t.Namespace = namespace
+	}
+}
+
 // WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
 func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extensions map[string]interface{}) TriggerOptionV1Beta1 {
 	attrs := make(map[string]string)
