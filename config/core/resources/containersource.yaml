@@ -321,7 +321,7 @@ spec:
                                           type: integer
                                           format: int64
                                       affinity:
-                                          description: 'If specified, the pod's scheduling constraints'
+                                          description: 'If specified, the pod''s scheduling constraints'
                                           type: object
                                           properties:
                                               nodeAffinity:
@@ -364,7 +364,7 @@ spec:
                                                                               description: 'A
                                                                                   list of node
                                                                                   selector requirements
-                                                                                  by node's
+                                                                                  by node''s
                                                                                   labels.'
                                                                               type: array
                                                                               items:
@@ -383,7 +383,7 @@ spec:
                                                                                       operator:
                                                                                           description: 'Represents
                                                                                               a
-                                                                                              key's
+                                                                                              key''s
                                                                                               relationship
                                                                                               to
                                                                                               a
