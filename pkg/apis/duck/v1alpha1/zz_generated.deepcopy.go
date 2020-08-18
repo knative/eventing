@@ -21,7 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	v1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	apis "knative.dev/pkg/apis"
@@ -148,7 +148,7 @@ func (in *ChannelableCombinedStatus) DeepCopyInto(out *ChannelableCombinedStatus
 	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
 	if in.ErrorChannel != nil {
 		in, out := &in.ErrorChannel, &out.ErrorChannel
-		*out = new(corev1.ObjectReference)
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	return
@@ -227,7 +227,7 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	if in.ErrorChannel != nil {
 		in, out := &in.ErrorChannel, &out.ErrorChannel
-		*out = new(corev1.ObjectReference)
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	return
