@@ -21,10 +21,10 @@ go test -v -timeout 30s -tags e2e knative.dev/eventing/test/conformance -run ^Te
 
 ## Running Broker conformance tests against an existing broker
 
-When developing a new broker, or testings against a preexisting broker setup you can specify:
+When developing a new broker, or testings against a preexisting broker setup you
+can specify:
 
-``` shell
+```shell
 go test -v -tags e2e knative.dev/eventing/test/conformance -brokername=foo -brokernamespace=bar -run TestBrokerV1Beta1DataPlaneIngress
 
 ```
-
