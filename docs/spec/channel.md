@@ -4,7 +4,7 @@
 
 The Knative Eventing project has one generic `Channel` CRD and might ship
 different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of in the
-`messaging.knative.dev/v1beta1` API Group. The generic `Channel` CRD points to
+`messaging.knative.dev/v1` API Group. The generic `Channel` CRD points to
 the chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
 
 A _channel_ logically receives events on its input domain and forwards them to
@@ -36,7 +36,7 @@ Each Channel implementation is backed by its own CRD, like the
 `InMemoryChannel`. Below is an example for the `InMemoryChannel`:
 
 ```
-apiVersion: messaging.knative.dev/v1beta1
+apiVersion: messaging.knative.dev/v1
 kind: InMemoryChannel
 metadata:
   name: my-channel
@@ -124,7 +124,7 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
-  version: v1beta1
+  version: v1
   names:
     kind: InMemoryChannel
     plural: inmemorychannels
@@ -154,6 +154,7 @@ currently have two versions:
 
 1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
 1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
+1. [v1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/channelable_types.go)
 
 So, for example to indicate that the Channel supports v1beta1 duck type, you
 should annotate it like so (only showing the annotations):
@@ -165,10 +166,10 @@ should annotate it like so (only showing the annotations):
     annotations: messaging.knative.dev/subscribable: v1beta1
 ```
 
-Unfortunately, we had to make breaking changes between the two versions, and to
-ensure functionality, the channel implementer must indicate which version they
-support. To ensure backwards compatibility with old channels, if no annotation
-is given, we assume it's `v1alpha1`.
+Unfortunately, we had to make breaking changes between v1alpha1 and v1beta1
+versions, and to ensure functionality, the channel implementer must indicate
+which version they support. To ensure backwards compatibility with old channels,
+if no annotation is given, we assume it's `v1alpha1`.
 
 #### Spec Requirements
 
@@ -181,6 +182,15 @@ Each channel CRD MUST contain an array of subscribers:
 
 Each channel CRD MUST contain an array of subscribers:
 [`spec.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/subscribable_types.go)
+
+Note: The array of subscribers MUST NOT be set directly on the generic Channel
+custom object, but rather appended to the backing channel by the subscription
+itself.
+
+##### v1 Spec
+
+Each channel CRD MUST contain an array of subscribers:
+[`spec.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/subscribable_types.go)
 
 Note: The array of subscribers MUST NOT be set directly on the generic Channel
 custom object, but rather appended to the backing channel by the subscription
@@ -218,6 +228,21 @@ Each channel CRD SHOULD have the following fields in `Status`
 - [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
   (as an array) SHOULD indicate status transitions and error reasons if present
 
+##### v1 Status
+
+Each channel CRD MUST have a `status` subresource which contains
+
+- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1/addressable_types.go)
+- [`subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/subscribable_types.go)
+  (as an array)
+
+Each channel CRD SHOULD have the following fields in `Status`
+
+- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+  MUST be populated if present
+- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+  (as an array) SHOULD indicate status transitions and error reasons if present
+
 #### Channel Status
 
 ##### v1alpha1
@@ -227,6 +252,11 @@ and `status.address.url` MUST be populated and `status.addressable` MUST be set
 to `True`.
 
 ##### v1beta1
+
+When the channel instance is ready to receive events `status.address.url` MUST
+be populated and `status.addressable` MUST be set to `True`.
+
+##### v1
 
 When the channel instance is ready to receive events `status.address.url` MUST
 be populated and `status.addressable` MUST be set to `True`.
@@ -241,6 +271,12 @@ subscriber identified by its `uid` MUST be set to `True` when the subscription
 is ready to be processed.
 
 ##### v1beta1
+
+Each subscription to a channel is added to the channel `status.subscribers`
+automatically. The `ready` field of the subscriber identified by its `uid` MUST
+be set to `True` when the subscription is ready to be processed.
+
+##### v1
 
 Each subscription to a channel is added to the channel `status.subscribers`
 automatically. The `ready` field of the subscriber identified by its `uid` MUST
