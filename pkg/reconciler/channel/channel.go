@@ -25,12 +25,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging"
-	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/channel"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/channel/resources"
@@ -52,7 +52,7 @@ type Reconciler struct {
 var _ channelreconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconciler.Event {
 	// 1. Create the backing Channel CRD, if it doesn't exist.
 	// 2. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
@@ -88,16 +88,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1beta1.Channel) pkgr
 	return nil
 }
 
-func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) *duckv1beta1.ChannelableStatus {
+func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) *eventingduckv1.ChannelableStatus {
 
-	channelableStatus := &duckv1beta1.ChannelableStatus{}
+	channelableStatus := &eventingduckv1.ChannelableStatus{}
 	if bc.AddressStatus.Address != nil {
 		channelableStatus.AddressStatus.Address = &duckv1.Addressable{}
 		bc.AddressStatus.Address.ConvertTo(ctx, channelableStatus.AddressStatus.Address)
 	}
 	channelableStatus.Status = bc.Status
 	if cAnnotations != nil &&
-		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
+		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
 		if len(bc.SubscribableStatus.Subscribers) > 0 {
 			channelableStatus.SubscribableStatus.Subscribers = bc.SubscribableStatus.Subscribers
 		}
@@ -119,7 +119,7 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1beta1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1alpha1.ChannelableCombined, error) {
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1alpha1.ChannelableCombined, error) {
 	lister, err := r.channelableTracker.ListerForKReference(backingChannelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))

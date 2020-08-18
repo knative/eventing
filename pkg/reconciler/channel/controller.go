@@ -25,8 +25,8 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
-	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel"
-	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/channel"
+	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
 )
 

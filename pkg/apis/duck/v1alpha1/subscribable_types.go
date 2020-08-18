@@ -24,7 +24,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
@@ -62,8 +61,6 @@ type SubscriberSpec struct {
 	DeadLetterSinkURI *apis.URL `json:"deadLetterSink,omitempty"`
 	// +optional
 	Delivery *duckv1beta1.DeliverySpec `json:"delivery,omitempty"`
-	// +optional
-	Deliveryv1 *duckv1.DeliverySpec `json:"deliveryv1,omitempty"`
 }
 
 // SubscribableStatus is the schema for the subscribable's status portion of the status
@@ -73,11 +70,6 @@ type SubscribableStatus struct {
 	// +patchMergeKey=uid
 	// +patchStrategy=merge
 	Subscribers []duckv1beta1.SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
-
-	// This is the list of subscription's statuses for this channel.
-	// +patchMergeKey=uid
-	// +patchStrategy=merge
-	Subscribersv1 []duckv1.SubscriberStatus `json:"subscribersv1,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -144,14 +136,6 @@ func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberSta
 	s.SubscribableStatus.Subscribers = subscribers
 }
 
-// AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
-// with Subscribers, use this function, so that the value is reflected in both the duplicate fields residing
-// in SubscribableTypeStatus
-func (s *SubscribableTypeStatus) AddSubscriberV1ToSubscribableStatus(subscriberStatus duckv1.SubscriberStatus) {
-	subscribersv1 := append(s.GetSubscribableTypeStatus().Subscribersv1, subscriberStatus)
-	s.SubscribableStatus.Subscribersv1 = subscribersv1
-}
-
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {
 	return &SubscribableType{}
@@ -176,17 +160,6 @@ func (c *SubscribableType) Populate() {
 	c.Status.SetSubscribableTypeStatus(SubscribableStatus{
 		// Populate ALL fields
 		Subscribers: []duckv1beta1.SubscriberStatus{{
-			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-			ObservedGeneration: 1,
-			Ready:              corev1.ConditionTrue,
-			Message:            "Some message",
-		}, {
-			UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-			ObservedGeneration: 2,
-			Ready:              corev1.ConditionFalse,
-			Message:            "Some message",
-		}},
-		Subscribersv1: []duckv1.SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
