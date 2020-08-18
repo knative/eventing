@@ -190,13 +190,9 @@ spec:
             description: Status represents the current state of the Sequence. This data
                 may be out of date.
             type: object
-            required:
-              - address
             properties:
               address:
                 type: object
-                required:
-                  - url
                 properties:
                     url:
                         type: string
@@ -262,9 +258,6 @@ spec:
                       description: ReadyCondition indicates whether the Channel
                           is ready or not.
                       type: object
-                      required:
-                        - type
-                        - status
                       properties:
                         lastTransitionTime:
                           description: LastTransitionTime is the last time
@@ -300,9 +293,6 @@ spec:
                 type: array
                 items:
                   type: object
-                  required:
-                    - type
-                    - status
                   properties:
                     lastTransitionTime:
                       description: LastTransitionTime is the last time the condition
@@ -346,9 +336,6 @@ spec:
                       description: ReadyCondition indicates whether the Subscription
                           is ready or not.
                       type: object
-                      required:
-                        - type
-                        - status
                       properties:
                         lastTransitionTime:
                           description: LastTransitionTime is the last time
