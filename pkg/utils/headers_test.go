@@ -54,4 +54,3 @@ func TestPassThroughHeaders(t *testing.T) {
 		})
 	}
 }
-}
