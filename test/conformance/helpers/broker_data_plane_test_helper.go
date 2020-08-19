@@ -81,7 +81,6 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 	trigger := client.CreateTriggerOrFailV1Beta1(
 		triggerName,
 		resources.WithBrokerV1Beta1(broker.Name),
-		resources.WithNamespaceTriggerV1Beta1(broker.Namespace),
 		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter, nil),
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
 	)
