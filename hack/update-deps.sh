@@ -32,7 +32,7 @@ FLOATING_DEPS=(
   "knative.dev/test-infra@${VERSION}"
   "knative.dev/pkg@${VERSION}"
 )
-  
+
 cd "${ROOT_DIR}"
 
 # Parse flags to determine any we should pass to dep.
