@@ -18,8 +18,6 @@ package lib
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
@@ -104,9 +102,6 @@ func (c *Client) WaitForAllTestResourcesReady() error {
 			return fmt.Errorf("created Pod %q did not become ready: %+v", n, errors.WithStack(err))
 		}
 	}
-	// FIXME(chizhg): This hacky sleep is added to try mitigating the test flakiness.
-	// Will delete it after we find the root cause and fix.
-	time.Sleep(10 * time.Second)
 	return nil
 }
 
