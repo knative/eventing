@@ -255,10 +255,8 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 		err = fmt.Errorf("failed to dispatch message: %w", err)
 	}
 
-	var sc int
-	if resp == nil {
-		sc = 0
-	} else {
+	sc := 0
+	if resp != nil {
 		sc = resp.StatusCode
 	}
 
