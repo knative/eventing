@@ -155,13 +155,9 @@ spec:
             description: Status represents the current state of the Parallel. This data
                 may be out of date.
             type: object
-            required:
-              - address
             properties:
               address:
                 type: object
-                required:
-                  - url
                 properties:
                   url:
                       type: string
@@ -184,7 +180,7 @@ spec:
                           channel status.
                       type: object
                       properties: &channelProperties
-                        channel: 
+                        channel:
                           description: Channel is the reference to the underlying
                               channel.
                           type: object
@@ -234,9 +230,6 @@ spec:
                           description: ReadyCondition indicates whether
                               the Channel is ready or not.
                           type: object
-                          required:
-                            - type
-                            - status
                           properties: &readyConditionProperties
                             lastTransitionTime:
                               description: LastTransitionTime is the
@@ -277,9 +270,6 @@ spec:
                           description: ReadyCondition indicates whether
                               the Subscription is ready or not.
                           type: object
-                          required:
-                            - type
-                            - status
                           properties:
                             <<: *readyConditionProperties
                         subscription:
@@ -297,9 +287,6 @@ spec:
                             description: ReadyCondition indicates whether
                                 the Subscription is ready or not.
                             type: object
-                            required:
-                              - type
-                              - status
                             properties:
                               <<: *readyConditionProperties
                         subscription:
@@ -314,9 +301,6 @@ spec:
                 type: array
                 items:
                   type: object
-                  required:
-                    - type
-                    - status
                   properties:
                     <<: *readyConditionProperties
               ingressChannelStatus:
@@ -324,7 +308,7 @@ spec:
                     status.
                 type: object
                 properties:
-                  <<: *channelProperties       
+                  <<: *channelProperties
               observedGeneration:
                 description: ObservedGeneration is the 'Generation' of the Service
                     that was last processed by the controller.
@@ -347,6 +331,10 @@ spec:
     name: v1
     served: true
     storage: false
+    # the schema of v1 is exactly the same as v1beta1 schema
+    schema:
+      openAPIV3Schema:
+        << : *openAPIV3Schema
   names:
     kind: Parallel
     plural: parallels
