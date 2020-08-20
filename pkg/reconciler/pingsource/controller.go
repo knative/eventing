@@ -18,33 +18,31 @@ package pingsource
 
 import (
 	"context"
-	"encoding/json"
-
-	"knative.dev/eventing/pkg/adapter/mtping"
-	eventingcache "knative.dev/eventing/pkg/utils/cache"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection/sharedmain"
-	"knative.dev/pkg/leaderelection"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
-
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
+
+	"knative.dev/eventing/pkg/adapter/mtping"
+	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
+	eventingcache "knative.dev/eventing/pkg/utils/cache"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -63,10 +61,10 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
-	deploymentInformer := deploymentinformer.Get(ctx)
-	pingSourceInformer := pingsourceinformer.Get(ctx)
-	serviceAccountInformer := serviceaccount.Get(ctx)
-	roleBindingInformer := rolebinding.Get(ctx)
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		logger.Fatalw("unable to process PingSourceSource's required environment variables: %v", err)
+	}
 
 	// Retrieve leader election config
 	leaderElectionConfig, err := sharedmain.GetLeaderElectionConfig(ctx)
@@ -74,27 +72,31 @@ func NewController(
 		logger.Fatalw("Error loading leader election configuration", zap.Error(err))
 	}
 
-	leConfig, err := leComponentConfigToJson(leaderElectionConfig.GetComponentConfig(mtcomponent))
+	cc := leaderElectionConfig.GetComponentConfig(mtcomponent)
+	leConfig, err := adapter.LeaderElectionComponentConfigToJson(&cc)
 	if err != nil {
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
 
-	r := &Reconciler{
-		kubeClientSet:        kubeclient.Get(ctx),
-		pingLister:           pingSourceInformer.Lister(),
-		deploymentLister:     deploymentInformer.Lister(),
-		serviceAccountLister: serviceAccountInformer.Lister(),
-		roleBindingLister:    roleBindingInformer.Lister(),
-		leConfig:             leConfig,
-		loggingContext:       ctx,
-	}
+	// Configure the reconciler
 
-	env := &envConfig{}
-	if err := envconfig.Process("", env); err != nil {
-		logging.FromContext(ctx).Panicf("unable to process PingSourceSource's required environment variables: %v", err)
+	deploymentInformer := deploymentinformer.Get(ctx)
+	pingSourceInformer := pingsourceinformer.Get(ctx)
+	serviceAccountInformer := serviceaccount.Get(ctx)
+	roleBindingInformer := rolebinding.Get(ctx)
+
+	r := &Reconciler{
+		kubeClientSet:         kubeclient.Get(ctx),
+		pingLister:            pingSourceInformer.Lister(),
+		deploymentLister:      deploymentInformer.Lister(),
+		serviceAccountLister:  serviceAccountInformer.Lister(),
+		roleBindingLister:     roleBindingInformer.Lister(),
+		leConfig:              leConfig,
+		loggingContext:        ctx,
+		configs:               reconcilersource.WatchConfigurations(ctx, component, cmw),
+		receiveAdapterImage:   env.Image,
+		receiveMTAdapterImage: env.MTImage,
 	}
-	r.receiveAdapterImage = env.Image
-	r.receiveMTAdapterImage = env.MTImage
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
@@ -122,10 +124,7 @@ func NewController(
 			)),
 	})
 
-	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
-	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
-
-	// Create and start persistent store backed by ConfigMaps
+	// Create and start persistent store serializing PingSource
 	store := eventingcache.NewPersistedStore(
 		mtcomponent,
 		kubeclient.Get(ctx),
@@ -133,15 +132,7 @@ func NewController(
 		"config-pingsource-mt-adapter",
 		pingSourceInformer.Informer(),
 		mtping.Project)
-
 	go store.Run(ctx)
 
 	return impl
-}
-
-// leComponentConfigToJson converts a ComponentConfig to a json string.
-// TODO: move to pkg
-func leComponentConfigToJson(cfg leaderelection.ComponentConfig) (string, error) {
-	jsonCfg, err := json.Marshal(cfg)
-	return string(jsonCfg), err
 }

@@ -197,3 +197,13 @@ func defaultLeaderElectionConfig() *kle.ComponentConfig {
 		RetryPeriod:   2 * time.Second,
 	}
 }
+
+// LeaderElectionComponentConfigToJson converts a ComponentConfig to a json string.
+func LeaderElectionComponentConfigToJson(cfg *kle.ComponentConfig) (string, error) {
+	if cfg == nil {
+		return "", nil
+	}
+
+	jsonCfg, err := json.Marshal(cfg)
+	return string(jsonCfg), err
+}
