@@ -98,6 +98,14 @@ func TestNew(t *testing.T) {
 						"loglevel.controller": "info",
 						"loglevel.webhook":    "info",
 					},
+				}, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "config-tracing",
+						Namespace: "knative-eventing",
+					},
+					Data: map[string]string{
+						"_example": "test-config",
+					},
 				},
 			))
 
