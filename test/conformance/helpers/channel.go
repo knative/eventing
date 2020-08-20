@@ -23,6 +23,7 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 
@@ -58,6 +59,20 @@ func getChannelDuckTypeSupportVersion(channelName string, client *testlib.Client
 		return "", errors.Wrapf(err, "Unable to cast the channel %v", metaResource)
 	}
 	return channelable.ObjectMeta.Annotations[messaging.SubscribableDuckVersionAnnotation], nil
+}
+
+func getChannelAsV1Channelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1.Channelable, error) {
+	metaResource := resources.NewMetaResource(channelName, client.Namespace, &channel)
+	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1.Channelable{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "Unable to get the channel as v1 Channel duck type: %q", channel)
+	}
+	channelable, ok := obj.(*eventingduckv1.Channelable)
+	if !ok {
+		return nil, errors.Errorf("Unable to cast channel %q to v1 duck type", channel)
+	}
+
+	return channelable, nil
 }
 
 func getChannelAsV1Beta1Channelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1beta1.Channelable, error) {

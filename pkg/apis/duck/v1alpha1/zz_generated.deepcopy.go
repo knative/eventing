@@ -21,9 +21,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	apis "knative.dev/pkg/apis"
 )
@@ -127,12 +126,6 @@ func (in *ChannelableCombinedSpec) DeepCopyInto(out *ChannelableCombinedSpec) {
 		*out = new(v1beta1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
-	in.SubscribableSpecv1.DeepCopyInto(&out.SubscribableSpecv1)
-	if in.Deliveryv1 != nil {
-		in, out := &in.Deliveryv1, &out.Deliveryv1
-		*out = new(v1.DeliverySpec)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 
@@ -153,10 +146,9 @@ func (in *ChannelableCombinedStatus) DeepCopyInto(out *ChannelableCombinedStatus
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
-	in.SubscribableStatusv1.DeepCopyInto(&out.SubscribableStatusv1)
 	if in.ErrorChannel != nil {
 		in, out := &in.ErrorChannel, &out.ErrorChannel
-		*out = new(corev1.ObjectReference)
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	return
@@ -235,7 +227,7 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	if in.ErrorChannel != nil {
 		in, out := &in.ErrorChannel, &out.ErrorChannel
-		*out = new(corev1.ObjectReference)
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	return
@@ -339,11 +331,6 @@ func (in *SubscribableStatus) DeepCopyInto(out *SubscribableStatus) {
 	if in.Subscribers != nil {
 		in, out := &in.Subscribers, &out.Subscribers
 		*out = make([]v1beta1.SubscriberStatus, len(*in))
-		copy(*out, *in)
-	}
-	if in.Subscribersv1 != nil {
-		in, out := &in.Subscribersv1, &out.Subscribersv1
-		*out = make([]v1.SubscriberStatus, len(*in))
 		copy(*out, *in)
 	}
 	return
@@ -483,11 +470,6 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 	if in.Delivery != nil {
 		in, out := &in.Delivery, &out.Delivery
 		*out = new(v1beta1.DeliverySpec)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.Deliveryv1 != nil {
-		in, out := &in.Deliveryv1, &out.Deliveryv1
-		*out = new(v1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
 	return
