@@ -38,18 +38,6 @@ func TestOnByDefault(t *testing.T) {
 			},
 			want: true,
 		},
-		"deprecated, enabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionEnabledLabelValue,
-			},
-			want: true,
-		},
-		"deprecated, disabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionDisabledLabelValue,
-			},
-			want: false,
-		},
 		"labeled, enabled": {
 			given: map[string]string{
 				InjectionLabelKey: InjectionEnabledLabelValue,
@@ -59,20 +47,6 @@ func TestOnByDefault(t *testing.T) {
 		"labeled, disabled": {
 			given: map[string]string{
 				InjectionLabelKey: InjectionDisabledLabelValue,
-			},
-			want: false,
-		},
-		"double labeled, fqn wins, enabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionDisabledLabelValue,
-				InjectionLabelKey:           InjectionEnabledLabelValue,
-			},
-			want: true,
-		},
-		"double labeled, fqn wins, disabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionEnabledLabelValue,
-				InjectionLabelKey:           InjectionDisabledLabelValue,
 			},
 			want: false,
 		},
@@ -105,18 +79,6 @@ func TestOffByDefault(t *testing.T) {
 			},
 			want: false,
 		},
-		"deprecated, enabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionEnabledLabelValue,
-			},
-			want: true,
-		},
-		"deprecated, disabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionDisabledLabelValue,
-			},
-			want: false,
-		},
 		"labeled, enabled": {
 			given: map[string]string{
 				InjectionLabelKey: InjectionEnabledLabelValue,
@@ -126,20 +88,6 @@ func TestOffByDefault(t *testing.T) {
 		"labeled, disabled": {
 			given: map[string]string{
 				InjectionLabelKey: InjectionDisabledLabelValue,
-			},
-			want: false,
-		},
-		"double labeled, fqn wins, enabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionDisabledLabelValue,
-				InjectionLabelKey:           InjectionEnabledLabelValue,
-			},
-			want: true,
-		},
-		"double labeled, fqn wins, disabled": {
-			given: map[string]string{
-				DeprecatedInjectionLabelKey: InjectionEnabledLabelValue,
-				InjectionLabelKey:           InjectionDisabledLabelValue,
 			},
 			want: false,
 		},
