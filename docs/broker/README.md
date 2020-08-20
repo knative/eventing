@@ -53,8 +53,8 @@ broker-ingress is based off the Path portion of the incoming request of the form
 implementation details above.
 
 `Broker`s are reconciled by the
-[Broker Reconciler](../../pkg/reconciler/mtbroker/broker.go). For each `Broker`, it
-reconciles:
+[Broker Reconciler](../../pkg/reconciler/mtbroker/broker.go). For each `Broker`,
+it reconciles:
 
 1. The 'trigger' `Channel`. This is a `Channel` that all events received by
    broker-ingress targeting this broker are sent to.
