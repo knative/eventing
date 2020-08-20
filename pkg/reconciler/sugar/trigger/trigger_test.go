@@ -88,7 +88,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Trigger is deleted no resources",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionEnabledLabelValue),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue),
 				WithTriggerDeleted),
 		},
 		Key: testNS + "/" + triggerName,
@@ -96,7 +96,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Trigger enabled",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionEnabledLabelValue)),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue)),
 		},
 		Key:                     testNS + "/" + triggerName,
 		SkipNamespaceValidation: true,
@@ -111,7 +111,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Trigger enabled, broker exists",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionEnabledLabelValue),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue),
 			),
 			resources.MakeBroker(testNS, resources.DefaultBrokerName),
 		},
@@ -122,7 +122,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Name: "Trigger enabled, broker exists with no label",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionDisabledLabelValue)),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
 			&v1beta1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
@@ -190,7 +190,7 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Trigger enabled",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionEnabledLabelValue)),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue)),
 		},
 		Key:                     testNS + "/" + triggerName,
 		SkipNamespaceValidation: true,
@@ -205,7 +205,7 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Trigger enabled, broker exists",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionEnabledLabelValue)),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue)),
 			resources.MakeBroker(testNS, resources.DefaultBrokerName),
 		},
 		Key:                     testNS + "/" + triggerName,
@@ -215,7 +215,7 @@ func TestDisabledByDefault(t *testing.T) {
 		Name: "Trigger enabled, broker exists with no label",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey,sugar.InjectionDisabledLabelValue)),
+				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
 			&v1beta1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
