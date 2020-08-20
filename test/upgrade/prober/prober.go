@@ -25,6 +25,11 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
+const (
+	ServingUseFlag         = "E2E_UPGRADE_TESTS_SERVING_USE"
+	ServingScaleToZeroFlag = "E2E_UPGRADE_TESTS_SERVING_SCALE_TO_ZERO"
+)
+
 var (
 	// FIXME: Interval is set to 200 msec, as lower values will result in errors: knative/eventing#2357
 	// Interval = 10 * time.Millisecond
@@ -69,8 +74,8 @@ func NewConfig(namespace string) *Config {
 		FinishedSleep: 5 * time.Second,
 		FailOnErrors:  true,
 		Serving: ServingConfig{
-			Use:         false,
-			ScaleToZero: true,
+			Use:         envflag(ServingUseFlag, false),
+			ScaleToZero: envflag(ServingScaleToZeroFlag, true),
 		},
 	}
 }
@@ -151,7 +156,7 @@ func (p *prober) remove() {
 	if p.config.Serving.Use {
 		p.removeForwarder()
 	}
-	p.client.Tracker.Clean(true)
+	ensure.NoError(p.client.Tracker.Clean(true))
 }
 
 func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
