@@ -66,11 +66,9 @@ TEST_EVENTING_NAMESPACE="${TEST_EVENTING_NAMESPACE:-"knative-eventing-"$(cat /de
   | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
 latest_version() {
-  local semver=$(git describe --match "v[0-9]*" --abbrev=0)
-  local major_minor=$(echo "$semver" | cut -d. -f1-2)
-
-  # Get the latest patch release for the major minor
-  git tag -l "${major_minor}*" | sort -r --version-sort | head -n1
+  # v0.17.0 is a bad release. To unblock submitting new PRs and to allow the creation of v0.17.1,
+  # use the most recent, valid release.
+  echo "v0.16.1"
 }
 
 # Latest release. If user does not supply this as a flag, the latest
