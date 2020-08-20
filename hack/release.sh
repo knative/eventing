@@ -24,9 +24,7 @@ readonly EVENTING_CRDS_YAML="eventing-crds.yaml"
 readonly SUGAR_CONTROLLER_YAML="eventing-sugar-controller.yaml"
 readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
 readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
-readonly PRE_INSTALL_V_0_16="eventing-pre-install-jobs.yaml"
-readonly POST_INSTALL_V_0_16="eventing-post-install-jobs.yaml"
-readonly POST_INSTALL_V_0_17="eventing-post-install-jobs.yaml"
+readonly POST_INSTALL="eventing-post-install-jobs.yaml"
 
 declare -A RELEASES
 RELEASES=(
@@ -61,16 +59,13 @@ function build_release() {
   # Create in memory channel yaml
   ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${IN_MEMORY_CHANNEL}"
 
-  # Create v0.16.0 pre-install job yaml. Upgrades Broker storage version from v1alpha1 to v1beta1.
-  ko resolve ${KO_FLAGS} -f config/pre-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${PRE_INSTALL_V_0_16}"
+  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${SUGAR_CONTROLLER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL})
 
-  # Create v0.16.0 post-install job yaml. Cleans up old broker resources from deleted namespaced brokers.
-  ko resolve ${KO_FLAGS} -f config/post-install/v0.16.0/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_V_0_16}"
-
-  # Create v0.17.0 post-install job yaml. Cleans up pingsources with finalizers
-  ko resolve ${KO_FLAGS} -f config/post-install/v0.17.0/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_V_0_17}"
-
-  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${SUGAR_CONTROLLER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL} ${PRE_INSTALL_V_0_16} ${POST_INSTALL_V_0_16} ${POST_INSTALL_V_0_17})
+  # # Template for POST_INSTALL usage:
+  # # Create vX.Y.Z post-install job yaml.
+  # ko resolve ${KO_FLAGS} -f config/post-install/vX.Y.Z/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL}"
+  # # If used, add  ${POST_INSTALL} to all_yamls,
+  # all_yamls+=(${POST_INSTALL})
 
   # Assemble the release
   for yaml in "${!RELEASES[@]}"; do
