@@ -64,7 +64,7 @@ spec:
                 description: Reply is a Reference to where the result of the last
                     Subscriber gets sent to.
                 type: object
-                properties:
+                properties: &addressableProperties
                     ref:
                       description: Ref points to an Addressable.
                       type: object
@@ -122,36 +122,7 @@ spec:
                               event that could not be sent to a destination.
                           type: object
                           properties:
-                            ref:
-                              description: Ref points to an Addressable.
-                              type: object
-                              properties:
-                                apiVersion:
-                                  description: API version of the
-                                      referent.
-                                  type: string
-                                kind:
-                                  description: 'Kind of the referent.
-                                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                                  type: string
-                                name:
-                                  description: 'Name of the referent.
-                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
-                                  type: string
-                                namespace:
-                                  description: 'Namespace of the
-                                      referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                                      This is optional field, it
-                                      gets defaulted to the object
-                                      holding it if left out.'
-                                  type: string
-                            uri:
-                              description: URI can be an absolute URL(non-empty
-                                  scheme and non-empty host) pointing
-                                  to the target or a relative URI. Relative
-                                  URIs will be resolved using the base
-                                  URI retrieved from Ref.
-                              type: string
+                            << : *addressableProperties
                         retry:
                           description: Retry is the minimum number of retries
                               the sender should attempt when sending an
@@ -163,23 +134,7 @@ spec:
                       description: Ref points to an Addressable.
                       type: object
                       properties:
-                        apiVersion:
-                          description: API version of the referent.
-                          type: string
-                        kind:
-                          description: 'Kind of the referent. More info:
-                              https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                          type: string
-                        name:
-                          description: 'Name of the referent. More info:
-                              https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
-                          type: string
-                        namespace:
-                          description: 'Namespace of the referent. More
-                              info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                              This is optional field, it gets defaulted
-                              to the object holding it if left out.'
-                          type: string
+                        << : *addressableProperties
                     uri:
                       description: URI can be an absolute URL(non-empty scheme
                           and non-empty host) pointing to the target or a relative
@@ -190,13 +145,9 @@ spec:
             description: Status represents the current state of the Sequence. This data
                 may be out of date.
             type: object
-            required:
-              - address
             properties:
               address:
                 type: object
-                required:
-                  - url
                 properties:
                     url:
                         type: string
@@ -262,10 +213,7 @@ spec:
                       description: ReadyCondition indicates whether the Channel
                           is ready or not.
                       type: object
-                      required:
-                        - type
-                        - status
-                      properties:
+                      properties: &readyConditionProperties
                         lastTransitionTime:
                           description: LastTransitionTime is the last time
                               the condition transitioned from one status
@@ -300,36 +248,8 @@ spec:
                 type: array
                 items:
                   type: object
-                  required:
-                    - type
-                    - status
                   properties:
-                    lastTransitionTime:
-                      description: LastTransitionTime is the last time the condition
-                          transitioned from one status to another. We use VolatileTime
-                          in place of metav1.Time to exclude this from creating
-                          equality.Semantic differences (all other things held
-                          constant).
-                      type: string
-                    message:
-                      description: A human readable message indicating details
-                          about the transition.
-                      type: string
-                    reason:
-                      description: The reason for the condition's last transition.
-                      type: string
-                    severity:
-                      description: Severity with which to treat failures of
-                          this type of condition. When this is not specified,
-                          it defaults to Error.
-                      type: string
-                    status:
-                      description: Status of the condition, one of True, False,
-                          Unknown.
-                      type: string
-                    type:
-                      description: Type of condition.
-                      type: string
+                    <<: *readyConditionProperties
               observedGeneration:
                 description: ObservedGeneration is the 'Generation' of the Service
                     that was last processed by the controller.
@@ -346,38 +266,8 @@ spec:
                       description: ReadyCondition indicates whether the Subscription
                           is ready or not.
                       type: object
-                      required:
-                        - type
-                        - status
                       properties:
-                        lastTransitionTime:
-                          description: LastTransitionTime is the last time
-                              the condition transitioned from one status
-                              to another. We use VolatileTime in place of
-                              metav1.Time to exclude this from creating
-                              equality.Semantic differences (all other things
-                              held constant).
-                          type: string
-                        message:
-                          description: A human readable message indicating
-                              details about the transition.
-                          type: string
-                        reason:
-                          description: The reason for the condition's last
-                              transition.
-                          type: string
-                        severity:
-                          description: Severity with which to treat failures
-                              of this type of condition. When this is not
-                              specified, it defaults to Error.
-                          type: string
-                        status:
-                          description: Status of the condition, one of True,
-                              False, Unknown.
-                          type: string
-                        type:
-                          description: Type of condition.
-                          type: string
+                        <<: *readyConditionProperties
                     subscription:
                       description: Subscription is the reference to the underlying
                           Subscription.
