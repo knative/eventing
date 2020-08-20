@@ -97,7 +97,7 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 	}
 	channelableStatus.Status = bc.Status
 	if cAnnotations != nil &&
-		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
+		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1" || cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
 		subs := make([]eventingduckv1.SubscriberStatus, len(bc.SubscribableStatus.Subscribers))
 		for i, sub := range bc.SubscribableStatus.Subscribers {
 			sub.ConvertTo(ctx, &subs[i])
