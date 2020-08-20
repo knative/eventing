@@ -326,7 +326,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		event.SetSource(source)
 		msg := []byte(`{"msg":"Transformed!"}`)
 		transformPod := resources.EventTransformationPod(
-			"tranformer-pod",
+			"transformer-pod",
 			"reply-check-type",
 			"reply-check-source",
 			msg,
