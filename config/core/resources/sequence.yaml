@@ -98,6 +98,7 @@ spec:
                 items:
                   type: object
                   properties:
+                    << : *addressableProperties
                     delivery:
                       description: Delivery is the delivery specification for
                           events to the subscriber This includes things like
@@ -130,7 +131,6 @@ spec:
                               sink.
                           type: integer
                           format: int32
-                    << : *addressableProperties
           status:
             description: Status represents the current state of the Sequence. This data
                 may be out of date.
@@ -202,15 +202,8 @@ spec:
                       description: ReadyCondition indicates whether the Channel
                           is ready or not.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                       properties: &readyConditionProperties
-                        lastTransitionTime:
-                          description: LastTransitionTime is the last time
-                              the condition transitioned from one status
-                              to another. We use VolatileTime in place of
-                              metav1.Time to exclude this from creating
-                              equality.Semantic differences (all other things
-                              held constant).
-                          type: string
                         message:
                           description: A human readable message indicating
                               details about the transition.
