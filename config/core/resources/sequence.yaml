@@ -130,17 +130,7 @@ spec:
                               sink.
                           type: integer
                           format: int32
-                    ref:
-                      description: Ref points to an Addressable.
-                      type: object
-                      properties:
-                        << : *addressableProperties
-                    uri:
-                      description: URI can be an absolute URL(non-empty scheme
-                          and non-empty host) pointing to the target or a relative
-                          URI. Relative URIs will be resolved using the base
-                          URI retrieved from Ref.
-                      type: string
+                    << : *addressableProperties
           status:
             description: Status represents the current state of the Sequence. This data
                 may be out of date.
@@ -157,7 +147,6 @@ spec:
                     to the user. This is roughly akin to Annotations on any k8s resource,
                     just the reconciler conveying richer information outwards.
                 type: object
-                x-kubernetes-preserve-unknown-fields: true
               channelStatuses:
                 description: ChannelStatuses is an array of corresponding Channel
                     statuses. Matches the Spec.Steps array in the order.
