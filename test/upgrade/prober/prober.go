@@ -19,15 +19,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-)
-
-const (
-	ServingUseFlag         = "E2E_UPGRADE_TESTS_SERVING_USE"
-	ServingScaleToZeroFlag = "E2E_UPGRADE_TESTS_SERVING_SCALE_TO_ZERO"
 )
 
 var (
@@ -68,15 +64,18 @@ type ServingConfig struct {
 }
 
 func NewConfig(namespace string) *Config {
+	servingConfig := ServingConfig{
+		Use:         false,
+		ScaleToZero: true,
+	}
+	err := envconfig.Process("e2e_upgrade_tests_serving", &servingConfig)
+	ensure.NoError(err)
 	return &Config{
 		Namespace:     namespace,
 		Interval:      Interval,
 		FinishedSleep: 5 * time.Second,
 		FailOnErrors:  true,
-		Serving: ServingConfig{
-			Use:         envflag(ServingUseFlag, false),
-			ScaleToZero: envflag(ServingScaleToZeroFlag, true),
-		},
+		Serving:       servingConfig,
 	}
 }
 

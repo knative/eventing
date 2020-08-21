@@ -23,33 +23,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEnvflag(t *testing.T) {
-	envname := "TestEnvflag"
+type envValue uint
+
+const (
+	EnvFalse envValue = iota
+	EnvTrue
+	EnvUnset
+)
+
+func TestNewConfig(t *testing.T) {
+	envname := "E2E_UPGRADE_TESTS_SERVING_USE"
 	suite := []struct {
-		env          string
-		envSet       bool
-		defaultValue bool
-		out          bool
+		env envValue
+		out bool
 	}{
-		{"", false, true, true},
-		{"", true, true, false},
-		{"yes", true, false, true},
-		{"y", true, false, false},
-		{"y", true, true, false},
-		{"true", true, false, true},
-		{"true", true, true, true},
-		{"enable", true, false, true},
-		{"enabled", true, false, false},
+		{EnvFalse, false},
+		{EnvTrue, true},
+		{EnvUnset, false},
 	}
 	for _, s := range suite {
-		t.Run(fmt.Sprintf("env(%t)=%q,def=%t", s.envSet, s.env, s.defaultValue), func(t *testing.T) {
-			if s.envSet {
-				assert.NoError(t, os.Setenv(envname, s.env))
+		t.Run(fmt.Sprintf("env=%v,out=%t", s.env, s.out), func(t *testing.T) {
+			if s.env != EnvUnset {
+				val := "false"
+				if s.env == EnvTrue {
+					val = "true"
+				}
+				assert.NoError(t, os.Setenv(envname, val))
 				defer func() { assert.NoError(t, os.Unsetenv(envname)) }()
 			}
-			result := envflag(envname, s.defaultValue)
+			config := NewConfig("test-ns")
 
-			assert.Equal(t, s.out, result)
+			assert.Equal(t, s.out, config.Serving.Use)
+			assert.True(t, config.Serving.ScaleToZero)
 		})
 	}
 }

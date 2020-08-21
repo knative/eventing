@@ -19,10 +19,8 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"runtime"
-	"strings"
 	"text/template"
 
 	"github.com/wavesoftware/go-ensure"
@@ -119,18 +117,4 @@ func (p *prober) compileTemplate(templateName string, brokerUrl *apis.URL) strin
 	}
 	ensure.NoError(tmpl.Execute(&buff, data))
 	return buff.String()
-}
-
-func envflag(name string, defaultValue bool) bool {
-	if value, ok := os.LookupEnv(name); ok {
-		valid := []string{"true", "yes", "enable"}
-		value = strings.ToLower(value)
-		for _, candidate := range valid {
-			if value == candidate {
-				return true
-			}
-		}
-		return false
-	}
-	return defaultValue
 }
