@@ -29,7 +29,7 @@ spec:
     subresources:
       status: {}
     schema:
-      openAPIV3Schema:
+      openAPIV3Schema: &openAPIV3Schema
         type: object
         properties:
           spec:
@@ -41,6 +41,7 @@ spec:
                 type: array
                 items:
                   type: object
+                  x-kubernetes-preserve-unknown-fields: true
                   properties:
                     delivery:
                       description: Delivery is the delivery specification for
