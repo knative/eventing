@@ -33,7 +33,6 @@ rules:
       - "watch"
   # Our own resources we care about.
   - apiGroups:
-      - "eventing.knative.dev"
       - "sources.knative.dev"
     resources:
       - "containersources"
