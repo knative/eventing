@@ -332,6 +332,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			msg,
 		)
 		client.CreatePodOrFail(transformPod, testlib.WithService("transformer-pod"))
+		client.WaitForServiceEndpointsOrFail("transformer-pod", 1)
 		transformTrigger := client.CreateTriggerOrFailV1Beta1(
 			"transform-trigger",
 			resources.WithBrokerV1Beta1(broker.Name),
