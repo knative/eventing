@@ -64,19 +64,20 @@ type ServingConfig struct {
 }
 
 func NewConfig(namespace string) *Config {
-	servingConfig := ServingConfig{
-		Use:         false,
-		ScaleToZero: true,
-	}
-	err := envconfig.Process("e2e_upgrade_tests_serving", &servingConfig)
-	ensure.NoError(err)
-	return &Config{
-		Namespace:     namespace,
+	config := &Config{
+		Namespace:     "",
 		Interval:      Interval,
 		FinishedSleep: 5 * time.Second,
 		FailOnErrors:  true,
-		Serving:       servingConfig,
+		Serving: ServingConfig{
+			Use:         false,
+			ScaleToZero: true,
+		},
 	}
+	err := envconfig.Process("e2e_upgrade_tests", config)
+	ensure.NoError(err)
+	config.Namespace = namespace
+	return config
 }
 
 // RunEventProber starts a single Prober of the given domain.
