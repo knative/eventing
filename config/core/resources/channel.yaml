@@ -44,19 +44,206 @@ spec:
       type: string
       jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
     schema:
-      openAPIV3Schema:
+      openAPIV3Schema: &openAPIV3Schema
         type: object
         properties:
           spec:
+            description: Spec defines the desired state of the Channel.
             type: object
-            x-kubernetes-preserve-unknown-fields: true
+            properties:
+              channelTemplate:
+                description: ChannelTemplate specifies which Channel CRD to use to
+                    create the CRD Channel backing this Channel. This is immutable
+                    after creation. Normally this is set by the Channel defaulter,
+                    not directly by the user.
+                type: object
+                properties:
+                  apiVersion:
+                    description: 'APIVersion defines the versioned schema of this
+                        representation of an object. Servers should convert recognized
+                        schemas to the latest internal value, and may reject unrecognized
+                        values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    type: string
+                  kind:
+                    description: 'Kind is a string value representing the REST
+                        resource this object represents. Servers may infer this
+                        from the endpoint the client submits requests to. Cannot
+                        be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  spec:
+                    description: Spec defines the Spec to use for each channel
+                        created. Passed in verbatim to the Channel CRD as Spec
+                        section.
+                    type: string
+              delivery: &deliverySpec
+                description: DeliverySpec contains options controlling the event delivery
+                type: object
+                properties:
+                  backoffDelay:
+                    description: 'BackoffDelay is the delay before retrying. More
+                        information on Duration format: - https://www.iso.org/iso-8601-date-and-time-format.html
+                        - https://en.wikipedia.org/wiki/ISO_8601  For linear policy,
+                        backoff delay is the time interval between retries. For
+                        exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>.'
+                    type: string
+                  backoffPolicy:
+                    description: BackoffPolicy is the retry backoff policy (linear,
+                        exponential).
+                    type: string
+                  deadLetterSink:
+                    description: DeadLetterSink is the sink receiving event that
+                        could not be sent to a destination.
+                    type: object
+                    properties:
+                      ref:
+                        description: Ref points to an Addressable.
+                        type: object
+                        properties: &referentProperties
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          kind:
+                            description: 'Kind of the referent. More info:
+                                https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info:
+                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            type: string
+                          namespace:
+                            description: 'Namespace of the referent. More
+                                info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                This is optional field, it gets defaulted
+                                to the object holding it if left out.'
+                            type: string
+                      uri:
+                        description: URI can be an absolute URL(non-empty
+                            scheme and non-empty host) pointing to the target
+                            or a relative URI. Relative URIs will be resolved
+                            using the base URI retrieved from Ref.
+                        type: string
+                  retry:
+                    description: Retry is the minimum number of retries the sender
+                        should attempt when sending an event before moving it
+                        to the dead letter sink.
+                    type: integer
+                    format: int32
+              subscribers:
+                description: This is the list of subscriptions for this subscribable.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    delivery:
+                      <<: *deliverySpec
+                    generation:
+                      description: Generation of the origin of the subscriber
+                          with uid:UID.
+                      type: integer
+                      format: int64
+                    replyUri:
+                      description: ReplyURI is the endpoint for the reply
+                      type: string
+                    subscriberUri:
+                      description: SubscriberURI is the endpoint for the subscriber
+                      type: string
+                    uid:
+                      description: UID is used to understand the origin of the
+                          subscriber.
+                      type: string
           status:
+            description: Status represents the current state of the Channel. This data
+                may be out of date.
             type: object
-            x-kubernetes-preserve-unknown-fields: true
+            properties:
+              address:
+                type: object
+                properties:
+                    url:
+                        type: string
+              annotations:
+                description: Annotations is additional Status fields for the Resource
+                    to save some additional State as well as convey more information
+                    to the user. This is roughly akin to Annotations on any k8s resource,
+                    just the reconciler conveying richer information outwards.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              channel:
+                description: Channel is an KReference to the Channel CRD backing this
+                    Channel.
+                type: object
+                properties:
+                  <<: *referentProperties
+              conditions:
+                description: Conditions the latest available observations of a resource's
+                    current state.
+                type: array
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  properties:
+                    message:
+                      description: A human readable message indicating details
+                          about the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    severity:
+                      description: Severity with which to treat failures of
+                          this type of condition. When this is not specified,
+                          it defaults to Error.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False,
+                          Unknown.
+                      type: string
+                    type:
+                      description: Type of condition.
+                      type: string
+              deadLetterChannel:
+                description: DeadLetterChannel is a KReference and is set by the channel
+                    when it supports native error handling via a channel Failed messages
+                    are delivered here.
+                type: object
+                properties:
+                  <<: *referentProperties
+              observedGeneration:
+                description: ObservedGeneration is the 'Generation' of the Service
+                    that was last processed by the controller.
+                type: integer
+                format: int64
+              subscribers:
+                description: This is the list of subscription's statuses for this
+                    channel.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      description: A human readable message indicating details
+                          of Ready status.
+                      type: string
+                    observedGeneration:
+                      description: Generation of the origin of the subscriber
+                          with uid:UID.
+                      type: integer
+                      format: int64
+                    ready:
+                      description: Status of the subscriber.
+                      type: string
+                    uid:
+                      description: UID is used to understand the origin of the
+                          subscriber.
+                      type: string
   - << : *version
     name: v1
     served: true
     storage: false
+    # the schema of v1 is exactly the same as v1beta1 schema
+    schema:
+      openAPIV3Schema:
+        << : *openAPIV3Schema
   names:
     kind: Channel
     plural: channels
