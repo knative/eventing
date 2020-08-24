@@ -31,10 +31,10 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/network/handlers"
 
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
@@ -102,7 +102,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 //
 // This method will block until ctx is done.
 func (h *Handler) Start(ctx context.Context) error {
-	return h.receiver.StartListen(ctx, health.WithLivenessCheck(health.WithReadinessCheck(h)))
+	return h.receiver.StartListen(ctx, &handlers.Drainer{Inner: h})
 }
 
 // 1. validate request
