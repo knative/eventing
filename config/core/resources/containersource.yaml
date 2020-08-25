@@ -37,7 +37,7 @@ spec:
           properties:
               spec:
                   type: object
-                  description: 'ContainerSourceSpec defines the desired state of ContainerSource (from the client).'                   
+                  description: 'ContainerSourceSpec defines the desired state of ContainerSource (from the client).'
                   properties:
                       ceOverrides:
                           description: 'CloudEventOverrides defines overrides to control the
@@ -407,7 +407,7 @@ spec:
       # the schema of v1beta1 is exactly the same as v1alpha2 schema
       schema:
         openAPIV3Schema:
-          <<: *openAPIV3Schema      
+          <<: *openAPIV3Schema
   names:
     categories:
       - all
