@@ -401,7 +401,7 @@ func WithSubscriberServiceRefForTriggerV1(name string) TriggerOptionV1 {
 
 // WithSubscriberURIForTriggerV1Beta1 returns an option that adds a Subscriber URI for the given v1beta1 Trigger.
 func WithSubscriberURIForTriggerV1Beta1(uri string) TriggerOptionV1Beta1 {
-	apisURI := apis.HTTP(uri)
+	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1beta1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{
 			URI: apisURI,
@@ -411,7 +411,7 @@ func WithSubscriberURIForTriggerV1Beta1(uri string) TriggerOptionV1Beta1 {
 
 // WithSubscriberURIForTriggerV1 returns an option that adds a Subscriber URI for the given v1 Trigger.
 func WithSubscriberURIForTriggerV1(uri string) TriggerOptionV1 {
-	apisURI := apis.HTTP(uri)
+	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{
 			URI: apisURI,
