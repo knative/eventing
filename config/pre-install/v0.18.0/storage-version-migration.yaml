@@ -40,3 +40,5 @@ spec:
         args:
           - "containersources.eventing.knative.dev"
           - "sinkbindings.sources.knative.dev"
+          - "brokers.sources.knative.dev"
+          - "triggers.sources.knative.dev"

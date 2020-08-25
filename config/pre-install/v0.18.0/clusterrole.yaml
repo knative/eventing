@@ -45,3 +45,16 @@ rules:
       - "delete"
       - "patch"
       - "watch"
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers"
+      - "triggers"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
