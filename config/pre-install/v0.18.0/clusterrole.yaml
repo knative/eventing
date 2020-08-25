@@ -72,3 +72,16 @@ rules:
       - "delete"
       - "patch"
       - "watch"
+  - apiGroups:
+      - "flows.knative.dev"
+    resources:
+      - "parallels"
+      - "sequences"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"

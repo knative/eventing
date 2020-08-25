@@ -45,3 +45,5 @@ spec:
           - "channels.messaging.knative.dev"
           - "inmemorychannels.messaging.knative.dev"
           - "subscriptions.messaging.knative.dev"
+          - "parallels.flows.knative.dev"
+          - "sequences.flows.knative.dev"
