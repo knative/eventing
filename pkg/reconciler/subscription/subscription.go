@@ -562,12 +562,11 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Beta1(ctx context.Context, ch
 			// Only set the deadletter sink if it's not nil. Otherwise we'll just end up patching
 			// empty delivery in there.
 			if sub.Status.PhysicalSubscription.DeadLetterSinkURI != nil {
-				deliveryv1 := eventingduckv1.DeliverySpec{
+				channel.Spec.Subscribers[i].Delivery = &eventingduckv1beta1.DeliverySpec{
 					DeadLetterSink: &duckv1.Destination{
 						URI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
 					},
 				}
-				deliveryv1.ConvertTo(ctx, channel.Spec.Subscribers[i].Delivery)
 			}
 			return
 		}
