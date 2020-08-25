@@ -37,7 +37,6 @@ var (
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	errs := t.Spec.Validate(ctx).ViaField("spec")
 	errs = t.validateAnnotation(errs, DependencyAnnotation, t.validateDependencyAnnotation)
-	errs = t.validateAnnotation(errs, DeprecatedInjectionAnnotation, t.validateInjectionAnnotation)
 	errs = t.validateAnnotation(errs, InjectionAnnotation, t.validateInjectionAnnotation)
 	if apis.IsInUpdate(ctx) {
 		original := apis.GetBaseline(ctx).(*Trigger)

@@ -255,7 +255,12 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 		err = fmt.Errorf("failed to dispatch message: %w", err)
 	}
 
-	_ = h.reporter.ReportEventDispatchTime(reporterArgs, resp.StatusCode, dispatchTime)
+	sc := 0
+	if resp != nil {
+		sc = resp.StatusCode
+	}
+
+	_ = h.reporter.ReportEventDispatchTime(reporterArgs, sc, dispatchTime)
 
 	return resp, err
 }

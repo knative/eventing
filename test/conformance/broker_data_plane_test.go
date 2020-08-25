@@ -26,14 +26,14 @@ import (
 )
 
 func TestBrokerV1Beta1DataPlaneIngress(t *testing.T) {
-	client := testlib.Setup(t, true, testlib.SetupClientOptionNoop)
+	client := testlib.Setup(t, true, helpers.BrokerDataPlaneNamespaceSetupOption(brokerNamespace))
 	defer testlib.TearDown(client)
 
 	broker := helpers.BrokerDataPlaneSetupHelper(client, brokerName, brokerNamespace, brokerClass)
 	helpers.BrokerV1Beta1IngressDataPlaneTestHelper(t, client, broker)
 }
 func TestBrokerV1Beta1DataPlaneConsumer(t *testing.T) {
-	client := testlib.Setup(t, true, testlib.SetupClientOptionNoop)
+	client := testlib.Setup(t, true, helpers.BrokerDataPlaneNamespaceSetupOption(brokerNamespace))
 	defer testlib.TearDown(client)
 
 	broker := helpers.BrokerDataPlaneSetupHelper(client, brokerName, brokerNamespace, brokerClass)

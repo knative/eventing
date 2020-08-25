@@ -28,13 +28,253 @@ spec:
     subresources:
       status: {}
     schema:
-      openAPIV3Schema:
+      openAPIV3Schema: &openAPIV3Schema
         type: object
-        # this is a work around so we don't need to flush out the
-        # schema for each version at this time
-        #
-        # see issue: https://github.com/knative/serving/issues/912
-        x-kubernetes-preserve-unknown-fields: true
+        description: 'Subscription routes events received on a Channel to a DNS name and
+          corresponds to the subscriptions.channels.knative.dev CRD.'
+        properties:
+          spec:
+            type: object
+            description: 'Specifies the Channel for incoming events, a Subscriber target
+                for processing those events and where to put the result of the processing. Only
+                From (where the events are coming from) is always required. You can optionally
+                only Process the events (results in no output events) by leaving out the Result.
+                You can also perform an identity transformation on the incoming events by leaving
+                out the Subscriber and only specifying Result.
+
+                The following are all valid specifications:
+                channel --[subscriber]--> reply
+                Sink, no outgoing events:
+                channel -- subscriber
+                no-op function (identity transformation):
+                channel --> reply'
+            properties:
+              channel:
+                description: 'Reference to a channel that will be used to create the
+                    subscription You can specify only the following fields of the
+                    ObjectReference: 
+                      - Kind 
+                      - APIVersion 
+                      - Name The resource pointed
+                    by this ObjectReference must meet the contract to the ChannelableSpec
+                    duck type. If the resource does not meet this contract it will
+                    be reflected in the Subscription''s status.  This field is immutable.
+                    We have no good answer on what happens to the events that are
+                    currently in the channel being consumed from and what the semantics
+                    there should be. For now, you can always delete the Subscription
+                    and recreate it to point to a different channel, giving the user
+                    more control over what semantics should be used (drain the channel
+                    first, possibly have events dropped, etc.)'
+                type: object
+                properties:
+                  apiVersion:
+                    description: 'API version of the referent.'
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead
+                        of an entire object, this string should contain a valid
+                        JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container
+                        within a pod, this would take on a value like: "spec.containers{name}"
+                        (where "name" refers to the name of the container that
+                        triggered the event) or if no container name is specified
+                        "spec.containers[2]" (container with index 2 in this pod).
+                        This syntax is chosen only to have some well-defined way
+                        of referencing a part of an object.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                        is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+              delivery:
+                description: 'Delivery configuration'
+                type: object
+                properties:
+                  backoffDelay:
+                    description: 'BackoffDelay is the delay before retrying. More
+                        information on Duration format: - https://www.iso.org/iso-8601-date-and-time-format.html
+                        - https://en.wikipedia.org/wiki/ISO_8601  For linear policy,
+                        backoff delay is the time interval between retries. For
+                        exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>.'
+                    type: string
+                  backoffPolicy:
+                    description: 'BackoffPolicy is the retry backoff policy (linear,
+                        exponential).'
+                    type: string
+                  deadLetterSink:
+                    description: 'DeadLetterSink is the sink receiving event that
+                        could not be sent to a destination.'
+                    type: object
+                    properties:
+                      ref:
+                        description: 'Ref points to an Addressable.'
+                        type: object
+                        properties:
+                          apiVersion:
+                            description: 'API version of the referent.'
+                            type: string
+                          kind:
+                            description: 'Kind of the referent. More info:
+                                https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info:
+                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            type: string
+                          namespace:
+                            description: 'Namespace of the referent. More
+                                info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                This is optional field, it gets defaulted
+                                to the object holding it if left out.'
+                            type: string
+                      uri:
+                        description: 'URI can be an absolute URL(non-empty
+                            scheme and non-empty host) pointing to the target
+                            or a relative URI. Relative URIs will be resolved
+                            using the base URI retrieved from Ref.'
+                        type: string
+                  retry:
+                    description: 'Retry is the minimum number of retries the sender
+                        should attempt when sending an event before moving it
+                        to the dead letter sink.'
+                    type: integer
+                    format: int32
+              reply:
+                description: 'Reply specifies (optionally) how to handle events returned
+                    from the Subscriber target.'
+                type: object
+                properties:
+                  ref:
+                    description: 'Ref points to an Addressable.'
+                    type: object
+                    properties:
+                      apiVersion:
+                        description: 'API version of the referent.'
+                        type: string
+                      kind:
+                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        type: string
+                      namespace:
+                        description: 'Namespace of the referent. More info:
+                            https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            This is optional field, it gets defaulted to the
+                            object holding it if left out.'
+                        type: string
+                  uri:
+                    description: 'URI can be an absolute URL(non-empty scheme and
+                        non-empty host) pointing to the target or a relative URI.
+                        Relative URIs will be resolved using the base URI retrieved
+                        from Ref.'
+                    type: string
+              subscriber:
+                description: 'Subscriber is reference to (optional) function for processing
+                    events. Events from the Channel will be delivered here and replies
+                    are sent to a Destination as specified by the Reply.'
+                type: object
+                properties:
+                  ref:
+                    description: 'Ref points to an Addressable.'
+                    type: object
+                    properties:
+                      apiVersion:
+                        description: 'API version of the referent.'
+                        type: string
+                      kind:
+                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        type: string
+                      namespace:
+                        description: 'Namespace of the referent. More info:
+                            https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            This is optional field, it gets defaulted to the
+                            object holding it if left out.'
+                        type: string
+                  uri:
+                    description: 'URI can be an absolute URL(non-empty scheme and
+                        non-empty host) pointing to the target or a relative URI.
+                        Relative URIs will be resolved using the base URI retrieved
+                        from Ref.'
+                    type: string
+          status:
+            type: object
+            description: Status (computed) for a subscription
+            properties:
+              annotations:
+                description: 'Annotations is additional Status fields for the Resource
+                    to save some additional State as well as convey more information
+                    to the user. This is roughly akin to Annotations on any k8s resource,
+                    just the reconciler conveying richer information outwards.'
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              conditions:
+                description: 'Conditions the latest available observations of a resource''s
+                    current state.'
+                type: array
+                items:
+                  type: object
+                  properties:
+                    lastTransitionTime:
+                      description: 'LastTransitionTime is the last time the condition
+                          transitioned from one status to another. We use VolatileTime
+                          in place of metav1.Time to exclude this from creating
+                          equality.Semantic differences (all other things held
+                          constant).'
+                      type: string
+                    message:
+                      description: 'A human readable message indicating details
+                          about the transition.'
+                      type: string
+                    reason:
+                      description: 'The reason for the condition''s last transition.'
+                      type: string
+                    severity:
+                      description: 'Severity with which to treat failures of
+                          this type of condition. When this is not specified,
+                          it defaults to Error.'
+                      type: string
+                    status:
+                      description: 'Status of the condition, one of True, False,
+                          Unknown.'
+                      type: string
+                    type:
+                      description: 'Type of condition.'
+                      type: string
+              observedGeneration:
+                  description: 'ObservedGeneration is the ''Generation'' of the Service
+                      that was last processed by the controller.'
+                  type: integer
+                  format: int64
+              physicalSubscription:
+                  description: 'PhysicalSubscription is the fully resolved values that
+                      this Subscription represents.'
+                  type: object
+                  properties:
+                    deadLetterSinkUri:
+                      description: 'ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.'
+                      type: string
+                    replyUri:
+                      description: 'ReplyURI is the fully resolved URI for the spec.reply.'
+                      type: string
+                    subscriberUri:
+                      description: 'SubscriberURI is the fully resolved URI for spec.subscriber.'
+                      type: string
     additionalPrinterColumns:
     - name: Age
       type: date
@@ -49,6 +289,10 @@ spec:
     name: v1
     served: true
     storage: false
+    # the schema of v1 is exactly the same as v1beta1 schema
+    schema:
+      openAPIV3Schema:
+        << : *openAPIV3Schema
   names:
     kind: Subscription
     plural: subscriptions

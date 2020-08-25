@@ -52,6 +52,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	recresources "knative.dev/eventing/pkg/reconciler/resources"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -99,11 +100,10 @@ type Reconciler struct {
 
 	loggingContext context.Context
 	sinkResolver   *resolver.URIResolver
-	loggingConfig  *pkgLogging.Config
-	metricsConfig  *metrics.ExporterOptions
 
 	// Leader election configuration for the mt receive adapter
 	leConfig string
+	configs  *reconcilersource.ConfigWatcher
 }
 
 // Check that our Reconciler implements ReconcileKind
@@ -237,12 +237,12 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1alpha2.
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
 
-	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.configs.MetricsConfig())
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}
@@ -293,12 +293,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Pin
 }
 
 func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha2.PingSource) (*appsv1.Deployment, error) {
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
 
-	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.configs.MetricsConfig())
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}
@@ -342,33 +342,4 @@ func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1al
 func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	// We really care about the fields we set and ignore the test.
 	return !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec)
-}
-
-// TODO determine how to push the updated logging config to existing data plane Pods.
-func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
-	if cfg != nil {
-		delete(cfg.Data, "_example")
-	}
-
-	logcfg, err := pkgLogging.NewConfigFromConfigMap(cfg)
-	if err != nil {
-		logging.FromContext(r.loggingContext).Warn("failed to create logging config from configmap", zap.String("cfg.Name", cfg.Name))
-		return
-	}
-	r.loggingConfig = logcfg
-	logging.FromContext(r.loggingContext).Debug("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
-}
-
-// TODO determine how to push the updated metrics config to existing data plane Pods.
-func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
-	if cfg != nil {
-		delete(cfg.Data, "_example")
-	}
-
-	r.metricsConfig = &metrics.ExporterOptions{
-		Domain:    metrics.Domain(),
-		Component: component,
-		ConfigMap: cfg.Data,
-	}
-	logging.FromContext(r.loggingContext).Debug("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }

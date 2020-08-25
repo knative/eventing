@@ -103,8 +103,11 @@ func (source *SubscriberSpec) ConvertTo(ctx context.Context, obj apis.Convertibl
 		sink.UID = source.UID
 		sink.Generation = source.Generation
 		sink.SubscriberURI = source.SubscriberURI
-		if source.Deliveryv1 != nil {
-			sink.Delivery = source.Deliveryv1
+		if source.Delivery != nil {
+			sink.Delivery = &eventingduckv1.DeliverySpec{}
+			if err := source.Delivery.ConvertTo(ctx, sink.Delivery); err != nil {
+				return err
+			}
 		} else {
 			// If however, there's a Deprecated DeadLetterSinkURI, convert that up
 			// to DeliverySpec.
@@ -139,14 +142,12 @@ func (source *SubscribableTypeStatus) ConvertTo(ctx context.Context, obj apis.Co
 		}
 	case *eventingduckv1.SubscribableStatus:
 		if source.SubscribableStatus != nil &&
-			len(source.SubscribableStatus.Subscribersv1) > 0 {
-			sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.SubscribableStatus.Subscribersv1))
-			for i, ss := range source.SubscribableStatus.Subscribersv1 {
-				sink.Subscribers[i] = eventingduckv1.SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
+			len(source.SubscribableStatus.Subscribers) > 0 {
+			sink.Subscribers = make([]eventingduckv1.SubscriberStatus, len(source.SubscribableStatus.Subscribers))
+			for i, ss := range source.SubscribableStatus.Subscribers {
+				sink.Subscribers[i] = eventingduckv1.SubscriberStatus{}
+				if err := ss.ConvertTo(ctx, &sink.Subscribers[i]); err != nil {
+					return err
 				}
 			}
 		}
@@ -228,16 +229,17 @@ func (sink *SubscriberSpec) ConvertFrom(ctx context.Context, obj apis.Convertibl
 		sink.Delivery = source.Delivery
 		sink.DeadLetterSinkURI = deadLetterSinkURI
 	case *eventingduckv1.SubscriberSpec:
-		var deadLetterSinkURI *apis.URL
-		if source.Delivery != nil && source.Delivery.DeadLetterSink != nil {
-			deadLetterSinkURI = source.Delivery.DeadLetterSink.URI
-		}
 		sink.UID = source.UID
 		sink.Generation = source.Generation
 		sink.SubscriberURI = source.SubscriberURI
 		sink.ReplyURI = source.ReplyURI
-		sink.Deliveryv1 = source.Delivery
-		sink.DeadLetterSinkURI = deadLetterSinkURI
+		if source.Delivery != nil {
+			sink.Delivery = &eventingduckv1beta1.DeliverySpec{}
+			if err := sink.Delivery.ConvertFrom(ctx, source.Delivery); err != nil {
+				return err
+			}
+			sink.DeadLetterSinkURI = source.Delivery.DeadLetterSink.URI
+		}
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
@@ -264,14 +266,12 @@ func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Co
 	case *eventingduckv1.SubscribableStatus:
 		if len(source.Subscribers) > 0 {
 			sink.SubscribableStatus = &SubscribableStatus{
-				Subscribersv1: make([]eventingduckv1.SubscriberStatus, len(source.Subscribers)),
+				Subscribers: make([]eventingduckv1beta1.SubscriberStatus, len(source.Subscribers)),
 			}
 			for i, ss := range source.Subscribers {
-				sink.SubscribableStatus.Subscribersv1[i] = eventingduckv1.SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
+				sink.SubscribableStatus.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{}
+				if err := sink.SubscribableStatus.Subscribers[i].ConvertFrom(ctx, &ss); err != nil {
+					return err
 				}
 			}
 		}
