@@ -58,3 +58,17 @@ rules:
       - "delete"
       - "patch"
       - "watch"
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "channels"
+      - "inmemorychannels"
+      - "subscriptions"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
