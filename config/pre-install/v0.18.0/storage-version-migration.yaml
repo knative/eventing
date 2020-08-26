@@ -42,3 +42,5 @@ spec:
           - "sinkbindings.sources.knative.dev"
           - "brokers.sources.knative.dev"
           - "triggers.sources.knative.dev"
+          - "channels.messaging.knative.dev"
+          - "inmemorychannels.messaging.knative.dev"
