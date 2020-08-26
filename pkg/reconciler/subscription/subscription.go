@@ -58,7 +58,6 @@ const (
 )
 
 var (
-	//v1ChannelGVK = v1.SchemeGroupVersion.WithKind("Channel")
 	v1ChannelGVK = v1.SchemeGroupVersion.WithKind("Channel")
 )
 
@@ -281,7 +280,7 @@ func (r *Reconciler) getSubStatus(ctx context.Context, subscription *v1.Subscrip
 	if channel.Annotations != nil {
 		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" ||
 			channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
-			return r.getSubStatusV1Beta1(subscription, channel)
+			return r.getSubStatusV1(subscription, channel)
 		}
 	}
 	return r.getSubStatusV1Alpha1(ctx, subscription, channel)
@@ -304,7 +303,7 @@ func (r *Reconciler) getSubStatusV1Alpha1(ctx context.Context, subscription *v1.
 	return eventingduckv1.SubscriberStatus{}, fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
 
-func (r *Reconciler) getSubStatusV1Beta1(subscription *v1.Subscription, channel *eventingduckv1alpha1.ChannelableCombined) (eventingduckv1.SubscriberStatus, error) {
+func (r *Reconciler) getSubStatusV1(subscription *v1.Subscription, channel *eventingduckv1alpha1.ChannelableCombined) (eventingduckv1.SubscriberStatus, error) {
 	for _, sub := range channel.Status.Subscribers {
 		if sub.UID == subscription.GetUID() &&
 			sub.ObservedGeneration == subscription.GetGeneration() {
