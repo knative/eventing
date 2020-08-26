@@ -36,13 +36,11 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
-	eventingcache "knative.dev/eventing/pkg/utils/cache"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -123,16 +121,6 @@ func NewController(
 				appsv1.SchemeGroupVersion.WithKind("Deployment"),
 			)),
 	})
-
-	// Create and start persistent store serializing PingSource
-	store := eventingcache.NewPersistedStore(
-		mtcomponent,
-		kubeclient.Get(ctx),
-		system.Namespace(),
-		"config-pingsource-mt-adapter",
-		pingSourceInformer.Informer(),
-		mtping.Project)
-	go store.Run(ctx)
 
 	return impl
 }
