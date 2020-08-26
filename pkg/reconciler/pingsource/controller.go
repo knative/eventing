@@ -20,9 +20,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"knative.dev/eventing/pkg/adapter/mtping"
-	eventingcache "knative.dev/eventing/pkg/utils/cache"
-
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -124,17 +121,6 @@ func NewController(
 
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
-
-	// Create and start persistent store backed by ConfigMaps
-	store := eventingcache.NewPersistedStore(
-		mtcomponent,
-		kubeclient.Get(ctx),
-		system.Namespace(),
-		"config-pingsource-mt-adapter",
-		pingSourceInformer.Informer(),
-		mtping.Project)
-
-	go store.Run(ctx)
 
 	return impl
 }
