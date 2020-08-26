@@ -83,3 +83,23 @@ Diagram below describe the setup:
           +--------+       +---------+ |
            (default)        +----------+
 ```
+
+#### Probe test configuration
+
+Probe test behavior can be influenced from outside without modifying its source
+code. That can be beneficial if one would like to run upgrade tests in different
+context. One such example might be running Eventing upgrade tests in place that
+have Serving and Eventing both installed. In such environment one can set
+environment variable `E2E_UPGRADE_TESTS_SERVING_USE` to enable usage of ksvc
+forwarder (which is disabled by default):
+
+```
+$ export E2E_UPGRADE_TESTS_SERVING_USE=true
+```
+
+Any option, apart from namespace, in
+[`knative.dev/eventing/test/upgrade/prober.Config`](https://github.com/knative/eventing/blob/022e281/test/upgrade/prober/prober.go#L52-L63)
+struct can be influenced, by using `E2E_UPGRADE_TESTS_XXXXX` environmental
+variable prefix (using
+[kelseyhightower/envconfig](https://github.com/kelseyhightower/envconfig#usage)
+usage).

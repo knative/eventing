@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
@@ -63,8 +64,8 @@ type ServingConfig struct {
 }
 
 func NewConfig(namespace string) *Config {
-	return &Config{
-		Namespace:     namespace,
+	config := &Config{
+		Namespace:     "",
 		Interval:      Interval,
 		FinishedSleep: 5 * time.Second,
 		FailOnErrors:  true,
@@ -73,6 +74,10 @@ func NewConfig(namespace string) *Config {
 			ScaleToZero: true,
 		},
 	}
+	err := envconfig.Process("e2e_upgrade_tests", config)
+	ensure.NoError(err)
+	config.Namespace = namespace
+	return config
 }
 
 // RunEventProber starts a single Prober of the given domain.
@@ -151,7 +156,7 @@ func (p *prober) remove() {
 	if p.config.Serving.Use {
 		p.removeForwarder()
 	}
-	p.client.Tracker.Clean(true)
+	ensure.NoError(p.client.Tracker.Clean(true))
 }
 
 func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
