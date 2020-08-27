@@ -44,3 +44,4 @@ spec:
           - "triggers.eventing.knative.dev"
           - "channels.messaging.knative.dev"
           - "inmemorychannels.messaging.knative.dev"
+          - "subscriptions.messaging.knative.dev"
