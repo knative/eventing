@@ -293,6 +293,37 @@ func TestParallelPropagateChannelStatuses(t *testing.T) {
 	}
 }
 
+func TestParallelPropagateChannelStatusUpdated(t *testing.T) {
+	inChannel := getChannelable(true)
+	initialChannels := []*eventingduckv1.Channelable{getChannelable(true)}
+	afterChannels := []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)}
+	ps := ParallelStatus{}
+	ps.PropagateChannelStatuses(inChannel, initialChannels)
+	if len(ps.BranchStatuses) != 1 {
+		t.Errorf("unexpected branchstatuses want 1 got %d", len(ps.BranchStatuses))
+	}
+	ps.PropagateChannelStatuses(inChannel, afterChannels)
+	if len(ps.BranchStatuses) != 2 {
+		t.Errorf("unexpected branchstatuses want 2 got %d", len(ps.BranchStatuses))
+	}
+}
+
+func TestParallelPropagateSubscriptionStatusUpdated(t *testing.T) {
+	initialFsubs := []*messagingv1.Subscription{getSubscription("fsub0", true)}
+	initialSubs := []*messagingv1.Subscription{getSubscription("sub0", true)}
+	afterFsubs := []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)}
+	afterSubs := []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)}
+	ps := ParallelStatus{}
+	ps.PropagateSubscriptionStatuses(initialFsubs, initialSubs)
+	if len(ps.BranchStatuses) != 1 {
+		t.Errorf("unexpected branchstatuses want 1 got %d", len(ps.BranchStatuses))
+	}
+	ps.PropagateSubscriptionStatuses(afterFsubs, afterSubs)
+	if len(ps.BranchStatuses) != 2 {
+		t.Errorf("unexpected branchstatuses want 2 got %d", len(ps.BranchStatuses))
+	}
+}
+
 func TestParallelReady(t *testing.T) {
 	tests := []struct {
 		name     string
