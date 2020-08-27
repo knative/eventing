@@ -24,13 +24,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/kmeta"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func TestNewServiceAccount(t *testing.T) {
 	testNS := "test-ns"
 	testName := "test-name"
-	obj := &v1alpha2.PingSource{
+	obj := &v1beta1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testName,
 			Namespace: testNS,

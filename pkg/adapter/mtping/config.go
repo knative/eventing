@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 type PingConfig struct {
@@ -50,7 +50,7 @@ type PingConfigs map[string]PingConfig
 
 // Project creates a PingConfig for the given source
 func Project(i interface{}) interface{} {
-	obj := i.(*v1alpha2.PingSource)
+	obj := i.(*v1beta1.PingSource)
 
 	if scope, ok := obj.Annotations[eventing.ScopeAnnotationKey]; ok && scope != eventing.ScopeCluster {
 		return nil

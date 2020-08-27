@@ -24,12 +24,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/system"
-	_ "knative.dev/pkg/system/testing"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
+
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
-func TestMakePingAdapter(t *testing.T) {
-	replicas := int32(1)
+func TestMakeReceiveAdapter(t *testing.T) {
+	src := &v1beta1.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "source-name",
+			Namespace: "source-namespace",
+			UID:       "source-uid",
+		},
+		Spec: v1beta1.PingSourceSpec{
+			Schedule: "*/2 * * * *",
+			JsonData: "data",
+		},
+	}
 
 	args := Args{
 		ServiceAccountName: "test-sa",
@@ -46,8 +58,20 @@ func TestMakePingAdapter(t *testing.T) {
 			Kind:       "Deployments",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      args.AdapterName,
+			Namespace: "source-namespace",
+			Name:      fmt.Sprintf("pingsource-%s-%s", src.Name, src.UID),
+			Labels: map[string]string{
+				"test-key1": "test-value1",
+				"test-key2": "test-value2",
+			},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion:         "sources.knative.dev/v1beta1",
+				Kind:               "PingSource",
+				Name:               src.Name,
+				UID:                src.UID,
+				Controller:         &yes,
+				BlockOwnerDeletion: &yes,
+			}},
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
