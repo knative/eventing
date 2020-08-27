@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ import (
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription"
-	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
+	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
@@ -67,7 +67,7 @@ func NewController(
 		// populated.
 		controller.EnsureTypeMeta(
 			r.tracker.OnChanged,
-			messagingv1beta1.SchemeGroupVersion.WithKind("Channel"),
+			messagingv1.SchemeGroupVersion.WithKind("Channel"),
 		),
 	))
 

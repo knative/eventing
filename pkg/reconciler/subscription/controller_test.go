@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable/fake"
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/subscription/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 )
 
