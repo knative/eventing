@@ -47,8 +47,8 @@ readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
 # Config tracing config.
 readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
-# PreInstall script for v0.16
-readonly PRE_INSTALL_V016="config/pre-install/v0.16.0"
+# PreInstall script for v0.18
+readonly PRE_INSTALL_V018="config/pre-install/v0.18.0"
 
 # The number of controlplane replicas to run.
 readonly REPLICAS=3
@@ -176,12 +176,12 @@ function install_latest_release() {
     fail_test "Knative latest release installation failed"
 }
 
-function run_preinstall_V016() {
-  local TMP_PRE_INSTALL_V016=${TMP_DIR}/pre_install
-  mkdir -p ${TMP_PRE_INSTALL_V016}
-  cp -r ${PRE_INSTALL_V016}/* ${TMP_PRE_INSTALL_V016}
-  find ${TMP_PRE_INSTALL_V016} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
-  ko apply --strict -f "${TMP_PRE_INSTALL_V016}" || return 1
+function run_preinstall_V018() {
+  local TMP_PRE_INSTALL_V018=${TMP_DIR}/pre_install
+  mkdir -p ${TMP_PRE_INSTALL_V018}
+  cp -r ${PRE_INSTALL_V018}/* ${TMP_PRE_INSTALL_V018}
+  find ${TMP_PRE_INSTALL_V018} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  ko apply --strict -f "${TMP_PRE_INSTALL_V018}" || return 1
   wait_until_batch_job_complete ${TEST_EVENTING_NAMESPACE} || return 1
 }
 
