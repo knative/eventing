@@ -24,6 +24,7 @@ import (
 
 	"knative.dev/eventing/test/e2e/helpers"
 	"knative.dev/eventing/test/lib"
+	logstream "knative.dev/pkg/test/logstream"
 )
 
 /*
@@ -55,7 +56,7 @@ func TestEventTransformationForTriggerV1BrokerV1Beta1(t *testing.T) {
 }
 
 func runTest(t *testing.T, brokerVersion string, triggerVersion string) {
-
+	t.Cleanup(logstream.Start(t))
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
 		helpers.EventTransformationForTriggerTestHelper(
 			t,

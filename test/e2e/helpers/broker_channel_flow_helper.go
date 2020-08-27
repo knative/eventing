@@ -22,6 +22,8 @@ import (
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkghelpers "knative.dev/pkg/test/helpers"
+	logstream "knative.dev/pkg/test/logstream"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
@@ -55,6 +57,7 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 	triggerVersion string,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
+	t.Cleanup(logstream.Start(t))
 	const (
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
@@ -74,10 +77,10 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		transformationPodName            = "e2e-brokerchannel-trans-pod"
 		allEventsRecorderPodName         = "e2e-brokerchannel-logger-pod1"
 		transformedEventsRecorderPodName = "e2e-brokerchannel-logger-pod2"
-
-		channelName      = "e2e-brokerchannel-channel"
-		subscriptionName = "e2e-brokerchannel-subscription"
 	)
+
+	channelName := pkghelpers.ObjectNameForTest(t)
+	subscriptionName := pkghelpers.ObjectNameForTest(t)
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := testlib.Setup(st, true, options...)

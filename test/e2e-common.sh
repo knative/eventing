@@ -65,6 +65,10 @@ export TEST_EVENTING_NAMESPACE
 TEST_EVENTING_NAMESPACE="${TEST_EVENTING_NAMESPACE:-"knative-eventing-"$(cat /dev/urandom \
   | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
+# For logstream
+# https://github.com/knative/pkg/tree/master/test/logstream
+export SYSTEM_NAMESPACE=$TEST_EVENTING_NAMESPACE
+
 latest_version() {
   local semver=$(git describe --match "v[0-9]*" --abbrev=0)
   local major_minor=$(echo "$semver" | cut -d. -f1-2)
