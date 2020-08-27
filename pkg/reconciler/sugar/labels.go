@@ -18,20 +18,14 @@ package sugar
 
 const (
 	// Label to enable Knative Eventing in a Namespace.
-	// DeprecatedInjectionLabelKey, fully qualified label keys recommended.
-	// Please use InjectionLabelKey.
-	DeprecatedInjectionLabelKey = "knative-eventing-injection"
 	InjectionLabelKey           = "eventing.knative.dev/injection"
 	InjectionEnabledLabelValue  = "enabled"
 	InjectionDisabledLabelValue = "disabled"
 )
 
 func InjectionLabelKeys() []string {
-	// Note: InjectionLabelKey needs to be first, order matters for conflicts
-	// with DeprecatedInjectionLabelKey. InjectionLabelKey should win.
 	return []string{
 		InjectionLabelKey,
-		DeprecatedInjectionLabelKey,
 	}
 }
 
