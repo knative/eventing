@@ -22,6 +22,8 @@ import (
 	"os"
 	"strconv"
 
+	"knative.dev/pkg/controller"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/prometheus/common/log"
 	"github.com/robfig/cron/v3"
@@ -64,9 +66,6 @@ func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloud
 	}
 	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx), opts...)
 
-	cmw := adapter.ConfigMapWatcherFromContext(ctx)
-	cmw.Watch("config-pingsource-mt-adapter", runner.updateFromConfigMap)
-
 	return &mtpingAdapter{
 		logger: logger,
 		runner: runner,
@@ -75,6 +74,11 @@ func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloud
 
 // Start implements adapter.Adapter
 func (a *mtpingAdapter) Start(ctx context.Context) error {
+	ctrl := NewController(ctx, a.runner)
+
+	a.logger.Info("Starting controllers...")
+	go controller.StartAll(ctx, ctrl)
+
 	defer a.runner.Stop()
 	a.logger.Info("Starting job runner...")
 	a.runner.Start(ctx.Done())
