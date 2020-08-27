@@ -354,7 +354,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		client.WaitForResourceReadyOrFail(transformTrigger.Name, testlib.TriggerTypeMeta)
 
 		client.WaitForResourceReadyOrFail(replyTrigger.Name, testlib.TriggerTypeMeta)
-		client.SendEventToAddressable(replySource+"-sender", broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured)))
+		client.SendEventToAddressable(replySource+"-sender", broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 		transformedEventMatcher := recordevents.MatchEvent(
 			cetest.HasSource("reply-check-source"),
 			cetest.HasType("reply-check-type"),
