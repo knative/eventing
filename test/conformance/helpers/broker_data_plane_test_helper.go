@@ -219,8 +219,31 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 	secondTriggerName := "second-trigger"
 	loggerName := "logger-pod"
 	secondLoggerName := "second-logger-pod"
+	transformerName := "transformer-pod"
+	replySource := "origin-for-reply"
+	eventID := "consumer-broker-tests"
+	baseSource := "consumer-test-sender"
 	eventTracker, _ := recordevents.StartEventRecordOrFail(client, loggerName)
 	secondTracker, _ := recordevents.StartEventRecordOrFail(client, secondLoggerName)
+
+	baseEvent := ce.NewEvent()
+	baseEvent.SetID(eventID)
+	baseEvent.SetType(testlib.DefaultEventType)
+	baseEvent.SetSource(baseSource)
+	baseEvent.SetSpecVersion("1.0")
+	body := fmt.Sprintf(`{"msg":%q}`, eventID)
+	if err := baseEvent.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
+		t.Fatalf("Cannot set the payload of the baseEvent: %s", err.Error())
+	}
+
+	transformMsg := []byte(`{"msg":"Transformed!"}`)
+	transformPod := resources.EventTransformationPod(
+		transformerName,
+		"reply-check-type",
+		"reply-check-source",
+		transformMsg,
+	)
+	client.CreatePodOrFail(transformPod, testlib.WithService(transformerName))
 	client.WaitForAllTestResourcesReadyOrFail()
 
 	trigger := client.CreateTriggerOrFailV1Beta1(
@@ -238,17 +261,19 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(secondLoggerName),
 	)
 	client.WaitForResourceReadyOrFail(secondTrigger.Name, testlib.TriggerTypeMeta)
-	eventID := "consumer-broker-tests"
-	baseSource := "consumer-test-sender"
-	baseEvent := ce.NewEvent()
-	baseEvent.SetID(eventID)
-	baseEvent.SetType(testlib.DefaultEventType)
-	baseEvent.SetSource(baseSource)
-	baseEvent.SetSpecVersion("1.0")
-	body := fmt.Sprintf(`{"msg":%q}`, eventID)
-	if err := baseEvent.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
-		t.Fatalf("Cannot set the payload of the baseEvent: %s", err.Error())
-	}
+
+	transformTrigger := client.CreateTriggerOrFailV1Beta1(
+		"transform-trigger",
+		resources.WithBrokerV1Beta1(broker.Name),
+		resources.WithAttributesTriggerFilterV1Beta1(replySource, baseEvent.Type(), nil),
+		resources.WithSubscriberServiceRefForTriggerV1Beta1(transformerName),
+	)
+	replyTrigger := client.CreateTriggerOrFailV1Beta1(
+		"reply-trigger",
+		resources.WithBrokerV1Beta1(broker.Name),
+		resources.WithAttributesTriggerFilterV1Beta1("reply-check-source", "reply-check-type", nil),
+		resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
+	)
 
 	t.Run("No upgrade of version", func(t *testing.T) {
 		event := baseEvent
@@ -322,37 +347,18 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 
 	t.Run("Replies are accepted and delivered", func(t *testing.T) {
 		event := baseEvent
-		source := "origin-for-reply"
-		event.SetSource(source)
-		msg := []byte(`{"msg":"Transformed!"}`)
-		transformPod := resources.EventTransformationPod(
-			"transformer-pod",
-			"reply-check-type",
-			"reply-check-source",
-			msg,
-		)
-		client.CreatePodOrFail(transformPod, testlib.WithService("transformer-pod"))
-		client.WaitForServiceEndpointsOrFail("transformer-pod", 1)
-		transformTrigger := client.CreateTriggerOrFailV1Beta1(
-			"transform-trigger",
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1(source, baseEvent.Type(), nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1("transformer-pod"),
-		)
+
+		event.SetSource(replySource)
+		client.WaitForServiceEndpointsOrFail(transformerName, 1)
+
 		client.WaitForResourceReadyOrFail(transformTrigger.Name, testlib.TriggerTypeMeta)
 
-		replyTrigger := client.CreateTriggerOrFailV1Beta1(
-			"reply-trigger",
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1("reply-check-source", "reply-check-type", nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
-		)
 		client.WaitForResourceReadyOrFail(replyTrigger.Name, testlib.TriggerTypeMeta)
-		client.SendEventToAddressable(source+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
+		client.SendEventToAddressable(replySource+"-sender", broker.Name, testlib.BrokerTypeMeta, event)
 		transformedEventMatcher := recordevents.MatchEvent(
 			cetest.HasSource("reply-check-source"),
 			cetest.HasType("reply-check-type"),
-			cetest.HasData(msg),
+			cetest.HasData(transformMsg),
 		)
 		eventTracker.AssertAtLeast(2, transformedEventMatcher)
 	})
