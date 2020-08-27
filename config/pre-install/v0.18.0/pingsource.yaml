@@ -43,7 +43,7 @@ spec:
         properties:
           spec:
             type: object
-            description: 'PingSourceSpec defines the desired state of the PingSource (from the client).' 
+            description: 'PingSourceSpec defines the desired state of the PingSource (from the client).'
             properties:
                 ceOverrides:
                     description: 'CloudEventOverrides defines overrides to control the
@@ -56,7 +56,7 @@ spec:
                                 pair are set on the event as an attribute extension independently.'
                             type: object
                             additionalProperties:
-                              type: string                            
+                              type: string
                             x-kubernetes-preserve-unknown-fields: true
                 jsonData:
                     description: 'JsonData is json encoded data used as the body of the
@@ -102,7 +102,7 @@ spec:
                         timezone. Defaults to the system time zone. More general information
                         about time zones: https://www.iana.org/time-zones List of valid
                         timezone values: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones'
-                    type: string                
+                    type: string
           status:
               type: object
               description: 'PingSourceStatus defines the observed state of PingSource (from the controller).'
@@ -171,7 +171,7 @@ spec:
                   sinkUri:
                       description: 'SinkURI is the current active sink URI that has been
                           configured for the Source.'
-                      type: string    
+                      type: string
     additionalPrinterColumns:
     - name: Ready
       type: string
