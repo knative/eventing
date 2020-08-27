@@ -30,7 +30,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
@@ -47,7 +47,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		defaultBrokerName    = sugarresources.DefaultBrokerName
 		triggerName          = "trigger-annotation"
 		subscriberName       = "subscriber-annotation"
-		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1alpha2"}`
+		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta1"}`
 		pingSourceName       = "test-ping-source-annotation"
 		// Every 1 minute starting from now
 		schedule = "*/1 * * * *"
@@ -74,10 +74,10 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	)
 
 	jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())
-	pingSource := eventingtesting.NewPingSourceV1Alpha2(
+	pingSource := eventingtesting.NewPingSourceV1Beta1(
 		pingSourceName,
 		client.Namespace,
-		eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+		eventingtesting.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
 			Schedule: schedule,
 			JsonData: jsonData,
 			SourceSpec: duckv1.SourceSpec{
@@ -93,13 +93,13 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		}
 	}
 
-	client.CreatePingSourceV1Alpha2OrFail(pingSource)
+	client.CreatePingSourceV1Beta1OrFail(pingSource)
 
 	// Trigger should become ready after pingSource was created
 	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
 
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
-		HasSource(sourcesv1alpha2.PingSourceSource(client.Namespace, pingSourceName)),
+		HasSource(sourcesv1beta1.PingSourceSource(client.Namespace, pingSourceName)),
 		HasData([]byte(jsonData)),
 	))
 }

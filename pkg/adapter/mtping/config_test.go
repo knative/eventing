@@ -26,28 +26,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func TestProject(t *testing.T) {
 	testCases := map[string]struct {
-		source   sourcesv1alpha2.PingSource
+		source   sourcesv1beta1.PingSource
 		expected PingConfig
 	}{
 		"TestAddRunRemoveSchedule": {
-			source: sourcesv1alpha2.PingSource{
+			source: sourcesv1beta1.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns"},
 
-				Spec: sourcesv1alpha2.PingSourceSpec{
+				Spec: sourcesv1beta1.PingSourceSpec{
 					SourceSpec: duckv1.SourceSpec{
 						CloudEventOverrides: nil,
 					},
 					Schedule: "* * * * ?",
 					JsonData: "some data",
 				},
-				Status: sourcesv1alpha2.PingSourceStatus{
+				Status: sourcesv1beta1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{
 							Host: "asink",
@@ -65,11 +65,11 @@ func TestProject(t *testing.T) {
 				SinkURI:  "//asink",
 			}},
 		"TestAddRunRemoveScheduleWithExtensionOverride": {
-			source: sourcesv1alpha2.PingSource{
+			source: sourcesv1beta1.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns"},
-				Spec: sourcesv1alpha2.PingSourceSpec{
+				Spec: sourcesv1beta1.PingSourceSpec{
 					SourceSpec: duckv1.SourceSpec{
 						Sink: duckv1.Destination{},
 						CloudEventOverrides: &duckv1.CloudEventOverrides{
@@ -79,7 +79,7 @@ func TestProject(t *testing.T) {
 					Schedule: "* * * * ?",
 					JsonData: "some data",
 				},
-				Status: sourcesv1alpha2.PingSourceStatus{
+				Status: sourcesv1beta1.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{Host: "anothersink"},
 					},

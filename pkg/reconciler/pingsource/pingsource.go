@@ -46,9 +46,9 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	recresources "knative.dev/eventing/pkg/reconciler/resources"
@@ -109,7 +109,7 @@ type Reconciler struct {
 // Check that our Reconciler implements ReconcileKind
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -135,10 +135,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 		return newWarningSinkNotFound(dest)
 	}
 	source.Status.MarkSink(sinkURI)
-
-	// The webhook does not allow for invalid schedules to be posted.
-	// TODO: remove MarkSchedule
-	source.Status.MarkSchedule()
 
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
@@ -187,14 +183,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 	}
 
 	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
-		Type:   v1alpha2.PingSourceEventType,
-		Source: v1alpha2.PingSourceSource(source.Namespace, source.Name),
+		Type:   v1beta1.PingSourceEventType,
+		Source: v1beta1.PingSourceSource(source.Namespace, source.Name),
 	}}
 
 	return nil
 }
 
-func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1alpha2.PingSource) (*corev1.ServiceAccount, error) {
+func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1beta1.PingSource) (*corev1.ServiceAccount, error) {
 	saName := resources.CreateReceiveAdapterName(source.Name, source.UID)
 	sa, err := r.serviceAccountLister.ServiceAccounts(source.Namespace).Get(saName)
 	if err != nil {
@@ -215,7 +211,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1alph
 	return sa, nil
 }
 
-func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1alpha2.PingSource) (*rbacv1.RoleBinding, error) {
+func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1beta1.PingSource) (*rbacv1.RoleBinding, error) {
 	rbName := resources.CreateReceiveAdapterName(source.Name, source.UID)
 
 	rb, err := r.roleBindingLister.RoleBindings(source.Namespace).Get(rbName)
@@ -236,7 +232,7 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1alpha2.
 	return rb, nil
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
@@ -292,7 +288,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.Pin
 	return ra, nil
 }
 
-func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1alpha2.PingSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1beta1.PingSource) (*appsv1.Deployment, error) {
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))

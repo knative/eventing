@@ -29,7 +29,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 type envConfig struct {
@@ -106,8 +106,8 @@ func (a *pingAdapter) cronTick() {
 	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
 
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
-	event.SetType(sourcesv1alpha2.PingSourceEventType)
-	event.SetSource(sourcesv1alpha2.PingSourceSource(a.Namespace, a.Name))
+	event.SetType(sourcesv1beta1.PingSourceEventType)
+	event.SetSource(sourcesv1beta1.PingSourceSource(a.Namespace, a.Name))
 	if err := event.SetData(cloudevents.ApplicationJSON, message(a.Data)); err != nil {
 		logging.FromContext(ctx).Errorw("ping failed to set event data", zap.Error(err))
 	}

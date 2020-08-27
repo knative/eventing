@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/kmeta"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func TestNewRoleBinding(t *testing.T) {
@@ -33,13 +33,13 @@ func TestNewRoleBinding(t *testing.T) {
 		crName = "my-test-cluster-role"
 		testNS = "test-ns"
 	)
-	src := &v1alpha2.PingSource{
+	src := &v1beta1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "source-name",
 			Namespace: testNS,
 			UID:       "source-uid",
 		},
-		Spec: v1alpha2.PingSourceSpec{
+		Spec: v1beta1.PingSourceSpec{
 			Schedule: "*/2 * * * *",
 			JsonData: "data",
 		},

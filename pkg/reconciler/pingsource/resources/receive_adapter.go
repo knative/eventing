@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -41,7 +41,7 @@ var (
 // field is required.
 type Args struct {
 	Image         string
-	Source        *v1alpha2.PingSource
+	Source        *v1beta1.PingSource
 	Labels        map[string]string
 	SinkURI       *apis.URL
 	MetricsConfig string

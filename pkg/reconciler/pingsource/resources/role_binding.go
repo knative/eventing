@@ -21,12 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/kmeta"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 // MakeRoleBinding creates a RoleBinding object for the single-tenant receive adapter
 // service account 'sa' in the Namespace 'ns'.
-func MakeRoleBinding(source *v1alpha2.PingSource, name string, clusterRoleName string) *rbacv1.RoleBinding {
+func MakeRoleBinding(source *v1beta1.PingSource, name string, clusterRoleName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

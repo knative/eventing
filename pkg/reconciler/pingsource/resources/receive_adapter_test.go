@@ -27,17 +27,17 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
-	src := &v1alpha2.PingSource{
+	src := &v1beta1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "source-name",
 			Namespace: "source-namespace",
 			UID:       "source-uid",
 		},
-		Spec: v1alpha2.PingSourceSpec{
+		Spec: v1beta1.PingSourceSpec{
 			Schedule: "*/2 * * * *",
 			JsonData: "data",
 		},
@@ -66,7 +66,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				"test-key2": "test-value2",
 			},
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "sources.knative.dev/v1alpha2",
+				APIVersion:         "sources.knative.dev/v1beta1",
 				Kind:               "PingSource",
 				Name:               src.Name,
 				UID:                src.UID,
