@@ -63,6 +63,7 @@ rules:
     resources:
       - "channels"
       - "inmemorychannels"
+      - "subscriptions"
     verbs:
       - "get"
       - "list"
