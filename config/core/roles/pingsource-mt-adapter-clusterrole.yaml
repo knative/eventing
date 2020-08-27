@@ -28,6 +28,22 @@ rules:
       - "list"
       - "watch"
   - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources
+      - pingsources/status
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources/finalizers
+    verbs:
+      - "patch"
+  - apiGroups:
       - ""
     resources:
       - events

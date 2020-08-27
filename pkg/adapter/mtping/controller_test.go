@@ -14,26 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package subscription
+package mtping
 
 import (
 	"testing"
 
-	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable/fake"
-	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	c := NewController(ctx, nil)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

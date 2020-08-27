@@ -38,7 +38,7 @@ rules:
       - "containersources"
       - "sinkbindings"
       - "pingsources"
-    verbs:
+    verbs: &everything
       - "get"
       - "list"
       - "create"
@@ -51,24 +51,20 @@ rules:
     resources:
       - "brokers"
       - "triggers"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
+
   - apiGroups:
       - "messaging.knative.dev"
     resources:
       - "channels"
       - "inmemorychannels"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+      - "subscriptions"
+    verbs: *everything
+
+  - apiGroups:
+      - "flows.knative.dev"
+    resources:
+      - "parallels"
+      - "sequences"
+    verbs: *everything
+

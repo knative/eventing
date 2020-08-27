@@ -38,10 +38,16 @@ spec:
         # and substituted here.
         image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
         args:
-          - "containersources.eventing.knative.dev"
+          - "containersources.sources.knative.dev"
           - "sinkbindings.sources.knative.dev"
-          - "brokers.sources.knative.dev"
-          - "triggers.sources.knative.dev"
+          - "brokers.eventing.knative.dev"
+          - "triggers.eventing.knative.dev"
           - "channels.messaging.knative.dev"
           - "inmemorychannels.messaging.knative.dev"
+<<<<<<< HEAD
           - "pingsources.sources.knative.dev"
+=======
+          - "subscriptions.messaging.knative.dev"
+          - "parallels.flows.knative.dev"
+          - "sequences.flows.knative.dev"
+>>>>>>> origin/master

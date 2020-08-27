@@ -200,6 +200,23 @@ func TestTriggerValidation(t *testing.T) {
 				Message: "missing field(s)",
 			},
 		}, {
+			name: "invalid injection annotation value - deprecated",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						DeprecatedInjectionAnnotation: invalidInjectionAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "default",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{fmt.Sprintf("metadata.annotations[%s]", DeprecatedInjectionAnnotation)},
+				Message: "The provided injection annotation value can only be \"enabled\" or \"disabled\", not \"wut\"",
+			},
+		}, {
 			name: "invalid injection annotation value",
 			t: &Trigger{
 				ObjectMeta: v1.ObjectMeta{
