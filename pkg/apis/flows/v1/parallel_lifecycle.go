@@ -77,7 +77,7 @@ func (ps *ParallelStatus) InitializeConditions() {
 // PropagateSubscriptionStatuses sets the ParallelConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
 func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*messagingv1.Subscription, subscriptions []*messagingv1.Subscription) {
-	if ps.BranchStatuses == nil {
+	if ps.BranchStatuses == nil || len(subscriptions) != len(ps.BranchStatuses) {
 		ps.BranchStatuses = make([]ParallelBranchStatus, len(subscriptions))
 	}
 	allReady := true
@@ -136,7 +136,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 // PropagateChannelStatuses sets the ChannelStatuses and ParallelConditionChannelsReady based on the
 // status of the incoming channels.
 func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1.Channelable, channels []*duckv1.Channelable) {
-	if ps.BranchStatuses == nil {
+	if ps.BranchStatuses == nil || len(channels) != len(ps.BranchStatuses) {
 		ps.BranchStatuses = make([]ParallelBranchStatus, len(channels))
 	}
 	allReady := true
