@@ -40,7 +40,7 @@ spec:
         args:
           - "containersources.sources.knative.dev"
           - "sinkbindings.sources.knative.dev"
-          - "brokers.sources.knative.dev"
-          - "triggers.sources.knative.dev"
+          - "brokers.eventing.knative.dev"
+          - "triggers.eventing.knative.dev"
           - "channels.messaging.knative.dev"
           - "inmemorychannels.messaging.knative.dev"
