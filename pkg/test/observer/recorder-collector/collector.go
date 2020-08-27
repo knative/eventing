@@ -19,6 +19,7 @@ package recorder_collector
 import (
 	"context"
 	"encoding/json"
+	recorder_vent "knative.dev/eventing/pkg/test/observer/recorder-vent"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -62,7 +63,7 @@ func (c *collector) List(from duckv1.KReference, filters ...FilterFn) ([]observe
 
 	for _, v := range events.Items {
 		switch v.Reason {
-		case observer.EventReason:
+		case recorder_vent.EventReason:
 			ob := observer.Observed{}
 			if err := json.Unmarshal([]byte(v.Message), &ob); err != nil {
 				return nil, err
