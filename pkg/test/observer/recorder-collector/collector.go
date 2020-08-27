@@ -19,6 +19,7 @@ package recorder_collector
 import (
 	"context"
 	"encoding/json"
+
 	recorder_vent "knative.dev/eventing/pkg/test/observer/recorder-vent"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
