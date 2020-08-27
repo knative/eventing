@@ -67,7 +67,8 @@ TEST_EVENTING_NAMESPACE="${TEST_EVENTING_NAMESPACE:-"knative-eventing-"$(cat /de
 
 # For logstream
 # https://github.com/knative/pkg/tree/master/test/logstream
-export SYSTEM_NAMESPACE=$TEST_EVENTING_NAMESPACE
+export SYSTEM_NAMESPACE
+SYSTEM_NAMESPACE=${TEST_EVENTING_NAMESPACE}
 
 latest_version() {
   local semver=$(git describe --match "v[0-9]*" --abbrev=0)
