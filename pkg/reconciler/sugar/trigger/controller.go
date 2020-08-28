@@ -19,22 +19,21 @@ package trigger
 import (
 	"context"
 
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
-	"knative.dev/eventing/pkg/apis/eventing"
+	"k8s.io/client-go/tools/cache"
 
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
+	"knative.dev/eventing/pkg/reconciler/sugar"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -66,7 +65,7 @@ func NewController(
 		if b, ok := obj.(*v1beta1.Broker); ok {
 			triggers, err := triggerInformer.Lister().Triggers(b.Namespace).List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
 			if err != nil {
-				logging.FromContext(ctx).Warn("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))
+				logging.FromContext(ctx).Warnw("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))
 				return
 			}
 			for _, t := range triggers {

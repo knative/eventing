@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	"knative.dev/eventing/pkg/logging"
 	duckapis "knative.dev/pkg/apis"
+	"knative.dev/pkg/logging"
 )
 
 // DomainToURL converts a domain into an HTTP URL.
@@ -56,7 +56,7 @@ func ResourceInterface(dynamicClient dynamic.Interface, namespace string, gvk sc
 func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (json.Marshaler, error) {
 	resourceClient, err := ResourceInterface(dynamicClient, namespace, ref.GroupVersionKind())
 	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
+		logging.FromContext(ctx).Warnw("Failed to create dynamic resource client", zap.Error(err))
 		return nil, err
 	}
 

@@ -32,10 +32,10 @@ import (
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	eventingduck "knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/channel/resources"
 	duckapis "knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
@@ -124,9 +124,10 @@ func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
 func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1alpha1.ChannelableCombined, error) {
+	logger := logging.FromContext(ctx)
 	lister, err := r.channelableTracker.ListerForKReference(backingChannelObjRef)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
+		logger.Errorw("Error getting lister for Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
 		return nil, err
 	}
 	backingChannel, err := lister.ByNamespace(backingChannelObjRef.Namespace).Get(backingChannelObjRef.Name)
@@ -135,29 +136,29 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		if apierrs.IsNotFound(err) {
 			newBackingChannel, err := resources.NewChannel(c)
 			if err != nil {
-				logging.FromContext(ctx).Error("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
+				logger.Errorw("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel Object: %+v", newBackingChannel))
+			logger.Debugf("Creating Channel Object: %+v", newBackingChannel)
 			created, err := channelResourceInterface.Create(newBackingChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error("Failed to create backing Channel", zap.Any("backingChannel", newBackingChannel), zap.Error(err))
+				logger.Errorw("Failed to create backing Channel", zap.Any("backingChannel", newBackingChannel), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Debug("Created backing Channel", zap.Any("backingChannel", newBackingChannel))
+			logger.Debug("Created backing Channel", zap.Any("backingChannel", newBackingChannel))
 			channelable := &duckv1alpha1.ChannelableCombined{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannelObjRef), zap.Any("createdChannel", created), zap.Error(err))
+				logger.Errorw("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannelObjRef), zap.Any("createdChannel", created), zap.Error(err))
 				return nil, err
 
 			}
 			return channelable, nil
 		}
-		logging.FromContext(ctx).Info("Failed to get backing Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
+		logger.Infow("Failed to get backing Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
 		return nil, err
 	}
-	logging.FromContext(ctx).Debug("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
+	logger.Debugw("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
 	channelable, ok := backingChannel.(*duckv1alpha1.ChannelableCombined)
 	if !ok {
 		return nil, fmt.Errorf("Failed to convert to Channelable Object %+v", backingChannel)

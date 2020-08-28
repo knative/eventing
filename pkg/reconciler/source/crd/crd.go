@@ -22,15 +22,16 @@ import (
 	"sync"
 
 	"go.uber.org/zap"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler/source/duck"
+
+	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
+	"knative.dev/eventing/pkg/reconciler/source/duck"
 )
 
 type runningController struct {
@@ -61,7 +62,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDe
 
 	gvr, gvk, err := r.resolveGroupVersions(ctx, crd)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error while resolving GVR and GVK", zap.String("CRD", crd.Name), zap.Error(err))
+		logging.FromContext(ctx).Errorw("Error while resolving GVR and GVK", zap.String("CRD", crd.Name), zap.Error(err))
 		return err
 	}
 
@@ -76,7 +77,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDe
 
 	err = r.reconcileController(ctx, crd, gvr, gvk)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error while reconciling controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()), zap.Error(err))
+		logging.FromContext(ctx).Errorw("Error while reconciling controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()), zap.Error(err))
 		return err
 	}
 
@@ -118,7 +119,7 @@ func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVers
 		// Now that we grabbed the write lock, check that nobody deleted it already.
 		rc, found := r.controllers[*gvr]
 		if found {
-			logging.FromContext(ctx).Info("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
+			logging.FromContext(ctx).Infow("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
 			rc.cancel()
 			delete(r.controllers, *gvr)
 		}
@@ -145,7 +146,7 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 	// Source Duck controller constructor
 	sdc := duck.NewController(crd.Name, *gvr, *gvk)
 	if sdc == nil {
-		logging.FromContext(ctx).Error("Source Duck Controller is nil.", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+		logging.FromContext(ctx).Errorw("Source Duck Controller is nil.", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
 		return nil
 	}
 
@@ -160,11 +161,11 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 	}
 	r.controllers[*gvr] = rc
 
-	logging.FromContext(ctx).Info("Starting Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+	logging.FromContext(ctx).Infow("Starting Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
 	go func(c *controller.Impl) {
 		if c != nil {
 			if err := c.Run(controller.DefaultThreadsPerController, sdctx.Done()); err != nil {
-				logging.FromContext(ctx).Error("Unable to start Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+				logging.FromContext(ctx).Errorw("Unable to start Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
 			}
 		}
 	}(rc.controller)
