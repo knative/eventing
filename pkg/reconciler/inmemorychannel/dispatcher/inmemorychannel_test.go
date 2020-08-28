@@ -123,7 +123,7 @@ func TestAllCases(t *testing.T) {
 							ReplyURI:      apis.HTTP("sink2"),
 							Delivery: &eventingduckv1.DeliverySpec{
 								DeadLetterSink: &duckv1.Destination{
-									URI: apis.HTTP("http://www.example.com"),
+									URI: apis.HTTP("www.example.com"),
 								},
 								Retry:         pointer.Int32Ptr(10),
 								BackoffPolicy: &backoffPolicy,
