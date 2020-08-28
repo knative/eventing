@@ -52,8 +52,7 @@ func TestPingSource_PingSourceSource(t *testing.T) {
 }
 
 func TestPingSourceStatusIsReady(t *testing.T) {
-	exampleUri := apis.HTTP("example")
-	exampleUri.Scheme = "uri"
+	exampleUri, _ := apis.ParseURL("uri://example")
 
 	tests := []struct {
 		name                string
@@ -124,8 +123,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 }
 
 func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
-	exampleUri := apis.HTTP("example")
-	exampleUri.Scheme = "uri"
+	exampleUri, _ := apis.ParseURL("uri://example")
 
 	tests := []struct {
 		name string
@@ -198,8 +196,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 }
 
 func TestPingSourceStatusGetCondition(t *testing.T) {
-	exampleUri := apis.HTTP("example")
-	exampleUri.Scheme = "uri"
+	exampleUri, _ := apis.ParseURL("uri://example")
 	tests := []struct {
 		name      string
 		s         *PingSourceStatus

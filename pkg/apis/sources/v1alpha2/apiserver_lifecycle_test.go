@@ -49,8 +49,7 @@ func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
 }
 
 func TestApiServerSourceStatusIsReady(t *testing.T) {
-	sink := apis.HTTP("example")
-	sink.Scheme = "uri"
+	sink, _ := apis.ParseURL("uri://example")
 
 	tests := []struct {
 		name                string
@@ -199,8 +198,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 }
 
 func TestApiServerSourceStatusGetCondition(t *testing.T) {
-	sink := apis.HTTP("example")
-	sink.Scheme = "uri"
+	sink, _ := apis.ParseURL("uri://example")
 
 	tests := []struct {
 		name      string

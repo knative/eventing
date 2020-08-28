@@ -43,8 +43,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 	}
 
-	exampleUri := apis.HTTP("example")
-	exampleUri.Scheme = "uri"
+	exampleUri, _ := apis.ParseURL("uri://example")
 
 	got := MakeReceiveAdapter(&Args{
 		Image:  "test-image",

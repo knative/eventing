@@ -70,7 +70,11 @@ var (
 	sinkDNS          = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI          = apis.HTTP(sinkDNS)
 	sinkURIReference = "/foo"
-	sinkTargetURI    = apis.HTTP(sinkDNS)
+	sinkTargetURI    = func() *apis.URL {
+		u := apis.HTTP(sinkDNS)
+		u.Path = sinkURIReference
+		return u
+	}()
 )
 
 const (
@@ -90,8 +94,6 @@ func init() {
 	_ = appsv1.AddToScheme(scheme.Scheme)
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-	// Set path
-	sinkTargetURI.Path = sinkURIReference
 }
 
 func TestReconcile(t *testing.T) {
