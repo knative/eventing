@@ -218,7 +218,8 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
 
-	ctx, _ = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	go func() {
 		runner.AddSchedule(PingConfig{
