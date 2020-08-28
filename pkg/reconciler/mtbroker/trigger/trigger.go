@@ -87,8 +87,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
-	// Start tracking the broker
-	r.trackBroker(ctx, t)
 
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {
@@ -149,22 +147,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		return err
 	}
 
-	return nil
-}
-
-func (r *Reconciler) trackBroker(ctx context.Context, t *eventingv1.Trigger) error {
-	trackKResource := r.kresourceTracker.TrackInNamespace(t)
-	brokerObjRef := corev1.ObjectReference{
-		Kind:       brokerGVK.Kind,
-		APIVersion: brokerGVK.GroupVersion().String(),
-		Name:       t.Spec.Broker,
-		Namespace:  t.Namespace,
-	}
-
-	if err := trackKResource(brokerObjRef); err != nil {
-		return fmt.Errorf("Failed to track broker %q : %s", t.Spec.Broker, err)
-	}
-	logging.FromContext(ctx).Infow("Tracking:", zap.Any("Broker", brokerObjRef))
 	return nil
 }
 
