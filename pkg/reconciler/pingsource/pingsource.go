@@ -140,7 +140,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSour
 	return nil
 }
 
-func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alpha2.PingSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta1.PingSource) (*appsv1.Deployment, error) {
 	loggingConfig, err := logging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))

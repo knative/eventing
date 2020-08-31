@@ -229,8 +229,8 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:         fakekubeclient.Get(ctx),
-			pingLister:            listers.GetPingSourceV1beta1Lister(),
+			kubeClientSet:       fakekubeclient.Get(ctx),
+			pingLister:          listers.GetPingSourceV1beta1Lister(),
 			deploymentLister:    listers.GetDeploymentLister(),
 			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
 			receiveAdapterImage: mtimage,
