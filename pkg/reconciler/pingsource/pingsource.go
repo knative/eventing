@@ -48,7 +48,6 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	recresources "knative.dev/eventing/pkg/reconciler/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
@@ -232,7 +231,7 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1beta1.P
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
+	loggingConfig, err := logging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
@@ -288,7 +287,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.Ping
 }
 
 func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1beta1.PingSource) (*appsv1.Deployment, error) {
-	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
+	loggingConfig, err := logging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
