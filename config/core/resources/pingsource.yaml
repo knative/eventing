@@ -32,7 +32,7 @@ spec:
   versions:
   - &version
     name: v1alpha2
-    served: false
+    served: true
     storage: false
     subresources:
       status: {}
