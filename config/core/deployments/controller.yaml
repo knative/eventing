@@ -65,9 +65,6 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
-          # PingSource
-          - name: MT_PING_IMAGE
-            value: ko://knative.dev/eventing/cmd/mtping
           # APIServerSource
           - name: APISERVER_RA_IMAGE
             value: ko://knative.dev/eventing/cmd/apiserver_receive_adapter

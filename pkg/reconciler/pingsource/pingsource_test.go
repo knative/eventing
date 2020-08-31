@@ -67,16 +67,11 @@ var (
 )
 
 const (
-	image          = "github.com/knative/test/image"
-	mtimage        = "github.com/knative/test/mtimage"
-	sourceName     = "test-ping-source"
-	sourceUID      = "1234"
-	sourceNameLong = "test-pingserver-source-with-a-very-long-name"
-	sourceUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
-	testNS         = "testnamespace"
-	testSchedule   = "*/2 * * * *"
-	testData       = "data"
-	crName         = "knative-eventing-pingsource-adapter"
+	sourceName   = "test-ping-source"
+	sourceUID    = "1234"
+	testNS       = "testnamespace"
+	testSchedule = "*/2 * * * *"
+	testData     = "data"
 
 	sinkName   = "testsink"
 	generation = 1
@@ -229,11 +224,10 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:       fakekubeclient.Get(ctx),
-			pingLister:          listers.GetPingSourceV1beta1Lister(),
-			deploymentLister:    listers.GetDeploymentLister(),
-			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
-			receiveAdapterImage: mtimage,
+			kubeClientSet:    fakekubeclient.Get(ctx),
+			pingLister:       listers.GetPingSourceV1beta1Lister(),
+			deploymentLister: listers.GetDeploymentLister(),
+			tracker:          tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
@@ -248,10 +242,8 @@ func TestAllCases(t *testing.T) {
 
 func MakeMTAdapter() *appsv1.Deployment {
 	args := resources.Args{
-		ServiceAccountName: mtadapterName,
-		AdapterName:        mtadapterName,
-		Image:              mtimage,
-		NoShutdownAfter:    mtping.GetNoShutDownAfterValue(),
+		AdapterName:     mtadapterName,
+		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 	}
 	return resources.MakeReceiveAdapter(args)
 }
