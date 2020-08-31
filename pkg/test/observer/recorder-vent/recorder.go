@@ -1,5 +1,3 @@
-// +build e2e
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,18 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package conformance
+package recorder_vent
 
 import (
-	"testing"
+	"encoding/json"
 
-	"knative.dev/eventing/test/conformance/helpers"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
+
+	"knative.dev/eventing/pkg/test/observer"
 )
 
-func TestBrokerV1Beta1DataPlaneIngress(t *testing.T) {
-	helpers.BrokerV1Beta1IngressDataPlaneTestHelper(t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(brokerTestRunner.ComponentNamespace))
+const (
+	// EventReason is the Kubernetes event reason used for observed events.
+	EventReason = "EventObserved"
+)
+
+type recorder struct {
+	out record.EventRecorder
+	on  runtime.Object
 }
 
-func TestBrokerV1Beta1DataPlaneConsumer(t *testing.T) {
-	helpers.BrokerV1Beta1ConsumerDataPlaneTestHelper(t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(brokerTestRunner.ComponentNamespace))
+func (r *recorder) Vent(observed observer.Observed) error {
+	b, err := json.Marshal(observed)
+	if err != nil {
+		return err
+	}
+
+	r.out.Eventf(r.on, corev1.EventTypeNormal, EventReason,
+		"%s", string(b))
+
+	return nil
 }

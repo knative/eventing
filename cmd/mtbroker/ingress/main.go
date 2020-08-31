@@ -74,6 +74,7 @@ type envConfig struct {
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
 	Port          int    `envconfig:"INGRESS_PORT" default:"8080"`
+	MaxTTL        int    `envconfig:"MAX_TTL" default:"255"`
 }
 
 func main() {
@@ -98,6 +99,11 @@ func main() {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
 
+	if env.MaxTTL <= 0 {
+		log.Fatalf("Invalid MaxTTL value, must be >=0, was: %d", env.MaxTTL)
+	}
+
+	log.Printf("Using TTL of %d", env.MaxTTL)
 	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
 	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
@@ -149,7 +155,7 @@ func main() {
 	h := &ingress.Handler{
 		Receiver:     kncloudevents.NewHttpMessageReceiver(env.Port),
 		Sender:       sender,
-		Defaulter:    broker.TTLDefaulter(logger, defaultTTL),
+		Defaulter:    broker.TTLDefaulter(logger, int32(env.MaxTTL)),
 		Reporter:     reporter,
 		Logger:       logger,
 		BrokerLister: brokerLister,

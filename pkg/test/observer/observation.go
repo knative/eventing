@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flags
+package observer
 
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
-type EventingEnvironmentFlags struct {
-	BrokerClass string
-	Channels
-	Sources
-	Brokers
-	PipeFile        string
-	ReadyFile       string
-	BrokerName      string
-	BrokerNamespace string
+import cloudevents "github.com/cloudevents/sdk-go/v2"
+
+// Observed is is the CloudEvent and metadata to relevant to an observation.
+type Observed struct {
+	Event    cloudevents.Event `json:"event"`
+	Origin   string            `json:"origin"`
+	Observer string            `json:"observer"`
+	Time     string            `json:"time"`
 }

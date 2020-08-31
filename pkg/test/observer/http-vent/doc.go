@@ -14,16 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flags
-
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
-type EventingEnvironmentFlags struct {
-	BrokerClass string
-	Channels
-	Sources
-	Brokers
-	PipeFile        string
-	ReadyFile       string
-	BrokerName      string
-	BrokerNamespace string
-}
+// Package http_vent implements an observer.EventLog backed by a CloudEvents
+// HTTP client, following the eventing sources container runtime contract.
+package http_vent

@@ -27,7 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/logging"
+	"knative.dev/pkg/logging"
 )
 
 type Config struct {
@@ -46,12 +46,12 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 
 		temp, present := configMap.Data[channelTemplateSpec]
 		if !present {
-			logging.FromContext(ctx).Info("ConfigMap is missing key", zap.String("key", channelTemplateSpec), zap.Any("configMap", configMap))
+			logging.FromContext(ctx).Infow("ConfigMap is missing key", zap.String("key", channelTemplateSpec), zap.Any("configMap", configMap))
 			return nil, errors.New("not found")
 		}
 
 		if temp == "" {
-			logging.FromContext(ctx).Info("ConfigMap's value was the empty string, ignoring it.", zap.Any("configMap", configMap))
+			logging.FromContext(ctx).Infow("ConfigMap's value was the empty string, ignoring it.", zap.Any("configMap", configMap))
 			return nil, errors.New("not found")
 		}
 

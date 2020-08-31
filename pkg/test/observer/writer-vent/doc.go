@@ -14,16 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flags
-
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
-type EventingEnvironmentFlags struct {
-	BrokerClass string
-	Channels
-	Sources
-	Brokers
-	PipeFile        string
-	ReadyFile       string
-	BrokerName      string
-	BrokerNamespace string
-}
+// Package writer_vent implements an observer.EventLog backed by a io.Writer
+// instance, events are converted to json and written out to the writer.
+package writer_vent

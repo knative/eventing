@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,25 +14,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package logging is a copy of knative/pkg's logging package, except it uses desugared loggers.
-package logging
+package writer_vent
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 
-	"go.uber.org/zap"
-	"knative.dev/pkg/logging"
+	"knative.dev/eventing/pkg/test/observer"
 )
 
-func WithLogger(ctx context.Context, logger *zap.Logger) context.Context {
-	return logging.WithLogger(ctx, logger.Sugar())
+func NewEventLog(ctx context.Context, out io.Writer) observer.EventLog {
+	return &writer{out: out}
 }
 
-func FromContext(ctx context.Context) *zap.Logger {
-	return logging.FromContext(ctx).Desugar()
+type writer struct {
+	out io.Writer
 }
 
-func With(ctx context.Context, fields ...zap.Field) context.Context {
-	logger := FromContext(ctx)
-	return WithLogger(ctx, logger.With(fields...))
+var newline = []byte("\n")
+
+func (w *writer) Vent(observed observer.Observed) error {
+	b, err := json.Marshal(observed)
+	if err != nil {
+		return err
+	}
+	if _, err := w.out.Write(b); err != nil {
+		return err
+	}
+	if _, err := w.out.Write(newline); err != nil {
+		return err
+	}
+
+	return nil
 }

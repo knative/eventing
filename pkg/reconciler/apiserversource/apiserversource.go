@@ -34,12 +34,12 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/apiserversource"
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/eventing/pkg/utils"
@@ -101,13 +101,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.ApiServe
 
 	err = r.runAccessCheck(source)
 	if err != nil {
-		logging.FromContext(ctx).Error("Not enough permission", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Not enough permission", zap.Error(err))
 		return err
 	}
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String())
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
 	source.Status.PropagateDeploymentAvailability(ra)
@@ -165,7 +165,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.ApiS
 		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentUpdated, "Deployment %q updated", ra.Name)
 		return ra, nil
 	} else {
-		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+		logging.FromContext(ctx).Debugw("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
 }

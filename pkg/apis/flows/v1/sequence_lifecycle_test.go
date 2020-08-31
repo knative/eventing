@@ -67,7 +67,7 @@ func getSubscription(name string, ready bool) *messagingv1.Subscription {
 }
 
 func getChannelable(ready bool) *eventingduckv1.Channelable {
-	URL, _ := apis.ParseURL("http://example.com")
+	URL := apis.HTTP("example.com")
 	c := eventingduckv1.Channelable{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1",
@@ -357,7 +357,7 @@ func TestSequenceReady(t *testing.T) {
 }
 
 func TestSequencePropagateSetAddress(t *testing.T) {
-	URL, _ := apis.ParseURL("http://example.com")
+	URL := apis.HTTP("example.com")
 	tests := []struct {
 		name       string
 		address    *duckv1.Addressable

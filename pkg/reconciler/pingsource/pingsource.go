@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"knative.dev/eventing/pkg/adapter/mtping"
-
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,13 +36,14 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
-	pkgLogging "knative.dev/pkg/logging"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
+	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
@@ -145,7 +144,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSour
 		// Make sure the global mt receive adapter is running
 		d, err := r.reconcileMTReceiveAdapter(ctx, source)
 		if err != nil {
-			logging.FromContext(ctx).Error("Unable to reconcile the mt receive adapter", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Unable to reconcile the mt receive adapter", zap.Error(err))
 			return err
 		}
 		source.Status.PropagateDeploymentAvailability(d)
@@ -159,24 +158,24 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSour
 		}, source)
 
 		if err != nil {
-			logging.FromContext(ctx).Error("Unable to track the deployment", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Unable to track the deployment", zap.Error(err))
 			return err
 		}
 
 	} else {
 		if _, err := r.reconcileServiceAccount(ctx, source); err != nil {
-			logging.FromContext(ctx).Error("Unable to create the receive adapter service account", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Unable to create the receive adapter service account", zap.Error(err))
 			return fmt.Errorf("creating receive adapter service account: %v", err)
 		}
 
 		if _, err := r.reconcileRoleBinding(ctx, source); err != nil {
-			logging.FromContext(ctx).Error("Unable to create the receive adapter role binding", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Unable to create the receive adapter role binding", zap.Error(err))
 			return fmt.Errorf("creating receive adapter role binding: %v", err)
 		}
 
 		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 		if err != nil {
-			logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Unable to create the receive adapter", zap.Error(err))
 			return fmt.Errorf("creating receive adapter: %v", err)
 		}
 		source.Status.PropagateDeploymentAvailability(ra)
@@ -204,7 +203,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, source *v1beta
 			return sa, nil
 		}
 
-		logging.FromContext(ctx).Error("Unable to get the PingSource ServiceAccount", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Unable to get the PingSource ServiceAccount", zap.Error(err))
 		source.Status.Annotations["serviceAccount"] = "Failed to get ServiceAccount"
 		return nil, newServiceAccountWarn(err)
 	}
@@ -225,7 +224,7 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1beta1.P
 			controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, pingSourceRoleBindingCreated, "PingSource RoleBinding created")
 			return rb, nil
 		}
-		logging.FromContext(ctx).Error("Unable to get the PingSource RoleBinding", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Unable to get the PingSource RoleBinding", zap.Error(err))
 		source.Status.Annotations["roleBinding"] = "Failed to get PingSource RoleBinding"
 		return nil, newRoleBindingWarn(err)
 	}
@@ -235,12 +234,12 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, source *v1beta1.P
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
 
 	metricsConfig, err := metrics.MetricsOptionsToJson(r.configs.MetricsConfig())
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}
 
 	adapterArgs := resources.Args{
@@ -283,7 +282,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.Ping
 		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Deployment %q updated", ra.Name)
 		return ra, nil
 	} else {
-		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+		logging.FromContext(ctx).Debugw("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
 }
@@ -291,12 +290,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.Ping
 func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1beta1.PingSource) (*appsv1.Deployment, error) {
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.configs.LoggingConfig())
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
 
 	metricsConfig, err := metrics.MetricsOptionsToJson(r.configs.MetricsConfig())
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}
 
 	args := resources.MTArgs{
@@ -330,7 +329,7 @@ func (r *Reconciler) reconcileMTReceiveAdapter(ctx context.Context, source *v1be
 		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Cluster-scoped deployment updated")
 		return d, nil
 	} else {
-		logging.FromContext(ctx).Debug("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
+		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
 	}
 	return d, nil
 }

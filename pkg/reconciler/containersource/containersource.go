@@ -33,9 +33,9 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/containersource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
@@ -72,13 +72,13 @@ var _ containersource.Interface = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.ContainerSource) pkgreconciler.Event {
 	_, err := r.reconcileSinkBinding(ctx, source)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling SinkBinding", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Error reconciling SinkBinding", zap.Error(err))
 		return err
 	}
 
 	_, err = r.reconcileReceiveAdapter(ctx, source)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling ReceiveAdapter", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Error reconciling ReceiveAdapter", zap.Error(err))
 		return err
 	}
 
@@ -108,7 +108,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 		}
 		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, deploymentUpdated, "Deployment updated %q", ra.Name)
 	} else {
-		logging.FromContext(ctx).Debug("Reusing existing Deployment", zap.Any("Deployment", ra))
+		logging.FromContext(ctx).Debugw("Reusing existing Deployment", zap.Any("Deployment", ra))
 	}
 
 	source.Status.PropagateReceiveAdapterStatus(ra)
@@ -138,7 +138,7 @@ func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1beta1.C
 		}
 		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, sinkBindingUpdated, "SinkBinding updated %q", sb.Name)
 	} else {
-		logging.FromContext(ctx).Debug("Reusing existing SinkBinding", zap.Any("SinkBinding", sb))
+		logging.FromContext(ctx).Debugw("Reusing existing SinkBinding", zap.Any("SinkBinding", sb))
 	}
 
 	source.Status.PropagateSinkBindingStatus(&sb.Status)

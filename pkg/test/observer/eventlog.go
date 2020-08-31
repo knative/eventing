@@ -14,16 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flags
+package observer
 
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
-type EventingEnvironmentFlags struct {
-	BrokerClass string
-	Channels
-	Sources
-	Brokers
-	PipeFile        string
-	ReadyFile       string
-	BrokerName      string
-	BrokerNamespace string
+// EventLog is the contract for an event logger to vent an event.
+type EventLog interface {
+	Vent(observed Observed) error
 }

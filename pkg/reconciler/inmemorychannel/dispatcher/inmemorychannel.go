@@ -19,10 +19,11 @@ package dispatcher
 import (
 	"context"
 
-	"knative.dev/pkg/reconciler"
-
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
@@ -30,7 +31,6 @@ import (
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	"knative.dev/eventing/pkg/logging"
 )
 
 // Reconciler reconciles InMemory Channels.

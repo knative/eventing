@@ -388,7 +388,7 @@ func TestParallelReady(t *testing.T) {
 }
 
 func TestParallelPropagateSetAddress(t *testing.T) {
-	URL, _ := apis.ParseURL("http://example.com")
+	URL := apis.HTTP("example.com")
 	tests := []struct {
 		name       string
 		address    *duckv1.Addressable

@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/e2e/helpers"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -40,14 +40,14 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 		// create a ConfigMap used by the broker.
 		config := client.CreateBrokerConfigMapOrFail("config-"+brokerName, &channel)
 
-		backoff := eventingduckv1beta1.BackoffPolicyLinear
+		backoff := eventingduckv1.BackoffPolicyLinear
 
 		// create a new broker.
-		client.CreateBrokerV1Beta1OrFail(brokerName,
-			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
-			resources.WithConfigForBrokerV1Beta1(config),
-			func(broker *v1beta1.Broker) {
-				broker.Spec.Delivery = &eventingduckv1beta1.DeliverySpec{
+		client.CreateBrokerV1OrFail(brokerName,
+			resources.WithBrokerClassForBrokerV1(brokerClass),
+			resources.WithConfigForBrokerV1(config),
+			func(broker *v1.Broker) {
+				broker.Spec.Delivery = &eventingduckv1.DeliverySpec{
 					Retry:         &numRetries,
 					BackoffPolicy: &backoff,
 					BackoffDelay:  pointer.StringPtr("PT1S"),

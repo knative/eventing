@@ -45,7 +45,8 @@ func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1beta1.ApiServerSource{}}
 
-	path, _ := apis.ParseURL("/path")
+	path := apis.HTTP("")
+	path.Path = "/path"
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       "Foo",
@@ -55,7 +56,8 @@ func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 		},
 		URI: path,
 	}
-	sinkUri, _ := apis.ParseURL("http://example.com/path")
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
 
 	tests := []struct {
 		name string
@@ -194,7 +196,8 @@ func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 
 // This tests round tripping from a higher version -> v1alpha1 and back to the higher version.
 func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
-	path, _ := apis.ParseURL("/path")
+	path := apis.HTTP("")
+	path.Path = "/path"
 	sink := duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       "Foo",
@@ -204,7 +207,8 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 		},
 		URI: path,
 	}
-	sinkURI, _ := apis.ParseURL("http://example.com/path")
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
 
 	ceOverrides := duckv1.CloudEventOverrides{
 		Extensions: map[string]string{
@@ -258,7 +262,7 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI: sinkUri,
 				},
 			},
 		},
@@ -307,7 +311,7 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI: sinkUri,
 				},
 			},
 		},

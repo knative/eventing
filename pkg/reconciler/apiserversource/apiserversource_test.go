@@ -68,9 +68,13 @@ var (
 		},
 	}
 	sinkDNS          = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI, _       = apis.ParseURL("http://" + sinkDNS)
+	sinkURI          = apis.HTTP(sinkDNS)
 	sinkURIReference = "/foo"
-	sinkTargetURI, _ = apis.ParseURL("http://" + sinkDNS + sinkURIReference)
+	sinkTargetURI    = func() *apis.URL {
+		u := apis.HTTP(sinkDNS)
+		u.Path = sinkURIReference
+		return u
+	}()
 )
 
 const (

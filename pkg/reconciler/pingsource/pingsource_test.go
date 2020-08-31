@@ -65,8 +65,8 @@ var (
 	sinkDestURI = duckv1.Destination{
 		URI: apis.HTTP(sinkDNS),
 	}
-	sinkDNS    = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI, _ = apis.ParseURL("http://" + sinkDNS)
+	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI = apis.HTTP(sinkDNS)
 )
 
 const (

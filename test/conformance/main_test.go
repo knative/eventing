@@ -40,9 +40,8 @@ const (
 
 var channelTestRunner testlib.ComponentsTestRunner
 var sourcesTestRunner testlib.ComponentsTestRunner
+var brokerTestRunner testlib.ComponentsTestRunner
 var brokerClass string
-var brokerName string
-var brokerNamespace string
 
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
@@ -55,9 +54,13 @@ func TestMain(m *testing.M) {
 			ComponentFeatureMap: testlib.SourceFeatureMap,
 			ComponentsToTest:    test.EventingFlags.Sources,
 		}
+		brokerTestRunner = testlib.ComponentsTestRunner{
+			ComponentFeatureMap: testlib.BrokerFeatureMap,
+			ComponentsToTest:    test.EventingFlags.Brokers,
+			ComponentName:       test.EventingFlags.BrokerName,
+			ComponentNamespace:  test.EventingFlags.BrokerNamespace,
+		}
 		brokerClass = test.EventingFlags.BrokerClass
-		brokerName = test.EventingFlags.BrokerName
-		brokerNamespace = test.EventingFlags.BrokerNamespace
 
 		addSourcesInitializers()
 		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
