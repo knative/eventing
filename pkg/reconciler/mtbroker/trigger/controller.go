@@ -19,12 +19,16 @@ package mttrigger
 import (
 	"context"
 
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
+	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
@@ -33,6 +37,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 )
 
@@ -65,6 +70,28 @@ func NewController(
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
+	// Filter Brokers and enqueue associated Triggers
+	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: brokerFilter,
+		Handler: controller.HandleAll(func(obj interface{}) {
+
+			if broker, ok := obj.(*eventingv1.Broker); ok {
+
+				selector := labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: broker.Name})
+				triggers, err := triggerInformer.Lister().Triggers(broker.Namespace).List(selector)
+				if err != nil {
+					logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
+					return
+				}
+
+				for _, trigger := range triggers {
+					impl.Enqueue(trigger)
+				}
+			}
+		}),
+	})
 
 	// Reconcile Trigger when my Subscription changes
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
