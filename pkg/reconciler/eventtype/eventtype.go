@@ -21,12 +21,14 @@ import (
 
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+
+	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/tracker"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-	"knative.dev/eventing/pkg/logging"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/tracker"
 )
 
 type Reconciler struct {
@@ -49,10 +51,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 	b, err := r.getBroker(ctx, et)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("Broker does not exist", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Broker does not exist", zap.Error(err))
 			et.Status.MarkBrokerDoesNotExist()
 		} else {
-			logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Unable to get the Broker", zap.Error(err))
 			et.Status.MarkBrokerExistsUnknown("BrokerGetFailed", "Failed to get broker: %v", err)
 		}
 		return err
@@ -68,7 +70,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 	}
 	// Tell tracker to reconcile this EventType whenever the Broker changes.
 	if err = r.tracker.TrackReference(ref, et); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
 

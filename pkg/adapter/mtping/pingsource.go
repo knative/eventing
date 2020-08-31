@@ -21,11 +21,12 @@ import (
 	"fmt"
 	"sync"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -33,7 +34,6 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
-	"knative.dev/eventing/pkg/logging"
 )
 
 // Reconciler reconciles PingSources
@@ -57,7 +57,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
 	if ok && scope != eventing.ScopeCluster {
 		// Not our responsibility
-		logging.FromContext(ctx).Info("Skipping non-cluster-scoped PingSource", zap.Any("namespace", source.Namespace), zap.Any("name", source.Name))
+		logging.FromContext(ctx).Infow("Skipping non-cluster-scoped PingSource", zap.Any("namespace", source.Namespace), zap.Any("name", source.Name))
 		return nil
 	}
 
@@ -67,7 +67,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 
 	reconcileErr := r.reconcile(ctx, source)
 	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling PingSource", zap.Error(reconcileErr))
+		logging.FromContext(ctx).Errorw("Error reconciling PingSource", zap.Error(reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("PingSource reconciled")
 	}

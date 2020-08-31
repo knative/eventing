@@ -23,12 +23,13 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
-	"knative.dev/eventing/pkg/logging"
 )
 
 const threeSecondsTillNextMinCronJob = 60 - 3
@@ -65,7 +66,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := rectesting.SetupFakeContext(t)
-			logger := logging.FromContext(ctx).Sugar()
+			logger := logging.FromContext(ctx)
 			ce := adaptertesting.NewTestClient()
 
 			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
@@ -92,7 +93,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 func TestUpdateConfigMap(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
-	logger := logging.FromContext(ctx).Sugar()
+	logger := logging.FromContext(ctx)
 	ce := adaptertesting.NewTestClient()
 	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
 
@@ -183,7 +184,7 @@ func TestUpdateConfigMap(t *testing.T) {
 
 func TestStartStopCron(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
-	logger := logging.FromContext(ctx).Sugar()
+	logger := logging.FromContext(ctx)
 	ce := adaptertesting.NewTestClient()
 
 	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
@@ -213,7 +214,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 		time.Sleep(time.Second * 4) // ward off edge cases
 	}
 	ctx, _ := rectesting.SetupFakeContext(t)
-	logger := logging.FromContext(ctx).Sugar()
+	logger := logging.FromContext(ctx)
 	ce := adaptertesting.NewTestClientWithDelay(time.Second * 5)
 
 	runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
