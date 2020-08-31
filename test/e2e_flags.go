@@ -32,12 +32,14 @@ const (
 	ChannelUsage = "The names of the channel type metas, separated by comma. " +
 		"Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel," +
 		"messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\"."
-	BrokerUsage = "Which brokerclass to test, requires the proper Broker " +
+	BrokerClassUsage = "Which brokerclass to test, requires the proper Broker " +
 		"implementation to have been installed, and only one value. brokerclass " +
 		"must be (for now) 'MTChannelBasedBroker'."
 	SourceUsage = "The names of the source type metas, separated by comma. " +
 		"Example: \"sources.knative.dev/v1alpha1:ApiServerSource," +
 		"sources.knative.dev/v1alpha1:PingSource\"."
+	BrokerUsage = "The name of the broker type metas, separated by comma. " +
+		"Example: \"eventing.knative.dev/v1beta1:MTChannelBasedBroker"
 	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
 		"won't create their own."
 	BrokerNamespaceUsage = "When testing a pre-existing broker, this variable specifies the namespace the broker can be found in."
@@ -51,10 +53,11 @@ var EventingFlags testflags.EventingEnvironmentFlags
 func InitializeEventingFlags() {
 
 	flag.Var(&EventingFlags.Channels, "channels", ChannelUsage)
-	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", BrokerUsage)
+	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "MTChannelBasedBroker", BrokerClassUsage)
 	flag.Var(&EventingFlags.Sources, "sources", SourceUsage)
 	flag.StringVar(&EventingFlags.PipeFile, "pipefile", "/tmp/prober-signal", "Temporary file to write the prober signal into.")
 	flag.StringVar(&EventingFlags.ReadyFile, "readyfile", "/tmp/prober-ready", "Temporary file to get the prober result.")
+	flag.Var(&EventingFlags.Brokers, "brokers", BrokerUsage)
 	flag.StringVar(&EventingFlags.BrokerName, "brokername", "", BrokerNameUsage)
 	flag.StringVar(&EventingFlags.BrokerNamespace, "brokernamespace", "", BrokerNamespaceUsage)
 	flag.Parse()

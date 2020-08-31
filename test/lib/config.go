@@ -61,6 +61,10 @@ var SourceFeatureMap = map[metav1.TypeMeta][]Feature{
 	PingSourceTypeMeta:      {FeatureBasic, FeatureLongLiving},
 }
 
+var BrokerFeatureMap = map[metav1.TypeMeta][]Feature{
+	*BrokerTypeMeta: {FeatureBasic},
+}
+
 // Feature is the feature supported by the channel.
 type Feature string
 

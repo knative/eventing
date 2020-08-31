@@ -16,14 +16,27 @@ limitations under the License.
 
 package flags
 
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
-type EventingEnvironmentFlags struct {
-	BrokerClass string
-	Channels
-	Sources
-	Brokers
-	PipeFile        string
-	ReadyFile       string
-	BrokerName      string
-	BrokerNamespace string
+import (
+	"fmt"
+	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// Brokers holds the Brokers we want to run test against.
+type Brokers []metav1.TypeMeta
+
+func (brokers *Brokers) String() string {
+	return fmt.Sprint(*brokers)
+}
+
+// Set appends the input string to Brokers.
+func (brokers *Brokers) Set(value string) error {
+	*brokers = csvToObjects(value, isValidBroker)
+	return nil
+}
+
+// Check if the broker kind is valid.
+func isValidBroker(broker string) bool {
+	return strings.HasSuffix(broker, "Broker")
 }
