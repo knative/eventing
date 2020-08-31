@@ -119,7 +119,13 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 			st.Fatalf("Error unmarshaling %s: %s", u, err)
 		}
 
-		_, err = client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(u, metav1.UpdateOptions{})
+		err = client.RetryWebhookErrors(func(attempt int) error {
+			_, e := client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(u, metav1.UpdateOptions{})
+			if e != nil {
+				client.T.Logf("Failed to update channel spec at attempt %d %q %q: %v", attempt, channel.Kind, channelName, e)
+			}
+			return e
+		})
 		return err
 	})
 	if err != nil {

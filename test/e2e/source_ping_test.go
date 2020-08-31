@@ -77,46 +77,6 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 	))
 }
 
-func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
-	const (
-		sourceName = "e2e-ping-source"
-		// Every 1 minute starting from now
-
-		recordEventPodName = "e2e-ping-source-logger-pod-v1alpha2rs"
-	)
-
-	client := setup(t, true)
-	defer tearDown(client)
-
-	// create event logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
-	// create cron job source
-	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-	source := eventingtesting.NewPingSourceV1Alpha2(
-		sourceName,
-		client.Namespace,
-		eventingtesting.WithPingSourceV1A2ResourceScopeAnnotation,
-		eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
-			JsonData: data,
-			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{
-					Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace),
-				},
-			},
-		}),
-	)
-	client.CreatePingSourceV1Alpha2OrFail(source)
-
-	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail()
-
-	// verify the logger service receives the event and only once
-	eventTracker.AssertExact(1, recordevents.MatchEvent(
-		HasSource(sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName)),
-		HasData([]byte(data)),
-	))
-}
-
 func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 	const (
 		sourceName = "e2e-ping-source-eventtype"
