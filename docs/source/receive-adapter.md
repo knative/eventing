@@ -36,7 +36,7 @@ func main() {
 - Setting up the profiler server (when enabled).
 - Setting up the metrics server.
 - Setting up tracing.
-- Setting up a ConfigMap watcher (when enabled, multiple resources only).
+- Setting up a ConfigMap watcher (when enabled, always multiple resources).
 - Setting up a CloudEvent client, targeting a single sink, for single resource
   adapter, or otherwise targeting no sink.
 - Running in leader election mode (when enabled) for being highly-available and
