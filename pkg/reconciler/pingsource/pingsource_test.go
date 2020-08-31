@@ -261,4 +261,3 @@ func makeAvailableMTAdapter() *appsv1.Deployment {
 	WithDeploymentAvailable()(ma)
 	return ma
 }
-
