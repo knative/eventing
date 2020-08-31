@@ -30,10 +30,10 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
+	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 )
 
 // Reconciler reconciles PingSources
@@ -53,7 +53,7 @@ var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 // Check that our Reconciler implements FinalizeKind.
 var _ pingsourcereconciler.Finalizer = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSource) pkgreconciler.Event {
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
 	if ok && scope != eventing.ScopeCluster {
 		// Not our responsibility
@@ -74,7 +74,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 	return reconcileErr
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource) error {
+func (r *Reconciler) reconcile(ctx context.Context, source *v1beta1.PingSource) error {
 	logging.FromContext(ctx).Info("synchronizing schedule")
 
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
@@ -110,7 +110,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 	return nil
 }
 
-func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
+func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1beta1.PingSource) pkgreconciler.Event {
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 
 	r.entryidMu.RLock()

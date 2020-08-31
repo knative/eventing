@@ -22,7 +22,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource/fake"
 )
 
 func TestNew(t *testing.T) {
