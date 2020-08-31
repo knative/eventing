@@ -44,6 +44,7 @@ spec:
           - "triggers.eventing.knative.dev"
           - "channels.messaging.knative.dev"
           - "inmemorychannels.messaging.knative.dev"
+          - "pingsources.sources.knative.dev"
           - "subscriptions.messaging.knative.dev"
           - "parallels.flows.knative.dev"
           - "sequences.flows.knative.dev"

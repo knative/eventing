@@ -38,7 +38,7 @@ rules:
       - "containersources"
       - "sinkbindings"
       - "pingsources"
-    verbs: &everything      
+    verbs: &everything
       - "get"
       - "list"
       - "create"
