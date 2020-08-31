@@ -17,132 +17,92 @@ limitations under the License.
 package resources
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/kmp"
-
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 )
 
-func TestMakeReceiveAdapter(t *testing.T) {
-	src := &v1alpha2.PingSource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "source-name",
-			Namespace: "source-namespace",
-			UID:       "source-uid",
-		},
-		Spec: v1alpha2.PingSourceSpec{
-			Schedule: "*/2 * * * *",
-			JsonData: "data",
-		},
+func TestMakePingAdapter(t *testing.T) {
+	replicas := int32(1)
+
+	args := Args{
+		ServiceAccountName: "test-sa",
+		AdapterName:        "test-name",
+		Image:              "test-image",
+		MetricsConfig:      "metrics",
+		LoggingConfig:      "logging",
+		NoShutdownAfter:    40,
 	}
 
-	exampleUri, _ := apis.ParseURL("uri://example")
-
-	got := MakeReceiveAdapter(&Args{
-		Image:  "test-image",
-		Source: src,
-		Labels: map[string]string{
-			"test-key1": "test-value1",
-			"test-key2": "test-value2",
-		},
-		SinkURI: exampleUri,
-	})
-
-	one := int32(1)
-	yes := true
 	want := &v1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployments",
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "source-namespace",
-			Name:      fmt.Sprintf("pingsource-%s-%s", src.Name, src.UID),
-			Labels: map[string]string{
-				"test-key1": "test-value1",
-				"test-key2": "test-value2",
-			},
-			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "sources.knative.dev/v1alpha2",
-				Kind:               "PingSource",
-				Name:               src.Name,
-				UID:                src.UID,
-				Controller:         &yes,
-				BlockOwnerDeletion: &yes,
-			}},
+			Namespace: system.Namespace(),
+			Name:      args.AdapterName,
 		},
 		Spec: v1.DeploymentSpec{
+			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"test-key1": "test-value1",
-					"test-key2": "test-value2",
-				},
+				MatchLabels: mtlabels,
 			},
-			Replicas: &one,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"test-key1": "test-value1",
-						"test-key2": "test-value2",
-					},
+					Labels: mtlabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "pingsource-source-name-source-uid",
+					ServiceAccountName: args.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
-							Name:  "receive-adapter",
-							Image: "test-image",
+							Name:  "dispatcher",
+							Image: args.Image,
+							Env: []corev1.EnvVar{{
+								Name:  system.NamespaceEnvKey,
+								Value: system.Namespace(),
+							}, {
+								Name: "NAMESPACE",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.namespace",
+									},
+								},
+							}, {
+								Name:  "K_METRICS_CONFIG",
+								Value: "metrics",
+							}, {
+								Name:  "K_LOGGING_CONFIG",
+								Value: "logging",
+							}, {
+								Name:  "K_LEADER_ELECTION_CONFIG",
+								Value: "",
+							}, {
+								Name:  "K_NO_SHUTDOWN_AFTER",
+								Value: "40",
+							}},
+							// Set low resource requests and limits.
+							// This should be configurable.
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("125m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("2048Mi"),
+								},
+							},
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
 							}},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "SCHEDULE",
-									Value: "*/2 * * * *",
-								},
-								{
-									Name:  "DATA",
-									Value: "data",
-								},
-								{
-									Name:  "K_SINK",
-									Value: "uri://example",
-								},
-								{
-									Name:  "NAME",
-									Value: "source-name",
-								},
-								{
-									Name:  "NAMESPACE",
-									Value: "source-namespace",
-								},
-								{
-									Name:  "METRICS_DOMAIN",
-									Value: "knative.dev/eventing",
-								},
-								{
-									Name:  "K_METRICS_CONFIG",
-									Value: "",
-								},
-								{
-									Name:  "K_LOGGING_CONFIG",
-									Value: "",
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("20m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("32Mi"),
-								},
-							},
 						},
 					},
 				},
@@ -150,9 +110,9 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 	}
 
-	if diff, err := kmp.SafeDiff(want, got); err != nil {
-		t.Errorf("unexpected cron job resources (-want, +got) = %v", err)
-	} else if diff != "" {
-		t.Errorf("Unexpected deployment (-want +got) = %v", diff)
+	got := MakeReceiveAdapter(args)
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("unexpected condition (-want, +got) = %v", diff)
 	}
 }

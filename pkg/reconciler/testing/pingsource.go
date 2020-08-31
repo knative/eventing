@@ -25,7 +25,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
@@ -70,20 +69,6 @@ func WithPingSourceV1A2UID(uid string) PingSourceV1A2Option {
 	return func(c *v1alpha2.PingSource) {
 		c.UID = types.UID(uid)
 	}
-}
-
-func WithPingSourceV1A2ResourceScopeAnnotation(c *v1alpha2.PingSource) {
-	if c.Annotations == nil {
-		c.Annotations = make(map[string]string)
-	}
-	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
-}
-
-func WithPingSourceV1A2ClusterScopeAnnotation(c *v1alpha2.PingSource) {
-	if c.Annotations == nil {
-		c.Annotations = make(map[string]string)
-	}
-	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
 }
 
 func WithInitPingSourceV1A2Conditions(s *v1alpha2.PingSource) {
