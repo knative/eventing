@@ -145,20 +145,6 @@ func WithPingSourceV1B1UID(uid string) PingSourceV1B1Option {
 	}
 }
 
-func WithPingSourceV1B1ResourceScopeAnnotation(c *v1beta1.PingSource) {
-	if c.Annotations == nil {
-		c.Annotations = make(map[string]string)
-	}
-	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
-}
-
-func WithPingSourceV1B1ClusterScopeAnnotation(c *v1beta1.PingSource) {
-	if c.Annotations == nil {
-		c.Annotations = make(map[string]string)
-	}
-	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
-}
-
 func WithInitPingSourceV1B1Conditions(s *v1beta1.PingSource) {
 	s.Status.InitializeConditions()
 }
