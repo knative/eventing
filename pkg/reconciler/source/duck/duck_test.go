@@ -117,9 +117,15 @@ func TestAllCases(t *testing.T) {
 				makeEventTypeWithName("other-type", "my-source-1", "name-1"),
 			},
 			Key: testNS + "/" + sourceName,
-			WantDeletes: []clientgotesting.DeleteActionImpl{
-				{Name: "name-1"},
-			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource: schema.GroupVersionResource{
+						Resource: "eventtypes",
+					},
+				},
+				Name: "name-1",
+			}},
 			WantCreates: []runtime.Object{
 				makeEventType("my-type-1", "http://my-source-1"),
 				makeEventType("my-type-2", "http://my-source-1"),
