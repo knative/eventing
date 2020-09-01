@@ -20,6 +20,9 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/adapter/mtping"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -242,10 +245,26 @@ func TestAllCases(t *testing.T) {
 
 func MakeMTAdapter() *appsv1.Deployment {
 	args := resources.Args{
-		AdapterName:     mtadapterName,
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 	}
-	return resources.MakeReceiveAdapter(args)
+	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployments",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      "adaptername",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "dispatcher",
+							Env:  resources.MakeReceiveAdapterEnvVar(args),
+						}}}}}}
+
 }
 
 func makeAvailableMTAdapter() *appsv1.Deployment {

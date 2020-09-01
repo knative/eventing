@@ -41,12 +41,19 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+
+            # The values below are being filled by the ping source controller
             - name: K_METRICS_CONFIG
               value: ''
             - name: K_LOGGING_CONFIG
               value: ''
             - name: K_LOGGING_CONFIG
               value: ''
+            - name: K_LEADER_ELECTION_CONFIG
+              value: ''
+            - name: K_NO_SHUTDOWN_AFTER
+              value: ''
+
           ports:
             - containerPort: 9090
               name: metrics

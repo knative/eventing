@@ -20,64 +20,40 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 )
 
 func TestMakePingAdapter(t *testing.T) {
 	args := Args{
-		AdapterName:     "test-name",
 		MetricsConfig:   "metrics",
 		LoggingConfig:   "logging",
 		NoShutdownAfter: 40,
 	}
 
-	want := &v1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployments",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      args.AdapterName,
-		},
-		Spec: v1.DeploymentSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name: "dispatcher",
-							Env: []corev1.EnvVar{{
-								Name: system.NamespaceEnvKey,
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										FieldPath: "metadata.namespace",
-									},
-								},
-							}, {
-								Name:  "K_METRICS_CONFIG",
-								Value: "metrics",
-							}, {
-								Name:  "K_LOGGING_CONFIG",
-								Value: "logging",
-							}, {
-								Name:  "K_LEADER_ELECTION_CONFIG",
-								Value: "",
-							}, {
-								Name:  "K_NO_SHUTDOWN_AFTER",
-								Value: "40",
-							}},
-						},
-					},
-				},
+	want := []corev1.EnvVar{{
+		Name: system.NamespaceEnvKey,
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
 			},
 		},
-	}
+	}, {
+		Name:  "K_METRICS_CONFIG",
+		Value: "metrics",
+	}, {
+		Name:  "K_LOGGING_CONFIG",
+		Value: "logging",
+	}, {
+		Name:  "K_LEADER_ELECTION_CONFIG",
+		Value: "",
+	}, {
+		Name:  "K_NO_SHUTDOWN_AFTER",
+		Value: "40",
+	}}
 
-	got := MakeReceiveAdapter(args)
+	got := MakeReceiveAdapterEnvVar(args)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)

@@ -48,7 +48,6 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	pingSourceDeploymentCreated = "PingSourceDeploymentCreated"
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 
 	component     = "pingsource"
@@ -151,28 +150,22 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	}
 
 	args := resources.Args{
-		AdapterName:     mtadapterName,
 		LoggingConfig:   loggingConfig,
 		MetricsConfig:   metricsConfig,
 		LeConfig:        r.leConfig,
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 	}
-	expected := resources.MakeReceiveAdapter(args)
+	expected := resources.MakeReceiveAdapterEnvVar(args)
 
 	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
-			if err != nil {
-				controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeWarning, pingSourceDeploymentCreated, "Cluster-scoped deployment not created (%v)", err)
-				return nil, err
-			}
-			controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentCreated, "Cluster-scoped deployment created")
-			return d, nil
+			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))
+			return nil, err
 		}
 		return nil, fmt.Errorf("error getting mt adapter deployment %v", err)
-	} else if update, c := needsUpdating(ctx, &d.Spec.Template.Spec, &expected.Spec.Template.Spec); update {
-		c.Env = expected.Spec.Template.Spec.Containers[0].Env
+	} else if update, c := needsUpdating(ctx, &d.Spec.Template.Spec, expected); update {
+		c.Env = expected
 
 		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
 			return d, err
@@ -185,7 +178,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	return d, nil
 }
 
-func needsUpdating(ctx context.Context, oldPodSpec *corev1.PodSpec, newPodSpec *corev1.PodSpec) (bool, *corev1.Container) {
+func needsUpdating(ctx context.Context, oldPodSpec *corev1.PodSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {
 	// We just care about the environment of the dispatcher container
 	container := findContainer(oldPodSpec, containerName)
 	if container == nil {
@@ -193,7 +186,7 @@ func needsUpdating(ctx context.Context, oldPodSpec *corev1.PodSpec, newPodSpec *
 		return false, nil
 	}
 
-	return !equality.Semantic.DeepEqual(container.Env, newPodSpec.Containers[0].Env), container
+	return !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
 }
 
 func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
