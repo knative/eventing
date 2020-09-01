@@ -39,8 +39,9 @@ type KResourceWithSpec struct {
 }
 
 const (
-	cmNs   = "test-ns"
-	cmName = "test-name"
+	cmNs         = "test-ns"
+	cmName       = "test-name"
+	timeOutValue = 4 * time.Second
 )
 
 var (
@@ -99,7 +100,7 @@ func TestPersistedStore(t *testing.T) {
 		if value, ok := cm.Labels[ComponentLabelKey]; !ok || value != "my-component" {
 			t.Fatalf("Missing %s label. Got %v", ComponentLabelKey, cm)
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out waiting for configmap creation.")
 	}
 
@@ -109,7 +110,7 @@ func TestPersistedStore(t *testing.T) {
 		if value, ok := cm.Data["resources.json"]; !ok || value != `{"test-ns/test-name":"aspec"}` {
 			t.Fatalf("Unexpected ConfigMap. Got %v", cm)
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out waiting for configmap update.")
 	}
 
@@ -121,7 +122,7 @@ func TestPersistedStore(t *testing.T) {
 		if spec, ok := cm.Data["resources.json"]; !ok || spec != `{}` {
 			t.Fatalf("Unexpected ConfigMap. Got %v", cm)
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out waiting for configmap update.")
 	}
 
@@ -129,7 +130,7 @@ func TestPersistedStore(t *testing.T) {
 
 	select {
 	case <-done:
-	case <-time.After(1 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out waiting for persisted store to stop.")
 	}
 
@@ -151,7 +152,7 @@ func TestPersistedStoreUnStarted(t *testing.T) {
 	select {
 	case <-done:
 		// All good, none blocking
-	case <-time.After(1 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out while waiting for multiple sync triggers to terminate.")
 	}
 }
@@ -166,7 +167,7 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 	updated := make(chan runtime.Object)
 	cs.PrependReactor("create", "configmaps",
 		func(action ktesting.Action) (bool, runtime.Object, error) {
-			time.Sleep(1 * time.Second)
+			time.Sleep(timeOutValue)
 			created <- action.(ktesting.CreateAction).GetObject()
 			return false, nil, nil
 		},
@@ -206,7 +207,7 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 		if value, ok := cm.Labels[ComponentLabelKey]; !ok || value != "my-component" {
 			t.Fatalf("Missing %s label. Got %v", ComponentLabelKey, cm)
 		}
-	case <-time.After(2 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out waiting for configmap creation.")
 	}
 
@@ -216,7 +217,7 @@ func TestPersistedStoreInterrupted(t *testing.T) {
 		if value, ok := cm.Data["resources.json"]; !ok || value != `{"test-ns/test-name":"aspec","test-ns/test-name-2":"aspec"}` {
 			t.Fatalf("Unexpected ConfigMap. Got %v", cm)
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(timeOutValue):
 		t.Fatal("Timed out waiting for configmap update.")
 	}
 }
