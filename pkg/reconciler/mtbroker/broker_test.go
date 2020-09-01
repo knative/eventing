@@ -742,7 +742,7 @@ func makeGenerationNotEqualPingSource() *sourcesv1beta1.PingSource {
 }
 
 func makeReadyPingSource() *sourcesv1beta1.PingSource {
-	u, _ := apis.ParseURL(sinkURI)
+	u := apis.HTTP(sinkURI)
 	return rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS,
 		rtv1alpha1.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
 			Schedule: testSchedule,
