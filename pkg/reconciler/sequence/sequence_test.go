@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
@@ -713,9 +714,15 @@ func TestAllCases(t *testing.T) {
 					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
 			},
 			WantErr: false,
-			WantDeletes: []clientgotesting.DeleteActionImpl{
-				{Name: resources.SequenceChannelName(sequenceName, 0)},
-			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource: schema.GroupVersionResource{
+						Resource: "subscriptions",
+					},
+				},
+				Name: resources.SequenceChannelName(sequenceName, 0),
+			}},
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
 					WithSequenceChannelTemplateSpec(imc),
