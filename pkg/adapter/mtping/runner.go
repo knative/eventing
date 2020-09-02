@@ -35,7 +35,7 @@ import (
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/eventing/pkg/utils/cache"
 )
 
@@ -77,8 +77,8 @@ func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interf
 
 func (a *cronJobsRunner) AddSchedule(cfg PingConfig) cron.EntryID {
 	event := cloudevents.NewEvent()
-	event.SetType(sourcesv1alpha2.PingSourceEventType)
-	event.SetSource(sourcesv1alpha2.PingSourceSource(cfg.Namespace, cfg.Name))
+	event.SetType(sourcesv1beta1.PingSourceEventType)
+	event.SetSource(sourcesv1beta1.PingSourceSource(cfg.Namespace, cfg.Name))
 	event.SetData(cloudevents.ApplicationJSON, message(cfg.JsonData))
 	if cfg.Extensions != nil {
 		for key, override := range cfg.Extensions {
@@ -179,7 +179,7 @@ func (a *cronJobsRunner) updateFromConfigMap(cm *corev1.ConfigMap) {
 	}
 
 	for key, cfg := range cfgs {
-		cfg.APIVersion = sourcesv1alpha2.SchemeGroupVersion.String()
+		cfg.APIVersion = sourcesv1beta1.SchemeGroupVersion.String()
 		cfg.Kind = "PingSource"
 
 		// Is the schedule already cached?

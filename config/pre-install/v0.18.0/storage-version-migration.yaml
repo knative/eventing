@@ -47,3 +47,4 @@ spec:
           - "subscriptions.messaging.knative.dev"
           - "parallels.flows.knative.dev"
           - "sequences.flows.knative.dev"
+          - "pingsources.sources.knative.dev"

@@ -22,7 +22,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
@@ -68,10 +67,10 @@ func ApiServerSourceV1B1ClientSetupOption(name string, mode string, recordEvents
 	}
 }
 
-// PingSourceV1A2ClientSetupOption returns a ClientSetupOption that can be used
+// PingSourceV1B1ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new PingSource. It creates a RecordEvents pod and a
 // PingSource object with the RecordEvent pod as its sink.
-func PingSourceV1A2ClientSetupOption(name string, recordEventsPodName string) testlib.SetupClientOption {
+func PingSourceV1B1ClientSetupOption(name string, recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 
 		// create event logger pod and service
@@ -79,10 +78,10 @@ func PingSourceV1A2ClientSetupOption(name string, recordEventsPodName string) te
 
 		// create cron job source
 		data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-		source := eventingtesting.NewPingSourceV1Alpha2(
+		source := eventingtesting.NewPingSourceV1Beta1(
 			name,
 			client.Namespace,
-			eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+			eventingtesting.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
 				JsonData: data,
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
@@ -91,7 +90,7 @@ func PingSourceV1A2ClientSetupOption(name string, recordEventsPodName string) te
 				},
 			}),
 		)
-		client.CreatePingSourceV1Alpha2OrFail(source)
+		client.CreatePingSourceV1Beta1OrFail(source)
 
 		// wait for all test resources to be ready
 		client.WaitForAllTestResourcesReadyOrFail()
