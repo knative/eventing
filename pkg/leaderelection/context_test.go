@@ -93,7 +93,7 @@ func TestWithBuilder(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
+	defer cancel()
 	go le.Run(ctx)
 
 	select {
