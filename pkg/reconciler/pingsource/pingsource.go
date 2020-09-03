@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -164,13 +165,17 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 			return nil, err
 		}
 		return nil, fmt.Errorf("error getting mt adapter deployment %v", err)
-	} else if update, c := needsUpdating(ctx, &d.Spec.Template.Spec, expected); update {
+	} else if update, c := needsUpdating(ctx, &d.Spec, expected); update {
 		c.Env = expected
+
+		if *d.Spec.Replicas == 0 {
+			d.Spec.Replicas = pointer.Int32Ptr(1)
+		}
 
 		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
 			return d, err
 		}
-		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Cluster-scoped deployment updated")
+		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "pingsource adapter deployment updated")
 		return d, nil
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
@@ -178,15 +183,16 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	return d, nil
 }
 
-func needsUpdating(ctx context.Context, oldPodSpec *corev1.PodSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {
+func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {
 	// We just care about the environment of the dispatcher container
+	oldPodSpec := &oldDeploymentSpec.Template.Spec
 	container := findContainer(oldPodSpec, containerName)
 	if container == nil {
 		logging.FromContext(ctx).Errorf("invalid %s deployment: missing the %s container", mtadapterName, containerName)
 		return false, nil
 	}
 
-	return !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
+	return *oldDeploymentSpec.Replicas == 0 || !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
 }
 
 func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
