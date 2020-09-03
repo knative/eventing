@@ -168,7 +168,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	} else if update, c := needsUpdating(ctx, &d.Spec, expected); update {
 		c.Env = expected
 
-		if *d.Spec.Replicas == 0 {
+		if zero(d.Spec.Replicas) {
 			d.Spec.Replicas = pointer.Int32Ptr(1)
 		}
 
@@ -192,7 +192,7 @@ func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec
 		return false, nil
 	}
 
-	return *oldDeploymentSpec.Replicas == 0 || !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
+	return zero(oldDeploymentSpec.Replicas) || !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
 }
 
 func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
@@ -202,4 +202,8 @@ func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
 		}
 	}
 	return nil
+}
+
+func zero(i *int32) bool {
+	return i != nil && *i == 0
 }

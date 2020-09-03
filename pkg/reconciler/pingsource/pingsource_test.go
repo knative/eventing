@@ -174,52 +174,6 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceV1B1StatusObservedGeneration(generation),
 				),
 			}},
-		}, {
-			Name:                    "valid with cluster scope annotation, create deployment",
-			SkipNamespaceValidation: true,
-			Objects: []runtime.Object{
-				NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
-						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
-						},
-					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
-				),
-				rtv1beta1.NewChannel(sinkName, testNS,
-					rtv1beta1.WithInitChannelConditions,
-					rtv1beta1.WithChannelAddress(sinkDNS),
-				),
-			},
-			Key: testNS + "/" + sourceName,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Cluster-scoped deployment created`),
-			},
-			WantCreates: []runtime.Object{
-				MakeMTAdapter(),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
-						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
-						},
-					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
-					// Status Update:
-					WithPingSourceV1B1NotDeployed(mtadapterName),
-					WithInitPingSourceV1B1Conditions,
-					WithPingSourceV1B1CloudEventAttributes,
-					WithPingSourceV1B1Sink(sinkURI),
-					WithPingSourceV1B1StatusObservedGeneration(generation),
-				),
-			}},
 		},
 	}
 
@@ -254,14 +208,14 @@ func MakeMTAdapter() *appsv1.Deployment {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
-			Name:      "adaptername",
+			Name:      mtadapterName,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: "dispatcher",
+							Name: containerName,
 							Env:  resources.MakeReceiveAdapterEnvVar(args),
 						}}}}}}
 
