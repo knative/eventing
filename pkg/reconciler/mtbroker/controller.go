@@ -25,7 +25,6 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/eventing/pkg/duck"
@@ -60,7 +59,6 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
-	triggerInformer := triggerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
@@ -77,7 +75,6 @@ func NewController(
 		dynamicClientSet:   dynamicclient.Get(ctx),
 		endpointsLister:    endpointsInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
-		triggerLister:      triggerInformer.Lister(),
 		brokerClass:        eventing.MTChannelBrokerClassValue,
 		configmapLister:    configmapInformer.Lister(),
 	}
