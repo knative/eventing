@@ -36,7 +36,6 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
@@ -57,7 +56,6 @@ type Reconciler struct {
 	// listers index properties about resources
 	endpointsLister    corev1listers.EndpointsLister
 	subscriptionLister messaginglisters.SubscriptionLister
-	triggerLister      eventinglisters.TriggerLister
 	configmapLister    corev1listers.ConfigMapLister
 
 	channelableTracker duck.ListableTracker
