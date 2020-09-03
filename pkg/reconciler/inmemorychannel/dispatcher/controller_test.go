@@ -30,7 +30,8 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
+	ctx, cancel, _ := SetupFakeContextWithCancel(t)
+	defer cancel()
 
 	os.Setenv("SCOPE", eventing.ScopeCluster)
 	c := NewController(ctx, &configmap.InformedWatcher{})
@@ -41,7 +42,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewInNamespace(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
+	ctx, cancel, _ := SetupFakeContextWithCancel(t)
+	defer cancel()
 
 	os.Setenv("SCOPE", eventing.ScopeNamespace)
 	c := NewController(ctx, &configmap.InformedWatcher{})
