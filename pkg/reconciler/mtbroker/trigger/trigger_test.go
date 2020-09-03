@@ -25,12 +25,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -355,9 +355,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
-					Resource: schema.GroupVersionResource{
-						Resource: "subscriptions",
-					},
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
 				},
 				Name: subscriptionName,
 			}},
