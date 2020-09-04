@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
@@ -120,9 +121,7 @@ func TestAllCases(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
-					Resource: schema.GroupVersionResource{
-						Resource: "eventtypes",
-					},
+					Resource:  v1.SchemeGroupVersion.WithResource("eventtypes"),
 				},
 				Name: "name-1",
 			}},
