@@ -29,7 +29,6 @@ import (
 	"go.uber.org/zap"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
@@ -71,14 +70,9 @@ func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloud
 
 // Start implements adapter.Adapter
 func (a *mtpingAdapter) Start(ctx context.Context) error {
-	ctrl := NewController(ctx, a)
-
-	a.logger.Info("Starting controllers...")
-	go controller.StartAll(ctx, ctrl)
-
-	defer a.runner.Stop()
 	a.logger.Info("Starting job runner...")
 	a.runner.Start(ctx.Done())
+	defer a.runner.Stop()
 
 	a.logger.Infof("runner stopped")
 	return nil

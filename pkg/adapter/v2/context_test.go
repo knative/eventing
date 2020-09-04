@@ -14,10 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package leaderelection
+package adapter
 
 import (
-	kle "knative.dev/pkg/leaderelection"
+	"context"
+	"testing"
+
+	"knative.dev/pkg/controller"
+
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
-var ValidateConfig = kle.NewConfigFromConfigMap
+func TestWithController(t *testing.T) {
+	ctx := WithController(context.TODO(), func(ctx context.Context, adapter Adapter) *controller.Impl {
+		return nil
+	})
+
+	if ControllerFromContext(ctx) == nil {
+		t.Error("expected non-nil controller constructor")
+	}
+}

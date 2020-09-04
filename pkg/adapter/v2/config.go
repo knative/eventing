@@ -179,18 +179,20 @@ func (e *EnvConfig) GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error
 
 func (e *EnvConfig) GetLeaderElectionConfig() (*kle.ComponentConfig, error) {
 	if e.LeaderElectionConfigJson == "" {
-		return defaultLeaderElectionConfig(), nil
+		return e.defaultLeaderElectionConfig(), nil
 	}
 
 	var config kle.ComponentConfig
 	if err := json.Unmarshal([]byte(e.LeaderElectionConfigJson), &config); err != nil {
-		return defaultLeaderElectionConfig(), err
+		return e.defaultLeaderElectionConfig(), err
 	}
+	config.Component = e.Component
 	return &config, nil
 }
 
-func defaultLeaderElectionConfig() *kle.ComponentConfig {
+func (e *EnvConfig) defaultLeaderElectionConfig() *kle.ComponentConfig {
 	return &kle.ComponentConfig{
+		Component:     e.Component,
 		Buckets:       1,
 		LeaseDuration: 15 * time.Second,
 		RenewDeadline: 10 * time.Second,

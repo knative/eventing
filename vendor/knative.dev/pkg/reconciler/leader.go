@@ -18,6 +18,7 @@ package reconciler
 
 import (
 	"sync"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -88,6 +89,7 @@ func (laf *LeaderAwareFuncs) IsLeaderFor(key types.NamespacedName) bool {
 
 // Promote implements LeaderAware
 func (laf *LeaderAwareFuncs) Promote(b Bucket, enq func(Bucket, types.NamespacedName)) error {
+	fmt.Println("PROMOTE")
 	func() {
 		laf.Lock()
 		defer laf.Unlock()
@@ -98,6 +100,8 @@ func (laf *LeaderAwareFuncs) Promote(b Bucket, enq func(Bucket, types.Namespaced
 	}()
 
 	if promote := laf.PromoteFunc; promote != nil {
+		fmt.Println("PROMOTE FUNC")
+
 		return promote(b, enq)
 	}
 	return nil
