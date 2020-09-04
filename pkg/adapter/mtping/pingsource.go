@@ -24,27 +24,19 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
-	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
-	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 )
 
 // Reconciler reconciles PingSources
 type Reconciler struct {
-	cronRunner        *cronJobsRunner
-	eventingClientSet clientset.Interface
-	pingsourceLister  sourceslisters.PingSourceLister
-	kubeClient        kubernetes.Interface
-
-	entryidMu sync.RWMutex
-	entryids  map[string]cron.EntryID // key: resource namespace/name
+	cronRunner *cronJobsRunner
+	entryidMu  sync.RWMutex
+	entryids   map[string]cron.EntryID // key: resource namespace/name
 }
 
 // Check that our Reconciler implements ReconcileKind.

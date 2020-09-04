@@ -18,7 +18,6 @@ package mtping
 
 import (
 	"context"
-	"flag"
 	"os"
 	"strconv"
 
@@ -26,7 +25,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/prometheus/common/log"
-	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
@@ -37,15 +35,6 @@ import (
 const (
 	EnvNoShutdownAfter = "K_NO_SHUTDOWN_AFTER"
 )
-
-var (
-	// withSeconds enables schedules with seconds.
-	withSeconds bool
-)
-
-func init() {
-	flag.BoolVar(&withSeconds, "with-seconds", false, "Enables schedule with seconds")
-}
 
 // mtpingAdapter implements the PingSource mt adapter to sinks
 type mtpingAdapter struct {
@@ -59,12 +48,7 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 
 func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
 	logger := logging.FromContext(ctx)
-	var opts []cron.Option
-	if withSeconds {
-		logger.Info("enable schedule with a seconds field")
-		opts = append(opts, cron.WithSeconds())
-	}
-	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx), opts...)
+	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx))
 
 	return &mtpingAdapter{
 		logger: logger,

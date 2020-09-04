@@ -21,12 +21,12 @@ import (
 	"sync"
 
 	"github.com/robfig/cron/v3"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
+
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -37,12 +37,9 @@ func NewController(ctx context.Context, cronRunner *cronJobsRunner) *controller.
 	pingsourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		eventingClientSet: eventingclient.Get(ctx),
-		kubeClient:        kubeclient.Get(ctx),
-		pingsourceLister:  pingsourceInformer.Lister(),
-		entryidMu:         sync.RWMutex{},
-		entryids:          make(map[string]cron.EntryID),
-		cronRunner:        cronRunner,
+		entryidMu:  sync.RWMutex{},
+		entryids:   make(map[string]cron.EntryID),
+		cronRunner: cronRunner,
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
