@@ -174,9 +174,10 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			cronRunner: NewCronJobsRunner(ce, testclient.NewSimpleClientset(), logger),
-			entryidMu:  sync.RWMutex{},
-			entryids:   make(map[string]cron.EntryID),
+			pingsourceLister: listers.GetPingSourceV1beta1Lister(),
+			cronRunner:       NewCronJobsRunner(ce, testclient.NewSimpleClientset(), logger),
+			entryidMu:        sync.RWMutex{},
+			entryids:         make(map[string]cron.EntryID),
 		}
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetPingSourceV1beta1Lister(),
