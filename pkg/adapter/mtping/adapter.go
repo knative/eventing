@@ -27,6 +27,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
+
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
