@@ -44,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/leaderelection"
 )
 
+// Adapter is the interface receive adapters are expected to implement
 type Adapter interface {
 	Start(ctx context.Context) error
 }

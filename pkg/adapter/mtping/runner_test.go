@@ -22,44 +22,65 @@ import (
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 const threeSecondsTillNextMinCronJob = 60 - 3
 
 func TestAddRunRemoveSchedules(t *testing.T) {
 	testCases := map[string]struct {
-		cfg   PingConfig
+		src   *sourcesv1beta1.PingSource
 		delay time.Duration
 	}{
 		"TestAddRunRemoveSchedule": {
-			cfg: PingConfig{
-				ObjectReference: corev1.ObjectReference{
+			src: &sourcesv1beta1.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns",
 				},
-				Schedule:   "* * * * ?",
-				JsonData:   "some data",
-				Extensions: nil,
-				SinkURI:    "a sink",
+				Spec: sourcesv1beta1.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule: "* * * * ?",
+					JsonData: "some data",
+				},
+				Status: sourcesv1beta1.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
 			},
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
-			cfg: PingConfig{
-				ObjectReference: corev1.ObjectReference{
+			src: &sourcesv1beta1.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns",
 				},
-				Schedule:   "* * * * ?",
-				JsonData:   "some data",
-				Extensions: map[string]string{"1": "one", "2": "two"},
-				SinkURI:    "a sink",
+				Spec: sourcesv1beta1.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{
+							Extensions: map[string]string{"1": "one", "2": "two"},
+						},
+					},
+					Schedule: "* * * * ?",
+					JsonData: "some data",
+				},
+				Status: sourcesv1beta1.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
 			},
 		},
 	}
@@ -70,7 +91,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			ce := adaptertesting.NewTestClient()
 
 			runner := NewCronJobsRunner(ce, kubeclient.Get(ctx), logger)
-			entryId := runner.AddSchedule(tc.cfg)
+			entryId := runner.AddSchedule(tc.src)
 
 			entry := runner.cron.Entry(entryId)
 			if entry.ID != entryId {
@@ -79,7 +100,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, `{"body":"some data"}`, tc.cfg.Extensions)
+			validateSent(t, ce, `{"body":"some data"}`, tc.src.Spec.CloudEventOverrides.Extensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -113,7 +134,6 @@ func TestStartStopCron(t *testing.T) {
 		t.Fatal("expected cron to be stopped after 2 seconds")
 	case <-wctx.Done():
 	}
-
 }
 
 func TestStartStopCronDelayWait(t *testing.T) {
@@ -132,17 +152,26 @@ func TestStartStopCronDelayWait(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		runner.AddSchedule(PingConfig{
-			ObjectReference: corev1.ObjectReference{
-				Name:      "test-name",
-				Namespace: "test-ns",
-			},
-			Schedule: "* * * * *",
-			JsonData: "some delayed data",
-			SinkURI:  "a delayed sink",
-		})
+		runner.AddSchedule(
+			&sourcesv1beta1.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: sourcesv1beta1.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule: "* * * * *",
+					JsonData: "some delayed data",
+				},
+				Status: sourcesv1beta1.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a delayed sink"},
+					},
+				},
+			})
 		runner.Start(ctx.Done())
-
 	}()
 
 	tn = time.Now()
