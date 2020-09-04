@@ -19,7 +19,6 @@ package pingsource
 import (
 	"context"
 
-	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
@@ -40,13 +39,6 @@ import (
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 
-// envConfig will be used to extract the required environment variables using
-// github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
-// NewController will panic.
-type envConfig struct {
-	Image string `envconfig:"MT_PING_IMAGE" required:"true"`
-}
-
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
@@ -54,11 +46,6 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
-
-	env := &envConfig{}
-	if err := envconfig.Process("", env); err != nil {
-		logger.Fatalw("unable to process PingSourceSource's required environment variables: %v", err)
-	}
 
 	// Retrieve leader election config
 	leaderElectionConfig, err := sharedmain.GetLeaderElectionConfig(ctx)
@@ -78,13 +65,12 @@ func NewController(
 	pingSourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:       kubeclient.Get(ctx),
-		pingLister:          pingSourceInformer.Lister(),
-		deploymentLister:    deploymentInformer.Lister(),
-		leConfig:            leConfig,
-		loggingContext:      ctx,
-		configs:             reconcilersource.WatchConfigurations(ctx, component, cmw),
-		receiveAdapterImage: env.Image,
+		kubeClientSet:    kubeclient.Get(ctx),
+		pingLister:       pingSourceInformer.Lister(),
+		deploymentLister: deploymentInformer.Lister(),
+		leConfig:         leConfig,
+		loggingContext:   ctx,
+		configs:          reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)

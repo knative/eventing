@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -48,12 +49,12 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	pingSourceDeploymentCreated = "PingSourceDeploymentCreated"
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 
 	component     = "pingsource"
 	mtcomponent   = "pingsource-mt-adapter"
 	mtadapterName = "pingsource-mt-adapter"
+	containerName = "dispatcher"
 )
 
 func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
@@ -63,8 +64,6 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
-
-	receiveAdapterImage string
 
 	// listers index properties about resources
 	pingLister       listers.PingSourceLister
@@ -152,34 +151,31 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	}
 
 	args := resources.Args{
-		ServiceAccountName: mtadapterName,
-		AdapterName:        mtadapterName,
-		Image:              r.receiveAdapterImage,
-		LoggingConfig:      loggingConfig,
-		MetricsConfig:      metricsConfig,
-		LeConfig:           r.leConfig,
-		NoShutdownAfter:    mtping.GetNoShutDownAfterValue(),
+		LoggingConfig:   loggingConfig,
+		MetricsConfig:   metricsConfig,
+		LeConfig:        r.leConfig,
+		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 	}
-	expected := resources.MakeReceiveAdapter(args)
+	expected := resources.MakeReceiveAdapterEnvVar(args)
 
 	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
-			if err != nil {
-				controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeWarning, pingSourceDeploymentCreated, "Cluster-scoped deployment not created (%v)", err)
-				return nil, err
-			}
-			controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentCreated, "Cluster-scoped deployment created")
-			return d, nil
+			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))
+			return nil, err
 		}
 		return nil, fmt.Errorf("error getting mt adapter deployment %v", err)
-	} else if podSpecChanged(d.Spec.Template.Spec, expected.Spec.Template.Spec) {
-		d.Spec.Template.Spec = expected.Spec.Template.Spec
+	} else if update, c := needsUpdating(ctx, &d.Spec, expected); update {
+		c.Env = expected
+
+		if zero(d.Spec.Replicas) {
+			d.Spec.Replicas = pointer.Int32Ptr(1)
+		}
+
 		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
 			return d, err
 		}
-		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Cluster-scoped deployment updated")
+		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "pingsource adapter deployment updated")
 		return d, nil
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
@@ -187,7 +183,27 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	return d, nil
 }
 
-func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
-	// We really care about the fields we set and ignore the test.
-	return !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec)
+func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {
+	// We just care about the environment of the dispatcher container
+	oldPodSpec := &oldDeploymentSpec.Template.Spec
+	container := findContainer(oldPodSpec, containerName)
+	if container == nil {
+		logging.FromContext(ctx).Errorf("invalid %s deployment: missing the %s container", mtadapterName, containerName)
+		return false, nil
+	}
+
+	return zero(oldDeploymentSpec.Replicas) || !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
+}
+
+func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
+	for i, container := range podSpec.Containers {
+		if container.Name == name {
+			return &podSpec.Containers[i]
+		}
+	}
+	return nil
+}
+
+func zero(i *int32) bool {
+	return i != nil && *i == 0
 }

@@ -20,97 +20,40 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 )
 
 func TestMakePingAdapter(t *testing.T) {
-	replicas := int32(1)
-
 	args := Args{
-		ServiceAccountName: "test-sa",
-		AdapterName:        "test-name",
-		Image:              "test-image",
-		MetricsConfig:      "metrics",
-		LoggingConfig:      "logging",
-		NoShutdownAfter:    40,
+		MetricsConfig:   "metrics",
+		LoggingConfig:   "logging",
+		NoShutdownAfter: 40,
 	}
 
-	want := &v1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployments",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      args.AdapterName,
-		},
-		Spec: v1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: mtlabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: mtlabels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: args.ServiceAccountName,
-					Containers: []corev1.Container{
-						{
-							Name:  "dispatcher",
-							Image: args.Image,
-							Env: []corev1.EnvVar{{
-								Name:  system.NamespaceEnvKey,
-								Value: system.Namespace(),
-							}, {
-								Name: "NAMESPACE",
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										FieldPath: "metadata.namespace",
-									},
-								},
-							}, {
-								Name:  "K_METRICS_CONFIG",
-								Value: "metrics",
-							}, {
-								Name:  "K_LOGGING_CONFIG",
-								Value: "logging",
-							}, {
-								Name:  "K_LEADER_ELECTION_CONFIG",
-								Value: "",
-							}, {
-								Name:  "K_NO_SHUTDOWN_AFTER",
-								Value: "40",
-							}},
-							// Set low resource requests and limits.
-							// This should be configurable.
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("125m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("2048Mi"),
-								},
-							},
-							Ports: []corev1.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9090,
-							}},
-						},
-					},
-				},
+	want := []corev1.EnvVar{{
+		Name: system.NamespaceEnvKey,
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
 			},
 		},
-	}
+	}, {
+		Name:  "K_METRICS_CONFIG",
+		Value: "metrics",
+	}, {
+		Name:  "K_LOGGING_CONFIG",
+		Value: "logging",
+	}, {
+		Name:  "K_LEADER_ELECTION_CONFIG",
+		Value: "",
+	}, {
+		Name:  "K_NO_SHUTDOWN_AFTER",
+		Value: "40",
+	}}
 
-	got := MakeReceiveAdapter(args)
+	got := MakeReceiveAdapterEnvVar(args)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)

@@ -20,6 +20,9 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/adapter/mtping"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -67,16 +70,11 @@ var (
 )
 
 const (
-	image          = "github.com/knative/test/image"
-	mtimage        = "github.com/knative/test/mtimage"
-	sourceName     = "test-ping-source"
-	sourceUID      = "1234"
-	sourceNameLong = "test-pingserver-source-with-a-very-long-name"
-	sourceUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
-	testNS         = "testnamespace"
-	testSchedule   = "*/2 * * * *"
-	testData       = "data"
-	crName         = "knative-eventing-pingsource-adapter"
+	sourceName   = "test-ping-source"
+	sourceUID    = "1234"
+	testNS       = "testnamespace"
+	testSchedule = "*/2 * * * *"
+	testData     = "data"
 
 	sinkName   = "testsink"
 	generation = 1
@@ -176,52 +174,6 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceV1B1StatusObservedGeneration(generation),
 				),
 			}},
-		}, {
-			Name:                    "valid with cluster scope annotation, create deployment",
-			SkipNamespaceValidation: true,
-			Objects: []runtime.Object{
-				NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
-						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
-						},
-					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
-				),
-				rtv1beta1.NewChannel(sinkName, testNS,
-					rtv1beta1.WithInitChannelConditions,
-					rtv1beta1.WithChannelAddress(sinkDNS),
-				),
-			},
-			Key: testNS + "/" + sourceName,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Cluster-scoped deployment created`),
-			},
-			WantCreates: []runtime.Object{
-				MakeMTAdapter(),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
-						SourceSpec: duckv1.SourceSpec{
-							Sink: sinkDest,
-						},
-					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
-					// Status Update:
-					WithPingSourceV1B1NotDeployed(mtadapterName),
-					WithInitPingSourceV1B1Conditions,
-					WithPingSourceV1B1CloudEventAttributes,
-					WithPingSourceV1B1Sink(sinkURI),
-					WithPingSourceV1B1StatusObservedGeneration(generation),
-				),
-			}},
 		},
 	}
 
@@ -229,11 +181,10 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			kubeClientSet:       fakekubeclient.Get(ctx),
-			pingLister:          listers.GetPingSourceV1beta1Lister(),
-			deploymentLister:    listers.GetDeploymentLister(),
-			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
-			receiveAdapterImage: mtimage,
+			kubeClientSet:    fakekubeclient.Get(ctx),
+			pingLister:       listers.GetPingSourceV1beta1Lister(),
+			deploymentLister: listers.GetDeploymentLister(),
+			tracker:          tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
@@ -248,12 +199,26 @@ func TestAllCases(t *testing.T) {
 
 func MakeMTAdapter() *appsv1.Deployment {
 	args := resources.Args{
-		ServiceAccountName: mtadapterName,
-		AdapterName:        mtadapterName,
-		Image:              mtimage,
-		NoShutdownAfter:    mtping.GetNoShutDownAfterValue(),
+		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 	}
-	return resources.MakeReceiveAdapter(args)
+	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployments",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      mtadapterName,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: containerName,
+							Env:  resources.MakeReceiveAdapterEnvVar(args),
+						}}}}}}
+
 }
 
 func makeAvailableMTAdapter() *appsv1.Deployment {

@@ -19,92 +19,23 @@ package resources
 import (
 	"strconv"
 
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/adapter/mtping"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/system"
 )
 
-var (
-	mtlabels = map[string]string{
-		"sources.knative.dev/role":    "adapter",
-		"eventing.knative.dev/source": controllerAgentName,
-	}
-)
-
 type Args struct {
-	ServiceAccountName string
-	AdapterName        string
-	Image              string
-	MetricsConfig      string
-	LoggingConfig      string
-	LeConfig           string
-	NoShutdownAfter    int
+	MetricsConfig   string
+	LoggingConfig   string
+	LeConfig        string
+	NoShutdownAfter int
 }
 
-// MakeReceiveAdapter generates the mtping deployment for pingsources
-func MakeReceiveAdapter(args Args) *v1.Deployment {
-	replicas := int32(1)
-
-	return &v1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployments",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      args.AdapterName,
-		},
-		Spec: v1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: mtlabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: mtlabels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: args.ServiceAccountName,
-					Containers: []corev1.Container{
-						{
-							Name:  "dispatcher",
-							Image: args.Image,
-							Env:   makeEnv(args),
-
-							// Set low resource requests and limits.
-							// This should be configurable.
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("125m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("2048Mi"),
-								},
-							},
-							Ports: []corev1.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9090,
-							}},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func makeEnv(args Args) []corev1.EnvVar {
+// MakeReceiveAdapterEnvVar generates the environment variables for the pingsources
+func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
 	return []corev1.EnvVar{{
-		Name:  system.NamespaceEnvKey,
-		Value: system.Namespace(),
-	}, {
-		Name: adapter.EnvConfigNamespace,
+		Name: system.NamespaceEnvKey,
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
@@ -123,4 +54,5 @@ func makeEnv(args Args) []corev1.EnvVar {
 		Name:  mtping.EnvNoShutdownAfter,
 		Value: strconv.Itoa(args.NoShutdownAfter),
 	}}
+
 }

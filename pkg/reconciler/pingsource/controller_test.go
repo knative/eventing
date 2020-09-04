@@ -17,7 +17,6 @@ limitations under the License.
 package pingsource
 
 import (
-	"os"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,83 +34,38 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	testCases := map[string]struct {
-		setEnv bool
-	}{
-		"image not set": {},
-		"image set": {
-			setEnv: true,
+	ctx, _ := SetupFakeContext(t)
+	c := NewController(ctx, configmap.NewStaticWatcher(
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config-observability",
+				Namespace: "knative-eventing",
+			},
+			Data: map[string]string{
+				"_example": "test-config",
+			},
+		}, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config-logging",
+				Namespace: "knative-eventing",
+			},
+			Data: map[string]string{
+				"zap-logger-config":   "test-config",
+				"loglevel.controller": "info",
+				"loglevel.webhook":    "info",
+			},
+		}, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "config-tracing",
+				Namespace: "knative-eventing",
+			},
+			Data: map[string]string{
+				"_example": "test-config",
+			},
 		},
-	}
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			if tc.setEnv {
-				if err := os.Setenv("PING_IMAGE", "anything"); err != nil {
-					t.Fatalf("Failed to set env var: %v", err)
-				}
-				if err := os.Setenv("MT_PING_IMAGE", "anything"); err != nil {
-					t.Fatalf("Failed to set env var: %v", err)
-				}
-				defer func() {
-					if err := os.Unsetenv("PING_IMAGE"); err != nil {
-						t.Fatalf("Failed to unset env var: %v", err)
-					}
-					if err := os.Unsetenv("MT_PING_IMAGE"); err != nil {
-						t.Fatalf("Failed to unset env var: %v", err)
-					}
-				}()
+	))
 
-				if err := os.Setenv("METRICS_DOMAIN", "knative.dev/eventing"); err != nil {
-					t.Fatalf("Failed to set env var: %v", err)
-				}
-				defer func() {
-					if err := os.Unsetenv("METRICS_DOMAIN"); err != nil {
-						t.Fatalf("Failed to unset env var: %v", err)
-					}
-				}()
-			} else {
-				defer func() {
-					r := recover()
-					if r == nil {
-						t.Errorf("Expected NewController to panic, nothing recovered.")
-					}
-				}()
-			}
-
-			ctx, _ := SetupFakeContext(t)
-			c := NewController(ctx, configmap.NewStaticWatcher(
-				&corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "config-observability",
-						Namespace: "knative-eventing",
-					},
-					Data: map[string]string{
-						"_example": "test-config",
-					},
-				}, &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "config-logging",
-						Namespace: "knative-eventing",
-					},
-					Data: map[string]string{
-						"zap-logger-config":   "test-config",
-						"loglevel.controller": "info",
-						"loglevel.webhook":    "info",
-					},
-				}, &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "config-tracing",
-						Namespace: "knative-eventing",
-					},
-					Data: map[string]string{
-						"_example": "test-config",
-					},
-				},
-			))
-
-			if c == nil {
-				t.Fatal("Expected NewController to return a non-nil value")
-			}
-		})
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }

@@ -1,0 +1,69 @@
+# Copyright 2018 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pingsource-mt-adapter
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  # when set to 0 (and only 0) will be set to 1 when the first PingSource is created.
+  replicas: 0
+  selector:
+    matchLabels:
+      eventing.knative.dev/source: ping-source-controller
+      sources.knative.dev/role: adapter
+  template:
+    metadata:
+      labels:
+        eventing.knative.dev/source: ping-source-controller
+        sources.knative.dev/role: adapter
+        eventing.knative.dev/release: devel
+    spec:
+      containers:
+        - name: dispatcher
+          image: ko://knative.dev/eventing/cmd/mtping
+          env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+
+            # The values below are being filled by the ping source controller
+            - name: K_METRICS_CONFIG
+              value: ''
+            - name: K_LOGGING_CONFIG
+              value: ''
+            - name: K_LOGGING_CONFIG
+              value: ''
+            - name: K_LEADER_ELECTION_CONFIG
+              value: ''
+            - name: K_NO_SHUTDOWN_AFTER
+              value: ''
+
+          ports:
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 125m
+              memory: 64Mi
+            limits:
+              cpu: 1000m
+              memory: 2048Mi
+      serviceAccountName: pingsource-mt-adapter
