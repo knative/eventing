@@ -27,7 +27,6 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
 )
@@ -46,13 +45,6 @@ var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 var _ pingsourcereconciler.Finalizer = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSource) pkgreconciler.Event {
-	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
-	if ok && scope != eventing.ScopeCluster {
-		// Not our responsibility
-		logging.FromContext(ctx).Infow("Skipping non-cluster-scoped PingSource", zap.Any("namespace", source.Namespace), zap.Any("name", source.Name))
-		return nil
-	}
-
 	if !source.Status.IsReady() {
 		return fmt.Errorf("PingSource is not ready. Cannot configure the cron jobs runner")
 	}
