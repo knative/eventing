@@ -4,8 +4,8 @@
 
 The Knative Eventing project has one generic `Channel` CRD and might ship
 different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of in the
-`messaging.knative.dev/v1` API Group. The generic `Channel` CRD points to
-the chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
+`messaging.knative.dev/v1` API Group. The generic `Channel` CRD points to the
+chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
 
 A _channel_ logically receives events on its input domain and forwards them to
 its subscribers. Below is a specification for the generic parts of each
