@@ -145,12 +145,12 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
 	if metricsConfig, err := env.GetMetricsConfig(); err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
-	} else {
+	} else if metricsConfig != nil {
 		if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
 			logger.Error("failed to create the metrics exporter", zap.Error(err))
 		}
 		// Check if metrics config contains profiling flag
-		if metricsConfig != nil && metricsConfig.ConfigMap != nil {
+		if metricsConfig.ConfigMap != nil {
 			if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err == nil && enabled {
 				// Start a goroutine to server profiling metrics
 				logger.Info("Profiling enabled")

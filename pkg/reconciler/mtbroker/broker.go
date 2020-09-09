@@ -74,8 +74,6 @@ type Reconciler struct {
 // Check that our Reconciler implements Interface
 var _ brokerreconciler.Interface = (*Reconciler)(nil)
 
-var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
-
 // ReconcilerArgs are the arguments needed to create a broker.Reconciler.
 type ReconcilerArgs struct {
 	IngressImage              string

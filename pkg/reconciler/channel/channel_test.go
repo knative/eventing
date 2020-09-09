@@ -28,7 +28,6 @@ import (
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -264,13 +263,6 @@ func channelCRD() metav1.TypeMeta {
 	}
 }
 
-func channelableV1Alpha1CRD() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: "duck.knative.dev/v1alpha1",
-		Kind:       "Channelable",
-	}
-}
-
 func subscribers() []eventingduckv1.SubscriberSpec {
 	return []eventingduckv1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -285,33 +277,8 @@ func subscribers() []eventingduckv1.SubscriberSpec {
 	}}
 }
 
-func subscribersV1Alpha1() []v1alpha1.SubscriberSpec {
-	return []v1alpha1.SubscriberSpec{{
-		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    1,
-		SubscriberURI: apis.HTTP("call1"),
-		ReplyURI:      apis.HTTP("sink2"),
-	}, {
-		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    2,
-		SubscriberURI: apis.HTTP("call2"),
-		ReplyURI:      apis.HTTP("sink2"),
-	}}
-}
-
 func subscriberStatuses() []eventingduckv1.SubscriberStatus {
 	return []eventingduckv1.SubscriberStatus{{
-		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 1,
-		Ready:              "True",
-	}, {
-		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 2,
-		Ready:              "True",
-	}}
-}
-func subscriberStatusesV1beta1() []eventingduckv1beta1.SubscriberStatus {
-	return []eventingduckv1beta1.SubscriberStatus{{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		ObservedGeneration: 1,
 		Ready:              "True",
@@ -359,15 +326,6 @@ func backingChannelObjRef() *duckv1.KReference {
 	return &duckv1.KReference{
 		APIVersion: "messaging.knative.dev/v1",
 		Kind:       "InMemoryChannel",
-		Namespace:  testNS,
-		Name:       channelName,
-	}
-}
-
-func backingChannelObjRefV1Alpha1() *duckv1.KReference {
-	return &duckv1.KReference{
-		APIVersion: "duck.knative.dev/v1alpha1",
-		Kind:       "Channelable",
 		Namespace:  testNS,
 		Name:       channelName,
 	}

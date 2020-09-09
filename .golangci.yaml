@@ -1,0 +1,19 @@
+run:
+  timeout: 5m
+
+  build-tags:
+    - e2e
+    - probe
+    - preupgrade
+    - postupgrade
+    - postdowngrade
+
+  skip-dirs:
+    - pkg/client
+
+linters:
+  enable:
+    - unconvert
+    - prealloc
+  disable:
+    - errcheck

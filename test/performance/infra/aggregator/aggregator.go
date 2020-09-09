@@ -32,9 +32,9 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/test/mako"
 
-	"github.com/golang/protobuf/proto"
 	tpb "github.com/google/mako/clients/proto/analyzers/threshold_analyzer_go_proto"
 	mpb "github.com/google/mako/spec/proto/mako_go_proto"
 
@@ -58,23 +58,23 @@ var (
 	fatalf = log.Fatalf
 
 	pea = &tpb.ThresholdAnalyzerInput{
-		Name: proto.String("Publish error throughput"),
+		Name: ptr.String("Publish error throughput"),
 		Configs: []*tpb.ThresholdConfig{{
-			Max: proto.Float64(0),
+			Max: ptr.Float64(0),
 			DataFilter: &mpb.DataFilter{
 				DataType: mpb.DataFilter_METRIC_AGGREGATE_MAX.Enum(),
-				ValueKey: proto.String("pet"),
+				ValueKey: ptr.String("pet"),
 			},
 		}},
 		CrossRunConfig: mako.NewCrossRunConfig(10),
 	}
 	dea = &tpb.ThresholdAnalyzerInput{
-		Name: proto.String("Deliver error throughput"),
+		Name: ptr.String("Deliver error throughput"),
 		Configs: []*tpb.ThresholdConfig{{
-			Max: proto.Float64(0),
+			Max: ptr.Float64(0),
 			DataFilter: &mpb.DataFilter{
 				DataType: mpb.DataFilter_METRIC_AGGREGATE_MAX.Enum(),
-				ValueKey: proto.String("det"),
+				ValueKey: ptr.String("det"),
 			},
 		}},
 		CrossRunConfig: mako.NewCrossRunConfig(10),

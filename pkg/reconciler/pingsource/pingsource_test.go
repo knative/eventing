@@ -62,9 +62,6 @@ var (
 			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 	}
-	sinkDestURI = duckv1.Destination{
-		URI: apis.HTTP(sinkDNS),
-	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = apis.HTTP(sinkDNS)
 )

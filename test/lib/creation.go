@@ -301,7 +301,7 @@ func (c *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.Bro
 		c.T.Fatalf("Failed to create v1beta1 broker %q: %v", name, err)
 	}
 	if err != nil && errors.IsAlreadyExists(err) {
-		err = c.RetryWebhookErrors(func(attempts int) (err error) {
+		c.RetryWebhookErrors(func(attempts int) (err error) {
 			c.T.Logf("Getting v1beta1 broker %s", name)
 			// update broker with the new reference
 			var e error
@@ -837,10 +837,9 @@ const (
 	saIngressName = "eventing-broker-ingress"
 	saFilterName  = "eventing-broker-filter"
 
-	// the three ClusterRoles are preinstalled in Knative Eventing setup
-	crIngressName      = "eventing-broker-ingress"
-	crFilterName       = "eventing-broker-filter"
-	crConfigReaderName = "eventing-config-reader"
+	// the ClusterRoles are preinstalled in Knative Eventing setup
+	crIngressName = "eventing-broker-ingress"
+	crFilterName  = "eventing-broker-filter"
 )
 
 // CreateRBACResourcesForBrokers creates required RBAC resources for creating Brokers,

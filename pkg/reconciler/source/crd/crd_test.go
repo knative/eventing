@@ -41,11 +41,13 @@ import (
 )
 
 const (
-	crdName          = "test-crd"
-	crdGroup         = "testing.sources.knative.dev"
-	crdKind          = "TestSource"
-	crdPlural        = "testsources"
-	crdVersionServed = "v1alpha1"
+	crdName = "test-crd"
+
+// TODO: See comment below
+//	crdGroup         = "testing.sources.knative.dev"
+//	crdKind          = "TestSource"
+//	crdPlural        = "testsources"
+//	crdVersionServed = "v1alpha1"
 )
 
 func TestAllCases(t *testing.T) {
