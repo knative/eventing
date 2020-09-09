@@ -58,7 +58,7 @@ func (n *NodesClient) RandomWorkerNode() (*corev1.Node, error) {
 			" it must be a worker (Minikube, CRC)", node.Name)
 		return &node, nil
 	} else {
-		role := "master"
+		role := "master" // see https://github.com/kubernetes/kubeadm/issues/2200 for replacement.
 		n.logger.Infof("Filtering %d nodes, to not contain role: %s", nodesCount, role)
 		workers := FilterOutByRole(nodes.Items, role)
 		n.logger.Infof("Found %d worker(s)", len(workers))
