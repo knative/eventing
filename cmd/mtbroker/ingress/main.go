@@ -17,17 +17,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
-	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
 	cmdbroker "knative.dev/eventing/cmd/mtbroker"
@@ -48,11 +45,6 @@ import (
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	tracingconfig "knative.dev/pkg/tracing/config"
-)
-
-var (
-	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
 // TODO make these constants configurable (either as env variables, config map, or part of broker spec).
@@ -77,21 +69,12 @@ type envConfig struct {
 }
 
 func main() {
-	flag.Parse()
-
 	ctx := signals.NewContext()
 
 	// Report stats on Go memory usage every 30 seconds.
-	msp := metrics.NewMemStatsAll()
-	msp.Start(ctx, 30*time.Second)
-	if err := view.Register(msp.DefaultViews()...); err != nil {
-		log.Fatalf("Error exporting go memstats view: %v", err)
-	}
+	sharedmain.MemStatsOrDie(ctx)
 
-	cfg, err := sharedmain.GetConfig(*masterURL, *kubeconfig)
-	if err != nil {
-		log.Fatal("Error building kubeconfig", err)
-	}
+	cfg := sharedmain.ParseAndGetConfigOrDie()
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
