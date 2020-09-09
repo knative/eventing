@@ -6,13 +6,13 @@ community contact's duty (subject to change) is as followed:
 
 ## Daily check list
 
-- Check the knative-users@ mailing list and #eventing-questions Slack channel for
-  new unanswered questions.
+- Check the knative-users@ mailing list and #eventing-questions Slack channel
+  for new unanswered questions.
 - Check
   [unassigned issues / untriaged issues](https://github.com/knative/eventing/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+no%3Amilestone)
   for unanswered questions.
-- You should already be added to @eventing-help usergroup by the previous contact
-  person, and will be tagged into user questions in other channels.
+- You should already be added to @eventing-help usergroup by the previous
+  contact person, and will be tagged into user questions in other channels.
 
 ## Weekly check list
 
@@ -70,7 +70,7 @@ your timeslot with others by sending PRs.
 # Schedule
 
 | Week       | Contact         |
-|------------|-----------------|
+| ---------- | --------------- |
 | 2020-08-17 | n3wscott        |
 | 2020-08-24 | vaikas          |
 | 2020-08-31 | grantr          |
