@@ -32,7 +32,7 @@ type mockReporter struct {
 }
 
 var (
-	fakeMasterURL = "test-source"
+	fakeURL = "test-source"
 )
 
 func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
@@ -70,7 +70,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ceClient, err := NewCloudEventsClient(fakeMasterURL, tc.ceOverrides, &mockReporter{})
+			ceClient, err := NewCloudEventsClient(fakeURL, tc.ceOverrides, &mockReporter{})
 			if err != nil {
 				t.Fail()
 			}
@@ -125,7 +125,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ceClient, err := NewCloudEventsClient(fakeMasterURL, tc.ceOverrides, &mockReporter{})
+			ceClient, err := NewCloudEventsClient(fakeURL, tc.ceOverrides, &mockReporter{})
 			if err != nil {
 				t.Fail()
 			}
