@@ -53,12 +53,10 @@ var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
 
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
-	triggerReconcileFailed    = "TriggerReconcileFailed"
-	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
-	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
-	subscriptionCreateFailed  = "SubscriptionCreateFailed"
-	subscriptionGetFailed     = "SubscriptionGetFailed"
-	subscriptionDeleted       = "SubscriptionDeleted"
+	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed = "SubscriptionCreateFailed"
+	subscriptionGetFailed    = "SubscriptionGetFailed"
+	subscriptionDeleted      = "SubscriptionDeleted"
 )
 
 type Reconciler struct {

@@ -62,11 +62,10 @@ const (
 	// Purposely set them to be equal, as the ingress only connects to its channel.
 	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
 	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
-	defaultMaxIdleConnections              = 1000
-	defaultMaxIdleConnectionsPerHost       = 1000
-	defaultTTL                       int32 = 255
-	defaultMetricsPort                     = 9092
-	component                              = "mt_broker_ingress"
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 1000
+	defaultMetricsPort               = 9092
+	component                        = "mt_broker_ingress"
 )
 
 type envConfig struct {

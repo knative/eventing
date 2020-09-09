@@ -102,7 +102,7 @@ func validateSourceStatus(st *testing.T, client *testlib.Client,
 
 func getSourceAsV1Beta1Source(client *testlib.Client,
 	source metav1.TypeMeta) (*duckv1beta1.Source, error) {
-	srcName := strings.ToLower(fmt.Sprintf("%s", source.Kind))
+	srcName := strings.ToLower(source.Kind)
 	metaResource := resources.NewMetaResource(srcName, client.Namespace,
 		&source)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource,
@@ -120,8 +120,5 @@ func getSourceAsV1Beta1Source(client *testlib.Client,
 }
 
 func hasCondition(src *duckv1beta1.Source, t apis.ConditionType) bool {
-	if src.Status.GetCondition(t) == nil {
-		return false
-	}
-	return true
+	return src.Status.GetCondition(t) != nil
 }

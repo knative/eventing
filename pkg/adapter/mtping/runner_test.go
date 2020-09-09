@@ -186,12 +186,3 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 		}
 	}
 }
-
-func configKey(key string, schedule string) string {
-	return `"` + key + `"` + `: {
-		"namespace": "default",
-		"name":"ping",
-		"schedule": "` + schedule + `",
-		"jsonData":"{\"msg\": \"hello\"}",
-		"sinkUri": "http://event-display.default.svc.cluster.local"}`
-}

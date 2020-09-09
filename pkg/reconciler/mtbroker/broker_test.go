@@ -22,23 +22,18 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -53,7 +48,6 @@ import (
 	"knative.dev/pkg/resolver"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
-	rtv1alpha1 "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
@@ -66,32 +60,9 @@ const (
 
 	configMapName = "test-configmap"
 
-	triggerName     = "test-trigger"
-	triggerUID      = "test-trigger-uid"
-	triggerNameLong = "test-trigger-name-is-a-long-name"
-	triggerUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
-
 	triggerChannelAPIVersion = "messaging.knative.dev/v1"
 	triggerChannelKind       = "InMemoryChannel"
 	triggerChannelName       = "test-broker-kne-trigger"
-
-	subscriberURI     = "http://example.com/subscriber/"
-	subscriberKind    = "Service"
-	subscriberName    = "subscriber-name"
-	subscriberGroup   = "serving.knative.dev"
-	subscriberVersion = "v1"
-
-	pingSourceName              = "test-ping-source"
-	testSchedule                = "*/2 * * * *"
-	testData                    = "data"
-	sinkName                    = "testsink"
-	dependencyAnnotation        = "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1beta1\"}"
-	subscriberURIReference      = "foo"
-	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
-
-	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
-	currentGeneration     = 1
-	outdatedGeneration    = 0
 
 	imcSpec = `
 apiVersion: "messaging.knative.dev/v1"
@@ -108,28 +79,6 @@ var (
 	filterServiceName  = "broker-filter"
 	ingressServiceName = "broker-ingress"
 
-	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
-
-	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
-	subscriberGVK        = metav1.GroupVersionKind{
-		Group:   subscriberGroup,
-		Version: subscriberVersion,
-		Kind:    subscriberKind,
-	}
-	k8sServiceGVK = metav1.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Service",
-	}
-	brokerDestv1 = duckv1.Destination{
-		Ref: &duckv1.KReference{
-			Name:       sinkName,
-			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1",
-		},
-	}
-	sinkDNS       = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI       = "http://" + sinkDNS
 	brokerAddress = &apis.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, utils.GetClusterDomainName()),
@@ -567,202 +516,6 @@ func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
 				"address": map[string]interface{}{
 					"url": "http://",
 				},
-			},
-		},
-	}
-}
-
-func createTriggerChannelRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1",
-		Kind:       "InMemoryChannel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
-	}
-}
-
-func makeServiceURI() *apis.URL {
-	return &apis.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("broker-filter.%s.svc.%s", systemNS, utils.GetClusterDomainName()),
-		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
-	}
-}
-func makeFilterSubscription() *messagingv1.Subscription {
-	return resources.NewSubscription(makeTrigger(), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
-}
-
-func makeTrigger() *eventingv1.Trigger {
-	return &eventingv1.Trigger{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1",
-			Kind:       "Trigger",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      triggerName,
-			UID:       triggerUID,
-		},
-		Spec: eventingv1.TriggerSpec{
-			Broker: brokerName,
-			Filter: &eventingv1.TriggerFilter{
-				Attributes: map[string]string{"Source": "Any", "Type": "Any"},
-			},
-			Subscriber: duckv1.Destination{
-				Ref: &duckv1.KReference{
-					Name:       subscriberName,
-					Namespace:  testNS,
-					Kind:       subscriberKind,
-					APIVersion: subscriberAPIVersion,
-				},
-			},
-		},
-	}
-}
-
-func makeBrokerRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1",
-		Kind:       "Broker",
-		Namespace:  testNS,
-		Name:       brokerName,
-	}
-}
-func makeEmptyDelivery() *eventingduckv1.DeliverySpec {
-	return nil
-}
-
-func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
-	brokerObjs := []runtime.Object{
-		NewBroker(brokerName, testNS,
-			WithBrokerClass(eventing.MTChannelBrokerClassValue),
-			WithBrokerConfig(config()),
-			WithInitBrokerConditions,
-			WithBrokerReady,
-			WithBrokerFinalizers("brokers.eventing.knative.dev"),
-			WithBrokerResourceVersion(""),
-			WithBrokerAddressURI(brokerAddress),
-			WithChannelAddressAnnotation(triggerChannelURL),
-			WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
-			WithChannelKindAnnotation(triggerChannelKind),
-			WithChannelNameAnnotation(triggerChannelName)),
-		createChannel(testNS, true),
-		imcConfigMap(),
-		NewEndpoints(filterServiceName, systemNS,
-			WithEndpointsLabels(FilterLabels()),
-			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
-		NewEndpoints(ingressServiceName, systemNS,
-			WithEndpointsLabels(IngressLabels()),
-			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
-	}
-	return append(brokerObjs[:], objs...)
-}
-
-// Just so we can test subscription updates
-func makeDifferentReadySubscription() *messagingv1.Subscription {
-	s := makeFilterSubscription()
-	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
-	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
-	return s
-}
-
-func makeFilterSubscriptionNotOwnedByTrigger() *messagingv1.Subscription {
-	sub := makeFilterSubscription()
-	sub.OwnerReferences = []metav1.OwnerReference{}
-	return sub
-}
-
-func makeReadySubscription() *messagingv1.Subscription {
-	s := makeFilterSubscription()
-	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
-	return s
-}
-
-func makeReadySubscriptionDeprecatedName(triggerName, triggerUID string) *messagingv1.Subscription {
-	s := makeFilterSubscription()
-	t := NewTrigger(triggerName, testNS, brokerName)
-	t.UID = types.UID(triggerUID)
-	s.Name = utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", brokerName, triggerName))
-	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
-	return s
-}
-
-func makeReadySubscriptionWithCustomData(triggerName, triggerUID string) *messagingv1.Subscription {
-	t := makeTrigger()
-	t.Name = triggerName
-	t.UID = types.UID(triggerUID)
-
-	uri := makeServiceURI()
-	uri.Path = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
-
-	return resources.NewSubscription(t, createTriggerChannelRef(), makeBrokerRef(), uri, makeEmptyDelivery())
-}
-
-func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": subscriberAPIVersion,
-			"kind":       subscriberKind,
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      subscriberName,
-			},
-			"status": map[string]interface{}{
-				"address": map[string]interface{}{
-					"url": subscriberURI,
-				},
-			},
-		},
-	}
-}
-
-func makeFalseStatusSubscription() *messagingv1.Subscription {
-	s := makeFilterSubscription()
-	s.Status.MarkReferencesNotResolved("testInducedError", "test induced error")
-	return s
-}
-
-func makeFalseStatusPingSource() *sourcesv1beta1.PingSource {
-	return rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS, rtv1alpha1.WithPingSourceV1B1SinkNotFound)
-}
-
-func makeUnknownStatusCronJobSource() *sourcesv1beta1.PingSource {
-	cjs := rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS)
-	cjs.Status.InitializeConditions()
-	return cjs
-}
-
-func makeGenerationNotEqualPingSource() *sourcesv1beta1.PingSource {
-	c := makeFalseStatusPingSource()
-	c.Generation = currentGeneration
-	c.Status.ObservedGeneration = outdatedGeneration
-	return c
-}
-
-func makeReadyPingSource() *sourcesv1beta1.PingSource {
-	u := apis.HTTP(sinkURI)
-	return rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS,
-		rtv1alpha1.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-			Schedule: testSchedule,
-			JsonData: testData,
-			SourceSpec: duckv1.SourceSpec{
-				Sink: brokerDestv1,
-			},
-		}),
-		rtv1alpha1.WithInitPingSourceV1B1Conditions,
-		rtv1alpha1.WithPingSourceV1B1Deployed,
-		rtv1alpha1.WithPingSourceV1B1CloudEventAttributes,
-		rtv1alpha1.WithPingSourceV1B1Sink(u),
-	)
-}
-func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Service",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      subscriberName,
 			},
 		},
 	}

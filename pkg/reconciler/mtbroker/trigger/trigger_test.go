@@ -67,10 +67,8 @@ const (
 
 	configMapName = "test-configmap"
 
-	triggerName     = "test-trigger"
-	triggerUID      = "test-trigger-uid"
-	triggerNameLong = "test-trigger-name-is-a-long-name"
-	triggerUIDLong  = "cafed00d-cafed00d-cafed00d-cafed00d-cafed00d"
+	triggerName = "test-trigger"
+	triggerUID  = "test-trigger-uid"
 
 	triggerChannelAPIVersion = "messaging.knative.dev/v1"
 	triggerChannelKind       = "InMemoryChannel"
@@ -762,46 +760,6 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	}
 }
 
-func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
-	name := fmt.Sprintf("%s-kne-trigger", brokerName)
-	labels := map[string]interface{}{
-		eventing.BrokerLabelKey:                 brokerName,
-		"eventing.knative.dev/brokerEverything": "true",
-	}
-	annotations := map[string]interface{}{
-		"eventing.knative.dev/scope": "cluster",
-	}
-
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1",
-			"kind":       "InMemoryChannel",
-			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         "eventing.knative.dev/v1",
-						"blockOwnerDeletion": true,
-						"controller":         true,
-						"kind":               "Broker",
-						"name":               brokerName,
-						"uid":                "",
-					},
-				},
-				"labels":      labels,
-				"annotations": annotations,
-			},
-			"status": map[string]interface{}{
-				"address": map[string]interface{}{
-					"url": "http://",
-				},
-			},
-		},
-	}
-}
-
 func createTriggerChannelRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1",
@@ -905,26 +863,6 @@ func makeReadySubscription() *messagingv1.Subscription {
 	s := makeFilterSubscription()
 	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
 	return s
-}
-
-func makeReadySubscriptionDeprecatedName(triggerName, triggerUID string) *messagingv1.Subscription {
-	s := makeFilterSubscription()
-	t := NewTrigger(triggerName, testNS, brokerName)
-	t.UID = types.UID(triggerUID)
-	s.Name = utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", brokerName, triggerName))
-	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
-	return s
-}
-
-func makeReadySubscriptionWithCustomData(triggerName, triggerUID string) *messagingv1.Subscription {
-	t := makeTrigger()
-	t.Name = triggerName
-	t.UID = types.UID(triggerUID)
-
-	uri := makeServiceURI()
-	uri.Path = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
-
-	return resources.NewSubscription(t, createTriggerChannelRef(), makeBrokerRef(), uri, makeEmptyDelivery())
 }
 
 func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {

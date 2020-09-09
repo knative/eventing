@@ -34,9 +34,6 @@ import (
 const (
 	// ReconcilerName is the name of the reconciler.
 	ReconcilerName = "SourceCRDs"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "source-crds-controller"
 )
 
 // NewController creates a Reconciler for Sources' CRDs and returns the result of NewImpl.

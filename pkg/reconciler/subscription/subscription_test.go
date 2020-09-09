@@ -1130,36 +1130,6 @@ func TestAllCases(t *testing.T) {
 	}, false, logger))
 }
 
-func patchSubscribersV1Alpha1(namespace, name string, subscribers []eventingduckv1alpha1.SubscriberSpec) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-
-	var spec string
-	if subscribers != nil {
-		b, err := json.Marshal(subscribers)
-		if err != nil {
-			return action
-		}
-		ss := make([]map[string]interface{}, 0)
-		err = json.Unmarshal(b, &ss)
-		if err != nil {
-			return action
-		}
-		subs, err := json.Marshal(ss)
-		if err != nil {
-			return action
-		}
-		spec = fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
-	} else {
-		spec = `{"subscribable":{"subscribers":null}}`
-	}
-
-	patch := `{"spec":` + spec + `}`
-	action.Patch = []byte(patch)
-	return action
-}
-
 func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
