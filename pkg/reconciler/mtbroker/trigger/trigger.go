@@ -101,7 +101,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 
 	// If it's not my brokerclass, ignore
 	if b.Annotations[eventing.BrokerClassKey] != eventing.MTChannelBrokerClassValue {
-		logging.FromContext(ctx).Infow("Ignoring trigger %s/%s", t.Namespace, t.Name)
+		logging.FromContext(ctx).Infof("Ignoring trigger %s/%s", t.Namespace, t.Name)
 		return nil
 	}
 	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
