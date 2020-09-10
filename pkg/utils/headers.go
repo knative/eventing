@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-// TODO add configurable whitelisting of propagated headers/prefixes (configmap?)
+// TODO make propagated headers/prefixes configurable (configmap?)
 
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
