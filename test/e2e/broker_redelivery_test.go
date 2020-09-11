@@ -62,10 +62,10 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 
 func TestBrokerRedelivery(t *testing.T) {
 
-	channelTestRunner.RunTests(context.Background(), t, testlib.FeatureRedelivery, func(t *testing.T, component metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureRedelivery, func(t *testing.T, component metav1.TypeMeta) {
 
 		brokerCreator := ChannelBasedBrokerCreator(component, brokerClass)
 
-		helpers.BrokerRedelivery(t, brokerCreator)
+		helpers.BrokerRedelivery(context.Background(), t, brokerCreator)
 	})
 }

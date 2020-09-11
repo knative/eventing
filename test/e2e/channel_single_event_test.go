@@ -19,6 +19,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -35,6 +36,7 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 func TestSingleBinaryEventForChannelV1Beta1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
+		context.Background(),
 		t,
 		cloudevents.EncodingBinary,
 		helpers.SubscriptionV1beta1,
@@ -45,6 +47,7 @@ func TestSingleBinaryEventForChannelV1Beta1(t *testing.T) {
 
 func TestSingleStructuredEventForChannelV1Beta1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
+		context.Background(),
 		t,
 		cloudevents.EncodingStructured,
 		helpers.SubscriptionV1beta1,
@@ -55,6 +58,7 @@ func TestSingleStructuredEventForChannelV1Beta1(t *testing.T) {
 
 func TestSingleBinaryEventForChannelV1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
+		context.Background(),
 		t,
 		cloudevents.EncodingBinary,
 		helpers.SubscriptionV1,
@@ -65,6 +69,7 @@ func TestSingleBinaryEventForChannelV1(t *testing.T) {
 
 func TestSingleStructuredEventForChannelV1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
+		context.Background(),
 		t,
 		cloudevents.EncodingStructured,
 		helpers.SubscriptionV1,
