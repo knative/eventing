@@ -26,5 +26,5 @@ import (
 )
 
 func TestChannelStatusSubscriber(t *testing.T) {
-	helpers.ChannelStatusSubscriberTestHelperWithChannelTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
+	helpers.ChannelStatusSubscriberTestHelperWithChannelTestRunner(context.Background(), t, channelTestRunner, testlib.SetupClientOptionNoop)
 }

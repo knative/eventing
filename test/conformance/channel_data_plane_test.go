@@ -26,9 +26,9 @@ import (
 )
 
 func TestChannelDataPlaneSuccess(t *testing.T) {
-	helpers.ChannelDataPlaneSuccessTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
+	helpers.ChannelDataPlaneSuccessTestRunner(context.Background(),t, channelTestRunner, testlib.SetupClientOptionNoop)
 }
 
 func TestChannelDataPlaneFailure(t *testing.T) {
-	helpers.ChannelDataPlaneFailureTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
+	helpers.ChannelDataPlaneFailureTestRunner(context.Background(),t, channelTestRunner, testlib.SetupClientOptionNoop)
 }

@@ -19,6 +19,7 @@ limitations under the License.
 package conformance
 
 import (
+	"context"
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
@@ -26,5 +27,5 @@ import (
 )
 
 func TestChannelChannelableManipulatorClusterRoleTest(t *testing.T) {
-	helpers.TestChannelChannelableManipulatorClusterRoleTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
+	helpers.TestChannelChannelableManipulatorClusterRoleTestRunner(context.Background(), t, channelTestRunner, testlib.SetupClientOptionNoop)
 }
