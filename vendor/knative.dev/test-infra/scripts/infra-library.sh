@@ -124,7 +124,10 @@ function create_test_cluster() {
 # Parameters: $1 - extra cluster creation flags
 #             $2 - test command to run by the kubetest2 tester
 function create_kind_test_cluster() {
-  # TODO(chizhg): implement with kubetest2
+  run_go_tool sigs.k8s.io/kind@v0.8.1 kind --help > /dev/null 2>&1
+  local -n _test_command=$3
+  kind create cluster
+  kubetest2 kind --test=exec -- "${_test_command[@]}"
   return 0
 }
 
