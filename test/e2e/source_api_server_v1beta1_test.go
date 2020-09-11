@@ -197,6 +197,8 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
+	ctx := context.Background()
+
 	// creates ServiceAccount and RoleBinding with a role for reading pods and events
 	r := resources.Role(roleName,
 		resources.WithRuleForRole(&rbacv1.PolicyRule{
