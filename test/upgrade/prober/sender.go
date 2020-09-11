@@ -16,6 +16,7 @@
 package prober
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/wavesoftware/go-ensure"
@@ -27,7 +28,7 @@ import (
 
 var senderName = "wathola-sender"
 
-func (p *prober) deploySender() {
+func (p *prober) deploySender(ctx context.Context) {
 	p.log.Infof("Deploy sender pod: %v", senderName)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -61,18 +62,18 @@ func (p *prober) deploySender() {
 		},
 	}
 	_, err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).
-		Create(pod)
+		Create(ctx, pod, metav1.CreateOptions{})
 	ensure.NoError(err)
 
 	testlib.WaitFor(fmt.Sprintf("sender pod be ready: %v", senderName), func() error {
-		return pkgTest.WaitForPodRunning(p.client.Kube, senderName, p.client.Namespace)
+		return pkgTest.WaitForPodRunning(ctx, p.client.Kube, senderName, p.client.Namespace)
 	})
 }
 
-func (p *prober) removeSender() {
+func (p *prober) removeSender(ctx context.Context) {
 	p.log.Infof("Remove of sender pod: %v", senderName)
 
 	err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).
-		Delete(senderName, &metav1.DeleteOptions{})
+		Delete(ctx, senderName, metav1.DeleteOptions{})
 	ensure.NoError(err)
 }

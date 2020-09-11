@@ -16,6 +16,7 @@
 package prober
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/wavesoftware/go-ensure"
@@ -32,12 +33,12 @@ var (
 	receiverNodePort int32 = -1
 )
 
-func (p *prober) deployReceiver() {
-	p.deployReceiverPod()
-	p.deployReceiverService()
+func (p *prober) deployReceiver(ctx context.Context) {
+	p.deployReceiverPod(ctx)
+	p.deployReceiverService(ctx)
 }
 
-func (p *prober) deployReceiverPod() {
+func (p *prober) deployReceiverPod(ctx context.Context) {
 	p.log.Infof("Deploy of receiver pod: %v", receiverName)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -81,15 +82,15 @@ func (p *prober) deployReceiverPod() {
 			},
 		},
 	}
-	_, err := p.client.Kube.CreatePod(pod)
+	_, err := p.client.Kube.CreatePod(ctx, pod)
 	ensure.NoError(err)
 
 	testlib.WaitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
-		return pkgTest.WaitForPodRunning(p.client.Kube, receiverName, p.client.Namespace)
+		return pkgTest.WaitForPodRunning(ctx, p.client.Kube, receiverName, p.client.Namespace)
 	})
 }
 
-func (p *prober) deployReceiverService() {
+func (p *prober) deployReceiverService(ctx context.Context) {
 	p.log.Infof("Deploy of receiver service: %v", receiverName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -115,7 +116,7 @@ func (p *prober) deployReceiverService() {
 		},
 	}
 	created, err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
-		Create(service)
+		Create(ctx, service, metav1.CreateOptions{})
 	ensure.NoError(err)
 	for _, portSpec := range created.Spec.Ports {
 		if portSpec.Port == 80 {

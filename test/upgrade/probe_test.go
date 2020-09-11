@@ -18,6 +18,7 @@
 package upgrade
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"syscall"
@@ -57,9 +58,9 @@ func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	// Use zap.SugarLogger instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
 	log := createLogger()
-	probe := prober.RunEventProber(log, client, config)
+	probe := prober.RunEventProber(context.Background(), log, client, config)
 	ensure.NoError(ioutil.WriteFile(test.EventingFlags.ReadyFile, []byte(readyMessage), 0666))
-	defer prober.AssertEventProber(t, probe)
+	defer prober.AssertEventProber(context.Background(), t, probe)
 
 	log.Infof("Waiting for file: %v as a signal that "+
 		"upgrade/downgrade is over, at which point we will finish the test "+

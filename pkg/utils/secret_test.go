@@ -17,6 +17,7 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -75,9 +76,9 @@ func TestCopySecret(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			// set up src namespace secret
 			srcNamespaceSecrets := tc.corev1Input.Secrets(srcNamespace)
-			_, secretCreateError := srcNamespaceSecrets.Create(&corev1.Secret{
+			_, secretCreateError := srcNamespaceSecrets.Create(context.Background(), &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: pullSecretName},
-			})
+			}, metav1.CreateOptions{})
 			if secretCreateError != nil {
 				t.Errorf("error creating secret resources for test case: %s", secretCreateError)
 
@@ -89,7 +90,7 @@ func TestCopySecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tgtNamespace,
 				}}
-			_, saCreateError := tgtNamespaceServiceAccts.Create(makeServiceAccount(namespace, svcAccountName))
+			_, saCreateError := tgtNamespaceServiceAccts.Create(context.Background(), makeServiceAccount(namespace, svcAccountName), metav1.CreateOptions{})
 			if saCreateError != nil {
 				t.Errorf("error creating service account resources for test case %s", saCreateError)
 			}
@@ -113,9 +114,9 @@ func TestCopySecret(t *testing.T) {
 			}
 
 			// clean up after test
-			tc.corev1Input.ServiceAccounts(tgtNamespace).Delete(svcAccountName, &metav1.DeleteOptions{})
-			tc.corev1Input.Secrets(srcNamespace).Delete(pullSecretName, &metav1.DeleteOptions{})
-			tc.corev1Input.Secrets(tc.tgtNS).Delete(pullSecretName, &metav1.DeleteOptions{})
+			tc.corev1Input.ServiceAccounts(tgtNamespace).Delete(context.Background(), svcAccountName, metav1.DeleteOptions{})
+			tc.corev1Input.Secrets(srcNamespace).Delete(context.Background(), pullSecretName, metav1.DeleteOptions{})
+			tc.corev1Input.Secrets(tc.tgtNS).Delete(context.Background(), pullSecretName, metav1.DeleteOptions{})
 		})
 	}
 }

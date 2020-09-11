@@ -121,14 +121,14 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 	toCreate, toDelete := r.computeDiff(current, expected)
 
 	for _, eventType := range toDelete {
-		if err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+		if err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Delete(ctx, eventType.Name, metav1.DeleteOptions{}); err != nil {
 			logging.FromContext(ctx).Errorw("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
 
 	for _, eventType := range toCreate {
-		if _, err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+		if _, err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Create(ctx, &eventType, metav1.CreateOptions{}); err != nil {
 			logging.FromContext(ctx).Errorw("Error creating eventType", zap.Any("eventType", eventType))
 			return err
 		}

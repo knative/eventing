@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 
@@ -103,7 +104,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSour
 		}
 	}
 
-	sinkURI, err := r.sinkResolver.URIFromDestinationV1(*dest, source)
+	sinkURI, err := r.sinkResolver.URIFromDestinationV1(ctx, *dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return newWarningSinkNotFound(dest)
@@ -172,7 +173,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 			d.Spec.Replicas = pointer.Int32Ptr(1)
 		}
 
-		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
+		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(ctx, d, metav1.UpdateOptions{}); err != nil {
 			return d, err
 		}
 		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "pingsource adapter deployment updated")

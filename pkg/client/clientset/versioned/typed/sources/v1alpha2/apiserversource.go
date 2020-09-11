@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,15 +38,15 @@ type ApiServerSourcesGetter interface {
 
 // ApiServerSourceInterface has methods to work with ApiServerSource resources.
 type ApiServerSourceInterface interface {
-	Create(*v1alpha2.ApiServerSource) (*v1alpha2.ApiServerSource, error)
-	Update(*v1alpha2.ApiServerSource) (*v1alpha2.ApiServerSource, error)
-	UpdateStatus(*v1alpha2.ApiServerSource) (*v1alpha2.ApiServerSource, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha2.ApiServerSource, error)
-	List(opts v1.ListOptions) (*v1alpha2.ApiServerSourceList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha2.ApiServerSource, err error)
+	Create(ctx context.Context, apiServerSource *v1alpha2.ApiServerSource, opts v1.CreateOptions) (*v1alpha2.ApiServerSource, error)
+	Update(ctx context.Context, apiServerSource *v1alpha2.ApiServerSource, opts v1.UpdateOptions) (*v1alpha2.ApiServerSource, error)
+	UpdateStatus(ctx context.Context, apiServerSource *v1alpha2.ApiServerSource, opts v1.UpdateOptions) (*v1alpha2.ApiServerSource, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha2.ApiServerSource, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha2.ApiServerSourceList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha2.ApiServerSource, err error)
 	ApiServerSourceExpansion
 }
 
@@ -64,20 +65,20 @@ func newApiServerSources(c *SourcesV1alpha2Client, namespace string) *apiServerS
 }
 
 // Get takes name of the apiServerSource, and returns the corresponding apiServerSource object, and an error if there is any.
-func (c *apiServerSources) Get(name string, options v1.GetOptions) (result *v1alpha2.ApiServerSource, err error) {
+func (c *apiServerSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha2.ApiServerSource, err error) {
 	result = &v1alpha2.ApiServerSource{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("apiserversources").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ApiServerSources that match those selectors.
-func (c *apiServerSources) List(opts v1.ListOptions) (result *v1alpha2.ApiServerSourceList, err error) {
+func (c *apiServerSources) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha2.ApiServerSourceList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *apiServerSources) List(opts v1.ListOptions) (result *v1alpha2.ApiServer
 		Resource("apiserversources").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested apiServerSources.
-func (c *apiServerSources) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *apiServerSources) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *apiServerSources) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("apiserversources").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a apiServerSource and creates it.  Returns the server's representation of the apiServerSource, and an error, if there is any.
-func (c *apiServerSources) Create(apiServerSource *v1alpha2.ApiServerSource) (result *v1alpha2.ApiServerSource, err error) {
+func (c *apiServerSources) Create(ctx context.Context, apiServerSource *v1alpha2.ApiServerSource, opts v1.CreateOptions) (result *v1alpha2.ApiServerSource, err error) {
 	result = &v1alpha2.ApiServerSource{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("apiserversources").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(apiServerSource).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a apiServerSource and updates it. Returns the server's representation of the apiServerSource, and an error, if there is any.
-func (c *apiServerSources) Update(apiServerSource *v1alpha2.ApiServerSource) (result *v1alpha2.ApiServerSource, err error) {
+func (c *apiServerSources) Update(ctx context.Context, apiServerSource *v1alpha2.ApiServerSource, opts v1.UpdateOptions) (result *v1alpha2.ApiServerSource, err error) {
 	result = &v1alpha2.ApiServerSource{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("apiserversources").
 		Name(apiServerSource.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(apiServerSource).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *apiServerSources) UpdateStatus(apiServerSource *v1alpha2.ApiServerSource) (result *v1alpha2.ApiServerSource, err error) {
+func (c *apiServerSources) UpdateStatus(ctx context.Context, apiServerSource *v1alpha2.ApiServerSource, opts v1.UpdateOptions) (result *v1alpha2.ApiServerSource, err error) {
 	result = &v1alpha2.ApiServerSource{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("apiserversources").
 		Name(apiServerSource.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(apiServerSource).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the apiServerSource and deletes it. Returns an error if one occurs.
-func (c *apiServerSources) Delete(name string, options *v1.DeleteOptions) error {
+func (c *apiServerSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("apiserversources").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *apiServerSources) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *apiServerSources) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("apiserversources").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched apiServerSource.
-func (c *apiServerSources) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha2.ApiServerSource, err error) {
+func (c *apiServerSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha2.ApiServerSource, err error) {
 	result = &v1alpha2.ApiServerSource{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("apiserversources").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

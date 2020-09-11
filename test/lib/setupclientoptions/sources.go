@@ -17,6 +17,7 @@ limitations under the License.
 package setupclientoptions
 
 import (
+	"context"
 	"fmt"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -34,15 +35,14 @@ import (
 // to create a new ApiServerSource. It creates a ServiceAccount, a Role, a
 // RoleBinding, a RecordEvents pod and an ApiServerSource object with the event
 // mode and RecordEvent pod as its sink.
-func ApiServerSourceV1B1ClientSetupOption(name string, mode string, recordEventsPodName string,
+func ApiServerSourceV1B1ClientSetupOption(ctx context.Context, name string, mode string, recordEventsPodName string,
 	roleName string, serviceAccountName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 		// create needed RBAC SA, Role & RoleBinding
 		createRbacObjects(client, roleName, serviceAccountName)
 
 		// create event record
-		recordevents.StartEventRecordOrFail(client,
-			recordEventsPodName)
+		recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 
 		spec := sourcesv1beta1.ApiServerSourceSpec{
 			Resources: []sourcesv1beta1.APIVersionKindSelector{{
@@ -63,18 +63,18 @@ func ApiServerSourceV1B1ClientSetupOption(name string, mode string, recordEvents
 		client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
 
 		// wait for all test resources to be ready
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 	}
 }
 
 // PingSourceV1B1ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new PingSource. It creates a RecordEvents pod and a
 // PingSource object with the RecordEvent pod as its sink.
-func PingSourceV1B1ClientSetupOption(name string, recordEventsPodName string) testlib.SetupClientOption {
+func PingSourceV1B1ClientSetupOption(ctx context.Context, name string, recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 
 		// create event logger pod and service
-		recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 
 		// create cron job source
 		data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
@@ -93,7 +93,7 @@ func PingSourceV1B1ClientSetupOption(name string, recordEventsPodName string) te
 		client.CreatePingSourceV1Beta1OrFail(source)
 
 		// wait for all test resources to be ready
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 	}
 }
 

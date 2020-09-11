@@ -19,6 +19,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +29,6 @@ import (
 
 func TestTriggerNoBroker(t *testing.T) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		helpers.TestTriggerNoBroker(t, channel.Kind, helpers.ChannelBasedBrokerCreator(channel, brokerClass))
+		helpers.TestTriggerNoBroker(context.Background(), t, channel.Kind, helpers.ChannelBasedBrokerCreator(channel, brokerClass))
 	})
 }

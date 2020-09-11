@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +62,13 @@ func NewFilteredTriggerInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1().Triggers(namespace).List(options)
+				return client.EventingV1().Triggers(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1().Triggers(namespace).Watch(options)
+				return client.EventingV1().Triggers(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&eventingv1.Trigger{},

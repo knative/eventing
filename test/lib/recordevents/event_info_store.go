@@ -17,6 +17,7 @@ limitations under the License.
 package recordevents
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -100,14 +101,14 @@ func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore,
 type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
 
 // Deploys a new recordevents pod and start the associated EventInfoStore
-func StartEventRecordOrFail(client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {
+func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {
 	eventRecordPod := resources.EventRecordPod(podName)
 	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(podName))...)
-	err := pkgTest.WaitForPodRunning(client.Kube, podName, client.Namespace)
+	err := pkgTest.WaitForPodRunning(ctx, client.Kube, podName, client.Namespace)
 	if err != nil {
 		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", podName, errors.WithStack(err))
 	}
-	client.WaitForServiceEndpointsOrFail(podName, 1)
+	client.WaitForServiceEndpointsOrFail(ctx, podName, 1)
 
 	eventTracker, err := NewEventInfoStore(client, podName)
 	if err != nil {

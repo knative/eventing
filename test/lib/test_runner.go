@@ -17,6 +17,7 @@ limitations under the License.
 package lib
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -187,7 +188,7 @@ func TearDown(client *Client) {
 	}
 
 	// Dump the events in the namespace
-	el, err := client.Kube.Kube.CoreV1().Events(client.Namespace).List(metav1.ListOptions{})
+	el, err := client.Kube.Kube.CoreV1().Events(client.Namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		client.T.Logf("Could not list events in the namespace %q: %v", client.Namespace, err)
 	} else {
@@ -214,11 +215,11 @@ func TearDown(client *Client) {
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
-	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 
 	if err != nil && apierrs.IsNotFound(err) {
 		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		_, err = client.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+		_, err = client.Kube.Kube.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
 
 		if err != nil {
 			t.Fatalf("Failed to create Namespace: %s; %v", namespace, err)
@@ -246,7 +247,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 func waitForServiceAccountExists(client *Client, name, namespace string) error {
 	return wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
 		sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
-		if _, err := sas.Get(name, metav1.GetOptions{}); err == nil {
+		if _, err := sas.Get(context.Background(), name, metav1.GetOptions{}); err == nil {
 			return true, nil
 		}
 		return false, nil
@@ -255,9 +256,9 @@ func waitForServiceAccountExists(client *Client, name, namespace string) error {
 
 // DeleteNameSpace deletes the namespace that has the given name.
 func DeleteNameSpace(client *Client) error {
-	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
+	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(context.Background(), client.Namespace, metav1.GetOptions{})
 	if err == nil || !apierrs.IsNotFound(err) {
-		return client.Kube.Kube.CoreV1().Namespaces().Delete(client.Namespace, nil)
+		return client.Kube.Kube.CoreV1().Namespaces().Delete(context.Background(), client.Namespace, metav1.DeleteOptions{})
 	}
 	return err
 }

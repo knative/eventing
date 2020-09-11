@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var brokersResource = schema.GroupVersionResource{Group: "eventing.knative.dev",
 var brokersKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1beta1", Kind: "Broker"}
 
 // Get takes name of the broker, and returns the corresponding broker object, and an error if there is any.
-func (c *FakeBrokers) Get(name string, options v1.GetOptions) (result *v1beta1.Broker, err error) {
+func (c *FakeBrokers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Broker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(brokersResource, c.ns, name), &v1beta1.Broker{})
 
@@ -50,7 +52,7 @@ func (c *FakeBrokers) Get(name string, options v1.GetOptions) (result *v1beta1.B
 }
 
 // List takes label and field selectors, and returns the list of Brokers that match those selectors.
-func (c *FakeBrokers) List(opts v1.ListOptions) (result *v1beta1.BrokerList, err error) {
+func (c *FakeBrokers) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.BrokerList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(brokersResource, brokersKind, c.ns, opts), &v1beta1.BrokerList{})
 
@@ -72,14 +74,14 @@ func (c *FakeBrokers) List(opts v1.ListOptions) (result *v1beta1.BrokerList, err
 }
 
 // Watch returns a watch.Interface that watches the requested brokers.
-func (c *FakeBrokers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeBrokers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(brokersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a broker and creates it.  Returns the server's representation of the broker, and an error, if there is any.
-func (c *FakeBrokers) Create(broker *v1beta1.Broker) (result *v1beta1.Broker, err error) {
+func (c *FakeBrokers) Create(ctx context.Context, broker *v1beta1.Broker, opts v1.CreateOptions) (result *v1beta1.Broker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(brokersResource, c.ns, broker), &v1beta1.Broker{})
 
@@ -90,7 +92,7 @@ func (c *FakeBrokers) Create(broker *v1beta1.Broker) (result *v1beta1.Broker, er
 }
 
 // Update takes the representation of a broker and updates it. Returns the server's representation of the broker, and an error, if there is any.
-func (c *FakeBrokers) Update(broker *v1beta1.Broker) (result *v1beta1.Broker, err error) {
+func (c *FakeBrokers) Update(ctx context.Context, broker *v1beta1.Broker, opts v1.UpdateOptions) (result *v1beta1.Broker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(brokersResource, c.ns, broker), &v1beta1.Broker{})
 
@@ -102,7 +104,7 @@ func (c *FakeBrokers) Update(broker *v1beta1.Broker) (result *v1beta1.Broker, er
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeBrokers) UpdateStatus(broker *v1beta1.Broker) (*v1beta1.Broker, error) {
+func (c *FakeBrokers) UpdateStatus(ctx context.Context, broker *v1beta1.Broker, opts v1.UpdateOptions) (*v1beta1.Broker, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(brokersResource, "status", c.ns, broker), &v1beta1.Broker{})
 
@@ -113,7 +115,7 @@ func (c *FakeBrokers) UpdateStatus(broker *v1beta1.Broker) (*v1beta1.Broker, err
 }
 
 // Delete takes name of the broker and deletes it. Returns an error if one occurs.
-func (c *FakeBrokers) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeBrokers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(brokersResource, c.ns, name), &v1beta1.Broker{})
 
@@ -121,15 +123,15 @@ func (c *FakeBrokers) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeBrokers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(brokersResource, c.ns, listOptions)
+func (c *FakeBrokers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(brokersResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.BrokerList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched broker.
-func (c *FakeBrokers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.Broker, err error) {
+func (c *FakeBrokers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Broker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(brokersResource, c.ns, name, pt, data, subresources...), &v1beta1.Broker{})
 

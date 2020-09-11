@@ -17,6 +17,7 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -38,7 +39,7 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 	tgtNamespaceSecrets := corev1Input.Secrets(tgtNS)
 
 	// First try to find the secret we're supposed to copy
-	srcSecret, err := srcSecrets.Get(srcSecretName, metav1.GetOptions{})
+	srcSecret, err := srcSecrets.Get(context.Background(), srcSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -50,21 +51,23 @@ func CopySecret(corev1Input clientcorev1.CoreV1Interface, srcNS string, srcSecre
 
 	// Found the secret, so now make a copy in our new namespace
 	newSecret, err := tgtNamespaceSecrets.Create(
+		context.Background(),
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: srcSecretName,
 			},
 			Data: srcSecret.Data,
 			Type: srcSecret.Type,
-		})
+		},
+		metav1.CreateOptions{})
 
 	// If the secret already exists then that's ok - may have already been created
 	if err != nil && !apierrs.IsAlreadyExists(err) {
 		return nil, fmt.Errorf("error copying the Secret: %s", err)
 	}
 
-	_, err = tgtNamespaceSvcAcct.Patch(svcAccount, types.StrategicMergePatchType,
-		[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
+	_, err = tgtNamespaceSvcAcct.Patch(context.Background(), svcAccount, types.StrategicMergePatchType,
+		[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`), metav1.PatchOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
 			tgtNS, srcSecretName, err)

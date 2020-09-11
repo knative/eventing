@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var configmappropagationsResource = schema.GroupVersionResource{Group: "configs.
 var configmappropagationsKind = schema.GroupVersionKind{Group: "configs.internal.knative.dev", Version: "v1alpha1", Kind: "ConfigMapPropagation"}
 
 // Get takes name of the configMapPropagation, and returns the corresponding configMapPropagation object, and an error if there is any.
-func (c *FakeConfigMapPropagations) Get(name string, options v1.GetOptions) (result *v1alpha1.ConfigMapPropagation, err error) {
+func (c *FakeConfigMapPropagations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ConfigMapPropagation, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(configmappropagationsResource, c.ns, name), &v1alpha1.ConfigMapPropagation{})
 
@@ -50,7 +52,7 @@ func (c *FakeConfigMapPropagations) Get(name string, options v1.GetOptions) (res
 }
 
 // List takes label and field selectors, and returns the list of ConfigMapPropagations that match those selectors.
-func (c *FakeConfigMapPropagations) List(opts v1.ListOptions) (result *v1alpha1.ConfigMapPropagationList, err error) {
+func (c *FakeConfigMapPropagations) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ConfigMapPropagationList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(configmappropagationsResource, configmappropagationsKind, c.ns, opts), &v1alpha1.ConfigMapPropagationList{})
 
@@ -72,14 +74,14 @@ func (c *FakeConfigMapPropagations) List(opts v1.ListOptions) (result *v1alpha1.
 }
 
 // Watch returns a watch.Interface that watches the requested configMapPropagations.
-func (c *FakeConfigMapPropagations) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeConfigMapPropagations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(configmappropagationsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a configMapPropagation and creates it.  Returns the server's representation of the configMapPropagation, and an error, if there is any.
-func (c *FakeConfigMapPropagations) Create(configMapPropagation *v1alpha1.ConfigMapPropagation) (result *v1alpha1.ConfigMapPropagation, err error) {
+func (c *FakeConfigMapPropagations) Create(ctx context.Context, configMapPropagation *v1alpha1.ConfigMapPropagation, opts v1.CreateOptions) (result *v1alpha1.ConfigMapPropagation, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(configmappropagationsResource, c.ns, configMapPropagation), &v1alpha1.ConfigMapPropagation{})
 
@@ -90,7 +92,7 @@ func (c *FakeConfigMapPropagations) Create(configMapPropagation *v1alpha1.Config
 }
 
 // Update takes the representation of a configMapPropagation and updates it. Returns the server's representation of the configMapPropagation, and an error, if there is any.
-func (c *FakeConfigMapPropagations) Update(configMapPropagation *v1alpha1.ConfigMapPropagation) (result *v1alpha1.ConfigMapPropagation, err error) {
+func (c *FakeConfigMapPropagations) Update(ctx context.Context, configMapPropagation *v1alpha1.ConfigMapPropagation, opts v1.UpdateOptions) (result *v1alpha1.ConfigMapPropagation, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(configmappropagationsResource, c.ns, configMapPropagation), &v1alpha1.ConfigMapPropagation{})
 
@@ -102,7 +104,7 @@ func (c *FakeConfigMapPropagations) Update(configMapPropagation *v1alpha1.Config
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeConfigMapPropagations) UpdateStatus(configMapPropagation *v1alpha1.ConfigMapPropagation) (*v1alpha1.ConfigMapPropagation, error) {
+func (c *FakeConfigMapPropagations) UpdateStatus(ctx context.Context, configMapPropagation *v1alpha1.ConfigMapPropagation, opts v1.UpdateOptions) (*v1alpha1.ConfigMapPropagation, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(configmappropagationsResource, "status", c.ns, configMapPropagation), &v1alpha1.ConfigMapPropagation{})
 
@@ -113,7 +115,7 @@ func (c *FakeConfigMapPropagations) UpdateStatus(configMapPropagation *v1alpha1.
 }
 
 // Delete takes name of the configMapPropagation and deletes it. Returns an error if one occurs.
-func (c *FakeConfigMapPropagations) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeConfigMapPropagations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(configmappropagationsResource, c.ns, name), &v1alpha1.ConfigMapPropagation{})
 
@@ -121,15 +123,15 @@ func (c *FakeConfigMapPropagations) Delete(name string, options *v1.DeleteOption
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeConfigMapPropagations) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(configmappropagationsResource, c.ns, listOptions)
+func (c *FakeConfigMapPropagations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(configmappropagationsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ConfigMapPropagationList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched configMapPropagation.
-func (c *FakeConfigMapPropagations) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ConfigMapPropagation, err error) {
+func (c *FakeConfigMapPropagations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ConfigMapPropagation, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(configmappropagationsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ConfigMapPropagation{})
 

@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -37,7 +38,7 @@ var podMeta = metav1.TypeMeta{
 	APIVersion: "v1",
 }
 
-func BrokerDataPlaneSetupHelper(client *testlib.Client, brokerClass string, brokerTestRunner testlib.ComponentsTestRunner) *eventingv1beta1.Broker {
+func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, brokerClass string, brokerTestRunner testlib.ComponentsTestRunner) *eventingv1beta1.Broker {
 	var broker *eventingv1beta1.Broker
 	var err error
 	brokerName := brokerTestRunner.ComponentName
@@ -53,17 +54,17 @@ func BrokerDataPlaneSetupHelper(client *testlib.Client, brokerClass string, brok
 		)
 		client.WaitForResourceReadyOrFail(broker.Name, testlib.BrokerTypeMeta)
 	} else {
-		if broker, err = client.Eventing.EventingV1beta1().Brokers(brokerNamespace).Get(brokerName, metav1.GetOptions{}); err != nil {
+		if broker, err = client.Eventing.EventingV1beta1().Brokers(brokerNamespace).Get(ctx, brokerName, metav1.GetOptions{}); err != nil {
 			client.T.Fatalf("Could not Get broker %s/%s: %v", brokerNamespace, brokerName, err)
 		}
 	}
 	return broker
 }
 
-func BrokerDataPlaneNamespaceSetupOption(namespace string) testlib.SetupClientOption {
+func BrokerDataPlaneNamespaceSetupOption(ctx context.Context, namespace string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 		if namespace != "" {
-			client.Kube.Kube.CoreV1().Namespaces().Delete(client.Namespace, nil)
+			client.Kube.Kube.CoreV1().Namespaces().Delete(ctx, client.Namespace, metav1.DeleteOptions{})
 			client.Namespace = namespace
 		}
 	}
@@ -76,6 +77,7 @@ func BrokerDataPlaneNamespaceSetupOption(namespace string) testlib.SetupClientOp
 //Respond with 400 on bad CE
 //Reject non-POST requests to publish URI
 func BrokerV1Beta1IngressDataPlaneTestHelper(
+	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
 	brokerTestRunner testlib.ComponentsTestRunner,
@@ -84,11 +86,11 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		client := testlib.Setup(t, false, options...)
 		defer testlib.TearDown(client)
 
-		broker := BrokerDataPlaneSetupHelper(client, brokerClass, brokerTestRunner)
+		broker := BrokerDataPlaneSetupHelper(ctx, client, brokerClass, brokerTestRunner)
 		triggerName := "trigger"
 		loggerName := "logger-pod"
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, loggerName)
-		client.WaitForAllTestResourcesReadyOrFail()
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, loggerName)
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		trigger := client.CreateTriggerOrFailV1Beta1(
 			triggerName,
@@ -112,7 +114,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			event.Context.AsV03()
 			event.SetSpecVersion("0.3")
 			senderName := "v03-test-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasId(eventID),
 				cetest.HasSpecVersion("0.3"),
@@ -133,7 +135,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			}
 
 			senderName := "v10-test-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasId(eventID),
 				cetest.HasSpecVersion("1.0"),
@@ -154,7 +156,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 				t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 			}
 			senderName := "structured-test-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasId(eventID),
 			))
@@ -173,7 +175,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 				t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 			}
 			senderName := "binary-test-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingBinary))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingBinary))
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasId(eventID),
 			))
@@ -186,7 +188,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			body := fmt.Sprintf(`{"msg":%q}`, eventID)
 			responseSink := "http://" + client.GetServiceHost(loggerName)
 			senderName := "twohundred-test-sender"
-			client.SendRequestToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta,
+			client.SendRequestToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta,
 				map[string]string{
 					"ce-specversion": "1.0",
 					"ce-type":        testlib.DefaultEventType,
@@ -207,7 +209,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			body := ";la}{kjsdf;oai2095{}{}8234092349807asdfashdf"
 			responseSink := "http://" + client.GetServiceHost(loggerName)
 			senderName := "fourhundres-test-sender"
-			client.SendRequestToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta,
+			client.SendRequestToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta,
 				map[string]string{
 					"ce-specversion": "9000.1", //its over 9,000!
 					"ce-type":        testlib.DefaultEventType,
@@ -232,6 +234,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 //Replies are accepted and delivered
 //Replies that are unsuccessfully forwarded cause initial message to be redelivered (Very difficult to test, can be ignored)
 func BrokerV1Beta1ConsumerDataPlaneTestHelper(
+	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
 	brokerTestRunner testlib.ComponentsTestRunner,
@@ -240,7 +243,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		client := testlib.Setup(t, false, options...)
 		defer testlib.TearDown(client)
 
-		broker := BrokerDataPlaneSetupHelper(client, brokerClass, brokerTestRunner)
+		broker := BrokerDataPlaneSetupHelper(ctx, client, brokerClass, brokerTestRunner)
 
 		triggerName := "trigger"
 		secondTriggerName := "second-trigger"
@@ -250,8 +253,8 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		replySource := "origin-for-reply"
 		eventID := "consumer-broker-tests"
 		baseSource := "consumer-test-sender"
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, loggerName)
-		secondTracker, _ := recordevents.StartEventRecordOrFail(client, secondLoggerName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, loggerName)
+		secondTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, secondLoggerName)
 
 		baseEvent := ce.NewEvent()
 		baseEvent.SetID(eventID)
@@ -271,7 +274,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			transformMsg,
 		)
 		client.CreatePodOrFail(transformPod, testlib.WithService(transformerName))
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		trigger := client.CreateTriggerOrFailV1Beta1(
 			triggerName,
@@ -310,7 +313,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			event.SetID(source)
 			event.Context = event.Context.AsV03()
 			senderName := source + "-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasSpecVersion("0.3"),
 				cetest.HasId("no-upgrade"),
@@ -325,7 +328,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			id := "identical-attributes"
 			event.SetID(id)
 			senderName := id + "-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			originalEventMatcher := recordevents.MatchEvent(
 				cetest.HasId(id),
 				cetest.HasType(testlib.DefaultEventType),
@@ -343,8 +346,8 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			secondEvent := baseEvent
 			firstSenderName := "first-" + source + "-sender"
 			secondSenderName := "second-" + source + "-sender"
-			client.SendEventToAddressable(firstSenderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
-			client.SendEventToAddressable(secondSenderName, broker.Name, testlib.BrokerTypeMeta, secondEvent, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, firstSenderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, secondSenderName, broker.Name, testlib.BrokerTypeMeta, secondEvent, sender.WithEncoding(ce.EncodingStructured))
 			filteredEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource(source),
 			)
@@ -362,7 +365,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			source := "filtered-event"
 			event.SetSource(source)
 			senderName := source + "-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			filteredEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource(source),
 			)
@@ -376,7 +379,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			source := "delivery-check"
 			event.SetSource(source)
 			senderName := source + "-sender"
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			originalEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource(source),
 			)
@@ -388,10 +391,10 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			event := baseEvent
 			event.SetSource(replySource)
 			senderName := replySource + "-sender"
-			client.WaitForServiceEndpointsOrFail(transformerName, 1)
+			client.WaitForServiceEndpointsOrFail(ctx, transformerName, 1)
 			client.WaitForResourceReadyOrFail(transformTrigger.Name, testlib.TriggerTypeMeta)
 			client.WaitForResourceReadyOrFail(replyTrigger.Name, testlib.TriggerTypeMeta)
-			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
+			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
 			transformedEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource("reply-check-source"),
 				cetest.HasType("reply-check-type"),

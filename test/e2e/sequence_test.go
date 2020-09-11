@@ -18,15 +18,16 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"knative.dev/eventing/test/e2e/helpers"
 )
 
 func TestSequence(t *testing.T) {
-	helpers.SequenceTestHelper(t, channelTestRunner)
+	helpers.SequenceTestHelper(context.Background(), t, channelTestRunner)
 }
 
 func TestSequenceV1(t *testing.T) {
-	helpers.SequenceV1TestHelper(t, channelTestRunner)
+	helpers.SequenceV1TestHelper(context.Background(), t, channelTestRunner)
 }

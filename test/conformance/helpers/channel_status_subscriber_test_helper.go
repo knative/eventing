@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"testing"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -32,6 +33,7 @@ import (
 // ChannelStatusSubscriberTestHelperWithChannelTestRunner runs the tests of
 // subscriber field of status for all Channels in the ComponentsTestRunner.
 func ChannelStatusSubscriberTestHelperWithChannelTestRunner(
+	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
@@ -42,12 +44,12 @@ func ChannelStatusSubscriberTestHelperWithChannelTestRunner(
 		defer testlib.TearDown(client)
 
 		t.Run("Channel has required status subscriber fields", func(t *testing.T) {
-			channelHasRequiredSubscriberStatus(st, client, channel, options...)
+			channelHasRequiredSubscriberStatus(ctx, st, client, channel, options...)
 		})
 	})
 }
 
-func channelHasRequiredSubscriberStatus(st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
+func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
 	st.Logf("Running channel subscriber status conformance test with channel %q", channel)
 
 	channelName := "channel-req-status-subscriber"
@@ -68,7 +70,7 @@ func channelHasRequiredSubscriberStatus(st *testing.T, client *testlib.Client, c
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	dtsv, err := getChannelDuckTypeSupportVersion(channelName, client, &channel)
 	if err != nil {

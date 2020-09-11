@@ -91,7 +91,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 
 	ra, err := r.deploymentLister.Deployments(expected.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Create(expected)
+		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("creating new Deployment: %v", err)
 		}
@@ -102,7 +102,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 		return nil, fmt.Errorf("Deployment %q is not owned by ContainerSource %q", ra.Name, source.Name)
 	} else if r.podSpecChanged(&ra.Spec.Template.Spec, &expected.Spec.Template.Spec) {
 		ra.Spec.Template.Spec = expected.Spec.Template.Spec
-		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Update(ra)
+		ra, err = r.kubeClientSet.AppsV1().Deployments(expected.Namespace).Update(ctx, ra, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("updating Deployment: %v", err)
 		}
@@ -121,7 +121,7 @@ func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1beta1.C
 
 	sb, err := r.sinkBindingLister.SinkBindings(source.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		sb, err = r.eventingClientSet.SourcesV1beta1().SinkBindings(source.Namespace).Create(expected)
+		sb, err = r.eventingClientSet.SourcesV1beta1().SinkBindings(source.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("creating new SinkBinding: %v", err)
 		}
@@ -132,7 +132,7 @@ func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1beta1.C
 		return nil, fmt.Errorf("SinkBinding %q is not owned by ContainerSource %q", sb.Name, source.Name)
 	} else if r.sinkBindingSpecChanged(&sb.Spec, &expected.Spec) {
 		sb.Spec = expected.Spec
-		sb, err = r.eventingClientSet.SourcesV1beta1().SinkBindings(source.Namespace).Update(sb)
+		sb, err = r.eventingClientSet.SourcesV1beta1().SinkBindings(source.Namespace).Update(ctx, sb, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("updating SinkBinding: %v", err)
 		}

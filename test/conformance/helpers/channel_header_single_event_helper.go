@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -40,6 +41,7 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 // SingleEventWithKnativeHeaderHelperForChannelTestHelper is the helper function for header_test
 func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
+	ctx context.Context,
 	t *testing.T,
 	encoding cloudevents.Encoding,
 	channelTestRunner testlib.ComponentsTestRunner,
@@ -60,7 +62,7 @@ func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 		client.CreateChannelOrFail(channelName, &channel)
 
 		// create logger service as the subscriber
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
@@ -70,7 +72,7 @@ func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send CloudEvent to the channel
 		eventID := uuid.New().String()
@@ -85,6 +87,7 @@ func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 
 		st.Logf("Sending event with knative headers to %s", senderName)
 		client.SendEventToAddressable(
+			ctx,
 			senderName,
 			channelName,
 			&channel,

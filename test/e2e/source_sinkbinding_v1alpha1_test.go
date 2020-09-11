@@ -18,6 +18,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -52,8 +53,10 @@ func TestSinkBindingDeployment(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
+	ctx := context.Background()
+
 	// create event record pod
-	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
 	extensionSecret := string(uuid.NewUUID())
 
 	// create sink binding
@@ -111,7 +114,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 	})
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(
 		recordevents.MatchHeartBeatsImageMessage(message),
@@ -133,8 +136,10 @@ func TestSinkBindingCronJob(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
+	ctx := context.Background()
+
 	// create event logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPod)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPod)
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBindingV1Alpha1(
 		sinkBindingName,
@@ -195,7 +200,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 	})
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// verify the logger service receives the event
 	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(

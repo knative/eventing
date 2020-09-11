@@ -16,6 +16,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -41,7 +42,9 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 
 Note: the number denotes the sequence of the event that flows in this test case.
 */
-func EventTransformationForTriggerTestHelper(t *testing.T,
+func EventTransformationForTriggerTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	brokerVersion string,
 	triggerVersion string,
 	creator BrokerCreator,
@@ -96,7 +99,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 	}
 
 	// create logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 	// create trigger2 for event receiving
 	if triggerVersion == "v1" {
 		client.CreateTriggerV1OrFail(
@@ -115,7 +118,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 	}
 
 	// wait for all test resources to be ready, so that we can start sending events
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// eventToSend is the event sent as input of the test
 	eventToSend := cloudevents.NewEvent()
@@ -125,7 +128,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 	if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
 		t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 	}
-	client.SendEventToAddressable(senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
+	client.SendEventToAddressable(ctx, senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 	// check if the logging service receives the correct event
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(

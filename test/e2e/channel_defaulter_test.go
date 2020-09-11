@@ -19,6 +19,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"knative.dev/eventing/test/e2e/helpers"
@@ -26,10 +27,10 @@ import (
 
 // TestChannelClusterDefaulter tests a cluster defaulted channel can be created with the template specified through configmap.
 func TestChannelClusterDefaulter(t *testing.T) {
-	helpers.ChannelClusterDefaulterTestHelper(t, channelTestRunner)
+	helpers.ChannelClusterDefaulterTestHelper(context.Background(), t, channelTestRunner)
 }
 
 // TestChannelNamespaceDefaulter tests a namespace defaulted channel can be created with the template specified through configmap.
 func TestChannelNamespaceDefaulter(t *testing.T) {
-	helpers.ChannelNamespaceDefaulterTestHelper(t, channelTestRunner)
+	helpers.ChannelNamespaceDefaulterTestHelper(context.Background(), t, channelTestRunner)
 }

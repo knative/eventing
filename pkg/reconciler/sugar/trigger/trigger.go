@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
@@ -58,7 +59,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reco
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
 		_, err = r.eventingClientSet.EventingV1beta1().Brokers(t.Namespace).Create(
-			resources.MakeBroker(t.Namespace, t.Spec.Broker))
+			ctx, resources.MakeBroker(t.Namespace, t.Spec.Broker), metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("Unable to create Broker: %w", err)
 		}

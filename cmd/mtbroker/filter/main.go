@@ -92,7 +92,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
-	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(metrics.ExporterOptions{
+	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
 		Component:      component,
 		PrometheusPort: defaultMetricsPort,
 	}, sl)

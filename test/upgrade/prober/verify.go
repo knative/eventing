@@ -17,6 +17,7 @@ package prober
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,8 +49,8 @@ func (p *prober) Verify() ([]error, int) {
 	return errs, report.Events
 }
 
-func (p *prober) Finish() {
-	p.removeSender()
+func (p *prober) Finish(ctx context.Context) {
+	p.removeSender(ctx)
 }
 
 func fetchReceiverReport(address *corev1.NodeAddress, log *zap.SugaredLogger) *Report {

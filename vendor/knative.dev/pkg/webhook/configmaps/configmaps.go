@@ -27,6 +27,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -157,7 +158,7 @@ func (ac *reconciler) reconcileValidatingWebhook(ctx context.Context, caCert []b
 	} else if !ok {
 		logger.Info("Updating webhook")
 		vwhclient := ac.client.AdmissionregistrationV1().ValidatingWebhookConfigurations()
-		if _, err := vwhclient.Update(webhook); err != nil {
+		if _, err := vwhclient.Update(ctx, webhook, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {

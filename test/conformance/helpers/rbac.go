@@ -17,15 +17,17 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 
 	authv1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	testlib "knative.dev/eventing/test/lib"
 )
 
 func ServiceAccountCanDoVerbOnResourceOrFail(client *testlib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
-	r, err := client.Kube.Kube.AuthorizationV1().SubjectAccessReviews().Create(&authv1.SubjectAccessReview{
+	r, err := client.Kube.Kube.AuthorizationV1().SubjectAccessReviews().Create(context.Background(), &authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
 			User: fmt.Sprintf("system:serviceaccount:%s:%s", client.Namespace, saName),
 			ResourceAttributes: &authv1.ResourceAttributes{
@@ -36,7 +38,7 @@ func ServiceAccountCanDoVerbOnResourceOrFail(client *testlib.Client, gvr schema.
 				Subresource: subresource,
 			},
 		},
-	})
+	}, metav1.CreateOptions{})
 	if err != nil {
 		client.T.Fatalf("Error while checking if %q is not allowed on %s.%s/%s subresource:%q. err: %q", verb, gvr.Resource, gvr.Group, gvr.Version, subresource, err)
 	}

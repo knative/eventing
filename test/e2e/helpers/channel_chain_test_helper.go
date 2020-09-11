@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -31,7 +32,9 @@ import (
 )
 
 // ChannelChainTestHelper is the helper function for channel_chain_test
-func ChannelChainTestHelper(t *testing.T,
+func ChannelChainTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	subscriptionVersion SubscriptionVersion,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -55,7 +58,7 @@ func ChannelChainTestHelper(t *testing.T,
 		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create loggerPod and expose it as a service
-		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		switch subscriptionVersion {
 		case SubscriptionV1:
@@ -93,7 +96,7 @@ func ChannelChainTestHelper(t *testing.T,
 			t.Fatalf("Invalid subscription version")
 		}
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send CloudEvent to the first channel
 		event := cloudevents.NewEvent()
@@ -106,7 +109,7 @@ func ChannelChainTestHelper(t *testing.T,
 			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 
-		client.SendEventToAddressable(senderName, channelNames[0], &channel, event)
+		client.SendEventToAddressable(ctx, senderName, channelNames[0], &channel, event)
 
 		// verify the logger service receives the event
 		eventTracker.AssertAtLeast(len(subscriptionNames1)*len(subscriptionNames2), recordevents.MatchEvent(

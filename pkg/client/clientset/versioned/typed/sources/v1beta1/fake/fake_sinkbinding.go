@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var sinkbindingsResource = schema.GroupVersionResource{Group: "sources.knative.d
 var sinkbindingsKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1beta1", Kind: "SinkBinding"}
 
 // Get takes name of the sinkBinding, and returns the corresponding sinkBinding object, and an error if there is any.
-func (c *FakeSinkBindings) Get(name string, options v1.GetOptions) (result *v1beta1.SinkBinding, err error) {
+func (c *FakeSinkBindings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.SinkBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(sinkbindingsResource, c.ns, name), &v1beta1.SinkBinding{})
 
@@ -50,7 +52,7 @@ func (c *FakeSinkBindings) Get(name string, options v1.GetOptions) (result *v1be
 }
 
 // List takes label and field selectors, and returns the list of SinkBindings that match those selectors.
-func (c *FakeSinkBindings) List(opts v1.ListOptions) (result *v1beta1.SinkBindingList, err error) {
+func (c *FakeSinkBindings) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.SinkBindingList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(sinkbindingsResource, sinkbindingsKind, c.ns, opts), &v1beta1.SinkBindingList{})
 
@@ -72,14 +74,14 @@ func (c *FakeSinkBindings) List(opts v1.ListOptions) (result *v1beta1.SinkBindin
 }
 
 // Watch returns a watch.Interface that watches the requested sinkBindings.
-func (c *FakeSinkBindings) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeSinkBindings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(sinkbindingsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a sinkBinding and creates it.  Returns the server's representation of the sinkBinding, and an error, if there is any.
-func (c *FakeSinkBindings) Create(sinkBinding *v1beta1.SinkBinding) (result *v1beta1.SinkBinding, err error) {
+func (c *FakeSinkBindings) Create(ctx context.Context, sinkBinding *v1beta1.SinkBinding, opts v1.CreateOptions) (result *v1beta1.SinkBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(sinkbindingsResource, c.ns, sinkBinding), &v1beta1.SinkBinding{})
 
@@ -90,7 +92,7 @@ func (c *FakeSinkBindings) Create(sinkBinding *v1beta1.SinkBinding) (result *v1b
 }
 
 // Update takes the representation of a sinkBinding and updates it. Returns the server's representation of the sinkBinding, and an error, if there is any.
-func (c *FakeSinkBindings) Update(sinkBinding *v1beta1.SinkBinding) (result *v1beta1.SinkBinding, err error) {
+func (c *FakeSinkBindings) Update(ctx context.Context, sinkBinding *v1beta1.SinkBinding, opts v1.UpdateOptions) (result *v1beta1.SinkBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(sinkbindingsResource, c.ns, sinkBinding), &v1beta1.SinkBinding{})
 
@@ -102,7 +104,7 @@ func (c *FakeSinkBindings) Update(sinkBinding *v1beta1.SinkBinding) (result *v1b
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSinkBindings) UpdateStatus(sinkBinding *v1beta1.SinkBinding) (*v1beta1.SinkBinding, error) {
+func (c *FakeSinkBindings) UpdateStatus(ctx context.Context, sinkBinding *v1beta1.SinkBinding, opts v1.UpdateOptions) (*v1beta1.SinkBinding, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(sinkbindingsResource, "status", c.ns, sinkBinding), &v1beta1.SinkBinding{})
 
@@ -113,7 +115,7 @@ func (c *FakeSinkBindings) UpdateStatus(sinkBinding *v1beta1.SinkBinding) (*v1be
 }
 
 // Delete takes name of the sinkBinding and deletes it. Returns an error if one occurs.
-func (c *FakeSinkBindings) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeSinkBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(sinkbindingsResource, c.ns, name), &v1beta1.SinkBinding{})
 
@@ -121,15 +123,15 @@ func (c *FakeSinkBindings) Delete(name string, options *v1.DeleteOptions) error 
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeSinkBindings) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(sinkbindingsResource, c.ns, listOptions)
+func (c *FakeSinkBindings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(sinkbindingsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.SinkBindingList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched sinkBinding.
-func (c *FakeSinkBindings) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.SinkBinding, err error) {
+func (c *FakeSinkBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.SinkBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(sinkbindingsResource, c.ns, name, pt, data, subresources...), &v1beta1.SinkBinding{})
 

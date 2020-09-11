@@ -33,22 +33,22 @@ require (
 	google.golang.org/grpc v1.31.0
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d // indirect
-	k8s.io/api v0.18.7-rc.0
+	k8s.io/api v0.18.8
 	k8s.io/apiextensions-apiserver v0.18.4
-	k8s.io/apimachinery v0.18.7-rc.0
-	k8s.io/apiserver v0.17.6
+	k8s.io/apimachinery v0.18.8
+	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/pkg v0.0.0-20200910143251-0761d6b47e4d
+	knative.dev/pkg v0.0.0-20200911145400-2d4efecc6bc1
 	knative.dev/test-infra v0.0.0-20200910231400-cfba2288403d
 	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-	k8s.io/api => k8s.io/api v0.17.6
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6
-	k8s.io/client-go => k8s.io/client-go v0.17.6
-	k8s.io/code-generator => k8s.io/code-generator v0.17.6
+	k8s.io/api => k8s.io/api v0.18.8
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
+	k8s.io/client-go => k8s.io/client-go v0.18.8
+	k8s.io/code-generator => k8s.io/code-generator v0.18.8
 )

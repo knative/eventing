@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,15 +38,15 @@ type SequencesGetter interface {
 
 // SequenceInterface has methods to work with Sequence resources.
 type SequenceInterface interface {
-	Create(*v1.Sequence) (*v1.Sequence, error)
-	Update(*v1.Sequence) (*v1.Sequence, error)
-	UpdateStatus(*v1.Sequence) (*v1.Sequence, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.Sequence, error)
-	List(opts metav1.ListOptions) (*v1.SequenceList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Sequence, err error)
+	Create(ctx context.Context, sequence *v1.Sequence, opts metav1.CreateOptions) (*v1.Sequence, error)
+	Update(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (*v1.Sequence, error)
+	UpdateStatus(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (*v1.Sequence, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Sequence, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.SequenceList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Sequence, err error)
 	SequenceExpansion
 }
 
@@ -64,20 +65,20 @@ func newSequences(c *FlowsV1Client, namespace string) *sequences {
 }
 
 // Get takes name of the sequence, and returns the corresponding sequence object, and an error if there is any.
-func (c *sequences) Get(name string, options metav1.GetOptions) (result *v1.Sequence, err error) {
+func (c *sequences) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Sequence, err error) {
 	result = &v1.Sequence{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("sequences").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Sequences that match those selectors.
-func (c *sequences) List(opts metav1.ListOptions) (result *v1.SequenceList, err error) {
+func (c *sequences) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SequenceList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *sequences) List(opts metav1.ListOptions) (result *v1.SequenceList, err 
 		Resource("sequences").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested sequences.
-func (c *sequences) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *sequences) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *sequences) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("sequences").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a sequence and creates it.  Returns the server's representation of the sequence, and an error, if there is any.
-func (c *sequences) Create(sequence *v1.Sequence) (result *v1.Sequence, err error) {
+func (c *sequences) Create(ctx context.Context, sequence *v1.Sequence, opts metav1.CreateOptions) (result *v1.Sequence, err error) {
 	result = &v1.Sequence{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("sequences").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(sequence).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a sequence and updates it. Returns the server's representation of the sequence, and an error, if there is any.
-func (c *sequences) Update(sequence *v1.Sequence) (result *v1.Sequence, err error) {
+func (c *sequences) Update(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (result *v1.Sequence, err error) {
 	result = &v1.Sequence{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("sequences").
 		Name(sequence.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(sequence).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *sequences) UpdateStatus(sequence *v1.Sequence) (result *v1.Sequence, err error) {
+func (c *sequences) UpdateStatus(ctx context.Context, sequence *v1.Sequence, opts metav1.UpdateOptions) (result *v1.Sequence, err error) {
 	result = &v1.Sequence{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("sequences").
 		Name(sequence.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(sequence).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the sequence and deletes it. Returns an error if one occurs.
-func (c *sequences) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *sequences) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("sequences").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *sequences) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *sequences) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("sequences").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched sequence.
-func (c *sequences) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Sequence, err error) {
+func (c *sequences) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Sequence, err error) {
 	result = &v1.Sequence{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("sequences").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

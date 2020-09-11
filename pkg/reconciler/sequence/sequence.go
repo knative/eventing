@@ -124,7 +124,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 				logger.Errorw("Failed to create Channel resource object", zap.Any("channel", channelObjRef), zap.Error(err))
 				return nil, err
 			}
-			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
+			created, err := channelResourceInterface.Create(ctx, newChannel, metav1.CreateOptions{})
 			if err != nil {
 				logger.Errorw("Failed to create Channel", zap.Any("channel", channelObjRef), zap.Error(err))
 				return nil, err
@@ -161,7 +161,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Infof("Creating subscription: %+v", sub)
-		newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Create(sub)
+		newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Create(ctx, sub, metav1.CreateOptions{})
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequence's subscription failed: %v", err)
@@ -176,12 +176,12 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1.
 	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
-		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
+		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Infow("Cannot delete subscription", zap.Error(err))
 			return nil, err
 		}
-		newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Create(expected)
+		newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Infow("Cannot create subscription", zap.Error(err))
 			return nil, err
@@ -196,7 +196,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, seq *v1.Sequence,
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	if err := r.channelableTracker.TrackInNamespace(seq)(ref); err != nil {
+	if err := r.channelableTracker.TrackInNamespace(ctx, seq)(ref); err != nil {
 		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to channel %+v : %v", ref, err)
 	}
 	chLister, err := r.channelableTracker.ListerFor(ref)

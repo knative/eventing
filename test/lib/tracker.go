@@ -20,6 +20,7 @@ limitations under the License.
 package lib
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -118,7 +119,7 @@ func (t *Tracker) AddObj(obj kmeta.OwnerRefable) {
 func (t *Tracker) Clean(awaitDeletion bool) error {
 	logf := t.tc.Logf
 	for _, deleter := range t.resourcesToClean {
-		r, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{})
+		r, err := deleter.Resource.Get(context.Background(), deleter.Name, metav1.GetOptions{})
 		if err != nil {
 			logf("Failed to get to-be cleaned resource %q : %v", deleter.Name, err)
 		} else {
@@ -130,12 +131,12 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 				logf("Cleaning resource: %q", deleter.Name)
 			}
 		}
-		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
+		if err := deleter.Resource.Delete(context.Background(), deleter.Name, metav1.DeleteOptions{}); err != nil {
 			logf("Failed to clean the resource %q : %v", deleter.Name, err)
 		} else if awaitDeletion {
 			logf("Waiting for %s to be deleted", deleter.Name)
 			if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-				if _, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{}); err != nil {
+				if _, err := deleter.Resource.Get(context.Background(), deleter.Name, metav1.GetOptions{}); err != nil {
 					return true, nil
 				}
 				return false, nil

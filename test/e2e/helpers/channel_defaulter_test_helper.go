@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -50,7 +51,9 @@ const (
 )
 
 // ChannelClusterDefaulterTestHelper is the helper function for channel_defaulter_test
-func ChannelClusterDefaulterTestHelper(t *testing.T,
+func ChannelClusterDefaulterTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
@@ -64,12 +67,14 @@ func ChannelClusterDefaulterTestHelper(t *testing.T,
 			st.Fatalf("Failed to update the defaultchannel configmap: %v", err)
 		}
 
-		defaultChannelTestHelper(st, client, channel)
+		defaultChannelTestHelper(ctx, st, client, channel)
 	})
 }
 
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
-func ChannelNamespaceDefaulterTestHelper(t *testing.T,
+func ChannelNamespaceDefaulterTestHelper(
+	ctx context.Context,
+	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
@@ -84,11 +89,11 @@ func ChannelNamespaceDefaulterTestHelper(t *testing.T,
 			st.Fatalf("Failed to update the defaultchannel configmap: %v", err)
 		}
 
-		defaultChannelTestHelper(st, client, channel)
+		defaultChannelTestHelper(ctx, st, client, channel)
 	})
 }
 
-func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChannel metav1.TypeMeta) {
+func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib.Client, expectedChannel metav1.TypeMeta) {
 	channelName := "e2e-defaulter-channel"
 	senderName := "e2e-defaulter-sender"
 	subscriptionName := "e2e-defaulter-subscription"
@@ -98,7 +103,7 @@ func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChan
 	client.CreateChannelWithDefaultOrFail(eventingtesting.NewChannel(channelName, client.Namespace))
 
 	// create event logger pod and service as the subscriber
-	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 	// create subscription to subscribe the channel, and forward the received events to the logger service
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
@@ -108,7 +113,7 @@ func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChan
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
 	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
@@ -146,7 +151,7 @@ func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChan
 	if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 		t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 	}
-	client.SendEventToAddressable(senderName, channelName, testlib.ChannelTypeMeta, event)
+	client.SendEventToAddressable(ctx, senderName, channelName, testlib.ChannelTypeMeta, event)
 
 	// verify the logger service receives the event
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
@@ -161,7 +166,7 @@ func updateDefaultChannelCM(client *testlib.Client, updateConfig func(config *co
 
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// get the defaultchannel configmap
-		configMap, err := cmInterface.Get(configMapName, metav1.GetOptions{})
+		configMap, err := cmInterface.Get(context.Background(), configMapName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -182,7 +187,7 @@ func updateDefaultChannelCM(client *testlib.Client, updateConfig func(config *co
 		}
 		// update the defaultchannel configmap
 		configMap.Data[channelDefaulterKey] = string(configBytes)
-		_, err = cmInterface.Update(configMap)
+		_, err = cmInterface.Update(context.Background(), configMap, metav1.UpdateOptions{})
 		return err
 	})
 	if err != nil {

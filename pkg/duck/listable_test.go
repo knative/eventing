@@ -56,7 +56,7 @@ type fakeInformerFactory struct {
 
 var _ duck.InformerFactory = (*fakeInformerFactory)(nil)
 
-func (fif *fakeInformerFactory) Get(gvr schema.GroupVersionResource) (cache.SharedIndexInformer, cache.GenericLister, error) {
+func (fif *fakeInformerFactory) Get(ctx context.Context, gvr schema.GroupVersionResource) (cache.SharedIndexInformer, cache.GenericLister, error) {
 	if fif.err != nil {
 		return nil, nil, fif.err
 	}
@@ -99,12 +99,13 @@ func TestResourceTracker(t *testing.T) {
 			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
 			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
-			track := rt.TrackInNamespace(&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "svc",
-				},
-			})
+			track := rt.TrackInNamespace(context.Background(),
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns,
+						Name:      "svc",
+					},
+				})
 			for i := 0; i <= tc.repeatedTracks; i++ {
 				ref := corev1.ObjectReference{
 					APIVersion: "v1",
@@ -157,12 +158,14 @@ func TestResourceTrackerForKReference(t *testing.T) {
 			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
 			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
-			track := rt.TrackInNamespaceKReference(&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "svc",
-				},
-			})
+			track := rt.TrackInNamespaceKReference(
+				context.Background(),
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns,
+						Name:      "svc",
+					},
+				})
 			for i := 0; i <= tc.repeatedTracks; i++ {
 				ref := duckv1.KReference{
 					APIVersion: "v1",

@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,15 +38,15 @@ type ContainerSourcesGetter interface {
 
 // ContainerSourceInterface has methods to work with ContainerSource resources.
 type ContainerSourceInterface interface {
-	Create(*v1alpha2.ContainerSource) (*v1alpha2.ContainerSource, error)
-	Update(*v1alpha2.ContainerSource) (*v1alpha2.ContainerSource, error)
-	UpdateStatus(*v1alpha2.ContainerSource) (*v1alpha2.ContainerSource, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha2.ContainerSource, error)
-	List(opts v1.ListOptions) (*v1alpha2.ContainerSourceList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha2.ContainerSource, err error)
+	Create(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.CreateOptions) (*v1alpha2.ContainerSource, error)
+	Update(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.UpdateOptions) (*v1alpha2.ContainerSource, error)
+	UpdateStatus(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.UpdateOptions) (*v1alpha2.ContainerSource, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha2.ContainerSource, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha2.ContainerSourceList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha2.ContainerSource, err error)
 	ContainerSourceExpansion
 }
 
@@ -64,20 +65,20 @@ func newContainerSources(c *SourcesV1alpha2Client, namespace string) *containerS
 }
 
 // Get takes name of the containerSource, and returns the corresponding containerSource object, and an error if there is any.
-func (c *containerSources) Get(name string, options v1.GetOptions) (result *v1alpha2.ContainerSource, err error) {
+func (c *containerSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha2.ContainerSource, err error) {
 	result = &v1alpha2.ContainerSource{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("containersources").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ContainerSources that match those selectors.
-func (c *containerSources) List(opts v1.ListOptions) (result *v1alpha2.ContainerSourceList, err error) {
+func (c *containerSources) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha2.ContainerSourceList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *containerSources) List(opts v1.ListOptions) (result *v1alpha2.Container
 		Resource("containersources").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested containerSources.
-func (c *containerSources) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *containerSources) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *containerSources) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("containersources").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a containerSource and creates it.  Returns the server's representation of the containerSource, and an error, if there is any.
-func (c *containerSources) Create(containerSource *v1alpha2.ContainerSource) (result *v1alpha2.ContainerSource, err error) {
+func (c *containerSources) Create(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.CreateOptions) (result *v1alpha2.ContainerSource, err error) {
 	result = &v1alpha2.ContainerSource{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("containersources").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(containerSource).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a containerSource and updates it. Returns the server's representation of the containerSource, and an error, if there is any.
-func (c *containerSources) Update(containerSource *v1alpha2.ContainerSource) (result *v1alpha2.ContainerSource, err error) {
+func (c *containerSources) Update(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.UpdateOptions) (result *v1alpha2.ContainerSource, err error) {
 	result = &v1alpha2.ContainerSource{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("containersources").
 		Name(containerSource.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(containerSource).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *containerSources) UpdateStatus(containerSource *v1alpha2.ContainerSource) (result *v1alpha2.ContainerSource, err error) {
+func (c *containerSources) UpdateStatus(ctx context.Context, containerSource *v1alpha2.ContainerSource, opts v1.UpdateOptions) (result *v1alpha2.ContainerSource, err error) {
 	result = &v1alpha2.ContainerSource{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("containersources").
 		Name(containerSource.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(containerSource).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the containerSource and deletes it. Returns an error if one occurs.
-func (c *containerSources) Delete(name string, options *v1.DeleteOptions) error {
+func (c *containerSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("containersources").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *containerSources) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *containerSources) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("containersources").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched containerSource.
-func (c *containerSources) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha2.ContainerSource, err error) {
+func (c *containerSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha2.ContainerSource, err error) {
 	result = &v1alpha2.ContainerSource{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("containersources").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

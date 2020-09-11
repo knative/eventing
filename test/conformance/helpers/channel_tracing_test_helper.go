@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -35,12 +36,13 @@ import (
 // ChannelTracingTestHelperWithChannelTestRunner runs the Channel tracing tests for all Channels in
 // the ComponentsTestRunner.
 func ChannelTracingTestHelperWithChannelTestRunner(
+	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	setupClient testlib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		tracingTest(t, setupClient, setupChannelTracingWithReply, channel)
+		tracingTest(ctx, t, setupClient, setupChannelTracingWithReply, channel)
 	})
 }
 
@@ -51,6 +53,7 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 // It returns the expected trace tree and a match function that is expected to be sent
 // by the SendEvents Pod and should be present in the RecordEvents list of events.
 func setupChannelTracingWithReply(
+	ctx context.Context,
 	t *testing.T,
 	channel *metav1.TypeMeta,
 	client *testlib.Client,
@@ -95,7 +98,7 @@ func setupChannelTracingWithReply(
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Everything is setup to receive an event. Generate a CloudEvent.
 	senderName := "sender"
@@ -111,9 +114,9 @@ func setupChannelTracingWithReply(
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	if senderPublishTrace {
-		client.SendEventToAddressable(senderName, channelName, channel, event, sender.EnableTracing())
+		client.SendEventToAddressable(ctx, senderName, channelName, channel, event, sender.EnableTracing())
 	} else {
-		client.SendEventToAddressable(senderName, channelName, channel, event)
+		client.SendEventToAddressable(ctx, senderName, channelName, channel, event)
 	}
 
 	// We expect the following spans:

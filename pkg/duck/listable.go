@@ -40,10 +40,10 @@ import (
 type ListableTracker interface {
 	// TrackInNamespace returns a function that can be used to watch arbitrary apis.Listable resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
-	TrackInNamespace(obj metav1.Object) Track
+	TrackInNamespace(ctx context.Context, obj metav1.Object) Track
 	// TrackInNamespaceKReference returns a function that can be used to watch arbitrary apis.Listable resources
 	// in the same namespace as obj. Any change will cause a callback for obj.
-	TrackInNamespaceKReference(obj metav1.Object) TrackKReference
+	TrackInNamespaceKReference(ctx context.Context, obj metav1.Object) TrackKReference
 	// ListerFor returns the lister for the object reference. It returns an error if the lister does not exist.
 	ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error)
 	// InformerFor returns the informer for the object reference. It returns an error if the informer does not exist.
@@ -81,7 +81,7 @@ type informerListerPair struct {
 
 // ensureTracking ensures that there is an informer watching and sending events to tracker for the
 // concrete GVK. It also ensures that there is the corresponding lister for that informer.
-func (t *listableTracker) ensureTracking(ref corev1.ObjectReference) error {
+func (t *listableTracker) ensureTracking(ctx context.Context, ref corev1.ObjectReference) error {
 	if equality.Semantic.DeepEqual(ref, &corev1.ObjectReference{}) {
 		return errors.New("cannot track empty object ref")
 	}
@@ -103,7 +103,7 @@ func (t *listableTracker) ensureTracking(ref corev1.ObjectReference) error {
 	if _, present = t.concrete[gvr]; present {
 		return nil
 	}
-	informer, lister, err := t.informerFactory.Get(gvr)
+	informer, lister, err := t.informerFactory.Get(ctx, gvr)
 	if err != nil {
 		return err
 	}
@@ -120,12 +120,12 @@ func (t *listableTracker) ensureTracking(ref corev1.ObjectReference) error {
 }
 
 // TrackInNamespace satisfies the ListableTracker interface.
-func (t *listableTracker) TrackInNamespace(obj metav1.Object) Track {
+func (t *listableTracker) TrackInNamespace(ctx context.Context, obj metav1.Object) Track {
 	return func(ref corev1.ObjectReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
 		// specify the namespace.
 		ref.Namespace = obj.GetNamespace()
-		if err := t.ensureTracking(ref); err != nil {
+		if err := t.ensureTracking(ctx, ref); err != nil {
 			return err
 		}
 
@@ -139,13 +139,13 @@ func (t *listableTracker) TrackInNamespace(obj metav1.Object) Track {
 }
 
 // TrackInNamespaceKReference satisfies the ListableTracker interface.
-func (t *listableTracker) TrackInNamespaceKReference(obj metav1.Object) TrackKReference {
+func (t *listableTracker) TrackInNamespaceKReference(ctx context.Context, obj metav1.Object) TrackKReference {
 	return func(ref duckv1.KReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
 		// specify the namespace.
 		ref.Namespace = obj.GetNamespace()
 		coreRef := corev1.ObjectReference{APIVersion: ref.APIVersion, Kind: ref.Kind, Name: ref.Name, Namespace: ref.Namespace}
-		if err := t.ensureTracking(coreRef); err != nil {
+		if err := t.ensureTracking(ctx, coreRef); err != nil {
 			return err
 		}
 

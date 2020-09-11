@@ -212,7 +212,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherN
 					Image:               r.dispatcherImage,
 				}
 				expected := resources.MakeDispatcher(args)
-				d, err := r.kubeClientSet.AppsV1().Deployments(dispatcherNamespace).Create(expected)
+				d, err := r.kubeClientSet.AppsV1().Deployments(dispatcherNamespace).Create(ctx, expected, metav1.CreateOptions{})
 				if err != nil {
 					return d, newDeploymentWarn(err)
 				}
@@ -235,7 +235,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherName
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			expected := resources.MakeServiceAccount(dispatcherNamespace, dispatcherName)
-			sa, err := r.kubeClientSet.CoreV1().ServiceAccounts(dispatcherNamespace).Create(expected)
+			sa, err := r.kubeClientSet.CoreV1().ServiceAccounts(dispatcherNamespace).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
 				return sa, newServiceAccountWarn(err)
 			}
@@ -255,7 +255,7 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns s
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			expected := resources.MakeRoleBinding(ns, name, sa, clusterRoleName)
-			rb, err := r.kubeClientSet.RbacV1().RoleBindings(ns).Create(expected)
+			rb, err := r.kubeClientSet.RbacV1().RoleBindings(ns).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
 				return rb, newRoleBindingWarn(err)
 			}
@@ -275,7 +275,7 @@ func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, disp
 		if apierrs.IsNotFound(err) {
 			if scope == eventing.ScopeNamespace {
 				expected := resources.MakeDispatcherService(dispatcherName, dispatcherNamespace)
-				svc, err := r.kubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
+				svc, err := r.kubeClientSet.CoreV1().Services(dispatcherNamespace).Create(ctx, expected, metav1.CreateOptions{})
 				if err != nil {
 					return svc, newServiceWarn(err)
 				}
@@ -310,7 +310,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 	svc, err := r.serviceLister.Services(imc.Namespace).Get(channelSvcName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			svc, err = r.kubeClientSet.CoreV1().Services(imc.Namespace).Create(expected)
+			svc, err = r.kubeClientSet.CoreV1().Services(imc.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
 				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
@@ -325,7 +325,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 		svc = svc.DeepCopy()
 		svc.Spec = expected.Spec
 
-		svc, err = r.kubeClientSet.CoreV1().Services(imc.Namespace).Update(svc)
+		svc, err = r.kubeClientSet.CoreV1().Services(imc.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Error("failed to update the channel service", zap.Error(err))
 			imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))

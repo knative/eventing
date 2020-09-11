@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +41,7 @@ var eventtypesResource = schema.GroupVersionResource{Group: "eventing.knative.de
 var eventtypesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1beta1", Kind: "EventType"}
 
 // Get takes name of the eventType, and returns the corresponding eventType object, and an error if there is any.
-func (c *FakeEventTypes) Get(name string, options v1.GetOptions) (result *v1beta1.EventType, err error) {
+func (c *FakeEventTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.EventType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(eventtypesResource, c.ns, name), &v1beta1.EventType{})
 
@@ -50,7 +52,7 @@ func (c *FakeEventTypes) Get(name string, options v1.GetOptions) (result *v1beta
 }
 
 // List takes label and field selectors, and returns the list of EventTypes that match those selectors.
-func (c *FakeEventTypes) List(opts v1.ListOptions) (result *v1beta1.EventTypeList, err error) {
+func (c *FakeEventTypes) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.EventTypeList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(eventtypesResource, eventtypesKind, c.ns, opts), &v1beta1.EventTypeList{})
 
@@ -72,14 +74,14 @@ func (c *FakeEventTypes) List(opts v1.ListOptions) (result *v1beta1.EventTypeLis
 }
 
 // Watch returns a watch.Interface that watches the requested eventTypes.
-func (c *FakeEventTypes) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeEventTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(eventtypesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a eventType and creates it.  Returns the server's representation of the eventType, and an error, if there is any.
-func (c *FakeEventTypes) Create(eventType *v1beta1.EventType) (result *v1beta1.EventType, err error) {
+func (c *FakeEventTypes) Create(ctx context.Context, eventType *v1beta1.EventType, opts v1.CreateOptions) (result *v1beta1.EventType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(eventtypesResource, c.ns, eventType), &v1beta1.EventType{})
 
@@ -90,7 +92,7 @@ func (c *FakeEventTypes) Create(eventType *v1beta1.EventType) (result *v1beta1.E
 }
 
 // Update takes the representation of a eventType and updates it. Returns the server's representation of the eventType, and an error, if there is any.
-func (c *FakeEventTypes) Update(eventType *v1beta1.EventType) (result *v1beta1.EventType, err error) {
+func (c *FakeEventTypes) Update(ctx context.Context, eventType *v1beta1.EventType, opts v1.UpdateOptions) (result *v1beta1.EventType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(eventtypesResource, c.ns, eventType), &v1beta1.EventType{})
 
@@ -102,7 +104,7 @@ func (c *FakeEventTypes) Update(eventType *v1beta1.EventType) (result *v1beta1.E
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeEventTypes) UpdateStatus(eventType *v1beta1.EventType) (*v1beta1.EventType, error) {
+func (c *FakeEventTypes) UpdateStatus(ctx context.Context, eventType *v1beta1.EventType, opts v1.UpdateOptions) (*v1beta1.EventType, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(eventtypesResource, "status", c.ns, eventType), &v1beta1.EventType{})
 
@@ -113,7 +115,7 @@ func (c *FakeEventTypes) UpdateStatus(eventType *v1beta1.EventType) (*v1beta1.Ev
 }
 
 // Delete takes name of the eventType and deletes it. Returns an error if one occurs.
-func (c *FakeEventTypes) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeEventTypes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(eventtypesResource, c.ns, name), &v1beta1.EventType{})
 
@@ -121,15 +123,15 @@ func (c *FakeEventTypes) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeEventTypes) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(eventtypesResource, c.ns, listOptions)
+func (c *FakeEventTypes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(eventtypesResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.EventTypeList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched eventType.
-func (c *FakeEventTypes) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.EventType, err error) {
+func (c *FakeEventTypes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.EventType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(eventtypesResource, c.ns, name, pt, data, subresources...), &v1beta1.EventType{})
 

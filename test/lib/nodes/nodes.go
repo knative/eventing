@@ -19,6 +19,7 @@
 package nodes
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 
@@ -44,7 +45,7 @@ func Client(kube kubernetes.Interface, logger *zap.SugaredLogger) *NodesClient {
 
 // RandomWorkerNode gets a worker node randomly
 func (n *NodesClient) RandomWorkerNode() (*corev1.Node, error) {
-	nodes, err := n.kube.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := n.kube.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -151,7 +151,7 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = source.WithDuck(ctx)
-		_, sourceLister, _ := source.Get(ctx).Get(gvr)
+		_, sourceLister, _ := source.Get(ctx).Get(ctx, gvr)
 		return &Reconciler{
 			crdLister:         listers.GetCustomResourceDefinitionLister(),
 			eventTypeLister:   listers.GetEventTypeLister(),

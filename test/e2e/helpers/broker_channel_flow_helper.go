@@ -16,6 +16,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -49,7 +50,9 @@ Trigger2 logs all events,
 Trigger3 filters the transformed event and sends it to Channel.
 
 */
-func BrokerChannelFlowWithTransformation(t *testing.T,
+func BrokerChannelFlowWithTransformation(
+	ctx context.Context,
+	t *testing.T,
 	brokerClass string,
 	brokerVersion string,
 	triggerVersion string,
@@ -129,7 +132,7 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 			)
 		}
 		// create event tracker that should receive all sent events
-		allEventTracker, _ := recordevents.StartEventRecordOrFail(client, allEventsRecorderPodName)
+		allEventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, allEventsRecorderPodName)
 
 		// create trigger to receive all the events
 		if triggerVersion == "v1" {
@@ -173,7 +176,7 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		}
 
 		// create event tracker that should receive only transformed events
-		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(client, transformedEventsRecorderPodName)
+		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, transformedEventsRecorderPodName)
 
 		// create subscription
 		client.CreateSubscriptionOrFail(
@@ -184,10 +187,10 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail()
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		// send CloudEvent to the broker
-		client.SendEventToAddressable(senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
+		client.SendEventToAddressable(ctx, senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 		// Assert the results on the event trackers
 		originalEventMatcher := recordevents.MatchEvent(AllOf(

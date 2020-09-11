@@ -50,7 +50,7 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 		crdInformer := crdinfomer.Get(ctx)
 		sourceduckInformer := sourceinformer.Get(ctx)
 
-		sourceInformer, sourceLister, err := sourceduckInformer.Get(gvr)
+		sourceInformer, sourceLister, err := sourceduckInformer.Get(ctx, gvr)
 		if err != nil {
 			logger.Errorw("Error getting source informer", zap.String("GVR", gvr.String()), zap.Error(err))
 			return nil
