@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -137,16 +138,17 @@ func (r *URIResolver) URIFromKReference(ref *duckv1.KReference, parent interface
 // URIFromObjectReference resolves an ObjectReference to a URI string.
 func (r *URIResolver) URIFromObjectReference(ref *corev1.ObjectReference, parent interface{}) (*apis.URL, error) {
 	if ref == nil {
-		return nil, errors.New("ref is nil")
+		return nil, apierrs.NewBadRequest("ref is nil")
 	}
 
+	gvr, _ := meta.UnsafeGuessKindToResource(ref.GroupVersionKind())
 	if err := r.tracker.TrackReference(tracker.Reference{
 		APIVersion: ref.APIVersion,
 		Kind:       ref.Kind,
 		Namespace:  ref.Namespace,
 		Name:       ref.Name,
 	}, parent); err != nil {
-		return nil, fmt.Errorf("failed to track %+v: %w", ref, err)
+		return nil, apierrs.NewNotFound(gvr.GroupResource(), ref.Name)
 	}
 
 	// K8s Services are special cased. They can be called, even though they do not satisfy the
@@ -161,30 +163,29 @@ func (r *URIResolver) URIFromObjectReference(ref *corev1.ObjectReference, parent
 		return url, nil
 	}
 
-	gvr, _ := meta.UnsafeGuessKindToResource(ref.GroupVersionKind())
 	_, lister, err := r.informerFactory.Get(gvr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get lister for %+v: %w", gvr, err)
+		return nil, apierrs.NewNotFound(gvr.GroupResource(), "Lister")
 	}
 
 	obj, err := lister.ByNamespace(ref.Namespace).Get(ref.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ref %+v: %w", ref, err)
+		return nil, apierrs.NewNotFound(gvr.GroupResource(), ref.Name)
 	}
 
 	addressable, ok := obj.(*duckv1.AddressableType)
 	if !ok {
-		return nil, fmt.Errorf("%+v (%T) is not an AddressableType", ref, ref)
+		return nil, apierrs.NewBadRequest(fmt.Sprintf("%+v (%T) is not an AddressableType", ref, ref))
 	}
 	if addressable.Status.Address == nil {
-		return nil, fmt.Errorf("address not set for %+v", ref)
+		return nil, apierrs.NewBadRequest(fmt.Sprintf("address not set for %+v", ref))
 	}
 	url := addressable.Status.Address.URL
 	if url == nil {
-		return nil, fmt.Errorf("URL missing in address of %+v", ref)
+		return nil, apierrs.NewBadRequest(fmt.Sprintf("URL missing in address of %+v", ref))
 	}
 	if url.Host == "" {
-		return nil, fmt.Errorf("hostname missing in address of %+v", ref)
+		return nil, apierrs.NewBadRequest(fmt.Sprintf("hostname missing in address of %+v", ref))
 	}
 	return url, nil
 }
