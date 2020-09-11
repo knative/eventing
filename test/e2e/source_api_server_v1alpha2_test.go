@@ -18,6 +18,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -121,6 +122,8 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	for _, tc := range table {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
@@ -146,7 +149,7 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 
 			// create event record
 			recordEventPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
@@ -159,7 +162,7 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 			client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
 
 			// wait for all test resources to be ready
-			client.WaitForAllTestResourcesReadyOrFail()
+			client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 			helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
 			client.CreatePodOrFail(helloworldPod)
@@ -235,7 +238,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Verify that EventTypes were created.
 	eventTypes, err := waitForEventTypes(client, len(sourcesv1alpha2.ApiServerSourceEventTypes))
