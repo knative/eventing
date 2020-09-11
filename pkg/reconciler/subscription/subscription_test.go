@@ -317,7 +317,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: failed to get ref &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:subscriber,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: subscribers.eventing.knative.dev %q not found", subscriberName),
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: subscribers.eventing.knative.dev %q not found", subscriberName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -326,7 +326,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: failed to get ref &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:subscriber,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: subscribers.eventing.knative.dev "subscriber" not found`),
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: subscribers.eventing.knative.dev "subscriber" not found`),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -351,7 +351,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:InMemoryChannel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1,ResourceVersion:,FieldPath:,}: inmemorychannels.messaging.knative.dev %q not found", replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", `Failed to resolve spec.reply: inmemorychannels.messaging.knative.dev %q not found`, replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -362,7 +362,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:InMemoryChannel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1,ResourceVersion:,FieldPath:,}: inmemorychannels.messaging.knative.dev %q not found", replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -470,7 +470,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: failed to get ref &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:dlc,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: subscribers.eventing.knative.dev \"dlc\" not found"),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: subscribers.eventing.knative.dev \"dlc\" not found"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -480,7 +480,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: failed to get ref &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:dlc,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: subscribers.eventing.knative.dev \"dlc\" not found"),
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: subscribers.eventing.knative.dev \"dlc\" not found"),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},

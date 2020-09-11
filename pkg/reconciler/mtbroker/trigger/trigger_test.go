@@ -450,7 +450,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				)}...),
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `failed to get ref &ObjectReference{Kind:Service,Namespace:test-namespace,Name:subscriber-name,UID:,APIVersion:serving.knative.dev/v1,ResourceVersion:,FieldPath:,}: services.serving.knative.dev "subscriber-name" not found`),
+				Eventf(corev1.EventTypeWarning, "InternalError", `services.serving.knative.dev "subscriber-name" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -459,7 +459,7 @@ func TestReconcile(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerSubscriberResolvedFailed("Unable to get the Subscriber's URI", `failed to get ref &ObjectReference{Kind:Service,Namespace:test-namespace,Name:subscriber-name,UID:,APIVersion:serving.knative.dev/v1,ResourceVersion:,FieldPath:,}: services.serving.knative.dev "subscriber-name" not found`),
+					WithTriggerSubscriberResolvedFailed("Unable to get the Subscriber's URI", `services.serving.knative.dev "subscriber-name" not found`),
 				),
 			}},
 			WantErr: true,
