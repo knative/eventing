@@ -18,6 +18,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"knative.dev/eventing/test/e2e/helpers"
@@ -44,14 +45,14 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlowTriggerV1BrokerV1(t *testing.T) {
-	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1", "v1", channelTestRunner)
+	helpers.BrokerChannelFlowWithTransformation(context.Background(), t, brokerClass, "v1", "v1", channelTestRunner)
 }
 func TestBrokerChannelFlowV1Beta1BrokerV1(t *testing.T) {
-	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1", "v1beta1", channelTestRunner)
+	helpers.BrokerChannelFlowWithTransformation(context.Background(), t, brokerClass, "v1", "v1beta1", channelTestRunner)
 }
 func TestBrokerChannelFlowTriggerV1Beta1BrokerV1Beta1(t *testing.T) {
-	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1beta1", "v1beta1", channelTestRunner)
+	helpers.BrokerChannelFlowWithTransformation(context.Background(), t, brokerClass, "v1beta1", "v1beta1", channelTestRunner)
 }
 func TestBrokerChannelFlowTriggerV1BrokerV1Beta1(t *testing.T) {
-	helpers.BrokerChannelFlowWithTransformation(t, brokerClass, "v1beta1", "v1", channelTestRunner)
+	helpers.BrokerChannelFlowWithTransformation(context.Background(), t, brokerClass, "v1beta1", "v1", channelTestRunner)
 }

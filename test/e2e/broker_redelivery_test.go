@@ -19,6 +19,7 @@
 package e2e
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -61,7 +62,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 
 func TestBrokerRedelivery(t *testing.T) {
 
-	channelTestRunner.RunTests(t, testlib.FeatureRedelivery, func(t *testing.T, component metav1.TypeMeta) {
+	channelTestRunner.RunTests(context.Background(), t, testlib.FeatureRedelivery, func(t *testing.T, component metav1.TypeMeta) {
 
 		brokerCreator := ChannelBasedBrokerCreator(component, brokerClass)
 
