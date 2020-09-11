@@ -82,14 +82,14 @@ func addSourcesInitializers() {
 	sourcesTestRunner.AddComponentSetupClientOption(
 		ctx,
 		testlib.ApiServerSourceTypeMeta,
-		setupclientoptions.ApiServerSourceV1B1ClientSetupOption(apiSrcName,
-			"Reference",
+		setupclientoptions.ApiServerSourceV1B1ClientSetupOption(
+			ctx, apiSrcName, "Reference",
 			recordEventsAPIPodName, roleName, serviceAccountName),
 	)
 	sourcesTestRunner.AddComponentSetupClientOption(
 		ctx,
 		testlib.PingSourceTypeMeta,
-		setupclientoptions.PingSourceV1B1ClientSetupOption(pingSrcName,
-			recordEventsPingPodName),
+		setupclientoptions.PingSourceV1B1ClientSetupOption(
+			ctx, pingSrcName, recordEventsPingPodName),
 	)
 }
