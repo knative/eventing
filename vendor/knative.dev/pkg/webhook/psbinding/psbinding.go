@@ -134,6 +134,11 @@ var (
 			Key:      duck.BindingExcludeLabel,
 			Operator: metav1.LabelSelectorOpNotIn,
 			Values:   []string{"true"},
+		}, {
+			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
+			// See knative/pkg#1590 for details.
+			Key:      "control-plane",
+			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/exclude: "true"
@@ -143,6 +148,11 @@ var (
 			Key:      duck.BindingIncludeLabel,
 			Operator: metav1.LabelSelectorOpIn,
 			Values:   []string{"true"},
+		}, {
+			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
+			// See knative/pkg#1590 for details.
+			Key:      "control-plane",
+			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/include: "true"
