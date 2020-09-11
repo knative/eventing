@@ -88,6 +88,8 @@ func TestPingSourceV1Beta1EventTypes(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
+	ctx := context.Background()
+
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
@@ -113,7 +115,7 @@ func TestPingSourceV1Beta1EventTypes(t *testing.T) {
 	client.CreatePingSourceV1Beta1OrFail(source)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Verify that an EventType was created.
 	eventTypes, err := waitForEventTypes(ctx, client, 1)

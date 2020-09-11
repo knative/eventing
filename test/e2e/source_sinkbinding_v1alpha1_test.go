@@ -136,6 +136,8 @@ func TestSinkBindingCronJob(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
+	ctx := context.Background()
+
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPod)
 	// create sink binding

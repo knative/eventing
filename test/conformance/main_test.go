@@ -18,6 +18,7 @@ limitations under the License.
 package conformance
 
 import (
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -73,15 +74,20 @@ func TestMain(m *testing.M) {
 }
 
 func addSourcesInitializers() {
+
+	ctx := context.Background()
+
 	apiSrcName := strings.ToLower(testlib.ApiServerSourceTypeMeta.Kind)
 	pingSrcName := strings.ToLower(testlib.PingSourceTypeMeta.Kind)
 	sourcesTestRunner.AddComponentSetupClientOption(
+		ctx,
 		testlib.ApiServerSourceTypeMeta,
 		setupclientoptions.ApiServerSourceV1B1ClientSetupOption(apiSrcName,
 			"Reference",
 			recordEventsAPIPodName, roleName, serviceAccountName),
 	)
 	sourcesTestRunner.AddComponentSetupClientOption(
+		ctx,
 		testlib.PingSourceTypeMeta,
 		setupclientoptions.PingSourceV1B1ClientSetupOption(pingSrcName,
 			recordEventsPingPodName),
