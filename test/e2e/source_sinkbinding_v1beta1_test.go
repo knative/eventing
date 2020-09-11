@@ -52,7 +52,7 @@ func TestSinkBindingV1Beta1Deployment(t *testing.T) {
 
 	client := setup(t, true)
 	defer tearDown(client)
-	
+
 	ctx := context.Background()
 
 	// create event logger pod and service
