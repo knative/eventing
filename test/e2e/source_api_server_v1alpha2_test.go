@@ -194,6 +194,8 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
+	ctx := context.Background()
+
 	// creates ServiceAccount and RoleBinding with a role for reading pods and events
 	r := resources.Role(roleName,
 		resources.WithRuleForRole(&rbacv1.PolicyRule{
@@ -241,7 +243,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Verify that EventTypes were created.
-	eventTypes, err := waitForEventTypes(client, len(sourcesv1alpha2.ApiServerSourceEventTypes))
+	eventTypes, err := waitForEventTypes(ctx, client, len(sourcesv1alpha2.ApiServerSourceEventTypes))
 	if err != nil {
 		t.Fatalf("Waiting for EventTypes: %v", err)
 	}
