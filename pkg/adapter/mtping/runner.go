@@ -36,6 +36,13 @@ import (
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
+type CronJobRunner interface {
+	Start(stopCh <-chan struct{})
+	Stop()
+	AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID
+	RemoveSchedule(id cron.EntryID)
+}
+
 type cronJobsRunner struct {
 	// The cron job runner
 	cron cron.Cron

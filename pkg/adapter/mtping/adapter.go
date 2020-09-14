@@ -42,7 +42,7 @@ const (
 // mtpingAdapter implements the PingSource mt adapter to sinks
 type mtpingAdapter struct {
 	logger    *zap.SugaredLogger
-	runner    *cronJobsRunner
+	runner    CronJobRunner
 	entryidMu sync.RWMutex
 	entryids  map[string]cron.EntryID // key: resource namespace/name
 }
