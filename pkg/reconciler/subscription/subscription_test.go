@@ -71,6 +71,8 @@ const (
 	subscriptionName       = "testsubscription"
 	testNS                 = "testnamespace"
 	subscriptionGeneration = 1
+
+	finalizerName = "subscriptions.messaging.knative.dev"
 )
 
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
@@ -1255,10 +1257,6 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 	action.Patch = []byte(patch)
 	return action
 }
-
-const (
-	finalizerName = "subscriptions.messaging.knative.dev"
-)
 
 func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
