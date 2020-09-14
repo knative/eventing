@@ -40,7 +40,6 @@ var podMeta = metav1.TypeMeta{
 
 func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, brokerClass string, brokerTestRunner testlib.ComponentsTestRunner) *eventingv1beta1.Broker {
 	var broker *eventingv1beta1.Broker
-	var err error
 	brokerName := brokerTestRunner.ComponentName
 	brokerNamespace := brokerTestRunner.ComponentNamespace
 	if brokerName == "" || brokerNamespace == "" {
