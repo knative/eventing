@@ -41,7 +41,7 @@ type KResourceWithSpec struct {
 const (
 	cmNs         = "test-ns"
 	cmName       = "test-name"
-	timeOutValue = 4 * time.Second
+	timeOutValue = 5 * time.Second
 )
 
 var (
