@@ -169,9 +169,6 @@ func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client versio
 		if opts.SkipStatusUpdates {
 			rec.skipStatusUpdates = true
 		}
-		if opts.DemoteFunc != nil {
-			rec.DemoteFunc = opts.DemoteFunc
-		}
 	}
 
 	return rec

@@ -34,3 +34,20 @@ func TestWithController(t *testing.T) {
 		t.Error("expected non-nil controller constructor")
 	}
 }
+
+func TestWithHAEnabled(t *testing.T) {
+	ctx := context.Background()
+	ctx = WithHAEnabled(ctx)
+	if !IsHAEnabled(ctx) {
+		t.Error("Expected HA to be enabled")
+	}
+
+	ctx = withHADisabledFlag(ctx)
+	if !IsHAEnabled(ctx) {
+		t.Error("Expected HA to be enabled")
+	}
+	if !isHADisabledFlag(ctx) {
+		t.Error("Expected HA to be disabled via commandline flag")
+	}
+
+}

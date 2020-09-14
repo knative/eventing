@@ -32,16 +32,12 @@ import (
 	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
-	pkgadapter "knative.dev/eventing/pkg/adapter/v2"
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 )
 
 func TestStartStopAdapter(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
-	cmw := pkgadapter.SetupConfigMapWatchOrDie(ctx, "component", "test-ns")
-	ctx = pkgadapter.WithConfigMapWatcher(ctx, cmw)
-
 	envCfg := NewEnvConfig()
 
 	ce := adaptertest.NewTestClient()

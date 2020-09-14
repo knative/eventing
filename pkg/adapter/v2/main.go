@@ -190,7 +190,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		ctrl := ctor(ctx, adapter)
 
 		if leaderelection.HasLeaderElection(ctx) {
-			// the reconciler  MUST implement LeaderAware.
+			// the reconciler MUST implement LeaderAware.
 			if _, ok := ctrl.Reconciler.(reconciler.LeaderAware); !ok {
 				log.Fatalf("%T is not leader-aware, all reconcilers must be leader-aware to enable fine-grained leader election.", ctrl.Reconciler)
 			}
