@@ -22,9 +22,12 @@ import (
 	"fmt"
 	"testing"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -33,14 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -50,10 +45,22 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1beta1/subscription"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/utils"
+
+	. "knative.dev/pkg/reconciler/testing"
+
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/channel/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1beta1/inmemorychannel/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
-	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -67,6 +74,8 @@ const (
 	subscriptionName       = "testsubscription"
 	testNS                 = "testnamespace"
 	subscriptionGeneration = 1
+
+	finalizerName = "subscriptions.messaging.knative.dev"
 )
 
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
@@ -147,6 +156,8 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
+	linear := eventingduck.BackoffPolicyLinear
+
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -1222,6 +1233,39 @@ func TestAllCases(t *testing.T) {
 					WithChannelableReadySubscriber("a-"+subscriptionUID),
 					WithChannelableReadySubscriber("b-"+subscriptionUID),
 				),
+			},
+		},
+		{
+			Name: "v1 imc+two subscribers for a channel - update delivery - full delivery spec",
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlcName,
+								Namespace:  testNS,
+							},
+						},
+						Retry:         pointer.Int32Ptr(10),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("PT1S"),
+					}),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
+				),
 				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
@@ -1233,24 +1277,49 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
-					WithSubscriptionChannel(channelableV1Alpha1GVK, channelName),
+					WithSubscriptionChannel(imcV1Beta1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlcName,
+								Namespace:  testNS,
+							},
+						},
+						Retry:         pointer.Int32Ptr(10),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("PT1S"),
+					}),
+					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribersV1Alpha1(testNS, channelName, []eventingduckv1alpha1.SubscriberSpec{
-					{UID: "b-" + subscriptionUID},
-					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURIWithPath},
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						UID:           "a-" + subscriptionUID,
+						SubscriberURI: serviceURIWithPath,
+						Delivery: &eventingduck.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
+							},
+							Retry:         pointer.Int32Ptr(10),
+							BackoffPolicy: &linear,
+							BackoffDelay:  pointer.StringPtr("PT1S"),
+						},
+					},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
-		}, {
-			Name: "v1beta1 imc+deleted - channel patch succeeded",
+		},
+		{
+			Name: "v1 imc+deleted - channel patch succeeded",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
@@ -1440,6 +1509,12 @@ func patchSubscribersV1Alpha1(namespace, name string, subscribers []eventingduck
 	return action
 }
 
+func WithSubscriptionDeliverySpec(d *eventingduck.DeliverySpec) SubscriptionOption {
+	return func(v *messagingv1beta1.Subscription) {
+		v.Spec.Delivery = d
+	}
+}
+
 func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
@@ -1469,10 +1544,6 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 	action.Patch = []byte(patch)
 	return action
 }
-
-const (
-	finalizerName = "subscriptions.messaging.knative.dev"
-)
 
 func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
