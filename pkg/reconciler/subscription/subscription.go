@@ -595,13 +595,9 @@ func deliverySpec(sub *v1.Subscription) *eventingduckv1beta1.DeliverySpec {
 		if delivery == nil {
 			delivery = &eventingduckv1beta1.DeliverySpec{}
 		}
-		delivery.BackoffPolicy = backoffPolicyV1Beta1(sub.Spec.Delivery.BackoffPolicy)
+		delivery.BackoffPolicy = (*eventingduckv1beta1.BackoffPolicyType)(sub.Spec.Delivery.BackoffPolicy)
 		delivery.Retry = sub.Spec.Delivery.Retry
 		delivery.BackoffDelay = sub.Spec.Delivery.BackoffDelay
 	}
 	return delivery
-}
-
-func backoffPolicyV1Beta1(policyType *eventingduckv1.BackoffPolicyType) *eventingduckv1beta1.BackoffPolicyType {
-	return (*eventingduckv1beta1.BackoffPolicyType)(policyType)
 }
