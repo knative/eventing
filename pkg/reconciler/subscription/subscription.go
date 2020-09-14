@@ -524,6 +524,7 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
 				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
 				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
+				Delivery:          deliverySpec(sub),
 			}},
 		}
 		return
@@ -536,6 +537,7 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 			channel.Spec.Subscribable.Subscribers[i].SubscriberURI = sub.Status.PhysicalSubscription.SubscriberURI
 			channel.Spec.Subscribable.Subscribers[i].ReplyURI = sub.Status.PhysicalSubscription.ReplyURI
 			channel.Spec.Subscribable.Subscribers[i].DeadLetterSinkURI = sub.Status.PhysicalSubscription.DeadLetterSinkURI
+			channel.Spec.Subscribable.Subscribers[i].Delivery = deliverySpec(sub)
 			return
 		}
 	}
@@ -548,6 +550,7 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 			SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
 			ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
 			DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
+			Delivery:          deliverySpec(sub),
 		})
 }
 
@@ -558,15 +561,7 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Beta1(ctx context.Context, ch
 			channel.Spec.Subscribers[i].Generation = sub.Generation
 			channel.Spec.Subscribers[i].SubscriberURI = sub.Status.PhysicalSubscription.SubscriberURI
 			channel.Spec.Subscribers[i].ReplyURI = sub.Status.PhysicalSubscription.ReplyURI
-			// Only set the deadletter sink if it's not nil. Otherwise we'll just end up patching
-			// empty delivery in there.
-			if sub.Status.PhysicalSubscription.DeadLetterSinkURI != nil {
-				channel.Spec.Subscribers[i].Delivery = &eventingduckv1beta1.DeliverySpec{
-					DeadLetterSink: &duckv1.Destination{
-						URI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
-					},
-				}
-			}
+			channel.Spec.Subscribers[i].Delivery = deliverySpec(sub)
 			return
 		}
 	}
@@ -576,17 +571,33 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Beta1(ctx context.Context, ch
 		Generation:    sub.Generation,
 		SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
 		ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI,
+		Delivery:      deliverySpec(sub),
 	}
+
+	// Must not have been found. Add it.
+	channel.Spec.Subscribers = append(channel.Spec.Subscribers, toAdd)
+}
+
+func deliverySpec(sub *v1.Subscription) *eventingduckv1beta1.DeliverySpec {
+
+	var delivery *eventingduckv1beta1.DeliverySpec
+
 	// Only set the deadletter sink if it's not nil. Otherwise we'll just end up patching
 	// empty delivery in there.
 	if sub.Status.PhysicalSubscription.DeadLetterSinkURI != nil {
-		toAdd.Delivery = &eventingduckv1beta1.DeliverySpec{
+		delivery = &eventingduckv1beta1.DeliverySpec{
 			DeadLetterSink: &duckv1.Destination{
 				URI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
 			},
 		}
 	}
-
-	// Must not have been found. Add it.
-	channel.Spec.Subscribers = append(channel.Spec.Subscribers, toAdd)
+	if sub.Spec.Delivery != nil && (sub.Spec.Delivery.BackoffDelay != nil || sub.Spec.Delivery.Retry != nil || sub.Spec.Delivery.BackoffPolicy != nil) {
+		if delivery == nil {
+			delivery = &eventingduckv1beta1.DeliverySpec{}
+		}
+		delivery.BackoffPolicy = (*eventingduckv1beta1.BackoffPolicyType)(sub.Spec.Delivery.BackoffPolicy)
+		delivery.Retry = sub.Spec.Delivery.Retry
+		delivery.BackoffDelay = sub.Spec.Delivery.BackoffDelay
+	}
+	return delivery
 }
