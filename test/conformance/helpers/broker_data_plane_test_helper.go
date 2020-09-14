@@ -54,7 +54,18 @@ func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, bro
 		)
 		client.WaitForResourceReadyOrFail(broker.Name, testlib.BrokerTypeMeta)
 	} else {
-		if broker, err = client.Eventing.EventingV1beta1().Brokers(brokerNamespace).Get(ctx, brokerName, metav1.GetOptions{}); err != nil {
+		var broker *eventingv1beta1.Broker
+		brokers := client.Eventing.EventingV1beta1().Brokers(brokerNamespace)
+		err := client.RetryWebhookErrors(func(attempts int) (err error) {
+			var e error
+			client.T.Logf("Getting v1beta1 broker %s", brokerName)
+			broker, e = brokers.Get(context.Background(), brokerName, metav1.GetOptions{})
+			if e != nil {
+				client.T.Logf("Failed to get broker %q: %v", brokerName, e)
+			}
+			return err
+		})
+		if err != nil {
 			client.T.Fatalf("Could not Get broker %s/%s: %v", brokerNamespace, brokerName, err)
 		}
 	}
