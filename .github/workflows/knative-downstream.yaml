@@ -96,4 +96,44 @@ jobs:
         upstream-module: knative.dev/${{ github.event.repository.name }}
         downstream-module: knative.dev/sample-source
 
+  downstream-eventing-kafka-broker:
+    name: Eventing Kafka Broker
+    strategy:
+      matrix:
+        go-version: [1.15.x]
+        platform: [ubuntu-latest]
+
+    runs-on: ${{ matrix.platform }}
+
+    env:
+      GOPATH: ${{ github.workspace }}
+
+    steps:
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+        id: go
+
+      - name: Install Dependencies
+        run: |
+          go get github.com/google/go-licenses
+
+      - name: Checkout Upstream
+        uses: actions/checkout@v2
+        with:
+          path: ./src/knative.dev/${{ github.event.repository.name }}
+
+      - name: Checkout Downstream
+        uses: actions/checkout@v2
+        with:
+          repository: knative-sandbox/eventing-kafka-broker
+          path: ./src/knative.dev/eventing-kafka-broker
+
+      - name: Test Downstream
+        uses: knative-sandbox/downstream-test-go@v1.0.1
+        with:
+          upstream-module: knative.dev/${{ github.event.repository.name }}
+          downstream-module: knative.dev/eventing-kafka-broker
 
