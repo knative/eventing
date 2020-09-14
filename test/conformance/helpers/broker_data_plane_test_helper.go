@@ -53,7 +53,6 @@ func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, bro
 		)
 		client.WaitForResourceReadyOrFail(broker.Name, testlib.BrokerTypeMeta)
 	} else {
-		var broker *eventingv1beta1.Broker
 		brokers := client.Eventing.EventingV1beta1().Brokers(brokerNamespace)
 		err := client.RetryWebhookErrors(func(attempts int) (err error) {
 			var e error
