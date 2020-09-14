@@ -97,8 +97,8 @@ function acquire_cluster_admin_role() {
 #             $3 - test command to run after cluster is created
 function create_test_cluster() {
   # Fail fast during setup.
-  set -o errexit
-  set -o pipefail
+#  set -o errexit
+#  set -o pipefail
 
   if function_exists cluster_setup; then
     cluster_setup || fail_test "cluster setup failed"
@@ -112,8 +112,8 @@ function create_test_cluster() {
 
   local result="$?"
   # Ignore any errors below, this is a best-effort cleanup and shouldn't affect the test result.
-  set +o errexit
-  set +o pipefail
+#  set +o errexit
+#  set +o pipefail
   function_exists cluster_teardown && cluster_teardown
   echo "Artifacts were written to ${ARTIFACTS}"
   echo "Test result code is ${result}"
@@ -128,8 +128,11 @@ function create_kind_test_cluster() {
   local -n _test_command=$3
 #  kind create cluster
   local config="${REPO_ROOT_DIR}/vendor/knative.dev/test-infra/scripts/config.yaml"
-  kind create cluster --name="istio-testing" --config "${config}" -v9 --retain --image "kindest/node:v1.18.2" --wait=60s
-  kubetest2 kind --test=exec -- "${_test_command[@]}"
+  kind create cluster --name="knative-testing" --config "${config}" -v9 --retain \
+    --image "kindest/node:v1.18.2@sha256:7b27a6d0f2517ff88ba444025beae41491b016bc6af573ba467b70c5e8e0d85f" --wait=60s || true
+  kind export logs $ARTIFACTS --name="knative-testing"
+  kind delete cluster --name="knative-testing"
+#  kubetest2 kind --test=exec -- "${_test_command[@]}"
   return 0
 }
 
