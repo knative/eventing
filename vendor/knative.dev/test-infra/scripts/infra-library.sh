@@ -126,7 +126,9 @@ function create_test_cluster() {
 function create_kind_test_cluster() {
   run_go_tool sigs.k8s.io/kind@v0.8.1 kind --help > /dev/null 2>&1
   local -n _test_command=$3
-  kind create cluster
+#  kind create cluster
+  local config="${REPO_ROOT_DIR}/vendor/knative.dev/test-infra/scripts/config.yaml"
+  kind create cluster --name="istio-testing" --config "${config}" -v9 --retain --image "kindest/node:v1.18.2" --wait=60s
   kubetest2 kind --test=exec -- "${_test_command[@]}"
   return 0
 }
