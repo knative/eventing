@@ -136,7 +136,17 @@ func triggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, bro
 
 	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
 
-	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
+	var tr *eventingv1beta1.Trigger
+	triggers := client.Eventing.EventingV1beta1().Triggers(client.Namespace)
+	err = client.RetryWebhookErrors(func(attempts int) (err error) {
+		var e error
+		client.T.Logf("Getting v1beta1 trigger %s", triggerName)
+		tr, e = triggers.Get(context.Background(), triggerName, metav1.GetOptions{})
+		if e != nil {
+			client.T.Logf("Failed to get trigger %q: %v", triggerName, e)
+		}
+		return err
+	})
 	if err != nil {
 		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
 	}
@@ -147,7 +157,17 @@ func triggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, bro
 
 func triggerV1Beta1ReadyIncludesSubURI(t *testing.T, triggerName string, client *testlib.Client) {
 	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
-	tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
+	var tr *eventingv1beta1.Trigger
+	triggers := client.Eventing.EventingV1beta1().Triggers(client.Namespace)
+	err := client.RetryWebhookErrors(func(attempts int) (err error) {
+		var e error
+		client.T.Logf("Getting v1beta1 trigger %s", triggerName)
+		tr, e = triggers.Get(context.Background(), triggerName, metav1.GetOptions{})
+		if e != nil {
+			client.T.Logf("Failed to get trigger %q: %v", triggerName, e)
+		}
+		return err
+	})
 	if err != nil {
 		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
 	}
