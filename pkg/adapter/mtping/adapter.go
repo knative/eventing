@@ -18,18 +18,21 @@ package mtping
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"os"
 	"strconv"
-
-	"knative.dev/pkg/controller"
+	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/prometheus/common/log"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
 const (
@@ -38,9 +41,16 @@ const (
 
 // mtpingAdapter implements the PingSource mt adapter to sinks
 type mtpingAdapter struct {
-	logger *zap.SugaredLogger
-	runner *cronJobsRunner
+	logger    *zap.SugaredLogger
+	runner    CronJobRunner
+	entryidMu sync.RWMutex
+	entryids  map[string]cron.EntryID // key: resource namespace/name
 }
+
+var (
+	_ adapter.Adapter = (*mtpingAdapter)(nil)
+	_ MTAdapter       = (*mtpingAdapter)(nil)
+)
 
 func NewEnvConfig() adapter.EnvConfigAccessor {
 	return &adapter.EnvConfig{}
@@ -51,14 +61,16 @@ func NewAdapter(ctx context.Context, _ adapter.EnvConfigAccessor, ceClient cloud
 	runner := NewCronJobsRunner(ceClient, kubeclient.Get(ctx), logging.FromContext(ctx))
 
 	return &mtpingAdapter{
-		logger: logger,
-		runner: runner,
+		logger:    logger,
+		runner:    runner,
+		entryidMu: sync.RWMutex{},
+		entryids:  make(map[string]cron.EntryID),
 	}
 }
 
 // Start implements adapter.Adapter
 func (a *mtpingAdapter) Start(ctx context.Context) error {
-	ctrl := NewController(ctx, a.runner)
+	ctrl := NewController(ctx, a)
 
 	a.logger.Info("Starting controllers...")
 	go controller.StartAll(ctx, ctrl)
@@ -76,10 +88,48 @@ func GetNoShutDownAfterValue() int {
 	if str != "" {
 		second, err := strconv.Atoi(str)
 		if err != nil || second < 0 || second > 59 {
-			log.Warnf("%s environment value is invalid. It must be a integer between 0 and 59. (got %s)", EnvNoShutdownAfter, str)
+			log.Printf("%s environment value is invalid. It must be a integer between 0 and 59. (got %s)", EnvNoShutdownAfter, str)
 		} else {
 			return second
 		}
 	}
 	return 55 // seems a reasonable default
+}
+
+// Implements MTAdapter
+
+func (a *mtpingAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
+	logging.FromContext(ctx).Info("Synchronizing schedule")
+
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
+	// Is the schedule already cached?
+	a.entryidMu.RLock()
+	id, ok := a.entryids[key]
+	a.entryidMu.RUnlock()
+
+	if ok {
+		a.runner.RemoveSchedule(id)
+	}
+
+	id = a.runner.AddSchedule(source)
+
+	a.entryidMu.Lock()
+	a.entryids[key] = id
+	a.entryidMu.Unlock()
+}
+
+func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
+
+	a.entryidMu.RLock()
+	id, ok := a.entryids[key]
+	a.entryidMu.RUnlock()
+
+	if ok {
+		a.runner.RemoveSchedule(id)
+
+		a.entryidMu.Lock()
+		delete(a.entryids, key)
+		a.entryidMu.Unlock()
+	}
 }

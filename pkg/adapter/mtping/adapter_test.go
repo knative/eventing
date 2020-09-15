@@ -18,10 +18,18 @@ package mtping
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+
+	"github.com/robfig/cron/v3"
+
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/logging"
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	pkgadapter "knative.dev/eventing/pkg/adapter/v2"
@@ -56,3 +64,43 @@ func TestStartStopAdapter(t *testing.T) {
 	case <-done:
 	}
 }
+
+func TestUpdateRemoveAdapter(t *testing.T) {
+	ctx, _ := rectesting.SetupFakeContext(t)
+	adapter := mtpingAdapter{
+		logger:    logging.FromContext(ctx),
+		runner:    &dummyRunner{},
+		entryidMu: sync.RWMutex{},
+		entryids:  make(map[string]cron.EntryID),
+	}
+
+	adapter.Update(ctx, &sourcesv1beta1.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-ns",
+		},
+	})
+
+	if _, ok := adapter.entryids["test-ns/test-name"]; !ok {
+		t.Error("expected cron entries to contain \"test-ns/test-name\"")
+	}
+
+	adapter.Remove(ctx, &sourcesv1beta1.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-ns",
+		},
+	})
+	if _, ok := adapter.entryids["test-ns/test-name"]; ok {
+		t.Error("expected cron entries to not contain \"test-ns/test-name\"")
+	}
+}
+
+type dummyRunner struct{}
+
+func (r *dummyRunner) Start(stopCh <-chan struct{}) {}
+func (r *dummyRunner) Stop()                        {}
+func (r *dummyRunner) AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID {
+	return cron.EntryID(1)
+}
+func (r *dummyRunner) RemoveSchedule(id cron.EntryID) {}

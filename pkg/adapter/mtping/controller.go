@@ -18,36 +18,56 @@ package mtping
 
 import (
 	"context"
-	"sync"
-
-	"github.com/robfig/cron/v3"
 
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 
+	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
 )
 
-// NewController initializes the controller and is called by the generated code.
+// TODO: code generation
+
+// MTAdapter is the interface the multi-tenant PingSource adapter must implement
+type MTAdapter interface {
+	// Update is called when the source is ready and when the specification and/or status has changed.
+	Update(ctx context.Context, source *v1beta1.PingSource)
+
+	// Remove is called when the source has been deleted.
+	Remove(ctx context.Context, source *v1beta1.PingSource)
+}
+
+// NewController initializes the controller. This is called by the shared adapter Main
 // Registers event handlers to enqueue events.
-func NewController(ctx context.Context, cronRunner *cronJobsRunner) *controller.Impl {
-	logger := logging.FromContext(ctx)
-
-	pingsourceInformer := pingsourceinformer.Get(ctx)
-
-	r := &Reconciler{
-		entryidMu:  sync.RWMutex{},
-		entryids:   make(map[string]cron.EntryID),
-		cronRunner: cronRunner,
+func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Impl {
+	mtadapter, ok := adapter.(MTAdapter)
+	if !ok {
+		logging.FromContext(ctx).Fatal("Multi-tenant adapters must implement the MTAdapter interface")
 	}
 
+	r := &Reconciler{mtadapter}
+
+	// TODO: need pkg#1683
+	// lister := pingsourceinformer.Get(ctx).Lister()
+	//opts := func(impl *controller.Impl) controller.Options {
+	//	return controller.Options{
+	//		DemoteFunc: func(b reconciler.Bucket) {
+	//			all, _ := lister.List(labels.Everything())
+	//			// TODO: demote with error
+	//			//if err != nil {
+	//			//	return err
+	//			//}
+	//			for _, elt := range all {
+	//				mtadapter.Remove(ctx, elt)
+	//			}
+	//		},
+	//	}
+	//}
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
-	logger.Info("Setting up event handlers")
-
-	// Watch for pingsource objects
-	pingsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
+	logging.FromContext(ctx).Info("Setting up event handlers")
+	pingsourceinformer.Get(ctx).Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	return impl
 }

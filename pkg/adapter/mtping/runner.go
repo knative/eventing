@@ -36,6 +36,13 @@ import (
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
+type CronJobRunner interface {
+	Start(stopCh <-chan struct{})
+	Stop()
+	AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID
+	RemoveSchedule(id cron.EntryID)
+}
+
 type cronJobsRunner struct {
 	// The cron job runner
 	cron cron.Cron
@@ -63,34 +70,35 @@ func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interf
 	}
 }
 
-func (a *cronJobsRunner) AddSchedule(cfg PingConfig) cron.EntryID {
+func (a *cronJobsRunner) AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID {
 	event := cloudevents.NewEvent()
 	event.SetType(sourcesv1beta1.PingSourceEventType)
-	event.SetSource(sourcesv1beta1.PingSourceSource(cfg.Namespace, cfg.Name))
-	event.SetData(cloudevents.ApplicationJSON, message(cfg.JsonData))
-	if cfg.Extensions != nil {
-		for key, override := range cfg.Extensions {
+	event.SetSource(sourcesv1beta1.PingSourceSource(source.Namespace, source.Name))
+	event.SetData(cloudevents.ApplicationJSON, message(source.Spec.JsonData))
+	if source.Spec.CloudEventOverrides != nil && source.Spec.CloudEventOverrides.Extensions != nil {
+		for key, override := range source.Spec.CloudEventOverrides.Extensions {
 			event.SetExtension(key, override)
 		}
 	}
 
 	ctx := context.Background()
-	ctx = cloudevents.ContextWithTarget(ctx, cfg.SinkURI)
+	ctx = cloudevents.ContextWithTarget(ctx, source.Status.SinkURI.String())
 
-	var kubeEventSink record.EventSink = &typedcorev1.EventSinkImpl{Interface: a.kubeClient.CoreV1().Events(cfg.Namespace)}
-	ctx = crstatusevent.ContextWithCRStatus(ctx, &kubeEventSink, "ping-source-mt-adapter", &cfg.ObjectReference, a.Logger.Infof)
+	var kubeEventSink record.EventSink = &typedcorev1.EventSinkImpl{Interface: a.kubeClient.CoreV1().Events(source.Namespace)}
+	ctx = crstatusevent.ContextWithCRStatus(ctx, &kubeEventSink, "ping-source-mt-adapter", source, a.Logger.Infof)
 
 	// Simple retry configuration to be less than 1mn.
 	// We might want to retry more times for less-frequent schedule.
 	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
 
 	metricTag := &kncloudevents.MetricTag{
-		Namespace:     cfg.Namespace,
-		Name:          cfg.Name,
+		Namespace:     source.Namespace,
+		Name:          source.Name,
 		ResourceGroup: resourceGroup,
 	}
+
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
-	id, _ := a.cron.AddFunc(cfg.Schedule, a.cronTick(ctx, event))
+	id, _ := a.cron.AddFunc(source.Spec.Schedule, a.cronTick(ctx, event))
 	return id
 }
 
@@ -113,7 +121,6 @@ func (a *cronJobsRunner) Stop() {
 
 func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
 	return func() {
-
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
 		target := cecontext.TargetFrom(ctx).String()

@@ -17,20 +17,35 @@ limitations under the License.
 package mtping
 
 import (
+	"context"
 	"testing"
 
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource/fake"
+
+	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
+
+type dummyAdapter struct{}
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, nil)
+	c := NewController(ctx, &dummyAdapter{})
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+func (dummyAdapter) Start(ctx context.Context) error {
+	return nil
+}
+
+func (dummyAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
+}
+
+func (dummyAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
 }

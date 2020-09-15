@@ -18,16 +18,12 @@ package mtping
 
 import (
 	"context"
-	"sync"
 	"testing"
 
-	"github.com/robfig/cron/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	testclient "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
-	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
@@ -170,14 +166,9 @@ func TestAllCases(t *testing.T) {
 	}
 
 	logger := logtesting.TestLogger(t)
-	ce := adaptertesting.NewTestClient()
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		r := &Reconciler{
-			cronRunner: NewCronJobsRunner(ce, testclient.NewSimpleClientset(), logger),
-			entryidMu:  sync.RWMutex{},
-			entryids:   make(map[string]cron.EntryID),
-		}
+		r := &Reconciler{mtadapter: dummyAdapter{}}
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetPingSourceV1beta1Lister(),
 			controller.GetEventRecorder(ctx), r)
