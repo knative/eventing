@@ -92,17 +92,17 @@ UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
+  kafka_setup || fail_test "Could not install Kafka"
+
   install_knative_eventing
+
+  install_kafka_channel_crds || fail_test "Could not install Kafka Channel"
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"
 
   install_sugar || fail_test "Could not install Sugar Controller"
 
-  unleash_duck || fail_test "Could not unleash the chaos duck"
-
-  kafka_setup || fail_test "Could not install Kafka"
-  
-  install_kafka_channel_crds || fail_test "Could not install Kafka Channel"
+  unleash_duck || fail_test "Could not unleash the chaos duck" 
 }
 
 function scale_controlplane() {
