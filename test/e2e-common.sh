@@ -44,6 +44,17 @@ readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="config/core/configmaps/default-
 readonly SUGAR_CONTROLLER_CONFIG_DIR="config/sugar"
 readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
 
+# Strimzi installation config template used for starting up Kafka clusters.
+readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="test/config/100-strimzi-cluster-operator-0.19.0.yaml"
+# Strimzi installation config.
+readonly STRIMZI_INSTALLATION_CONFIG="$(mktemp)"
+# Kafka cluster CR config file.
+readonly KAFKA_INSTALLATION_CONFIG="test/config/100-kafka-ephemeral-triple-2.5.0.yaml"
+# Kafka cluster URL for our installation
+readonly KAFKA_CLUSTER_URL="my-cluster-kafka-bootstrap.kafka:9092"
+# Kafka CRD
+readonly KAFKA_CHANNEL_CRD="test/config/100-kafka-channel.yaml"
+
 # Config tracing config.
 readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
@@ -88,6 +99,10 @@ function knative_setup() {
   install_sugar || fail_test "Could not install Sugar Controller"
 
   unleash_duck || fail_test "Could not unleash the chaos duck"
+
+  kafka_setup || fail_test "Could not install Kafka"
+  
+  install_kafka_channel_crds || fail_test "Could not install Kafka Channel"
 }
 
 function scale_controlplane() {
@@ -157,6 +172,28 @@ function install_knative_eventing() {
   else
     echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
   fi
+}
+
+function kafka_setup() {
+  echo "Installing Kafka cluster"
+  kubectl create namespace kafka || return 1
+  sed 's/namespace: .*/namespace: kafka/' ${STRIMZI_INSTALLATION_CONFIG_TEMPLATE} > ${STRIMZI_INSTALLATION_CONFIG}
+  kubectl apply -f "${STRIMZI_INSTALLATION_CONFIG}" -n kafka
+  kubectl apply -f ${KAFKA_INSTALLATION_CONFIG} -n kafka
+  wait_until_pods_running kafka || fail_test "Failed to start up a Kafka cluster"
+}
+
+function kafka_teardown() {
+  echo "Uninstalling Kafka cluster"
+  kubectl delete -f ${KAFKA_INSTALLATION_CONFIG} -n kafka
+  kubectl delete -f "${STRIMZI_INSTALLATION_CONFIG}" -n kafka
+  kubectl delete namespace kafka
+}
+
+function install_kafka_channel_crds() {
+  echo "Installing Kafka Channel CRD"
+  kubectl apply -f ${KAFKA_CHANNEL_CRD}
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka Channel CRD"
 }
 
 function install_head {
