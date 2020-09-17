@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ TestChannelChain tests the following scenario:
 EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ---> Service(Logger)
 
 */
-func TestChannelChain(t *testing.T) {
+func TestChannelChainV1beta1(t *testing.T) {
 	helpers.ChannelChainTestHelper(context.Background(), t, helpers.SubscriptionV1beta1, channelTestRunner)
 }
 
