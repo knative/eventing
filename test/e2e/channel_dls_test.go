@@ -31,5 +31,5 @@ func TestChannelDeadLetterSink(t *testing.T) {
 }
 
 func TestChannelDeadLetterSinkV1(t *testing.T) {
-	helpers.ChannelDeadLetterSinkTestHelper(context.Background(), t, helpers.SubscriptionV1beta1, channelTestRunner)
+	helpers.ChannelDeadLetterSinkTestHelper(context.Background(), t, helpers.SubscriptionV1, channelTestRunner)
 }
