@@ -151,7 +151,7 @@ number of receive adapter replicas for increase reliability and reducing
 downtime.
 
 The
-[GithubSource](https://github.com/knative/eventing-contrib/tree/master/github)
+[GithubSource](https://github.com/knative-sandbox/eventing-github)
 is a good example of a highly-available push-based receive adapter leveraging
 Knative Service.
 
