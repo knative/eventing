@@ -150,10 +150,9 @@ Kubernetes Service, or as a Knative Service. In both cases you can increase the
 number of receive adapter replicas for increase reliability and reducing
 downtime.
 
-The
-[GithubSource](https://github.com/knative-sandbox/eventing-github)
-is a good example of a highly-available push-based receive adapter leveraging
-Knative Service.
+The [GithubSource](https://github.com/knative-sandbox/eventing-github) is a good
+example of a highly-available push-based receive adapter leveraging Knative
+Service.
 
 ### Pull model
 
