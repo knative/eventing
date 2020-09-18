@@ -73,6 +73,11 @@ spec:
           - name: BROKER_INJECTION_DEFAULT
             value: "false"
 
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+
         securityContext:
           allowPrivilegeEscalation: false
 

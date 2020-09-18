@@ -47,6 +47,11 @@ spec:
                 fieldPath: metadata.namespace
           - name: DISPATCHER_IMAGE
             value: ko://knative.dev/eventing/cmd/in_memory/channel_dispatcher
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+
         securityContext:
           allowPrivilegeEscalation: false
 

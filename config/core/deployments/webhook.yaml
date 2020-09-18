@@ -82,6 +82,10 @@ spec:
           # The default is `exclusion`.
         - name: SINK_BINDING_SELECTION_MODE
           value: "exclusion"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
 
         securityContext:
           allowPrivilegeEscalation: false

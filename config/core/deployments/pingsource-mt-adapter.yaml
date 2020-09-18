@@ -54,6 +54,10 @@ spec:
               value: ''
             - name: K_NO_SHUTDOWN_AFTER
               value: ''
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
 
           ports:
             - containerPort: 9090
