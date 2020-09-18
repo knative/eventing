@@ -68,6 +68,10 @@ spec:
           # APIServerSource
           - name: APISERVER_RA_IMAGE
             value: ko://knative.dev/eventing/cmd/apiserver_receive_adapter
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
 
         securityContext:
           allowPrivilegeEscalation: false
