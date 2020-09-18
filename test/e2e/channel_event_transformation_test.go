@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    |  ---------
                                    -----------> Service(Transformation)
 */
-func TestEventTransformationForSubscription(t *testing.T) {
+func TestEventTransformationForSubscriptionV1Beta1(t *testing.T) {
 	helpers.EventTransformationForSubscriptionTestHelper(context.Background(), t, helpers.SubscriptionV1beta1, channelTestRunner)
 }
 
