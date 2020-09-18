@@ -279,7 +279,7 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 		n, _ := response.BodyReader.Read(body)
 		response.BodyReader.Close()
 		if n != 0 {
-			return resp.StatusCode, errors.New("Received a malformed event in reply")
+			return resp.StatusCode, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
 		}
 		return resp.StatusCode, nil
 	}
