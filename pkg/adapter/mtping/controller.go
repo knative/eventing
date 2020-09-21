@@ -65,6 +65,7 @@ func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Imp
 	//		},
 	//	}
 	//}
+
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
 	logging.FromContext(ctx).Info("Setting up event handlers")

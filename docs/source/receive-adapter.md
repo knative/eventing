@@ -83,12 +83,12 @@ handle more than one source instance at a time, either all source instances in
 one namespace or all source instances in the cluster.
 
 In order to support multi-resources per receive adapter, you need to enable the
-ConfigMap watcher feature, as follows:
+Controller watcher feature, as follows:
 
 ```go
 func main() {
   ctx := signals.NewContext()
-  ctx = adapter.WithInjectorEnabled(ctx)
+  ctx = adapter.WithController(ctx, youradapter.NewController)
   ctx = adapter.WithConfigMapWatcherEnabled(ctx)
   adapter.MainWithContext(ctx, "yourcomponent",
     youradapter.NewEnvConfig,

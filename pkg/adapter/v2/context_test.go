@@ -20,23 +20,34 @@ import (
 	"context"
 	"testing"
 
+	"knative.dev/pkg/controller"
+
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
-	rectesting "knative.dev/pkg/reconciler/testing"
 )
 
-func TestConfigMapWatcherEnabled(t *testing.T) {
-	ctx := WithConfigMapWatcherEnabled(context.TODO())
-	if !IsConfigMapWatcherEnabled(ctx) {
-		t.Error("expected config watcher to be enabled")
+func TestWithController(t *testing.T) {
+	ctx := WithController(context.TODO(), func(ctx context.Context, adapter Adapter) *controller.Impl {
+		return nil
+	})
+
+	if ControllerFromContext(ctx) == nil {
+		t.Error("expected non-nil controller constructor")
 	}
 }
 
-func TestConfigMapWatcher(t *testing.T) {
-	ctx, _ := rectesting.SetupFakeContext(t)
-	watcher := SetupConfigMapWatchOrDie(ctx, "component", "test-ns")
-	ctx = WithConfigMapWatcher(ctx, watcher)
-
-	if ConfigMapWatcherFromContext(ctx) == nil {
-		t.Error("expected config watcher, got nothing")
+func TestWithHAEnabled(t *testing.T) {
+	ctx := context.Background()
+	ctx = WithHAEnabled(ctx)
+	if !IsHAEnabled(ctx) {
+		t.Error("Expected HA to be enabled")
 	}
+
+	ctx = withHADisabledFlag(ctx)
+	if !IsHAEnabled(ctx) {
+		t.Error("Expected HA to be enabled")
+	}
+	if !isHADisabledFlag(ctx) {
+		t.Error("Expected HA to be disabled via commandline flag")
+	}
+
 }

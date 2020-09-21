@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+
 	"log"
 	"net/http"
 	"strconv"
@@ -34,14 +35,15 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
+	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
-	"knative.dev/eventing/pkg/leaderelection"
 )
 
 // Adapter is the interface receive adapters are expected to implement
@@ -51,40 +53,20 @@ type Adapter interface {
 
 type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client) Adapter
 
-type haEnabledKey struct{}
-
-// WithHAEnabled signals to MainWithContext that it should set up an appropriate leader elector for this component.
-func WithHAEnabled(ctx context.Context) context.Context {
-	return context.WithValue(ctx, haEnabledKey{}, struct{}{})
-}
-
-// IsHAEnabled checks the context for the desire to enable leader elector.
-func IsHAEnabled(ctx context.Context) bool {
-	val := ctx.Value(haEnabledKey{})
-	return val != nil
-}
-
-type haDisabledFlagKey struct{}
-
-// withHADisabledFlag signals to MainWithConfig that it should not set up an appropriate leader elector for this component.
-func withHADisabledFlag(ctx context.Context) context.Context {
-	return context.WithValue(ctx, haDisabledFlagKey{}, struct{}{})
-}
-
-// isHADisabledFlag checks the context for the desired to disable leader elector.
-func isHADisabledFlag(ctx context.Context) bool {
-	val := ctx.Value(haDisabledFlagKey{})
-	return val != nil
-}
+// ControllerConstructor is the function signature for creating controllers synchronizing
+// the multi-tenant receive adapter state
+type ControllerConstructor func(ctx context.Context, adapter Adapter) *controller.Impl
 
 type injectorEnabledKey struct{}
 
 // WithInjectorEnabled signals to MainWithInjectors that it should try to run injectors.
+// TODO: deprecated. Use WithController instead
 func WithInjectorEnabled(ctx context.Context) context.Context {
 	return context.WithValue(ctx, injectorEnabledKey{}, struct{}{})
 }
 
 // IsInjectorEnabled checks the context for the desire to enable injectors
+// TODO: deprecated.
 func IsInjectorEnabled(ctx context.Context) bool {
 	val := ctx.Value(injectorEnabledKey{})
 	return val != nil
@@ -104,7 +86,7 @@ func MainWithEnv(ctx context.Context, component string, env EnvConfigAccessor, c
 		flag.Bool("disable-ha", false, "Whether to disable high-availability functionality for this component.")
 	}
 
-	if IsInjectorEnabled(ctx) {
+	if ControllerFromContext(ctx) != nil || IsInjectorEnabled(ctx) {
 		ictx, informers := SetupInformers(ctx, env.GetLogger())
 		if informers != nil {
 			StartInformers(ctx, informers) // none-blocking
@@ -188,22 +170,8 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
 
-	// Setup config watcher if enabled.
-	if IsConfigMapWatcherEnabled(ctx) {
-		cmw := SetupConfigMapWatchOrDie(ctx, component, env.GetNamespace())
-		ctx = WithConfigMapWatcher(ctx, cmw)
-	}
-
 	// Configuring the adapter
 	adapter := ctor(ctx, env, eventsClient)
-
-	// Start config watcher if enabled.
-	if IsConfigMapWatcherEnabled(ctx) {
-		logger.Info("Starting configuration manager...")
-		if err := ConfigMapWatcherFromContext(ctx).Start(ctx.Done()); err != nil {
-			logger.Fatalw("Failed to start configuration manager", zap.Error(err))
-		}
-	}
 
 	// Build the leader elector
 	leConfig, err := env.GetLeaderElectionConfig()
@@ -213,15 +181,29 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	if !isHADisabledFlag(ctx) && IsHAEnabled(ctx) {
 		// Signal that we are executing in a context with leader election.
+		logger.Info("Leader election mode enabled")
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
 
-	elector, err := leaderelection.BuildAdapterElector(ctx, adapter)
-	if err != nil {
-		logger.Fatal("Error creating the adapter elector", zap.Error(err))
+	// Create and start controller is needed
+	if ctor := ControllerFromContext(ctx); ctor != nil {
+		ctrl := ctor(ctx, adapter)
+
+		if leaderelection.HasLeaderElection(ctx) {
+			// the reconciler MUST implement LeaderAware.
+			if _, ok := ctrl.Reconciler.(reconciler.LeaderAware); !ok {
+				log.Fatalf("%T is not leader-aware, all reconcilers must be leader-aware to enable fine-grained leader election.", ctrl.Reconciler)
+			}
+		}
+
+		logger.Info("Starting controller")
+		go controller.StartAll(ctx, ctrl)
 	}
 
-	elector.Run(ctx)
+	// Finally start the adapter (blocking)
+	if err := adapter.Start(ctx); err != nil {
+		logging.FromContext(ctx).Warn("Start returned an error", zap.Error(err))
+	}
 }
 
 func ConstructEnvOrDie(ector EnvConfigConstructor) EnvConfigAccessor {
