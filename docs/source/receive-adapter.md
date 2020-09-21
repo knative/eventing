@@ -89,46 +89,10 @@ Controller watcher feature, as follows:
 func main() {
   ctx := signals.NewContext()
   ctx = adapter.WithController(ctx, youradapter.NewController)
-  ctx = adapter.WithConfigMapWatcherEnabled(ctx)
   adapter.MainWithContext(ctx, "yourcomponent",
     youradapter.NewEnvConfig,
     youradapter.NewAdapter)
 }
-```
-
-The library automatically creates a watcher on the ConfigMap named
-`config-yourcomponent`. In order to react to any ConfigMap changes, in your
-adapter constructor (`NewAdapter`), you must add a ConfigMap watcher, as
-follows:
-
-```go
-func NewAdapter(ctx context.Context,
-                _ adapter.EnvConfigAccessor,
-                ceClient cloudevents.Client) adapter.Adapter {
-  youradapter := ...
-
-  cmw := adapter.ConfigMapWatcherFromContext(ctx)
-  cmw.Watch("config-yourcomponent", youradapter.updateFromConfigMap)
-
-  return youradapter
-}
-```
-
-The controller associated to the receive adapter generates the ConfigMap. It
-relies on the [persistent store](../../pkg/utils/cache/persisted_store.go)
-utility. Add these lines to your controller to enable it.
-
-```go
-// Create and start persistent store backed by ConfigMaps
-store := eventingcache.NewPersistedStore(
-    "yourcomponent",
-    kubeclient.Get(ctx),
-    system.Namespace(),
-    "config-yourcomponent",
-    yourcomponentInformer.Informer(),
-    yourcomponent.Project)
-
-go store.Run(ctx)
 ```
 
 ## Logging, metrics and tracing
