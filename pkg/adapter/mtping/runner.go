@@ -22,8 +22,6 @@ import (
 	"math/rand"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cecontext "github.com/cloudevents/sdk-go/v2/context"
 	"github.com/google/uuid"
@@ -57,29 +55,6 @@ type cronJobsRunner struct {
 
 	// kubeClient for sending k8s events
 	kubeClient kubernetes.Interface
-}
-
-type PingConfig struct {
-	corev1.ObjectReference `json:",inline"`
-
-	// Schedule is the cronjob schedule. Defaults to `* * * * *`.
-	Schedule string `json:"schedule"`
-
-	// JsonData is json encoded data used as the body of the event posted to
-	// the sink. Default is empty. If set, datacontenttype will also be set
-	// to "application/json".
-	// +optional
-	JsonData string `json:"jsonData,omitempty"`
-
-	// Extensions specify what attribute are added or overridden on the
-	// outbound event. Each `Extensions` key-value pair are set on the event as
-	// an attribute extension independently.
-	// +optional
-	Extensions map[string]string `json:"extensions,omitempty"`
-
-	// SinkURI is the current active sink URI that has been configured for the
-	// Source.
-	SinkURI string `json:"sinkUri,omitempty"`
 }
 
 const (
