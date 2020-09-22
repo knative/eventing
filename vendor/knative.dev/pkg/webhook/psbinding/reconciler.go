@@ -45,6 +45,14 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
+// SubResourcesReconcilerInterface is used to reconcile binding related
+// sub-resources. Reconcile is executed after Binding's ReconcileSubject
+// and ReconcileDeletion will be executed before Binding's ReconcileDeletion
+type SubResourcesReconcilerInterface interface {
+	Reconcile(ctx context.Context, fb Bindable) error
+	ReconcileDeletion(ctx context.Context, fb Bindable) error
+}
+
 var jsonLabelPatch = map[string]interface{}{
 	"metadata": map[string]interface{}{
 		"labels": map[string]string{duck.BindingIncludeLabel: "true"},
@@ -88,6 +96,9 @@ type BaseReconciler struct {
 
 	// Namespace Lister
 	NamespaceLister corev1listers.NamespaceLister
+
+	// Sub-resources reconciler. Used to reconcile Binding related resources
+	SubResourcesReconciler SubResourcesReconcilerInterface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -151,6 +162,12 @@ func (r *BaseReconciler) reconcile(ctx context.Context, fb Bindable) error {
 	if fb.GetDeletionTimestamp() != nil {
 		// Check for a DeletionTimestamp.  If present, elide the normal
 		// reconcile logic and do our finalizer handling.
+		if r.SubResourcesReconciler != nil {
+			// If a SubResourceReconciler is defined, finalize related resources
+			if err := r.SubResourcesReconciler.ReconcileDeletion(ctx, fb); err != nil {
+				return err
+			}
+		}
 		return r.ReconcileDeletion(ctx, fb)
 	}
 	// Make sure that our conditions have been initialized.
@@ -165,6 +182,12 @@ func (r *BaseReconciler) reconcile(ctx context.Context, fb Bindable) error {
 	// Perform our Binding's Do() method on the subject(s) of the Binding.
 	if err := r.ReconcileSubject(ctx, fb, fb.Do); err != nil {
 		return err
+	}
+	if r.SubResourcesReconciler != nil {
+		// If a SubResourceReconciler is defined, reconcile related resources
+		if err := r.SubResourcesReconciler.Reconcile(ctx, fb); err != nil {
+			return err
+		}
 	}
 
 	// Update the observed generation once we have successfully reconciled

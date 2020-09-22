@@ -231,3 +231,44 @@ With the above defined, then in our webhook's `main.go` we invoke
 		githubbinding.NewController, githubbinding.NewWebhook,
 	)
 ```
+
+### Subresource reconciler
+
+Sometimes we might find the need for controlling not only `psbinding.Bindable`
+and `duckv1.WithPod`, but also other resources. We can achieve this by
+implementing `psbinding.SubResourcesReconcilerInterface` and injecting it in the
+`psbinding.BaseReconciler`.
+
+For example we can implement a SubResourcesReconciler to create/delete k8s
+resources:
+
+```go
+type FooBindingSubResourcesReconciler struct {
+    Client kubernetes.Interface
+}
+
+func (fr *FooBindingSubresourcesReconciler) Reconcile(ctx context.Context, fb psbinding.Bindable) error {
+    // Logic to create k8s resources here
+    return err
+}
+
+func (fr *FooBindingSubresourcesReconciler) ReconcileDeletion(ctx context.Context, fb psbinding.Bindable) error {
+    // Logic to delete k8s resources related to our Bindable
+    return err
+}
+
+```
+
+The SubResourcesReconciler can be then injected in the
+`psbinding.BaseReconciler` as follows:
+
+```go
+kclient := kubeclient.Get(ctx)
+srr := FooBindingSubResourcesReconciler{
+    Client: kclient,
+}
+c := &psbinding.BaseReconciler{
+		...
+        SubresourcesReconciler: srr
+	}
+```
