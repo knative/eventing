@@ -1,0 +1,6 @@
+# TODO(n3wscott): this is config for a WIP tool to help with release management
+
+release: 0.18
+knative:
+  - knative.dev/pkg
+  - knative.dev/test-infra
