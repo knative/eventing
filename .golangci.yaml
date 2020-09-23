@@ -16,7 +16,6 @@ linters:
     - asciicheck
     - gosec
     - prealloc
-#    - stylecheck
     - unconvert
     - unparam
   disable:
@@ -28,9 +27,3 @@ issues:
       linters:
         - gosec
         - unparam
-
-    # Allow source and sink receivers in conversion code for clarity.
-    - path: _conversion\.go
-      text: "ST1016:"
-      linters:
-        - stylecheck
