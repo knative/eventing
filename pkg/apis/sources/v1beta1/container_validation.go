@@ -38,8 +38,8 @@ func (cs *ContainerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("containers")
 		errs = errs.Also(fe)
 	} else {
-		for i, c := range cs.Template.Spec.Containers {
-			if ce := isValidContainer(&c); ce != nil {
+		for i := range cs.Template.Spec.Containers {
+			if ce := isValidContainer(&cs.Template.Spec.Containers[i]); ce != nil {
 				errs = errs.Also(ce.ViaFieldIndex("containers", i))
 			}
 		}

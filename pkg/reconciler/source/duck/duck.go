@@ -120,14 +120,16 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 
 	toCreate, toDelete := r.computeDiff(current, expected)
 
-	for _, eventType := range toDelete {
+	for i := range toDelete {
+		eventType := toCreate[i]
 		if err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Delete(ctx, eventType.Name, metav1.DeleteOptions{}); err != nil {
 			logging.FromContext(ctx).Errorw("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
 
-	for _, eventType := range toCreate {
+	for i := range toCreate {
+		eventType := toCreate[i]
 		if _, err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Create(ctx, &eventType, metav1.CreateOptions{}); err != nil {
 			logging.FromContext(ctx).Errorw("Error creating eventType", zap.Any("eventType", eventType))
 			return err
@@ -229,7 +231,8 @@ func (r *Reconciler) computeDiff(current []v1beta1.EventType, expected []v1beta1
 	expectedMap := asMap(expected, keyFromEventType)
 
 	// Iterate over the slices instead of the maps for predictable UT expectations.
-	for _, e := range expected {
+	for i := range expected {
+		e := expected[i]
 		if c, ok := currentMap[keyFromEventType(&e)]; !ok {
 			toCreate = append(toCreate, e)
 		} else {
@@ -242,7 +245,8 @@ func (r *Reconciler) computeDiff(current []v1beta1.EventType, expected []v1beta1
 	// Need to check whether the current EventTypes are not in the expected map. If so, we have to delete them.
 	// This could happen if the Source CO changes its broker.
 	// TODO remove once we remove Broker https://github.com/knative/eventing/issues/2750
-	for _, c := range current {
+	for i := range current {
+		c := current[i]
 		if _, ok := expectedMap[keyFromEventType(&c)]; !ok {
 			toDelete = append(toDelete, c)
 		}
@@ -252,7 +256,8 @@ func (r *Reconciler) computeDiff(current []v1beta1.EventType, expected []v1beta1
 
 func asMap(eventTypes []v1beta1.EventType, keyFunc func(*v1beta1.EventType) string) map[string]v1beta1.EventType {
 	eventTypesAsMap := make(map[string]v1beta1.EventType)
-	for _, eventType := range eventTypes {
+	for i := range eventTypes {
+		eventType := eventTypes[i]
 		key := keyFunc(&eventType)
 		eventTypesAsMap[key] = eventType
 	}

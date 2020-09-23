@@ -191,8 +191,8 @@ func (sink *SubscribableTypeSpec) ConvertFrom(ctx context.Context, obj apis.Conv
 			sink.Subscribable = &Subscribable{
 				Subscribers: make([]SubscriberSpec, len(source.Subscribers)),
 			}
-			for i, s := range source.Subscribers {
-				if err := sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &s); err != nil {
+			for i := range source.Subscribers {
+				if err := sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &source.Subscribers[i]); err != nil {
 					return err
 				}
 			}
@@ -202,8 +202,8 @@ func (sink *SubscribableTypeSpec) ConvertFrom(ctx context.Context, obj apis.Conv
 			sink.Subscribable = &Subscribable{
 				Subscribers: make([]SubscriberSpec, len(source.Subscribers)),
 			}
-			for i, s := range source.Subscribers {
-				if err := sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &s); err != nil {
+			for i := range source.Subscribers {
+				if err := sink.Subscribable.Subscribers[i].ConvertFrom(ctx, &source.Subscribers[i]); err != nil {
 					return err
 				}
 			}
@@ -268,9 +268,9 @@ func (sink *SubscribableTypeStatus) ConvertFrom(ctx context.Context, obj apis.Co
 			sink.SubscribableStatus = &SubscribableStatus{
 				Subscribers: make([]eventingduckv1beta1.SubscriberStatus, len(source.Subscribers)),
 			}
-			for i, ss := range source.Subscribers {
+			for i := range source.Subscribers {
 				sink.SubscribableStatus.Subscribers[i] = eventingduckv1beta1.SubscriberStatus{}
-				if err := sink.SubscribableStatus.Subscribers[i].ConvertFrom(ctx, &ss); err != nil {
+				if err := sink.SubscribableStatus.Subscribers[i].ConvertFrom(ctx, &source.Subscribers[i]); err != nil {
 					return err
 				}
 			}

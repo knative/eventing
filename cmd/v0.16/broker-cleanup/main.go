@@ -106,7 +106,8 @@ func main() {
 		}
 
 		foundBrokerForCleaning := false
-		for _, broker := range brokers.Items {
+		for i := range brokers.Items {
+			broker := brokers.Items[i]
 			clean := false
 
 			if broker.Annotations["eventing.knative.dev/broker.class"] == "ChannelBasedBroker" {
@@ -232,7 +233,8 @@ func main() {
 	}
 
 	if !env.DryRun {
-		for _, b := range relabel {
+		for i := range relabel {
+			b := relabel[i]
 			b.Annotations["eventing.knative.dev/broker.class"] = env.ReplacementBrokerClass
 			if _, err := client.EventingV1beta1().Brokers(b.Namespace).Update(ctx, &b, metav1.UpdateOptions{}); err != nil {
 				fmt.Printf("# [error] failed to update broker class for %s/%s: %s\n", b.Namespace, b.Name, err)

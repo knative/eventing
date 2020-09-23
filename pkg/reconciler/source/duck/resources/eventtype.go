@@ -17,7 +17,7 @@ limitations under the License.
 package resources
 
 import (
-	"crypto/md5"
+	"crypto/md5" // nolint:gosec // No strong cryptography needed.
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +43,7 @@ func MakeEventType(args *EventTypeArgs) *v1beta1.EventType {
 	// TODO revisit whether we want multiple event types, or just one with multiple owner refs. That will depend on the fields
 	//  it will contain. For example, if we remove Broker and Source, then the latter makes more sense.
 	//  See https://github.com/knative/eventing/issues/2750
+	// nolint:gosec // No strong cryptography needed.
 	fixedName := fmt.Sprintf("%x", md5.Sum([]byte(args.CeType+args.CeSource.String()+args.CeSchema.String()+string(args.Source.GetUID()))))
 	return &v1beta1.EventType{
 		ObjectMeta: metav1.ObjectMeta{

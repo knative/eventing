@@ -41,6 +41,7 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				if ds.BackoffPolicy != nil && *ds.BackoffPolicy == "" {
 					ds.BackoffPolicy = nil
 				} else {
+					// nolint:gosec // Cryptographic randomness is not necessary.
 					ds.BackoffPolicy = bops[rand.Intn(3)]
 				}
 			},
