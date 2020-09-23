@@ -37,7 +37,7 @@ while [[ $# -ne 0 ]]; do
       ;;
     --release)
       shift
-      VERISON="$1"
+      VERSION="$1"
       ;;
     *) abort "unknown option ${parameter}" ;;
   esac
