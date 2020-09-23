@@ -56,8 +56,8 @@ var (
 // still need to generate the traces, this just ensures that if generated, they are collected
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP
 // handler.
-func setupPublishing(serviceName string, logger *zap.SugaredLogger) (*tracing.OpenCensusTracer, error) {
-	return tracing.NewOpenCensusTracer(tracing.WithExporter(serviceName, logger)), nil
+func setupPublishing(serviceName string, logger *zap.SugaredLogger) *tracing.OpenCensusTracer {
+	return tracing.NewOpenCensusTracer(tracing.WithExporter(serviceName, logger))
 }
 
 // SetupStaticPublishing sets up trace publishing for the process. Note that other
@@ -65,11 +65,8 @@ func setupPublishing(serviceName string, logger *zap.SugaredLogger) (*tracing.Op
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP
 // handler. The configuration will not be dynamically updated.
 func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *tracingconfig.Config) error {
-	oct, err := setupPublishing(serviceName, logger)
-	if err != nil {
-		return err
-	}
-	err = oct.ApplyConfig(cfg)
+	oct := setupPublishing(serviceName, logger)
+	err := oct.ApplyConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("unable to set OpenCensusTracing config: %v", err)
 	}
@@ -82,16 +79,13 @@ func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *t
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
 func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName, tracingConfigName string) error {
-	oct, err := setupPublishing(serviceName, logger)
-	if err != nil {
-		return err
-	}
+	oct := setupPublishing(serviceName, logger)
 
 	tracerUpdater := func(name string, value interface{}) {
 		if name == tracingConfigName {
 			cfg := value.(*tracingconfig.Config)
 			logger.Debugw("Updating tracing config", zap.Any("cfg", cfg))
-			err = oct.ApplyConfig(cfg)
+			err := oct.ApplyConfig(cfg)
 			if err != nil {
 				logger.Errorw("Unable to apply open census tracer config", zap.Error(err))
 				return

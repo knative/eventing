@@ -438,9 +438,9 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 	after := channel.DeepCopy()
 
 	if sub.DeletionTimestamp.IsZero() {
-		r.updateChannelAddSubscription(ctx, after, sub)
+		r.updateChannelAddSubscription(after, sub)
 	} else {
-		r.updateChannelRemoveSubscription(ctx, after, sub)
+		r.updateChannelRemoveSubscription(after, sub)
 	}
 
 	patch, err := duck.CreateMergePatch(channel, after)
@@ -467,18 +467,18 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 	return true, nil
 }
 
-func (r *Reconciler) updateChannelRemoveSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelRemoveSubscription(channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
 	if channel.Annotations != nil {
 		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1" ||
 			channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
-			r.updateChannelRemoveSubscriptionV1Beta1(ctx, channel, sub)
+			r.updateChannelRemoveSubscriptionV1Beta1(channel, sub)
 			return
 		}
 	}
-	r.updateChannelRemoveSubscriptionV1Alpha1(ctx, channel, sub)
+	r.updateChannelRemoveSubscriptionV1Alpha1(channel, sub)
 }
 
-func (r *Reconciler) updateChannelRemoveSubscriptionV1Beta1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelRemoveSubscriptionV1Beta1(channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {
 			channel.Spec.Subscribers = append(
@@ -489,7 +489,7 @@ func (r *Reconciler) updateChannelRemoveSubscriptionV1Beta1(ctx context.Context,
 	}
 }
 
-func (r *Reconciler) updateChannelRemoveSubscriptionV1Alpha1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelRemoveSubscriptionV1Alpha1(channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
 	if channel.Spec.Subscribable == nil {
 		return
 	}
@@ -504,18 +504,18 @@ func (r *Reconciler) updateChannelRemoveSubscriptionV1Alpha1(ctx context.Context
 	}
 }
 
-func (r *Reconciler) updateChannelAddSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelAddSubscription(channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
 	if channel.Annotations != nil {
 		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" ||
 			channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1" {
-			r.updateChannelAddSubscriptionV1Beta1(ctx, channel, sub)
+			r.updateChannelAddSubscriptionV1Beta1(channel, sub)
 			return
 		}
 	}
-	r.updateChannelAddSubscriptionV1Alpha1(ctx, channel, sub)
+	r.updateChannelAddSubscriptionV1Alpha1(channel, sub)
 }
 
-func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
 	if channel.Spec.Subscribable == nil {
 		channel.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
 			Subscribers: []eventingduckv1alpha1.SubscriberSpec{{
@@ -554,7 +554,7 @@ func (r *Reconciler) updateChannelAddSubscriptionV1Alpha1(ctx context.Context, c
 		})
 }
 
-func (r *Reconciler) updateChannelAddSubscriptionV1Beta1(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
+func (r *Reconciler) updateChannelAddSubscriptionV1Beta1(channel *eventingduckv1alpha1.ChannelableCombined, sub *v1.Subscription) {
 	// Look to update subscriber.
 	for i, v := range channel.Spec.Subscribers {
 		if v.UID == sub.UID {

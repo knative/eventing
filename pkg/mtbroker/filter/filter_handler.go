@@ -201,13 +201,12 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	h.reportArrivalTime(event, reportArgs)
 
-	h.send(ctx, writer, request.Header, subscriberURI.String(), reportArgs, event, ttl, span)
+	h.send(ctx, writer, request.Header, subscriberURI.String(), reportArgs, event, ttl)
 }
 
-func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target string, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32, span *trace.Span) {
-
+func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers http.Header, target string, reportArgs *ReportArgs, event *cloudevents.Event, ttl int32) {
 	// send the event to trigger's subscriber
-	response, err := h.sendEvent(ctx, headers, target, event, reportArgs, span)
+	response, err := h.sendEvent(ctx, headers, target, event, reportArgs)
 	if err != nil {
 		h.logger.Error("failed to send event", zap.Error(err))
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -216,7 +215,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	}
 
 	// If there is an event in the response write it to the response
-	statusCode, err := writeResponse(ctx, writer, response, ttl, span)
+	statusCode, err := writeResponse(ctx, writer, response, ttl)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 		// Ok, so writeResponse will return the HttpStatus of the function. That may have
@@ -232,7 +231,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	writer.WriteHeader(statusCode)
 }
 
-func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *cloudevents.Event, reporterArgs *ReportArgs, span *trace.Span) (*http.Response, error) {
+func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, error) {
 	// Send the event to the subscriber
 	req, err := h.sender.NewCloudEventRequestWithTarget(ctx, target)
 	if err != nil {
@@ -265,8 +264,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	return resp, err
 }
 
-func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32, span *trace.Span) (int, error) {
-
+func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32) (int, error) {
 	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
 

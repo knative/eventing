@@ -78,14 +78,14 @@ var _ cloudevents.Client = (*client)(nil)
 
 // Send implements client.Send
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
-	c.applyOverrides(ctx, &out)
+	c.applyOverrides(&out)
 	res := c.ceClient.Send(ctx, out)
 	return c.reportCount(ctx, out, res)
 }
 
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
-	c.applyOverrides(ctx, &out)
+	c.applyOverrides(&out)
 	resp, res := c.ceClient.Request(ctx, out)
 	return resp, c.reportCount(ctx, out, res)
 }
@@ -95,7 +95,7 @@ func (c *client) StartReceiver(ctx context.Context, fn interface{}) error {
 	return errors.New("not implemented")
 }
 
-func (c *client) applyOverrides(ctx context.Context, event *cloudevents.Event) {
+func (c *client) applyOverrides(event *cloudevents.Event) {
 	if c.ceOverrides != nil && c.ceOverrides.Extensions != nil {
 		for n, v := range c.ceOverrides.Extensions {
 			event.SetExtension(n, v)

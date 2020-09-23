@@ -27,7 +27,6 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,8 +183,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherN
 			return nil, err
 		}
 
-		_, err = r.reconcileRoleBinding(ctx, dispatcherName, dispatcherNamespace, imc, dispatcherName, sa)
-		if err != nil {
+		if err := r.reconcileRoleBinding(ctx, dispatcherName, dispatcherNamespace, imc, dispatcherName, sa); err != nil {
 			return nil, err
 		}
 
@@ -194,8 +192,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherN
 		// subject in the dispatcher's namespace.
 		// TODO: might change when ConfigMapPropagation lands
 		roleBindingName := fmt.Sprintf("%s-%s", dispatcherName, dispatcherNamespace)
-		_, err = r.reconcileRoleBinding(ctx, roleBindingName, r.systemNamespace, imc, "eventing-config-reader", sa)
-		if err != nil {
+		if err := r.reconcileRoleBinding(ctx, roleBindingName, r.systemNamespace, imc, "eventing-config-reader", sa); err != nil {
 			return nil, err
 		}
 	}
@@ -250,23 +247,23 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherName
 	return sa, nil
 }
 
-func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns string, imc *v1.InMemoryChannel, clusterRoleName string, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
-	rb, err := r.roleBindingLister.RoleBindings(ns).Get(name)
+func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns string, imc *v1.InMemoryChannel, clusterRoleName string, sa *corev1.ServiceAccount) error {
+	_, err := r.roleBindingLister.RoleBindings(ns).Get(name)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			expected := resources.MakeRoleBinding(ns, name, sa, clusterRoleName)
-			rb, err := r.kubeClientSet.RbacV1().RoleBindings(ns).Create(ctx, expected, metav1.CreateOptions{})
+			_, err := r.kubeClientSet.RbacV1().RoleBindings(ns).Create(ctx, expected, metav1.CreateOptions{})
 			if err != nil {
-				return rb, newRoleBindingWarn(err)
+				return newRoleBindingWarn(err)
 			}
 			controller.GetEventRecorder(ctx).Eventf(imc, corev1.EventTypeNormal, dispatcherRoleBindingCreated, "Dispatcher RoleBinding created")
-			return rb, nil
+			return nil
 		}
 		logging.FromContext(ctx).Error("Unable to get the dispatcher RoleBinding", zap.Error(err))
 		imc.Status.MarkDispatcherFailed("DispatcherRoleBindingGetFailed", "Failed to get dispatcher RoleBinding")
-		return nil, newRoleBindingWarn(err)
+		return newRoleBindingWarn(err)
 	}
-	return rb, nil
+	return nil
 }
 
 func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, dispatcherNamespace string, imc *v1.InMemoryChannel) (*corev1.Service, error) {

@@ -113,10 +113,7 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 		return err
 	}
 
-	expected, err := r.makeEventTypes(ctx, src)
-	if err != nil {
-		return err
-	}
+	expected := r.makeEventTypes(ctx, src)
 
 	toCreate, toDelete := r.computeDiff(current, expected)
 
@@ -154,19 +151,19 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *duckv1.Source) ([]v
 	return eventTypes, nil
 }
 
-func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]v1beta1.EventType, error) {
+func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) []v1beta1.EventType {
 	// Only create EventTypes for Broker sinks.
 	// We add this check here in case the Source was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
 	// TODO remove broker from EventType https://github.com/knative/eventing/issues/2750
 	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
-		return make([]v1beta1.EventType, 0), nil
+		return make([]v1beta1.EventType, 0)
 	}
 
 	// If the Source didn't specify a CloudEventsAttributes, then we skip the creation of EventTypes.
 	// TODO might change in the near future https://github.com/knative/eventing/issues/2750.
 	if src.Status.CloudEventAttributes == nil {
-		return make([]v1beta1.EventType, 0), nil
+		return make([]v1beta1.EventType, 0)
 	}
 
 	entries := make(map[string]eventTypeEntry)
@@ -221,7 +218,7 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) ([]
 		})
 		eventTypes = append(eventTypes, *eventType)
 	}
-	return eventTypes, nil
+	return eventTypes
 }
 
 func (r *Reconciler) computeDiff(current []v1beta1.EventType, expected []v1beta1.EventType) ([]v1beta1.EventType, []v1beta1.EventType) {
