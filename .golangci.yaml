@@ -13,7 +13,17 @@ run:
 
 linters:
   enable:
-    - unconvert
+    - asciicheck
+    - gosec
     - prealloc
+    - unconvert
+    - unparam
   disable:
     - errcheck
+
+issues:
+  exclude-rules:
+    - path: test # Excludes /test, *_test.go etc.
+      linters:
+        - gosec
+        - unparam

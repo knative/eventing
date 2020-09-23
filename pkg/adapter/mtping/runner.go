@@ -125,6 +125,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
 		target := cecontext.TargetFrom(ctx).String()
 		source := event.Context.GetSource()
+		// nolint:gosec // Cryptographic randomness not necessary here.
 		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) // provide a delay so not all ping fired instantaneously distribute load on resources.
 
 		a.Logger.Debugf("sending cloudevent id: %s, source: %s, target: %s", event.ID(), source, target)

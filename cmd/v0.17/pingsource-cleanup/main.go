@@ -72,7 +72,8 @@ func main() {
 	}
 
 	if !env.DryRun {
-		for _, ref := range cleanups {
+		for i := range cleanups {
+			ref := cleanups[i]
 			fmt.Printf("# will remove finalizer for %s/%s\n", ref.Namespace, ref.Name)
 
 			finalizers := sets.NewString(ref.Finalizers...)

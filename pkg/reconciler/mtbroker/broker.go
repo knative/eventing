@@ -100,7 +100,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 
-	triggerChan, err := r.reconcileChannel(ctx, chanMan.inf, chanMan.ref, c, b)
+	triggerChan, err := r.reconcileChannel(ctx, chanMan.inf, chanMan.ref, c)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
@@ -227,7 +227,7 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *eventingv1.Broke
 }
 
 // reconcileChannel reconciles Broker's 'b' underlying channel.
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured, b *eventingv1.Broker) (*duckv1.Channelable, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured) (*duckv1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(channelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))

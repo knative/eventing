@@ -60,7 +60,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDe
 	//  2. Dynamically create a controller for it, if not present already. Such controller is in charge of reconciling
 	//     duckv1.Source resources with that particular GVR..
 
-	gvr, gvk, err := r.resolveGroupVersions(ctx, crd)
+	gvr, gvk, err := r.resolveGroupVersions(crd)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error while resolving GVR and GVK", zap.String("CRD", crd.Name), zap.Error(err))
 		return err
@@ -75,16 +75,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDe
 		return nil
 	}
 
-	err = r.reconcileController(ctx, crd, gvr, gvk)
-	if err != nil {
-		logging.FromContext(ctx).Errorw("Error while reconciling controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()), zap.Error(err))
-		return err
-	}
+	r.reconcileController(ctx, crd, gvr, gvk)
 
 	return nil
 }
 
-func (r *Reconciler) resolveGroupVersions(ctx context.Context, crd *v1.CustomResourceDefinition) (*schema.GroupVersionResource, *schema.GroupVersionKind, error) {
+func (r *Reconciler) resolveGroupVersions(crd *v1.CustomResourceDefinition) (*schema.GroupVersionResource, *schema.GroupVersionKind, error) {
 	var gvr *schema.GroupVersionResource
 	var gvk *schema.GroupVersionKind
 	for _, v := range crd.Spec.Versions {
@@ -127,12 +123,12 @@ func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVers
 	}
 }
 
-func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) error {
+func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) {
 	r.lock.RLock()
 	_, found := r.controllers[*gvr]
 	r.lock.RUnlock()
 	if found {
-		return nil
+		return
 	}
 
 	r.lock.Lock()
@@ -140,14 +136,14 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 	// Now that we grabbed the write lock, check that nobody has created the controller.
 	_, found = r.controllers[*gvr]
 	if found {
-		return nil
+		return
 	}
 
 	// Source Duck controller constructor
 	sdc := duck.NewController(crd.Name, *gvr, *gvk)
 	if sdc == nil {
 		logging.FromContext(ctx).Errorw("Source Duck Controller is nil.", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
-		return nil
+		return
 	}
 
 	// Source Duck controller context
@@ -169,5 +165,4 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 			}
 		}
 	}(rc.controller)
-	return nil
 }

@@ -48,7 +48,7 @@ var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 // 2. Verify the Broker is ready.
 // TODO remove https://github.com/knative/eventing/issues/2750
 func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) pkgreconciler.Event {
-	b, err := r.getBroker(ctx, et)
+	b, err := r.getBroker(et)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			logging.FromContext(ctx).Errorw("Broker does not exist", zap.Error(err))
@@ -80,6 +80,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 }
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
-func (r *Reconciler) getBroker(ctx context.Context, et *v1beta1.EventType) (*v1beta1.Broker, error) {
+func (r *Reconciler) getBroker(et *v1beta1.EventType) (*v1beta1.Broker, error) {
 	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Broker)
 }

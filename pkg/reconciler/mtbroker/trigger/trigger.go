@@ -112,7 +112,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		return nil
 	}
 
-	brokerTrigger, err := getBrokerChannelRef(ctx, b)
+	brokerTrigger, err := getBrokerChannelRef(b)
 	if err != nil {
 		t.Status.MarkBrokerFailed("MissingBrokerChannel", "Failed to get broker %q annotations: %s", t.Spec.Broker, err)
 		return fmt.Errorf("failed to find Broker's Trigger channel: %s", err)
@@ -278,7 +278,7 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *eventi
 	return nil
 }
 
-func getBrokerChannelRef(ctx context.Context, b *eventingv1.Broker) (*corev1.ObjectReference, error) {
+func getBrokerChannelRef(b *eventingv1.Broker) (*corev1.ObjectReference, error) {
 	if b.Status.Annotations != nil {
 		ref := &corev1.ObjectReference{
 			Kind:       b.Status.Annotations[eventing.BrokerChannelKindStatusAnnotationKey],

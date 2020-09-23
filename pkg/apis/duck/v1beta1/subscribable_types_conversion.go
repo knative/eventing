@@ -136,8 +136,8 @@ func (sink *SubscribableSpec) ConvertFrom(ctx context.Context, obj apis.Converti
 	case *eventingduckv1.SubscribableSpec:
 		if len(source.Subscribers) > 0 {
 			sink.Subscribers = make([]SubscriberSpec, len(source.Subscribers))
-			for i, s := range source.Subscribers {
-				if err := sink.Subscribers[i].ConvertFrom(ctx, &s); err != nil {
+			for i := range source.Subscribers {
+				if err := sink.Subscribers[i].ConvertFrom(ctx, &source.Subscribers[i]); err != nil {
 					return err
 				}
 			}
@@ -172,9 +172,9 @@ func (sink *SubscribableStatus) ConvertFrom(ctx context.Context, obj apis.Conver
 	case *eventingduckv1.SubscribableStatus:
 		if len(source.Subscribers) > 0 {
 			sink.Subscribers = make([]SubscriberStatus, len(source.Subscribers))
-			for i, ss := range source.Subscribers {
+			for i := range source.Subscribers {
 				sink.Subscribers[i] = SubscriberStatus{}
-				if err := sink.Subscribers[i].ConvertFrom(ctx, &ss); err != nil {
+				if err := sink.Subscribers[i].ConvertFrom(ctx, &source.Subscribers[i]); err != nil {
 					return err
 				}
 			}
