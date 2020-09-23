@@ -33,6 +33,11 @@ import (
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 )
 
+var podMeta = metav1.TypeMeta{
+	Kind:       "pod",
+	APIVersion: "v1",
+}
+
 func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, brokerClass string, brokerTestRunner testlib.ComponentsTestRunner) *eventingv1beta1.Broker {
 	var broker *eventingv1beta1.Broker
 	brokerName := brokerTestRunner.ComponentName
@@ -74,12 +79,12 @@ func BrokerDataPlaneNamespaceSetupOption(ctx context.Context, namespace string) 
 	}
 }
 
-// At ingress
-// Supports CE 0.3 or CE 1.0 via HTTP
-// Supports structured or Binary mode
-// Respond with 2xx on good CE
-// Respond with 400 on bad CE
-// Reject non-POST requests to publish URI
+//At ingress
+//Supports CE 0.3 or CE 1.0 via HTTP
+//Supports structured or Binary mode
+//Respond with 2xx on good CE
+//Respond with 400 on bad CE
+//Reject non-POST requests to publish URI
 func BrokerV1Beta1IngressDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
@@ -123,7 +128,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 				cetest.HasId(eventID),
 				cetest.HasSpecVersion("0.3"),
 			))
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(1, originalEventMatcher)
 		})
 
@@ -144,7 +149,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 				cetest.HasId(eventID),
 				cetest.HasSpecVersion("1.0"),
 			))
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(1, originalEventMatcher)
 
 		})
@@ -164,7 +169,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasId(eventID),
 			))
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(1, originalEventMatcher)
 		})
 
@@ -183,7 +188,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			originalEventMatcher := recordevents.MatchEvent(cetest.AllOf(
 				cetest.HasId(eventID),
 			))
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(1, originalEventMatcher)
 		})
 
@@ -203,11 +208,11 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 				body,
 				sender.WithResponseSink(responseSink),
 			)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertExact(1, recordevents.MatchEvent(sender.MatchStatusCode(202))) // should probably be a range
 
 		})
-		// Respond with 400 on bad CE
+		//Respond with 400 on bad CE
 		st.Run("Respond with 400 on bad CE", func(t *testing.T) {
 			eventID := "four-hundred-on-bad-ce"
 			body := ";la}{kjsdf;oai2095{}{}8234092349807asdfashdf"
@@ -215,7 +220,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			senderName := "fourhundres-test-sender"
 			client.SendRequestToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta,
 				map[string]string{
-					"ce-specversion": "9000.1", // its over 9,000!
+					"ce-specversion": "9000.1", //its over 9,000!
 					"ce-type":        testlib.DefaultEventType,
 					"ce-source":      "400.request.sender.test.knative.dev",
 					"ce-id":          eventID,
@@ -223,20 +228,20 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 				},
 				body,
 				sender.WithResponseSink(responseSink))
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertExact(1, recordevents.MatchEvent(sender.MatchStatusCode(400)))
 		})
 	})
 }
 
-// At consumer
-// No upgrade of version
-// Attributes received should be the same as produced (attributes may be added)
-// Events are filtered
-// Events are delivered to multiple subscribers
-// Deliveries succeed at least once
-// Replies are accepted and delivered
-// Replies that are unsuccessfully forwarded cause initial message to be redelivered (Very difficult to test, can be ignored)
+//At consumer
+//No upgrade of version
+//Attributes received should be the same as produced (attributes may be added)
+//Events are filtered
+//Events are delivered to multiple subscribers
+//Deliveries succeed at least once
+//Replies are accepted and delivered
+//Replies that are unsuccessfully forwarded cause initial message to be redelivered (Very difficult to test, can be ignored)
 func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
@@ -322,7 +327,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 				cetest.HasSpecVersion("0.3"),
 				cetest.HasId("no-upgrade"),
 			))
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertExact(1, originalEventMatcher)
 
 		})
@@ -339,7 +344,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 				cetest.HasSource(baseSource),
 				cetest.HasSpecVersion("1.0"),
 			)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertExact(1, originalEventMatcher)
 		})
 
@@ -358,8 +363,8 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			nonEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource(baseSource),
 			)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, firstSenderName, client.Namespace)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, secondSenderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(firstSenderName, &podMeta)
+			client.WaitForResourceReadyOrFail(secondSenderName, &podMeta)
 			secondTracker.AssertAtLeast(1, filteredEventMatcher)
 			secondTracker.AssertNot(nonEventMatcher)
 		})
@@ -373,7 +378,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			filteredEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource(source),
 			)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(1, filteredEventMatcher)
 			secondTracker.AssertAtLeast(1, filteredEventMatcher)
 		})
@@ -387,7 +392,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			originalEventMatcher := recordevents.MatchEvent(
 				cetest.HasSource(source),
 			)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(1, originalEventMatcher)
 		})
 
@@ -404,7 +409,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 				cetest.HasType("reply-check-type"),
 				cetest.HasData(transformMsg),
 			)
-			testlib.WaitForPodRunningOrFail(t, ctx, client.Kube, senderName, client.Namespace)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
 			eventTracker.AssertAtLeast(2, transformedEventMatcher)
 		})
 	})

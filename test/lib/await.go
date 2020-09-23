@@ -16,18 +16,14 @@
 package lib
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/util/wait"
-	pkgtest "knative.dev/pkg/test"
 )
 
 // WaitFor will register a wait routine to be resolved later
@@ -82,12 +78,6 @@ func WaitForReadiness(port int, log *zap.SugaredLogger) error {
 		}
 		return resp.StatusCode == 200 && string(body) == "OK", nil
 	})
-}
-
-// WaitForPodRunningOrFail waits until the pod is running and fails if something goes wrong.
-func WaitForPodRunningOrFail(t *testing.T, ctx context.Context, client *pkgtest.KubeClient, name, namespace string) {
-	err := pkgtest.WaitForPodRunning(ctx, client, name, namespace)
-	assert.Nil(t, err)
 }
 
 type AwaitRoutine func() error
