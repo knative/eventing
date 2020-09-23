@@ -118,7 +118,7 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 	toCreate, toDelete := r.computeDiff(current, expected)
 
 	for i := range toDelete {
-		eventType := toCreate[i]
+		eventType := toDelete[i]
 		if err = r.eventingClientSet.EventingV1beta1().EventTypes(src.Namespace).Delete(ctx, eventType.Name, metav1.DeleteOptions{}); err != nil {
 			logging.FromContext(ctx).Errorw("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
