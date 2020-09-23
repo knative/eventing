@@ -23,11 +23,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mt-broker-controller
+      eventing.knative.dev/brokerRole: controller
   template:
     metadata:
       labels:
-        app: mt-broker-controller
+        eventing.knative.dev/brokerRole: controller
         eventing.knative.dev/release: devel
     spec:
       # To avoid node becoming SPOF, spread our replicas to different nodes.
