@@ -41,11 +41,7 @@ var _ pingsourcereconciler.Finalizer = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSource) reconciler.Event {
 	if !source.Status.IsReady() {
-		// The source might have been previously ready
-		// Make sure the adapter does not handle it
-		r.mtadapter.Remove(ctx, source)
-
-		return fmt.Errorf("PingSource is not ready")
+		return fmt.Errorf("warning: PingSource is not ready")
 	}
 
 	// Update the adapter state

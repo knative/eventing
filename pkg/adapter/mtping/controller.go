@@ -66,7 +66,11 @@ func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Imp
 	//	}
 	//}
 
-	impl := pingsourcereconciler.NewImpl(ctx, r)
+	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			SkipStatusUpdates: true,
+		}
+	})
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 	pingsourceinformer.Get(ctx).Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
