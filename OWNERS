@@ -11,6 +11,7 @@ approvers:
 - lionelvillard
 - slinkydeveloper
 - lberk
+- pierDipi
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -25,6 +26,7 @@ reviewers:
 - lionelvillard
 - slinkydeveloper
 - lberk
+- pierDipi
 
 # Add reviewers below
 - liu-cong
