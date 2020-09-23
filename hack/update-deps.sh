@@ -46,7 +46,7 @@ done
 readonly GO_GET
 
 if (( GO_GET )); then
-  FLOATING_DEPS=( $(run_go_tool github.com/n3wscott/buoy buoy ${ROOT_DIR}/go.mod ${VERSION}) )
+  FLOATING_DEPS=( $(run_go_tool github.com/n3wscott/buoy buoy ${ROOT_DIR}/go.mod --release ${VERSION}) )
   go get -d ${FLOATING_DEPS[@]}
 fi
 
