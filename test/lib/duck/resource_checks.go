@@ -22,6 +22,7 @@ package duck
 import (
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -60,7 +61,7 @@ func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.M
 	})
 }
 
-// isResourceReady leverage duck-type to check if the given MetaResource is in ready state
+// isResourceReady leverage duck-type to check if the given obj is in ready state
 func isResourceReady(obj runtime.Object, err error) (bool, error) {
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
@@ -72,7 +73,16 @@ func isResourceReady(obj runtime.Object, err error) (bool, error) {
 		return false, err
 	}
 
+	if pod, isPod := obj.(*corev1.Pod); isPod {
+		return isPodRunning(pod), nil
+	}
+
 	kr := obj.(*duckv1beta1.KResource)
 	ready := kr.Status.GetCondition(apis.ConditionReady)
 	return ready != nil && ready.IsTrue(), nil
+}
+
+// isPodRunning will check the status conditions of the pod and return true if it's Running or Succeeded.
+func isPodRunning(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded
 }
