@@ -1,10 +1,11 @@
 package kncloudevents
 
 import (
-	"github.com/stretchr/testify/assert"
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 // Test The RetryConfigFromDeliverySpec() Functionality
