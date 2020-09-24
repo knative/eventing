@@ -165,7 +165,7 @@ func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) 
 		switch *spec.BackoffPolicy {
 		case duckv1.BackoffPolicyExponential:
 			retryConfig.Backoff = func(attemptNum int, resp *nethttp.Response) time.Duration {
-				return time.Duration(math.Pow(float64(delayDuration*2), float64(attemptNum)))
+				return delayDuration * time.Duration(math.Exp2(float64(attemptNum)))
 			}
 		case duckv1.BackoffPolicyLinear:
 			retryConfig.Backoff = func(attemptNum int, resp *nethttp.Response) time.Duration {
