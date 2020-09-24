@@ -52,7 +52,7 @@ spec:
         - containerPort: 8080
           name: http
           protocol: TCP
-        - containerPort: 9090
+        - containerPort: 9092
           name: metrics
           protocol: TCP
         terminationMessagePath: /dev/termination-log
