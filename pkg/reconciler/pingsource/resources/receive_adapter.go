@@ -30,6 +30,7 @@ type Args struct {
 	LoggingConfig   string
 	LeConfig        string
 	NoShutdownAfter int
+	SinkTimeout     int
 }
 
 // MakeReceiveAdapterEnvVar generates the environment variables for the pingsources
@@ -53,6 +54,9 @@ func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
 	}, {
 		Name:  mtping.EnvNoShutdownAfter,
 		Value: strconv.Itoa(args.NoShutdownAfter),
+	}, {
+		Name:  adapter.EnvSinkTimeout,
+		Value: strconv.Itoa(args.SinkTimeout),
 	}}
 
 }
