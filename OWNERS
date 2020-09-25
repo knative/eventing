@@ -12,6 +12,7 @@ approvers:
 - slinkydeveloper
 - lberk
 - pierDipi
+- aliok
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -27,10 +28,10 @@ reviewers:
 - slinkydeveloper
 - lberk
 - pierDipi
+- aliok
 
 # Add reviewers below
 - liu-cong
 - yolocs
 - aslom
 - nlopezgi
-- aliok
