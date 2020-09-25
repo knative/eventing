@@ -18,9 +18,13 @@ package adapter
 
 import (
 	"context"
+	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
 
@@ -44,8 +48,10 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 	testCases := map[string]struct {
 		ceOverrides *duckv1.CloudEventOverrides
 		event       *cloudevents.Event
+		timeout     int
 	}{
-		"none": {},
+		"timeout": {timeout: 13},
+		"none":    {},
 		"send": {
 			event: func() *cloudevents.Event {
 				event := cloudevents.NewEvent()
@@ -70,9 +76,60 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ceClient, err := NewCloudEventsClient(fakeURL, tc.ceOverrides, &mockReporter{})
+			restoreHTTP := cloudevents.NewHTTP
+			restoreEnv, setEnv := os.LookupEnv("K_SINK_TIMEOUT")
+			if tc.timeout != 0 {
+				if err := os.Setenv("K_SINK_TIMEOUT", strconv.Itoa(tc.timeout)); err != nil {
+					t.Error(err)
+				}
+			}
+
+			defer func(restoreHTTP func(opts ...http.Option) (*http.Protocol, error), restoreEnv string, setEnv bool) {
+				cloudevents.NewHTTP = restoreHTTP
+				if setEnv {
+					if err := os.Setenv("K_SINK_TIMEOUT", restoreEnv); err != nil {
+						t.Error(err)
+					}
+				} else {
+					if err := os.Unsetenv("K_SINK_TIMEOUT"); err != nil {
+						t.Error(err)
+					}
+				}
+
+			}(restoreHTTP, restoreEnv, setEnv)
+
+			sendOptions := []http.Option{}
+			cloudevents.NewHTTP = func(opts ...http.Option) (*http.Protocol, error) {
+				sendOptions = append(sendOptions, opts...)
+				return nil, nil
+			}
+			envConfigAccessor := ConstructEnvOrDie(func() EnvConfigAccessor {
+				return &EnvConfig{}
+
+			})
+
+			ceClient, err := NewCloudEventsClientCRStatus(envConfigAccessor, &mockReporter{}, nil)
 			if err != nil {
 				t.Fail()
+			}
+			timeoutSet := false
+			if tc.timeout != 0 {
+				for _, opt := range sendOptions {
+					p := http.Protocol{}
+					if err := opt(&p); err != nil {
+						t.Error(err)
+					}
+					if p.Client != nil {
+						if p.Client.Timeout == time.Duration(tc.timeout)*time.Second {
+							timeoutSet = true
+						}
+					}
+
+				}
+				if !timeoutSet {
+					t.Error("Expected timout to be set")
+				}
+
 			}
 			got, ok := ceClient.(*client)
 			if !ok {

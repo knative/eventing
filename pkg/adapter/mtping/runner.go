@@ -123,6 +123,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 	return func() {
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
+		defer a.Logger.Debug("finished sending cloudevent id: ", event.ID())
 		target := cecontext.TargetFrom(ctx).String()
 		source := event.Context.GetSource()
 		// nolint:gosec // Cryptographic randomness not necessary here.
@@ -135,6 +136,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 			a.Logger.Error("failed to send cloudevent result: ", zap.Any("result", result),
 				zap.String("source", source), zap.String("target", target), zap.String("id", event.ID()))
 		}
+
 	}
 }
 

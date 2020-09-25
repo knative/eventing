@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-
 	"log"
 	"net/http"
 	"strconv"
@@ -160,12 +159,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
-	ceOverrides, err := env.GetCloudEventOverrides()
-	if err != nil {
-		logger.Error("Error loading cloudevents overrides", zap.Error(err))
-	}
-
-	eventsClient, err := NewCloudEventsClientCRStatus(env.GetSink(), ceOverrides, reporter, crStatusEventClient)
+	eventsClient, err := NewCloudEventsClientCRStatus(env, reporter, crStatusEventClient)
 	if err != nil {
 		logger.Fatal("Error building cloud event client", zap.Error(err))
 	}
