@@ -40,8 +40,7 @@ func BrokerRedelivery(t *testing.T, creator BrokerCreatorWithRetries) {
 
 	t.Run(dropevents.Fibonacci, func(t *testing.T) {
 		brokerRedelivery(t, creator, numRetries, func(pod *corev1.Pod, client *testlib.Client) error {
-			container := pod.Spec.Containers[0]
-			container.Env = append(container.Env,
+			pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env,
 				corev1.EnvVar{
 					Name:  dropevents.SkipAlgorithmKey,
 					Value: dropevents.Fibonacci,
@@ -53,15 +52,14 @@ func BrokerRedelivery(t *testing.T, creator BrokerCreatorWithRetries) {
 
 	t.Run(dropevents.Sequence, func(t *testing.T) {
 		brokerRedelivery(t, creator, numRetries, func(pod *corev1.Pod, client *testlib.Client) error {
-			container := pod.Spec.Containers[0]
-			container.Env = append(container.Env,
+			pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env,
 				corev1.EnvVar{
 					Name:  dropevents.SkipAlgorithmKey,
 					Value: dropevents.Sequence,
 				},
 				corev1.EnvVar{
 					Name:  dropevents.NumberKey,
-					Value: fmt.Sprintf("%d", numRetries-1),
+					Value: fmt.Sprintf("%d", numRetries),
 				},
 			)
 			return nil
