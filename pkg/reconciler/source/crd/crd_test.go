@@ -18,10 +18,11 @@ package crd
 
 import (
 	"context"
+	"testing"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
-	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -57,27 +58,27 @@ func TestAllCases(t *testing.T) {
 	ctx, _ = injection.Fake.SetupInformers(ctx, &rest.Config{})
 	table := TableTest{
 		{
-		Name: "bad workqueue key",
-		// Make sure Reconcile handles bad keys.
-		Key: "too/many/parts",
-	}, {
-		Name: "key not found",
-		// Make sure Reconcile handles good keys that don't exist.
-		Key: "not-found",
-	}, {
-		Name: "reconcile failed, cannot find GVR or GVK",
-		Objects: []runtime.Object{
-			NewCustomResourceDefinition(crdName,
-				WithCustomResourceDefinitionLabels(map[string]string{
-					sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
-				})),
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
+		}, {
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "not-found",
+		}, {
+			Name: "reconcile failed, cannot find GVR or GVK",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					})),
+			},
+			Key:     crdName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
+			},
 		},
-		Key:     crdName,
-		WantErr: true,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
-		},
-	},
 		{
 
 			Name: "reconcile succeeded",
