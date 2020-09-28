@@ -33,7 +33,7 @@ process.
   triaged weekly (this could be modified based on incoming bugs rate), and upon
   triage will be assigned a priority or closed.
 - During each release/sprint planning, all priority/important-soon and some of
-  priority/important-longterm bugs need to be accounted while commiting to new
+  priority/important-longterm bugs need to be accounted while committing to new
   features and improvements. These will be marked with approapriate release
   along with the planned features.
 - Bugs marked with current release always take priority over feature work in a
