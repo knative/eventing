@@ -18,6 +18,9 @@ package crd
 
 import (
 	"context"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/rest"
+	"knative.dev/pkg/injection"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -43,15 +46,17 @@ import (
 const (
 	crdName = "test-crd"
 
-// TODO: See comment below
-//	crdGroup         = "testing.sources.knative.dev"
-//	crdKind          = "TestSource"
-//	crdPlural        = "testsources"
-//	crdVersionServed = "v1alpha1"
+	crdGroup         = "testing.sources.knative.dev"
+	crdKind          = "TestSource"
+	crdPlural        = "testsources"
+	crdVersionServed = "v1alpha1"
 )
 
 func TestAllCases(t *testing.T) {
-	table := TableTest{{
+	ctx := context.Background()
+	ctx, _ = injection.Fake.SetupInformers(ctx, &rest.Config{})
+	table := TableTest{
+		{
 		Name: "bad workqueue key",
 		// Make sure Reconcile handles bad keys.
 		Key: "too/many/parts",
@@ -73,25 +78,27 @@ func TestAllCases(t *testing.T) {
 			Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
 		},
 	},
-	//}, {
-	// TODO uncomment the following once we figure out why the eventtype informer is missing from the duck.controller.
-	//Name: "reconcile succeeded",
-	//Objects: []runtime.Object{
-	//	NewCustomResourceDefinition(crdName,
-	//		WithCustomResourceDefinitionLabels(map[string]string{
-	//			sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
-	//		}),
-	//		WithCustomResourceDefinitionGroup(crdGroup),
-	//		WithCustomResourceDefinitionNames(apiextensionsv1beta1.CustomResourceDefinitionNames{
-	//			Kind:   crdKind,
-	//			Plural: crdPlural,
-	//		}),
-	//		WithCustomResourceDefinitionVersions([]apiextensionsv1beta1.CustomResourceDefinitionVersion{{
-	//			Name:   crdVersionServed,
-	//			Served: true,
-	//		}})),
-	//},
-	//Key: crdName,
+		{
+
+			Name: "reconcile succeeded",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: true,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
