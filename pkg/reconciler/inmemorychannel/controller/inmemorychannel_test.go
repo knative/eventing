@@ -23,6 +23,7 @@ import (
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/network"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 
@@ -39,7 +40,6 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
@@ -541,7 +541,7 @@ func makeChannelService(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, utils.GetClusterDomainName()),
+			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, network.GetClusterDomainName()),
 		},
 	}
 }
@@ -561,7 +561,7 @@ func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, utils.GetClusterDomainName()),
+			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, network.GetClusterDomainName()),
 		},
 	}
 }

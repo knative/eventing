@@ -19,7 +19,7 @@ package names
 import (
 	"testing"
 
-	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/network"
 )
 
 func TestNames(t *testing.T) {
@@ -32,7 +32,7 @@ func TestNames(t *testing.T) {
 		F: func() string {
 			return ServiceHostName("foo", "namespace")
 		},
-		Want: "foo.namespace.svc." + utils.GetClusterDomainName(),
+		Want: "foo.namespace.svc." + network.GetClusterDomainName(),
 	}}
 
 	for _, tc := range testCases {

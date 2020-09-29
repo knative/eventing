@@ -6,8 +6,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/network"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 type K8sServiceOption func(*corev1.Service) error
 
 func CreateExternalServiceAddress(namespace, service string) string {
-	return fmt.Sprintf("%s.%s.svc.%s", service, namespace, utils.GetClusterDomainName())
+	return fmt.Sprintf("%s.%s.svc.%s", service, namespace, network.GetClusterDomainName())
 }
 
 func CreateChannelServiceName(name string) string {

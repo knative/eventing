@@ -25,6 +25,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"knative.dev/pkg/network"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -38,7 +40,6 @@ import (
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/eventing/pkg/utils"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -86,7 +87,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"x-requEst-id":              {"1234"},
 				"knatIve-will-pass-through": {"true", "always"},
 			},
-			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
+			host: "test-name.test-namespace.svc." + network.GetClusterDomainName(),
 			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
@@ -120,7 +121,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				if h, ok := e.Extensions()[EventHistory]; !ok {
 					return fmt.Errorf("test receiver func -- history not added")
 				} else {
-					expectedHistory := "test-name.test-namespace.svc." + utils.GetClusterDomainName()
+					expectedHistory := "test-name.test-namespace.svc." + network.GetClusterDomainName()
 					if h != expectedHistory {
 						return fmt.Errorf("test receiver func -- bad history: %v", h)
 					}
@@ -141,7 +142,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				tc.path = "/"
 			}
 			if tc.host == "" {
-				tc.host = "test-channel.test-namespace.svc." + utils.GetClusterDomainName()
+				tc.host = "test-channel.test-namespace.svc." + network.GetClusterDomainName()
 			}
 
 			f := tc.receiverFunc
@@ -205,7 +206,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 
 	// Default the common things.
 	method := nethttp.MethodPost
-	host := "test-name.test-namespace.svc." + utils.GetClusterDomainName()
+	host := "test-name.test-namespace.svc." + network.GetClusterDomainName()
 
 	logger, _ := zap.NewDevelopment()
 
@@ -241,7 +242,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 }
 
 func TestMessageReceiver_WrongRequest(t *testing.T) {
-	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
+	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
@@ -263,7 +264,7 @@ func TestMessageReceiver_WrongRequest(t *testing.T) {
 }
 
 func TestMessageReceiver_UnknownHost(t *testing.T) {
-	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
+	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")

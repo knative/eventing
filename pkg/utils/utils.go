@@ -17,12 +17,8 @@ limitations under the License.
 package utils
 
 import (
-	"bufio"
-	"io"
-	"os"
 	"regexp"
 	"strings"
-	"sync"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
@@ -32,55 +28,15 @@ import (
 )
 
 const (
-	resolverFileName  = "/etc/resolv.conf"
-	defaultDomainName = "cluster.local"
-
 	// Number of characters to keep available just in case the prefix used in generateName
 	// exceeds the maximum allowed for k8s names.
 	generateNameSafety = 10
 )
 
 var (
-	domainName string
-	once       sync.Once
-
 	// Only allow alphanumeric, '-' or '.'.
 	validChars = regexp.MustCompile(`[^-\.a-z0-9]+`)
 )
-
-// GetClusterDomainName returns cluster's domain name or an error
-// Closes issue: https://github.com/knative/eventing/issues/714
-func GetClusterDomainName() string {
-	once.Do(func() {
-		f, err := os.Open(resolverFileName)
-		if err == nil {
-			defer f.Close()
-			domainName = getClusterDomainName(f)
-
-		} else {
-			domainName = defaultDomainName
-		}
-	})
-
-	return domainName
-}
-
-func getClusterDomainName(r io.Reader) string {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		elements := strings.Split(scanner.Text(), " ")
-		if elements[0] != "search" {
-			continue
-		}
-		for i := 1; i < len(elements)-1; i++ {
-			if strings.HasPrefix(elements[i], "svc.") {
-				return elements[i][4:]
-			}
-		}
-	}
-	// For all abnormal cases return default domain name
-	return defaultDomainName
-}
 
 func ObjectRef(obj metav1.Object, gvk schema.GroupVersionKind) corev1.ObjectReference {
 	// We can't always rely on the TypeMeta being populated.
@@ -110,28 +66,4 @@ func ToDNS1123Subdomain(name string) string {
 		name = strings.Trim(name, "-.")
 	}
 	return name
-}
-
-// GenerateFixedName generates a fixed name for the given owning resource and human readable prefix.
-// The name's length will be short enough to be valid for K8s Services.
-//
-// Deprecated, use knative.dev/pkg/kmeta.ChildName instead.
-func GenerateFixedName(owner metav1.Object, prefix string) string {
-	uid := string(owner.GetUID())
-
-	pl := validation.DNS1123LabelMaxLength - len(uid)
-	if pl < len(prefix) {
-		prefix = prefix[:pl]
-	}
-
-	// Make sure the UID is separated from the prefix by a leading dash.
-	if !strings.HasSuffix(prefix, "-") && !strings.HasPrefix(uid, "-") {
-		uid = "-" + uid
-		if len(prefix) == pl {
-			prefix = prefix[:len(prefix)-1]
-		}
-	}
-
-	// A dot must be followed by [a-z0-9] to be DNS1123 compliant. Make sure we are not joining a dot and a dash.
-	return strings.TrimSuffix(prefix, ".") + uid
 }
