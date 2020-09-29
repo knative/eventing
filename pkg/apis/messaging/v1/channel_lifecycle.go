@@ -101,6 +101,11 @@ func (cs *ChannelStatus) MarkBackingChannelReady() {
 }
 
 func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) {
+	// Set the address and update the Addressable conditions.
+	cs.SetAddress(chs.AddressStatus.Address)
+	// Set the subscribable status.
+	cs.SubscribableStatus = chs.SubscribableStatus
+
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
 	readyCondition := chs.Status.GetCondition(apis.ConditionReady)
 	if readyCondition == nil {
@@ -117,8 +122,4 @@ func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) 
 			cs.MarkBackingChannelUnknown("BackingChannelUnknown", "The status of BackingChannel is invalid: %v", readyCondition.Status)
 		}
 	}
-	// Set the address and update the Addressable conditions.
-	cs.SetAddress(chs.AddressStatus.Address)
-	// Set the subscribable status.
-	cs.SubscribableStatus = chs.SubscribableStatus
 }
