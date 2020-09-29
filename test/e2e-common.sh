@@ -332,7 +332,7 @@ function wait_for_file() {
   waits=300
   timeout=$waits
 
-  echo "Waiting for existance of file: ${file}"
+  echo "Waiting for existence of file: ${file}"
 
   while [ ! -f "${file}" ]; do
     # When the timeout is equal to zero, show an error and leave the loop.

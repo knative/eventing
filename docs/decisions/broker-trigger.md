@@ -160,5 +160,5 @@ Accepted decisions (2+ votes)
   - Future user stories could change this and motivate a particular
     implementation.
 
-[UX Proposals Comparision](https://docs.google.com/document/d/1fRpM4u4mP2fGUBmScKQ9_e77rKz_7xh_Thwxp8QXhUA/edit#)
+[UX Proposals Comparison](https://docs.google.com/document/d/1fRpM4u4mP2fGUBmScKQ9_e77rKz_7xh_Thwxp8QXhUA/edit#)
 (includes background and discussion)

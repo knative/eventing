@@ -75,9 +75,9 @@ spec:
           value: "8443"
           # SINK_BINDING_SELECTION_MODE specifies the NamespaceSelector and ObjectSelector
           # for the sinkbinding webhook.
-          # If `inclusion` is selected, namespaces/objects labled as `bindings.knative.dev/include:true`
+          # If `inclusion` is selected, namespaces/objects labelled as `bindings.knative.dev/include:true`
           # will be considered by the sinkbinding webhook;
-          # If `exclusion` is selected, namespaces/objects labled as `bindings.knative.dev/exclude:true`
+          # If `exclusion` is selected, namespaces/objects labelled as `bindings.knative.dev/exclude:true`
           # will NOT be considered by the sinkbinding webhook.
           # The default is `exclusion`.
         - name: SINK_BINDING_SELECTION_MODE
