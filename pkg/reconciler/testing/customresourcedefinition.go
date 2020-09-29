@@ -17,9 +17,10 @@ limitations under the License.
 package testing
 
 import (
+	"time"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 // CustomResourceDefinitionOption enables further configuration of a CustomResourceDefinition.
