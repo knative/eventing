@@ -39,6 +39,8 @@ import (
 	fakemessagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1/fake"
 	messagingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1beta1"
 	fakemessagingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1beta1/fake"
+	sourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
+	fakesourcesv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1/fake"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
 	fakesourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha2"
@@ -142,4 +144,9 @@ func (c *Clientset) SourcesV1alpha2() sourcesv1alpha2.SourcesV1alpha2Interface {
 // SourcesV1beta1 retrieves the SourcesV1beta1Client
 func (c *Clientset) SourcesV1beta1() sourcesv1beta1.SourcesV1beta1Interface {
 	return &fakesourcesv1beta1.FakeSourcesV1beta1{Fake: &c.Fake}
+}
+
+// SourcesV1 retrieves the SourcesV1Client
+func (c *Clientset) SourcesV1() sourcesv1.SourcesV1Interface {
+	return &fakesourcesv1.FakeSourcesV1{Fake: &c.Fake}
 }

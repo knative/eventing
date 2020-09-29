@@ -30,6 +30,7 @@ import (
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	v1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
@@ -106,6 +107,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1beta1().InMemoryChannels().Informer()}, nil
 	case messagingv1beta1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1beta1().Subscriptions().Informer()}, nil
+
+		// Group=sources.knative.dev, Version=v1
+	case sourcesv1.SchemeGroupVersion.WithResource("apiserversources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1().ApiServerSources().Informer()}, nil
 
 		// Group=sources.knative.dev, Version=v1alpha1
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("apiserversources"):
