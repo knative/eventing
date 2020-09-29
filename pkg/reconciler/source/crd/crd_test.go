@@ -100,6 +100,50 @@ func TestAllCases(t *testing.T) {
 			Key: crdName,
 			Ctx: ctx,
 		},
+		{
+			Name: "reconcile deleted",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionDeletionTimestamp(),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: true,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
+		{
+			Name: "reconcile not Served",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionDeletionTimestamp(),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: false,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
