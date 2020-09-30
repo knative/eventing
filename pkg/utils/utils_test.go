@@ -21,11 +21,64 @@ import (
 	"strings"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 )
+
+func TestGenerateFixedName(t *testing.T) {
+	testCases := map[string]struct {
+		uid      string
+		prefix   string
+		expected string
+	}{
+		"standard": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "default-text-extractor",
+			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"too long": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "this-is-an-extremely-long-prefix-which-will-make-the-generated-name-too-long-",
+			expected: "this-is-an-extremely-long--2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"uid starts with dash": {
+			uid:      "-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "this-is-an-extremely-long-prefix-which-will-make-the-generated-name-too-long-",
+			expected: "this-is-an-extremely-long--2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"prefix ends with dash": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "default-text-extractor-",
+			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"dot in prefix": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "default-text-extractor.",
+			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"too long and dot in prefix": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "this-is-an-extremely-long.prefix-and-it-will-be-cut-at-the-dot",
+			expected: "this-is-an-extremely-long-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			owner := &v1beta1.Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: types.UID(tc.uid),
+				},
+			}
+			if actual := GenerateFixedName(owner, tc.prefix); actual != tc.expected {
+				t.Errorf("Expected %q, actual %q", tc.expected, actual)
+			}
+		})
+	}
+}
 
 func TestObjectRef(t *testing.T) {
 	testCases := map[string]struct {
