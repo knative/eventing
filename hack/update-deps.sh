@@ -24,7 +24,7 @@ set -o pipefail
 export GO111MODULE=on
 
 # This controls the release branch we track.
-VERSION="release-0.18"
+VERSION="master"
 
 # The list of dependencies that we track at HEAD and periodically
 # float forward in this repository.
