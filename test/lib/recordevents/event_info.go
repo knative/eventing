@@ -62,11 +62,14 @@ type MinMaxResponse struct {
 type EventInfo struct {
 	// Set if the http request received by the pod couldn't be decoded or
 	// didn't pass validation
-	Error string
+	Error string `json:"error"`
 	// Event received if the cloudevent received by the pod passed validation
-	Event *cloudevents.Event
+	Event *cloudevents.Event `json:"event"`
 	// HTTPHeaders of the connection that delivered the event
-	HTTPHeaders map[string][]string
+	HTTPHeaders map[string][]string `json:"httpHeaders"`
+	Origin   string            `json:"origin"`
+	Observer string            `json:"observer"`
+	Time     time.Time            `json:"time"`
 }
 
 // Pretty print the event. Meant for debugging.  This formats the validation error
