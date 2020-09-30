@@ -89,7 +89,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -110,7 +110,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -121,7 +121,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.UnavailableDeployment())
+			s.PropagateReceiveAdapterStatus(unavailableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -132,7 +132,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.UnknownDeployment())
+			s.PropagateReceiveAdapterStatus(unknownDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -154,7 +154,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			return s
 		}(),
@@ -165,9 +165,9 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.UnavailableDeployment())
+			s.PropagateReceiveAdapterStatus(unavailableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -178,7 +178,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -189,7 +189,7 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
@@ -241,7 +241,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
@@ -268,7 +268,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
@@ -282,7 +282,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			return s
 		}(),
@@ -299,8 +299,8 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
-			s.PropagateReceiveAdapterStatus(TestHelper.UnavailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
+			s.PropagateReceiveAdapterStatus(unavailableDeployment)
 			return s
 		}(),
 		condQuery: ContainerSourceConditionReady,
@@ -314,7 +314,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
 			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
-			s.PropagateReceiveAdapterStatus(TestHelper.AvailableDeployment())
+			s.PropagateReceiveAdapterStatus(availableDeployment)
 			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),

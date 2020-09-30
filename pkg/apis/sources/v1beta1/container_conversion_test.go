@@ -22,7 +22,7 @@ import (
 )
 
 func TestContainerSourceConversionBadType(t *testing.T) {
-	good, bad := &ContainerSource{}, &ContainerSource{}
+	good, bad := &ContainerSource{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

@@ -35,6 +35,7 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	sources "knative.dev/eventing/pkg/apis/sources"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	testlib "knative.dev/eventing/test/lib"
@@ -243,14 +244,14 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Verify that EventTypes were created.
-	eventTypes, err := waitForEventTypes(ctx, client, len(sourcesv1alpha2.ApiServerSourceEventTypes))
+	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventTypes))
 	if err != nil {
 		t.Fatalf("Waiting for EventTypes: %v", err)
 	}
-	expectedCeTypes := sets.NewString(sourcesv1alpha2.ApiServerSourceEventTypes...)
+	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventTypes...)
 	for _, et := range eventTypes {
 		if !expectedCeTypes.Has(et.Spec.Type) {
-			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1alpha2.ApiServerSourceEventTypes, et.Spec.Type)
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
 }

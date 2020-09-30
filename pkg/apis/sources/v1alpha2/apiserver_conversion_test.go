@@ -18,9 +18,11 @@ package v1alpha2
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,8 +31,19 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
+// implement apis.Convertible
+type dummyObject struct{}
+
+func (*dummyObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
+func (*dummyObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
 func TestApiServerSourceConversionBadType(t *testing.T) {
-	good, bad := &ApiServerSource{}, &dummy{}
+	good, bad := &ApiServerSource{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)
@@ -43,7 +56,7 @@ func TestApiServerSourceConversionBadType(t *testing.T) {
 
 func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
-	versions := []apis.Convertible{&v1beta1.ApiServerSource{}}
+	versions := []apis.Convertible{&v1beta1.ApiServerSource{}, &v1.ApiServerSource{}}
 
 	path := apis.HTTP("")
 	path.Path = "/path"
@@ -221,27 +234,27 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 		name string
 		in   apis.Convertible
 	}{{name: "empty",
-		in: &v1beta1.ApiServerSource{
+		in: &v1.ApiServerSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "apiserver-name",
 				Namespace:  "apiserver-ns",
 				Generation: 17,
 			},
-			Spec:   v1beta1.ApiServerSourceSpec{},
-			Status: v1beta1.ApiServerSourceStatus{},
+			Spec:   v1.ApiServerSourceSpec{},
+			Status: v1.ApiServerSourceStatus{},
 		},
 	}, {name: "simple configuration",
-		in: &v1beta1.ApiServerSource{
+		in: &v1.ApiServerSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "apiserver-name",
 				Namespace:  "apiserver-ns",
 				Generation: 17,
 			},
-			Spec: v1beta1.ApiServerSourceSpec{
+			Spec: v1.ApiServerSourceSpec{
 				SourceSpec: duckv1.SourceSpec{
 					Sink: sink,
 				},
-				Resources: []v1beta1.APIVersionKindSelector{{
+				Resources: []v1.APIVersionKindSelector{{
 					APIVersion: "A1",
 					Kind:       "K1",
 					LabelSelector: &metav1.LabelSelector{
@@ -253,7 +266,7 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 				}},
 				EventMode: "Ref",
 			},
-			Status: v1beta1.ApiServerSourceStatus{
+			Status: v1.ApiServerSourceStatus{
 				SourceStatus: duckv1.SourceStatus{
 					Status: duckv1.Status{
 						ObservedGeneration: 1,
@@ -267,18 +280,18 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 			},
 		},
 	}, {name: "full",
-		in: &v1beta1.ApiServerSource{
+		in: &v1.ApiServerSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "apiserver-name",
 				Namespace:  "apiserver-ns",
 				Generation: 17,
 			},
-			Spec: v1beta1.ApiServerSourceSpec{
+			Spec: v1.ApiServerSourceSpec{
 				SourceSpec: duckv1.SourceSpec{
 					Sink:                sink,
 					CloudEventOverrides: &ceOverrides,
 				},
-				Resources: []v1beta1.APIVersionKindSelector{{
+				Resources: []v1.APIVersionKindSelector{{
 					APIVersion: "A1",
 					Kind:       "K1",
 					LabelSelector: &metav1.LabelSelector{
@@ -295,14 +308,14 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 					APIVersion: "A2",
 					Kind:       "K2",
 				}},
-				ResourceOwner: &v1beta1.APIVersionKind{
+				ResourceOwner: &v1.APIVersionKind{
 					APIVersion: "custom/v1",
 					Kind:       "Parent",
 				},
 				EventMode:          "Resource",
 				ServiceAccountName: "adult",
 			},
-			Status: v1beta1.ApiServerSourceStatus{
+			Status: v1.ApiServerSourceStatus{
 				SourceStatus: duckv1.SourceStatus{
 					Status: duckv1.Status{
 						ObservedGeneration: 1,

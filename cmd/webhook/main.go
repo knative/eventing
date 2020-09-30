@@ -53,6 +53,7 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/apis/sources"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
@@ -94,6 +95,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1beta1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1beta1.PingSource{},
 	sourcesv1beta1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1beta1.SinkBinding{},
 	sourcesv1beta1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1beta1.ContainerSource{},
+	// v1
+	sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1.ApiServerSource{},
 
 	// For group flows.knative.dev
 	// v1beta1
@@ -240,6 +243,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1alpha1_  = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_  = sourcesv1alpha2.SchemeGroupVersion.Version
 		sourcesv1beta1_   = sourcesv1beta1.SchemeGroupVersion.Version
+		sourcesv1_        = sourcesv1.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -311,13 +315,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 			},
 
 			// Sources
-			sourcesv1beta1.Kind("ApiServerSource"): {
+			sourcesv1.Kind("ApiServerSource"): {
 				DefinitionName: sources.ApiServerSourceResource.String(),
 				HubVersion:     sourcesv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
 					sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
 					sourcesv1beta1_:  &sourcesv1beta1.ApiServerSource{},
+					sourcesv1_:       &sourcesv1.ApiServerSource{},
 				},
 			},
 			sourcesv1beta1.Kind("PingSource"): {

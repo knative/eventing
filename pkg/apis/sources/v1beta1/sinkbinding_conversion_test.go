@@ -22,7 +22,7 @@ import (
 )
 
 func TestSinkBindingConversionBadType(t *testing.T) {
-	good, bad := &SinkBinding{}, &SinkBinding{}
+	good, bad := &SinkBinding{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

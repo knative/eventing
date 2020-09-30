@@ -18,24 +18,11 @@ package v1alpha2
 
 import (
 	"context"
-	"errors"
 	"testing"
-
-	"knative.dev/pkg/apis"
 )
 
-type dummy struct{}
-
-func (*dummy) ConvertTo(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
-func (*dummy) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
 func TestSinkBindingConversionBadType(t *testing.T) {
-	good, bad := &SinkBinding{}, &dummy{}
+	good, bad := &SinkBinding{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)
