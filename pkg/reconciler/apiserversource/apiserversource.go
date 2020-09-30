@@ -38,6 +38,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
+	apisources "knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
@@ -252,8 +253,8 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1beta1.ApiServerS
 }
 
 func (r *Reconciler) createCloudEventAttributes() []duckv1.CloudEventAttributes {
-	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(v1beta1.ApiServerSourceEventTypes))
-	for _, apiServerSourceType := range v1beta1.ApiServerSourceEventTypes {
+	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(apisources.ApiServerSourceEventTypes))
+	for _, apiServerSourceType := range apisources.ApiServerSourceEventTypes {
 		ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
 			Type:   apiServerSourceType,
 			Source: r.ceSource,

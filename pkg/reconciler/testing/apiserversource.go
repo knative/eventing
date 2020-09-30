@@ -23,6 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	apisources "knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
@@ -99,8 +100,8 @@ func WithApiServerSourceDeployedV1B1(s *v1beta1.ApiServerSource) {
 
 func WithApiServerSourceEventTypesV1B1(source string) V1Beta1ApiServerSourceOption {
 	return func(s *v1beta1.ApiServerSource) {
-		ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(v1beta1.ApiServerSourceEventTypes))
-		for _, apiServerSourceType := range v1beta1.ApiServerSourceEventTypes {
+		ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(apisources.ApiServerSourceEventTypes))
+		for _, apiServerSourceType := range apisources.ApiServerSourceEventTypes {
 			ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
 				Type:   apiServerSourceType,
 				Source: source,
