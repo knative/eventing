@@ -17,9 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"knative.dev/eventing/pkg/apis/sources"
 	"reflect"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 

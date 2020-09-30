@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"knative.dev/eventing/pkg/apis/sources"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

@@ -18,8 +18,9 @@ package v1
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/sources"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 )
 
 func TestApiServerConversionBadType(t *testing.T) {

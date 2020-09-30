@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"knative.dev/eventing/pkg/apis/sources"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

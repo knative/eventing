@@ -18,9 +18,10 @@ package v1alpha1
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/sources"
 	"reflect"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 
 	corev1 "k8s.io/api/core/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"

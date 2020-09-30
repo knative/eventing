@@ -18,9 +18,10 @@ package v1alpha1
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/sources"
 	"reflect"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 
 	"knative.dev/pkg/tracker"
 

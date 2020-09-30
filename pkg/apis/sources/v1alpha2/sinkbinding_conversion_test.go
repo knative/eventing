@@ -18,8 +18,9 @@ package v1alpha2
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/sources"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/sources"
 )
 
 func TestSinkBindingConversionBadType(t *testing.T) {
