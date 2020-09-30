@@ -14,11 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package sources
 
 import (
+	"context"
+	"errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	"knative.dev/pkg/apis"
 )
 
 type testHelper struct{}
@@ -60,4 +64,15 @@ func (t testHelper) UnknownDeployment() *appsv1.Deployment {
 		},
 	}
 	return d
+}
+
+// implement apis.Convertible
+type DummyObject struct{}
+
+func (*DummyObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
+func (*DummyObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
 }

@@ -18,11 +18,12 @@ package v1beta1
 
 import (
 	"context"
+	"knative.dev/eventing/pkg/apis/sources"
 	"testing"
 )
 
 func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
+	good, bad := &PingSource{}, &sources.DummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

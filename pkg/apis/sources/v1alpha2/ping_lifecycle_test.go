@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"knative.dev/eventing/pkg/apis/sources"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -78,7 +79,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -120,7 +121,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -143,7 +144,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -155,7 +156,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.UnavailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.UnavailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -167,7 +168,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.UnknownDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.UnknownDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -179,7 +180,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkEventType()
 			return s
 		}(),
@@ -192,7 +193,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
@@ -205,7 +206,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkNoEventType("Testing", "")
 			return s
 		}(),
@@ -218,7 +219,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -230,7 +231,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkSink(exampleUri)
 			return s
 		}(),
@@ -281,7 +282,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
@@ -330,7 +331,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
@@ -357,7 +358,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
@@ -371,7 +372,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkEventType()
 			return s
 		}(),
@@ -386,7 +387,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
@@ -403,7 +404,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkNoEventType("Testing", "")
 			return s
 		}(),
@@ -418,7 +419,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		want: &apis.Condition{
@@ -434,7 +435,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkSink(exampleUri)
 			return s
 		}(),
@@ -485,7 +486,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		condQuery: PingSourceConditionReady,
@@ -526,7 +527,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		condQuery: PingSourceConditionReady,
@@ -541,7 +542,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkEventType()
 			return s
 		}(),
@@ -557,7 +558,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkNoSink("Testing", "hi%s", "")
 			return s
 		}(),
@@ -575,7 +576,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkInvalidSchedule("Testing", "hi%s", "")
 			return s
 		}(),
@@ -593,7 +594,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
@@ -611,7 +612,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
 		}(),
@@ -629,7 +630,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkEventType()
 			s.MarkNoEventType("Testing", "hi")
 			return s
@@ -646,7 +647,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		condQuery: PingSourceConditionReady,
@@ -663,7 +664,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSchedule()
 			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			s.MarkSink(exampleUri)
 			return s
 		}(),

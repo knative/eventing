@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"knative.dev/eventing/pkg/apis/sources"
 	"reflect"
 	"testing"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 )
 
@@ -66,7 +66,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(v1alpha2.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -98,7 +98,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(v1alpha2.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -110,7 +110,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(v1alpha2.TestHelper.UnavailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.UnavailableDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -122,7 +122,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(v1alpha2.TestHelper.UnknownDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.UnknownDeployment())
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -196,7 +196,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(v1alpha2.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -224,7 +224,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(v1alpha2.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
