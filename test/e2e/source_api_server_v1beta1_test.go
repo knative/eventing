@@ -253,7 +253,7 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventTypes...)
 	for _, et := range eventTypes {
 		if !expectedCeTypes.Has(et.Spec.Type) {
-			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1beta1.ApiServerSourceEventTypes, et.Spec.Type)
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
 }
