@@ -19,12 +19,10 @@ package v1alpha2
 import (
 	"context"
 	"testing"
-
-	"knative.dev/eventing/pkg/apis/sources"
 )
 
 func TestSinkBindingConversionBadType(t *testing.T) {
-	good, bad := &SinkBinding{}, &sources.DummyObject{}
+	good, bad := &SinkBinding{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

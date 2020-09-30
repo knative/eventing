@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -28,6 +28,50 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
+)
+
+var (
+	availableDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "available",
+		},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	unavailableDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "unavailable",
+		},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+	}
+
+	unknownDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "unknown",
+		},
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionUnknown,
+				},
+			},
+		},
+	}
 )
 
 func TestApiServerSourceGetConditionSet(t *testing.T) {
@@ -76,7 +120,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -117,7 +161,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -129,7 +173,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.UnavailableDeployment())
+			s.PropagateDeploymentAvailability(unavailableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionFalse,
@@ -141,7 +185,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.UnknownDeployment())
+			s.PropagateDeploymentAvailability(unknownDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -165,7 +209,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -229,7 +273,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -257,7 +301,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -272,7 +316,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -287,7 +331,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink(nil)
 			s.MarkSufficientPermissions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,

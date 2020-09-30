@@ -19,12 +19,10 @@ package v1beta1
 import (
 	"context"
 	"testing"
-
-	"knative.dev/eventing/pkg/apis/sources"
 )
 
 func TestContainerSourceConversionBadType(t *testing.T) {
-	good, bad := &ContainerSource{}, &sources.DummyObject{}
+	good, bad := &ContainerSource{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

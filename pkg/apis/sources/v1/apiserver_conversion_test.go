@@ -18,13 +18,25 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/pkg/apis"
 )
 
+// implement apis.Convertible
+type dummyObject struct{}
+
+func (*dummyObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
+func (*dummyObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
 func TestApiServerConversionBadType(t *testing.T) {
-	good, bad := &ApiServerSource{}, &sources.DummyObject{}
+	good, bad := &ApiServerSource{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

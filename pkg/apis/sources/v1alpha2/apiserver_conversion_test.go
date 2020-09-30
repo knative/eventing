@@ -18,10 +18,9 @@ package v1alpha2
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
-
-	"knative.dev/eventing/pkg/apis/sources"
 
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
@@ -32,8 +31,19 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
+// implement apis.Convertible
+type dummyObject struct{}
+
+func (*dummyObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
+func (*dummyObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	return errors.New("Won't go")
+}
+
 func TestApiServerSourceConversionBadType(t *testing.T) {
-	good, bad := &ApiServerSource{}, &sources.DummyObject{}
+	good, bad := &ApiServerSource{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

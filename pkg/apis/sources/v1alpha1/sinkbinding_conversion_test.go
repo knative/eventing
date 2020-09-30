@@ -21,8 +21,6 @@ import (
 	"reflect"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
-
 	"knative.dev/pkg/tracker"
 
 	"github.com/google/go-cmp/cmp"
@@ -36,7 +34,7 @@ import (
 )
 
 func TestSinkBindingConversionBadType(t *testing.T) {
-	good, bad := &SinkBinding{}, &sources.DummyObject{}
+	good, bad := &SinkBinding{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

@@ -21,8 +21,6 @@ import (
 	"reflect"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
-
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
@@ -31,7 +29,7 @@ import (
 )
 
 func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &sources.DummyObject{}
+	good, bad := &PingSource{}, &dummyObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

@@ -19,8 +19,6 @@ package v1beta1
 import (
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources"
-
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -79,7 +77,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionUnknown,
@@ -101,7 +99,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		wantConditionStatus: corev1.ConditionTrue,
@@ -151,7 +149,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		want: &apis.Condition{
@@ -176,7 +174,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink(exampleUri)
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		want: &apis.Condition{
@@ -226,7 +224,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 		s: func() *PingSourceStatus {
 			s := &PingSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(sources.TestHelper.AvailableDeployment())
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: PingSourceConditionReady,

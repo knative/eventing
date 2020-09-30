@@ -45,32 +45,6 @@ var (
 	_ apis.HasSpec = (*ApiServerSource)(nil)
 )
 
-// ApiServerSourceEventTypes is the list of CloudEvent types the ApiServerSource emits.
-var ApiServerSourceEventTypes = []string{
-	ApiServerSourceAddEventType,
-	ApiServerSourceDeleteEventType,
-	ApiServerSourceUpdateEventType,
-	ApiServerSourceAddRefEventType,
-	ApiServerSourceDeleteRefEventType,
-	ApiServerSourceUpdateRefEventType,
-}
-
-const (
-	// ApiServerSourceAddEventType is the ApiServerSource CloudEvent type for adds.
-	ApiServerSourceAddEventType = "dev.knative.apiserver.resource.add"
-	// ApiServerSourceUpdateEventType is the ApiServerSource CloudEvent type for updates.
-	ApiServerSourceUpdateEventType = "dev.knative.apiserver.resource.update"
-	// ApiServerSourceDeleteEventType is the ApiServerSource CloudEvent type for deletions.
-	ApiServerSourceDeleteEventType = "dev.knative.apiserver.resource.delete"
-
-	// ApiServerSourceAddRefEventType is the ApiServerSource CloudEvent type for ref adds.
-	ApiServerSourceAddRefEventType = "dev.knative.apiserver.ref.add"
-	// ApiServerSourceUpdateRefEventType is the ApiServerSource CloudEvent type for ref updates.
-	ApiServerSourceUpdateRefEventType = "dev.knative.apiserver.ref.update"
-	// ApiServerSourceDeleteRefEventType is the ApiServerSource CloudEvent type for ref deletions.
-	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
-)
-
 // ApiServerSourceSpec defines the desired state of ApiServerSource
 type ApiServerSourceSpec struct {
 	// Resources is the list of resources to watch
