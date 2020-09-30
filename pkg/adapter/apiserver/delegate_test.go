@@ -18,7 +18,7 @@ package apiserver
 import (
 	"testing"
 
-	sources "knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/eventing/pkg/apis/sources"
 )
 
 func TestResourceAddEvent(t *testing.T) {

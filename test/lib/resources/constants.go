@@ -30,6 +30,7 @@ const (
 	ServingAPIVersion     = "serving.knative.dev/v1"
 	SourcesV1A2APIVersion = "sources.knative.dev/v1alpha2"
 	SourcesV1B1APIVersion = "sources.knative.dev/v1beta1"
+	SourcesV1APIVersion   = "sources.knative.dev/v1"
 )
 
 // Kind for Knative resources.

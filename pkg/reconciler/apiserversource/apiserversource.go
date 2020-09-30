@@ -39,8 +39,8 @@ import (
 	"knative.dev/pkg/resolver"
 
 	apisources "knative.dev/eventing/pkg/apis/sources"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/apiserversource"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/eventing/pkg/utils"
@@ -74,7 +74,7 @@ type Reconciler struct {
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.ApiServerSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -118,7 +118,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.ApiServe
 	return nil
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1beta1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
@@ -186,7 +186,7 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 	return false
 }
 
-func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1beta1.ApiServerSource) error {
+func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource) error {
 	if src.Spec.Resources == nil || len(src.Spec.Resources) == 0 {
 		src.Status.MarkSufficientPermissions()
 		return nil
