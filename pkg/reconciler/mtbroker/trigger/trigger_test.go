@@ -40,7 +40,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -51,6 +50,7 @@ import (
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -101,7 +101,7 @@ kind: "InMemoryChannel"
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 
-	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
+	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", network.GetClusterDomainName())
 	triggerChannelURL      = fmt.Sprintf("http://%s", triggerChannelHostname)
 
 	filterServiceName  = "broker-filter"
@@ -127,12 +127,12 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS
 
 	brokerAddress = &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, utils.GetClusterDomainName()),
+		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, network.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 )
@@ -772,7 +772,7 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 func makeServiceURI() *apis.URL {
 	return &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("broker-filter.%s.svc.%s", systemNS, utils.GetClusterDomainName()),
+		Host:   fmt.Sprintf("broker-filter.%s.svc.%s", systemNS, network.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }

@@ -21,51 +21,13 @@ import (
 	"strings"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 )
-
-func TestGetDomainName(t *testing.T) {
-	testCases := map[string]struct {
-		resolvConf string
-		want       string
-	}{
-		"all good": {
-			resolvConf: `
-nameserver 1.1.1.1
-search default.svc.abc.com svc.abc.com abc.com
-options ndots:5
-`,
-			want: "abc.com",
-		},
-		"missing search line": {
-			resolvConf: `
-nameserver 1.1.1.1
-options ndots:5
-`,
-			want: defaultDomainName,
-		},
-		"non k8s resolv.conf format": {
-			resolvConf: `
-nameserver 1.1.1.1
-search  abc.com xyz.com
-options ndots:5
-`,
-			want: defaultDomainName,
-		},
-	}
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			got := getClusterDomainName(strings.NewReader(tc.resolvConf))
-			if got != tc.want {
-				t.Errorf("Expected: %s but got: %s", tc.want, got)
-			}
-		})
-	}
-}
 
 func TestGenerateFixedName(t *testing.T) {
 	testCases := map[string]struct {

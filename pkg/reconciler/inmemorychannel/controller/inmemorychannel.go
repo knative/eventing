@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/network"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,7 +44,6 @@ import (
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/logging"
 )
 
@@ -156,7 +156,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(apis.HTTP(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName())))
+	imc.Status.SetAddress(apis.HTTP(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, network.GetClusterDomainName())))
 
 	imc.Status.Subscribers = make([]eventingduck.SubscriberStatus, 0)
 	for _, sub := range imc.Spec.Subscribers {

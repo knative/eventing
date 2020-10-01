@@ -24,6 +24,7 @@ import (
 
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/network"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -51,7 +52,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/utils"
 
 	. "knative.dev/pkg/reconciler/testing"
 
@@ -78,19 +78,19 @@ const (
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
 
 var (
-	channelDNS = "channel.mynamespace.svc." + utils.GetClusterDomainName()
+	channelDNS = "channel.mynamespace.svc." + network.GetClusterDomainName()
 
-	subscriberDNS = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
+	subscriberDNS = "subscriber.mynamespace.svc." + network.GetClusterDomainName()
 	subscriberURI = apis.HTTP(subscriberDNS)
 
-	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
+	replyDNS = "reply.mynamespace.svc." + network.GetClusterDomainName()
 	replyURI = apis.HTTP(replyDNS)
 
-	serviceDNS         = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
+	serviceDNS         = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
 	serviceURI         = apis.HTTP(serviceDNS)
 	serviceURIWithPath = &apis.URL{Scheme: "http", Host: serviceDNS, Path: "/"}
 
-	dlcDNS = "dlc.mynamespace.svc." + utils.GetClusterDomainName()
+	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
 	dlcURI = apis.HTTP(dlcDNS)
 
 	subscriberGVK = metav1.GroupVersionKind{

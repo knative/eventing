@@ -25,9 +25,10 @@ import (
 	"log"
 	"os"
 
+	"knative.dev/pkg/network"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
@@ -62,7 +63,7 @@ func main() {
 	}
 
 	if source == "" {
-		source = fmt.Sprintf("http://%s", utils.GetClusterDomainName())
+		source = fmt.Sprintf("http://%s", network.GetClusterDomainName())
 	}
 
 	t, err := cloudevents.NewHTTP(

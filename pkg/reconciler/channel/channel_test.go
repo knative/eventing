@@ -35,13 +35,13 @@ import (
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -53,7 +53,7 @@ const (
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, channelName)
 
-	backingChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
+	backingChannelHostname = fmt.Sprintf("foo.bar.svc.%s", network.GetClusterDomainName())
 )
 
 func init() {

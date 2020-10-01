@@ -35,7 +35,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -45,6 +44,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
 
 	rttesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -67,7 +67,7 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
-	sinkDNS          = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkDNS          = "sink.mynamespace.svc." + network.GetClusterDomainName()
 	sinkURI          = apis.HTTP(sinkDNS)
 	sinkURIReference = "/foo"
 	sinkTargetURI    = func() *apis.URL {

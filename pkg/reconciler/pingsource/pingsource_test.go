@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
@@ -35,7 +36,6 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -62,7 +62,7 @@ var (
 			APIVersion: "messaging.knative.dev/v1beta1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
 	sinkURI = apis.HTTP(sinkDNS)
 )
 

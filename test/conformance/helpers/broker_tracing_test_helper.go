@@ -21,13 +21,14 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/network"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/pkg/utils"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -129,7 +130,7 @@ func setupBrokerTracing(ctx context.Context, brokerClass string) SetupTracingTes
 			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event)
 		}
 
-		domain := utils.GetClusterDomainName()
+		domain := network.GetClusterDomainName()
 
 		// We expect the following spans:
 		// 1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).

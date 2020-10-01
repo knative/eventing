@@ -17,12 +17,8 @@ limitations under the License.
 package utils
 
 import (
-	"bufio"
-	"io"
-	"os"
 	"regexp"
 	"strings"
-	"sync"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
@@ -32,55 +28,15 @@ import (
 )
 
 const (
-	resolverFileName  = "/etc/resolv.conf"
-	defaultDomainName = "cluster.local"
-
 	// Number of characters to keep available just in case the prefix used in generateName
 	// exceeds the maximum allowed for k8s names.
 	generateNameSafety = 10
 )
 
 var (
-	domainName string
-	once       sync.Once
-
 	// Only allow alphanumeric, '-' or '.'.
 	validChars = regexp.MustCompile(`[^-\.a-z0-9]+`)
 )
-
-// GetClusterDomainName returns cluster's domain name or an error
-// Closes issue: https://github.com/knative/eventing/issues/714
-func GetClusterDomainName() string {
-	once.Do(func() {
-		f, err := os.Open(resolverFileName)
-		if err == nil {
-			defer f.Close()
-			domainName = getClusterDomainName(f)
-
-		} else {
-			domainName = defaultDomainName
-		}
-	})
-
-	return domainName
-}
-
-func getClusterDomainName(r io.Reader) string {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		elements := strings.Split(scanner.Text(), " ")
-		if elements[0] != "search" {
-			continue
-		}
-		for i := 1; i < len(elements)-1; i++ {
-			if strings.HasPrefix(elements[i], "svc.") {
-				return elements[i][4:]
-			}
-		}
-	}
-	// For all abnormal cases return default domain name
-	return defaultDomainName
-}
 
 func ObjectRef(obj metav1.Object, gvk schema.GroupVersionKind) corev1.ObjectReference {
 	// We can't always rely on the TypeMeta being populated.

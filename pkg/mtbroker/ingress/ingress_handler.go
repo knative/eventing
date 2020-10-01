@@ -40,6 +40,7 @@ import (
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/network"
 )
 
 const (
@@ -183,7 +184,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 	channelAddress, err := h.getChannelAddress(brokerName, brokerNamespace)
 	if err != nil {
 		h.Logger.Warn("Failed to get channel address, falling back on guess", zap.Error(err))
-		channelAddress = guessChannelAddress(brokerName, brokerNamespace, utils.GetClusterDomainName())
+		channelAddress = guessChannelAddress(brokerName, brokerNamespace, network.GetClusterDomainName())
 	}
 
 	return h.send(ctx, headers, event, channelAddress)

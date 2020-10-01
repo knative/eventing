@@ -43,7 +43,6 @@ import (
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
-	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -138,15 +137,6 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(ctx, expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		// Issue #2842: Adater deployment name uses kmeta.ChildName. If a deployment by the previous name pattern is found, it should
-		// be deleted. This might cause temporary downtime.
-		if deprecatedName := utils.GenerateFixedName(adapterArgs.Source, fmt.Sprintf("apiserversource-%s", adapterArgs.Source.Name)); deprecatedName != expected.Name {
-			if err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ctx, deprecatedName, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("error deleting deprecated named deployment: %v", err)
-			}
-			controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentDeleted, "Deprecated deployment removed: \"%s/%s\"", src.Namespace, deprecatedName)
-		}
-
 		ra, err = r.kubeClientSet.AppsV1().Deployments(src.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		msg := "Deployment created"
 		if err != nil {
