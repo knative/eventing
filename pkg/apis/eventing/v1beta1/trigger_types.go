@@ -30,11 +30,6 @@ const (
 	DependencyAnnotation = "knative.dev/dependency"
 
 	// These are copied from ./pkg/reconcilers/sugar
-
-	// DeprecatedInjectionAnnotation
-	// Deprecated: v0.16, please use InjectionAnnotation.
-	DeprecatedInjectionAnnotation = "knative-eventing-injection"
-
 	// InjectionAnnotation is the annotation key used to enable knative eventing
 	// injection for a namespace to automatically create a broker.
 	InjectionAnnotation = "eventing.knative.dev/injection"
