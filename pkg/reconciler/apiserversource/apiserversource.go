@@ -49,7 +49,6 @@ const (
 	// Name of the corev1.Events emitted from the reconciliation process
 	apiserversourceDeploymentCreated = "ApiServerSourceDeploymentCreated"
 	apiserversourceDeploymentUpdated = "ApiServerSourceDeploymentUpdated"
-	apiserversourceDeploymentDeleted = "ApiServerSourceDeploymentDeleted"
 
 	component = "apiserversource"
 )
@@ -112,7 +111,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.PropagateDeploymentAvailability(ra)
 
-	source.Status.CloudEventAttributes = r.createCloudEventAttributes(source)
+	cloudEventAttributes, err := r.createCloudEventAttributes(source)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Unable to create CloudEventAttributes", zap.Error(err))
+		return err
+	}
+	source.Status.CloudEventAttributes = cloudEventAttributes
 
 	return nil
 }
@@ -242,12 +246,14 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 
 }
 
-func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) []duckv1.CloudEventAttributes {
+func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duckv1.CloudEventAttributes, error) {
 	var eventTypes []string
 	if src.Spec.EventMode == v1.ReferenceMode {
 		eventTypes = apisources.ApiServerSourceEventReferenceModeTypes
 	} else if src.Spec.EventMode == v1.ResourceMode {
 		eventTypes = apisources.ApiServerSourceEventResourceModeTypes
+	} else {
+		return []duckv1.CloudEventAttributes{}, fmt.Errorf("no EventType available for EventMode:%s", src.Spec.EventMode)
 	}
 	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(eventTypes))
 	for _, apiServerSourceType := range eventTypes {
@@ -256,5 +262,5 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) []duckv
 			Source: r.ceSource,
 		})
 	}
-	return ceAttributes
+	return ceAttributes, nil
 }
