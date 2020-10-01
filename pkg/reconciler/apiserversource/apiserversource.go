@@ -140,7 +140,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1.ApiServer
 		ra, err = r.kubeClientSet.AppsV1().Deployments(src.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		msg := "Deployment created"
 		if err != nil {
-			msg = fmt.Sprintf("Deployment created, error: %v", err)
+			msg = fmt.Sprint("Deployment created, error:", err)
 		}
 		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentCreated, "%s", msg)
 		return ra, err

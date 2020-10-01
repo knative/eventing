@@ -99,7 +99,7 @@ func TestConfigMapPropagationGetCondition(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.cmps.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+				t.Error("unexpected condition (-want, +got) =", diff)
 			}
 		})
 	}
@@ -172,7 +172,7 @@ func TestConfigMapPropagationInitializeConditions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			test.cmps.InitializeConditions()
 			if diff := cmp.Diff(test.want, test.cmps, ignoreAllButTypeAndStatus); diff != "" {
-				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
 		})
 	}

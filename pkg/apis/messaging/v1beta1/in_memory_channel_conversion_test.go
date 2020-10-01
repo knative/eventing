@@ -262,11 +262,11 @@ func TestInMemoryChannelConversion(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ver := &v1.InMemoryChannel{}
 			if err := test.in.ConvertTo(context.Background(), ver); err != nil {
-				t.Errorf("ConvertTo() = %v", err)
+				t.Error("ConvertTo() =", err)
 			}
 			got := &InMemoryChannel{}
 			if err := got.ConvertFrom(context.Background(), ver); err != nil {
-				t.Errorf("ConvertFrom() = %v", err)
+				t.Error("ConvertFrom() =", err)
 			}
 			// Make sure the annotation specifies the correct duck.
 			if test.in.Annotations == nil {
@@ -275,7 +275,7 @@ func TestInMemoryChannelConversion(t *testing.T) {
 			test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 	}
@@ -499,11 +499,11 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			version := &InMemoryChannel{}
 			if err := version.ConvertFrom(context.Background(), test.in); err != nil {
-				t.Errorf("ConvertTo() = %v", err)
+				t.Error("ConvertTo() =", err)
 			}
 			got := &v1.InMemoryChannel{}
 			if err := version.ConvertTo(context.Background(), got); err != nil {
-				t.Errorf("ConvertFrom() = %v", err)
+				t.Error("ConvertFrom() =", err)
 			}
 			// Make sure the annotation specifies the correct duck.
 			if test.in.Annotations == nil {
@@ -512,7 +512,7 @@ func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 			test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 

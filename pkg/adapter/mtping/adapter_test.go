@@ -43,20 +43,20 @@ func TestStartStopAdapter(t *testing.T) {
 	ce := adaptertest.NewTestClient()
 	adapter := NewAdapter(ctx, envCfg, ce)
 
-	done := make(chan bool)
+	done := make(chan struct{})
 	go func(ctx context.Context) {
 		err := adapter.Start(ctx)
 		if err != nil {
-			t.Errorf("unexpected error: %v", err)
+			t.Error("Unexpected error:", err)
 		}
-		done <- true
+		close(done)
 	}(ctx)
 
 	cancel()
 
 	select {
 	case <-time.After(2 * time.Second):
-		t.Fatal("expected adapter to be stopped after 2 seconds")
+		t.Fatal("Expected adapter to be stopped after 2 seconds")
 	case <-done:
 	}
 }
@@ -78,7 +78,7 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 	})
 
 	if _, ok := adapter.entryids["test-ns/test-name"]; !ok {
-		t.Error("expected cron entries to contain \"test-ns/test-name\"")
+		t.Error(`Expected cron entries to contain "test-ns/test-name"`)
 	}
 
 	adapter.Remove(ctx, &sourcesv1beta1.PingSource{
@@ -88,15 +88,15 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 		},
 	})
 	if _, ok := adapter.entryids["test-ns/test-name"]; ok {
-		t.Error("expected cron entries to not contain \"test-ns/test-name\"")
+		t.Error(`Expected cron entries to not contain "test-ns/test-name"`)
 	}
 }
 
 type dummyRunner struct{}
 
-func (r *dummyRunner) Start(stopCh <-chan struct{}) {}
-func (r *dummyRunner) Stop()                        {}
-func (r *dummyRunner) AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID {
+func (r *dummyRunner) Start(<-chan struct{}) {}
+func (r *dummyRunner) Stop()                 {}
+func (r *dummyRunner) AddSchedule(*sourcesv1beta1.PingSource) cron.EntryID {
 	return cron.EntryID(1)
 }
 func (r *dummyRunner) RemoveSchedule(id cron.EntryID) {}

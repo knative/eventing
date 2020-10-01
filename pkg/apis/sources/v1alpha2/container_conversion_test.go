@@ -160,16 +160,16 @@ func TestContainerSourceConversionRoundTripUp(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 
 				got := &ContainerSource{}
 
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				if diff := cmp.Diff(test.in, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}
@@ -242,16 +242,16 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			down := &ContainerSource{}
 			if err := down.ConvertFrom(context.Background(), test.in); err != nil {
-				t.Errorf("ConvertTo() = %v", err)
+				t.Error("ConvertTo() =", err)
 			}
 
 			got := (reflect.New(reflect.TypeOf(test.in).Elem()).Interface()).(apis.Convertible)
 
 			if err := down.ConvertTo(context.Background(), got); err != nil {
-				t.Errorf("ConvertFrom() = %v", err)
+				t.Error("ConvertFrom() =", err)
 			}
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 	}

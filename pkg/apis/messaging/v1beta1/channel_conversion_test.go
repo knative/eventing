@@ -152,11 +152,11 @@ func TestChannelConversion(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				got := &Channel{}
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				// Make sure the annotation specifies the correct duck.
 				if test.in.Annotations == nil {
@@ -164,7 +164,7 @@ func TestChannelConversion(t *testing.T) {
 				}
 				test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
 				if diff := cmp.Diff(test.in, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}
@@ -295,11 +295,11 @@ func TestChannelConversionWithV1(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := version.ConvertFrom(context.Background(), test.in); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				got := &v1.Channel{}
 				if err := ver.ConvertTo(context.Background(), got); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				// Make sure the annotation specifies the correct duck.
 				if test.in.Annotations == nil {
@@ -307,7 +307,7 @@ func TestChannelConversionWithV1(t *testing.T) {
 				}
 				test.in.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1"
 				if diff := cmp.Diff(test.in, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}

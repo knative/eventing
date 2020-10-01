@@ -297,7 +297,7 @@ func TestMakeDeployment(t *testing.T) {
 			test.source.Labels = Labels(name)
 			got := MakeDeployment(test.source)
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("unexpected deploy (-want, +got) = %v", diff)
+				t.Error("unexpected deploy (-want, +got) =", diff)
 			}
 		})
 	}

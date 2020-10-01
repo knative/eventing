@@ -100,6 +100,6 @@ func TestNewSubscription(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected diff (-want, +got) = %v", diff)
+		t.Error("unexpected diff (-want, +got) =", diff)
 	}
 }

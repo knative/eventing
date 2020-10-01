@@ -53,6 +53,6 @@ func TestNewRoleBinding(t *testing.T) {
 	got := MakeRoleBinding(testNS, rbName, sa, crName)
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+		t.Error("unexpected condition (-want, +got) =", diff)
 	}
 }

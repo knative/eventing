@@ -77,7 +77,7 @@ func TestOurConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testConfig, err := NewConfigFromConfigMapFunc(logtesting.TestContextWithLogger(t))(tt.data)
 			if tt.fail != (err != nil) {
-				t.Fatalf("Unexpected error value: %v", err)
+				t.Fatal("Unexpected error value:", err)
 			}
 
 			t.Log(actual)
@@ -86,7 +86,7 @@ func TestOurConfig(t *testing.T) {
 				if testConfig != nil && testConfig.DefaultChannelTemplate.Spec != nil {
 					t.Log(string(testConfig.DefaultChannelTemplate.Spec.Raw))
 				}
-				t.Errorf("Unexpected controller config (-want, +got): %s", diff)
+				t.Error("Unexpected controller config (-want, +got):", diff)
 			}
 		})
 	}

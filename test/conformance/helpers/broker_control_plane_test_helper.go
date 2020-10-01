@@ -103,7 +103,7 @@ func readyBrokerV1Beta1AvailableHelper(t *testing.T, brokerName string, client *
 	obj := resources.NewMetaResource(brokerName, client.Namespace, testlib.BrokerTypeMeta)
 	_, err := duck.GetAddressableURI(client.Dynamic, obj)
 	if err != nil {
-		t.Fatalf("Broker is not addressable %v", err)
+		t.Fatal("Broker is not addressable", err)
 	}
 }
 

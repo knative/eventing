@@ -33,7 +33,7 @@ import (
 func TestChannelDefaultsConfigurationFromFile(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, ChannelDefaultsConfigName)
 	if _, err := NewChannelDefaultsConfigFromConfigMap(example); err != nil {
-		t.Errorf("NewChannelDefaultsConfigFromConfigMap(example) = %v", err)
+		t.Error("NewChannelDefaultsConfigFromConfigMap(example) =", err)
 	}
 }
 
@@ -41,11 +41,11 @@ func TestGetChannelConfig(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, ChannelDefaultsConfigName)
 	channelDefaults, err := NewChannelDefaultsConfigFromConfigMap(example)
 	if err != nil {
-		t.Errorf("NewChannelDefaultsConfigFromConfigMap(example) = %v", err)
+		t.Error("NewChannelDefaultsConfigFromConfigMap(example) =", err)
 	}
 	c, err := channelDefaults.GetChannelConfig("rando")
 	if err != nil {
-		t.Errorf("GetChannelConfig Failed = %v", err)
+		t.Error("GetChannelConfig Failed =", err)
 	}
 	if c.APIVersion != "messaging.knative.dev/v1beta1" {
 		t.Errorf("apiversion mismatch want %q got %q", "messaging.knative.dev/v1beta1", c.APIVersion)
@@ -55,7 +55,7 @@ func TestGetChannelConfig(t *testing.T) {
 	}
 	c, err = channelDefaults.GetChannelConfig("some-namespace")
 	if err != nil {
-		t.Errorf("GetChannelConfig Failed = %v", err)
+		t.Error("GetChannelConfig Failed =", err)
 	}
 	if c.APIVersion != "messaging.knative.dev/v1alpha1" {
 		t.Errorf("apiversion mismatch want %q got %q", "messaging.knative.dev/v1alpha1", c.APIVersion)
@@ -183,7 +183,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 					t.Fatalf("Diff failed: %s %q", err, diff)
 				}
 				if diff != "" {
-					t.Fatalf("diff %s", diff)
+					t.Fatal("diff", diff)
 				}
 			}
 		})

@@ -303,17 +303,17 @@ func validate(t *testing.T, got cloudevents.Event, err error, want *cloudevents.
 		}
 		if !strings.Contains(wantErr, gotErr) {
 			diff := cmp.Diff(wantErr, gotErr)
-			t.Errorf("unexpected error (-want, +got) = %v", diff)
+			t.Error("unexpected error (-want, +got) =", diff)
 		}
 		return
 	}
 
 	if diff := cmp.Diff(want, &got, cmpopts.IgnoreFields(cloudevents.Event{}, "DataBase64", "DataEncoded")); diff != "" {
-		t.Errorf("unexpected event diff (-want, +got) = %v", diff)
+		t.Error("unexpected event diff (-want, +got) =", diff)
 	}
 
 	gotData := string(got.Data())
 	if diff := cmp.Diff(wantData, gotData); diff != "" {
-		t.Errorf("unexpected data diff (-want, +got) = %v", diff)
+		t.Error("unexpected data diff (-want, +got) =", diff)
 	}
 }

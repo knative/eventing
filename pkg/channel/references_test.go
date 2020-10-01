@@ -43,7 +43,7 @@ func TestChannelReference_String(t *testing.T) {
 func TestParseChannel(t *testing.T) {
 	c, err := ParseChannel("test-channel.test-namespace.svc.")
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Error("Unexpected error:", err)
 	}
 	if c.Name != "test-channel" {
 		t.Errorf("Expected Name: test-channel. Got: %q", c.Name)

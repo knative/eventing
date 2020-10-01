@@ -69,7 +69,7 @@ func tracingTest(
 	// Start the event info store and assert the event was received correctly
 	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
 	if err != nil {
-		t.Fatalf("Pod tracker failed: %v", err)
+		t.Fatal("Pod tracker failed:", err)
 	}
 	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
 

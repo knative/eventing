@@ -92,7 +92,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-		t.Fatalf("Error annotating namespace: %v", err)
+		t.Fatal("Error annotating namespace:", err)
 	}
 
 	// Wait for default broker ready.
@@ -120,7 +120,7 @@ func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
 	// Verify that an EventType was created.
 	eventTypes, err := waitForEventTypes(ctx, client, 1)
 	if err != nil {
-		t.Fatalf("Waiting for EventTypes: %v", err)
+		t.Fatal("Waiting for EventTypes:", err)
 	}
 	et := eventTypes[0]
 	if et.Spec.Type != sourcesv1alpha2.PingSourceEventType && et.Spec.Source.String() != sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName) {

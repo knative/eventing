@@ -51,6 +51,6 @@ func TestNewDispatcherService(t *testing.T) {
 	got := MakeDispatcherService(dispatcherName, testNS)
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+		t.Error("unexpected condition (-want, +got) =", diff)
 	}
 }

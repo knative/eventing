@@ -238,7 +238,7 @@ func TestTriggerValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.t.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("Trigger.Validate (-want, +got) = %v", diff)
+				t.Error("Trigger.Validate (-want, +got) =", diff)
 			}
 		})
 	}
@@ -439,7 +439,7 @@ func TestTriggerImmutableFields(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.current.CheckImmutableFields(context.TODO(), test.original)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+				t.Error("CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
 	}

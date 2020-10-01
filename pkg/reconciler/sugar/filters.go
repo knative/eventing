@@ -37,7 +37,7 @@ func LabelFilterFnOrDie(ctx context.Context) LabelFilterFn {
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		logging.FromContext(ctx).Fatalf("annotations namespace controller was unable to process environment: %v", err)
+		logging.FromContext(ctx).Fatal("annotations namespace controller was unable to process environment: ", err)
 	} else if env.InjectionDefault {
 		filter = OnByDefault
 	} else {

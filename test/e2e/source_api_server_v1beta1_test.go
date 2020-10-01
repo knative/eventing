@@ -215,7 +215,7 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-		t.Fatalf("Error annotating namespace: %v", err)
+		t.Fatal("Error annotating namespace:", err)
 	}
 
 	// Wait for default broker ready.
@@ -245,7 +245,7 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 
 	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventTypes))
 	if err != nil {
-		t.Fatalf("Waiting for EventTypes: %v", err)
+		t.Fatal("Waiting for EventTypes:", err)
 	}
 	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventTypes...)
 	for _, et := range eventTypes {

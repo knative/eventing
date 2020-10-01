@@ -81,6 +81,6 @@ func TestMakeEventType(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected difference (-want, +got) = %v", diff)
+		t.Error("unexpected difference (-want, +got) =", diff)
 	}
 }

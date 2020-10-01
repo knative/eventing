@@ -49,7 +49,7 @@ func TestInMemoryChannelSetDefaults(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			tc.initial.SetDefaults(context.Background())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
-				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
+				t.Fatal("Unexpected defaults (-want, +got):", diff)
 			}
 		})
 	}

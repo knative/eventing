@@ -112,7 +112,7 @@ func TestChannelablePopulate(t *testing.T) {
 	got.Populate()
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("Unexpected difference (-want, +got): %v", diff)
+		t.Error("Unexpected difference (-want, +got):", diff)
 	}
 
 }

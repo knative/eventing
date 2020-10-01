@@ -60,7 +60,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-		t.Fatalf("Error annotating namespace: %v", err)
+		t.Fatal("Error annotating namespace:", err)
 	}
 	// Wait for default broker ready.
 	client.WaitForResourceReadyOrFail(defaultBrokerName, testlib.BrokerTypeMeta)

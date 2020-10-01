@@ -146,7 +146,7 @@ func TestParallelSetDefaults(t *testing.T) {
 			}
 			tc.initial.SetDefaults(ctx)
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
-				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
+				t.Fatal("Unexpected defaults (-want, +got):", diff)
 			}
 		})
 	}

@@ -128,7 +128,7 @@ func TestTriggerGetCondition(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.ts.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+				t.Error("unexpected condition (-want, +got) =", diff)
 			}
 		})
 	}
@@ -232,7 +232,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			test.ts.InitializeConditions()
 			if diff := cmp.Diff(test.want, test.ts, ignoreAllButTypeAndStatus); diff != "" {
-				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
 		})
 	}

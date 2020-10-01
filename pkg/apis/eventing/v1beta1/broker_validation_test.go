@@ -67,7 +67,7 @@ func TestBrokerImmutableFields(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			gotErr := current.CheckImmutableFields(context.Background(), test.og)
 			if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
-				t.Errorf("Broker.CheckImmutableFields (-want, +got) = %v", diff)
+				t.Error("Broker.CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
 	}
@@ -190,7 +190,7 @@ func TestValidate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.b.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("Broker.Validate (-want, +got) = %v", diff)
+				t.Error("Broker.Validate (-want, +got) =", diff)
 			}
 		})
 	}
@@ -232,7 +232,7 @@ func TestValidSpec(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.spec.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("BrokerSpec.Validate (-want, +got) = %v", diff)
+				t.Error("BrokerSpec.Validate (-want, +got) =", diff)
 			}
 		})
 	}

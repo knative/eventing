@@ -44,8 +44,8 @@ func TestStoreLoadWithContext(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
 		expected, _ := NewDefaultsConfigFromConfigMap(defaultsConfig)
 		if diff := cmp.Diff(expected, config.Defaults, ignoreStuff...); diff != "" {
-			t.Errorf("Unexpected defaults config (-want, +got): %v", diff)
-			t.Fatalf("Unexpected defaults config (-want, +got): %v", diff)
+			t.Error("Unexpected defaults config (-want, +got):", diff)
+			t.Fatal("Unexpected defaults config (-want, +got):", diff)
 		}
 	})
 }
@@ -57,7 +57,7 @@ func TestStoreLoadWithContextOrDefaults(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
 		expected, _ := NewDefaultsConfigFromConfigMap(defaultsConfig)
 		if diff := cmp.Diff(expected, config.Defaults, ignoreStuff...); diff != "" {
-			t.Errorf("Unexpected defaults config (-want, +got): %v", diff)
+			t.Error("Unexpected defaults config (-want, +got):", diff)
 		}
 	})
 }

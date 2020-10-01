@@ -36,7 +36,7 @@ func TestEventTypeValidation(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		got := et.Validate(context.TODO())
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("EventType.Validate (-want, +got) = %v", diff)
+			t.Error("EventType.Validate (-want, +got) =", diff)
 		}
 	})
 }
@@ -251,7 +251,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.current.CheckImmutableFields(context.TODO(), test.original)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+				t.Error("CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
 	}

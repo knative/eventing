@@ -35,6 +35,6 @@ func TestNewServiceAccount(t *testing.T) {
 	got := MakeServiceAccount(testNS, saName)
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+		t.Error("unexpected condition (-want, +got) =", diff)
 	}
 }

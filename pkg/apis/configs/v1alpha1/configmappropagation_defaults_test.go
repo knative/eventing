@@ -53,7 +53,7 @@ func TestConfigMapPropagationDefaults(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			tc.initial.SetDefaults(context.Background())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
-				t.Errorf("Unexpected defaults (-want, +got): %s", diff)
+				t.Error("Unexpected defaults (-want, +got):", diff)
 			}
 		})
 	}

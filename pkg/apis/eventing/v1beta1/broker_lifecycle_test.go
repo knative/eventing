@@ -98,10 +98,10 @@ func TestBrokerGetConditionSet(t *testing.T) {
 			RegisterAlternateBrokerConditionSet(tc.expectedConditionSet)
 
 			if diff := cmp.Diff(tc.expectedConditionSet, tc.broker.GetConditionSet(), cmp.AllowUnexported(apis.ConditionSet{})); diff != "" {
-				t.Errorf("unexpected conditions (-want, +got) %s", diff)
+				t.Error("unexpected conditions (-want, +got)", diff)
 			}
 			if diff := cmp.Diff(tc.expectedConditionSet, tc.broker.Status.GetConditionSet(), cmp.AllowUnexported(apis.ConditionSet{})); diff != "" {
-				t.Errorf("unexpected conditions (-want, +got) %s", diff)
+				t.Error("unexpected conditions (-want, +got)", diff)
 			}
 		})
 	}
@@ -168,7 +168,7 @@ func TestBrokerGetCondition(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.bs.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+				t.Error("unexpected condition (-want, +got) =", diff)
 			}
 		})
 	}
@@ -268,7 +268,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			test.bs.InitializeConditions()
 			if diff := cmp.Diff(test.want, test.bs, ignoreAllButTypeAndStatus); diff != "" {
-				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
 		})
 	}

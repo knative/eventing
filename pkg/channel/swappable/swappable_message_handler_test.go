@@ -82,7 +82,7 @@ func TestMessageHandler(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 			if err != nil {
-				t.Errorf("Unexpected error creating handler: %v", err)
+				t.Error("Unexpected error creating handler:", err)
 			}
 			for _, c := range tc.configs {
 				updateConfigAndTest(t, h, c)
@@ -129,7 +129,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 			if err != nil {
-				t.Errorf("Unexpected error creating handler: %v", err)
+				t.Error("Unexpected error creating handler:", err)
 			}
 
 			server := httptest.NewServer(http.HandlerFunc(successHandler))
@@ -138,7 +138,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 			rc := replaceDomains(tc.initialConfig, server.URL[7:])
 			err = h.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &rc)
 			if err != nil {
-				t.Errorf("Unexpected error updating to initial config: %v", tc.initialConfig)
+				t.Error("Unexpected error updating to initial config:", tc.initialConfig)
 			}
 			assertRequestAccepted(t, h)
 
@@ -158,7 +158,7 @@ func TestMessageHandler_NilConfigChange(t *testing.T) {
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 	h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 	if err != nil {
-		t.Errorf("Unexpected error creating handler: %v", err)
+		t.Error("Unexpected error creating handler:", err)
 	}
 
 	err = h.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, nil)
@@ -178,7 +178,7 @@ func updateConfigAndTest(t *testing.T, h *MessageHandler, config multichannelfan
 		t.Errorf("Unexpected error updating config: %+v", err)
 	}
 	if orig == h.fanout.Load() {
-		t.Errorf("Expected the inner multiChannelFanoutHandler to change, it didn't: %v", orig)
+		t.Error("Expected the inner multiChannelFanoutHandler to change, it didn't:", orig)
 	}
 
 	assertRequestAccepted(t, h)
@@ -203,7 +203,7 @@ func assertRequestAccepted(t *testing.T, h *MessageHandler) {
 
 	h.ServeHTTP(&resp, req)
 	if resp.Code != http.StatusAccepted {
-		t.Errorf("Unexpected response code. Expected 202. Actual %v", resp.Code)
+		t.Error("Unexpected response code. Expected 202. Actual", resp.Code)
 	}
 }
 

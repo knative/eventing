@@ -193,7 +193,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 			})
 
 			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("unexpected deploy (-want, +got) = %v", diff)
+				t.Error("unexpected deploy (-want, +got) =", diff)
 			}
 
 		})

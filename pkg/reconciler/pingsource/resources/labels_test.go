@@ -34,6 +34,6 @@ func TestPingSourceLabels(t *testing.T) {
 	got := Labels(pingsourceName)
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected labels (-want, +got) = %v", diff)
+		t.Error("unexpected labels (-want, +got) =", diff)
 	}
 }

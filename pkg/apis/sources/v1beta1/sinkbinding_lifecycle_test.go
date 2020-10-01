@@ -269,7 +269,7 @@ func TestSinkBindingUndo(t *testing.T) {
 			sb.Undo(context.Background(), got)
 
 			if !cmp.Equal(got, test.want) {
-				t.Errorf("Undo (-want, +got): %s", cmp.Diff(test.want, got))
+				t.Error("Undo (-want, +got):", cmp.Diff(test.want, got))
 			}
 		})
 	}
@@ -465,7 +465,7 @@ func TestSinkBindingDo(t *testing.T) {
 			sb.Do(ctx, got)
 
 			if !cmp.Equal(got, test.want) {
-				t.Errorf("Undo (-want, +got): %s", cmp.Diff(test.want, got))
+				t.Error("Undo (-want, +got):", cmp.Diff(test.want, got))
 			}
 		})
 	}
@@ -509,6 +509,6 @@ func TestSinkBindingDoNoURI(t *testing.T) {
 	sb.Do(context.Background(), got)
 
 	if !cmp.Equal(got, want) {
-		t.Errorf("Undo (-want, +got): %s", cmp.Diff(want, got))
+		t.Error("Undo (-want, +got):", cmp.Diff(want, got))
 	}
 }

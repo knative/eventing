@@ -450,7 +450,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
-				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+				t.Error("unexpected condition (-want, +got) =", diff)
 			}
 		})
 	}
@@ -680,7 +680,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
-				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+				t.Error("unexpected condition (-want, +got) =", diff)
 			}
 		})
 	}

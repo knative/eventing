@@ -206,7 +206,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		transformed := r.Header.Get("ce-transformed")
 		if transformed != "" {
 			w.WriteHeader(500)
-			t.Fatalf("Not expecting ce-transformed, found %s", transformed)
+			t.Fatal("Not expecting ce-transformed, found", transformed)
 		}
 	}))
 	defer deadLetterServer.Close()
@@ -278,7 +278,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	}
 
 	if res.StatusCode != 202 {
-		t.Fatalf("Expected 202, Have %d", res.StatusCode)
+		t.Fatal("Expected 202, Have", res.StatusCode)
 	}
 
 	transformationsFailureWg.Wait()

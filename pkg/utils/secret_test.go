@@ -80,7 +80,7 @@ func TestCopySecret(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: pullSecretName},
 			}, metav1.CreateOptions{})
 			if secretCreateError != nil {
-				t.Errorf("error creating secret resources for test case: %s", secretCreateError)
+				t.Error("error creating secret resources for test case:", secretCreateError)
 
 			}
 
@@ -92,14 +92,14 @@ func TestCopySecret(t *testing.T) {
 				}}
 			_, saCreateError := tgtNamespaceServiceAccts.Create(context.Background(), makeServiceAccount(namespace, svcAccountName), metav1.CreateOptions{})
 			if saCreateError != nil {
-				t.Errorf("error creating service account resources for test case %s", saCreateError)
+				t.Error("error creating service account resources for test case", saCreateError)
 			}
 
 			// try copying the secret
 			copiedSecret, err := CopySecret(tc.corev1Input, tc.srcNS, tc.srcSecretName, tc.tgtNS, tc.svcAccount)
 			if !tc.errorExpected {
 				if err != nil {
-					t.Errorf("unexpected error on copying secret %v", err)
+					t.Error("unexpected error on copying secret", err)
 				}
 				if copiedSecret.Name != tc.srcSecretName {
 					t.Errorf("Expected %s, actually %s", tc.srcSecretName, copiedSecret.Name)

@@ -236,7 +236,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 			if shouldLabelNamespace {
 				// Label namespace so that it creates the default broker.
 				if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-					t.Fatalf("Error annotating namespace: %v", err)
+					t.Fatal("Error annotating namespace:", err)
 				}
 			}
 
@@ -248,7 +248,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 			if shouldLabelNamespace {
 				// Test if namespace reconciler would recreate broker once broker was deleted.
 				if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(context.Background(), brokerName, metav1.DeleteOptions{}); err != nil {
-					t.Fatalf("Can't delete default broker in namespace: %v", client.Namespace)
+					t.Fatal("Can't delete default broker in namespace:", client.Namespace)
 				}
 				client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 			}
@@ -291,7 +291,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 
 				data := fmt.Sprintf(`{"msg":"%s"}`, eventTestCase.String())
 				if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(data)); err != nil {
-					t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+					t.Fatal("Cannot set the payload of the event:", err.Error())
 				}
 
 				// Send event

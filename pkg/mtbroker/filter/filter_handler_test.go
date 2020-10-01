@@ -348,7 +348,7 @@ func TestReceiver(t *testing.T) {
 				}
 				return
 			} else if err != nil {
-				t.Fatalf("Unable to create receiver: %v", err)
+				t.Fatal("Unable to create receiver:", err)
 			}
 
 			e := tc.event
@@ -393,7 +393,7 @@ func TestReceiver(t *testing.T) {
 			event, err := binding.ToEvent(context.Background(), message)
 			if tc.returnedEvent == nil {
 				if err == nil || event != nil {
-					t.Fatalf("Unexpected response event: %v", event)
+					t.Fatal("Unexpected response event:", event)
 				}
 				return
 			}
@@ -416,10 +416,10 @@ func TestReceiver(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), event.Context.AsV1()); diff != "" {
-				t.Errorf("Incorrect response event context (-want +got): %s", diff)
+				t.Error("Incorrect response event context (-want +got):", diff)
 			}
 			if diff := cmp.Diff(expectedResponseEvent.Data(), event.Data()); diff != "" {
-				t.Errorf("Incorrect response event data (-want +got): %s", diff)
+				t.Error("Incorrect response event data (-want +got):", diff)
 			}
 		})
 	}

@@ -103,7 +103,7 @@ func BrokerChannelFlowWithTransformation(
 		eventToSend.SetType(eventType)
 		eventToSend.SetSource(eventSource)
 		if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
-			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
 
 		// create the transformation service for trigger1

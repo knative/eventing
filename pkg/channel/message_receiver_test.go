@@ -259,7 +259,7 @@ func TestMessageReceiver_WrongRequest(t *testing.T) {
 
 	r.ServeHTTP(&res, req)
 	if res.Code != 400 {
-		t.Fatalf("Unexpected status code. Expected 400. Actual %v", res.Code)
+		t.Fatal("Unexpected status code. Expected 400. Actual", res.Code)
 	}
 }
 
@@ -297,6 +297,6 @@ func TestMessageReceiver_UnknownHost(t *testing.T) {
 
 	r.ServeHTTP(&res, req)
 	if res.Code != 404 {
-		t.Fatalf("Unexpected status code. Expected 404. Actual %v", res.Code)
+		t.Fatal("Unexpected status code. Expected 404. Actual", res.Code)
 	}
 }

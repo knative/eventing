@@ -30,6 +30,6 @@ func TestParallelGetStatus(t *testing.T) {
 func TestParallelKind(t *testing.T) {
 	parallel := Parallel{}
 	if parallel.GetGroupVersionKind().String() != "flows.knative.dev/v1beta1, Kind=Parallel" {
-		t.Errorf("unexpected gvk: %v", parallel.GetGroupVersionKind())
+		t.Error("unexpected gvk:", parallel.GetGroupVersionKind())
 	}
 }

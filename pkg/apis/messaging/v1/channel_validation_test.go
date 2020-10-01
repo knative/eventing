@@ -196,7 +196,7 @@ func TestChannelImmutableFields(t *testing.T) {
 			ctx = apis.WithinUpdate(ctx, test.original)
 			got := test.current.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+				t.Error("CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
 	}

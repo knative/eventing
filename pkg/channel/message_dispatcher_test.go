@@ -677,7 +677,7 @@ func TestDispatchMessage(t *testing.T) {
 				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
 			if finishInvoked != 1 {
-				t.Errorf("Finish should be invoked exactly one time. Actual: %d", finishInvoked)
+				t.Error("Finish should be invoked exactly one time. Actual:", finishInvoked)
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)
@@ -782,7 +782,7 @@ func assertEquality(t *testing.T, replacementURL string, expected, actual reques
 	expected.Host = server.Host
 	canonicalizeHeaders(expected, actual)
 	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("Unexpected difference (-want, +got): %v", diff)
+		t.Error("Unexpected difference (-want, +got):", diff)
 	}
 }
 
