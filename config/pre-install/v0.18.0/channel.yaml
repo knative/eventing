@@ -83,8 +83,8 @@ spec:
                     description: 'BackoffDelay is the delay before retrying. More
                         information on Duration format: - https://www.iso.org/iso-8601-date-and-time-format.html
                         - https://en.wikipedia.org/wiki/ISO_8601  For linear policy,
-                        backoff delay is the time interval between retries. For
-                        exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>.'
+                        backoff delay is backoffDelay*<numberOfRetries>. For
+                        exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.'
                     type: string
                   backoffPolicy:
                     description: BackoffPolicy is the retry backoff policy (linear,

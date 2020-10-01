@@ -46,8 +46,8 @@ type DeliverySpec struct {
 	//  - https://www.iso.org/iso-8601-date-and-time-format.html
 	//  - https://en.wikipedia.org/wiki/ISO_8601
 	//
-	// For linear policy, backoff delay is the time interval between retries.
-	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>.
+	// For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
+	// For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
 }

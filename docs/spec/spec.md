@@ -223,7 +223,7 @@ retrieved from ref.
 | deadLetterSink | Destination   | DeadLetterSink is the sink receiving event that could not be sent to a destination.                                                                 |             |
 | retry          | String        | Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.                    |             |
 | backoffPolicy  | BackoffPolicy | BackoffPolicy is the retry backoff policy (linear, exponential).                                                                                    |             |
-| backoffDelay   | String        | For linear policy, backoff delay is the time interval between retries. For exponential policy , backoff delay is backoffDelay\*2^<numberOfRetries>. |             |
+| backoffDelay   | String        | For linear policy, backoff delay is backoffDelay\*<numberOfRetries>. For exponential policy, backoff delay is backoffDelay\*2^<numberOfRetries>. |             |
 
 ### duck.SubscriberSpec
 
