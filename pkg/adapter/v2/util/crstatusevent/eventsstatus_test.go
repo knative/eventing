@@ -97,7 +97,7 @@ func TestReportCRStatusEvent(t *testing.T) {
 		name: "TestReportCRStatusEvent500",
 		args: args{
 			fakesink:    fakeSink{Name: "TestReportCRStatusEvent500"},
-			result:      http.NewResult(500, "%w"),
+			result:      http.NewResult(500, "" /*noargs*/),
 			enabled:     "true",
 			wantType:    "Warning",
 			wantReason:  "SinkSendFailed",
@@ -108,13 +108,13 @@ func TestReportCRStatusEvent(t *testing.T) {
 		args: args{
 			fakesink: fakeSink{Name: "TestReportCRStatusEvent200"},
 			enabled:  "true",
-			result:   http.NewResult(200, "%w"),
+			result:   http.NewResult(200, ""),
 		},
 	}, {
 		name: "TestReportCRStatusEvent500Disabled",
 		args: args{
 			fakesink: fakeSink{Name: "TestReportCRStatusEvent500"},
-			result:   http.NewResult(500, "%w"),
+			result:   http.NewResult(500, ""),
 			enabled:  "false",
 		},
 	}}
