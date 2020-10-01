@@ -105,7 +105,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	}
 	uri, err := resolver.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
-		logging.FromContext(ctx).Errorf("URI could not be extracted from destination: %w", err)
+		logging.FromContext(ctx).Errorw("URI could not be extracted from destination: ", zap.Error(err))
 		return
 	}
 	sb.Status.MarkSink(uri)
