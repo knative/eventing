@@ -70,6 +70,7 @@ var mutex = &sync.Mutex{}
 var recordTestSinkResults map[string]*v1beta1.Event = make(map[string]*v1beta1.Event)
 
 type fakeSink struct {
+	record.EventSink
 	Name string
 }
 
@@ -78,14 +79,6 @@ func (f fakeSink) Create(event *v1beta1.Event) (*v1beta1.Event, error) {
 	defer mutex.Unlock()
 	recordTestSinkResults[f.Name] = event
 	return event, nil
-}
-
-func (f fakeSink) Update(event *v1beta1.Event) (*v1beta1.Event, error) {
-	panic("implement me")
-}
-
-func (f fakeSink) Patch(oldEvent *v1beta1.Event, data []byte) (*v1beta1.Event, error) {
-	panic("implement me")
 }
 
 func TestReportCRStatusEvent(t *testing.T) {
@@ -100,8 +93,9 @@ func TestReportCRStatusEvent(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-	}{
-		{name: "TestReportCRStatusEvent500", args: args{
+	}{{
+		name: "TestReportCRStatusEvent500",
+		args: args{
 			fakesink:    fakeSink{Name: "TestReportCRStatusEvent500"},
 			result:      http.NewResult(500, "%w"),
 			enabled:     "true",
@@ -109,22 +103,21 @@ func TestReportCRStatusEvent(t *testing.T) {
 			wantReason:  "SinkSendFailed",
 			wantMessage: "500 Error sending cloud event to sink.",
 		},
-		},
-		{name: "TestReportCRStatusEvent200", args: args{
+	}, {
+		name: "TestReportCRStatusEvent200",
+		args: args{
 			fakesink: fakeSink{Name: "TestReportCRStatusEvent200"},
 			enabled:  "true",
 			result:   http.NewResult(200, "%w"),
-			wantType: "",
 		},
-		},
-		{name: "TestReportCRStatusEvent500Disabled", args: args{
+	}, {
+		name: "TestReportCRStatusEvent500Disabled",
+		args: args{
 			fakesink: fakeSink{Name: "TestReportCRStatusEvent500"},
 			result:   http.NewResult(500, "%w"),
 			enabled:  "false",
-			wantType: "",
 		},
-		},
-	}
+	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -142,21 +135,21 @@ func TestReportCRStatusEvent(t *testing.T) {
 			event := recordTestSinkResults[tt.name]
 
 			if tt.args.wantType == "" && event != nil {
-				t.Errorf("Test %s failed expected no event but got one. %v", tt.name, event)
+				t.Error("Expected no event but got one: ", event)
 			} else if event == nil {
 				return // all good return.
 			}
 			if tt.args.wantType != "" && event == nil {
-				t.Errorf("Test %s failed wanted event got nill", tt.name)
+				t.Error("Wanted event got nil")
 			}
 			if tt.args.wantType != event.Type {
-				t.Errorf("Test %s failed wanted warning got %s", tt.name, tt.args.wantType)
+				t.Errorf("Wanted warning got %s", tt.args.wantType)
 			}
 			if event.Reason != tt.args.wantReason {
-				t.Errorf("Test %s failed wanted reason '%s' got '%s'", tt.name, tt.args.wantReason, event.Reason)
+				t.Errorf("Reason = %q; want %q", event.Reason, tt.args.wantReason)
 			}
 			if event.Message != tt.args.wantMessage {
-				t.Errorf("Test %s failed wanted message '%s' got '%s'", tt.name, tt.args.wantMessage, event.Message)
+				t.Errorf("Message = %q; want: %q", event.Message, tt.args.wantMessage)
 			}
 
 		})

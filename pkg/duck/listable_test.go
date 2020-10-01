@@ -41,13 +41,9 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-const (
-	ns = "test-ns"
-)
+const ns = "test-ns"
 
-var (
-	errTest = errors.New("test error")
-)
+var errTest = errors.New("test error")
 
 type fakeInformerFactory struct {
 	gvr map[schema.GroupVersionResource]int
@@ -59,9 +55,6 @@ var _ duck.InformerFactory = (*fakeInformerFactory)(nil)
 func (fif *fakeInformerFactory) Get(ctx context.Context, gvr schema.GroupVersionResource) (cache.SharedIndexInformer, cache.GenericLister, error) {
 	if fif.err != nil {
 		return nil, nil, fif.err
-	}
-	if _, present := fif.gvr[gvr]; !present {
-		fif.gvr[gvr] = 0
 	}
 	fif.gvr[gvr]++
 	return &fakeInformer{}, nil, nil
@@ -193,43 +186,12 @@ func TestResourceTrackerForKReference(t *testing.T) {
 }
 
 type fakeInformer struct {
+	cache.SharedIndexInformer
 	eventHandlerAdded bool
 }
 
 func (fi *fakeInformer) AddEventHandler(cache.ResourceEventHandler) {
 	fi.eventHandlerAdded = true
-}
-
-func (fi *fakeInformer) AddEventHandlerWithResyncPeriod(handler cache.ResourceEventHandler, resyncPeriod time.Duration) {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) GetStore() cache.Store {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) GetController() cache.Controller {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) Run(stopCh <-chan struct{}) {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) HasSynced() bool {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) LastSyncResourceVersion() string {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) AddIndexers(indexers cache.Indexers) error {
-	panic("not used in the test")
-}
-
-func (fi *fakeInformer) GetIndexer() cache.Indexer {
-	panic("not used in the test")
 }
 
 var _ cache.SharedIndexInformer = (*fakeInformer)(nil)
