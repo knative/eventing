@@ -23,9 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-
 	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
@@ -40,7 +37,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	rttestingv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -157,10 +154,10 @@ func TestApiServerSourceV1Beta1(t *testing.T) {
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
-			apiServerSource := eventingtesting.NewApiServerSourceV1Beta1(
+			apiServerSource := rttestingv1beta1.NewApiServerSource(
 				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 				client.Namespace,
-				eventingtesting.WithApiServerSourceSpecV1B1(spec),
+				rttestingv1beta1.WithApiServerSourceSpec(spec),
 			)
 
 			client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
@@ -225,10 +222,10 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
-	apiServerSource := eventingtesting.NewApiServerSourceV1Beta1(
+	apiServerSource := rttestingv1beta1.NewApiServerSource(
 		sourceName,
 		client.Namespace,
-		eventingtesting.WithApiServerSourceSpecV1B1(
+		rttestingv1beta1.WithApiServerSourceSpec(
 			sourcesv1beta1.ApiServerSourceSpec{
 				Resources: []sourcesv1beta1.APIVersionKindSelector{{
 					APIVersion: "v1",
@@ -256,28 +253,4 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
-}
-
-// waitForEventTypes waits for the expected number of EventTypes to exist in client.Namespace.
-func waitForEventTypes(ctx context.Context, client *testlib.Client, expectedNumEventTypes int) ([]v1beta1.EventType, error) {
-	eventTypes := &v1beta1.EventTypeList{}
-	// Interval and timeout were chosen arbitrarily.
-	err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
-		var err error
-		eventTypes, err = client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return false, fmt.Errorf("error listing EventTypes: %w", err)
-		}
-		if len(eventTypes.Items) == expectedNumEventTypes {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		return []v1beta1.EventType{}, fmt.Errorf("error polling for EventTypes: %w", err)
-	}
-	if actual := len(eventTypes.Items); actual != expectedNumEventTypes {
-		return []v1beta1.EventType{}, fmt.Errorf("invalid number of EventTypes registered, expected: %d, got: %d", expectedNumEventTypes, actual)
-	}
-	return eventTypes.Items, nil
 }

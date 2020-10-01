@@ -26,14 +26,14 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 
-	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/apiserversource"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/apiserversource"
+	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/apiserversource"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/apiserversource"
 )
 
 // envConfig will be used to extract the required environment variables using
@@ -73,7 +73,7 @@ func NewController(
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1alpha1.Kind("ApiServerSource")),
+		FilterFunc: controller.FilterControllerGK(v1.Kind("ApiServerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

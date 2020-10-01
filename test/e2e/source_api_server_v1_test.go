@@ -1,7 +1,8 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -23,7 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/reconciler/testing/v1alpha2"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 
 	"knative.dev/eventing/pkg/reconciler/sugar"
 
@@ -38,13 +40,14 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/apis/sources"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
-func TestApiServerSourceV1Alpha2(t *testing.T) {
+func TestApiServerSourceV1(t *testing.T) {
 	const (
 		baseApiServerSourceName = "e2e-api-server-source"
 
@@ -57,14 +60,14 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 	mode := "Reference"
 	table := []struct {
 		name     string
-		spec     sourcesv1alpha2.ApiServerSourceSpec
+		spec     sourcesv1.ApiServerSourceSpec
 		pod      func(name string) *corev1.Pod
 		expected string
 	}{
 		{
 			name: "event-ref",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1.ApiServerSourceSpec{
+				Resources: []sourcesv1.APIVersionKindSelector{{
 					APIVersion: "v1",
 					Kind:       "Event",
 				}},
@@ -76,8 +79,8 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 		},
 		{
 			name: "event-ref-unmatch-label",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1.ApiServerSourceSpec{
+				Resources: []sourcesv1.APIVersionKindSelector{{
 					APIVersion:    "v1",
 					Kind:          "Pod",
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
@@ -89,8 +92,8 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1.ApiServerSourceSpec{
+				Resources: []sourcesv1.APIVersionKindSelector{{
 					APIVersion:    "v1",
 					Kind:          "Pod",
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
@@ -105,8 +108,8 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label-expr",
-			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+			spec: sourcesv1.ApiServerSourceSpec{
+				Resources: []sourcesv1.APIVersionKindSelector{{
 					APIVersion: "v1",
 					Kind:       "Pod",
 					LabelSelector: &metav1.LabelSelector{
@@ -155,13 +158,13 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
-			apiServerSource := v1alpha2.NewApiServerSource(
+			apiServerSource := rttestingv1.NewApiServerSource(
 				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 				client.Namespace,
-				v1alpha2.WithApiServerSourceSpec(spec),
+				rttestingv1.WithApiServerSourceSpec(spec),
 			)
 
-			client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
+			client.CreateApiServerSourceV1OrFail(apiServerSource)
 
 			// wait for all test resources to be ready
 			client.WaitForAllTestResourcesReadyOrFail(ctx)
@@ -186,7 +189,7 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 	}
 }
 
-func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
+func TestApiServerSourceV1EventTypes(t *testing.T) {
 	const (
 		sourceName         = "e2e-apiserver-source-eventtypes"
 		serviceAccountName = "event-watcher-sa"
@@ -223,12 +226,12 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
-	apiServerSource := v1alpha2.NewApiServerSource(
+	apiServerSource := rttestingv1.NewApiServerSource(
 		sourceName,
 		client.Namespace,
-		v1alpha2.WithApiServerSourceSpec(
-			sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+		rttestingv1.WithApiServerSourceSpec(
+			sourcesv1.ApiServerSourceSpec{
+				Resources: []sourcesv1.APIVersionKindSelector{{
 					APIVersion: "v1",
 					Kind:       "Event",
 				}},
@@ -239,12 +242,11 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	)
 	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: sugarresources.DefaultBrokerName, Namespace: client.Namespace}}
 
-	client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
+	client.CreateApiServerSourceV1OrFail(apiServerSource)
 
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-	// Verify that EventTypes were created.
 	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventTypes))
 	if err != nil {
 		t.Fatalf("Waiting for EventTypes: %v", err)
@@ -255,4 +257,28 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
+}
+
+// waitForEventTypes waits for the expected number of EventTypes to exist in client.Namespace.
+func waitForEventTypes(ctx context.Context, client *testlib.Client, expectedNumEventTypes int) ([]v1beta1.EventType, error) {
+	eventTypes := &v1beta1.EventTypeList{}
+	// Interval and timeout were chosen arbitrarily.
+	err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
+		var err error
+		eventTypes, err = client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, fmt.Errorf("error listing EventTypes: %w", err)
+		}
+		if len(eventTypes.Items) == expectedNumEventTypes {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return []v1beta1.EventType{}, fmt.Errorf("error polling for EventTypes: %w", err)
+	}
+	if actual := len(eventTypes.Items); actual != expectedNumEventTypes {
+		return []v1beta1.EventType{}, fmt.Errorf("invalid number of EventTypes registered, expected: %d, got: %d", expectedNumEventTypes, actual)
+	}
+	return eventTypes.Items, nil
 }

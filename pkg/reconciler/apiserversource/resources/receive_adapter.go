@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"knative.dev/eventing/pkg/adapter/apiserver"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
@@ -39,7 +39,7 @@ import (
 // Every field is required.
 type ReceiveAdapterArgs struct {
 	Image   string
-	Source  *v1beta1.ApiServerSource
+	Source  *v1.ApiServerSource
 	Labels  map[string]string
 	SinkURI string
 	Configs reconcilersource.ConfigAccessor

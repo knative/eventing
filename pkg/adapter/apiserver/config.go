@@ -17,7 +17,7 @@ package apiserver
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 type ResourceWatch struct {
@@ -44,7 +44,7 @@ type Config struct {
 	// owned by a specific resource type. If ResourceOwner matches Resources[n]
 	// then Resources[n] is allowed to pass the ResourceOwner filter.
 	// +optional
-	ResourceOwner *v1beta1.APIVersionKind `json:"owner,omitempty"`
+	ResourceOwner *v1.APIVersionKind `json:"owner,omitempty"`
 
 	// EventMode controls the format of the event.
 	// `Reference` sends a dataref event type for the resource under watch.

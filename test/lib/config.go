@@ -47,7 +47,7 @@ var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
 }
 
 var ApiServerSourceTypeMeta = metav1.TypeMeta{
-	APIVersion: resources.SourcesV1B1APIVersion,
+	APIVersion: resources.SourcesV1APIVersion,
 	Kind:       resources.ApiServerSourceKind,
 }
 

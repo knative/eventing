@@ -23,19 +23,21 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// ApiServerSourceV1B1ClientSetupOption returns a ClientSetupOption that can be used
+// ApiServerSourceV1ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new ApiServerSource. It creates a ServiceAccount, a Role, a
 // RoleBinding, a RecordEvents pod and an ApiServerSource object with the event
 // mode and RecordEvent pod as its sink.
-func ApiServerSourceV1B1ClientSetupOption(ctx context.Context, name string, mode string, recordEventsPodName string,
+func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode string, recordEventsPodName string,
 	roleName string, serviceAccountName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 		// create needed RBAC SA, Role & RoleBinding
@@ -44,8 +46,8 @@ func ApiServerSourceV1B1ClientSetupOption(ctx context.Context, name string, mode
 		// create event record
 		recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 
-		spec := sourcesv1beta1.ApiServerSourceSpec{
-			Resources: []sourcesv1beta1.APIVersionKindSelector{{
+		spec := sourcesv1.ApiServerSourceSpec{
+			Resources: []sourcesv1.APIVersionKindSelector{{
 				APIVersion: "v1",
 				Kind:       "Event",
 			}},
@@ -54,13 +56,13 @@ func ApiServerSourceV1B1ClientSetupOption(ctx context.Context, name string, mode
 		}
 		spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventsPodName)}
 
-		apiServerSource := eventingtesting.NewApiServerSourceV1Beta1(
+		apiServerSource := eventingtestingv1.NewApiServerSource(
 			name,
 			client.Namespace,
-			eventingtesting.WithApiServerSourceSpecV1B1(spec),
+			eventingtestingv1.WithApiServerSourceSpec(spec),
 		)
 
-		client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
+		client.CreateApiServerSourceV1OrFail(apiServerSource)
 
 		// wait for all test resources to be ready
 		client.WaitForAllTestResourcesReadyOrFail(ctx)

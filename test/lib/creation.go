@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -579,6 +581,23 @@ func (c *Client) CreateApiServerSourceV1Alpha2OrFail(apiServerSource *sourcesv1a
 func (c *Client) CreateApiServerSourceV1Beta1OrFail(apiServerSource *sourcesv1beta1.ApiServerSource) {
 	c.T.Logf("Creating apiserversource %+v", apiServerSource)
 	apiServerInterface := c.Eventing.SourcesV1beta1().ApiServerSources(c.Namespace)
+	err := c.RetryWebhookErrors(func(attempts int) (err error) {
+		_, e := apiServerInterface.Create(context.Background(), apiServerSource, metav1.CreateOptions{})
+		if e != nil {
+			c.T.Logf("Failed to create apiserversource %q: %v", apiServerSource.Name, e)
+		}
+		return e
+	})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
+	}
+	c.Tracker.AddObj(apiServerSource)
+}
+
+// CreateApiServerSourceV1OrFail will create an v1 ApiServerSource
+func (c *Client) CreateApiServerSourceV1OrFail(apiServerSource *sourcesv1.ApiServerSource) {
+	c.T.Logf("Creating apiserversource %+v", apiServerSource)
+	apiServerInterface := c.Eventing.SourcesV1().ApiServerSources(c.Namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := apiServerInterface.Create(context.Background(), apiServerSource, metav1.CreateOptions{})
 		if e != nil {
