@@ -106,7 +106,9 @@ spec:
             httpHeaders:
             - name: k-kubelet-probe
               value: "webhook"
-        livenessProbe: *probe
+        livenessProbe:
+          <<: *probe
+          initialDelaySeconds: 20
 
       # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently
       # high value that we respect whatever value it has configured for the lame duck grace period.
