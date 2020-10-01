@@ -112,7 +112,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ApiServerSour
 	}
 	source.Status.PropagateDeploymentAvailability(ra)
 
-	source.Status.CloudEventAttributes = r.createCloudEventAttributes()
+	source.Status.CloudEventAttributes = r.createCloudEventAttributes(source)
 
 	return nil
 }
@@ -242,9 +242,15 @@ func (r *Reconciler) runAccessCheck(ctx context.Context, src *v1.ApiServerSource
 
 }
 
-func (r *Reconciler) createCloudEventAttributes() []duckv1.CloudEventAttributes {
-	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(apisources.ApiServerSourceEventTypes))
-	for _, apiServerSourceType := range apisources.ApiServerSourceEventTypes {
+func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) []duckv1.CloudEventAttributes {
+	var eventTypes []string
+	if src.Spec.EventMode == v1.ReferenceMode {
+		eventTypes = apisources.ApiServerSourceEventReferenceModeTypes
+	} else if src.Spec.EventMode == v1.ResourceMode {
+		eventTypes = apisources.ApiServerSourceEventResourceModeTypes
+	}
+	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(eventTypes))
+	for _, apiServerSourceType := range eventTypes {
 		ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
 			Type:   apiServerSourceType,
 			Source: r.ceSource,

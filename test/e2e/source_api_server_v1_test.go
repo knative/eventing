@@ -247,14 +247,14 @@ func TestApiServerSourceV1EventTypes(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventTypes))
+	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventReferenceModeTypes))
 	if err != nil {
 		t.Fatalf("Waiting for EventTypes: %v", err)
 	}
-	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventTypes...)
+	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventReferenceModeTypes...)
 	for _, et := range eventTypes {
 		if !expectedCeTypes.Has(et.Spec.Type) {
-			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventTypes, et.Spec.Type)
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventReferenceModeTypes, et.Spec.Type)
 		}
 	}
 }

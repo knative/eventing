@@ -80,10 +80,23 @@ func WithApiServerSourceDeployed(s *v1.ApiServerSource) {
 	s.Status.PropagateDeploymentAvailability(testing.NewDeployment("any", "any", testing.WithDeploymentAvailable()))
 }
 
-func WithApiServerSourceEventTypes(source string) ApiServerSourceOption {
+func WithApiServerSourceReferenceModeEventTypes(source string) ApiServerSourceOption {
 	return func(s *v1.ApiServerSource) {
-		ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(apisources.ApiServerSourceEventTypes))
-		for _, apiServerSourceType := range apisources.ApiServerSourceEventTypes {
+		ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(apisources.ApiServerSourceEventReferenceModeTypes))
+		for _, apiServerSourceType := range apisources.ApiServerSourceEventReferenceModeTypes {
+			ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
+				Type:   apiServerSourceType,
+				Source: source,
+			})
+		}
+		s.Status.CloudEventAttributes = ceAttributes
+	}
+}
+
+func WithApiServerSourceResourceModeEventTypes(source string) ApiServerSourceOption {
+	return func(s *v1.ApiServerSource) {
+		ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(apisources.ApiServerSourceEventResourceModeTypes))
+		for _, apiServerSourceType := range apisources.ApiServerSourceEventResourceModeTypes {
 			ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
 				Type:   apiServerSourceType,
 				Source: source,

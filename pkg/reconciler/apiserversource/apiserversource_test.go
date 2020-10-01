@@ -184,7 +184,57 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeployed,
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+			),
+		}},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "valid with eventmode of resourcemode",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					EventMode:  sourcesv1.ResourceMode,
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkDNS),
+			),
+			makeAvailableReceiveAdapterWithEventMode(t, sourcesv1.ResourceMode),
+		},
+		Key: testNS + "/" + sourceName,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					EventMode:  sourcesv1.ResourceMode,
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceDeployed,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+				rttestingv1.WithApiServerSourceResourceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
@@ -232,7 +282,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeployed,
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
@@ -290,7 +340,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeployed,
 				rttestingv1.WithApiServerSourceSink(sinkTargetURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
@@ -340,7 +390,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithInitApiServerSourceConditions,
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceDeploymentUnavailable,
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
@@ -401,7 +451,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeploymentUnavailable,
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
@@ -455,7 +505,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeploymentUnavailable,
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
@@ -506,7 +556,7 @@ func TestReconcile(t *testing.T) {
 				rttestingv1.WithApiServerSourceDeployed,
 				rttestingv1.WithApiServerSourceSink(sinkURI),
 				rttestingv1.WithApiServerSourceSufficientPermissions,
-				rttestingv1.WithApiServerSourceEventTypes(source),
+				rttestingv1.WithApiServerSourceReferenceModeEventTypes(source),
 				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
 			),
 		}},
@@ -603,6 +653,40 @@ func makeAvailableReceiveAdapterWithTargetURI(t *testing.T) *appsv1.Deployment {
 		Source:  src,
 		Labels:  resources.Labels(sourceName),
 		SinkURI: sinkTargetURI.String(),
+		Configs: &reconcilersource.EmptyVarsGenerator{},
+	}
+
+	ra, err := resources.MakeReceiveAdapter(&args)
+	require.NoError(t, err)
+
+	rttesting.WithDeploymentAvailable()(ra)
+	return ra
+}
+
+func makeAvailableReceiveAdapterWithEventMode(t *testing.T, eventMode string) *appsv1.Deployment {
+	t.Helper()
+
+	src := rttestingv1.NewApiServerSource(sourceName, testNS,
+		rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+			Resources: []sourcesv1.APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			}},
+			EventMode:  eventMode,
+			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+		}),
+		rttestingv1.WithApiServerSourceUID(sourceUID),
+		// Status Update:
+		rttestingv1.WithInitApiServerSourceConditions,
+		rttestingv1.WithApiServerSourceDeployed,
+		rttestingv1.WithApiServerSourceSink(sinkURI),
+	)
+
+	args := resources.ReceiveAdapterArgs{
+		Image:   image,
+		Source:  src,
+		Labels:  resources.Labels(sourceName),
+		SinkURI: sinkURI.String(),
 		Configs: &reconcilersource.EmptyVarsGenerator{},
 	}
 
