@@ -71,7 +71,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		err = a.Start(ctx)
-		done <- struct{}{}
+		close(done)
 	}()
 
 	// Wait for the reflector to be fully initialized.
@@ -83,7 +83,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	<-done
 
 	if err != nil {
-		t.Errorf("did not expect an error, but got %v", err)
+		t.Error("Did not expect an error, but got:", err)
 	}
 }
 
@@ -118,7 +118,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		err = a.Start(ctx)
-		done <- struct{}{}
+		close(done)
 	}()
 
 	// Wait for the reflector to be fully initialized.
@@ -130,7 +130,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	<-done
 
 	if err != nil {
-		t.Errorf("did not expect an error, but got %v", err)
+		t.Error("Did not expect an error, but got:", err)
 	}
 }
 
@@ -177,7 +177,7 @@ func TestAdapter_StartNonNamespacedResource(t *testing.T) {
 	<-done
 
 	if err != nil {
-		t.Errorf("did not expect an error, but got %v", err)
+		t.Error("Did not expect an error, but got: ", err)
 	}
 }
 
@@ -271,7 +271,7 @@ func simpleOwnedPod(name, namespace string) *unstructured.Unstructured {
 
 func validateSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, want string) {
 	if got := len(ce.Sent()); got != 1 {
-		t.Errorf("Expected 1 event to be sent, got %d", got)
+		t.Error("Expected 1 event to be sent, got:", got)
 	}
 
 	if got := ce.Sent()[0].Type(); got != want {
@@ -281,7 +281,7 @@ func validateSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, want stri
 
 func validateNotSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, want string) {
 	if got := len(ce.Sent()); got != 0 {
-		t.Errorf("Expected 0 event to be sent, got %d", got)
+		t.Error("Expected 0 events to be sent, got:", got)
 	}
 }
 

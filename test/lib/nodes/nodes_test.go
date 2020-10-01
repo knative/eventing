@@ -46,7 +46,7 @@ func TestNodesClientRandomWorkerNode(t *testing.T) {
 	node, err := c.RandomWorkerNode()
 
 	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+		t.Fatal("Unexpected error:", err)
 	}
 	nodeName := workerNode.Name
 	assertProperNodeIsReturned(t, node, nodeName)
@@ -68,7 +68,7 @@ func TestNodesClientRandomWorkerNode_OneNode(t *testing.T) {
 	node, err := c.RandomWorkerNode()
 
 	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+		t.Fatal("Unexpected error:", err)
 	}
 	assertProperNodeIsReturned(t, node, nodeName)
 }
@@ -84,7 +84,7 @@ func TestNodesClientRandomWorkerNode_NoNode(t *testing.T) {
 	}
 	actual := err.Error()
 	if actual != "fetched 0 nodes, so can't chose a worker" {
-		t.Errorf("Unexpected error: %s", actual)
+		t.Error("Unexpected error:", actual)
 	}
 }
 

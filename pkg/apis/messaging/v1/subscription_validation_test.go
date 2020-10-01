@@ -82,7 +82,7 @@ func TestSubscriptionValidation(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		got := c.Validate(context.TODO())
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("Subscription.Validate (-want, +got) = %v", diff)
+			t.Error("Subscription.Validate (-want, +got) =", diff)
 		}
 	})
 
@@ -359,7 +359,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 			ctx = apis.WithinUpdate(ctx, test.og)
 			got := test.c.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+				t.Error("CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
 	}
@@ -440,7 +440,7 @@ func TestValidChannel(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := isValidChannel(test.c)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("isValidChannel (-want, +got) = %v", diff)
+				t.Error("isValidChannel (-want, +got) =", diff)
 			}
 		})
 	}

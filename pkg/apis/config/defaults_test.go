@@ -32,7 +32,7 @@ import (
 func TestDefaultsConfigurationFromFile(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)
 	if _, err := NewDefaultsConfigFromConfigMap(example); err != nil {
-		t.Errorf("NewDefaultsConfigFromConfigMap(example) = %v", err)
+		t.Error("NewDefaultsConfigFromConfigMap(example) =", err)
 	}
 }
 
@@ -40,21 +40,21 @@ func TestGetBrokerConfig(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)
 	defaults, err := NewDefaultsConfigFromConfigMap(example)
 	if err != nil {
-		t.Errorf("NewDefaultsConfigFromConfigMap(example) = %v", err)
+		t.Error("NewDefaultsConfigFromConfigMap(example) =", err)
 	}
 	c, err := defaults.GetBrokerConfig("rando")
 	if err != nil {
-		t.Errorf("GetBrokerConfig Failed = %v", err)
+		t.Error("GetBrokerConfig Failed =", err)
 	}
 	if c.Name != "somename" {
-		t.Errorf("GetBrokerConfig Failed, wanted somename, got: %s", c.Name)
+		t.Error("GetBrokerConfig Failed, wanted somename, got:", c.Name)
 	}
 	c, err = defaults.GetBrokerConfig("some-namespace")
 	if err != nil {
-		t.Errorf("GetBrokerConfig Failed = %v", err)
+		t.Error("GetBrokerConfig Failed =", err)
 	}
 	if c.Name != "someothername" {
-		t.Errorf("GetBrokerConfig Failed, wanted someothername, got: %s", c.Name)
+		t.Error("GetBrokerConfig Failed, wanted someothername, got:", c.Name)
 	}
 
 	// Nil and empty tests
@@ -64,7 +64,7 @@ func TestGetBrokerConfig(t *testing.T) {
 		t.Errorf("GetBrokerConfig did not fail with nil")
 	}
 	if err.Error() != "Defaults are nil" {
-		t.Errorf("GetBrokerConfig did not fail with nil msg, got %v", err)
+		t.Error("GetBrokerConfig did not fail with nil msg, got", err)
 	}
 	emptyDefaults := Defaults{}
 	_, err = emptyDefaults.GetBrokerConfig("rando")
@@ -72,7 +72,7 @@ func TestGetBrokerConfig(t *testing.T) {
 		t.Errorf("GetBrokerConfig did not fail with empty")
 	}
 	if err.Error() != "Defaults for Broker Configurations have not been set up." {
-		t.Errorf("GetBrokerConfig did not fail with non-setup msg, got %v", err)
+		t.Error("GetBrokerConfig did not fail with non-setup msg, got", err)
 	}
 }
 
@@ -80,21 +80,21 @@ func TestGetBrokerClass(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)
 	defaults, err := NewDefaultsConfigFromConfigMap(example)
 	if err != nil {
-		t.Errorf("NewDefaultsConfigFromConfigMap(example) = %v", err)
+		t.Error("NewDefaultsConfigFromConfigMap(example) =", err)
 	}
 	c, err := defaults.GetBrokerClass("rando")
 	if err != nil {
-		t.Errorf("GetBrokerClass Failed = %v", err)
+		t.Error("GetBrokerClass Failed =", err)
 	}
 	if c != "MTChannelBasedBroker" {
-		t.Errorf("GetBrokerClass Failed, wanted MTChannelBasedBroker, got: %s", c)
+		t.Error("GetBrokerClass Failed, wanted MTChannelBasedBroker, got:", c)
 	}
 	c, err = defaults.GetBrokerClass("some-namespace")
 	if err != nil {
-		t.Errorf("GetBrokerClass Failed = %v", err)
+		t.Error("GetBrokerClass Failed =", err)
 	}
 	if c != "someotherbrokerclass" {
-		t.Errorf("GetBrokerClass Failed, wanted someothername, got: %s", c)
+		t.Error("GetBrokerClass Failed, wanted someothername, got:", c)
 	}
 
 	// Nil and empty tests
@@ -104,7 +104,7 @@ func TestGetBrokerClass(t *testing.T) {
 		t.Errorf("GetBrokerClass did not fail with nil")
 	}
 	if err.Error() != "Defaults are nil" {
-		t.Errorf("GetBrokerClass did not fail with nil msg, got %v", err)
+		t.Error("GetBrokerClass did not fail with nil msg, got", err)
 	}
 	emptyDefaults := Defaults{}
 	_, err = emptyDefaults.GetBrokerClass("rando")
@@ -112,7 +112,7 @@ func TestGetBrokerClass(t *testing.T) {
 		t.Errorf("GetBrokerClass did not fail with empty")
 	}
 	if err.Error() != "Defaults for Broker Configurations have not been set up." {
-		t.Errorf("GetBrokerClass did not fail with non-setup msg, got %v", err)
+		t.Error("GetBrokerClass did not fail with non-setup msg, got", err)
 	}
 }
 
@@ -389,7 +389,7 @@ func TestDefaultsConfiguration(t *testing.T) {
 					t.Fatalf("Diff failed: %s %q", err, diff)
 				}
 				if diff != "" {
-					t.Fatalf("diff %s", diff)
+					t.Fatal("diff", diff)
 				}
 			}
 		})

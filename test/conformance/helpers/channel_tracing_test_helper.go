@@ -109,7 +109,7 @@ func setupChannelTracingWithReply(
 	event.SetType(testlib.DefaultEventType)
 	body := fmt.Sprintf(`{"msg":"TestChannelTracing %s"}`, eventID)
 	if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
-		t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+		t.Fatal("Cannot set the payload of the event:", err.Error())
 	}
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).

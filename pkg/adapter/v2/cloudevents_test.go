@@ -152,7 +152,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 
 func validateSent(t *testing.T, ce *test.TestCloudEventsClient, want string) {
 	if got := len(ce.Sent()); got != 1 {
-		t.Errorf("Expected 1 event to be sent, got %d", got)
+		t.Error("Expected 1 event to be sent, got", got)
 	}
 
 	if got := ce.Sent()[0].Type(); got != want {
@@ -162,13 +162,13 @@ func validateSent(t *testing.T, ce *test.TestCloudEventsClient, want string) {
 
 func validateNotSent(t *testing.T, ce *test.TestCloudEventsClient) {
 	if got := len(ce.Sent()); got != 0 {
-		t.Errorf("Expected 0 event to be sent, got %d", got)
+		t.Error("Expected no events to be sent, got", got)
 	}
 }
 
 func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
 	if mockReporter, ok := reporter.(*mockReporter); !ok {
-		t.Errorf("reporter is not a mockReporter")
+		t.Errorf("Reporter is not a mockReporter")
 	} else if mockReporter.eventCount != want {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
 	}

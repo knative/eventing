@@ -281,7 +281,7 @@ func TestTriggerValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.t.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("Trigger.Validate (-want, +got) = %v", diff)
+				t.Error("Trigger.Validate (-want, +got) =", diff)
 			}
 		})
 	}
@@ -491,7 +491,7 @@ func TestTriggerImmutableFields(t *testing.T) {
 			ctx = apis.WithinUpdate(ctx, test.original)
 			got := test.current.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+				t.Error("CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
 	}

@@ -31,7 +31,7 @@ func injectionEnabled() context.Context {
 	// Start the injection clients and informers.
 	go func(ctx context.Context) {
 		if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-			panic(fmt.Sprintf("Failed to start informers - %s", err))
+			panic(fmt.Sprint("Failed to start informers - ", err))
 		}
 		<-ctx.Done()
 	}(ctx)

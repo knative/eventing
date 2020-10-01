@@ -144,7 +144,7 @@ func TestSinkBindingDefaulting(t *testing.T) {
 			got := test.in
 			got.SetDefaults(context.Background())
 			if !cmp.Equal(test.want, got) {
-				t.Errorf("SetDefaults (-want, +got) = %v", cmp.Diff(test.want, got))
+				t.Error("SetDefaults (-want, +got) =", cmp.Diff(test.want, got))
 			}
 		})
 	}

@@ -127,7 +127,7 @@ func TestPingSourceValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.source.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("PingSourceSpec.Validate (-want, +got) = %v", diff)
+				t.Error("PingSourceSpec.Validate (-want, +got) =", diff)
 			}
 		})
 	}

@@ -40,14 +40,14 @@ type UnknownChannelError struct {
 }
 
 func (e *UnknownChannelError) Error() string {
-	return fmt.Sprintf("unknown channel: %v", e.c)
+	return fmt.Sprint("unknown channel: ", e.c)
 }
 
 // UnknownHostError represents the error when a ResolveMessageChannelFromHostHeader func cannot resolve an host
 type UnknownHostError string
 
 func (e UnknownHostError) Error() string {
-	return fmt.Sprintf("cannot map host to channel: %s", string(e))
+	return "cannot map host to channel: " + string(e)
 }
 
 // MessageReceiver starts a server to receive new events for the channel dispatcher. The new

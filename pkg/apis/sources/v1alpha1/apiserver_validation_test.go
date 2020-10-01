@@ -91,7 +91,7 @@ func TestAPIServerValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.spec.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("APIServerSourceSpec.Validate (-want, +got) = %v", diff)
+				t.Error("APIServerSourceSpec.Validate (-want, +got) =", diff)
 			}
 		})
 	}

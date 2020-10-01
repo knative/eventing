@@ -86,12 +86,12 @@ func TestAddGetMany(t *testing.T) {
 	}
 	_, err := es.GetEventInfoBytes(count + 1)
 	if err == nil {
-		t.Errorf("Unexpected non-error return for getinfo of %d", count+1)
+		t.Error("Unexpected non-error return for getinfo of", count+1)
 	}
 
 	_, err = es.GetEventInfoBytes(0)
 	if err == nil {
-		t.Errorf("Unexpected non-error return for getinfo of %d", 0)
+		t.Error("Unexpected non-error return for getinfo of", 0)
 	}
 
 }
@@ -109,7 +109,7 @@ func TestEmpty(t *testing.T) {
 	for i := -2; i < 2; i++ {
 		_, err := es.GetEventInfoBytes(0)
 		if err == nil {
-			t.Errorf("Unexpected non-error return for getinfo of %d", i)
+			t.Error("Unexpected non-error return for getinfo of", i)
 		}
 	}
 
@@ -135,19 +135,19 @@ func TestAddGetSingleValid(t *testing.T) {
 
 	evInfoBytes, err := es.GetEventInfoBytes(minAvail)
 	if err != nil {
-		t.Fatalf("Error calling get: %v", err)
+		t.Fatal("Error calling get:", err)
 	}
 	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
-		t.Fatalf("Error unmarshalling stored JSON: %v", err)
+		t.Fatal("Error unmarshalling stored JSON:", err)
 	}
 
 	if evInfo.Event == nil {
 		t.Fatalf("Unexpected empty event info event: %+v", evInfo)
 	}
 	if len(evInfo.Error) != 0 {
-		t.Fatalf("Unexpected error for stored event: %s", evInfo.Error)
+		t.Fatal("Unexpected error for stored event:", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -189,18 +189,18 @@ func TestAddGetSingleInvalid(t *testing.T) {
 
 	evInfoBytes, err := es.GetEventInfoBytes(minAvail)
 	if err != nil {
-		t.Fatalf("Error calling get: %v", err)
+		t.Fatal("Error calling get:", err)
 	}
 	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
-		t.Fatalf("Error unmarshalling stored JSON: %v", err)
+		t.Fatal("Error unmarshalling stored JSON:", err)
 	}
 	if evInfo.Event != nil {
 		t.Fatalf("Unexpected event info: %+v", evInfo)
 	}
 	if len(evInfo.Error) == 0 {
-		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.Error)
+		t.Fatal("Unexpected empty error for stored event:", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -230,18 +230,18 @@ func TestAddGetSingleInvalidError(t *testing.T) {
 
 	evInfoBytes, err := es.GetEventInfoBytes(minAvail)
 	if err != nil {
-		t.Fatalf("Error calling get: %v", err)
+		t.Fatal("Error calling get:", err)
 	}
 	var evInfo recordevents.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
-		t.Fatalf("Error unmarshalling stored JSON: %v", err)
+		t.Fatal("Error unmarshalling stored JSON:", err)
 	}
 	if evInfo.Event != nil {
 		t.Fatalf("Unexpected event info: %+v", evInfo)
 	}
 	if len(evInfo.Error) == 0 {
-		t.Fatalf("Unexpected empty error for stored event: %s", evInfo.Error)
+		t.Fatal("Unexpected empty error for stored event:", evInfo.Error)
 	}
 	if len(evInfo.HTTPHeaders) != 1 {
 		t.Fatalf("Unexpected header contents for stored event: %+v", evInfo.HTTPHeaders)
@@ -326,7 +326,7 @@ func TestTrim(t *testing.T) {
 		helperFillCount(es, count)
 		err := es.TrimThrough(testVal)
 		if err == nil {
-			t.Fatalf("Incorrect missing error trimming to %d", testVal)
+			t.Fatal("Incorrect missing error trimming to", testVal)
 		}
 		minAvail, maxSeen := es.MinMax()
 		if minAvail != 1 {

@@ -126,7 +126,7 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 		orig,
 	)
 	if err != nil {
-		t.Errorf("Unable to create handler, %v", err)
+		t.Error("Unable to create handler,", err)
 	}
 
 	option := ignoreCheckRetryAndBackFunctions()
@@ -136,7 +136,7 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 
 	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated)
 	if err != nil {
-		t.Errorf("Unable to copy handler: %v", err)
+		t.Error("Unable to copy handler:", err)
 	}
 
 	if h.logger != newH.logger {
@@ -202,7 +202,7 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.orig)
 			if err != nil {
-				t.Errorf("Unable to create handler: %v", err)
+				t.Error("Unable to create handler:", err)
 			}
 			diff := h.ConfigDiff(tc.updated)
 
@@ -329,7 +329,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 				message = bindingshttp.NewMessage(response.Header, nil)
 			}
 			if message.ReadEncoding() != binding.EncodingUnknown {
-				t.Errorf("Expected EncodingUnkwnown. Actual: %v", message.ReadEncoding())
+				t.Error("Expected EncodingUnkwnown. Actual:", message.ReadEncoding())
 			}
 		})
 	}

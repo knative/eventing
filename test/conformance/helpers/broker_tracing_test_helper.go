@@ -120,7 +120,7 @@ func setupBrokerTracing(ctx context.Context, brokerClass string) SetupTracingTes
 		event.SetSource(senderName)
 		event.SetType(etTransformer)
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
-			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
 
 		// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).

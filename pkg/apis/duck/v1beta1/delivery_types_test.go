@@ -69,7 +69,7 @@ func TestDeliverySpecValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.spec.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("DeliverySpec.Validate (-want, +got) = %v", diff)
+				t.Error("DeliverySpec.Validate (-want, +got) =", diff)
 			}
 		})
 	}

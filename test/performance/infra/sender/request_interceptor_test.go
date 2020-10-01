@@ -41,7 +41,7 @@ func TestRequestInterceptor(t *testing.T) {
 	tc := http.Client{Transport: ti}
 
 	if _, err := tc.Get(ts.URL); err != nil {
-		t.Fatalf("Failed to send request to mock server: %v", err)
+		t.Fatal("Failed to send request to mock server:", err)
 	}
 
 	if !calledBefore || !calledAfter {

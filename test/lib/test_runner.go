@@ -155,7 +155,7 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 		namespace,
 		t)
 	if err != nil {
-		t.Fatalf("Couldn't initialize clients: %v", err)
+		t.Fatal("Couldn't initialize clients:", err)
 	}
 
 	CreateNamespaceIfNeeded(t, client, namespace)
@@ -229,7 +229,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
 		err = waitForServiceAccountExists(client, "default", namespace)
 		if err != nil {
-			t.Fatalf("The default ServiceAccount was not created for the Namespace: %s", namespace)
+			t.Fatal("The default ServiceAccount was not created for the Namespace:", namespace)
 		}
 
 		// If the "default" Namespace has a secret called

@@ -232,7 +232,7 @@ func SetupInformers(ctx context.Context, logger *zap.SugaredLogger) (context.Con
 func StartInformers(ctx context.Context, informers []controller.Informer) {
 	go func() {
 		if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-			panic(fmt.Sprintf("Failed to start informers - %s", err))
+			panic(fmt.Sprint("Failed to start informers - ", err))
 		}
 		<-ctx.Done()
 	}()

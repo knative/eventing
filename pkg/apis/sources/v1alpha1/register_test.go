@@ -35,7 +35,7 @@ func TestResource(t *testing.T) {
 	got := Resource("foo")
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected resource (-want, +got) = %v", diff)
+		t.Error("unexpected resource (-want, +got) =", diff)
 	}
 }
 
@@ -49,7 +49,7 @@ func TestKind(t *testing.T) {
 	got := Kind("kind")
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected resource (-want, +got) = %v", diff)
+		t.Error("unexpected resource (-want, +got) =", diff)
 	}
 }
 

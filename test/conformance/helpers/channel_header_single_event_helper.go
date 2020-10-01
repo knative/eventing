@@ -82,10 +82,10 @@ func SingleEventWithKnativeHeaderHelperForChannelTestHelper(
 		event.SetSource(senderName)
 		event.SetType(testlib.DefaultEventType)
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
-			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
 
-		st.Logf("Sending event with knative headers to %s", senderName)
+		st.Log("Sending event with knative headers to", senderName)
 		client.SendEventToAddressable(
 			ctx,
 			senderName,

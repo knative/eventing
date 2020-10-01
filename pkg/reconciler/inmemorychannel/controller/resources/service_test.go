@@ -83,11 +83,11 @@ func TestNewK8sService(t *testing.T) {
 
 	got, err := NewK8sService(imc)
 	if err != nil {
-		t.Fatalf("Failed to create new service: %s", err)
+		t.Fatal("Failed to create new service:", err)
 	}
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+		t.Error("unexpected condition (-want, +got) =", diff)
 	}
 }
 
@@ -121,11 +121,11 @@ func TestNewK8sServiceWithExternal(t *testing.T) {
 
 	got, err := NewK8sService(imc, ExternalService(dispatcherNS, dispatcherName))
 	if err != nil {
-		t.Fatalf("Failed to create new service: %s", err)
+		t.Fatal("Failed to create new service:", err)
 	}
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+		t.Error("unexpected condition (-want, +got) =", diff)
 	}
 }
 

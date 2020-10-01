@@ -118,7 +118,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			body := fmt.Sprintf(`{"msg":%q}`, eventID)
 
 			if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
-				t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+				t.Fatal("Cannot set the payload of the event:", err.Error())
 			}
 			event.Context.AsV03()
 			event.SetSpecVersion("0.3")
@@ -140,7 +140,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			event.SetSource("1.0.event.sender.test.knative.dev")
 			body := fmt.Sprintf(`{"msg":%q}`, eventID)
 			if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
-				t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+				t.Fatal("Cannot set the payload of the event:", err.Error())
 			}
 
 			senderName := "v10-test-sender"
@@ -162,7 +162,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			event.SetSource("structured.mode.event.sender.test.knative.dev")
 			body := fmt.Sprintf(`{"msg":%q}`, eventID)
 			if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
-				t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+				t.Fatal("Cannot set the payload of the event:", err.Error())
 			}
 			senderName := "structured-test-sender"
 			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingStructured))
@@ -181,7 +181,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 			event.SetSource("binary.mode.event.sender.test.knative.dev")
 			body := fmt.Sprintf(`{"msg":%q}`, eventID)
 			if err := event.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
-				t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+				t.Fatal("Cannot set the payload of the event:", err.Error())
 			}
 			senderName := "binary-test-sender"
 			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.WithEncoding(ce.EncodingBinary))
@@ -272,7 +272,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		baseEvent.SetSpecVersion("1.0")
 		body := fmt.Sprintf(`{"msg":%q}`, eventID)
 		if err := baseEvent.SetData(ce.ApplicationJSON, []byte(body)); err != nil {
-			t.Fatalf("Cannot set the payload of the baseEvent: %s", err.Error())
+			t.Fatal("Cannot set the payload of the baseEvent:", err.Error())
 		}
 
 		transformMsg := []byte(`{"msg":"Transformed!"}`)

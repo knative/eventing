@@ -234,7 +234,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 					if v, ok := svc.receivedHeaders[k]; !ok {
 						t.Errorf("expected header %s - %v", k, svc.receivedHeaders)
 					} else if diff := cmp.Diff(expValue, v); diff != "" {
-						t.Errorf("(-want +got) %s", diff)
+						t.Error("(-want +got)", diff)
 					}
 				}
 			}

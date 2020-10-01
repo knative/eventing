@@ -177,10 +177,10 @@ func TestAPIServerValidation(t *testing.T) {
 			got := test.spec.Validate(context.TODO())
 			if test.want != nil {
 				if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-					t.Errorf("APIServerSourceSpec.Validate (-want, +got) = %v", diff)
+					t.Error("APIServerSourceSpec.Validate (-want, +got) =", diff)
 				}
 			} else if got != nil {
-				t.Errorf("APIServerSourceSpec.Validate wanted nil, got = %v", got.Error())
+				t.Error("APIServerSourceSpec.Validate wanted nil, got =", got.Error())
 			}
 		})
 	}

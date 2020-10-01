@@ -82,7 +82,7 @@ func TestNewChannel(t *testing.T) {
 			c, err := NewChannel("ingress", b, &tc.channelTemplate, labels)
 			if err != nil {
 				if !tc.expectError {
-					t.Fatalf("Unexpected error calling NewChannel: %v", err)
+					t.Fatal("Unexpected error calling NewChannel:", err)
 				}
 				return
 			} else if tc.expectError {
@@ -121,7 +121,7 @@ func assertSoleOwner(t *testing.T, owner v1.Object, owned *unstructured.Unstruct
 	md := owned.Object["metadata"].(map[string]interface{})
 	owners := md["ownerReferences"].([]interface{})
 	if len(owners) != 1 {
-		t.Errorf("Expected 1 owner, actually %d", len(owners))
+		t.Error("Expected 1 owner, actually", len(owners))
 	}
 	o := owners[0].(map[string]interface{})
 	if uid := o["uid"]; uid != string(owner.GetUID()) {

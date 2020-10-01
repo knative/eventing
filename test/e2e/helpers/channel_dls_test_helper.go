@@ -89,7 +89,7 @@ func ChannelDeadLetterSinkTestHelper(
 		event.SetType(testlib.DefaultEventType)
 		body := fmt.Sprintf(`{"msg":"TestChannelDeadLetterSink %s"}`, uuid.New().String())
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
-			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
+			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
 		client.SendEventToAddressable(ctx, senderName, channelNames[0], &channel, event)
 

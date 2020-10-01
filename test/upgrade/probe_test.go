@@ -44,7 +44,7 @@ func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	// to signal that we should stop probing.
 	ensureTempFilesAreCleaned()
 	if err := syscall.Mkfifo(test.EventingFlags.PipeFile, 0666); err != nil {
-		t.Fatalf("Failed to create pipe: %v", err)
+		t.Fatal("Failed to create pipe:", err)
 	}
 	defer ensureTempFilesAreCleaned()
 	client := setup(t, false)

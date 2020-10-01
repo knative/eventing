@@ -30,7 +30,7 @@ func TestSequenceGetStatus(t *testing.T) {
 func TestSequenceKind(t *testing.T) {
 	sequence := Sequence{}
 	if sequence.GetGroupVersionKind().String() != "flows.knative.dev/v1, Kind=Sequence" {
-		t.Errorf("unexpected gvk: %v", sequence.GetGroupVersionKind())
+		t.Error("unexpected gvk:", sequence.GetGroupVersionKind())
 	}
 }
 

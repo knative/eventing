@@ -99,7 +99,7 @@ func TestMakeSinkBinding(t *testing.T) {
 
 	got := MakeSinkBinding(source)
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected (-want, +got) = %v", diff)
+		t.Error("unexpected (-want, +got) =", diff)
 	}
 
 }

@@ -126,16 +126,16 @@ func TestSubscribableTypeConversionV1alphaV1beta1(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				got := &SubscribableType{}
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 
 				fixed := fixSubscribableTypeDeprecated(test.in)
 				if diff := cmp.Diff(fixed, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}
@@ -225,16 +225,16 @@ func TestSubscribableTypeConversionV1alphaV1(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				got := &SubscribableType{}
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 
 				fixed := fixSubscribableTypeDeprecated(test.in)
 				if diff := cmp.Diff(fixed, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}
@@ -311,14 +311,14 @@ func TestSubscribableTypeConversionWithV1beta1V1alpha1(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := version.ConvertFrom(context.Background(), test.in); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				got := &v1beta1.Subscribable{}
 				if err := ver.ConvertTo(context.Background(), got); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				if diff := cmp.Diff(test.in, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}
@@ -395,14 +395,14 @@ func TestSubscribableTypeConversionWithV1V1alpha1(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
 				if err := version.ConvertFrom(context.Background(), test.in); err != nil {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				got := &v1.Subscribable{}
 				if err := ver.ConvertTo(context.Background(), got); err != nil {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				if diff := cmp.Diff(test.in, got); diff != "" {
-					t.Errorf("roundtrip (-want, +got) = %v", diff)
+					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
 		}

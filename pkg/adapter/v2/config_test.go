@@ -50,19 +50,19 @@ func TestEnvConfig(t *testing.T) {
 	var env myEnvConfig
 	err := envconfig.Process("", &env)
 	if err != nil {
-		t.Errorf("Expected no error: %v", err)
+		t.Error("Expected no error:", err)
 	}
 
 	if env.Mode != "mymode" {
-		t.Errorf("Expected mode mymode, got: %s", env.Mode)
+		t.Error("Expected mode mymode, got:", env.Mode)
 	}
 
 	if env.Sink != "http://sink" {
-		t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
+		t.Error("Expected sinkURI http://sink, got:", env.Sink)
 	}
 
 	if env.LeaderElectionConfigJson != "leaderelection" {
-		t.Errorf("Expected LeaderElectionConfigJson leaderelection, got: %s", env.LeaderElectionConfigJson)
+		t.Error("Expected LeaderElectionConfigJson leaderelection, got:", env.LeaderElectionConfigJson)
 	}
 
 }

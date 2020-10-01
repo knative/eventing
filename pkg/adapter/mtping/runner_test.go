@@ -188,7 +188,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string,
 	extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
-		t.Errorf("Expected 1 event to be sent, got %d", got)
+		t.Error("Expected 1 event to be sent, got", got)
 	}
 
 	if got := ce.Sent()[0].Data(); string(got) != wantData {
@@ -198,15 +198,15 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 	gotExtensions := ce.Sent()[0].Context.GetExtensions()
 
 	if extensions == nil && gotExtensions != nil {
-		t.Errorf("Expected event with no extension overrides got %v", gotExtensions)
+		t.Error("Expected event with no extension overrides, got:", gotExtensions)
 	}
 
 	if extensions != nil && gotExtensions == nil {
-		t.Errorf("Expected event with extension overrides got nil")
+		t.Error("Expected event with extension overrides but got nil")
 	}
 
 	if extensions != nil {
-		compareTo := map[string]interface{}{}
+		compareTo := make(map[string]interface{}, len(extensions))
 		for k, v := range extensions {
 			compareTo[k] = v
 		}

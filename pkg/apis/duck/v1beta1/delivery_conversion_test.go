@@ -113,16 +113,16 @@ func TestDeliverySpecConversion(t *testing.T) {
 			err := test.in.ConvertTo(context.Background(), ver)
 			if err != nil {
 				if test.err == nil || *test.err != err.Error() {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				return
 			}
 			got := &DeliverySpec{}
 			if err := got.ConvertFrom(context.Background(), ver); err != nil {
-				t.Errorf("ConvertFrom() = %v", err)
+				t.Error("ConvertFrom() =", err)
 			}
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 	}
@@ -190,16 +190,16 @@ func TestDeliverySpecConversionV1(t *testing.T) {
 			err := ver.ConvertFrom(context.Background(), test.in)
 			if err != nil {
 				if test.err == nil || *test.err != err.Error() {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				return
 			}
 			got := &v1.DeliverySpec{}
 			if err := ver.ConvertTo(context.Background(), got); err != nil {
-				t.Errorf("ConvertTo() = %v", err)
+				t.Error("ConvertTo() =", err)
 			}
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 	}
@@ -228,16 +228,16 @@ func TestDeliveryStatusConversion(t *testing.T) {
 			err := test.in.ConvertTo(context.Background(), ver)
 			if err != nil {
 				if test.err == nil || *test.err != err.Error() {
-					t.Errorf("ConvertTo() = %v", err)
+					t.Error("ConvertTo() =", err)
 				}
 				return
 			}
 			got := &DeliveryStatus{}
 			if err := got.ConvertFrom(context.Background(), ver); err != nil {
-				t.Errorf("ConvertFrom() = %v", err)
+				t.Error("ConvertFrom() =", err)
 			}
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 	}
@@ -266,16 +266,16 @@ func TestDeliveryStatusConversionV1(t *testing.T) {
 			err := ver.ConvertFrom(context.Background(), test.in)
 			if err != nil {
 				if test.err == nil || *test.err != err.Error() {
-					t.Errorf("ConvertFrom() = %v", err)
+					t.Error("ConvertFrom() =", err)
 				}
 				return
 			}
 			got := &v1.DeliveryStatus{}
 			if err := ver.ConvertTo(context.Background(), got); err != nil {
-				t.Errorf("ConvertTo() = %v", err)
+				t.Error("ConvertTo() =", err)
 			}
 			if diff := cmp.Diff(test.in, got); diff != "" {
-				t.Errorf("roundtrip (-want, +got) = %v", diff)
+				t.Error("roundtrip (-want, +got) =", diff)
 			}
 		})
 	}

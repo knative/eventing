@@ -48,14 +48,14 @@ func TestVegetaTargeter(t *testing.T) {
 
 		target1 := vegeta.Target{}
 		if err := targeter(&target1); err != nil {
-			t.Fatalf("Targeter call returned error: %v", err)
+			t.Fatal("Targeter call returned error:", err)
 		}
 
 		nonEmptyHeaders := []string{"Ce-Id", "Ce-Type", "Ce-Source", "Ce-Specversion", "Content-Type"}
 		for _, header := range nonEmptyHeaders {
 			val, found := target1.Header[header]
 			if !found {
-				t.Fatalf("Missing header: %s", header)
+				t.Fatal("Missing header:", header)
 			} else if len(val) != 1 {
 				t.Fatalf("Bad header(%s) length = %d, expected 1", header, len(val))
 			}
@@ -70,12 +70,12 @@ func TestVegetaTargeter(t *testing.T) {
 		}
 		target2 := vegeta.Target{}
 		if err := targeter(&target2); err != nil {
-			t.Fatalf("Targeter call returned error: %v", err)
+			t.Fatal("Targeter call returned error:", err)
 		}
 		if fixedPayload && !bytes.Equal(target1.Body, target2.Body) {
 			t.Errorf("Target bodies differ, b1 = %v, b2 = %v", target1.Body, target2.Body)
 		} else if !fixedPayload && bytes.Equal(target1.Body, target2.Body) {
-			t.Errorf("Target bodies unexpectedly equal: %v", target1.Body)
+			t.Error("Target bodies unexpectedly equal:", target1.Body)
 		}
 		ceID1 := target1.Header["Ce-Id"]
 		ceID2 := target2.Header["Ce-Id"]
