@@ -19,6 +19,7 @@ package channel
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -751,9 +752,9 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		w.WriteHeader(f.response.StatusCode)
-		var buf bytes.Buffer
-		buf.ReadFrom(f.response.Body)
-		w.Write(buf.Bytes())
+		if _, err := io.Copy(w, f.response.Body); err != nil {
+			f.t.Error("Error copying Body:", err)
+		}
 	} else {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(""))

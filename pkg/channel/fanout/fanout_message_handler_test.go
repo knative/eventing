@@ -259,13 +259,13 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		},
 	)
 	if err != nil {
-		t.Fatalf("NewHandler failed. Error:%s", err)
+		t.Fatal("NewHandler failed =", err)
 	}
 
 	if receiverFunc != nil {
 		receiver, err := channel.NewMessageReceiver(receiverFunc, logger)
 		if err != nil {
-			t.Fatalf("NewEventReceiver failed. Error:%s", err)
+			t.Fatal("NewEventReceiver failed =", err)
 		}
 		h.receiver = receiver
 	}
@@ -281,9 +281,9 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil).WithContext(reqCtx)
 
 	ctx := context.Background()
-	err = bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req)
-	if err != nil {
-		t.Fatal(err)
+
+	if err := bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req); err != nil {
+		t.Fatal("WriteRequest =", err)
 	}
 
 	resp := httptest.ResponseRecorder{}

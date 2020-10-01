@@ -92,11 +92,11 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 	}
 }
 
-type dummyRunner struct{}
+type dummyRunner struct {
+	CronJobRunner
+}
 
-func (r *dummyRunner) Start(<-chan struct{}) {}
-func (r *dummyRunner) Stop()                 {}
-func (r *dummyRunner) AddSchedule(*sourcesv1beta1.PingSource) cron.EntryID {
+func (*dummyRunner) AddSchedule(*sourcesv1beta1.PingSource) cron.EntryID {
 	return cron.EntryID(1)
 }
-func (r *dummyRunner) RemoveSchedule(id cron.EntryID) {}
+func (*dummyRunner) RemoveSchedule(cron.EntryID) {}
