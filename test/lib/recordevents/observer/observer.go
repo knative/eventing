@@ -25,7 +25,7 @@ type Observer struct {
 // EventLog instances. It will listen on :8080.
 func New(name string, eventLogs ...recordevents.EventLog) *Observer {
 	return &Observer{
-		Name: name,
+		Name:      name,
 		EventLogs: eventLogs,
 	}
 }

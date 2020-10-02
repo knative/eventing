@@ -38,11 +38,11 @@ type PodOption func(*corev1.Pod)
 type RoleOption func(*rbacv1.Role)
 
 // EventRecordPod creates a Pod that stores received events for test retrieval.
-func EventRecordPod(name string) *corev1.Pod {
-	return eventLoggerPod("recordevents", name)
+func EventRecordPod(name string, namespace string, serviceAccountName string) *corev1.Pod {
+	return recordEventsPod("recordevents", name, namespace, serviceAccountName)
 }
 
-func eventLoggerPod(imageName string, name string) *corev1.Pod {
+func recordEventsPod(imageName string, name string, namespace string, serviceAccountName string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -53,7 +53,18 @@ func eventLoggerPod(imageName string, name string) *corev1.Pod {
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
+				Env: []corev1.EnvVar{{
+					Name: "SYSTEM_NAMESPACE",
+					Value: namespace,
+				}, {
+					Name: "OBSERVER",
+					Value: "recorder-" + name,
+				}, {
+					Name:  "K8S_EVENT_SINK",
+					Value: fmt.Sprintf("{\"apiVersion\": \"v1\", \"kind\": \"Pod\", \"name\": \"%s\", \"namespace\": \"%s\"}", name, namespace),
+				}},
 			}},
+			ServiceAccountName: serviceAccountName,
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
 	}

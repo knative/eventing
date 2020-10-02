@@ -17,12 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"os"
 
 	"go.uber.org/zap"
+	"k8s.io/client-go/rest"
+	"knative.dev/pkg/injection/sharedmain"
+	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/test/lib/dropevents"
 	"knative.dev/eventing/test/lib/recordevents/observer"
@@ -32,7 +34,11 @@ import (
 )
 
 func main() {
-	ctx := context.TODO()
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatalf("Error while reading the cfg: %s", err)
+	}
+	ctx := sharedmain.EnableInjectionOrDie(nil, cfg)
 
 	logger, _ := zap.NewDevelopment()
 	if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
@@ -44,7 +50,6 @@ func main() {
 		writer_vent.NewEventLog(ctx, os.Stdout),
 	)
 
-	var err error
 	algorithm, ok := os.LookupEnv(dropevents.SkipAlgorithmKey)
 	if ok {
 		skipper := dropevents.SkipperAlgorithm(algorithm)
@@ -65,6 +70,6 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatalf("Problem with start %s", err)
+		log.Fatalf("Error during start: %s", err)
 	}
 }

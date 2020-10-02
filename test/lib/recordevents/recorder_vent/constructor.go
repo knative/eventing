@@ -23,6 +23,8 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	"knative.dev/pkg/system"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,17 +73,18 @@ func NewEventLog(ctx context.Context, agentName string, ref duckv1.KReference) r
 		logging.FromContext(ctx).Fatalf("failed to parse group version, %s", err)
 	}
 
+	logging.FromContext(ctx).Infof("Going to send events to %+v", ref)
+
 	gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(ref.Kind))
 
 	var on runtime.Object
 	if ref.Namespace == "" {
 		on, err = dynamicclient.Get(ctx).Resource(gvr).Get(ctx, ref.Name, metav1.GetOptions{})
 	} else {
-		on, err = dynamicclient.Get(ctx).Resource(gvr).Get(ctx, ref.Name, metav1.GetOptions{})
+		on, err = dynamicclient.Get(ctx).Resource(gvr).Namespace(ref.Namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	}
 	if err != nil {
 		logging.FromContext(ctx).Fatalf("failed to fetch object ref, %+v, %s", ref, err)
-
 	}
 
 	return &recorder{out: createRecorder(ctx, agentName), on: on}
@@ -98,7 +101,8 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
 			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events("")}),
+				&v1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events(system.Namespace())},
+			),
 		}
 		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: agentName})
 		go func() {

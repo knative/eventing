@@ -28,7 +28,7 @@ import (
 
 const (
 	// EventReason is the Kubernetes event reason used for observed events.
-	EventReason = "EventObserved"
+	EventReason = "CloudEventObserved"
 )
 
 type recorder struct {

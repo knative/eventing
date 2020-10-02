@@ -67,9 +67,9 @@ type EventInfo struct {
 	Event *cloudevents.Event `json:"event"`
 	// HTTPHeaders of the connection that delivered the event
 	HTTPHeaders map[string][]string `json:"httpHeaders"`
-	Origin   string            `json:"origin"`
-	Observer string            `json:"observer"`
-	Time     time.Time            `json:"time"`
+	Origin      string              `json:"origin"`
+	Observer    string              `json:"observer"`
+	Time        time.Time           `json:"time"`
 }
 
 // Pretty print the event. Meant for debugging.  This formats the validation error
@@ -117,15 +117,6 @@ type eventGetter struct {
 func newEventGetter(podName string, client *testlib.Client, logf logging.FormatLogger) (eventGetterInterface, error) {
 	egi := &eventGetter{podName: podName, podNamespace: client.Namespace,
 		kubeClientset: client.Kube.Kube, podPort: RecordEventsPort, logf: logf}
-	err := egi.forwardPort()
-	if err != nil {
-		return nil, err
-	}
-
-	err = egi.waitTillUp()
-	if err != nil {
-		return nil, err
-	}
 	return egi, nil
 }
 
