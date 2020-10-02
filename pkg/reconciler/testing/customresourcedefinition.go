@@ -17,6 +17,8 @@ limitations under the License.
 package testing
 
 import (
+	"time"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,5 +61,12 @@ func WithCustomResourceDefinitionGroup(group string) CustomResourceDefinitionOpt
 func WithCustomResourceDefinitionNames(names apiextensionsv1.CustomResourceDefinitionNames) CustomResourceDefinitionOption {
 	return func(crd *apiextensionsv1.CustomResourceDefinition) {
 		crd.Spec.Names = names
+	}
+}
+
+func WithCustomResourceDefinitionDeletionTimestamp() CustomResourceDefinitionOption {
+	return func(crd *apiextensionsv1.CustomResourceDefinition) {
+		t := metav1.NewTime(time.Unix(1e9, 0))
+		crd.ObjectMeta.SetDeletionTimestamp(&t)
 	}
 }

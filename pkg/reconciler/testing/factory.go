@@ -59,8 +59,10 @@ type Ctor func(context.Context, *Listers, configmap.Watcher) controller.Reconcil
 func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factory {
 	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList) {
 		ls := NewListers(r.Objects)
-
-		ctx := context.Background()
+		ctx := r.Ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
 		ctx = logging.WithLogger(ctx, logger)
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)

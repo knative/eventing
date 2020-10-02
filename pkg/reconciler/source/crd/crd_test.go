@@ -20,6 +20,12 @@ import (
 	"context"
 	"testing"
 
+	"knative.dev/eventing/pkg/reconciler/source/duck"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/rest"
+	"knative.dev/pkg/injection"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -43,55 +49,115 @@ import (
 const (
 	crdName = "test-crd"
 
-// TODO: See comment below
-//	crdGroup         = "testing.sources.knative.dev"
-//	crdKind          = "TestSource"
-//	crdPlural        = "testsources"
-//	crdVersionServed = "v1alpha1"
+	crdGroup         = "testing.sources.knative.dev"
+	crdKind          = "TestSource"
+	crdPlural        = "testsources"
+	crdVersionServed = "v1alpha1"
 )
 
+var crdGVR = schema.GroupVersionResource{
+	Group:    crdGroup,
+	Version:  crdVersionServed,
+	Resource: crdPlural,
+}
+
+var crdGVK = schema.GroupVersionKind{
+	Group:   crdGroup,
+	Version: crdVersionServed,
+	Kind:    crdKind,
+}
+
 func TestAllCases(t *testing.T) {
-	table := TableTest{{
-		Name: "bad workqueue key",
-		// Make sure Reconcile handles bad keys.
-		Key: "too/many/parts",
-	}, {
-		Name: "key not found",
-		// Make sure Reconcile handles good keys that don't exist.
-		Key: "not-found",
-	}, {
-		Name: "reconcile failed, cannot find GVR or GVK",
-		Objects: []runtime.Object{
-			NewCustomResourceDefinition(crdName,
-				WithCustomResourceDefinitionLabels(map[string]string{
-					sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
-				})),
+	ctx := context.Background()
+	ctx, _ = injection.Fake.SetupInformers(ctx, &rest.Config{})
+	table := TableTest{
+		{
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
+		}, {
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "not-found",
+		}, {
+			Name: "reconcile failed, cannot find GVR or GVK",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					})),
+			},
+			Key:     crdName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
+			},
 		},
-		Key:     crdName,
-		WantErr: true,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
+		{
+
+			Name: "reconcile succeeded",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: true,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
 		},
-	},
-	//}, {
-	// TODO uncomment the following once we figure out why the eventtype informer is missing from the duck.controller.
-	//Name: "reconcile succeeded",
-	//Objects: []runtime.Object{
-	//	NewCustomResourceDefinition(crdName,
-	//		WithCustomResourceDefinitionLabels(map[string]string{
-	//			sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
-	//		}),
-	//		WithCustomResourceDefinitionGroup(crdGroup),
-	//		WithCustomResourceDefinitionNames(apiextensionsv1beta1.CustomResourceDefinitionNames{
-	//			Kind:   crdKind,
-	//			Plural: crdPlural,
-	//		}),
-	//		WithCustomResourceDefinitionVersions([]apiextensionsv1beta1.CustomResourceDefinitionVersion{{
-	//			Name:   crdVersionServed,
-	//			Served: true,
-	//		}})),
-	//},
-	//Key: crdName,
+		{
+			Name: "reconcile deleted",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionDeletionTimestamp(),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: true,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
+		{
+			Name: "reconcile not Served",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionDeletionTimestamp(),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: false,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -102,6 +168,80 @@ func TestAllCases(t *testing.T) {
 			ogcmw:       cmw,
 			controllers: make(map[schema.GroupVersionResource]runningController),
 		}
+
+		return crdreconciler.NewReconciler(ctx, logger,
+			fakeclient.Get(ctx), listers.GetCustomResourceDefinitionLister(),
+			controller.GetEventRecorder(ctx), r)
+	}, false, logger))
+}
+
+func TestControllerRunning(t *testing.T) {
+	ctx := context.Background()
+	ctx, _ = injection.Fake.SetupInformers(ctx, &rest.Config{})
+	table := TableTest{
+		{
+
+			Name: "reconcile succeeded",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: true,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
+		{
+			Name: "reconcile deleted",
+			Objects: []runtime.Object{
+				NewCustomResourceDefinition(crdName,
+					WithCustomResourceDefinitionLabels(map[string]string{
+						sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+					}),
+
+					WithCustomResourceDefinitionGroup(crdGroup),
+					WithCustomResourceDefinitionDeletionTimestamp(),
+					WithCustomResourceDefinitionNames(apiextensionsv1.CustomResourceDefinitionNames{
+						Kind:   crdKind,
+						Plural: crdPlural,
+					}),
+					WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:   crdVersionServed,
+						Served: true,
+					}})),
+			},
+			Key: crdName,
+			Ctx: ctx,
+		},
+	}
+
+	logger := logtesting.TestLogger(t)
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = source.WithDuck(ctx)
+		r := &Reconciler{
+			ogctx:       ctx,
+			ogcmw:       cmw,
+			controllers: make(map[schema.GroupVersionResource]runningController),
+		}
+		sdc := duck.NewController(crdName, crdGVR, crdGVK)
+		// Source Duck controller context
+		sdctx, cancel := context.WithCancel(r.ogctx)
+		// Source Duck controller instantiation
+		sd := sdc(sdctx, r.ogcmw)
+		rc := runningController{
+			controller: sd,
+			cancel:     cancel,
+		}
+		r.controllers[crdGVR] = rc
 
 		return crdreconciler.NewReconciler(ctx, logger,
 			fakeclient.Get(ctx), listers.GetCustomResourceDefinitionLister(),
