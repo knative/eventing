@@ -41,15 +41,14 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ps.ChannelTemplate == nil {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate"))
-		return errs
-	}
+	} else {
+		if len(ps.ChannelTemplate.APIVersion) == 0 {
+			errs = errs.Also(apis.ErrMissingField("channelTemplate.apiVersion"))
+		}
 
-	if len(ps.ChannelTemplate.APIVersion) == 0 {
-		errs = errs.Also(apis.ErrMissingField("channelTemplate.apiVersion"))
-	}
-
-	if len(ps.ChannelTemplate.Kind) == 0 {
-		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
+		if len(ps.ChannelTemplate.Kind) == 0 {
+			errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
+		}
 	}
 
 	if err := ps.Reply.Validate(ctx); err != nil {
