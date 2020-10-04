@@ -17,6 +17,10 @@ limitations under the License.
 package sugar
 
 import (
+	"context"
+	"os"
+	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -100,4 +104,32 @@ func TestOffByDefault(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLabelFilterFnOrDieInjectionOn(t *testing.T) {
+	ctx := context.Background()
+	os.Setenv("BROKER_INJECTION_DEFAULT", "true")
+	want := OnByDefault
+	if got := LabelFilterFnOrDie(ctx); !reflect.DeepEqual(reflect.ValueOf(got).Pointer(), reflect.ValueOf(want).Pointer()) {
+		t.Errorf("LabelFilterFnOrDie() = %v, want %v", getFunctionName(got), getFunctionName(want))
+	}
+	os.Unsetenv("BROKER_INJECTION_DEFAULT")
+
+}
+
+func TestLabelFilterFnOrDieInjectionOff(t *testing.T) {
+	ctx := context.Background()
+	want := OffByDefault
+	if got := LabelFilterFnOrDie(ctx); !reflect.DeepEqual(reflect.ValueOf(got).Pointer(), reflect.ValueOf(want).Pointer()) {
+		t.Errorf("LabelFilterFnOrDie() = %v, want %v", getFunctionName(got), getFunctionName(want))
+	}
+	os.Setenv("BROKER_INJECTION_DEFAULT", "false")
+	if got := LabelFilterFnOrDie(ctx); !reflect.DeepEqual(reflect.ValueOf(got).Pointer(), reflect.ValueOf(want).Pointer()) {
+		t.Errorf("LabelFilterFnOrDie() = %v, want %v", getFunctionName(got), getFunctionName(want))
+	}
+	os.Unsetenv("BROKER_INJECTION_DEFAULT")
+
+}
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
