@@ -55,7 +55,6 @@ const (
 	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed = "SubscriptionCreateFailed"
 	subscriptionGetFailed    = "SubscriptionGetFailed"
-	subscriptionDeleted      = "SubscriptionDeleted"
 )
 
 type Reconciler struct {

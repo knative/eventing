@@ -49,7 +49,6 @@ const (
 	// Name of the corev1.Events emitted from the reconciliation process
 	apiserversourceDeploymentCreated = "ApiServerSourceDeploymentCreated"
 	apiserversourceDeploymentUpdated = "ApiServerSourceDeploymentUpdated"
-	apiserversourceDeploymentDeleted = "ApiServerSourceDeploymentDeleted"
 
 	component = "apiserversource"
 )
