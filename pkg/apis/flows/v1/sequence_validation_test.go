@@ -74,13 +74,16 @@ func getValidDestinationRef() *duckv1.Destination {
 func getInvalidDestination() duckv1.Destination {
 	return duckv1.Destination{
 		Ref: &duckv1.KReference{
-			Name: "test",
-		},
-		URI: &apis.URL{
-			Scheme: "http",
-			Host:   "test-host",
+			Name:      "testName",
+			Kind:      "testKind",
+			Namespace: "testNamespace",
 		},
 	}
+}
+
+func getInvalidDestinationRef() *duckv1.Destination {
+	d := getInvalidDestination()
+	return &d
 }
 
 func getValidDelivery() *eventingduckv1.DeliverySpec {
@@ -205,18 +208,34 @@ func TestSequenceSpecValidate(t *testing.T) {
 			want: apis.ErrMissingField("channelTemplate.kind"),
 		},
 		{
+			name: "invalid channelTemplate & invalid reply",
+			ss: &SequenceSpec{
+				Steps: getValidSteps(),
+				ChannelTemplate: &messagingv1.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind: "testChannel",
+					},
+				},
+				Reply: getInvalidDestinationRef(),
+			},
+			want: apis.ErrMissingField("channelTemplate.apiVersion", "reply.ref.apiVersion"),
+		},
+		{
 			name: "invalid reply",
 			ss: &SequenceSpec{
 				Steps:           getValidSteps(),
 				ChannelTemplate: getValidChannelTemplate(),
-				Reply: &duckv1.Destination{
-					Ref: &duckv1.KReference{
-						Name: "testName",
-						Kind: "testKind",
-					},
-				},
+				Reply:           getInvalidDestinationRef(),
 			},
 			want: apis.ErrMissingField("reply.ref.apiVersion"),
+		},
+		{
+			name: "no channelTemplate & invalid reply",
+			ss: &SequenceSpec{
+				Steps: getValidSteps(),
+				Reply: getInvalidDestinationRef(),
+			},
+			want: apis.ErrMissingField("channelTemplate", "reply.ref.apiVersion"),
 		},
 	}
 
@@ -250,7 +269,7 @@ func TestSequenceStepValidate(t *testing.T) {
 				Destination: getInvalidDestination(),
 				Delivery:    getValidDelivery(),
 			},
-			want: apis.ErrGeneric("Absolute URI is not allowed when Ref or [apiVersion, kind, name] is present", "[apiVersion, kind, name]", "ref", "uri"),
+			want: apis.ErrMissingField("ref.apiVersion"),
 		},
 		{
 			name: "invalid delivery",
@@ -267,7 +286,7 @@ func TestSequenceStepValidate(t *testing.T) {
 				Delivery:    getInvalidDelivery(),
 			},
 			want: func() *apis.FieldError {
-				errs := apis.ErrGeneric("Absolute URI is not allowed when Ref or [apiVersion, kind, name] is present", "[apiVersion, kind, name]", "ref", "uri")
+				errs := apis.ErrMissingField("ref.apiVersion")
 				return errs.Also(apis.ErrInvalidValue("invalid delay", "delivery.backoffDelay"))
 			}(),
 		},
