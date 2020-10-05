@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"k8s.io/api/core/v1"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test"
 )
@@ -16,7 +16,7 @@ func EventRecordPod(name string, namespace string, serviceAccountName string) *v
 
 func recordEventsPod(imageName string, name string, namespace string, serviceAccountName string) *v1.Pod {
 	return &v1.Pod{
-		ObjectMeta: v12.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
 		},
