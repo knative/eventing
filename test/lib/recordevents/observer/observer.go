@@ -93,7 +93,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 			Time:        time.Now(),
 		})
 		if err != nil {
-			log.Warn("Error while venting the recorded event %s", err)
+			log.Warn("Error while venting the recorded event", err)
 		}
 	}
 
