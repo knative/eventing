@@ -25,29 +25,30 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/test/lib/resources"
 )
 
 // GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.
 func GetAddressableURI(dynamicClient dynamic.Interface, obj *resources.MetaResource) (url.URL, error) {
-	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1alpha1.AddressableType{})
+	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1.AddressableType{})
 	if err != nil {
 		return url.URL{}, err
 	}
 
-	at := untyped.(*duckv1alpha1.AddressableType)
+	at := untyped.(*duckv1.AddressableType)
 
 	if at.Status.Address == nil {
 		return url.URL{}, fmt.Errorf("addressable does not have an Address: %+v", at)
 	}
-
-	au := at.Status.Address.GetURL()
-	if au.Host == "" {
+	if at.Status.Address.URL == nil {
+		return url.URL{}, fmt.Errorf("addressable does not have a URL: %+v", at)
+	}
+	if at.Status.Address.URL.Host == "" {
 		return url.URL{}, fmt.Errorf("addressable's URL does not have a Host: %+v", at)
 	}
-	return url.URL(au), nil
+	return url.URL(*at.Status.Address.URL), nil
 }
 
 func GetServiceHostname(svc *corev1.Service) string {
