@@ -253,7 +253,7 @@ func (r *Reconciler) createCloudEventAttributes(src *v1.ApiServerSource) ([]duck
 	} else if src.Spec.EventMode == v1.ResourceMode {
 		eventTypes = apisources.ApiServerSourceEventResourceModeTypes
 	} else {
-		return []duckv1.CloudEventAttributes{}, fmt.Errorf("no EventType available for EventMode:%s", src.Spec.EventMode)
+		return []duckv1.CloudEventAttributes{}, fmt.Errorf("no EventType available for EventMode: %s", src.Spec.EventMode)
 	}
 	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(eventTypes))
 	for _, apiServerSourceType := range eventTypes {
