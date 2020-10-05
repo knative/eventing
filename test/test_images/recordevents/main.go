@@ -26,6 +26,7 @@ import (
 	"knative.dev/pkg/injection/sharedmain"
 	_ "knative.dev/pkg/system/testing"
 
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/test/lib/dropevents"
 	"knative.dev/eventing/test/lib/recordevents/observer"
 	"knative.dev/eventing/test/lib/recordevents/recorder_vent"
@@ -57,7 +58,7 @@ func main() {
 		counter := dropevents.CounterHandler{
 			Skipper: skipper,
 		}
-		err = obs.Start(ctx, func(handler http.Handler) http.Handler {
+		err = obs.Start(ctx, kncloudevents.CreateHandler, func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 				if counter.Skip() {
 					writer.WriteHeader(http.StatusConflict)
@@ -67,7 +68,7 @@ func main() {
 			})
 		})
 	} else {
-		err = obs.Start(ctx)
+		err = obs.Start(ctx, kncloudevents.CreateHandler)
 	}
 
 	if err != nil {
