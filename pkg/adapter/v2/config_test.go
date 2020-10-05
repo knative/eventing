@@ -35,7 +35,8 @@ func TestEnvConfig(t *testing.T) {
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("K_TRACING_CONFIG", "tracing")
 	os.Setenv("K_LEADER_ELECTION_CONFIG", "leaderelection")
-	os.Setenv("MODE", "mymode") // note: custom to this test impl
+	os.Setenv("MODE", "mymode")        // note: custom to this test impl
+	os.Setenv("K_SINK_TIMEOUT", "999") // note: custom to this test impl
 
 	defer func() {
 		os.Unsetenv("K_SINK")
@@ -45,6 +46,7 @@ func TestEnvConfig(t *testing.T) {
 		os.Unsetenv("K_TRACING_CONFIG")
 		os.Unsetenv("K_LEADER_ELECTION_CONFIG")
 		os.Unsetenv("MODE")
+		os.Unsetenv("K_SINK_TIMEOUT")
 	}()
 
 	var env myEnvConfig
@@ -63,6 +65,13 @@ func TestEnvConfig(t *testing.T) {
 
 	if env.LeaderElectionConfigJson != "leaderelection" {
 		t.Error("Expected LeaderElectionConfigJson leaderelection, got:", env.LeaderElectionConfigJson)
+	}
+
+	if sinkTimeout := GetSinkTimeout(nil); sinkTimeout != 999 {
+		t.Error("Expected GetSinkTimeout to be 999, got:", sinkTimeout)
+	}
+	if env.EnvSinkTimeout != 999 {
+		t.Error("Expected env.EnvSinkTimeout to be 999, got:", env.EnvSinkTimeout)
 	}
 
 }

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/system"
 
@@ -197,6 +198,7 @@ func TestAllCases(t *testing.T) {
 func MakeMTAdapter() *appsv1.Deployment {
 	args := resources.Args{
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
+		SinkTimeout:     adapter.GetSinkTimeout(nil),
 	}
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{

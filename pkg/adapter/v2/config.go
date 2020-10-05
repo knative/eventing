@@ -17,6 +17,8 @@ package adapter
 
 import (
 	"encoding/json"
+	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
@@ -43,6 +45,7 @@ const (
 	EnvConfigLoggingConfig        = "K_LOGGING_CONFIG"
 	EnvConfigTracingConfig        = "K_TRACING_CONFIG"
 	EnvConfigLeaderElectionConfig = "K_LEADER_ELECTION_CONFIG"
+	EnvSinkTimeout                = "K_SINK_TIMEOUT"
 )
 
 // EnvConfig is the minimal set of configuration parameters
@@ -85,6 +88,9 @@ type EnvConfig struct {
 
 	// LeaderElectionConfigJson is the leader election component configuration.
 	LeaderElectionConfigJson string `envconfig:"K_LEADER_ELECTION_CONFIG"`
+
+	// Time in seconds to wait for sink to respond
+	EnvSinkTimeout int `envconfig:"K_SINK_TIMEOUT"`
 }
 
 // EnvConfigAccessor defines accessors for the minimal
@@ -114,6 +120,9 @@ type EnvConfigAccessor interface {
 
 	// GetLeaderElectionConfig returns leader election configuration.
 	GetLeaderElectionConfig() (*kle.ComponentConfig, error)
+
+	// Get the name of the adapter.
+	GetSinktimeout() int
 }
 
 var _ EnvConfigAccessor = (*EnvConfig)(nil)
@@ -156,6 +165,10 @@ func (e *EnvConfig) GetNamespace() string {
 
 func (e *EnvConfig) GetName() string {
 	return e.Name
+}
+
+func (e *EnvConfig) GetSinktimeout() int {
+	return e.EnvSinkTimeout
 }
 
 func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) error {
@@ -208,4 +221,20 @@ func LeaderElectionComponentConfigToJson(cfg *kle.ComponentConfig) (string, erro
 
 	jsonCfg, err := json.Marshal(cfg)
 	return string(jsonCfg), err
+}
+
+func GetSinkTimeout(logger *zap.SugaredLogger) int {
+	str := os.Getenv(EnvSinkTimeout)
+	if str != "" {
+		var err error
+		duration, err := strconv.Atoi(str)
+		if err != nil || duration < 0 {
+			if logger != nil {
+				logger.Errorf("%s environment value is invalid. It must be a integer greater than zero. (got %s)", EnvSinkTimeout, str)
+			}
+			return -1
+		}
+		return duration
+	}
+	return -1
 }
