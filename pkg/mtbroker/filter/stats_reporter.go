@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"go.opencensus.io/resource"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -65,9 +66,6 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	namespaceKey         = tag.MustNewKey(metricskey.LabelNamespaceName)
-	triggerKey           = tag.MustNewKey(metricskey.LabelTriggerName)
-	brokerKey            = tag.MustNewKey(metricskey.LabelBrokerName)
 	triggerFilterTypeKey = tag.MustNewKey(metricskey.LabelFilterType)
 	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
 	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
@@ -115,19 +113,19 @@ func register() {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
 			Description: processingTimeInMsecM.Description(),
 			Measure:     processingTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{triggerFilterTypeKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 	)
 	if err != nil {
@@ -173,24 +171,22 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 }
 
 func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
+	ctx := metricskey.WithResource(emptyContext, resource.Resource{
+		Type: metricskey.ResourceTypeKnativeTrigger,
+		Labels: map[string]string{
+			metricskey.LabelNamespaceName: args.ns,
+			metricskey.LabelBrokerName:    args.broker,
+			metricskey.LabelTriggerName:   args.trigger,
+		},
+	})
 	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
 	ctx, err := tag.New(
-		emptyContext,
-		tag.Insert(broker.ContainerTagKey, r.container),
-		tag.Insert(broker.UniqueTagKey, r.uniqueName),
-		tag.Insert(namespaceKey, args.ns),
-		tag.Insert(triggerKey, args.trigger),
-		tag.Insert(brokerKey, args.broker),
-		tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)))
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range tags {
-		ctx, err = tag.New(ctx, t)
-		if err != nil {
-			return nil, err
-		}
-	}
+		ctx,
+		append(tags,
+			tag.Insert(broker.ContainerTagKey, r.container),
+			tag.Insert(broker.UniqueTagKey, r.uniqueName),
+			tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)),
+		)...)
 	return ctx, err
 }
 

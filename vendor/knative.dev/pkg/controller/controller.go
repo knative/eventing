@@ -266,7 +266,7 @@ func (c *Impl) EnqueueAfter(obj interface{}, after time.Duration) {
 func (c *Impl) EnqueueSlowKey(key types.NamespacedName) {
 	c.workQueue.SlowLane().Add(key)
 	c.logger.With(zap.String(logkey.Key, key.String())).
-		Debugf("Adding to the slow queue %s (depth(total/slow): %d/%d)",
+		Infof("Adding to the slow queue %s (depth(total/slow): %d/%d)",
 			safeKey(key), c.workQueue.Len(), c.workQueue.SlowLane().Len())
 }
 
@@ -400,6 +400,7 @@ func (c *Impl) EnqueueKey(key types.NamespacedName) {
 // MaybeEnqueueBucketKey takes a Bucket and namespace/name string and puts it onto
 // the slow work queue.
 func (c *Impl) MaybeEnqueueBucketKey(bkt reconciler.Bucket, key types.NamespacedName) {
+	c.logger.Infof("Enqueueing bucket key")
 	if bkt.Has(key) {
 		c.EnqueueSlowKey(key)
 	}
@@ -455,7 +456,7 @@ func (c *Impl) RunContext(ctx context.Context, threadiness int) error {
 
 	c.logger.Info("Started workers")
 	<-ctx.Done()
-	c.logger.Info("Shutting down workers")
+	c.logger.Infow("Shutting down workers", "err", ctx.Err())
 
 	return nil
 }

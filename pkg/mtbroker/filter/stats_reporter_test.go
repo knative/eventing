@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opencensus.io/resource"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
@@ -39,12 +40,9 @@ func TestStatsReporter(t *testing.T) {
 	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelTriggerName:   "testtrigger",
-		metricskey.LabelBrokerName:    "testbroker",
-		metricskey.LabelFilterType:    "testeventtype",
-		broker.LabelContainerName:     "testcontainer",
-		broker.LabelUniqueName:        "testpod",
+		metricskey.LabelFilterType: "testeventtype",
+		broker.LabelContainerName:  "testcontainer",
+		broker.LabelUniqueName:     "testpod",
 	}
 
 	wantAllTags := map[string]string{}
@@ -54,6 +52,15 @@ func TestStatsReporter(t *testing.T) {
 	wantAllTags[metricskey.LabelResponseCode] = "202"
 	wantAllTags[metricskey.LabelResponseCodeClass] = "2xx"
 
+	resource := resource.Resource{
+		Type: metricskey.ResourceTypeKnativeTrigger,
+		Labels: map[string]string{
+			metricskey.LabelNamespaceName: "testns",
+			metricskey.LabelTriggerName:   "testtrigger",
+			metricskey.LabelBrokerName:    "testbroker",
+		},
+	}
+
 	// test ReportEventCount
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
@@ -61,6 +68,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
+	metricstest.AssertMetric(t, metricstest.IntMetric("event_count", 2, wantAllTags).WithResource(&resource))
 	metricstest.CheckCountData(t, "event_count", wantAllTags, 2)
 
 	// test ReportEventDispatchTime
@@ -70,6 +78,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
+	metricstest.AssertMetric(t, metricstest.DistributionCountOnlyMetric("event_dispatch_latencies", 2, wantAllTags).WithResource(&resource))
 	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantAllTags, 2, 1100.0, 9100.0)
 
 	// test ReportEventProcessingTime
@@ -79,6 +88,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventProcessingTime(args, 8000*time.Millisecond)
 	})
+	metricstest.AssertMetric(t, metricstest.DistributionCountOnlyMetric("event_processing_latencies", 2, wantTags))
 	metricstest.CheckDistributionData(t, "event_processing_latencies", wantTags, 2, 1000.0, 8000.0)
 }
 
@@ -95,14 +105,20 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelTriggerName:       "testtrigger",
-		metricskey.LabelBrokerName:        "testbroker",
 		metricskey.LabelFilterType:        anyValue,
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
 		broker.LabelContainerName:         "testcontainer",
 		broker.LabelUniqueName:            "testpod",
+	}
+
+	resource := resource.Resource{
+		Type: metricskey.ResourceTypeKnativeTrigger,
+		Labels: map[string]string{
+			metricskey.LabelNamespaceName: "testns",
+			metricskey.LabelTriggerName:   "testtrigger",
+			metricskey.LabelBrokerName:    "testbroker",
+		},
 	}
 
 	// test ReportEventCount
@@ -118,7 +134,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
-	metricstest.CheckCountData(t, "event_count", wantTags, 4)
+	metricstest.AssertMetric(t, metricstest.IntMetric("event_count", 4, wantTags).WithResource(&resource))
 }
 
 func expectSuccess(t *testing.T, f func() error) {
