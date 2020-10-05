@@ -60,6 +60,11 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 	if dlse := ds.DeadLetterSink.Validate(ctx); dlse != nil {
 		errs = errs.Also(dlse).ViaField("deadLetterSink")
 	}
+
+	if ds.Retry != nil && *ds.Retry < 0 {
+		errs = errs.Also(apis.ErrInvalidValue(*ds.Retry, "retry"))
+	}
+
 	if ds.BackoffPolicy != nil {
 		switch *ds.BackoffPolicy {
 		case BackoffPolicyExponential, BackoffPolicyLinear:
@@ -68,6 +73,7 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffPolicy, "backoffPolicy"))
 		}
 	}
+
 	if ds.BackoffDelay != nil {
 		_, te := period.Parse(*ds.BackoffDelay)
 		if te != nil {
