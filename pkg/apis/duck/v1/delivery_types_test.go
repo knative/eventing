@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -63,6 +64,18 @@ func TestDeliverySpecValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			return apis.ErrGeneric("invalid value: "+invalidBackoffDelay, "backoffDelay")
 		}(),
+	}, {
+		name: "negative retry",
+		spec: &DeliverySpec{Retry: pointer.Int32Ptr(-1)},
+		want: func() *apis.FieldError {
+			return apis.ErrGeneric("invalid value: -1", "retry")
+		}(),
+	}, {
+		name: "valid retry 0",
+		spec: &DeliverySpec{Retry: pointer.Int32Ptr(0)},
+	}, {
+		name: "valid retry 1",
+		spec: &DeliverySpec{Retry: pointer.Int32Ptr(1)},
 	}}
 
 	for _, test := range tests {
