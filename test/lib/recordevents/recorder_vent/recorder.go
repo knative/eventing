@@ -26,11 +26,6 @@ import (
 	"knative.dev/eventing/test/lib/recordevents"
 )
 
-const (
-	// EventReason is the Kubernetes event reason used for observed events.
-	EventReason = "CloudEventObserved"
-)
-
 type recorder struct {
 	out record.EventRecorder
 	on  runtime.Object
@@ -42,7 +37,7 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 		return err
 	}
 
-	r.out.Eventf(r.on, corev1.EventTypeNormal, EventReason, "%s", string(b))
+	r.out.Eventf(r.on, corev1.EventTypeNormal, recordevents.CloudEventObservedReason, "%s", string(b))
 
 	return nil
 }

@@ -67,7 +67,7 @@ func tracingTest(
 	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true)
 
 	// Start the event info store and assert the event was received correctly
-	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
+	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName, client.Namespace)
 	if err != nil {
 		t.Fatal("Pod tracker failed:", err)
 	}
