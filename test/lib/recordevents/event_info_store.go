@@ -60,7 +60,7 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 	))
 	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
 
-	eventRecordPod := resources.EventRecordPod(name, client.Namespace, name)
+	eventRecordPod := EventRecordPod(name, client.Namespace, name)
 	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(name))...)
 	err := pkgTest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
