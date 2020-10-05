@@ -38,6 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error while reading the cfg", err)
 	}
+	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
 	ctx := sharedmain.EnableInjectionOrDie(nil, cfg)
 
 	logger, _ := zap.NewDevelopment()
