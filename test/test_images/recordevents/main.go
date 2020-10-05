@@ -36,13 +36,13 @@ import (
 func main() {
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Error while reading the cfg: %s", err)
+		log.Fatal("Error while reading the cfg", err)
 	}
 	ctx := sharedmain.EnableInjectionOrDie(nil, cfg)
 
 	logger, _ := zap.NewDevelopment()
 	if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
-		log.Fatalf("Unable to setup trace publishing: %v", err)
+		log.Fatal("Unable to setup trace publishing", err)
 	}
 
 	obs := observer.NewFromEnv(
@@ -70,6 +70,6 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatalf("Error during start: %s", err)
+		log.Fatal("Error during start", err)
 	}
 }

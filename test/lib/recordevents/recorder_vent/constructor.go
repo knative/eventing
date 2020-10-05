@@ -22,6 +22,7 @@ import (
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 
 	"knative.dev/pkg/system"
 
@@ -55,12 +56,12 @@ type envConfig struct {
 func NewFromEnv(ctx context.Context) recordevents.EventLog {
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Fatalf("[ERROR] Failed to process env var: %s", err)
+		log.Fatal("Failed to process env var", err)
 	}
 
 	var ref duckv1.KReference
 	if err := json.Unmarshal([]byte(env.EventOn), &ref); err != nil {
-		log.Fatalf("[ERROR] Failed to process env var [K8S_EVENT_SINK]: %s", err)
+		log.Fatal("Failed to process env var [K8S_EVENT_SINK]", err)
 	}
 
 	return NewEventLog(ctx, env.AgentName, ref)
@@ -70,7 +71,7 @@ func NewEventLog(ctx context.Context, agentName string, ref duckv1.KReference) r
 
 	gv, err := schema.ParseGroupVersion(ref.APIVersion)
 	if err != nil {
-		logging.FromContext(ctx).Fatalf("failed to parse group version, %s", err)
+		logging.FromContext(ctx).Fatalw("Failed to parse group version", zap.Error(err))
 	}
 
 	logging.FromContext(ctx).Infof("Going to send events to %+v", ref)

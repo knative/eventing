@@ -54,7 +54,7 @@ type envConfig struct {
 func NewFromEnv(eventLogs ...recordevents.EventLog) *Observer {
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Fatalf("[ERROR] Failed to process env var: %s", err)
+		log.Fatal("Failed to process env var", err)
 	}
 
 	return New(env.ObserverName, eventLogs...)
