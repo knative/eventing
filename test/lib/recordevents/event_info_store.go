@@ -19,6 +19,7 @@ package recordevents
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -245,6 +246,7 @@ func (ei *EventInfoStore) AssertAtLeast(min int, matchers ...EventInfoMatcher) [
 	if err != nil {
 		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
+	ei.logAssertCompleted()
 	return events
 }
 
@@ -255,7 +257,7 @@ func (ei *EventInfoStore) AssertInRange(min int, max int, matchers ...EventInfoM
 	if max > 0 && len(events) > max {
 		ei.tb.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
-
+	ei.logAssertCompleted()
 	return events
 }
 
@@ -272,14 +274,16 @@ func (ei *EventInfoStore) AssertNot(matchers ...EventInfoMatcher) []EventInfo {
 			fmt.Errorf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
-
+	ei.logAssertCompleted()
 	return res
 }
 
 // Assert that there are exactly n matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertExact(n int, matchers ...EventInfoMatcher) []EventInfo {
-	return ei.AssertInRange(n, n, matchers...)
+	events := ei.AssertInRange(n, n, matchers...)
+	ei.logAssertCompleted()
+	return events
 }
 
 // Wait a long time (currently 4 minutes) until the provided function matches at least
@@ -312,6 +316,15 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 		return true, nil
 	})
 	return matchRet, internalErr
+}
+
+// This function prints the place where the assert was invoked
+func (ei *EventInfoStore) logAssertCompleted() {
+	const depth = 1
+	var pcs [depth]uintptr
+	_ = runtime.Callers(3, pcs[:])
+	f := errors.Frame(pcs[0])
+	ei.tb.Logf("Assert passed: %n at %v", f, f)
 }
 
 func formatErrors(errs []error) string {
