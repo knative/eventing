@@ -38,5 +38,5 @@ func init() {
 func main() {
 	flag.Parse()
 
-	infra.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers), receiver.EventTypeExtractor, receiver.EventIdExtractor)
+	infra.StartPerformanceImage(sender.NewHTTPLoadGeneratorFactory(sinkURL, minWorkers), receiver.EventTypeExtractor, receiver.EventIdExtractor)
 }
