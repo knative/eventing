@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"testing"
 
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+
 	"knative.dev/pkg/tracker"
 
 	"github.com/google/go-cmp/cmp"
@@ -46,7 +48,7 @@ func TestSinkBindingConversionBadType(t *testing.T) {
 }
 
 func TestSinkBindingConversionRoundTripUp(t *testing.T) {
-	versions := []apis.Convertible{&v1beta1.SinkBinding{}, &v1alpha2.SinkBinding{}}
+	versions := []apis.Convertible{&v1.SinkBinding{}, &v1beta1.SinkBinding{}, &v1alpha2.SinkBinding{}}
 
 	path := apis.HTTP("")
 	path.Path = "/path"

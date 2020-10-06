@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// ApiServerSources returns a ApiServerSourceInformer.
 	ApiServerSources() ApiServerSourceInformer
+	// SinkBindings returns a SinkBindingInformer.
+	SinkBindings() SinkBindingInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // ApiServerSources returns a ApiServerSourceInformer.
 func (v *version) ApiServerSources() ApiServerSourceInformer {
 	return &apiServerSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// SinkBindings returns a SinkBindingInformer.
+func (v *version) SinkBindings() SinkBindingInformer {
+	return &sinkBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

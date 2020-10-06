@@ -31,6 +31,10 @@ func TestTypesImplements(t *testing.T) {
 		// ApiServerSource
 		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
 		{instance: &ApiServerSource{}, iface: &duckv1.Source{}},
+		// SinkBinding
+		{instance: &SinkBinding{}, iface: &duckv1.Conditions{}},
+		{instance: &SinkBinding{}, iface: &duckv1.Source{}},
+		{instance: &SinkBinding{}, iface: &duckv1.Binding{}},
 	}
 	for _, tc := range testCases {
 		if err := duck.VerifyType(tc.instance, tc.iface); err != nil {
