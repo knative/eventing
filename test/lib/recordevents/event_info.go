@@ -41,6 +41,7 @@ type EventInfo struct {
 	Origin      string              `json:"origin,omitempty"`
 	Observer    string              `json:"observer,omitempty"`
 	Time        time.Time           `json:"time,omitempty"`
+	Sequence    uint64              `json:"sequence"`
 }
 
 // Pretty print the event. Meant for debugging.  This formats the validation error

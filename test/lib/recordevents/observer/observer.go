@@ -19,6 +19,7 @@ package observer
 import (
 	"context"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
@@ -35,7 +36,9 @@ type Observer struct {
 	// Name is the name of this Observer, used to filter if multiple observers.
 	Name string
 	// EventLogs is the list of EventLog implementors to vent observed events.
-	EventLogs []recordevents.EventLog
+	EventLogs recordevents.EventLogs
+
+	seq uint64
 }
 
 // New returns an observer that will vent observations to the list of provided
@@ -92,22 +95,21 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
 	header := request.Header
 
-	for _, el := range o.EventLogs {
-		eventErrStr := ""
-		if eventErr != nil {
-			eventErrStr = eventErr.Error()
-		}
-		err := el.Vent(recordevents.EventInfo{
-			Error:       eventErrStr,
-			Event:       event,
-			HTTPHeaders: header,
-			Origin:      request.RemoteAddr,
-			Observer:    o.Name,
-			Time:        time.Now(),
-		})
-		if err != nil {
-			log.Warn("Error while venting the recorded event", err)
-		}
+	eventErrStr := ""
+	if eventErr != nil {
+		eventErrStr = eventErr.Error()
+	}
+	err := o.EventLogs.Vent(recordevents.EventInfo{
+		Error:       eventErrStr,
+		Event:       event,
+		HTTPHeaders: header,
+		Origin:      request.RemoteAddr,
+		Observer:    o.Name,
+		Time:        time.Now(),
+		Sequence:    atomic.AddUint64(&o.seq, 1),
+	})
+	if err != nil {
+		log.Warn("Error while venting the recorded event", err)
 	}
 
 	writer.WriteHeader(http.StatusAccepted)

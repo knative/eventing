@@ -19,6 +19,7 @@ package recorder_vent
 import (
 	"context"
 	"log"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/system"
@@ -73,10 +74,19 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 		// Create event broadcaster
 		logger.Debug("Creating event broadcaster")
 		eventBroadcaster := record.NewBroadcasterWithCorrelatorOptions(record.CorrelatorOptions{
-			MessageFunc: func(event *corev1.Event) string {
-				return event.Message
+			KeyFunc: func(event *corev1.Event) (aggregateKey string, localKey string) {
+				return strings.Join([]string{
+					event.Source.Component,
+					event.Source.Host,
+					event.InvolvedObject.Kind,
+					event.InvolvedObject.Namespace,
+					event.InvolvedObject.Name,
+					string(event.InvolvedObject.UID),
+					event.InvolvedObject.APIVersion,
+					event.Type,
+					event.Reason,
+				}, ""), string(event.UID)
 			},
-			MaxEvents: 1,
 		})
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),

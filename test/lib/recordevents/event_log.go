@@ -20,3 +20,14 @@ package recordevents
 type EventLog interface {
 	Vent(observed EventInfo) error
 }
+
+type EventLogs []EventLog
+
+func (e EventLogs) Vent(observed EventInfo) error {
+	for _, el := range e {
+		if err := el.Vent(observed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
