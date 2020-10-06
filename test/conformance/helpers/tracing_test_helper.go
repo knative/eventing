@@ -107,6 +107,6 @@ func getTraceIDHeader(t *testing.T, evInfos []recordevents.EventInfo) string {
 			}
 		}
 	}
-	t.Fatalf("FAIL: No traceid in %d messages: (%s)", len(evInfos), evInfos)
+	t.Fatalf("FAIL: No traceid in %d messages: (%v)", len(evInfos), evInfos)
 	return ""
 }
