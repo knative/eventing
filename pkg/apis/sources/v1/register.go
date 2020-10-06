@@ -49,6 +49,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ApiServerSourceList{},
 		&SinkBinding{},
 		&SinkBindingList{},
+		&ContainerSource{},
+		&ContainerSourceList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

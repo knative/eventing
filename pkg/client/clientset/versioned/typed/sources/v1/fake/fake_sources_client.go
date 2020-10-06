@@ -32,6 +32,10 @@ func (c *FakeSourcesV1) ApiServerSources(namespace string) v1.ApiServerSourceInt
 	return &FakeApiServerSources{c, namespace}
 }
 
+func (c *FakeSourcesV1) ContainerSources(namespace string) v1.ContainerSourceInterface {
+	return &FakeContainerSources{c, namespace}
+}
+
 func (c *FakeSourcesV1) SinkBindings(namespace string) v1.SinkBindingInterface {
 	return &FakeSinkBindings{c, namespace}
 }
