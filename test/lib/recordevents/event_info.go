@@ -33,14 +33,14 @@ const (
 type EventInfo struct {
 	// Set if the http request received by the pod couldn't be decoded or
 	// didn't pass validation
-	Error string `json:"error"`
+	Error string `json:"error,omitempty"`
 	// Event received if the cloudevent received by the pod passed validation
-	Event *cloudevents.Event `json:"event"`
+	Event *cloudevents.Event `json:"event,omitempty"`
 	// HTTPHeaders of the connection that delivered the event
-	HTTPHeaders map[string][]string `json:"httpHeaders"`
-	Origin      string              `json:"origin"`
-	Observer    string              `json:"observer"`
-	Time        time.Time           `json:"time"`
+	HTTPHeaders map[string][]string `json:"httpHeaders,omitempty"`
+	Origin      string              `json:"origin,omitempty"`
+	Observer    string              `json:"observer,omitempty"`
+	Time        time.Time           `json:"time,omitempty"`
 }
 
 // Pretty print the event. Meant for debugging.  This formats the validation error

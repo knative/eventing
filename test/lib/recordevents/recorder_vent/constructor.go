@@ -18,28 +18,20 @@ package recorder_vent
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
-	"go.uber.org/zap"
-
 	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/test/lib/recordevents"
@@ -47,10 +39,8 @@ import (
 
 type envConfig struct {
 	AgentName string `envconfig:"AGENT_NAME" default:"observer-default" required:"true"`
-	EventOn   string `envconfig:"K8S_EVENT_SINK" required:"true"`
-
-	Port int    `envconfig:"PORT" default:"8080" required:"true"`
-	Sink string `envconfig:"K_SINK"`
+	PodName   string `envconfig:"POD_NAME" required:"true"`
+	Port      int    `envconfig:"PORT" default:"8080" required:"true"`
 }
 
 func NewFromEnv(ctx context.Context) recordevents.EventLog {
@@ -59,34 +49,18 @@ func NewFromEnv(ctx context.Context) recordevents.EventLog {
 		log.Fatal("Failed to process env var", err)
 	}
 
-	var ref duckv1.KReference
-	if err := json.Unmarshal([]byte(env.EventOn), &ref); err != nil {
-		log.Fatal("Failed to process env var [K8S_EVENT_SINK]", err)
-	}
+	logging.FromContext(ctx).Infof("Environment configuration: %+v", env)
 
-	return NewEventLog(ctx, env.AgentName, ref)
+	return NewEventLog(ctx, env.AgentName, env.PodName)
 }
 
-func NewEventLog(ctx context.Context, agentName string, ref duckv1.KReference) recordevents.EventLog {
-
-	gv, err := schema.ParseGroupVersion(ref.APIVersion)
+func NewEventLog(ctx context.Context, agentName string, podName string) recordevents.EventLog {
+	on, err := kubeclient.Get(ctx).CoreV1().Pods(system.Namespace()).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
-		logging.FromContext(ctx).Fatalw("Failed to parse group version", zap.Error(err))
+		logging.FromContext(ctx).Fatal("Error while trying to retrieve the pod", err)
 	}
 
-	logging.FromContext(ctx).Infof("Going to send events to %+v", ref)
-
-	gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(ref.Kind))
-
-	var on runtime.Object
-	if ref.Namespace == "" {
-		on, err = dynamicclient.Get(ctx).Resource(gvr).Get(ctx, ref.Name, metav1.GetOptions{})
-	} else {
-		on, err = dynamicclient.Get(ctx).Resource(gvr).Namespace(ref.Namespace).Get(ctx, ref.Name, metav1.GetOptions{})
-	}
-	if err != nil {
-		logging.FromContext(ctx).Fatalf("failed to fetch object ref, %+v, %s", ref, err)
-	}
+	logging.FromContext(ctx).Infof("Going to send events to %s", on.ObjectMeta.String())
 
 	return &recorder{out: createRecorder(ctx, agentName), on: on}
 }

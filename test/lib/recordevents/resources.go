@@ -17,8 +17,6 @@ limitations under the License.
 package recordevents
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -26,11 +24,11 @@ import (
 )
 
 // EventRecordPod creates a Pod that stores received events for test retrieval.
-func EventRecordPod(name string, namespace string, serviceAccountName string) *corev1.Pod {
-	return recordEventsPod("recordevents", name, namespace, serviceAccountName)
+func EventRecordPod(name string, serviceAccountName string) *corev1.Pod {
+	return recordEventsPod("recordevents", name, serviceAccountName)
 }
 
-func recordEventsPod(imageName string, name string, namespace string, serviceAccountName string) *corev1.Pod {
+func recordEventsPod(imageName string, name string, serviceAccountName string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -42,14 +40,18 @@ func recordEventsPod(imageName string, name string, namespace string, serviceAcc
 				Image:           test.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
 				Env: []corev1.EnvVar{{
-					Name:  "SYSTEM_NAMESPACE",
-					Value: namespace,
+					Name: "SYSTEM_NAMESPACE",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+					},
 				}, {
 					Name:  "OBSERVER",
 					Value: "recorder-" + name,
 				}, {
-					Name:  "K8S_EVENT_SINK",
-					Value: fmt.Sprintf("{\"apiVersion\": \"corev1\", \"kind\": \"Pod\", \"name\": \"%s\", \"namespace\": \"%s\"}", name, namespace),
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
+					},
 				}},
 			}},
 			ServiceAccountName: serviceAccountName,
