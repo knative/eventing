@@ -241,27 +241,31 @@ func (ei *EventInfoStore) Find(matchers ...EventInfoMatcher) ([]EventInfo, Searc
 // Assert that there are at least min number of match for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertAtLeast(min int, matchers ...EventInfoMatcher) []EventInfo {
+	ei.tb.Helper()
 	events, err := ei.waitAtLeastNMatch(AllOf(matchers...), min)
 	if err != nil {
 		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
+	ei.tb.Logf("Assert passed")
 	return events
 }
 
 // Assert that there are at least min number of matches and at most max number of matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertInRange(min int, max int, matchers ...EventInfoMatcher) []EventInfo {
+	ei.tb.Helper()
 	events := ei.AssertAtLeast(min, matchers...)
 	if max > 0 && len(events) > max {
 		ei.tb.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
-
+	ei.tb.Logf("Assert passed")
 	return events
 }
 
 // Assert that there aren't any matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertNot(matchers ...EventInfoMatcher) []EventInfo {
+	ei.tb.Helper()
 	res, recentEvents, _, err := ei.Find(matchers...)
 	if err != nil {
 		ei.tb.Fatalf("Unexpected error during find on recordevents '%s': %+v", ei.podName, errors.WithStack(err))
@@ -272,14 +276,17 @@ func (ei *EventInfoStore) AssertNot(matchers ...EventInfoMatcher) []EventInfo {
 			fmt.Errorf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
-
+	ei.tb.Logf("Assert passed")
 	return res
 }
 
 // Assert that there are exactly n matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertExact(n int, matchers ...EventInfoMatcher) []EventInfo {
-	return ei.AssertInRange(n, n, matchers...)
+	ei.tb.Helper()
+	events := ei.AssertInRange(n, n, matchers...)
+	ei.tb.Logf("Assert passed")
+	return events
 }
 
 // Wait a long time (currently 4 minutes) until the provided function matches at least
