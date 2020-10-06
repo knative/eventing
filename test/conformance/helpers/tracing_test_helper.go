@@ -65,7 +65,7 @@ func tracingTest(
 	expectedTestSpan, eventMatcher := setupInfrastructure(t, &channel, client, recordEventsPodName, true)
 
 	// Start the event info store and assert the event was received correctly
-	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName)
+	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName, client.Namespace)
 	if err != nil {
 		t.Fatalf("Pod tracker failed: %v", err)
 	}
@@ -105,6 +105,6 @@ func getTraceIDHeader(t *testing.T, evInfos []recordevents.EventInfo) string {
 			}
 		}
 	}
-	t.Fatalf("FAIL: No traceid in %d messages: (%s)", len(evInfos), evInfos)
+	t.Fatalf("FAIL: No traceid in %d messages: (%v)", len(evInfos), evInfos)
 	return ""
 }

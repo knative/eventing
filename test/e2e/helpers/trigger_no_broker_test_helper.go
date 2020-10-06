@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -40,8 +41,8 @@ func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreat
 	brokerName := strings.ToLower(channel)
 
 	subscriberName := "dumper-empty"
-	eventRecordPod := resources.EventRecordPod(subscriberName)
-	client.CreatePodOrFail(eventRecordPod, testlib.WithService(subscriberName))
+	recordevents.DeployEventRecordOrFail(context.TODO(), client, subscriberName)
+
 	client.CreateTriggerOrFailV1Beta1("testtrigger",
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
 		resources.WithBrokerV1Beta1(brokerName),

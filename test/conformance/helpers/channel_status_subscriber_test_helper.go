@@ -22,6 +22,7 @@ import (
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -56,8 +57,7 @@ func channelHasRequiredSubscriberStatus(st *testing.T, client *testlib.Client, c
 	client.CreateChannelOrFail(channelName, &channel)
 	client.WaitForResourceReadyOrFail(channelName, &channel)
 
-	pod := resources.EventRecordPod(subscriberServiceName + "-pod")
-	client.CreatePodOrFail(pod, testlib.WithService(subscriberServiceName))
+	_ = recordevents.DeployEventRecordOrFail(context.TODO(), client, subscriberServiceName+"-pod")
 
 	subscription := client.CreateSubscriptionOrFail(
 		subscriberServiceName,

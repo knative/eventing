@@ -37,28 +37,6 @@ type PodOption func(*corev1.Pod)
 // Option enables further configuration of a Role.
 type RoleOption func(*rbacv1.Role)
 
-// EventRecordPod creates a Pod that stores received events for test retrieval.
-func EventRecordPod(name string) *corev1.Pod {
-	return eventLoggerPod("recordevents", name)
-}
-
-func eventLoggerPod(imageName string, name string) *corev1.Pod {
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name:            imageName,
-				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
-			}},
-			RestartPolicy: corev1.RestartPolicyAlways,
-		},
-	}
-}
-
 // EventTransformationPod creates a Pod that transforms events received receiving as arg a cloudevents sdk2 Event
 func EventTransformationPod(name string, newEventType string, newEventSource string, newEventData []byte) *corev1.Pod {
 	const imageName = "transformevents"

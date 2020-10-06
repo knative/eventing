@@ -47,6 +47,8 @@ type Client struct {
 	Dynamic       dynamic.Interface
 	Config        *rest.Config
 
+	EventListener *EventListener
+
 	Namespace string
 	T         *testing.T
 	Tracker   *Tracker
@@ -91,6 +93,10 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	client.Namespace = namespace
 	client.T = t
 	client.Tracker = NewTracker(t, client.Dynamic)
+
+	// Start informer
+	client.EventListener = NewEventListener(client.Kube.Kube, client.Namespace, client.T.Logf)
+	client.Cleanup(client.EventListener.Stop)
 
 	client.tracingEnv, err = getTracingConfig(client.Kube.Kube)
 	if err != nil {
