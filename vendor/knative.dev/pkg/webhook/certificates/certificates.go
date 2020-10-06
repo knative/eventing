@@ -52,12 +52,10 @@ var _ pkgreconciler.LeaderAware = (*reconciler)(nil)
 
 // Reconcile implements controller.Reconciler
 func (r *reconciler) Reconcile(ctx context.Context, key string) error {
-	logging.FromContext(ctx).Infof("Reconciling cert", "key", key)
 	if r.IsLeaderFor(r.key) {
 		// only reconciler the certificate when we are leader.
 		return r.reconcileCertificate(ctx)
 	}
-	logging.FromContext(ctx).Warnf("Not leader", r.key)
 	return nil
 }
 
