@@ -25,6 +25,8 @@ source "$(dirname "$0")/e2e-common.sh"
 readonly PROBER_READY_FILE="/tmp/prober-ready"
 readonly PROBER_PIPE_FILE="/tmp/prober-signal"
 
+export E2E_UPGRADE_TESTS_SERVING_USE=true
+
 # Overrides
 
 function knative_setup {
