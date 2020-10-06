@@ -25,6 +25,7 @@ import (
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/common/log"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/test/lib/recordevents"
 )
@@ -69,7 +70,19 @@ func (o *Observer) Start(ctx context.Context, handlerFuncs ...func(handler http.
 		handler = dec(handler)
 	}
 
-	return http.ListenAndServe(":8080", handler)
+	server := &http.Server{Addr: ":8080", Handler: handler}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			logging.FromContext(ctx).Fatal("Error while starting the HTTP server", err)
+		}
+	}()
+
+	<-ctx.Done()
+
+	logging.FromContext(ctx).Info("Closing the HTTP server")
+
+	return server.Shutdown(ctx)
 }
 
 func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -89,7 +102,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 			Event:       event,
 			HTTPHeaders: header,
 			Origin:      request.RemoteAddr,
-			Observer:    "",
+			Observer:    o.Name,
 			Time:        time.Now(),
 		})
 		if err != nil {

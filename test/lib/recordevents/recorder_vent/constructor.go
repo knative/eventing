@@ -60,7 +60,7 @@ func NewEventLog(ctx context.Context, agentName string, podName string) recordev
 		logging.FromContext(ctx).Fatal("Error while trying to retrieve the pod", err)
 	}
 
-	logging.FromContext(ctx).Infof("Going to send events to ", on.ObjectMeta.String())
+	logging.FromContext(ctx).Infof("Going to send events to pod '%s' in namespace '%s'", on.Name, on.Namespace)
 
 	return &recorder{out: createRecorder(ctx, agentName), on: on}
 }
@@ -85,6 +85,7 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 			for _, w := range watches {
 				w.Stop()
 			}
+			logging.FromContext(ctx).Debug("Closed event-broadcaster")
 		}()
 	}
 

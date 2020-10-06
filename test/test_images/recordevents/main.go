@@ -21,16 +21,15 @@ import (
 	"net/http"
 	"os"
 
-	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/test/lib/dropevents"
 	"knative.dev/eventing/test/lib/recordevents/observer"
 	"knative.dev/eventing/test/lib/recordevents/recorder_vent"
-	"knative.dev/eventing/test/lib/recordevents/writer_vent"
 	"knative.dev/eventing/test/test_images"
 )
 
@@ -42,14 +41,12 @@ func main() {
 	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
 	ctx := sharedmain.EnableInjectionOrDie(nil, cfg)
 
-	logger, _ := zap.NewDevelopment()
-	if err := test_images.ConfigureTracing(logger.Sugar(), ""); err != nil {
-		log.Fatal("Unable to setup trace publishing", err)
+	if err := test_images.ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
+		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
 	}
 
 	obs := observer.NewFromEnv(
 		recorder_vent.NewFromEnv(ctx),
-		writer_vent.NewEventLog(ctx, os.Stdout),
 	)
 
 	algorithm, ok := os.LookupEnv(dropevents.SkipAlgorithmKey)
@@ -72,6 +69,8 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatal("Error during start", err)
+		logging.FromContext(ctx).Fatal("Error during start", err)
 	}
+
+	logging.FromContext(ctx).Info("Closing the recordevents process")
 }
