@@ -60,7 +60,7 @@ func NewEventLog(ctx context.Context, agentName string, podName string) recordev
 		logging.FromContext(ctx).Fatal("Error while trying to retrieve the pod", err)
 	}
 
-	logging.FromContext(ctx).Infof("Going to send events to %s", on.ObjectMeta.String())
+	logging.FromContext(ctx).Infof("Going to send events to ", on.ObjectMeta.String())
 
 	return &recorder{out: createRecorder(ctx, agentName), on: on}
 }
