@@ -82,7 +82,7 @@ func (o *Observer) Start(ctx context.Context, handlerFuncs ...func(handler http.
 
 	logging.FromContext(ctx).Info("Closing the HTTP server")
 
-	return server.Shutdown(ctx)
+	return server.Close()
 }
 
 func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
