@@ -72,7 +72,12 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 	if recorder == nil {
 		// Create event broadcaster
 		logger.Debug("Creating event broadcaster")
-		eventBroadcaster := record.NewBroadcaster()
+		eventBroadcaster := record.NewBroadcasterWithCorrelatorOptions(record.CorrelatorOptions{
+			MessageFunc: func(event *corev1.Event) string {
+				return event.Message
+			},
+			MaxEvents: 1,
+		})
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
 			eventBroadcaster.StartRecordingToSink(
