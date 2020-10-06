@@ -32,12 +32,16 @@ const (
 	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
 )
 
-// ApiServerSourceEventTypes is the list of CloudEvent types the ApiServerSource emits.
-var ApiServerSourceEventTypes = []string{
-	ApiServerSourceAddEventType,
-	ApiServerSourceDeleteEventType,
-	ApiServerSourceUpdateEventType,
+// ApiServerSourceEventReferenceModeTypes is the list of CloudEvent types the ApiServerSource with EventMode of ReferenceMode emits.
+var ApiServerSourceEventReferenceModeTypes = []string{
 	ApiServerSourceAddRefEventType,
 	ApiServerSourceDeleteRefEventType,
 	ApiServerSourceUpdateRefEventType,
+}
+
+// ApiServerSourceEventResourceModeTypes is the list of CloudEvent types the ApiServerSource with EventMode of ResourceMode emits.
+var ApiServerSourceEventResourceModeTypes = []string{
+	ApiServerSourceAddEventType,
+	ApiServerSourceDeleteEventType,
+	ApiServerSourceUpdateEventType,
 }

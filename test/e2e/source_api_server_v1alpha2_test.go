@@ -245,14 +245,14 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Verify that EventTypes were created.
-	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventTypes))
+	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventReferenceModeTypes))
 	if err != nil {
 		t.Fatal("Waiting for EventTypes:", err)
 	}
-	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventTypes...)
+	expectedCeTypes := sets.NewString(sources.ApiServerSourceEventReferenceModeTypes...)
 	for _, et := range eventTypes {
 		if !expectedCeTypes.Has(et.Spec.Type) {
-			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventTypes, et.Spec.Type)
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sources.ApiServerSourceEventReferenceModeTypes, et.Spec.Type)
 		}
 	}
 }
