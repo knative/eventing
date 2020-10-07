@@ -47,21 +47,21 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 	// Create The TestCases
 	testcases := []TestCase{
 		{
-			name:          "Successful Linear Backoff 2500ms",
+			name:          "Successful Linear Backoff 2500ms, 5 retries",
 			retry:         int32(5),
 			backoffPolicy: duckv1.BackoffPolicyLinear,
 			backoffDelay:  "PT2.5S",
 			expectedBackoffDurations: []time.Duration{
-				2500 * time.Millisecond,
-				2500 * time.Millisecond,
-				2500 * time.Millisecond,
-				2500 * time.Millisecond,
-				2500 * time.Millisecond,
+				1 * 2500 * time.Millisecond,
+				2 * 2500 * time.Millisecond,
+				3 * 2500 * time.Millisecond,
+				4 * 2500 * time.Millisecond,
+				5 * 2500 * time.Millisecond,
 			},
 			wantErr: false,
 		},
 		{
-			name:          "Successful Exponential Backoff 1500ms",
+			name:          "Successful Exponential Backoff 1500ms, 5 retries",
 			retry:         int32(5),
 			backoffPolicy: duckv1.BackoffPolicyExponential,
 			backoffDelay:  "PT1.5S",
@@ -75,7 +75,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:          "Successful Exponential Backoff 500ms",
+			name:          "Successful Exponential Backoff 500ms, 5 retries",
 			retry:         int32(5),
 			backoffPolicy: duckv1.BackoffPolicyExponential,
 			backoffDelay:  "PT0.5S",
