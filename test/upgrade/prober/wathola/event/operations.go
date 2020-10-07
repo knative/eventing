@@ -26,6 +26,7 @@ type FinishedStore interface {
 	RegisterFinished(finished *Finished)
 	State() State
 	Thrown() []string
+	InvalidEvents() map[string]int
 }
 
 // Typed says a type of an event

@@ -18,6 +18,7 @@ package sender
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/wavesoftware/go-ensure"
@@ -67,14 +68,14 @@ func (s *sender) SendContinually() {
 }
 
 // NewCloudEvent creates a new cloud event
-func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
+func NewCloudEvent(id string, data interface{}, typ string) cloudevents.Event {
 	e := cloudevents.NewEvent()
 	e.SetDataContentType("application/json")
 	e.SetType(typ)
 	host, err := os.Hostname()
 	ensure.NoError(err)
 	e.SetSource(fmt.Sprintf("knative://%s/wathola/sender", host))
-	e.SetID(NewEventID())
+	e.SetID(id)
 	e.SetTime(time.Now())
 	err = e.SetData(cloudevents.ApplicationJSON, data)
 	ensure.NoError(err)
@@ -102,7 +103,7 @@ func SendEvent(e cloudevents.Event, url string) error {
 
 func (s *sender) sendStep() error {
 	step := event.Step{Number: s.counter + 1}
-	ce := NewCloudEvent(step, event.StepType)
+	ce := NewCloudEvent(strconv.Itoa(step.Number), step, event.StepType)
 	url := senderConfig.Address
 	log.Infof("Sending step event #%v to %s", step.Number, url)
 	err := SendEvent(ce, url)
@@ -119,7 +120,7 @@ func (s *sender) sendFinished() {
 	}
 	finished := event.Finished{Count: s.counter}
 	url := senderConfig.Address
-	ce := NewCloudEvent(finished, event.FinishedType)
+	ce := NewCloudEvent(NewEventID(), finished, event.FinishedType)
 	log.Infof("Sending finished event (count: %v) to %s", finished.Count, url)
 	ensure.NoError(SendEvent(ce, url))
 }

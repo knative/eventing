@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
@@ -30,7 +31,7 @@ import (
 	"knative.dev/eventing/test/lib/nodes"
 )
 
-func (p *prober) Verify() ([]error, int) {
+func (p *Prober) Verify() Report {
 	nc := nodes.Client(p.client.Kube.Kube, p.log)
 	node, err := nc.RandomWorkerNode()
 	ensure.NoError(err)
@@ -42,15 +43,12 @@ func (p *prober) Verify() ([]error, int) {
 	if report.State == "active" {
 		panic(errors.New("report fetched to early, receiver is in active state"))
 	}
-	errs := make([]error, 0)
-	for _, t := range report.Thrown {
-		errs = append(errs, errors.New(t))
-	}
-	return errs, report.Events
+	return *report
 }
 
-func (p *prober) Finish(ctx context.Context) {
+func (p *Prober) Finish(ctx context.Context) {
 	p.removeSender(ctx)
+	p.waitAfterFinished()
 }
 
 func fetchReceiverReport(address *corev1.NodeAddress, log *zap.SugaredLogger) *Report {
@@ -77,7 +75,14 @@ func fetchReceiverReport(address *corev1.NodeAddress, log *zap.SugaredLogger) *R
 
 // Report represents a receiver JSON report
 type Report struct {
-	State  string   `json:"state"`
-	Events int      `json:"events"`
-	Thrown []string `json:"thrown"`
+	State         string         `json:"state"`
+	Events        int            `json:"events"`
+	Thrown        []string       `json:"thrown"`
+	InvalidEvents map[string]int `json:"invalid_events"`
+}
+
+func (p *Prober) waitAfterFinished() {
+	cfg := p.config
+	p.log.Infof("Waiting %v after sender finished...", cfg.FinishedSleep)
+	time.Sleep(cfg.FinishedSleep)
 }

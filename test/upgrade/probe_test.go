@@ -19,14 +19,15 @@ package upgrade
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"syscall"
 	"testing"
 
+	"github.com/wavesoftware/go-ensure"
 	"knative.dev/eventing/test"
 
-	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	"knative.dev/eventing/test/upgrade/prober"
 )
@@ -34,6 +35,8 @@ import (
 const (
 	readyMessage = "prober ready"
 )
+
+var Log *zap.SugaredLogger
 
 func TestContinuousEventsPropagationWithProber(t *testing.T) {
 	// We run the prober as a golang test because it fits in nicely with
@@ -57,15 +60,59 @@ func TestContinuousEventsPropagationWithProber(t *testing.T) {
 
 	// Use zap.SugarLogger instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
-	log := createLogger()
-	probe := prober.RunEventProber(context.Background(), log, client, config)
+	Log = createLogger()
+	p := prober.NewProber(Log, client, config)
+	p.Deploy(context.Background())
 	ensure.NoError(ioutil.WriteFile(test.EventingFlags.ReadyFile, []byte(readyMessage), 0666))
-	defer prober.AssertEventProber(context.Background(), t, probe)
+	defer removeProbeWithEventsValidation(t, p, config.FailOnErrors)
 
-	log.Infof("Waiting for file: %v as a signal that "+
+	Log.Infof("Waiting for file: %v as a signal that "+
 		"upgrade/downgrade is over, at which point we will finish the test "+
 		"and check the prober.", test.EventingFlags.PipeFile)
 	_, _ = ioutil.ReadFile(test.EventingFlags.PipeFile)
+}
+
+func removeProbeWithEventsValidation(t *testing.T, p prober.Prober, failOnErrors bool) {
+	ctx := context.Background()
+	p.Finish(ctx)
+	assertEventProber(t, p, failOnErrors)
+	p.Remove()
+}
+
+// assertEventProber will send finish event and then verify if all events propagated well
+func assertEventProber(t *testing.T, p prober.Prober, failOnErrors bool) {
+	errs, events := parseReport(p.Verify())
+	if len(errs) == 0 {
+		t.Logf("All %d events propagated well", events)
+	} else {
+		t.Logf("There were %d events propagated, but %d errors occurred. "+
+			"Listing them below.", events, len(errs))
+	}
+	reportErrors(t, errs, failOnErrors)
+}
+
+func reportErrors(t *testing.T, errors []error, failOnErrors bool) {
+	for _, err := range errors {
+		if failOnErrors {
+			t.Error(err)
+		} else {
+			Log.Warnf("Silenced FAIL: %v", err)
+		}
+	}
+	if len(errors) > 0 && !failOnErrors {
+		t.Skipf(
+			"Found %d errors, but FailOnErrors is false. Skipping test.",
+			len(errors),
+		)
+	}
+}
+
+func parseReport(r prober.Report) ([]error, int) {
+	errs := make([]error, 0)
+	for _, t := range r.Thrown {
+		errs = append(errs, errors.New(t))
+	}
+	return errs, r.Events
 }
 
 func createLogger() *zap.SugaredLogger {

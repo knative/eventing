@@ -32,10 +32,16 @@ var (
 	forwarderName = "wathola-forwarder"
 )
 
-func (p *prober) deployForwarder(ctx context.Context) {
+func (p *Prober) deployForwarder(ctx context.Context) {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
+
+	image := p.config.Images.Forwarder
+	if image == "" {
+		image = pkgTest.ImagePath(forwarderName)
+	}
+
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	service := forwarderKService(forwarderName, p.client.Namespace)
+	service := forwarderKService(forwarderName, p.client.Namespace, image)
 	_, err := serving.Create(context.Background(), service, metav1.CreateOptions{})
 	ensure.NoError(err)
 
@@ -53,14 +59,14 @@ func (p *prober) deployForwarder(ctx context.Context) {
 	}
 }
 
-func (p *prober) removeForwarder() {
+func (p *Prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	err := serving.Delete(context.Background(), forwarderName, metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
 
-func forwarderKService(name, namespace string) *unstructured.Unstructured {
+func forwarderKService(name, namespace string, image string) *unstructured.Unstructured {
 	obj := map[string]interface{}{
 		"apiVersion": resources.KServiceType.APIVersion,
 		"kind":       resources.KServiceType.Kind,
@@ -76,7 +82,7 @@ func forwarderKService(name, namespace string) *unstructured.Unstructured {
 				"spec": map[string]interface{}{
 					"containers": []map[string]interface{}{{
 						"name":  "forwarder",
-						"image": pkgTest.ImagePath(forwarderName),
+						"image": image,
 						"volumeMounts": []map[string]interface{}{{
 							"name":      configName,
 							"mountPath": configMountPoint,

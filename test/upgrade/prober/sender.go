@@ -28,8 +28,14 @@ import (
 
 var senderName = "wathola-sender"
 
-func (p *prober) deploySender(ctx context.Context) {
+func (p *Prober) deploySender(ctx context.Context) {
 	p.log.Infof("Deploy sender pod: %v", senderName)
+
+	image := p.config.Images.Sender
+	if image == "" {
+		image = pkgTest.ImagePath(senderName)
+	}
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      senderName,
@@ -49,7 +55,7 @@ func (p *prober) deploySender(ctx context.Context) {
 			Containers: []corev1.Container{
 				{
 					Name:  "sender",
-					Image: pkgTest.ImagePath(senderName),
+					Image: image,
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      configName,
@@ -70,7 +76,7 @@ func (p *prober) deploySender(ctx context.Context) {
 	})
 }
 
-func (p *prober) removeSender(ctx context.Context) {
+func (p *Prober) removeSender(ctx context.Context) {
 	p.log.Infof("Remove of sender pod: %v", senderName)
 
 	err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).

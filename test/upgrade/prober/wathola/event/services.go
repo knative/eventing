@@ -17,6 +17,7 @@ package event
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -28,15 +29,17 @@ var lastProgressReport = time.Now()
 
 // ErrorStore contains errors that was thrown
 type ErrorStore struct {
-	state  State
-	thrown []thrown
+	state         State
+	thrown        []thrown
+	invalidEvents map[string]int
 }
 
 // NewErrorStore creates a new error store
 func NewErrorStore() *ErrorStore {
 	return &ErrorStore{
-		state:  Active,
-		thrown: make([]thrown, 0),
+		state:         Active,
+		thrown:        make([]thrown, 0),
+		invalidEvents: make(map[string]int),
 	}
 }
 
@@ -114,6 +117,10 @@ func (f *finishedStore) Thrown() []string {
 	return msgs
 }
 
+func (f *finishedStore) InvalidEvents() map[string]int {
+	return f.errors.invalidEvents
+}
+
 func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
 	for eventNo := 1; eventNo <= finished.Count; eventNo++ {
@@ -124,6 +131,7 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 		if times != 1 {
 			f.errors.throw("event #%v should be received once, but was received %v times",
 				eventNo, times)
+			f.errors.invalidEvents[strconv.Itoa(eventNo)] = times
 		}
 	}
 }

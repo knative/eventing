@@ -33,13 +33,19 @@ var (
 	receiverNodePort int32 = -1
 )
 
-func (p *prober) deployReceiver(ctx context.Context) {
+func (p *Prober) deployReceiver(ctx context.Context) {
 	p.deployReceiverPod(ctx)
 	p.deployReceiverService(ctx)
 }
 
-func (p *prober) deployReceiverPod(ctx context.Context) {
+func (p *Prober) deployReceiverPod(ctx context.Context) {
 	p.log.Infof("Deploy of receiver pod: %v", receiverName)
+
+	image := p.config.Images.Receiver
+	if image == "" {
+		image = pkgTest.ImagePath(receiverName)
+	}
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      receiverName,
@@ -62,7 +68,7 @@ func (p *prober) deployReceiverPod(ctx context.Context) {
 			Containers: []corev1.Container{
 				{
 					Name:  "receiver",
-					Image: pkgTest.ImagePath(receiverName),
+					Image: image,
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      configName,
@@ -90,7 +96,7 @@ func (p *prober) deployReceiverPod(ctx context.Context) {
 	})
 }
 
-func (p *prober) deployReceiverService(ctx context.Context) {
+func (p *Prober) deployReceiverService(ctx context.Context) {
 	p.log.Infof("Deploy of receiver service: %v", receiverName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

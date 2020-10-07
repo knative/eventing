@@ -46,17 +46,17 @@ var (
 	brokerName = "default"
 )
 
-func (p *prober) deployConfiguration() {
+func (p *Prober) deployConfiguration() {
 	p.deployBroker()
 	p.deployConfigMap()
 	p.deployTriggers()
 }
 
-func (p *prober) deployBroker() {
+func (p *Prober) deployBroker() {
 	p.client.CreateBrokerV1Beta1OrFail(brokerName)
 }
 
-func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
+func (p *Prober) fetchBrokerUrl() (*apis.URL, error) {
 	namespace := p.config.Namespace
 	p.log.Debugf("Fetching %s broker URL for ns %s", brokerName, namespace)
 	meta := resources.NewMetaResource(brokerName, p.config.Namespace, testlib.BrokerTypeMeta)
@@ -73,7 +73,7 @@ func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
 	return url, nil
 }
 
-func (p *prober) deployConfigMap() {
+func (p *Prober) deployConfigMap() {
 	name := configName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
 	brokerUrl, err := p.fetchBrokerUrl()
@@ -82,7 +82,7 @@ func (p *prober) deployConfigMap() {
 	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{configFilename: configData})
 }
 
-func (p *prober) deployTriggers() {
+func (p *Prober) deployTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		fullType := fmt.Sprintf("%v.%v", watholaEventNs, eventType)
@@ -101,7 +101,7 @@ func (p *prober) deployTriggers() {
 	}
 }
 
-func (p *prober) compileTemplate(templateName string, brokerUrl *apis.URL) string {
+func (p *Prober) compileTemplate(templateName string, brokerUrl *apis.URL) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
