@@ -79,7 +79,7 @@ func removeProbeWithEventsValidation(t *testing.T, p prober.Prober, failOnErrors
 	p.Remove()
 }
 
-// assertEventProber will send finish event and then verify if all events propagated well
+// assertEventProber verifies if all events are propagated correctly
 func assertEventProber(t *testing.T, p prober.Prober, failOnErrors bool) {
 	errs, events := parseReport(p.Verify())
 	if len(errs) == 0 {
@@ -96,7 +96,7 @@ func reportErrors(t *testing.T, errors []error, failOnErrors bool) {
 		if failOnErrors {
 			t.Error(err)
 		} else {
-			Log.Warnf("Silenced FAIL: %v", err)
+			Log.Warn("Silenced FAIL: ", err)
 		}
 	}
 	if len(errors) > 0 && !failOnErrors {

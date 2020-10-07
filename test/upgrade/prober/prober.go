@@ -32,7 +32,8 @@ var (
 	Interval = 200 * time.Millisecond
 )
 
-// Prober is the interface for a prober, which checks the result of the probes when stopped.
+// Prober is the orchestrator object managing the lifecycle of the sender and receiver
+// The lifecycle is managed through the methods Deploy, Finish, Verify & Remove
 type Prober struct {
 	log    *zap.SugaredLogger
 	client *testlib.Client
@@ -45,7 +46,7 @@ type ImagesConfig struct {
 	Forwarder string
 }
 
-// Config represents a configuration for prober
+// Config represents a configuration for Prober
 type Config struct {
 	Namespace     string
 	Interval      time.Duration
