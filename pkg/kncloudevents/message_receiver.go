@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/pkg/network/handlers"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
@@ -33,7 +34,6 @@ const (
 type HttpMessageReceiver struct {
 	port int
 
-	handler  nethttp.Handler
 	server   *nethttp.Server
 	listener net.Listener
 }
@@ -51,11 +51,12 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 		return err
 	}
 
-	recv.handler = CreateHandler(handler)
-
+	drainer := &handlers.Drainer{
+		Inner: CreateHandler(handler),
+	}
 	recv.server = &nethttp.Server{
 		Addr:    recv.listener.Addr().String(),
-		Handler: recv.handler,
+		Handler: drainer,
 	}
 
 	errChan := make(chan error, 1)
@@ -66,6 +67,9 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 	// wait for the server to return or ctx.Done().
 	select {
 	case <-ctx.Done():
+		// As we start to shutdown, disable keep-alives to avoid clients hanging onto connections.
+		recv.server.SetKeepAlivesEnabled(false)
+		drainer.Drain()
 		ctx, cancel := context.WithTimeout(context.Background(), getShutdownTimeout(ctx))
 		defer cancel()
 		err := recv.server.Shutdown(ctx)

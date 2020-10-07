@@ -35,7 +35,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
-	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/tracing"
@@ -97,7 +96,7 @@ func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
+	return h.Receiver.StartListen(ctx, h)
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
