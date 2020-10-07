@@ -21,12 +21,11 @@ import (
 	"reflect"
 	"testing"
 
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-
 	"knative.dev/pkg/tracker"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
