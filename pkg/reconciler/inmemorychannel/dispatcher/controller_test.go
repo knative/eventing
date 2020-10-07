@@ -34,6 +34,8 @@ func TestNew(t *testing.T) {
 	defer cancel()
 
 	os.Setenv("SCOPE", eventing.ScopeCluster)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
@@ -46,6 +48,8 @@ func TestNewInNamespace(t *testing.T) {
 	defer cancel()
 
 	os.Setenv("SCOPE", eventing.ScopeNamespace)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {

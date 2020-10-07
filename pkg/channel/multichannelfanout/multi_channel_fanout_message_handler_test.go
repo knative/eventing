@@ -60,7 +60,7 @@ func TestNewMessageHandler(t *testing.T) {
 			createErr: "duplicate channel key: duplicatekey",
 		},
 	}
-
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
@@ -69,6 +69,7 @@ func TestNewMessageHandler(t *testing.T) {
 				logger,
 				channel.NewMessageDispatcher(logger),
 				tc.config,
+				reporter,
 			)
 			if tc.createErr != "" {
 				if err == nil {
@@ -119,11 +120,13 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 		t.Errorf("Orig and updated must be different")
 	}
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	h, err := NewMessageHandler(
 		context.TODO(),
 		logger,
 		channel.NewMessageDispatcher(logger),
 		orig,
+		reporter,
 	)
 	if err != nil {
 		t.Error("Unable to create handler,", err)
@@ -134,7 +137,7 @@ func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
 		t.Errorf("Incorrect config. Expected '%v'. Actual '%v' - diff: %s", orig, h.config, diff)
 	}
 
-	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated)
+	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated, reporter)
 	if err != nil {
 		t.Error("Unable to copy handler:", err)
 	}
@@ -197,10 +200,11 @@ func TestConfigDiffMessageHandler(t *testing.T) {
 			expectedDiff: true,
 		},
 	}
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.orig)
+			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.orig, reporter)
 			if err != nil {
 				t.Error("Unable to create handler:", err)
 			}
@@ -296,7 +300,8 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 			replaceDomains(tc.config, server.URL[7:])
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config)
+			reporter := channel.NewStatsReporter("testcontainer", "testpod")
+			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}

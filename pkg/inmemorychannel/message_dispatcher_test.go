@@ -49,7 +49,8 @@ import (
 
 func TestNewMessageDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 
 	if err != nil {
 		t.Fatalf("Failed to create handler")
@@ -73,7 +74,8 @@ func TestNewMessageDispatcher(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_close(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,6 +112,7 @@ func TestDispatcher_close(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_dispatch(t *testing.T) {
 	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +125,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		ZipkinEndpoint: "http://zipkin.zipkin.svc.cluster.local:9411/api/v2/spans",
 	})
 
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -42,27 +42,29 @@ type MessageHandler struct {
 	fanout     atomic.Value
 	updateLock sync.Mutex
 	logger     *zap.Logger
+	reporter   channel.StatsReporter
 }
 
 // UpdateConfig updates the configuration to use the new config, returning an error if it can't.
 type UpdateConfig func(config *multichannelfanout.Config) error
 
 // NewMessageHandler creates a new swappable.Handler.
-func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger) *MessageHandler {
+func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger, reporter channel.StatsReporter) *MessageHandler {
 	h := &MessageHandler{
 		logger: logger.With(zap.String("httpHandler", "swappable")),
+		reporter: reporter,
 	}
 	h.SetHandler(handler)
 	return h
 }
 
 // NewEmptyMessageHandler creates a new swappable.Handler with an empty configuration.
-func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher) (*MessageHandler, error) {
-	h, err := multichannelfanout.NewMessageHandler(context, logger, messageDispatcher, multichannelfanout.Config{})
+func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, reporter channel.StatsReporter) (*MessageHandler, error) {
+	h, err := multichannelfanout.NewMessageHandler(context, logger, messageDispatcher, multichannelfanout.Config{}, reporter)
 	if err != nil {
 		return nil, err
 	}
-	return NewMessageHandler(h, logger), nil
+	return NewMessageHandler(h, logger, reporter), nil
 }
 
 // GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
@@ -91,7 +93,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig 
 	ih := h.GetHandler()
 	if diff := ih.ConfigDiff(*config); diff != "" {
 		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
-		newIh, err := ih.CopyWithNewConfig(context, dispatcherConfig, *config)
+		newIh, err := ih.CopyWithNewConfig(context, dispatcherConfig, *config, h.reporter)
 		if err != nil {
 			h.logger.Info("Unable to update config", zap.Error(err), zap.Any("config", config))
 			return err

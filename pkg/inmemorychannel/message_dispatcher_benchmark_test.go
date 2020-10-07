@@ -39,8 +39,8 @@ import (
 // send -> channela -> sub aaaa -> transformationsServer -> channelb -> sub bbbb -> receiver
 func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	logger := zap.NewNop()
-
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, nil)
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, nil, reporter)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	}
 	httpSender.Client = mockedHTTPClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
 
-	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config)
+	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config, reporter)
 	if err != nil {
 		b.Fatal(err)
 	}

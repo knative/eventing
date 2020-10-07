@@ -38,8 +38,8 @@ func TestMessageHistory(t *testing.T) {
 			len:      0,
 		},
 		{
-			append:   []string{"name.ns.service.local"},
-			expected: "name.ns.service.local",
+			append:   []string{"name.Ns.service.local"},
+			expected: "name.Ns.service.local",
 			len:      1,
 		},
 		{

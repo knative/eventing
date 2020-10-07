@@ -77,10 +77,11 @@ func TestMessageHandler(t *testing.T) {
 			},
 		},
 	}
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 			if err != nil {
 				t.Error("Unexpected error creating handler:", err)
 			}
@@ -124,10 +125,11 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 			},
 		},
 	}
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+			h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 			if err != nil {
 				t.Error("Unexpected error creating handler:", err)
 			}
@@ -156,7 +158,8 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 
 func TestMessageHandler_NilConfigChange(t *testing.T) {
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-	h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	h, err := NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 	if err != nil {
 		t.Error("Unexpected error creating handler:", err)
 	}

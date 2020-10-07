@@ -212,6 +212,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 
 func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.UnbufferedMessageReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
 	var subscriberServerWg *sync.WaitGroup
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if subscriberReqs != 0 {
 		subscriberServerWg = &sync.WaitGroup{}
 		subscriberServerWg.Add(subscriberReqs)
@@ -257,13 +258,14 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 			Subscriptions: subs,
 			AsyncHandler:  async,
 		},
+		reporter,
 	)
 	if err != nil {
 		t.Fatal("NewHandler failed =", err)
 	}
 
 	if receiverFunc != nil {
-		receiver, err := channel.NewMessageReceiver(receiverFunc, logger)
+		receiver, err := channel.NewMessageReceiver(receiverFunc, logger, reporter)
 		if err != nil {
 			t.Fatal("NewEventReceiver failed =", err)
 		}

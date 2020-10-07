@@ -24,7 +24,9 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/types"
 	"go.uber.org/zap"
 
 	"knative.dev/pkg/network"
@@ -57,6 +59,7 @@ type MessageReceiver struct {
 	receiverFunc         UnbufferedMessageReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
+	reporter             StatsReporter
 }
 
 // UnbufferedMessageReceiverFunc is the function to be called for handling the message.
@@ -84,13 +87,14 @@ func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHos
 
 // NewMessageReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.Logger, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
-	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(8080)
+func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
+	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
 	receiver := &MessageReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
 		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannel),
 		logger:               logger,
+		reporter: reporter,
 	}
 	for _, opt := range opts {
 		if err := opt(receiver); err != nil {
@@ -123,7 +127,7 @@ func (r *MessageReceiver) Start(ctx context.Context) error {
 	}
 
 	// Done channel has been closed, we need to gracefully shutdown r.ceClient. The cancel() method will start its
-	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
+	// shutdown, if it hasn't finished in a reasonable amount of Time, just return an error.
 	cancel()
 	select {
 	case err := <-errCh:
@@ -145,6 +149,8 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 
+	args := ReportArgs{}
+
 	// The response status codes:
 	//   202 - the event was sent to subscribers
 	//   404 - the request was for an unknown channel
@@ -155,35 +161,61 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	if err != nil {
 		if _, ok := err.(UnknownHostError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
+			_ = r.reporter.ReportEventCount(&args, nethttp.StatusNotFound)
 			r.logger.Info(err.Error())
 		} else {
 			r.logger.Info("Could not extract channel", zap.Error(err))
 			response.WriteHeader(nethttp.StatusInternalServerError)
+			_ = r.reporter.ReportEventCount(&args, nethttp.StatusInternalServerError)
 		}
 		return
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	message := http.NewMessageFromHttpRequest(request)
+	args.Ns = channel.Namespace
 
+	message := http.NewMessageFromHttpRequest(request)
 	if message.ReadEncoding() == binding.EncodingUnknown {
 		r.logger.Info("Cannot determine the cloudevent message encoding")
 		response.WriteHeader(nethttp.StatusBadRequest)
+		r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
 		return
 	}
 
-	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{AddHistory(host)}, utils.PassThroughHeaders(request.Header))
+	te := TypeExtractorTransformer("")
+	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{AddHistory(host), &te}, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
+			_ = r.reporter.ReportEventCount(&args, nethttp.StatusNotFound)
 		} else {
 			r.logger.Info("Error in receiver", zap.Error(err))
 			response.WriteHeader(nethttp.StatusInternalServerError)
+			_ = r.reporter.ReportEventCount(&args, nethttp.StatusInternalServerError)
 		}
 		return
 	}
 
+	eventType, err := types.ToString(te)
+
+	if err == nil {
+		args.EventType = eventType
+	}
+	_ = r.reporter.ReportEventCount(&args, nethttp.StatusAccepted)
 	response.WriteHeader(nethttp.StatusAccepted)
 }
 
 var _ nethttp.Handler = (*MessageReceiver)(nil)
+
+type TypeExtractorTransformer string
+func (a TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
+	_, ty := reader.GetAttribute(spec.Type)
+	if ty != nil {
+		tyParsed, err := types.ToString(ty)
+		if err != nil {
+			return err
+		}
+		a = TypeExtractorTransformer(tyParsed)
+	}
+	return nil
+}
