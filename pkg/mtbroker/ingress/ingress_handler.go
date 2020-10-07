@@ -40,7 +40,6 @@ import (
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/network/handlers"
 )
 
 const (
@@ -97,7 +96,7 @@ func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, &handlers.Drainer{Inner: h})
+	return h.Receiver.StartListen(ctx, h)
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
