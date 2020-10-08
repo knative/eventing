@@ -121,7 +121,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	ctx := request.Context()
 
-	message := cehttp.NewMessageFromHTTPRequest(request)
+	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)
 
 	event, err := binding.ToEvent(ctx, message)

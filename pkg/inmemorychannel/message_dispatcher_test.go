@@ -156,7 +156,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	// Start a bunch of test servers to simulate the various services
 	transformationsCh := make(chan error, 1)
 	transformationsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		message := protocolhttp.NewMessageFromHTTPRequest(r)
+		message := protocolhttp.NewMessageFromHttpRequest(r)
 		defer message.Finish(nil)
 
 		if message.ReadEncoding() == binding.EncodingUnknown {

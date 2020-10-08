@@ -125,7 +125,7 @@ func clientMock(channelAHost string, transformationsHost string, channelBHost st
 			return response.Result()
 		}
 		if req.URL.Host == transformationsHost {
-			message := protocolhttp.NewMessageFromHTTPRequest(req)
+			message := protocolhttp.NewMessageFromHttpRequest(req)
 			defer message.Finish(nil)
 
 			_ = protocolhttp.WriteResponseWriter(

@@ -89,7 +89,7 @@ func (o *Observer) Start(ctx context.Context, handlerFuncs ...func(handler http.
 }
 
 func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	m := cloudeventshttp.NewMessageFromHTTPRequest(request)
+	m := cloudeventshttp.NewMessageFromHttpRequest(request)
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)

@@ -389,7 +389,7 @@ func TestReceiver(t *testing.T) {
 				}
 			}
 			// Compare the returned event.
-			message := cehttp.NewMessageFromHTTPResponse(response)
+			message := cehttp.NewMessageFromHttpResponse(response)
 			event, err := binding.ToEvent(context.Background(), message)
 			if tc.returnedEvent == nil {
 				if err == nil || event != nil {

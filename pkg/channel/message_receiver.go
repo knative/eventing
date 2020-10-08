@@ -164,7 +164,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	message := http.NewMessageFromHTTPRequest(request)
+	message := http.NewMessageFromHttpRequest(request)
 
 	if message.ReadEncoding() == binding.EncodingUnknown {
 		r.logger.Info("Cannot determine the cloudevent message encoding")

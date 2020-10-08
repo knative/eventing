@@ -126,7 +126,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	ctx := request.Context()
 
-	message := cehttp.NewMessageFromHTTPRequest(request)
+	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)
 
 	event, err := binding.ToEvent(ctx, message)
@@ -264,7 +264,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 }
 
 func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32) (int, error) {
-	response := cehttp.NewMessageFromHTTPResponse(resp)
+	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
 
 	if response.ReadEncoding() == binding.EncodingUnknown {

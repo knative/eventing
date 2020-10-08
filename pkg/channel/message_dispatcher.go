@@ -200,7 +200,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 		// Reject non-successful responses.
 		return ctx, nil, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
 	}
-	responseMessage := http.NewMessageFromHTTPResponse(response)
+	responseMessage := http.NewMessageFromHttpResponse(response)
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
 		_ = response.Body.Close()
 		d.logger.Debug("Response is a non event, discarding it", zap.Int("status_code", response.StatusCode))
