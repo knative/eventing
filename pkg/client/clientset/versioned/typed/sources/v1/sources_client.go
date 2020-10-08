@@ -27,6 +27,7 @@ import (
 type SourcesV1Interface interface {
 	RESTClient() rest.Interface
 	ApiServerSourcesGetter
+	SinkBindingsGetter
 }
 
 // SourcesV1Client is used to interact with features provided by the sources.knative.dev group.
@@ -36,6 +37,10 @@ type SourcesV1Client struct {
 
 func (c *SourcesV1Client) ApiServerSources(namespace string) ApiServerSourceInterface {
 	return newApiServerSources(c, namespace)
+}
+
+func (c *SourcesV1Client) SinkBindings(namespace string) SinkBindingInterface {
+	return newSinkBindings(c, namespace)
 }
 
 // NewForConfig creates a new SourcesV1Client for the given config.

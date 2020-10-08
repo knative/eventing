@@ -25,3 +25,11 @@ type ApiServerSourceListerExpansion interface{}
 // ApiServerSourceNamespaceListerExpansion allows custom methods to be added to
 // ApiServerSourceNamespaceLister.
 type ApiServerSourceNamespaceListerExpansion interface{}
+
+// SinkBindingListerExpansion allows custom methods to be added to
+// SinkBindingLister.
+type SinkBindingListerExpansion interface{}
+
+// SinkBindingNamespaceListerExpansion allows custom methods to be added to
+// SinkBindingNamespaceLister.
+type SinkBindingNamespaceListerExpansion interface{}

@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
@@ -46,7 +47,7 @@ func TestSinkBindingConversionBadType(t *testing.T) {
 }
 
 func TestSinkBindingConversionRoundTripUp(t *testing.T) {
-	versions := []apis.Convertible{&v1beta1.SinkBinding{}, &v1alpha2.SinkBinding{}}
+	versions := []apis.Convertible{&v1.SinkBinding{}, &v1beta1.SinkBinding{}, &v1alpha2.SinkBinding{}}
 
 	path := apis.HTTP("")
 	path.Path = "/path"

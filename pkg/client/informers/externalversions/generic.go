@@ -111,6 +111,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=sources.knative.dev, Version=v1
 	case sourcesv1.SchemeGroupVersion.WithResource("apiserversources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1().ApiServerSources().Informer()}, nil
+	case sourcesv1.SchemeGroupVersion.WithResource("sinkbindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1().SinkBindings().Informer()}, nil
 
 		// Group=sources.knative.dev, Version=v1alpha1
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("apiserversources"):
