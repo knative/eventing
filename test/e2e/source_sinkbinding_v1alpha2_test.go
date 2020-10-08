@@ -76,7 +76,7 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 	)
 	client.CreateSinkBindingV1Alpha2OrFail(sinkBinding)
 
-	message := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
+	message := fmt.Sprintf("TestSinkBindingDeployment: %s", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
@@ -159,7 +159,7 @@ func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 	)
 	client.CreateSinkBindingV1Alpha2OrFail(sinkBinding)
 
-	message := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
+	message := fmt.Sprintf("TestSinkBindingCronJob: %s", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
