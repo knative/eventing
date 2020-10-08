@@ -127,7 +127,7 @@ func main() {
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	sender, err := kncloudevents.NewHttpMessageSender(&connectionArgs, "")
+	sender, err := kncloudevents.NewHTTTPMessageSender(&connectionArgs, "")
 	if err != nil {
 		logger.Fatal("Unable to create message sender", zap.Error(err))
 	}
@@ -135,7 +135,7 @@ func main() {
 	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	h := &ingress.Handler{
-		Receiver:     kncloudevents.NewHttpMessageReceiver(env.Port),
+		Receiver:     kncloudevents.NewHTTPMessageReceiver(env.Port),
 		Sender:       sender,
 		Defaulter:    broker.TTLDefaulter(logger, int32(env.MaxTTL)),
 		Reporter:     reporter,

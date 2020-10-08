@@ -53,7 +53,7 @@ func (e UnknownHostError) Error() string {
 // MessageReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
 type MessageReceiver struct {
-	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
+	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
 	receiverFunc         UnbufferedMessageReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
@@ -85,7 +85,7 @@ func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHos
 // NewMessageReceiver creates an event receiver passing new events to the
 // receiverFunc.
 func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.Logger, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
-	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
+	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(8080)
 	receiver := &MessageReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
@@ -164,7 +164,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	message := http.NewMessageFromHttpRequest(request)
+	message := http.NewMessageFromHTTPRequest(request)
 
 	if message.ReadEncoding() == binding.EncodingUnknown {
 		r.logger.Info("Cannot determine the cloudevent message encoding")

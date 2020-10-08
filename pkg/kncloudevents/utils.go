@@ -24,7 +24,8 @@ import (
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 )
 
-func WriteHttpRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request, additionalHeaders nethttp.Header, transformers ...binding.Transformer) error {
+func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request,
+	additionalHeaders nethttp.Header, transformers ...binding.Transformer) error {
 	err := http.WriteRequest(ctx, message, req, transformers...)
 	if err != nil {
 		return err
