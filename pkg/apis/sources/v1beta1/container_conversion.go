@@ -18,17 +18,37 @@ package v1beta1
 
 import (
 	"context"
-	"fmt"
 
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis"
 )
 
-// ConvertTo implements apis.Convertible
-func (source *ContainerSource) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+// ConvertTo implements apis.Convertible.
+// Converts source from v1beta1.ContainerSource into a higher version.
+func (source *ContainerSource) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+	switch sink := obj.(type) {
+	case *v1.ContainerSource:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec.SourceSpec = source.Spec.SourceSpec
+		sink.Spec.Template = source.Spec.Template
+		sink.Status.SourceStatus = source.Status.SourceStatus
+		return nil
+	default:
+		return apis.ConvertToViaProxy(ctx, source, &v1.ContainerSource{}, sink)
+	}
 }
 
-// ConvertFrom implements apis.Convertible
-func (sink *ContainerSource) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+// ConvertFrom implements apis.Convertible.
+// Converts obj from a higher version into v1beta1.ContainerSource.
+func (sink *ContainerSource) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+	switch source := obj.(type) {
+	case *v1.ContainerSource:
+		sink.ObjectMeta = source.ObjectMeta
+		sink.Spec.SourceSpec = source.Spec.SourceSpec
+		sink.Spec.Template = source.Spec.Template
+		sink.Status.SourceStatus = source.Status.SourceStatus
+		return nil
+	default:
+		return apis.ConvertFromViaProxy(ctx, source, &v1.ContainerSource{}, sink)
+	}
 }

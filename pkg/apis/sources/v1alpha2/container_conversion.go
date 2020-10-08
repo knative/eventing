@@ -18,7 +18,6 @@ package v1alpha2
 
 import (
 	"context"
-	"fmt"
 
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
@@ -35,7 +34,7 @@ func (source *ContainerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", sink)
+		return apis.ConvertToViaProxy(ctx, source, &v1beta1.ContainerSource{}, sink)
 	}
 }
 
@@ -50,6 +49,6 @@ func (sink *ContainerSource) ConvertFrom(ctx context.Context, obj apis.Convertib
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
-		return fmt.Errorf("Unknown conversion, got: %T", source)
+		return apis.ConvertFromViaProxy(ctx, source, &v1beta1.ContainerSource{}, sink)
 	}
 }
