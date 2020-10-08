@@ -68,7 +68,7 @@ type HTTPMessageSender struct {
 	Target string
 }
 
-func NewHTTTPMessageSender(connectionArgs *ConnectionArgs, target string) (*HTTPMessageSender, error) {
+func NewHTTPMessageSender(connectionArgs *ConnectionArgs, target string) (*HTTPMessageSender, error) {
 	// Add connection options to the default transport.
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 	connectionArgs.ConfigureTransport(base)

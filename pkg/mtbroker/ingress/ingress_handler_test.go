@@ -213,7 +213,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				annotatedBrokers = append(annotatedBrokers, b)
 			}
 			listers := reconcilertestingv1.NewListers(annotatedBrokers)
-			sender, _ := kncloudevents.NewHTTTPMessageSender(nil, "")
+			sender, _ := kncloudevents.NewHTTPMessageSender(nil, "")
 			h := &Handler{
 				Sender:       sender,
 				Defaulter:    tc.defaulter,
