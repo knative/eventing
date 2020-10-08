@@ -134,7 +134,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 
 			parentSpan := trace.FromContext(ctx)
 			te := TypeExtractorTransformer("")
-			transformers = append(transformers, te)
+			transformers = append(transformers, &te)
 			// Message buffering here is done before starting the dispatch goroutine
 			// Because the message could be closed before the buffering happens
 			bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
@@ -186,7 +186,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 		}
 
 		te := TypeExtractorTransformer("")
-		transformers = append(transformers, te)
+		transformers = append(transformers, &te)
 		// We buffer the message to send it several times
 		bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
 		if err != nil {
@@ -295,14 +295,14 @@ type dispatchResult struct {
 
 type TypeExtractorTransformer string
 
-func (a TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
+func (a *TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
 	_, ty := reader.GetAttribute(spec.Type)
 	if ty != nil {
 		tyParsed, err := types.ToString(ty)
 		if err != nil {
 			return err
 		}
-		a = TypeExtractorTransformer(tyParsed)
+		a = (*TypeExtractorTransformer)(&tyParsed)
 	}
 	return nil
 }
