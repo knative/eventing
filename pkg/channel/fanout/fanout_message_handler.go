@@ -24,10 +24,11 @@ package fanout
 import (
 	"context"
 	"errors"
-	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	nethttp "net/http"
 	"net/url"
 	"time"
+
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/buffering"

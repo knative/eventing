@@ -18,10 +18,11 @@ package dispatcher
 
 import (
 	"context"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/kmeta"
-	"time"
 
 	"knative.dev/pkg/logging"
 
