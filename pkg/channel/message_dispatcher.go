@@ -111,7 +111,6 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	var responseMessage cloudevents.Message
 	var responseAdditionalHeaders nethttp.Header
 	var dispatchExecutionInfo DispatchExecutionInfo
-
 	if destination != nil {
 		var err error
 		// Try to send to destination
@@ -121,16 +120,15 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 		if err != nil {
 			// DeadLetter is configured, send the message to it
 			if deadLetter != nil {
-
-				_, deadLetterResponse, _, dispatchTime, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig)
+				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig)
 				if deadLetterErr != nil {
-					return dispatchTime, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
+					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
 				if deadLetterResponse != nil {
 					messagesToFinish = append(messagesToFinish, deadLetterResponse)
 				}
 
-				return dispatchTime, nil
+				return dispatchExecutionInfo, nil
 			}
 			// No DeadLetter, just fail
 			return dispatchExecutionInfo, fmt.Errorf("unable to complete request to %s: %v", destination, err)
@@ -157,15 +155,15 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	if err != nil {
 		// DeadLetter is configured, send the message to it
 		if deadLetter != nil {
-			_, deadLetterResponse, _, dispatchTime, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig)
+			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig)
 			if deadLetterErr != nil {
-				return dispatchTime, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
+				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
 				messagesToFinish = append(messagesToFinish, deadLetterResponse)
 			}
 
-			return dispatchTime, nil
+			return dispatchExecutionInfo, nil
 		}
 		// No DeadLetter, just fail
 		return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s: %v", reply, err)
@@ -204,11 +202,17 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	start := time.Now()
 	response, err := d.sender.SendWithRetries(req, configs)
 	dispatchTime := time.Since(start)
-	execInfo.ResponseCode = response.StatusCode
-	execInfo.Time = dispatchTime
 	if err != nil {
+		execInfo.Time = dispatchTime
+		execInfo.ResponseCode = nethttp.StatusInternalServerError
 		return ctx, nil, nil, execInfo, err
 	}
+
+	if response != nil {
+		execInfo.ResponseCode = response.StatusCode
+	}
+	execInfo.Time = dispatchTime
+
 	if isFailure(response.StatusCode) {
 		_ = response.Body.Close()
 		// Reject non-successful responses.

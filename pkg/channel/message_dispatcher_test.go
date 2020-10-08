@@ -82,6 +82,7 @@ func TestDispatchMessage(t *testing.T) {
 		expectedDestRequest       *requestValidation
 		expectedReplyRequest      *requestValidation
 		expectedDeadLetterRequest *requestValidation
+		lastReceiver              string
 	}{
 		"destination - only": {
 			sendToDestination: true,
@@ -111,6 +112,7 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: `"destination"`,
 			},
+			lastReceiver: "destination",
 		},
 		"destination - only -- error": {
 			sendToDestination: true,
@@ -144,7 +146,8 @@ func TestDispatchMessage(t *testing.T) {
 				StatusCode: http.StatusNotFound,
 				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
 			},
-			expectedErr: true,
+			expectedErr:  true,
+			lastReceiver: "destination",
 		},
 		"reply - only": {
 			sendToReply: true,
@@ -174,6 +177,7 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: `"reply"`,
 			},
+			lastReceiver: "reply",
 		},
 		"reply - only -- error": {
 			sendToReply: true,
@@ -242,7 +246,8 @@ func TestDispatchMessage(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
 			},
-			expectedErr: true,
+			expectedErr:  true,
+			lastReceiver: "reply",
 		},
 		"destination and reply - dest returns empty body": {
 			sendToDestination: true,
@@ -283,6 +288,7 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: ioutil.NopCloser(bytes.NewBufferString("")),
 			},
+			lastReceiver: "reply",
 		},
 		"destination and reply": {
 			sendToDestination: true,
@@ -342,6 +348,7 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: "destination-response",
 			},
+			lastReceiver: "reply",
 		},
 		"invalid destination and delivery option": {
 			sendToDestination: true,
@@ -406,6 +413,7 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
+			lastReceiver: "deadLetter",
 		},
 		"invalid destination and delivery option - deadletter reply without event": {
 			sendToDestination: true,
@@ -459,6 +467,7 @@ func TestDispatchMessage(t *testing.T) {
 				StatusCode: http.StatusAccepted,
 				Body:       ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
+			lastReceiver: "deadLetter",
 		},
 		"invalid reply and delivery option - deadletter reply without event": {
 			sendToReply:       true,
@@ -512,6 +521,7 @@ func TestDispatchMessage(t *testing.T) {
 				StatusCode: http.StatusAccepted,
 				Body:       ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
+			lastReceiver: "deadLetter",
 		},
 		"destination and invalid reply and delivery option": {
 			sendToDestination: true,
@@ -605,6 +615,7 @@ func TestDispatchMessage(t *testing.T) {
 				},
 				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
 			},
+			lastReceiver: "deadLetter",
 		},
 	}
 	for n, tc := range testCases {
@@ -672,7 +683,30 @@ func TestDispatchMessage(t *testing.T) {
 				finishInvoked++
 			})
 
-			_, err = md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deadLetterSink)
+			info, err := md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deadLetterSink)
+
+			if tc.lastReceiver != "" {
+				switch tc.lastReceiver {
+				case "destination":
+					if tc.fakeResponse != nil {
+						if tc.fakeResponse.StatusCode != info.ResponseCode {
+							t.Errorf("Unexpected response code inf DispatchResultInfo. Expected %v. Actual: %v", tc.fakeResponse.StatusCode, info.ResponseCode)
+						}
+					}
+				case "deadLetter":
+					if tc.fakeDeadLetterResponse != nil {
+						if tc.fakeDeadLetterResponse.StatusCode != info.ResponseCode {
+							t.Errorf("Unexpected response code inf DispatchResultInfo. Expected %v. Actual: %v", tc.fakeDeadLetterResponse.StatusCode, info.ResponseCode)
+						}
+					}
+				case "reply":
+					if tc.fakeReplyResponse != nil {
+						if tc.fakeReplyResponse.StatusCode != info.ResponseCode {
+							t.Errorf("Unexpected response code inf DispatchResultInfo. Expected %v. Actual: %v", tc.fakeReplyResponse.StatusCode, info.ResponseCode)
+						}
+					}
+				}
+			}
 
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)

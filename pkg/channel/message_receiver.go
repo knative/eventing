@@ -24,9 +24,7 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	"github.com/cloudevents/sdk-go/v2/types"
 	"go.uber.org/zap"
 
 	"knative.dev/pkg/network"
@@ -94,7 +92,7 @@ func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.
 		receiverFunc:         receiverFunc,
 		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannel),
 		logger:               logger,
-		reporter: reporter,
+		reporter:             reporter,
 	}
 	for _, opt := range opts {
 		if err := opt(receiver); err != nil {
@@ -181,41 +179,17 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
 		return
 	}
-
-	te := TypeExtractorTransformer("")
-	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{AddHistory(host), &te}, utils.PassThroughHeaders(request.Header))
+	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{AddHistory(host)}, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
-			_ = r.reporter.ReportEventCount(&args, nethttp.StatusNotFound)
 		} else {
 			r.logger.Info("Error in receiver", zap.Error(err))
 			response.WriteHeader(nethttp.StatusInternalServerError)
-			_ = r.reporter.ReportEventCount(&args, nethttp.StatusInternalServerError)
 		}
 		return
 	}
-
-	eventType, err := types.ToString(te)
-
-	if err == nil {
-		args.EventType = eventType
-	}
-	_ = r.reporter.ReportEventCount(&args, nethttp.StatusAccepted)
 	response.WriteHeader(nethttp.StatusAccepted)
 }
 
 var _ nethttp.Handler = (*MessageReceiver)(nil)
-
-type TypeExtractorTransformer string
-func (a TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
-	_, ty := reader.GetAttribute(spec.Type)
-	if ty != nil {
-		tyParsed, err := types.ToString(ty)
-		if err != nil {
-			return err
-		}
-		a = TypeExtractorTransformer(tyParsed)
-	}
-	return nil
-}

@@ -51,7 +51,7 @@ type UpdateConfig func(config *multichannelfanout.Config) error
 // NewMessageHandler creates a new swappable.Handler.
 func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger, reporter channel.StatsReporter) *MessageHandler {
 	h := &MessageHandler{
-		logger: logger.With(zap.String("httpHandler", "swappable")),
+		logger:   logger.With(zap.String("httpHandler", "swappable")),
 		reporter: reporter,
 	}
 	h.SetHandler(handler)

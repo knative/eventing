@@ -146,6 +146,6 @@ func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Cont
 		tag.Insert(eventTypeKey, args.EventType),
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
 		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)),
-	    tag.Insert(ContainerTagKey, r.container),
+		tag.Insert(ContainerTagKey, r.container),
 		tag.Insert(UniqueTagKey, r.uniqueName))
 }

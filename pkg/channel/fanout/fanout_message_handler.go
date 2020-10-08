@@ -24,6 +24,7 @@ package fanout
 import (
 	"context"
 	"errors"
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	nethttp "net/http"
 	"net/url"
 	"time"
@@ -70,7 +71,7 @@ type MessageHandler struct {
 	timeout time.Duration
 
 	reporter channel.StatsReporter
-	logger *zap.Logger
+	logger   *zap.Logger
 }
 
 // NewMessageHandler creates a new fanout.MessageHandler.
@@ -80,7 +81,7 @@ func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDisp
 		config:     config,
 		dispatcher: messageDispatcher,
 		timeout:    defaultTimeout,
-		reporter: reporter,
+		reporter:   reporter,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -131,6 +132,8 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 			}
 
 			parentSpan := trace.FromContext(ctx)
+			te := TypeExtractorTransformer("")
+			transformers = append(transformers, te)
 			// Message buffering here is done before starting the dispatch goroutine
 			// Because the message could be closed before the buffering happens
 			bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
@@ -138,17 +141,9 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 				return err
 			}
 
-			var te channel.TypeExtractorTransformer
-			for _, tr := range transformers {
-				switch tr.(type) {
-				case channel.TypeExtractorTransformer:
-					te = tr.(channel.TypeExtractorTransformer)
-				}
-			}
-
 			reportArgs := channel.ReportArgs{}
 			eventType, err := types.ToString(te)
-			if err != nil{
+			if err != nil {
 				reportArgs.EventType = eventType
 			}
 			reportArgs.Ns = ref.Namespace
@@ -159,10 +154,25 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
-				totalDispatchTime, _ := f.dispatch(ctx, m, h)
-				if totalDispatchTime > channel.NoDuration {
-					_ = (*r).ReportEventDispatchTime(args, 0, totalDispatchTime)
+				dispatchResultForFanout, err := f.dispatch(ctx, m, h)
+				if dispatchResultForFanout.info.Time > channel.NoDuration {
+					if dispatchResultForFanout.info.ResponseCode > channel.NoResponse {
+						_ = (*r).ReportEventDispatchTime(&reportArgs, dispatchResultForFanout.info.ResponseCode, dispatchResultForFanout.info.Time)
+					} else {
+						_ = (*r).ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, dispatchResultForFanout.info.Time)
+
+					}
 				}
+				if err != nil {
+					if _, ok := err.(*channel.UnknownChannelError); ok {
+						_ = (*r).ReportEventCount(args, nethttp.StatusNotFound)
+					} else {
+						_ = (*r).ReportEventCount(args, nethttp.StatusInternalServerError)
+					}
+				} else {
+					_ = (*r).ReportEventCount(args, nethttp.StatusAccepted)
+				}
+
 			}(bufferedMessage, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
 			return nil
 		}
@@ -174,6 +184,8 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 			return nil
 		}
 
+		te := TypeExtractorTransformer("")
+		transformers = append(transformers, te)
 		// We buffer the message to send it several times
 		bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
 		if err != nil {
@@ -181,23 +193,29 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 		}
 		// We don't need the original message anymore
 		_ = message.Finish(nil)
-		var te channel.TypeExtractorTransformer
-		for _, tr := range transformers {
-			switch tr.(type) {
-			case channel.TypeExtractorTransformer:
-				te = tr.(channel.TypeExtractorTransformer)
-			}
-		}
 
 		reportArgs := channel.ReportArgs{}
 		eventType, err := types.ToString(te)
-		if err != nil{
+		if err != nil {
 			reportArgs.EventType = eventType
 		}
 		reportArgs.Ns = ref.Namespace
-		totalDispatchTime, err := f.dispatch(ctx, bufferedMessage, additionalHeaders)
-		if totalDispatchTime > channel.NoDuration {
-			_ = f.reporter.ReportEventDispatchTime(&reportArgs, 0, totalDispatchTime)
+		dispatchResultForFanout, err := f.dispatch(ctx, bufferedMessage, additionalHeaders)
+		if dispatchResultForFanout.info.Time > channel.NoDuration {
+			if dispatchResultForFanout.info.ResponseCode > channel.NoResponse {
+				_ = f.reporter.ReportEventDispatchTime(&reportArgs, dispatchResultForFanout.info.ResponseCode, dispatchResultForFanout.info.Time)
+			} else {
+				_ = f.reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, dispatchResultForFanout.info.Time)
+			}
+		}
+		if err != nil {
+			if _, ok := err.(*channel.UnknownChannelError); ok {
+				_ = f.reporter.ReportEventCount(&reportArgs, nethttp.StatusNotFound)
+			} else {
+				_ = f.reporter.ReportEventCount(&reportArgs, nethttp.StatusInternalServerError)
+			}
+		} else {
+			_ = f.reporter.ReportEventCount(&reportArgs, dispatchResultForFanout.info.ResponseCode)
 		}
 		return err
 	}
@@ -209,7 +227,7 @@ func (f *MessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *net
 
 // dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.Message, additionalHeaders nethttp.Header) (time.Duration, error) {
+func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.Message, additionalHeaders nethttp.Header) (dispatchResult, error) {
 	subs := len(f.config.Subscriptions)
 
 	// Bind the lifecycle of the buffered message to the number of subs
@@ -224,27 +242,35 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 	}
 
 	var totalDispatchTimeForFanout time.Duration = channel.NoDuration
+	dispatchResultForFanout := dispatchResult{
+		info: channel.DispatchExecutionInfo{
+			Time:         channel.NoDuration,
+			ResponseCode: channel.NoResponse,
+		},
+	}
 	for range f.config.Subscriptions {
 		select {
 		case dispatchResult := <-errorCh:
+			if dispatchResult.info.Time > channel.NoDuration {
+				if totalDispatchTimeForFanout > channel.NoDuration {
+					totalDispatchTimeForFanout += dispatchResult.info.Time
+				} else {
+					totalDispatchTimeForFanout = dispatchResult.info.Time
+				}
+			}
+			dispatchResultForFanout.info.Time = totalDispatchTimeForFanout
+			dispatchResultForFanout.info.ResponseCode = dispatchResult.info.ResponseCode
 			if dispatchResult.err != nil {
 				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
-				if dispatchResult.info.Time > channel.NoDuration {
-					if totalDispatchTimeForFanout > channel.NoDuration {
-						totalDispatchTimeForFanout += dispatchResult.info.Time
-					} else {
-						totalDispatchTimeForFanout = dispatchResult.info.Time
-					}
-				}
-				return totalDispatchTimeForFanout, dispatchResult.err
+				return dispatchResultForFanout, dispatchResult.err
 			}
 		case <-time.After(f.timeout):
 			f.logger.Error("Fanout timed out")
-			return totalDispatchTimeForFanout, errors.New("fanout timed out")
+			return dispatchResultForFanout, errors.New("fanout timed out")
 		}
 	}
 	// All Subscriptions returned err = nil.
-	return totalDispatchTimeForFanout, nil
+	return dispatchResultForFanout, nil
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
@@ -260,8 +286,22 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 		sub.RetryConfig,
 	)
 }
+
 type dispatchResult struct {
 	err  error
 	info channel.DispatchExecutionInfo
 }
 
+type TypeExtractorTransformer string
+
+func (a TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
+	_, ty := reader.GetAttribute(spec.Type)
+	if ty != nil {
+		tyParsed, err := types.ToString(ty)
+		if err != nil {
+			return err
+		}
+		a = TypeExtractorTransformer(tyParsed)
+	}
+	return nil
+}
