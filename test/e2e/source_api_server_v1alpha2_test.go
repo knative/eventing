@@ -222,10 +222,10 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
-	apiServerSource := v1alpha2.NewApiServerSource(
+	apiServerSource := rttestingv1alpha2.NewApiServerSource(
 		sourceName,
 		client.Namespace,
-		v1alpha2.WithApiServerSourceSpec(
+		rttestingv1alpha2.WithApiServerSourceSpec(
 			sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion: "v1",
