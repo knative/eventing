@@ -213,7 +213,7 @@ spec:
                         required:
                           - type
                           - status
-                        properties:                        
+                        properties:
                           lastTransitionTime:
                             description: 'LastTransitionTime is the last time the condition
                                 transitioned from one status to another. We use VolatileTime
