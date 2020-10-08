@@ -49,9 +49,9 @@ const (
 
 type Handler struct {
 	// Receiver receives incoming HTTP requests
-	Receiver *kncloudevents.HttpMessageReceiver
+	Receiver *kncloudevents.HTTPMessageReceiver
 	// Sender sends requests to the broker
-	Sender *kncloudevents.HttpMessageSender
+	Sender *kncloudevents.HTTPMessageSender
 	// Defaults sets default values to incoming events
 	Defaulter client.EventDefaulter
 	// Reporter reports stats of status code and dispatch time
@@ -200,7 +200,7 @@ func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudeve
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
-	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
+	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}

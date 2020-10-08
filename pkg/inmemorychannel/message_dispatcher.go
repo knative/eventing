@@ -33,7 +33,7 @@ type MessageDispatcher interface {
 
 type InMemoryMessageDispatcher struct {
 	handler              *swappable.MessageHandler
-	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
+	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
 	writeTimeout         time.Duration
 	logger               *zap.Logger
 }
@@ -58,7 +58,7 @@ func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
 	// TODO set read timeouts?
-	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(args.Port)
+	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(args.Port)
 
 	dispatcher := &InMemoryMessageDispatcher{
 		handler:              args.Handler,

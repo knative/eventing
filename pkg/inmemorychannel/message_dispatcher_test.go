@@ -169,7 +169,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		if err != nil {
 			logger.Fatal("Error in transformation handler", zap.Error(err))
 			transformationsCh <- err
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 		transformationsCh <- nil
 	}))
@@ -185,7 +185,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 			err := fmt.Errorf("expecting ce-transformed: true, found %s", transformed)
 			logger.Fatal("Error in receiver", zap.Error(err))
 			receiverCh <- err
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 		receiverCh <- nil
 	}))
@@ -195,7 +195,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	transformationsFailureWg.Add(1)
 	transformationsFailureServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer transformationsFailureWg.Done()
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer transformationsFailureServer.Close()
 
@@ -205,7 +205,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		defer deadLetterWg.Done()
 		transformed := r.Header.Get("ce-transformed")
 		if transformed != "" {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			t.Fatal("Not expecting ce-transformed, found", transformed)
 		}
 	}))
@@ -259,7 +259,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	}
 
 	// Ok now everything should be ready to send the event
-	httpsender, err := kncloudevents.NewHttpMessageSender(nil, channelAProxy.URL)
+	httpsender, err := kncloudevents.NewHTTTPMessageSender(nil, channelAProxy.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +277,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if res.StatusCode != 202 {
+	if res.StatusCode != http.StatusAccepted {
 		t.Fatal("Expected 202, Have", res.StatusCode)
 	}
 
@@ -296,7 +296,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 
 func createReverseProxy(t *testing.T, host string, port int) *httputil.ReverseProxy {
 	director := func(req *http.Request) {
-		target := mustParseUrl(t, fmt.Sprintf("http://localhost:%d", port))
+		target := mustParseUrl(t, fmt.Sprint("http://localhost:", port))
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
 		req.URL.Path = target.Path

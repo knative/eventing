@@ -59,9 +59,9 @@ const (
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
 	// receiver receives incoming HTTP requests
-	receiver *kncloudevents.HttpMessageReceiver
+	receiver *kncloudevents.HTTPMessageReceiver
 	// sender sends requests to downstream services
-	sender *kncloudevents.HttpMessageSender
+	sender *kncloudevents.HTTPMessageSender
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
@@ -81,13 +81,13 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
 
-	sender, err := kncloudevents.NewHttpMessageSender(&connectionArgs, "")
+	sender, err := kncloudevents.NewHTTTPMessageSender(&connectionArgs, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message sender: %w", err)
 	}
 
 	return &Handler{
-		receiver:      kncloudevents.NewHttpMessageReceiver(port),
+		receiver:      kncloudevents.NewHTTPMessageReceiver(port),
 		sender:        sender,
 		reporter:      reporter,
 		triggerLister: triggerLister,
@@ -217,12 +217,12 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	statusCode, err := writeResponse(ctx, writer, response, ttl)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
-		// Ok, so writeResponse will return the HttpStatus of the function. That may have
+		// Ok, so writeResponse will return the HTTPStatus of the function. That may have
 		// succeeded (200), but it may have returned a malformed event, so if the
 		// function succeeded, convert this to an StatusBadGateway instead to indicate
 		// error. Note that we could just use StatusInternalServerError, but to distinguish
 		// between the two failure cases, we use a different code here.
-		if statusCode == 200 {
+		if statusCode == http.StatusOK {
 			statusCode = http.StatusBadGateway
 		}
 	}
@@ -241,7 +241,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
-	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write request: %w", err)
 	}

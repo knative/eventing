@@ -92,11 +92,11 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	}
 
 	// Let's mock this stuff!
-	httpSender, err := kncloudevents.NewHttpMessageSender(nil, channelAUrl.String())
+	httpSender, err := kncloudevents.NewHTTTPMessageSender(nil, channelAUrl.String())
 	if err != nil {
 		b.Fatal(err)
 	}
-	httpSender.Client = mockedHttpClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
+	httpSender.Client = mockedHTTPClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
 
 	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config)
 	if err != nil {
@@ -160,7 +160,7 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
-func mockedHttpClient(fn roundTripFunc) *http.Client {
+func mockedHTTPClient(fn roundTripFunc) *http.Client {
 	return &http.Client{
 		Transport: fn,
 	}

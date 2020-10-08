@@ -18,108 +18,88 @@ package kncloudevents
 
 import (
 	"context"
-	nethttp "net/http"
+	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/atomic"
 	"k8s.io/utils/pointer"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 )
 
 // Test The RetryConfigFromDeliverySpec() Functionality
 func TestRetryConfigFromDeliverySpec(t *testing.T) {
-
-	// Define The TestCase Structure
-	type TestCase struct {
+	const retry = 5
+	testcases := []struct {
 		name                     string
-		retry                    int32
 		backoffPolicy            duckv1.BackoffPolicyType
 		backoffDelay             string
 		expectedBackoffDurations []time.Duration
 		wantErr                  bool
-	}
-
-	// Create The TestCases
-	testcases := []TestCase{
-		{
-			name:          "Successful Linear Backoff 2500ms, 5 retries",
-			retry:         int32(5),
-			backoffPolicy: duckv1.BackoffPolicyLinear,
-			backoffDelay:  "PT2.5S",
-			expectedBackoffDurations: []time.Duration{
-				1 * 2500 * time.Millisecond,
-				2 * 2500 * time.Millisecond,
-				3 * 2500 * time.Millisecond,
-				4 * 2500 * time.Millisecond,
-				5 * 2500 * time.Millisecond,
-			},
-			wantErr: false,
+	}{{
+		name:          "Successful Linear Backoff 2500ms, 5 retries",
+		backoffPolicy: duckv1.BackoffPolicyLinear,
+		backoffDelay:  "PT2.5S",
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
 		},
-		{
-			name:          "Successful Exponential Backoff 1500ms, 5 retries",
-			retry:         int32(5),
-			backoffPolicy: duckv1.BackoffPolicyExponential,
-			backoffDelay:  "PT1.5S",
-			expectedBackoffDurations: []time.Duration{
-				3 * time.Second,
-				6 * time.Second,
-				12 * time.Second,
-				24 * time.Second,
-				48 * time.Second,
-			},
-			wantErr: false,
+	}, {
+		name:          "Successful Exponential Backoff 1500ms, 5 retries",
+		backoffPolicy: duckv1.BackoffPolicyExponential,
+		backoffDelay:  "PT1.5S",
+		expectedBackoffDurations: []time.Duration{
+			3 * time.Second,
+			6 * time.Second,
+			12 * time.Second,
+			24 * time.Second,
+			48 * time.Second,
 		},
-		{
-			name:          "Successful Exponential Backoff 500ms, 5 retries",
-			retry:         int32(5),
-			backoffPolicy: duckv1.BackoffPolicyExponential,
-			backoffDelay:  "PT0.5S",
-			expectedBackoffDurations: []time.Duration{
-				1 * time.Second,
-				2 * time.Second,
-				4 * time.Second,
-				8 * time.Second,
-				16 * time.Second,
-			},
-			wantErr: false,
+	}, {
+		name:          "Successful Exponential Backoff 500ms, 5 retries",
+		backoffPolicy: duckv1.BackoffPolicyExponential,
+		backoffDelay:  "PT0.5S",
+		expectedBackoffDurations: []time.Duration{
+			1 * time.Second,
+			2 * time.Second,
+			4 * time.Second,
+			8 * time.Second,
+			16 * time.Second,
 		},
-		{
-			name:          "Invalid Backoff Delay",
-			retry:         int32(5),
-			backoffPolicy: duckv1.BackoffPolicyLinear,
-			backoffDelay:  "FOO",
-			wantErr:       true,
-		},
-	}
+	}, {
+		name:          "Invalid Backoff Delay",
+		backoffPolicy: duckv1.BackoffPolicyLinear,
+		backoffDelay:  "FOO",
+		wantErr:       true,
+	}}
 
-	// Loop Over The TestCases
-	for _, testcase := range testcases {
-
-		// Execute The TestCase
-		t.Run(testcase.name, func(t *testing.T) {
-
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
 			// Create The DeliverySpec To Test
 			deliverySpec := duckv1.DeliverySpec{
 				DeadLetterSink: nil,
-				Retry:          &testcase.retry,
-				BackoffPolicy:  &testcase.backoffPolicy,
-				BackoffDelay:   &testcase.backoffDelay,
+				Retry:          ptr.Int32(retry),
+				BackoffPolicy:  &tc.backoffPolicy,
+				BackoffDelay:   &tc.backoffDelay,
 			}
 
-			// Create The RetryConfig From The DeliverySpec
+			// Create the RetryConfig from the deliverySpec
 			retryConfig, err := RetryConfigFromDeliverySpec(deliverySpec)
-			assert.Equal(t, testcase.wantErr, err != nil)
+			assert.Equal(t, tc.wantErr, err != nil)
 
-			// If Successful Then Validate The RetryConfig (Max & Backoff Calculations)
+			// If successful then validate the retryConfig (Max & Backoff calculations).
 			if err == nil {
-				assert.Equal(t, int(testcase.retry), retryConfig.RetryMax)
-				for i := 1; i < int(testcase.retry); i++ {
-					expectedBackoffDuration := testcase.expectedBackoffDurations[i-1]
+				assert.Equal(t, retry, retryConfig.RetryMax)
+				for i := 1; i < retry; i++ {
+					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
 					actualBackoffDuration := retryConfig.Backoff(i, nil)
 					assert.Equal(t, expectedBackoffDuration, actualBackoffDuration)
 				}
@@ -128,7 +108,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 	}
 }
 
-func TestHttpMessageSenderSendWithRetries(t *testing.T) {
+func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -136,118 +116,94 @@ func TestHttpMessageSenderSendWithRetries(t *testing.T) {
 		config       *RetryConfig
 		wantStatus   int
 		wantDispatch int
-		wantErr      bool
-	}{
-		{
-			name: "5 max retry",
-			config: &RetryConfig{
-				RetryMax: 5,
-				CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
-					return true, nil
-				},
-				Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
-					return time.Millisecond
-				},
+	}{{
+		name: "5 max retry",
+		config: &RetryConfig{
+			RetryMax: 5,
+			CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+				return true, nil
 			},
-			wantStatus:   nethttp.StatusServiceUnavailable,
-			wantDispatch: 6,
-			wantErr:      false,
-		},
-		{
-			name: "1 max retry",
-			config: &RetryConfig{
-				RetryMax: 1,
-				CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
-					return true, nil
-				},
-				Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
-					return time.Millisecond
-				},
+			Backoff: func(attemptNum int, resp *http.Response) time.Duration {
+				return time.Millisecond
 			},
-			wantStatus:   nethttp.StatusServiceUnavailable,
-			wantDispatch: 2,
-			wantErr:      false,
 		},
-		{
-			name:         "with no retryConfig",
-			wantStatus:   nethttp.StatusServiceUnavailable,
-			wantDispatch: 1,
-			wantErr:      false,
+		wantStatus:   http.StatusServiceUnavailable,
+		wantDispatch: 6,
+	}, {
+		name: "1 max retry",
+		config: &RetryConfig{
+			RetryMax: 1,
+			CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+				return true, nil
+			},
+			Backoff: func(attemptNum int, resp *http.Response) time.Duration {
+				return time.Millisecond
+			},
 		},
-	}
+		wantStatus:   http.StatusServiceUnavailable,
+		wantDispatch: 2,
+	}, {
+		name:         "with no retryConfig",
+		wantStatus:   http.StatusServiceUnavailable,
+		wantDispatch: 1,
+	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			n := 0
-			var mu sync.Mutex
-			server := httptest.NewServer(nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
-				mu.Lock()
-				n++
-				mu.Unlock()
-
+			var n atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				n.Inc()
 				writer.WriteHeader(tt.wantStatus)
 			}))
 
-			sender := &HttpMessageSender{
-				Client: nethttp.DefaultClient,
+			sender := &HTTPMessageSender{
+				Client: http.DefaultClient,
 			}
 
-			request, err := nethttp.NewRequest("POST", server.URL, nil)
+			request, err := http.NewRequest("POST", server.URL, nil)
 			assert.Nil(t, err)
 			got, err := sender.SendWithRetries(request, tt.config)
-			if (err != nil) != tt.wantErr || got == nil {
-				t.Errorf("SendWithRetries() error = %v, wantErr %v or got nil", err, tt.wantErr)
-				return
+			if err != nil {
+				t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
 			}
-			if got.StatusCode != nethttp.StatusServiceUnavailable {
-				t.Errorf("SendWithRetries() got = %v, want %v", got.StatusCode, nethttp.StatusServiceUnavailable)
-				return
+			if got.StatusCode != http.StatusServiceUnavailable {
+				t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, http.StatusServiceUnavailable)
 			}
-			if n != tt.wantDispatch {
-				t.Errorf("expected %d retries got %d", tt.config.RetryMax, n)
-				return
+			if int(n.Load()) != tt.wantDispatch {
+				t.Fatalf("expected %d retries got %d", tt.config.RetryMax, n)
 			}
 		})
 	}
 }
 
 func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
+	const retryMax = 10
 	linear := eventingduck.BackoffPolicyLinear
 	tests := []struct {
-		name     string
-		spec     eventingduck.DeliverySpec
-		retryMax int
-		wantErr  bool
-	}{
-		{
-			name: "full delivery",
-			spec: eventingduck.DeliverySpec{
-				Retry:         pointer.Int32Ptr(10),
-				BackoffPolicy: &linear,
-				BackoffDelay:  pointer.StringPtr("PT1S"),
-			},
-			retryMax: 10,
-			wantErr:  false,
+		name    string
+		spec    eventingduck.DeliverySpec
+		wantErr bool
+	}{{
+		name: "full delivery",
+		spec: eventingduck.DeliverySpec{
+			Retry:         pointer.Int32Ptr(10),
+			BackoffPolicy: &linear,
+			BackoffDelay:  pointer.StringPtr("PT1S"),
 		},
-		{
-			name: "only retry",
-			spec: eventingduck.DeliverySpec{
-				Retry:         pointer.Int32Ptr(10),
-				BackoffPolicy: &linear,
-			},
-			retryMax: 10,
-			wantErr:  false,
+	}, {
+		name: "only retry",
+		spec: eventingduck.DeliverySpec{
+			Retry:         pointer.Int32Ptr(10),
+			BackoffPolicy: &linear,
 		},
-		{
-			name: "not ISO8601",
-			spec: eventingduck.DeliverySpec{
-				Retry:         pointer.Int32Ptr(10),
-				BackoffDelay:  pointer.StringPtr("PP1"),
-				BackoffPolicy: &linear,
-			},
-			retryMax: 10,
-			wantErr:  true,
+	}, {
+		name: "not ISO8601",
+		spec: eventingduck.DeliverySpec{
+			Retry:         pointer.Int32Ptr(10),
+			BackoffDelay:  pointer.StringPtr("PP1"),
+			BackoffPolicy: &linear,
 		},
+		wantErr: true,
+	},
 	}
 
 	for _, tt := range tests {
@@ -268,8 +224,8 @@ func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
 			if got.Backoff == nil {
 				t.Errorf("Backoff must not be nil")
 			}
-			if got.RetryMax != tt.retryMax {
-				t.Errorf("retryMax want %d got %d", tt.retryMax, got.RetryMax)
+			if got.RetryMax != retryMax {
+				t.Errorf("RetryMax = %d, want: %d", got.RetryMax, retryMax)
 			}
 		})
 	}
