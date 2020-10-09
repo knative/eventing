@@ -92,7 +92,7 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	}
 
 	// Let's mock this stuff!
-	httpSender, err := kncloudevents.NewHTTTPMessageSender(nil, channelAUrl.String())
+	httpSender, err := kncloudevents.NewHTTPMessageSender(nil, channelAUrl.String())
 	if err != nil {
 		b.Fatal(err)
 	}

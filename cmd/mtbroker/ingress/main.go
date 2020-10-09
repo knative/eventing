@@ -127,7 +127,7 @@ func main() {
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	sender, err := kncloudevents.NewHTTTPMessageSender(&connectionArgs, "")
+	sender, err := kncloudevents.NewHTTPMessageSender(&connectionArgs, "")
 	if err != nil {
 		logger.Fatal("Unable to create message sender", zap.Error(err))
 	}
