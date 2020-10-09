@@ -103,7 +103,7 @@ func EventSenderPod(imageName string, name string, sink string, event cloudevent
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args:            args,
 			}},
 			// Never restart the event sender Pod.
@@ -148,7 +148,7 @@ func RequestSenderPod(imageName string, name string, sink string, headers map[st
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args:            args,
 			}},
 			// Never restart the event sender Pod.

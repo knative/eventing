@@ -49,7 +49,7 @@ func EventTransformationPod(name string, newEventType string, newEventSource str
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args: []string{
 					"-event-type",
 					newEventType,
@@ -75,7 +75,7 @@ func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
@@ -107,7 +107,7 @@ func SequenceStepperPod(name, eventMsgAppender string) *corev1.Pod {
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args: []string{
 					"-msg-appender",
 					eventMsgAppender,
@@ -130,7 +130,7 @@ func EventFilteringPod(name string, filter bool) *corev1.Pod {
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},

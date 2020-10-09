@@ -38,7 +38,7 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 			Containers: []corev1.Container{{
 				Name:            imageName,
 				Image:           test.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Env: []corev1.EnvVar{{
 					Name: "SYSTEM_NAMESPACE",
 					ValueFrom: &corev1.EnvVarSource{
