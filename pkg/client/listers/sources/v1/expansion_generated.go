@@ -26,6 +26,14 @@ type ApiServerSourceListerExpansion interface{}
 // ApiServerSourceNamespaceLister.
 type ApiServerSourceNamespaceListerExpansion interface{}
 
+// ContainerSourceListerExpansion allows custom methods to be added to
+// ContainerSourceLister.
+type ContainerSourceListerExpansion interface{}
+
+// ContainerSourceNamespaceListerExpansion allows custom methods to be added to
+// ContainerSourceNamespaceLister.
+type ContainerSourceNamespaceListerExpansion interface{}
+
 // SinkBindingListerExpansion allows custom methods to be added to
 // SinkBindingLister.
 type SinkBindingListerExpansion interface{}
