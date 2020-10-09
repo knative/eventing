@@ -114,7 +114,7 @@ func register() {
 		},
 	)
 	if err != nil {
-		log.Printf("failed to register opencensus views, %s", err)
+		log.Print("failed to register opencensus views, " + err.Error())
 	}
 }
 

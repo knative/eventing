@@ -24,6 +24,7 @@ package fanout
 import (
 	"context"
 	"errors"
+	"fmt"
 	nethttp "net/http"
 	"net/url"
 	"time"
@@ -143,10 +144,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 			}
 
 			reportArgs := channel.ReportArgs{}
-			eventType, err := types.ToString(te)
-			if err != nil {
-				reportArgs.EventType = eventType
-			}
+			reportArgs.EventType = fmt.Sprintf("%v", te)
 			reportArgs.Ns = ref.Namespace
 
 			// We don't need the original message anymore
@@ -196,10 +194,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 		_ = message.Finish(nil)
 
 		reportArgs := channel.ReportArgs{}
-		eventType, err := types.ToString(te)
-		if err != nil {
-			reportArgs.EventType = eventType
-		}
+		reportArgs.EventType = fmt.Sprintf("%v", te)
 		reportArgs.Ns = ref.Namespace
 		dispatchResultForFanout, err := f.dispatch(ctx, bufferedMessage, additionalHeaders)
 		if dispatchResultForFanout.info.Time > channel.NoDuration {
@@ -302,7 +297,7 @@ func (a *TypeExtractorTransformer) Transform(reader binding.MessageMetadataReade
 		if err != nil {
 			return err
 		}
-		a = (*TypeExtractorTransformer)(&tyParsed)
+		*a = TypeExtractorTransformer(tyParsed)
 	}
 	return nil
 }
