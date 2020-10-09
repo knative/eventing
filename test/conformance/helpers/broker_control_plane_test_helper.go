@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/reconciler"
 
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/test/lib/recordevents"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
@@ -82,8 +83,7 @@ func triggerV1Beta1BeforeBrokerHelper(triggerName string, client *testlib.Client
 	const etLogger = "logger"
 	const loggerPodName = "logger-pod"
 
-	logPod := resources.EventRecordPod(loggerPodName)
-	client.CreatePodOrFail(logPod, testlib.WithService(loggerPodName))
+	_ = recordevents.DeployEventRecordOrFail(context.TODO(), client, loggerPodName)
 	client.WaitForAllTestResourcesReadyOrFail(context.Background()) // Can't do this for the trigger because it's not 'ready' yet
 	client.CreateTriggerOrFailV1Beta1(triggerName,
 		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
