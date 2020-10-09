@@ -86,7 +86,7 @@ func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHos
 // NewMessageReceiver creates an event receiver passing new events to the
 // receiverFunc.
 func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.Logger, reporter StatsReporter, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
-	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
+	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(8080)
 	receiver := &MessageReceiver{
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
