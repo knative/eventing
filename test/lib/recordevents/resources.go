@@ -41,8 +41,10 @@ func EchoEvent(pod *corev1.Pod, client *testlib.Client) error {
 	return nil
 }
 
+var _ EventRecordOption = EchoEvent
+
 // ReplyWithTransformedEvent is an option to let the recordevents reply with the transformed event
-func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, replyEventData string) func(*corev1.Pod, *testlib.Client) error {
+func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, replyEventData string) EventRecordOption {
 	return func(pod *corev1.Pod, client *testlib.Client) error {
 		pod.Spec.Containers[0].Env = append(
 			pod.Spec.Containers[0].Env,
