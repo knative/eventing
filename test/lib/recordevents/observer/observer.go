@@ -66,10 +66,14 @@ func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observ
 		logging.FromContext(ctx).Fatal("Failed to process env var", err)
 	}
 
+	logging.FromContext(ctx).Infof("Observer environment configuration: %+v", env)
+
 	var replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
 	if env.Reply {
+		logging.FromContext(ctx).Info("Observer will reply with an event")
 		replyFunc = ReplyTransformerFunc(env.ReplyEventType, env.ReplyEventSource, env.ReplyEventData)
 	} else {
+		logging.FromContext(ctx).Info("Observer won't reply with an event")
 		replyFunc = NoOpReply
 	}
 
