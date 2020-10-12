@@ -23,8 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/reconciler/testing/v1alpha2"
-
 	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
@@ -39,6 +37,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	rttestingv1alpha2 "knative.dev/eventing/pkg/reconciler/testing/v1alpha2"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -155,10 +154,10 @@ func TestApiServerSourceV1Alpha2(t *testing.T) {
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
-			apiServerSource := v1alpha2.NewApiServerSource(
+			apiServerSource := rttestingv1alpha2.NewApiServerSource(
 				fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 				client.Namespace,
-				v1alpha2.WithApiServerSourceSpec(spec),
+				rttestingv1alpha2.WithApiServerSourceSpec(spec),
 			)
 
 			client.CreateApiServerSourceV1Alpha2OrFail(apiServerSource)
@@ -223,10 +222,10 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create the api server source
-	apiServerSource := v1alpha2.NewApiServerSource(
+	apiServerSource := rttestingv1alpha2.NewApiServerSource(
 		sourceName,
 		client.Namespace,
-		v1alpha2.WithApiServerSourceSpec(
+		rttestingv1alpha2.WithApiServerSourceSpec(
 			sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion: "v1",
