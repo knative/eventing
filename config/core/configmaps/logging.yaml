@@ -44,7 +44,7 @@ data:
         "callerEncoder": ""
       }
     }
-  
+
   # Log level overrides
   # For all components changes are be picked up immediately.
   loglevel.controller: "info"

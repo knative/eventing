@@ -49,7 +49,7 @@ spec:
         properties:
             spec:
                 type: object
-                description: 'ApiServerSourceSpec defines the desired state of ApiServerSource (from the client).'           
+                description: 'ApiServerSourceSpec defines the desired state of ApiServerSource (from the client).'
                 properties:
                     ceOverrides:
                         description: 'CloudEventOverrides defines overrides to control the
@@ -311,7 +311,7 @@ spec:
                     sinkUri:
                         description: 'SinkURI is the current active sink URI that has been
                             configured for the Source.'
-                        type: string        
+                        type: string
     additionalPrinterColumns:
     - name: Sink
       type: string
@@ -336,7 +336,7 @@ spec:
         properties:
             spec:
                 type: object
-                description: 'ApiServerSourceSpec defines the desired state of ApiServerSource (from the client).' 
+                description: 'ApiServerSourceSpec defines the desired state of ApiServerSource (from the client).'
                 required:
                   - resources
                 properties:
@@ -351,7 +351,7 @@ spec:
                                     pair are set on the event as an attribute extension independently.'
                                 type: object
                                 additionalProperties:
-                                  type: string                            
+                                  type: string
                     mode:
                         description: 'EventMode controls the format of the event. `Reference`
                             sends a dataref event type for the resource under watch. `Resource`
@@ -534,7 +534,7 @@ spec:
                     sinkUri:
                         description: 'SinkURI is the current active sink URI that has been
                             configured for the Source.'
-                        type: string    
+                        type: string
   - <<: *version
     name: v1beta1
     served: true

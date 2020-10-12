@@ -204,7 +204,7 @@ func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 	}
 }
 
-// This tests round tripping from a higher version -> v1alpha1 and back to the higher version.
+// This tests round tripping from a higher version -> v1beta1 and back to the higher version.
 func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 	path := apis.HTTP("")
 	path.Path = "/path"

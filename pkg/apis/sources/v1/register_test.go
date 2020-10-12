@@ -62,6 +62,10 @@ func TestKnownTypes(t *testing.T) {
 	for _, name := range []string{
 		"ApiServerSource",
 		"ApiServerSourceList",
+		"SinkBinding",
+		"SinkBindingList",
+		"ContainerSource",
+		"ContainerSourceList",
 	} {
 		if _, ok := types[name]; !ok {
 			t.Errorf("Did not find %q as registered type", name)

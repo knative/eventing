@@ -31,6 +31,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/sender"
 )
@@ -82,8 +83,7 @@ func setupBrokerTracing(ctx context.Context, brokerClass string) SetupTracingTes
 		)
 
 		// Create a logger (EventRecord) Pod and a K8s Service that points to it.
-		logPod := resources.EventRecordPod(loggerPodName)
-		client.CreatePodOrFail(logPod, testlib.WithService(loggerPodName))
+		_ = recordevents.DeployEventRecordOrFail(ctx, client, loggerPodName)
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 		loggerTrigger := client.CreateTriggerOrFailV1Beta1(

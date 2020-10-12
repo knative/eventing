@@ -54,7 +54,7 @@ spec:
             - name: K_NO_SHUTDOWN_AFTER
               value: ''
             - name: K_SINK_TIMEOUT
-              value: ''
+              value: '-1'
             - name: POD_NAME
               valueFrom:
                 fieldRef:

@@ -19,10 +19,11 @@ import (
 	"context"
 	"fmt"
 	"net"
-	nethttp "net/http"
+	"net/http"
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/pkg/network/handlers"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
@@ -30,32 +31,32 @@ const (
 	DefaultShutdownTimeout = time.Minute * 1
 )
 
-type HttpMessageReceiver struct {
+type HTTPMessageReceiver struct {
 	port int
 
-	handler  nethttp.Handler
-	server   *nethttp.Server
+	server   *http.Server
 	listener net.Listener
 }
 
-func NewHttpMessageReceiver(port int) *HttpMessageReceiver {
-	return &HttpMessageReceiver{
+func NewHTTPMessageReceiver(port int) *HTTPMessageReceiver {
+	return &HTTPMessageReceiver{
 		port: port,
 	}
 }
 
 // Blocking
-func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethttp.Handler) error {
+func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
 	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.port)); err != nil {
 		return err
 	}
 
-	recv.handler = CreateHandler(handler)
-
-	recv.server = &nethttp.Server{
+	drainer := &handlers.Drainer{
+		Inner: CreateHandler(handler),
+	}
+	recv.server = &http.Server{
 		Addr:    recv.listener.Addr().String(),
-		Handler: recv.handler,
+		Handler: drainer,
 	}
 
 	errChan := make(chan error, 1)
@@ -66,6 +67,9 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 	// wait for the server to return or ctx.Done().
 	select {
 	case <-ctx.Done():
+		// As we start to shutdown, disable keep-alives to avoid clients hanging onto connections.
+		recv.server.SetKeepAlivesEnabled(false)
+		drainer.Drain()
 		ctx, cancel := context.WithTimeout(context.Background(), getShutdownTimeout(ctx))
 		defer cancel()
 		err := recv.server.Shutdown(ctx)
@@ -90,7 +94,7 @@ func WithShutdownTimeout(ctx context.Context, timeout time.Duration) context.Con
 	return context.WithValue(ctx, shutdownTimeoutKey{}, timeout)
 }
 
-func CreateHandler(handler nethttp.Handler) nethttp.Handler {
+func CreateHandler(handler http.Handler) http.Handler {
 	return &ochttp.Handler{
 		Propagation: tracecontextb3.TraceContextEgress,
 		Handler:     handler,

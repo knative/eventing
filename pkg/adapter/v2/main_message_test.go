@@ -51,7 +51,7 @@ func TestMainMessageAdapter(t *testing.T) {
 	MainMessageAdapterWithContext(ctx,
 		"mycomponentbindings",
 		func() EnvConfigAccessor { return &myEnvConfig{} },
-		func(ctx context.Context, environment EnvConfigAccessor, sender *kncloudevents.HttpMessageSender, reporter source.StatsReporter) MessageAdapter {
+		func(ctx context.Context, environment EnvConfigAccessor, sender *kncloudevents.HTTPMessageSender, reporter source.StatsReporter) MessageAdapter {
 			env := environment.(*myEnvConfig)
 			if env.Mode != "mymode" {
 				t.Error("Expected mode mymode, got:", env.Mode)

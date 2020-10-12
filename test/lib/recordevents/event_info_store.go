@@ -18,6 +18,7 @@ package recordevents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	pkgTest "knative.dev/pkg/test"
 
@@ -36,9 +38,48 @@ import (
 
 const (
 	// The interval and timeout used for checking events
-	minEvRetryInterval = 4 * time.Second
-	timeoutEvRetry     = 4 * time.Minute
+	retryInterval = 4 * time.Second
+	retryTimeout  = 4 * time.Minute
 )
+
+type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
+
+func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
+	client.CreateServiceAccountOrFail(name)
+	client.CreateRoleOrFail(resources.Role(name,
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get"},
+		}),
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{rbacv1.VerbAll},
+		}),
+	))
+	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
+
+	eventRecordPod := EventRecordPod(name, name)
+	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(name))...)
+	err := pkgTest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
+	if err != nil {
+		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", name, errors.WithStack(err))
+	}
+	client.WaitForServiceEndpointsOrFail(ctx, name, 1)
+	return eventRecordPod
+}
+
+// Deploys a new recordevents pod and start the associated EventInfoStore
+func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {
+	eventRecordPod := DeployEventRecordOrFail(ctx, client, podName, options...)
+
+	eventTracker, err := NewEventInfoStore(client, podName, client.Namespace)
+	if err != nil {
+		client.T.Fatalf("Failed to start the EventInfoStore associated to pod '%s': %v", podName, err)
+	}
+	return eventTracker, eventRecordPod
+}
 
 // Stateful store of events received by the recordevents pod it is pointed at.
 // This pulls events from the pod during any Find or Wait call, storing them
@@ -46,159 +87,57 @@ const (
 type EventInfoStore struct {
 	tb testing.TB
 
-	podName string
-	getter  eventGetterInterface
+	podName      string
+	podNamespace string
 
-	lock          sync.Mutex
-	allEvents     []EventInfo
-	firstID       int
-	closeCh       chan struct{}
-	doRefresh     chan chan error
-	timeout       time.Duration
-	retryInterval time.Duration
-}
-
-// Functions used for getting data from the REST api of the recordevents pod.
-// The interface exists for use with unit tests of this module.
-type eventGetterInterface interface {
-	getMinMax() (minRet int, maxRet int, errRet error)
-	getEntry(seqno int) (EventInfo, error)
-	trimThrough(seqno int) error
-	cleanup()
-}
-
-// Internal function to create an event store.  This is called directly by unit tests of
-// this module.
-func newTestableEventInfoStore(egi eventGetterInterface, retryInterval time.Duration,
-	timeout time.Duration) *EventInfoStore {
-	if timeout == -1 {
-		timeout = timeoutEvRetry
-	}
-	if retryInterval == -1 {
-		retryInterval = minEvRetryInterval
-	}
-	ei := &EventInfoStore{getter: egi, firstID: 1, timeout: timeout, retryInterval: retryInterval}
-	ei.start()
-	return ei
+	lock      sync.Mutex
+	collected []EventInfo
 }
 
 // Creates an EventInfoStore that is used to iteratively download events recorded by the
-// recordevents pod.  Calling this forwards the recordevents port to the local machine
-// and blocks waiting to connect to that pod.  Fails if it cannot connect within
-// the expected timeout (4 minutes currently)
-func NewEventInfoStore(client *testlib.Client, podName string) (*EventInfoStore, error) {
-	egi, err := newEventGetter(podName, client, client.T.Logf)
-	if err != nil {
-		return nil, err
+// recordevents pod.
+func NewEventInfoStore(client *testlib.Client, podName string, podNamespace string) (*EventInfoStore, error) {
+	store := &EventInfoStore{
+		tb:           client.T,
+		podName:      podName,
+		podNamespace: podNamespace,
 	}
-	ei := newTestableEventInfoStore(egi, -1, -1)
-	ei.podName = podName
-	ei.tb = client.T
-	client.Cleanup(ei.cleanup)
-	return ei, nil
+
+	client.EventListener.AddHandler(store.handle)
+
+	return store, nil
 }
 
-type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
-
-// Deploys a new recordevents pod and start the associated EventInfoStore
-func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {
-	eventRecordPod := resources.EventRecordPod(podName)
-	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(podName))...)
-	err := pkgTest.WaitForPodRunning(ctx, client.Kube, podName, client.Namespace)
-	if err != nil {
-		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", podName, errors.WithStack(err))
-	}
-	client.WaitForServiceEndpointsOrFail(ctx, podName, 1)
-
-	eventTracker, err := NewEventInfoStore(client, podName)
-	if err != nil {
-		client.T.Fatalf("Failed to start the EventInfoStore associated to pod '%s': %v", podName, err)
-	}
-	return eventTracker, eventRecordPod
-}
-
-// Starts the single threaded background goroutine used to update local state
-// from the remote REST API.
-func (ei *EventInfoStore) start() {
-	ei.closeCh = make(chan struct{})
-	ei.doRefresh = make(chan chan error)
-	go func() {
-		for {
-			select {
-			case <-ei.closeCh:
-				ei.getter.cleanup()
-				return
-			case replyCh := <-ei.doRefresh:
-				replyCh <- ei.doRetrieveData()
-			}
-		}
-	}()
-}
-
-// The data update thread used by the single threaded background goroutine
-// for updating data from the REST api.
-func (ei *EventInfoStore) doRetrieveData() error {
-	min, max, err := ei.getter.getMinMax()
-	if err != nil {
-		return fmt.Errorf("error getting MinMax %v", err)
-	}
+func (ei *EventInfoStore) getEventInfo() []EventInfo {
 	ei.lock.Lock()
-	curMin := ei.firstID
-	curMax := curMin + len(ei.allEvents) - 1
-	ei.lock.Unlock()
-	if min == max+1 {
-		// Nothing to read or trim
-		return nil
-	} else {
-		if min > curMax+1 {
-			return fmt.Errorf("mismatched stored max/available min: %d, %d", curMax, min)
-		}
-		min = curMax + 1
-		// We may have data to read, definitely have data to trim.
-	}
-	var newEvents []EventInfo
-	for i := min; i <= max; i++ {
-		e, err := ei.getter.getEntry(i)
-		if err != nil {
-			return fmt.Errorf("error calling getEntry of %d %v", i, err)
-		}
-
-		newEvents = append(newEvents, e)
-	}
-	ei.lock.Lock()
-	ei.allEvents = append(ei.allEvents, newEvents...)
-	ei.lock.Unlock()
-	err = ei.getter.trimThrough(max)
-	return err
-
+	defer ei.lock.Unlock()
+	return ei.collected
 }
 
-// Clean up any background resources used by the store.  Must be called exactly once after
-// the last use.
-func (ei *EventInfoStore) cleanup() {
-	close(ei.closeCh)
-}
+func (ei *EventInfoStore) handle(event *corev1.Event) {
+	// Filter events
+	if !ei.isMyEvent(event) {
+		return
+	}
 
-//TODO remove it, this is not useful anymore
-// Deprecated: you can remove the manual cleanup of the event getter, since now it's done at test tear down automatically
-func (ei *EventInfoStore) Cleanup() {}
-
-// Called internally by functions wanting the current list of all
-// known events.  This calls for an update from the REST server and
-// returns the summary of all locally and remotely known events.
-// Returns an error in case of a connection or protocol error.
-func (ei *EventInfoStore) refreshData() ([]EventInfo, error) {
-	var allEvents []EventInfo
-	replyCh := make(chan error)
-	ei.doRefresh <- replyCh
-	err := <-replyCh
+	eventInfo := EventInfo{}
+	err := json.Unmarshal([]byte(event.Message), &eventInfo)
 	if err != nil {
-		return nil, err
+		ei.tb.Errorf("Received EventInfo that cannot be unmarshalled! %+v", err)
+		return
 	}
+
 	ei.lock.Lock()
-	allEvents = append(allEvents, ei.allEvents...)
-	ei.lock.Unlock()
-	return allEvents, nil
+	defer ei.lock.Unlock()
+	ei.collected = append(ei.collected, eventInfo)
+}
+
+func (ei *EventInfoStore) isMyEvent(event *corev1.Event) bool {
+	return event.Type == corev1.EventTypeNormal &&
+		event.Reason == CloudEventObservedReason &&
+		event.InvolvedObject.Kind == "Pod" &&
+		event.InvolvedObject.Name == ei.podName &&
+		event.InvolvedObject.Namespace == ei.podNamespace
 }
 
 // Find all events received by the recordevents pod that match the provided matchers,
@@ -216,10 +155,7 @@ func (ei *EventInfoStore) Find(matchers ...EventInfoMatcher) ([]EventInfo, Searc
 	lastEvents := []EventInfo{}
 	var nonMatchingErrors []error
 
-	allEvents, err := ei.refreshData()
-	if err != nil {
-		return nil, sInfo, nonMatchingErrors, fmt.Errorf("error getting events %v", err)
-	}
+	allEvents := ei.getEventInfo()
 	for i := range allEvents {
 		if err := f(allEvents[i]); err == nil {
 			allMatch = append(allMatch, allEvents[i])
@@ -241,27 +177,31 @@ func (ei *EventInfoStore) Find(matchers ...EventInfoMatcher) ([]EventInfo, Searc
 // Assert that there are at least min number of match for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertAtLeast(min int, matchers ...EventInfoMatcher) []EventInfo {
+	ei.tb.Helper()
 	events, err := ei.waitAtLeastNMatch(AllOf(matchers...), min)
 	if err != nil {
 		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
+	ei.tb.Logf("Assert passed")
 	return events
 }
 
 // Assert that there are at least min number of matches and at most max number of matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertInRange(min int, max int, matchers ...EventInfoMatcher) []EventInfo {
+	ei.tb.Helper()
 	events := ei.AssertAtLeast(min, matchers...)
 	if max > 0 && len(events) > max {
 		ei.tb.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
-
+	ei.tb.Logf("Assert passed")
 	return events
 }
 
 // Assert that there aren't any matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertNot(matchers ...EventInfoMatcher) []EventInfo {
+	ei.tb.Helper()
 	res, recentEvents, _, err := ei.Find(matchers...)
 	if err != nil {
 		ei.tb.Fatalf("Unexpected error during find on recordevents '%s': %+v", ei.podName, errors.WithStack(err))
@@ -272,14 +212,17 @@ func (ei *EventInfoStore) AssertNot(matchers ...EventInfoMatcher) []EventInfo {
 			fmt.Errorf("Unexpected matches on recordevents '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
-
+	ei.tb.Logf("Assert passed")
 	return res
 }
 
 // Assert that there are exactly n matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
 func (ei *EventInfoStore) AssertExact(n int, matchers ...EventInfoMatcher) []EventInfo {
-	return ei.AssertInRange(n, n, matchers...)
+	ei.tb.Helper()
+	events := ei.AssertInRange(n, n, matchers...)
+	ei.tb.Logf("Assert passed")
+	return events
 }
 
 // Wait a long time (currently 4 minutes) until the provided function matches at least
@@ -290,7 +233,7 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 	var matchRet []EventInfo
 	var internalErr error
 
-	wait.PollImmediate(ei.retryInterval, ei.timeout, func() (bool, error) {
+	wait.PollImmediate(retryInterval, retryTimeout, func() (bool, error) {
 		allMatch, sInfo, matchErrs, err := ei.Find(f)
 		if err != nil {
 			internalErr = fmt.Errorf("FAIL MATCHING: unexpected error during find: %v", err)

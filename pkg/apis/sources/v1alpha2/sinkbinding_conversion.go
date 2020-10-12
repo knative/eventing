@@ -55,6 +55,6 @@ func (sink *SinkBinding) ConvertFrom(ctx context.Context, obj apis.Convertible) 
 		sink.Status.SourceStatus = source.Status.SourceStatus
 		return nil
 	default:
-		return apis.ConvertToViaProxy(ctx, source, &v1beta1.SinkBinding{}, sink)
+		return apis.ConvertFromViaProxy(ctx, source, &v1beta1.SinkBinding{}, sink)
 	}
 }

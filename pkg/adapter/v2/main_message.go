@@ -39,7 +39,7 @@ type MessageAdapter interface {
 	Start(ctx context.Context) error
 }
 
-type MessageAdapterConstructor func(ctx context.Context, env EnvConfigAccessor, adapter *kncloudevents.HttpMessageSender, reporter source.StatsReporter) MessageAdapter
+type MessageAdapterConstructor func(ctx context.Context, env EnvConfigAccessor, adapter *kncloudevents.HTTPMessageSender, reporter source.StatsReporter) MessageAdapter
 
 func MainMessageAdapter(component string, ector EnvConfigConstructor, ctor MessageAdapterConstructor) {
 	ctx := signals.NewContext()
@@ -108,7 +108,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpBindingsSender, err := kncloudevents.NewHttpMessageSender(nil, env.GetSink())
+	httpBindingsSender, err := kncloudevents.NewHTTPMessageSender(nil, env.GetSink())
 	if err != nil {
 		logger.Fatal("error building cloud event client", zap.Error(err))
 	}

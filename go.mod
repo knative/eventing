@@ -18,6 +18,7 @@ require (
 	github.com/pelletier/go-toml v1.8.0
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/common v0.9.1
 	github.com/rickb777/date v1.13.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
@@ -31,15 +32,15 @@ require (
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/grpc v1.31.1
 	gopkg.in/yaml.v2 v2.3.0
-	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 	k8s.io/api v0.18.8
 	k8s.io/apiextensions-apiserver v0.18.4
 	k8s.io/apimachinery v0.18.8
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/pkg v0.0.0-20201003175733-ea7374e81105
-	knative.dev/test-infra v0.0.0-20201002164834-8c07ff018549
+	knative.dev/pkg v0.0.0-20201009175121-3c4df8c27293
+	knative.dev/test-infra v0.0.0-20201009190921-622088de6f36
 	sigs.k8s.io/yaml v1.2.0
 )
 

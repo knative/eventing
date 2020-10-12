@@ -35,7 +35,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
-	"knative.dev/eventing/pkg/health"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/tracing"
@@ -50,9 +49,9 @@ const (
 
 type Handler struct {
 	// Receiver receives incoming HTTP requests
-	Receiver *kncloudevents.HttpMessageReceiver
+	Receiver *kncloudevents.HTTPMessageReceiver
 	// Sender sends requests to the broker
-	Sender *kncloudevents.HttpMessageSender
+	Sender *kncloudevents.HTTPMessageSender
 	// Defaults sets default values to incoming events
 	Defaulter client.EventDefaulter
 	// Reporter reports stats of status code and dispatch time
@@ -97,7 +96,7 @@ func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
+	return h.Receiver.StartListen(ctx, h)
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -201,7 +200,7 @@ func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudeve
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
-	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
+	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}

@@ -91,7 +91,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	if brokerClass == eventing.MTChannelBrokerClassValue {
 		pingSource.Spec.SourceSpec.Sink.URI = &apis.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("broker-ingress.%s.svc.cluster.local", resources.SystemNamespace),
+			Host:   fmt.Sprintf("broker-ingress.%s.svc", resources.SystemNamespace),
 			Path:   fmt.Sprintf("/%s/%s", client.Namespace, defaultBrokerName),
 		}
 	}

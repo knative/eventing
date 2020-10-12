@@ -78,7 +78,7 @@ func TestContainerSourceV1Alpha2(t *testing.T) {
 					Containers: []corev1.Container{{
 						Name:            imageName,
 						Image:           pkgTest.ImagePath(imageName),
-						ImagePullPolicy: corev1.PullAlways,
+						ImagePullPolicy: corev1.PullIfNotPresent,
 						Args:            args,
 						Env:             envVars,
 					}},

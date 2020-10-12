@@ -107,7 +107,7 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 	}
 }
 
-type HttpLoadGenerator struct {
+type httpLoadGenerator struct {
 	eventSource string
 	sinkUrl     string
 
@@ -119,13 +119,13 @@ type HttpLoadGenerator struct {
 	ceClient       cloudevents.Client
 }
 
-func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
+func NewHTTPLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
 	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
 		if sinkUrl == "" {
 			panic("Missing --sink flag")
 		}
 
-		loadGen := &HttpLoadGenerator{
+		loadGen := &httpLoadGenerator{
 			eventSource: eventSource,
 			sinkUrl:     sinkUrl,
 
@@ -190,27 +190,27 @@ func newCloudEventsClient(sinkUrl string) (cloudevents.Client, error) {
 		cloudevents.WithTarget(sinkUrl),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create transport: %v", err)
+		return nil, fmt.Errorf("failed to create transport: %w", err)
 	}
 
 	return cloudevents.NewClient(t)
 }
 
-func (h HttpLoadGenerator) Warmup(pace common.PaceSpec, msgSize uint, fixedBody bool) {
+func (h httpLoadGenerator) Warmup(pace common.PaceSpec, msgSize uint, fixedBody bool) {
 	targeter := NewCloudEventsTargeter(h.sinkUrl, msgSize, common.WarmupEventType, defaultEventSource, fixedBody).VegetaTargeter()
 	vegetaResults := h.warmupAttacker.Attack(targeter, vegeta.ConstantPacer{Freq: pace.Rps, Per: time.Second}, pace.Duration, common.WarmupEventType+"-attack")
 	for range vegetaResults {
 	}
 }
 
-func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint, fixedBody bool) {
+func (h httpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint, fixedBody bool) {
 	targeter := NewCloudEventsTargeter(h.sinkUrl, msgSize, common.MeasureEventType, eventsSource(), fixedBody).VegetaTargeter()
 	res := h.paceAttacker.Attack(targeter, vegeta.ConstantPacer{Freq: pace.Rps, Per: time.Second}, pace.Duration, fmt.Sprintf("%s-attack-%d", h.eventSource, i))
 	for range res {
 	}
 }
 
-func (h HttpLoadGenerator) SendGCEvent() {
+func (h httpLoadGenerator) SendGCEvent() {
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
 	event.SetDataContentType(cloudevents.ApplicationJSON)
@@ -220,7 +220,7 @@ func (h HttpLoadGenerator) SendGCEvent() {
 	_ = h.ceClient.Send(context.TODO(), event)
 }
 
-func (h HttpLoadGenerator) SendEndEvent() {
+func (h httpLoadGenerator) SendEndEvent() {
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
 	event.SetDataContentType(cloudevents.ApplicationJSON)
