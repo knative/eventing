@@ -1002,7 +1002,7 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/pkg v0.0.0-20201012163217-54ad6c6d39a7 => github.com/vagababov/pkg v0.0.0-20201012182538-2279bdf9ad29
+# knative.dev/pkg v0.0.0-20201012163217-54ad6c6d39a7
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
