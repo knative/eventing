@@ -2,6 +2,7 @@
 
 /*
 Copyright 2020 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -37,17 +38,17 @@ import (
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
-	rttestingv1alpha2 "knative.dev/eventing/pkg/reconciler/testing/v1alpha2"
+	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
-func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
+func TestSinkBindingV1Deployment(t *testing.T) {
 	const (
 		sinkBindingName = "e2e-sink-binding"
 		deploymentName  = "e2e-sink-binding-deployment"
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1alpha2dep"
+		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1beta1dep"
 	)
 
 	client := setup(t, true)
@@ -60,23 +61,23 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 	extensionSecret := string(uuid.NewUUID())
 
 	// create sink binding
-	sinkBinding := rttestingv1alpha2.NewSinkBinding(
+	sinkBinding := rttestingv1.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		rttestingv1alpha2.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
-		rttestingv1alpha2.WithSubject(tracker.Reference{
+		rttestingv1.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
+		rttestingv1.WithSubject(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Namespace:  client.Namespace,
 			Name:       deploymentName,
 		}),
-		rttestingv1alpha2.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
+		rttestingv1.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
 			"sinkbinding": extensionSecret,
 		}}),
 	)
-	client.CreateSinkBindingV1Alpha2OrFail(sinkBinding)
+	client.CreateSinkBindingV1OrFail(sinkBinding)
 
-	message := fmt.Sprintf("msg %s TestSinkBindingDeployment", uuid.NewUUID())
+	message := fmt.Sprintf("msg %s for TestSinkBindingDeployment", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
@@ -98,7 +99,7 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 					Containers: []corev1.Container{{
 						Name:            imageName,
 						Image:           pkgTest.ImagePath(imageName),
-						ImagePullPolicy: corev1.PullIfNotPresent,
+						ImagePullPolicy: corev1.PullAlways,
 						Args:            []string{"--msg=" + message},
 						Env: []corev1.EnvVar{{
 							Name:  "POD_NAME",
@@ -124,14 +125,14 @@ func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 	))
 }
 
-func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
+func TestSinkBindingV1CronJob(t *testing.T) {
 	const (
 		sinkBindingName = "e2e-sink-binding"
 		deploymentName  = "e2e-sink-binding-cronjob"
 		// the heartbeats image is built from test_images/heartbeats
 		imageName = "heartbeats"
 
-		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1alpha2c"
+		recordEventPodName = "e2e-sink-binding-recordevent-pod-v1beta1c"
 	)
 
 	client := setup(t, true)
@@ -142,11 +143,11 @@ func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
 	// create sink binding
-	sinkBinding := rttestingv1alpha2.NewSinkBinding(
+	sinkBinding := rttestingv1.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		rttestingv1alpha2.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
-		rttestingv1alpha2.WithSubject(tracker.Reference{
+		rttestingv1.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
+		rttestingv1.WithSubject(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
 			Namespace:  client.Namespace,
@@ -157,7 +158,7 @@ func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 			},
 		}),
 	)
-	client.CreateSinkBindingV1Alpha2OrFail(sinkBinding)
+	client.CreateSinkBindingV1OrFail(sinkBinding)
 
 	message := fmt.Sprintf("msg %s TestSinkBindingCronJob", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{
@@ -180,7 +181,7 @@ func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 							Containers: []corev1.Container{{
 								Name:            imageName,
 								Image:           pkgTest.ImagePath(imageName),
-								ImagePullPolicy: corev1.PullIfNotPresent,
+								ImagePullPolicy: corev1.PullAlways,
 								Args:            []string{"--msg=" + message},
 								Env: []corev1.EnvVar{{
 									Name:  "ONE_SHOT",

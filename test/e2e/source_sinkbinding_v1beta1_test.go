@@ -37,7 +37,7 @@ import (
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	rttestingv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 )
 
 func TestSinkBindingV1Beta1Deployment(t *testing.T) {
@@ -60,23 +60,23 @@ func TestSinkBindingV1Beta1Deployment(t *testing.T) {
 	extensionSecret := string(uuid.NewUUID())
 
 	// create sink binding
-	sinkBinding := eventingtesting.NewSinkBindingV1Beta1(
+	sinkBinding := rttestingv1beta1.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSinkV1B1(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
-		eventingtesting.WithSubjectV1B1(tracker.Reference{
+		rttestingv1beta1.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
+		rttestingv1beta1.WithSubject(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Namespace:  client.Namespace,
 			Name:       deploymentName,
 		}),
-		eventingtesting.WithCloudEventOverridesV1B1(duckv1.CloudEventOverrides{Extensions: map[string]string{
+		rttestingv1beta1.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
 			"sinkbinding": extensionSecret,
 		}}),
 	)
 	client.CreateSinkBindingV1Beta1OrFail(sinkBinding)
 
-	message := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
+	message := fmt.Sprintf("msg %s TestSinkBindingDeployment", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
@@ -142,11 +142,11 @@ func TestSinkBindingV1Beta1CronJob(t *testing.T) {
 	// create event logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
 	// create sink binding
-	sinkBinding := eventingtesting.NewSinkBindingV1Beta1(
+	sinkBinding := rttestingv1beta1.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSinkV1B1(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
-		eventingtesting.WithSubjectV1B1(tracker.Reference{
+		rttestingv1beta1.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(recordEventPodName, client.Namespace)}),
+		rttestingv1beta1.WithSubject(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
 			Namespace:  client.Namespace,
@@ -159,7 +159,7 @@ func TestSinkBindingV1Beta1CronJob(t *testing.T) {
 	)
 	client.CreateSinkBindingV1Beta1OrFail(sinkBinding)
 
-	message := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
+	message := fmt.Sprintf("msg %s TestSinkBindingCronJob", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: client.Namespace,
