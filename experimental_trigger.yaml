@@ -1,0 +1,13 @@
+apiVersion: eventing.knative.dev/v1experimental
+kind: Trigger
+metadata:
+  name: my-service-trigger
+spec:
+  broker: default
+  filter:
+    expression: "helloworld"
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: my-service

@@ -114,6 +114,12 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 
 var callbacks = map[schema.GroupVersionKind]validation.Callback{}
 
+func init() {
+	for k, v := range AdditionalCRD() {
+		ourTypes[k] = v
+	}
+}
+
 func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	// Decorate contexts with the current state of the config.
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
@@ -248,113 +254,119 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1_        = sourcesv1.SchemeGroupVersion.Version
 	)
 
+	conversions := map[schema.GroupKind]conversion.GroupKindConversion{
+		// Eventing
+		eventingv1.Kind("Trigger"): {
+			DefinitionName: eventing.TriggersResource.String(),
+			HubVersion:     eventingv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				eventingv1beta1_: &eventingv1beta1.Trigger{},
+				eventingv1_:      &eventingv1.Trigger{},
+			},
+		},
+		eventingv1.Kind("Broker"): {
+			DefinitionName: eventing.BrokersResource.String(),
+			HubVersion:     eventingv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				eventingv1beta1_: &eventingv1beta1.Broker{},
+				eventingv1_:      &eventingv1.Broker{},
+			},
+		},
+
+		// Messaging
+		messagingv1.Kind("Channel"): {
+			DefinitionName: messaging.ChannelsResource.String(),
+			HubVersion:     messagingv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				messagingv1beta1_: &messagingv1beta1.Channel{},
+				messagingv1_:      &messagingv1.Channel{},
+			},
+		},
+		messagingv1.Kind("InMemoryChannel"): {
+			DefinitionName: messaging.InMemoryChannelsResource.String(),
+			HubVersion:     messagingv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				messagingv1beta1_: &messagingv1beta1.InMemoryChannel{},
+				messagingv1_:      &messagingv1.InMemoryChannel{},
+			},
+		},
+		messagingv1.Kind("Subscription"): {
+			DefinitionName: messaging.SubscriptionsResource.String(),
+			HubVersion:     messagingv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				messagingv1beta1_: &messagingv1beta1.Subscription{},
+				messagingv1_:      &messagingv1.Subscription{},
+			},
+		},
+
+		// flows
+		flowsv1.Kind("Sequence"): {
+			DefinitionName: flows.SequenceResource.String(),
+			HubVersion:     flowsv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				flowsv1beta1_: &flowsv1beta1.Sequence{},
+				flowsv1_:      &flowsv1.Sequence{},
+			},
+		},
+		flowsv1.Kind("Parallel"): {
+			DefinitionName: flows.ParallelResource.String(),
+			HubVersion:     flowsv1beta1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				flowsv1beta1_: &flowsv1beta1.Parallel{},
+				flowsv1_:      &flowsv1.Parallel{},
+			},
+		},
+
+		// Sources
+		sourcesv1.Kind("ApiServerSource"): {
+			DefinitionName: sources.ApiServerSourceResource.String(),
+			HubVersion:     sourcesv1alpha1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
+				sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
+				sourcesv1beta1_:  &sourcesv1beta1.ApiServerSource{},
+				sourcesv1_:       &sourcesv1.ApiServerSource{},
+			},
+		},
+		sourcesv1beta1.Kind("PingSource"): {
+			DefinitionName: sources.PingSourceResource.String(),
+			HubVersion:     sourcesv1alpha2_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
+				sourcesv1beta1_:  &sourcesv1beta1.PingSource{},
+			},
+		},
+		sourcesv1.Kind("SinkBinding"): {
+			DefinitionName: sources.SinkBindingResource.String(),
+			HubVersion:     sourcesv1alpha1_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
+				sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
+				sourcesv1beta1_:  &sourcesv1beta1.SinkBinding{},
+				sourcesv1_:       &sourcesv1.SinkBinding{},
+			},
+		},
+		sourcesv1.Kind("ContainerSource"): {
+			DefinitionName: sources.ContainerSourceResource.String(),
+			HubVersion:     sourcesv1alpha2_,
+			Zygotes: map[string]conversion.ConvertibleObject{
+				sourcesv1alpha2_: &sourcesv1alpha2.ContainerSource{},
+				sourcesv1beta1_:  &sourcesv1beta1.ContainerSource{},
+				sourcesv1_:       &sourcesv1.ContainerSource{},
+			},
+		},
+	}
+
+	for k, v := range AdditionalConversions() {
+		conversions[k] = v
+	}
+
 	return conversion.NewConversionController(ctx,
 		// The path on which to serve the webhook
 		"/resource-conversion",
 
 		// Specify the types of custom resource definitions that should be converted
-		map[schema.GroupKind]conversion.GroupKindConversion{
-			// Eventing
-			eventingv1.Kind("Trigger"): {
-				DefinitionName: eventing.TriggersResource.String(),
-				HubVersion:     eventingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1beta1_: &eventingv1beta1.Trigger{},
-					eventingv1_:      &eventingv1.Trigger{},
-				},
-			},
-			eventingv1.Kind("Broker"): {
-				DefinitionName: eventing.BrokersResource.String(),
-				HubVersion:     eventingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1beta1_: &eventingv1beta1.Broker{},
-					eventingv1_:      &eventingv1.Broker{},
-				},
-			},
-
-			// Messaging
-			messagingv1.Kind("Channel"): {
-				DefinitionName: messaging.ChannelsResource.String(),
-				HubVersion:     messagingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1beta1_: &messagingv1beta1.Channel{},
-					messagingv1_:      &messagingv1.Channel{},
-				},
-			},
-			messagingv1.Kind("InMemoryChannel"): {
-				DefinitionName: messaging.InMemoryChannelsResource.String(),
-				HubVersion:     messagingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1beta1_: &messagingv1beta1.InMemoryChannel{},
-					messagingv1_:      &messagingv1.InMemoryChannel{},
-				},
-			},
-			messagingv1.Kind("Subscription"): {
-				DefinitionName: messaging.SubscriptionsResource.String(),
-				HubVersion:     messagingv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1beta1_: &messagingv1beta1.Subscription{},
-					messagingv1_:      &messagingv1.Subscription{},
-				},
-			},
-
-			// flows
-			flowsv1.Kind("Sequence"): {
-				DefinitionName: flows.SequenceResource.String(),
-				HubVersion:     flowsv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					flowsv1beta1_: &flowsv1beta1.Sequence{},
-					flowsv1_:      &flowsv1.Sequence{},
-				},
-			},
-			flowsv1.Kind("Parallel"): {
-				DefinitionName: flows.ParallelResource.String(),
-				HubVersion:     flowsv1beta1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					flowsv1beta1_: &flowsv1beta1.Parallel{},
-					flowsv1_:      &flowsv1.Parallel{},
-				},
-			},
-
-			// Sources
-			sourcesv1.Kind("ApiServerSource"): {
-				DefinitionName: sources.ApiServerSourceResource.String(),
-				HubVersion:     sourcesv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
-					sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
-					sourcesv1beta1_:  &sourcesv1beta1.ApiServerSource{},
-					sourcesv1_:       &sourcesv1.ApiServerSource{},
-				},
-			},
-			sourcesv1beta1.Kind("PingSource"): {
-				DefinitionName: sources.PingSourceResource.String(),
-				HubVersion:     sourcesv1alpha2_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
-					sourcesv1beta1_:  &sourcesv1beta1.PingSource{},
-				},
-			},
-			sourcesv1.Kind("SinkBinding"): {
-				DefinitionName: sources.SinkBindingResource.String(),
-				HubVersion:     sourcesv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
-					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
-					sourcesv1beta1_:  &sourcesv1beta1.SinkBinding{},
-					sourcesv1_:       &sourcesv1.SinkBinding{},
-				},
-			},
-			sourcesv1.Kind("ContainerSource"): {
-				DefinitionName: sources.ContainerSourceResource.String(),
-				HubVersion:     sourcesv1alpha2_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha2_: &sourcesv1alpha2.ContainerSource{},
-					sourcesv1beta1_:  &sourcesv1beta1.ContainerSource{},
-					sourcesv1_:       &sourcesv1.ContainerSource{},
-				},
-			},
-		},
+		conversions,
 
 		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.
 		ctxFunc,

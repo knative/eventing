@@ -47,6 +47,12 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   "eventing:v1beta1 eventing:v1 messaging:v1beta1 messaging:v1 flows:v1beta1 flows:v1 sources:v1alpha1 sources:v1alpha2 sources:v1beta1 sources:v1 configs:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
+${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
+  knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
+  "eventing:v1experimental" \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt \
+  --build-tag js_trigger_filter
+
 # Deep copy config
 ${GOPATH}/bin/deepcopy-gen \
   -O zz_generated.deepcopy \
