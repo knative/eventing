@@ -77,6 +77,7 @@ type Reconciler struct {
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
+	LogTriggerFilterExpression(ctx, t)
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
