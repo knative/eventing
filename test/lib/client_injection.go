@@ -22,6 +22,7 @@ package lib
 import (
 	"context"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/test"
 	"testing"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -42,6 +43,7 @@ func NewClientFromCtx(ctx context.Context, namespace string, t *testing.T) (*Cli
 		Namespace:     namespace,
 		T:             t,
 	}
+	client.KubeClient = test.KubeClient{Kube: client.Kube}
 
 	client.Namespace = namespace
 	client.T = t
