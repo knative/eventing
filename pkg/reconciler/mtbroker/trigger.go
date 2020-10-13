@@ -91,7 +91,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1beta1.Broker, t 
 	}
 	t.Status.PropagateSubscriptionCondition(sub.Status.GetTopLevelCondition())
 
-	if err := r.checkDependencyAnnotation(ctx, t, b); err != nil {
+	if err := r.checkDependencyAnnotation(ctx, t); err != nil {
 		return err
 	}
 
@@ -193,14 +193,14 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1beta1.T
 	return r.eventingClientSet.EventingV1beta1().Triggers(desired.Namespace).UpdateStatus(existing)
 }
 
-func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.Trigger, b *v1beta1.Broker) error {
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.Trigger) error {
 	if dependencyAnnotation, ok := t.GetAnnotations()[v1beta1.DependencyAnnotation]; ok {
 		dependencyObjRef, err := v1beta1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {
 			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
 			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
 		}
-		trackKResource := r.kresourceTracker.TrackInNamespace(b)
+		trackKResource := r.sourceTracker.TrackInNamespace(t)
 		// Trigger and its dependent source are in the same namespace, we already did the validation in the webhook.
 		if err := trackKResource(dependencyObjRef); err != nil {
 			return fmt.Errorf("tracking dependency: %v", err)
@@ -215,7 +215,7 @@ func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1beta1.T
 }
 
 func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1beta1.Trigger, dependencyObjRef corev1.ObjectReference) error {
-	lister, err := r.kresourceTracker.ListerFor(dependencyObjRef)
+	lister, err := r.sourceTracker.ListerFor(dependencyObjRef)
 	if err != nil {
 		t.Status.MarkDependencyUnknown("ListerDoesNotExist", "Failed to retrieve lister: %v", err)
 		return fmt.Errorf("retrieving lister: %v", err)
@@ -229,7 +229,7 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1beta
 		}
 		return fmt.Errorf("getting the dependency: %v", err)
 	}
-	dependency := dependencyObj.(*duckv1.KResource)
+	dependency := dependencyObj.(*duckv1.Source)
 
 	// The dependency hasn't yet reconciled our latest changes to
 	// its desired state, so its conditions are outdated.
