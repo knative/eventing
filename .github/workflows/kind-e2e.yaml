@@ -57,6 +57,7 @@ jobs:
       # Use a semi-random cluster suffix, but somewhat predictable
       # so reruns don't just give us a completely new value.
       CLUSTER_SUFFIX: c${{ github.run_id }}.local
+      ARTIFACTS: ${{ github.workspace }}/artifacts
 
     steps:
     - name: Set up Go 1.15.x
@@ -162,3 +163,34 @@ jobs:
         # Run the tests tagged as e2e on the KinD cluster.
         go test -race -count=1 -parallel=12 -timeout=30m -tags=e2e \
            ${{ matrix.test-suite }} ${{ matrix.extra-test-flags }}
+
+    - name: Collect system diagnostics
+      if: ${{ failure() }}
+      run: |
+        kubectl -n${SYSTEM_NAMESPACE} get pods
+
+        echo '::group:: describe'
+        kubectl -n${SYSTEM_NAMESPACE} describe pods
+        echo '::endgroup::'
+
+        for x in $(kubectl get pods -n${SYSTEM_NAMESPACE} -oname); do
+          echo "::group:: describe $x"
+          kubectl -n${SYSTEM_NAMESPACE} describe $x
+          echo '::endgroup::'
+
+          echo "::group:: $x logs"
+          kubectl -n${SYSTEM_NAMESPACE} logs $x --all-containers
+          echo '::endgroup::'
+        done
+
+    - name: Dump Artifacts
+      if: ${{ failure() }}
+      run: |
+        if [[ -d ${{ env.ARTIFACTS }} ]]; then
+          cd ${{ env.ARTIFACTS }}
+          for x in $(find . -type f); do
+            echo "::group:: artifact $x"
+            cat $x
+            echo '::endgroup::'
+          done
+        fi
