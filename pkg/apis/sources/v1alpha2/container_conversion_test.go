@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -42,8 +43,9 @@ func TestContainerSourceConversionBadType(t *testing.T) {
 	}
 }
 
+// This tests round tripping from v1alpha2 to a higher version and back to v1alpha2.
 func TestContainerSourceConversionRoundTripUp(t *testing.T) {
-	versions := []apis.Convertible{&v1beta1.ContainerSource{}}
+	versions := []apis.Convertible{&v1beta1.ContainerSource{}, &v1.ContainerSource{}}
 
 	path := apis.HTTP("")
 	path.Path = "/path"
@@ -202,7 +204,147 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 	tests := []struct {
 		name string
 		in   apis.Convertible
-	}{{name: "full",
+	}{{name: "empty-v1",
+		in: &v1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1.ContainerSourceSpec{},
+			Status: v1.ContainerSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+				},
+			},
+		},
+	}, {name: "simple configuration-v1",
+		in: &v1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1.ContainerSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink: sink,
+				},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "test",
+							Image: "test-image",
+						}},
+					},
+				},
+			},
+			Status: v1.ContainerSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "Unknown",
+						}},
+					},
+					SinkURI: sinkUri,
+				},
+			},
+		},
+	}, {name: "full-v1",
+		in: &v1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1.ContainerSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "test",
+							Image: "test-image",
+						}},
+					},
+				},
+			},
+			Status: v1.ContainerSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI: sinkUri,
+				},
+			},
+		},
+	}, {name: "empty-v1beta1",
+		in: &v1beta1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1beta1.ContainerSourceSpec{},
+			Status: v1beta1.ContainerSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+				},
+			},
+		},
+	}, {name: "simple configuration-v1beta1",
+		in: &v1beta1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1beta1.ContainerSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink: sink,
+				},
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "test",
+							Image: "test-image",
+						}},
+					},
+				},
+			},
+			Status: v1beta1.ContainerSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "Unknown",
+						}},
+					},
+					SinkURI: sinkUri,
+				},
+			},
+		},
+	}, {name: "full-v1beta1",
 		in: &v1beta1.ContainerSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
@@ -237,8 +379,8 @@ func TestContainerSourceConversionRoundTripDown(t *testing.T) {
 			},
 		},
 	}}
-	for _, test := range tests {
 
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			down := &ContainerSource{}
 			if err := down.ConvertFrom(context.Background(), test.in); err != nil {

@@ -98,6 +98,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// v1
 	sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1.ApiServerSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
+	sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1.ContainerSource{},
 
 	// For group flows.knative.dev
 	// v1beta1
@@ -344,12 +345,13 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					sourcesv1_:       &sourcesv1.SinkBinding{},
 				},
 			},
-			sourcesv1beta1.Kind("ContainerSource"): {
+			sourcesv1.Kind("ContainerSource"): {
 				DefinitionName: sources.ContainerSourceResource.String(),
 				HubVersion:     sourcesv1alpha2_,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1alpha2_: &sourcesv1alpha2.ContainerSource{},
 					sourcesv1beta1_:  &sourcesv1beta1.ContainerSource{},
+					sourcesv1_:       &sourcesv1.ContainerSource{},
 				},
 			},
 		},
