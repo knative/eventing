@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"go.opencensus.io/resource"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -52,8 +53,6 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	namespaceKey         = tag.MustNewKey(metricskey.LabelNamespaceName)
-	brokerKey            = tag.MustNewKey(metricskey.LabelBrokerName)
 	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
 	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
 	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
@@ -94,8 +93,6 @@ func NewStatsReporter(container, uniqueName string) StatsReporter {
 
 func register() {
 	tagKeys := []tag.Key{
-		namespaceKey,
-		brokerKey,
 		eventTypeKey,
 		responseCodeKey,
 		responseCodeClassKey,
@@ -144,12 +141,17 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 }
 
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
+	ctx := metricskey.WithResource(emptyContext, resource.Resource{
+		Type: metricskey.ResourceTypeKnativeBroker,
+		Labels: map[string]string{
+			metricskey.LabelNamespaceName: args.ns,
+			metricskey.LabelBrokerName:    args.broker,
+		},
+	})
 	return tag.New(
-		emptyContext,
+		ctx,
 		tag.Insert(broker.ContainerTagKey, r.container),
 		tag.Insert(broker.UniqueTagKey, r.uniqueName),
-		tag.Insert(namespaceKey, args.ns),
-		tag.Insert(brokerKey, args.broker),
 		tag.Insert(eventTypeKey, args.eventType),
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
 		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))

@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opencensus.io/resource"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
@@ -39,13 +40,19 @@ func TestStatsReporter(t *testing.T) {
 	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelBrokerName:        "testbroker",
 		metricskey.LabelEventType:         "testeventtype",
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
 		broker.LabelUniqueName:            "testpod",
 		broker.LabelContainerName:         "testcontainer",
+	}
+
+	resource := resource.Resource{
+		Type: metricskey.ResourceTypeKnativeBroker,
+		Labels: map[string]string{
+			metricskey.LabelNamespaceName: "testns",
+			metricskey.LabelBrokerName:    "testbroker",
+		},
 	}
 
 	// test ReportEventCount
@@ -55,7 +62,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
-	metricstest.CheckCountData(t, "event_count", wantTags, 2)
+	metricstest.AssertMetric(t, metricstest.IntMetric("event_count", 2, wantTags).WithResource(&resource))
 
 	// test ReportDispatchTime
 	expectSuccess(t, func() error {
@@ -64,6 +71,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
+	metricstest.AssertMetric(t, metricstest.DistributionCountOnlyMetric("event_dispatch_latencies", 2, wantTags))
 	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
 }
 
