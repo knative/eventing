@@ -236,7 +236,7 @@ func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *eventingv
 			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
 			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
 		}
-		trackSource := r.sourceTracker.TrackInNamespace(ctx, t)
+		trackSource := r.sourceTracker.TrackInNamespace(t)
 
 		// Trigger and its dependent source are in the same namespace, we already did the validation in the webhook.
 		if err := trackSource(dependencyObjRef); err != nil {
