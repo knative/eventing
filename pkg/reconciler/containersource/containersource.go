@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -29,10 +28,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/containersource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -69,7 +68,7 @@ type Reconciler struct {
 var _ containersource.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.ContainerSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1.ContainerSource) pkgreconciler.Event {
 	_, err := r.reconcileSinkBinding(ctx, source)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error reconciling SinkBinding", zap.Error(err))
@@ -85,7 +84,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.Containe
 	return newReconciledNormal(source.Namespace, source.Name)
 }
 
-func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta1.ContainerSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1.ContainerSource) (*appsv1.Deployment, error) {
 
 	expected := resources.MakeDeployment(source)
 
@@ -115,13 +114,13 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	return ra, nil
 }
 
-func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1beta1.ContainerSource) (*v1beta1.SinkBinding, error) {
+func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1.ContainerSource) (*v1.SinkBinding, error) {
 
 	expected := resources.MakeSinkBinding(source)
 
 	sb, err := r.sinkBindingLister.SinkBindings(source.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		sb, err = r.eventingClientSet.SourcesV1beta1().SinkBindings(source.Namespace).Create(ctx, expected, metav1.CreateOptions{})
+		sb, err = r.eventingClientSet.SourcesV1().SinkBindings(source.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("creating new SinkBinding: %v", err)
 		}
@@ -132,7 +131,7 @@ func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1beta1.C
 		return nil, fmt.Errorf("SinkBinding %q is not owned by ContainerSource %q", sb.Name, source.Name)
 	} else if r.sinkBindingSpecChanged(&sb.Spec, &expected.Spec) {
 		sb.Spec = expected.Spec
-		sb, err = r.eventingClientSet.SourcesV1beta1().SinkBindings(source.Namespace).Update(ctx, sb, metav1.UpdateOptions{})
+		sb, err = r.eventingClientSet.SourcesV1().SinkBindings(source.Namespace).Update(ctx, sb, metav1.UpdateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("updating SinkBinding: %v", err)
 		}
@@ -150,6 +149,6 @@ func (r *Reconciler) podSpecChanged(have *corev1.PodSpec, want *corev1.PodSpec) 
 	return !equality.Semantic.DeepDerivative(want, have)
 }
 
-func (r *Reconciler) sinkBindingSpecChanged(have *v1beta1.SinkBindingSpec, want *v1beta1.SinkBindingSpec) bool {
+func (r *Reconciler) sinkBindingSpecChanged(have *v1.SinkBindingSpec, want *v1.SinkBindingSpec) bool {
 	return !equality.Semantic.DeepDerivative(want, have)
 }

@@ -168,14 +168,6 @@ func (l *Listers) GetPingSourceV1beta1Lister() sourcev1beta1listers.PingSourceLi
 	return sourcev1beta1listers.NewPingSourceLister(l.indexerFor(&sourcesv1beta1.PingSource{}))
 }
 
-func (l *Listers) GetContainerSourceV1alpha2Lister() sourcev1alpha2listers.ContainerSourceLister {
-	return sourcev1alpha2listers.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha2.ContainerSource{}))
-}
-
-func (l *Listers) GetContainerSourceV1beta1Lister() sourcev1beta1listers.ContainerSourceLister {
-	return sourcev1beta1listers.NewContainerSourceLister(l.indexerFor(&sourcesv1beta1.ContainerSource{}))
-}
-
 func (l *Listers) GetSinkBindingV1alpha2Lister() sourcev1alpha2listers.SinkBindingLister {
 	return sourcev1alpha2listers.NewSinkBindingLister(l.indexerFor(&sourcesv1alpha2.SinkBinding{}))
 }
