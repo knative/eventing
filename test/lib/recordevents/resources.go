@@ -17,11 +17,88 @@ limitations under the License.
 package recordevents
 
 import (
+	"context"
+
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/pkg/test"
+	pkgtest "knative.dev/pkg/test"
+
+	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 )
+
+type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
+
+// EchoEvent is an option to let the recordevents reply with the received event
+func EchoEvent(pod *corev1.Pod, client *testlib.Client) error {
+	pod.Spec.Containers[0].Env = append(
+		pod.Spec.Containers[0].Env,
+		corev1.EnvVar{Name: "REPLY", Value: "true"},
+	)
+	return nil
+}
+
+var _ EventRecordOption = EchoEvent
+
+// ReplyWithTransformedEvent is an option to let the recordevents reply with the transformed event
+func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, replyEventData string) EventRecordOption {
+	return func(pod *corev1.Pod, client *testlib.Client) error {
+		pod.Spec.Containers[0].Env = append(
+			pod.Spec.Containers[0].Env,
+			corev1.EnvVar{Name: "REPLY", Value: "true"},
+		)
+		if replyEventType != "" {
+			pod.Spec.Containers[0].Env = append(
+				pod.Spec.Containers[0].Env,
+				corev1.EnvVar{Name: "REPLY_EVENT_TYPE", Value: replyEventType},
+			)
+		}
+		if replyEventSource != "" {
+			pod.Spec.Containers[0].Env = append(
+				pod.Spec.Containers[0].Env,
+				corev1.EnvVar{Name: "REPLY_EVENT_SOURCE", Value: replyEventSource},
+			)
+		}
+		if replyEventData != "" {
+			pod.Spec.Containers[0].Env = append(
+				pod.Spec.Containers[0].Env,
+				corev1.EnvVar{Name: "REPLY_EVENT_DATA", Value: replyEventData},
+			)
+		}
+
+		return nil
+	}
+}
+
+// DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
+func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
+	client.CreateServiceAccountOrFail(name)
+	client.CreateRoleOrFail(resources.Role(name,
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get"},
+		}),
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{rbacv1.VerbAll},
+		}),
+	))
+	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
+
+	eventRecordPod := EventRecordPod(name, name)
+	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(name))...)
+	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
+	if err != nil {
+		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", name, errors.WithStack(err))
+	}
+	client.WaitForServiceEndpointsOrFail(ctx, name, 1)
+	return eventRecordPod
+}
 
 // EventRecordPod creates a Pod that stores received events for test retrieval.
 func EventRecordPod(name string, serviceAccountName string) *corev1.Pod {
@@ -37,7 +114,7 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name:            imageName,
-				Image:           test.ImagePath(imageName),
+				Image:           pkgtest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Env: []corev1.EnvVar{{
 					Name: "SYSTEM_NAMESPACE",

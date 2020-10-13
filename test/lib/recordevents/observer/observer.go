@@ -25,7 +25,6 @@ import (
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/prometheus/common/log"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/test/lib/recordevents"
@@ -33,35 +32,57 @@ import (
 
 // Observer is the entry point for sinking events into the event log.
 type Observer struct {
+
 	// Name is the name of this Observer, used to filter if multiple observers.
 	Name string
 	// EventLogs is the list of EventLog implementors to vent observed events.
 	EventLogs recordevents.EventLogs
 
-	seq uint64
-}
-
-// New returns an observer that will vent observations to the list of provided
-// EventLog instances. It will listen on :8080.
-func New(name string, eventLogs ...recordevents.EventLog) *Observer {
-	return &Observer{
-		Name:      name,
-		EventLogs: eventLogs,
-	}
+	ctx       context.Context
+	seq       uint64
+	replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
 }
 
 type envConfig struct {
 	// ObserverName is used to identify this instance of the observer.
 	ObserverName string `envconfig:"OBSERVER_NAME" default:"observer-default" required:"true"`
+
+	// Reply is used to define if the observer should reply back
+	Reply bool `envconfig:"REPLY" default:"false" required:"false"`
+
+	// The event type to use in the reply, if enabled
+	ReplyEventType string `envconfig:"REPLY_EVENT_TYPE" default:"" required:"false"`
+
+	// The event source to use in the reply, if enabled
+	ReplyEventSource string `envconfig:"REPLY_EVENT_SOURCE" default:"" required:"false"`
+
+	// The event data to use in the reply, if enabled
+	ReplyEventData string `envconfig:"REPLY_EVENT_DATA" default:"" required:"false"`
 }
 
-func NewFromEnv(eventLogs ...recordevents.EventLog) *Observer {
+func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observer {
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", err)
+		logging.FromContext(ctx).Fatal("Failed to process env var", err)
 	}
 
-	return New(env.ObserverName, eventLogs...)
+	logging.FromContext(ctx).Infof("Observer environment configuration: %+v", env)
+
+	var replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
+	if env.Reply {
+		logging.FromContext(ctx).Info("Observer will reply with an event")
+		replyFunc = ReplyTransformerFunc(env.ReplyEventType, env.ReplyEventSource, env.ReplyEventData)
+	} else {
+		logging.FromContext(ctx).Info("Observer won't reply with an event")
+		replyFunc = NoOpReply
+	}
+
+	return &Observer{
+		Name:      env.ObserverName,
+		EventLogs: eventLogs,
+		ctx:       ctx,
+		replyFunc: replyFunc,
+	}
 }
 
 // Start will create the CloudEvents client and start listening for inbound
@@ -99,7 +120,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	if eventErr != nil {
 		eventErrStr = eventErr.Error()
 	}
-	err := o.EventLogs.Vent(recordevents.EventInfo{
+	eventInfo := recordevents.EventInfo{
 		Error:       eventErrStr,
 		Event:       event,
 		HTTPHeaders: header,
@@ -107,10 +128,11 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		Observer:    o.Name,
 		Time:        time.Now(),
 		Sequence:    atomic.AddUint64(&o.seq, 1),
-	})
+	}
+	err := o.EventLogs.Vent(eventInfo)
 	if err != nil {
-		log.Warn("Error while venting the recorded event", err)
+		logging.FromContext(o.ctx).Warn("Error while venting the recorded event", err)
 	}
 
-	writer.WriteHeader(http.StatusAccepted)
+	o.replyFunc(o.ctx, writer, eventInfo)
 }
