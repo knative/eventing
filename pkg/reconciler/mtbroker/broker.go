@@ -72,8 +72,8 @@ type Reconciler struct {
 
 	channelableTracker duck.ListableTracker
 
-	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
-	kresourceTracker duck.ListableTracker
+	// Dynamic tracker to track Sources. In particular, it tracks the dependency between Triggers and Sources.
+	sourceTracker duck.ListableTracker
 
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker

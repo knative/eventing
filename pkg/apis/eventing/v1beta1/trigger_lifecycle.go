@@ -167,7 +167,7 @@ func (ts *TriggerStatus) MarkDependencyNotConfigured() {
 		"DependencyNotConfigured", "Dependency has not yet been reconciled.")
 }
 
-func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.KResource) {
+func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.Source) {
 	kc := ks.Status.GetCondition(apis.ConditionReady)
 	if kc == nil {
 		ts.MarkDependencyNotConfigured()
