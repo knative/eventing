@@ -19,6 +19,8 @@ package lib
 import (
 	"context"
 	"fmt"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	injectiontest "knative.dev/pkg/injection/test"
 	"log"
 	"os"
 	"path/filepath"
@@ -31,7 +33,8 @@ import (
 )
 
 func (c *Client) ExportLogs(dir string) error {
-	return exportLogs(c.Kube, c.Namespace, dir, c.T.Logf)
+	kubeClient := &pkgtest.KubeClient{Kube: c.Kube}
+	return exportLogs(kubeClient, c.Namespace, dir, c.T.Logf)
 }
 
 func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func(format string, args ...interface{})) error {
@@ -56,11 +59,11 @@ func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error creating file %q: %w", fn, err))
 			}
-			log, err := kubeClient.PodLogs(context.Background(), pod.Name, ct.Name, pod.Namespace)
+			logs, err := kubeClient.PodLogs(context.Background(), pod.Name, ct.Name, pod.Namespace)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error getting logs for pod %q container %q: %w", pod.Name, ct.Name, err))
 			}
-			_, err = f.Write(log)
+			_, err = f.Write(logs)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error writing logs into file %q: %w", fn, err))
 			}
@@ -73,14 +76,11 @@ func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func
 }
 
 func ExportLogs(systemLogsDir, systemNamespace string) {
-
 	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
 	// which will then be uploaded to GCS after the test job finishes.
 	if prow.IsCI() {
-		kubeClient, err := pkgtest.NewKubeClient(pkgtest.Flags.Kubeconfig, pkgtest.Flags.Cluster)
-		if err != nil {
-			log.Printf("Failed to create Kube client: %v\n", err)
-		}
+		k := kubeclient.Get(injectiontest.InjectionContext())
+		kubeClient := &pkgtest.KubeClient{Kube: k}
 
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), systemLogsDir)
 		if err := exportLogs(kubeClient, systemNamespace, dir, log.Printf); err != nil {

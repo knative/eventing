@@ -82,7 +82,7 @@ func (p *prober) deployReceiverPod(ctx context.Context) {
 			},
 		},
 	}
-	_, err := p.client.Kube.CreatePod(ctx, pod)
+	_, err := p.client.CreatePod(ctx, pod)
 	ensure.NoError(err)
 
 	testlib.WaitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
@@ -115,7 +115,7 @@ func (p *prober) deployReceiverService(ctx context.Context) {
 			Type: corev1.ServiceTypeNodePort,
 		},
 	}
-	created, err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
+	created, err := p.client.Kube.CoreV1().Services(p.config.Namespace).
 		Create(ctx, service, metav1.CreateOptions{})
 	ensure.NoError(err)
 	for _, portSpec := range created.Spec.Ports {

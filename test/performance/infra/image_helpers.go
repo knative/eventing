@@ -24,6 +24,8 @@ import (
 	"os"
 	"strings"
 
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	injectiontest "knative.dev/pkg/injection/test"
 	"knative.dev/pkg/signals"
 	pkgtest "knative.dev/pkg/test"
 
@@ -155,10 +157,6 @@ func testNamespace() string {
 }
 
 func waitForPods(namespace string) error {
-	c, err := pkgtest.NewKubeClient("", "")
-	if err != nil {
-		return err
-	}
-
-	return pkgtest.WaitForAllPodsRunning(context.Background(), c, namespace)
+	client := kubeclient.Get(injectiontest.InjectionContext())
+	return pkgtest.WaitForAllPodsRunning(context.Background(), client, namespace)
 }

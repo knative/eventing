@@ -24,29 +24,29 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/test/lib/resources"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	apiextclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/test_images"
 	"knative.dev/pkg/test"
 	configtracing "knative.dev/pkg/tracing/config"
 
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
-	"knative.dev/eventing/test/test_images"
 )
 
 // Client holds instances of interfaces for making requests to Knative.
 type Client struct {
-	Kube          *test.KubeClient
-	Eventing      *eventing.Clientset
-	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
+	test.KubeClient
+
+	Eventing eventing.Interface
+
+	Kube          kubernetes.Interface
+	APIExtensions apiextclientset.Interface
 	Dynamic       dynamic.Interface
-	Config        *rest.Config
 
 	EventListener *EventListener
 
@@ -63,30 +63,29 @@ type Client struct {
 
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
+// +deprecated, use NewClientFromCtx
 func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
-	var err error
-
 	client := &Client{}
-	client.Config, err = test.BuildClientConfig(configPath, clusterName)
+	config, err := test.BuildClientConfig(configPath, clusterName)
 	if err != nil {
 		return nil, err
 	}
-	client.Kube, err = test.NewKubeClient(configPath, clusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	client.Eventing, err = eventing.NewForConfig(client.Config)
+	client.Kube, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	client.Apiextensions, err = apiextensionsv1beta1.NewForConfig(client.Config)
+	client.Eventing, err = eventing.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	client.Dynamic, err = dynamic.NewForConfig(client.Config)
+	client.APIExtensions, err = apiextclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Dynamic, err = dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -96,10 +95,10 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	client.Tracker = NewTracker(t, client.Dynamic)
 
 	// Start informer
-	client.EventListener = NewEventListener(client.Kube.Kube, client.Namespace, client.T.Logf)
+	client.EventListener = NewEventListener(client.Kube, client.Namespace, client.T.Logf)
 	client.Cleanup(client.EventListener.Stop)
 
-	client.tracingEnv, err = getTracingConfig(client.Kube.Kube)
+	client.tracingEnv, err = getTracingConfig(client.Kube)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func (c *Client) runCleanup() (err error) {
 	return nil
 }
 
-func getTracingConfig(c *kubernetes.Clientset) (corev1.EnvVar, error) {
+func getTracingConfig(c kubernetes.Interface) (corev1.EnvVar, error) {
 	cm, err := c.CoreV1().ConfigMaps(resources.SystemNamespace).Get(context.Background(), "config-tracing", metav1.GetOptions{})
 	if err != nil {
 		return corev1.EnvVar{}, fmt.Errorf("error while retrieving the config-tracing config map: %+v", errors.WithStack(err))

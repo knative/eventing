@@ -36,7 +36,7 @@ func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key 
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(context.Background(), crdName, metav1.GetOptions{
+	crd, err := client.APIExtensions.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), crdName, metav1.GetOptions{
 		TypeMeta: metav1.TypeMeta{},
 	})
 	if err != nil {

@@ -73,7 +73,7 @@ func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, bro
 func BrokerDataPlaneNamespaceSetupOption(ctx context.Context, namespace string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 		if namespace != "" {
-			client.Kube.Kube.CoreV1().Namespaces().Delete(ctx, client.Namespace, metav1.DeleteOptions{})
+			client.Kube.CoreV1().Namespaces().Delete(ctx, client.Namespace, metav1.DeleteOptions{})
 			client.Namespace = namespace
 		}
 	}

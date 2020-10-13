@@ -27,7 +27,7 @@ import (
 )
 
 func ServiceAccountCanDoVerbOnResourceOrFail(client *testlib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
-	r, err := client.Kube.Kube.AuthorizationV1().SubjectAccessReviews().Create(context.Background(), &authv1.SubjectAccessReview{
+	r, err := client.Kube.AuthorizationV1().SubjectAccessReviews().Create(context.Background(), &authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
 			User: fmt.Sprintf("system:serviceaccount:%s:%s", client.Namespace, saName),
 			ResourceAttributes: &authv1.ResourceAttributes{
