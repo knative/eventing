@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Pod
-metadata:
-  name: transformevents
-spec:
-  containers:
-    - name: transformevents
-      image: ko://knative.dev/eventing/test/test_images/transformevents
-

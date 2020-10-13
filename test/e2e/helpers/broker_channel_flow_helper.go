@@ -107,13 +107,16 @@ func BrokerChannelFlowWithTransformation(
 		}
 
 		// create the transformation service for trigger1
-		transformationPod := resources.EventTransformationPod(
+		recordevents.DeployEventRecordOrFail(
+			ctx,
+			client,
 			transformationPodName,
-			transformedEventType,
-			transformedEventSource,
-			[]byte(transformedBody),
+			recordevents.ReplyWithTransformedEvent(
+				transformedEventType,
+				transformedEventSource,
+				transformedBody,
+			),
 		)
-		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create trigger1 to receive the original event, and do event transformation
 		if triggerVersion == "v1" {
