@@ -139,7 +139,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	}
 	t.Status.PropagateSubscriptionCondition(sub.Status.GetTopLevelCondition())
 
-	if err := r.checkDependencyAnnotation(ctx, t, b); err != nil {
+	if err := r.checkDependencyAnnotation(ctx, t); err != nil {
 		return err
 	}
 
@@ -216,7 +216,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *eventingv1.Tr
 	return newSub, nil
 }
 
-func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *eventingv1.Trigger, b *eventingv1.Broker) error {
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *eventingv1.Trigger) error {
 	if dependencyAnnotation, ok := t.GetAnnotations()[eventingv1.DependencyAnnotation]; ok {
 		dependencyObjRef, err := eventingv1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {
