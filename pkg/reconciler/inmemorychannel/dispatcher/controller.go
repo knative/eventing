@@ -82,7 +82,9 @@ func NewController(
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: informer,
 	}
-	impl := inmemorychannelreconciler.NewImpl(ctx, r)
+	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{SkipStatusUpdates: true}
+	})
 
 	// Nothing to filer, enqueue all imcs if configmap updates.
 	noopFilter := func(interface{}) bool { return true }
