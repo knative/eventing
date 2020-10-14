@@ -45,7 +45,6 @@ import (
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 )
 
@@ -59,13 +58,6 @@ type Reconciler struct {
 	configmapLister    corev1listers.ConfigMapLister
 
 	channelableTracker duck.ListableTracker
-
-	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
-	kresourceTracker duck.ListableTracker
-
-	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
-	addressableTracker duck.ListableTracker
-	uriResolver        *resolver.URIResolver
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string

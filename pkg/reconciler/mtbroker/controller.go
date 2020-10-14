@@ -30,8 +30,6 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
-	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/configmap"
@@ -39,7 +37,6 @@ import (
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 )
 
@@ -82,10 +79,7 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 
-	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
