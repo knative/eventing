@@ -27,9 +27,8 @@ import (
 	kle "knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
-
-	"knative.dev/eventing/pkg/tracing"
 )
 
 type EnvConfigConstructor func() EnvConfigAccessor

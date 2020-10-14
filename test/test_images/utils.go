@@ -24,9 +24,8 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"knative.dev/pkg/tracing/config"
-
-	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
 func ParseHeaders(serializedHeaders string) http.Header {
@@ -55,10 +54,10 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 	tracingEnv := os.Getenv(ConfigTracingEnv)
 
 	if tracingEnv == "" {
-		return tracing.SetupStaticPublishing(logger, serviceName, tracing.AlwaysSample)
+		return tracing.SetupStaticPublishing(logger, serviceName, tracingconfig.AlwaysSample)
 	}
 
-	conf, err := config.JsonToTracingConfig(tracingEnv)
+	conf, err := tracingconfig.JsonToTracingConfig(tracingEnv)
 	if err != nil {
 		return err
 	}

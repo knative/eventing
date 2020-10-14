@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tracing
+package kncloudevents
 
 import (
 	"github.com/cloudevents/sdk-go/v2/binding"

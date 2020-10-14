@@ -38,8 +38,10 @@ import (
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
+	"knative.dev/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
+
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -218,7 +220,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	server := httptest.NewServer(kncloudevents.CreateHandler(r))
 	defer server.Close()
 
-	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracing.AlwaysSample))
+	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracingconfig.AlwaysSample))
 
 	p, err := cloudevents.NewHTTP(
 		http.WithTarget(server.URL),

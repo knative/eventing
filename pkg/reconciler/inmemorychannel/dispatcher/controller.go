@@ -30,6 +30,8 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	pkgreconciler "knative.dev/pkg/reconciler"
+
+	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -37,7 +39,6 @@ import (
 	"knative.dev/eventing/pkg/channel/swappable"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	"knative.dev/eventing/pkg/tracing"
 )
 
 const (
