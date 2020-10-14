@@ -22,6 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/system"
 )
 
@@ -102,10 +104,10 @@ func makeEnv() []corev1.EnvVar {
 		Value: "knative.dev/inmemorychannel-dispatcher",
 	}, {
 		Name:  "CONFIG_OBSERVABILITY_NAME",
-		Value: "config-observability",
+		Value: metrics.ConfigMapName(),
 	}, {
 		Name:  "CONFIG_LOGGING_NAME",
-		Value: "config-logging",
+		Value: logging.ConfigMapName(),
 	}, {
 		Name: "NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{
