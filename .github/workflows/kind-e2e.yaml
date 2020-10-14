@@ -133,7 +133,6 @@ jobs:
         # Build and Publish our containers to the docker daemon (including test assets)
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
-        ko apply --platform=all -Pf test/config/
         ko apply --platform=all -P \
            -f config/ \
            `# Install the MT Broker` \
@@ -143,6 +142,7 @@ jobs:
            -f config/sugar/500-controller.yaml \
            `# Install the in-memory channel` \
            -f config/channels/in-memory-channel
+        ko apply --platform=all -Pf test/config/
 
         # Be KinD to these tests.
         kubectl scale -n${SYSTEM_NAMESPACE} deployment/chaosduck --replicas=0
