@@ -73,13 +73,16 @@ func setupChannelTracingWithReply(
 	recordEventsPod := recordevents.DeployEventRecordOrFail(ctx, client, recordEventsPodName)
 
 	// Create the subscriber, a Pod that mutates the event.
-	transformerPod := resources.EventTransformationPod(
+	transformerPod := recordevents.DeployEventRecordOrFail(
+		ctx,
+		client,
 		"transformer",
-		"mutated",
-		eventSource,
-		nil,
+		recordevents.ReplyWithTransformedEvent(
+			"mutated",
+			eventSource,
+			"",
+		),
 	)
-	client.CreatePodOrFail(transformerPod, testlib.WithService(transformerPod.Name))
 
 	// Create the Subscription linking the Channel to the mutator.
 	client.CreateSubscriptionOrFail(
