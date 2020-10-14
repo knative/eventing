@@ -23,6 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/test/lib/recordevents"
@@ -32,7 +33,7 @@ func NoOpReply(_ context.Context, writer http.ResponseWriter, _ recordevents.Eve
 	writer.WriteHeader(http.StatusAccepted)
 }
 
-func ReplyTransformerFunc(replyEventType string, replyEventSource string, replyEventData string) func(context.Context, http.ResponseWriter, recordevents.EventInfo) {
+func ReplyTransformerFunc(replyEventType string, replyEventSource string, replyEventData string, replyAppendData string) func(context.Context, http.ResponseWriter, recordevents.EventInfo) {
 	return func(ctx context.Context, writer http.ResponseWriter, info recordevents.EventInfo) {
 		if info.Error != "" {
 			writer.WriteHeader(http.StatusBadRequest)
@@ -51,17 +52,36 @@ func ReplyTransformerFunc(replyEventType string, replyEventSource string, replyE
 		outputEvent := info.Event.Clone()
 
 		if replyEventSource != "" {
+			logging.FromContext(ctx).Infof("Setting reply event source '%s'", replyEventSource)
 			outputEvent.SetSource(replyEventSource)
 		}
 		if replyEventType != "" {
+			logging.FromContext(ctx).Infof("Setting reply event type '%s'", replyEventType)
 			outputEvent.SetType(replyEventType)
 		}
 		if replyEventData != "" {
+			logging.FromContext(ctx).Infof("Setting reply event data '%s'", replyAppendData)
 			if err := outputEvent.SetData(cloudevents.ApplicationJSON, []byte(replyEventData)); err != nil {
 				logging.FromContext(ctx).Warn("Cannot set the event data")
 			}
 		}
+		if replyAppendData != "" {
+			var d string
+			if outputEvent.Data() == nil {
+				d = replyAppendData
+			} else {
+				if err := info.Event.DataAs(&d); err != nil {
+					logging.FromContext(ctx).Warn("Cannot read the event data as text/plain")
+				}
+				d = d + replyAppendData
+			}
+			logging.FromContext(ctx).Infof("Setting appended event data '%s'", d)
+			if err := outputEvent.SetData(cloudevents.TextPlain, d); err != nil {
+				logging.FromContext(ctx).Warn("Cannot set the event data")
+			}
+		}
 
+		logging.FromContext(ctx).Infow("Replying with", zap.Stringer("event", outputEvent))
 		err := cehttp.WriteResponseWriter(ctx, binding.ToMessage(&outputEvent), 200, writer)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Error while writing the event as response", err)

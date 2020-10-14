@@ -73,6 +73,24 @@ func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, r
 	}
 }
 
+// ReplyWithAppendedData is an option to let the recordevents reply with the transformed event with appended data
+func ReplyWithAppendedData(appendData string) EventRecordOption {
+	return func(pod *corev1.Pod, client *testlib.Client) error {
+		pod.Spec.Containers[0].Env = append(
+			pod.Spec.Containers[0].Env,
+			corev1.EnvVar{Name: "REPLY", Value: "true"},
+		)
+		if appendData != "" {
+			pod.Spec.Containers[0].Env = append(
+				pod.Spec.Containers[0].Env,
+				corev1.EnvVar{Name: "REPLY_APPEND_DATA", Value: appendData},
+			)
+		}
+
+		return nil
+	}
+}
+
 // DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
 func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
 	client.CreateServiceAccountOrFail(name)
