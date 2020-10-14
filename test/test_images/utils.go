@@ -54,7 +54,7 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 	tracingEnv := os.Getenv(ConfigTracingEnv)
 
 	if tracingEnv == "" {
-		return tracing.SetupStaticPublishing(logger, serviceName, config.AlwaysSample)
+		return tracing.SetupStaticPublishing(logger, serviceName, config.NoopConfig())
 	}
 
 	conf, err := config.JsonToTracingConfig(tracingEnv)

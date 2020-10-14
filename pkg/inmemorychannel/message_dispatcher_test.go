@@ -115,7 +115,12 @@ func TestDispatcher_dispatch(t *testing.T) {
 	}
 
 	// tracing publishing is configured to let the code pass in all "critical" branches
-	tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracingconfig.AlwaysSample)
+	tracing.SetupStaticPublishing(logger.Sugar(), "localhost", &tracingconfig.Config{
+		Backend:        tracingconfig.Zipkin,
+		Debug:          true,
+		SampleRate:     1.0,
+		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	})
 
 	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
 	if err != nil {

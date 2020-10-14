@@ -220,7 +220,12 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	server := httptest.NewServer(kncloudevents.CreateHandler(r))
 	defer server.Close()
 
-	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "localhost", tracingconfig.AlwaysSample))
+	require.NoError(t, tracing.SetupStaticPublishing(logger.Sugar(), "localhost", &tracingconfig.Config{
+		Backend:        tracingconfig.Zipkin,
+		Debug:          true,
+		SampleRate:     1.0,
+		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	}))
 
 	p, err := cloudevents.NewHTTP(
 		http.WithTarget(server.URL),
