@@ -162,7 +162,7 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 
 // updateDefaultChannelCM will update the default channel configmap
 func updateDefaultChannelCM(client *testlib.Client, updateConfig func(config *config.ChannelDefaults)) error {
-	cmInterface := client.Kube.Kube.CoreV1().ConfigMaps(resources.SystemNamespace)
+	cmInterface := client.Kube.CoreV1().ConfigMaps(resources.SystemNamespace)
 
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// get the defaultchannel configmap

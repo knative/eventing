@@ -250,7 +250,7 @@ func (c *Client) CreateSubscriptionsV1OrFail(
 // CreateConfigMapOrFail will create a configmap or fail the test if there is an error.
 func (c *Client) CreateConfigMapOrFail(name, namespace string, data map[string]string) *corev1.ConfigMap {
 	c.T.Logf("Creating configmap %s", name)
-	configMap, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(context.Background(), resources.ConfigMap(name, namespace, data), metav1.CreateOptions{})
+	configMap, err := c.Kube.CoreV1().ConfigMaps(namespace).Create(context.Background(), resources.ConfigMap(name, namespace, data), metav1.CreateOptions{})
 	if err != nil {
 		c.T.Fatalf("Failed to create configmap %s: %v", name, err)
 	}
@@ -271,7 +271,7 @@ func (c *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMe
 `, channel.APIVersion, channel.Kind),
 		},
 	}
-	_, err := c.Kube.Kube.CoreV1().ConfigMaps(c.Namespace).Create(context.Background(), cm, metav1.CreateOptions{})
+	_, err := c.Kube.CoreV1().ConfigMaps(c.Namespace).Create(context.Background(), cm, metav1.CreateOptions{})
 	if err != nil {
 		c.T.Fatalf("Failed to create broker config %q: %v", name, err)
 	}
@@ -698,7 +698,7 @@ func (c *Client) CreatePingSourceV1Beta1OrFail(pingSource *sourcesv1beta1.PingSo
 func (c *Client) CreateServiceOrFail(svc *corev1.Service) *corev1.Service {
 	c.T.Logf("Creating service %+v", svc)
 	namespace := c.Namespace
-	if newSvc, err := c.Kube.Kube.CoreV1().Services(namespace).Create(context.Background(), svc, metav1.CreateOptions{}); err != nil {
+	if newSvc, err := c.Kube.CoreV1().Services(namespace).Create(context.Background(), svc, metav1.CreateOptions{}); err != nil {
 		c.T.Fatalf("Failed to create service %q: %v", svc.Name, err)
 		return nil
 	} else {
@@ -713,7 +713,7 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 		namespace := pod.Namespace
 		svc := resources.ServiceDefaultHTTP(name, pod.Labels)
 
-		svcs := client.Kube.Kube.CoreV1().Services(namespace)
+		svcs := client.Kube.CoreV1().Services(namespace)
 		if _, err := svcs.Create(context.Background(), svc, metav1.CreateOptions{}); err != nil {
 			return err
 		}
@@ -768,7 +768,7 @@ func (c *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...fu
 	c.applyTracingEnv(&deploy.Spec.Template.Spec)
 
 	c.T.Logf("Creating deployment %+v", deploy)
-	if _, err := c.Kube.Kube.AppsV1().Deployments(deploy.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{}); err != nil {
+	if _, err := c.Kube.AppsV1().Deployments(deploy.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{}); err != nil {
 		c.T.Fatalf("Failed to create deploy %q: %v", deploy.Name, err)
 	}
 	c.Tracker.Add("apps", "v1", "deployments", namespace, deploy.Name)
@@ -789,7 +789,7 @@ func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...f
 	c.applyTracingEnv(&cronjob.Spec.JobTemplate.Spec.Template.Spec)
 
 	c.T.Logf("Creating cronjob %+v", cronjob)
-	if _, err := c.Kube.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(context.Background(), cronjob, metav1.CreateOptions{}); err != nil {
+	if _, err := c.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(context.Background(), cronjob, metav1.CreateOptions{}); err != nil {
 		c.T.Fatalf("Failed to create cronjob %q: %v", cronjob.Name, err)
 	}
 	c.Tracker.Add("batch", "v1beta1", "cronjobs", namespace, cronjob.Name)
@@ -799,7 +799,7 @@ func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...f
 func (c *Client) CreateServiceAccountOrFail(saName string) {
 	namespace := c.Namespace
 	sa := resources.ServiceAccount(saName, namespace)
-	sas := c.Kube.Kube.CoreV1().ServiceAccounts(namespace)
+	sas := c.Kube.CoreV1().ServiceAccounts(namespace)
 	c.T.Logf("Creating service account %+v", sa)
 	if _, err := sas.Create(context.Background(), sa, metav1.CreateOptions{}); err != nil {
 		c.T.Fatalf("Failed to create service account %q: %v", saName, err)
@@ -810,7 +810,7 @@ func (c *Client) CreateServiceAccountOrFail(saName string) {
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the new ServiceAccount we just created.
 	// This is needed for cases where the images are in a private registry.
-	_, err := utils.CopySecret(c.Kube.Kube.CoreV1(), "default", testPullSecretName, namespace, saName)
+	_, err := utils.CopySecret(c.Kube.CoreV1(), "default", testPullSecretName, namespace, saName)
 	if err != nil && !errors.IsNotFound(err) {
 		c.T.Fatalf("Error copying the secret: %s", err)
 	}
@@ -819,7 +819,7 @@ func (c *Client) CreateServiceAccountOrFail(saName string) {
 // CreateClusterRoleOrFail creates the given ClusterRole or fail the test if there is an error.
 func (c *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	c.T.Logf("Creating cluster role %+v", cr)
-	crs := c.Kube.Kube.RbacV1().ClusterRoles()
+	crs := c.Kube.RbacV1().ClusterRoles()
 	if _, err := crs.Create(context.Background(), cr, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
 	}
@@ -830,7 +830,7 @@ func (c *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 func (c *Client) CreateRoleOrFail(r *rbacv1.Role) {
 	c.T.Logf("Creating role %+v", r)
 	namespace := c.Namespace
-	rs := c.Kube.Kube.RbacV1().Roles(namespace)
+	rs := c.Kube.RbacV1().Roles(namespace)
 	if _, err := rs.Create(context.Background(), r, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
 		c.T.Fatalf("Failed to create role %q: %v", r.Name, err)
 	}
@@ -846,7 +846,7 @@ const (
 func (c *Client) CreateRoleBindingOrFail(saName, rKind, rName, rbName, rbNamespace string) {
 	saNamespace := c.Namespace
 	rb := resources.RoleBinding(saName, saNamespace, rKind, rName, rbName, rbNamespace)
-	rbs := c.Kube.Kube.RbacV1().RoleBindings(rbNamespace)
+	rbs := c.Kube.RbacV1().RoleBindings(rbNamespace)
 
 	c.T.Logf("Creating role binding %+v", rb)
 	if _, err := rbs.Create(context.Background(), rb, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
@@ -859,7 +859,7 @@ func (c *Client) CreateRoleBindingOrFail(saName, rKind, rName, rbName, rbNamespa
 func (c *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName string) {
 	saNamespace := c.Namespace
 	crb := resources.ClusterRoleBinding(saName, saNamespace, crName, crbName)
-	crbs := c.Kube.Kube.RbacV1().ClusterRoleBindings()
+	crbs := c.Kube.RbacV1().ClusterRoleBindings()
 
 	c.T.Logf("Creating cluster role binding %+v", crb)
 	if _, err := crbs.Create(context.Background(), crb, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
