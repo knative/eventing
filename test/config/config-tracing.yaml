@@ -19,6 +19,6 @@ metadata:
   namespace: knative-eventing
 data:
   backend: "zipkin"
-  zipkin-endpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
+  zipkin-endpoint: "http://zipkin.knative-eventing.svc.cluster.local:9411/api/v2/spans"
   debug: "true"
   sample-rate: "1.0"
