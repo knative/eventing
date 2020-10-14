@@ -99,7 +99,7 @@ func channelCRDHasProperCategory(st *testing.T, client *testlib.Client, channel 
 
 func getApiResource(client *testlib.Client, typeMeta metav1.TypeMeta) (*metav1.APIResource, error) {
 	gvr, _ := meta.UnsafeGuessKindToResource(typeMeta.GroupVersionKind())
-	apiResourceList, err := client.Kube.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
+	apiResourceList, err := client.Kube.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
 	if err != nil {
 		return nil, errors.Wrapf(err, "Unable to list server resources for groupVersion of %q: %v", typeMeta, err)
 	}

@@ -115,7 +115,7 @@ func (p *prober) deployReceiverService(ctx context.Context) {
 			Type: corev1.ServiceTypeNodePort,
 		},
 	}
-	created, err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
+	created, err := p.client.Kube.CoreV1().Services(p.config.Namespace).
 		Create(ctx, service, metav1.CreateOptions{})
 	ensure.NoError(err)
 	for _, portSpec := range created.Spec.Ports {
