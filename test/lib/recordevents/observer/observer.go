@@ -58,6 +58,10 @@ type envConfig struct {
 
 	// The event data to use in the reply, if enabled
 	ReplyEventData string `envconfig:"REPLY_EVENT_DATA" default:"" required:"false"`
+
+	// This string to append in the data field in the reply, if enabled.
+	// This will threat the data as text/plain field
+	ReplyAppendData string `envconfig:"REPLY_APPEND_DATA" default:"" required:"false"`
 }
 
 func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observer {
@@ -71,7 +75,7 @@ func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observ
 	var replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
 	if env.Reply {
 		logging.FromContext(ctx).Info("Observer will reply with an event")
-		replyFunc = ReplyTransformerFunc(env.ReplyEventType, env.ReplyEventSource, env.ReplyEventData)
+		replyFunc = ReplyTransformerFunc(env.ReplyEventType, env.ReplyEventSource, env.ReplyEventData, env.ReplyAppendData)
 	} else {
 		logging.FromContext(ctx).Info("Observer won't reply with an event")
 		replyFunc = NoOpReply
