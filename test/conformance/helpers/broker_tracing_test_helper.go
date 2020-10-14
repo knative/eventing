@@ -93,15 +93,18 @@ func setupBrokerTracing(ctx context.Context, brokerClass string) SetupTracingTes
 			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName),
 		)
 
-		// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
+		// Create a transformer Pod (recordevents with transform reply) that replies with the same event as the input,
 		// except the reply's event's type is changed to bar.
-		eventTransformerPod := resources.EventTransformationPod(
+		eventTransformerPod := recordevents.DeployEventRecordOrFail(
+			ctx,
+			client,
 			"transformer",
-			etLogger,
-			senderName,
-			[]byte(eventBody),
+			recordevents.ReplyWithTransformedEvent(
+				etLogger,
+				senderName,
+				eventBody,
+			),
 		)
-		client.CreatePodOrFail(eventTransformerPod, testlib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
 		transformerTrigger := client.CreateTriggerOrFailV1Beta1(

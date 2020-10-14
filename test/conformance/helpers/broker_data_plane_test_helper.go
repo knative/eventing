@@ -276,14 +276,16 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		}
 
 		transformMsg := []byte(`{"msg":"Transformed!"}`)
-		transformPod := resources.EventTransformationPod(
+		recordevents.DeployEventRecordOrFail(
+			ctx,
+			client,
 			transformerName,
-			"reply-check-type",
-			"reply-check-source",
-			transformMsg,
+			recordevents.ReplyWithTransformedEvent(
+				"reply-check-type",
+				"reply-check-source",
+				string(transformMsg),
+			),
 		)
-		client.CreatePodOrFail(transformPod, testlib.WithService(transformerName))
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 		trigger := client.CreateTriggerOrFailV1Beta1(
 			triggerName,
