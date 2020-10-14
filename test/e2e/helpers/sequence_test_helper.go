@@ -76,9 +76,11 @@ func SequenceTestHelper(
 			// create a stepper Pod with Service
 			podName := config.podName
 			msgAppender := config.msgAppender
-			stepperPod := resources.SequenceStepperPod(podName, msgAppender)
+			recordevents.DeployEventRecordOrFail(
+				ctx, client, podName,
+				recordevents.ReplyWithAppendedData(msgAppender),
+			)
 
-			client.CreatePodOrFail(stepperPod, testlib.WithService(podName))
 			// create a new step
 			step := v1beta1.SequenceStep{
 				Destination: duckv1.Destination{
@@ -131,8 +133,7 @@ func SequenceTestHelper(
 		event.SetSource(eventSource)
 		event.SetType(testlib.DefaultEventType)
 		msg := fmt.Sprintf("TestSequence %s", uuid.New().String())
-		body := fmt.Sprintf(`{"msg":"%s"}`, msg)
-		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
+		if err := event.SetData(cloudevents.TextPlain, msg); err != nil {
 			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 		client.SendEventToAddressable(
@@ -149,7 +150,8 @@ func SequenceTestHelper(
 		}
 		eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
 			cetest.HasSource(eventSource),
-			cetest.DataContains(expectedMsg),
+			cetest.HasDataContentType(cloudevents.TextPlain),
+			cetest.HasData([]byte(expectedMsg)),
 		))
 	})
 }
@@ -192,9 +194,11 @@ func SequenceV1TestHelper(
 			// create a stepper Pod with Service
 			podName := config.podName
 			msgAppender := config.msgAppender
-			stepperPod := resources.SequenceStepperPod(podName, msgAppender)
+			recordevents.DeployEventRecordOrFail(
+				ctx, client, podName,
+				recordevents.ReplyWithAppendedData(msgAppender),
+			)
 
-			client.CreatePodOrFail(stepperPod, testlib.WithService(podName))
 			// create a new step
 			step := flowsv1.SequenceStep{
 				Destination: duckv1.Destination{
@@ -247,8 +251,7 @@ func SequenceV1TestHelper(
 		event.SetSource(eventSource)
 		event.SetType(testlib.DefaultEventType)
 		msg := fmt.Sprintf("TestSequence %s", uuid.New().String())
-		body := fmt.Sprintf(`{"msg":"%s"}`, msg)
-		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
+		if err := event.SetData(cloudevents.TextPlain, msg); err != nil {
 			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 		client.SendEventToAddressable(
@@ -265,7 +268,8 @@ func SequenceV1TestHelper(
 		}
 		eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
 			cetest.HasSource(eventSource),
-			cetest.DataContains(expectedMsg),
+			cetest.HasDataContentType(cloudevents.TextPlain),
+			cetest.HasData([]byte(expectedMsg)),
 		))
 	})
 }
