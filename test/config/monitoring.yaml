@@ -19,8 +19,6 @@ metadata:
   # istio assumes that zipkin is installed in istio-system namespace - 
   # we have to install to istio-system until istio allows overriding this behavior.
   namespace: istio-system
-  labels:
-    serving.knative.dev/release: "v0.18.0"
 spec:
   ports:
   - name: http
@@ -33,8 +31,6 @@ kind: Deployment
 metadata:
   name: zipkin
   namespace: istio-system
-  labels:
-    serving.knative.dev/release: "v0.18.0"
 spec:
   replicas: 1
   selector:
@@ -44,7 +40,6 @@ spec:
     metadata:
       labels:
         app: zipkin
-        serving.knative.dev/release: "v0.18.0"
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
