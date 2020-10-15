@@ -108,7 +108,7 @@ func newLoggerFromConfig(configJSON string, levelOverride string, opts []zap.Opt
 	}
 
 	logger.Info("Successfully created the logger.")
-	logger.Info("Logging level set to: " + loggingCfg.Level.String())
+	logger.Sugar().Infof("Logging level set to %v", loggingCfg.Level)
 	return logger, loggingCfg.Level, nil
 }
 
@@ -232,15 +232,16 @@ func UpdateLevelFromConfigMap(logger *zap.SugaredLogger, atomicLevel zap.AtomicL
 
 // ConfigMapName gets the name of the logging ConfigMap
 func ConfigMapName() string {
-	if cm := os.Getenv(configMapNameEnv); cm != "" {
-		return cm
+	cm := os.Getenv(configMapNameEnv)
+	if cm == "" {
+		return "config-logging"
 	}
-	return "config-logging"
+	return cm
 }
 
 // JsonToLoggingConfig converts a json string of a Config.
 // Returns a non-nil Config always.
-func JsonToLoggingConfig(jsonCfg string) (*Config, error) { //nolint No rename due to backwards incompatibility.
+func JsonToLoggingConfig(jsonCfg string) (*Config, error) {
 	if jsonCfg == "" {
 		return nil, errEmptyJSONLogginString
 	}
@@ -259,7 +260,7 @@ func JsonToLoggingConfig(jsonCfg string) (*Config, error) { //nolint No rename d
 }
 
 // LoggingConfigToJson converts a Config to a json string.
-func LoggingConfigToJson(cfg *Config) (string, error) { //nolint No rename due to backwards incompatibility.
+func LoggingConfigToJson(cfg *Config) (string, error) {
 	if cfg == nil || cfg.LoggingConfig == "" {
 		return "", nil
 	}

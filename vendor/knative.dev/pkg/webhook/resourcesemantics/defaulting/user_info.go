@@ -24,8 +24,8 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// setUserInfoAnnotations sets creator and updater annotations on a resource.
-func setUserInfoAnnotations(ctx context.Context, resource apis.HasSpec, groupName string) {
+// SetUserInfoAnnotations sets creator and updater annotations on a resource.
+func SetUserInfoAnnotations(resource apis.HasSpec, ctx context.Context, groupName string) {
 	if ui := apis.GetUserInfo(ctx); ui != nil {
 		objectMetaAccessor, ok := resource.(metav1.ObjectMetaAccessor)
 		if !ok {

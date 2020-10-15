@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,13 +45,13 @@ const (
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took for name to get into the state checked by inState.
-func WaitForDeploymentState(ctx context.Context, client kubernetes.Interface, name string, inState func(d *appsv1.Deployment) (bool, error), desc string, namespace string, timeout time.Duration) error {
-	d := client.AppsV1().Deployments(namespace)
-	span := logging.GetEmitableSpan(ctx, fmt.Sprintf("WaitForDeploymentState/%s/%s", name, desc))
+func WaitForDeploymentState(client *KubeClient, name string, inState func(d *appsv1.Deployment) (bool, error), desc string, namespace string, timeout time.Duration) error {
+	d := client.Kube.AppsV1().Deployments(namespace)
+	span := logging.GetEmitableSpan(context.Background(), fmt.Sprintf("WaitForDeploymentState/%s/%s", name, desc))
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		d, err := d.Get(ctx, name, metav1.GetOptions{})
+		d, err := d.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return true, err
 		}
@@ -65,13 +63,13 @@ func WaitForDeploymentState(ctx context.Context, client kubernetes.Interface, na
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForPodListState(ctx context.Context, client kubernetes.Interface, inState func(p *corev1.PodList) (bool, error), desc string, namespace string) error {
-	p := client.CoreV1().Pods(namespace)
-	span := logging.GetEmitableSpan(ctx, "WaitForPodListState/"+desc)
+func WaitForPodListState(client *KubeClient, inState func(p *corev1.PodList) (bool, error), desc string, namespace string) error {
+	p := client.Kube.CoreV1().Pods(namespace)
+	span := logging.GetEmitableSpan(context.Background(), fmt.Sprintf("WaitForPodListState/%s", desc))
 	defer span.End()
 
 	return wait.PollImmediate(interval, podTimeout, func() (bool, error) {
-		p, err := p.List(ctx, metav1.ListOptions{})
+		p, err := p.List(metav1.ListOptions{})
 		if err != nil {
 			return true, err
 		}
@@ -83,13 +81,13 @@ func WaitForPodListState(ctx context.Context, client kubernetes.Interface, inSta
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForPodState(ctx context.Context, client kubernetes.Interface, inState func(p *corev1.Pod) (bool, error), name string, namespace string) error {
-	p := client.CoreV1().Pods(namespace)
-	span := logging.GetEmitableSpan(ctx, "WaitForPodState/"+name)
+func WaitForPodState(client *KubeClient, inState func(p *corev1.Pod) (bool, error), name string, namespace string) error {
+	p := client.Kube.CoreV1().Pods(namespace)
+	span := logging.GetEmitableSpan(context.Background(), "WaitForPodState/"+name)
 	defer span.End()
 
 	return wait.PollImmediate(interval, podTimeout, func() (bool, error) {
-		p, err := p.Get(ctx, name, metav1.GetOptions{})
+		p, err := p.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -98,8 +96,8 @@ func WaitForPodState(ctx context.Context, client kubernetes.Interface, inState f
 }
 
 // WaitForPodDeleted waits for the given pod to disappear from the given namespace.
-func WaitForPodDeleted(ctx context.Context, client kubernetes.Interface, name, namespace string) error {
-	if err := WaitForPodState(ctx, client, func(p *corev1.Pod) (bool, error) {
+func WaitForPodDeleted(client *KubeClient, name, namespace string) error {
+	if err := WaitForPodState(client, func(p *corev1.Pod) (bool, error) {
 		// Always return false. We're oly interested in the error which indicates pod deletion or timeout.
 		return false, nil
 	}, name, namespace); err != nil {
@@ -112,13 +110,13 @@ func WaitForPodDeleted(ctx context.Context, client kubernetes.Interface, name, n
 
 // WaitForServiceHasAtLeastOneEndpoint polls the status of the specified Service
 // from client every interval until number of service endpoints = numOfEndpoints
-func WaitForServiceEndpoints(ctx context.Context, client kubernetes.Interface, svcName string, svcNamespace string, numOfEndpoints int) error {
-	endpointsService := client.CoreV1().Endpoints(svcNamespace)
-	span := logging.GetEmitableSpan(ctx, "WaitForServiceHasAtLeastOneEndpoint/"+svcName)
+func WaitForServiceEndpoints(client *KubeClient, svcName string, svcNamespace string, numOfEndpoints int) error {
+	endpointsService := client.Kube.CoreV1().Endpoints(svcNamespace)
+	span := logging.GetEmitableSpan(context.Background(), "WaitForServiceHasAtLeastOneEndpoint/"+svcName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, podTimeout, func() (bool, error) {
-		endpoint, err := endpointsService.Get(ctx, svcName, metav1.GetOptions{})
+		endpoint, err := endpointsService.Get(svcName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -139,8 +137,8 @@ func countEndpointsNum(e *corev1.Endpoints) int {
 }
 
 // GetEndpointAddresses returns addresses of endpoints for the given service.
-func GetEndpointAddresses(ctx context.Context, client kubernetes.Interface, svcName, svcNamespace string) ([]string, error) {
-	endpoints, err := client.CoreV1().Endpoints(svcNamespace).Get(ctx, svcName, metav1.GetOptions{})
+func GetEndpointAddresses(client *KubeClient, svcName, svcNamespace string) ([]string, error) {
+	endpoints, err := client.Kube.CoreV1().Endpoints(svcNamespace).Get(svcName, metav1.GetOptions{})
 	if err != nil || countEndpointsNum(endpoints) == 0 {
 		return nil, fmt.Errorf("no endpoints or error: %w", err)
 	}
@@ -154,16 +152,16 @@ func GetEndpointAddresses(ctx context.Context, client kubernetes.Interface, svcN
 }
 
 // WaitForChangedEndpoints waits until the endpoints for the given service differ from origEndpoints.
-func WaitForChangedEndpoints(ctx context.Context, client kubernetes.Interface, svcName, svcNamespace string, origEndpoints []string) error {
+func WaitForChangedEndpoints(client *KubeClient, svcName, svcNamespace string, origEndpoints []string) error {
 	return wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
-		newEndpoints, err := GetEndpointAddresses(ctx, client, svcName, svcNamespace)
+		newEndpoints, err := GetEndpointAddresses(client, svcName, svcNamespace)
 		return !cmp.Equal(origEndpoints, newEndpoints), err
 	})
 }
 
 // GetConfigMap gets the configmaps for a given namespace
-func GetConfigMap(client kubernetes.Interface, namespace string) k8styped.ConfigMapInterface {
-	return client.CoreV1().ConfigMaps(namespace)
+func GetConfigMap(client *KubeClient, namespace string) k8styped.ConfigMapInterface {
+	return client.Kube.CoreV1().ConfigMaps(namespace)
 }
 
 // DeploymentScaledToZeroFunc returns a func that evaluates if a deployment has scaled to 0 pods
@@ -175,9 +173,9 @@ func DeploymentScaledToZeroFunc() func(d *appsv1.Deployment) (bool, error) {
 
 // WaitForLogContent waits until logs for given Pod/Container include the given content.
 // If the content is not present within timeout it returns error.
-func WaitForLogContent(ctx context.Context, client *KubeClient, podName, containerName, namespace, content string) error {
+func WaitForLogContent(client *KubeClient, podName, containerName, namespace, content string) error {
 	return wait.PollImmediate(interval, logTimeout, func() (bool, error) {
-		logs, err := client.PodLogs(ctx, podName, containerName, namespace)
+		logs, err := client.PodLogs(podName, containerName, namespace)
 		if err != nil {
 			return true, err
 		}
@@ -186,15 +184,15 @@ func WaitForLogContent(ctx context.Context, client *KubeClient, podName, contain
 }
 
 // WaitForAllPodsRunning waits for all the pods to be in running state
-func WaitForAllPodsRunning(ctx context.Context, client kubernetes.Interface, namespace string) error {
-	return WaitForPodListState(ctx, client, podsRunning, "PodsAreRunning", namespace)
+func WaitForAllPodsRunning(client *KubeClient, namespace string) error {
+	return WaitForPodListState(client, podsRunning, "PodsAreRunning", namespace)
 }
 
 // WaitForPodRunning waits for the given pod to be in running state
-func WaitForPodRunning(ctx context.Context, client kubernetes.Interface, name string, namespace string) error {
-	p := client.CoreV1().Pods(namespace)
+func WaitForPodRunning(client *KubeClient, name string, namespace string) error {
+	p := client.Kube.CoreV1().Pods(namespace)
 	return wait.PollImmediate(interval, podTimeout, func() (bool, error) {
-		p, err := p.Get(ctx, name, metav1.GetOptions{})
+		p, err := p.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return true, err
 		}
@@ -219,9 +217,8 @@ func podRunning(pod *corev1.Pod) bool {
 }
 
 // WaitForDeploymentScale waits until the given deployment has the expected scale.
-func WaitForDeploymentScale(ctx context.Context, client kubernetes.Interface, name, namespace string, scale int) error {
+func WaitForDeploymentScale(client *KubeClient, name, namespace string, scale int) error {
 	return WaitForDeploymentState(
-		ctx,
 		client,
 		name,
 		func(d *appsv1.Deployment) (bool, error) {

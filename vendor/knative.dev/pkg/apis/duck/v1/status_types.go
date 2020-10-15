@@ -74,7 +74,7 @@ func (*Conditions) GetFullType() ducktypes.Populatable {
 	return &KResource{}
 }
 
-// GetCondition fetches a copy of the condition of the specified type.
+// GetCondition fetches the condition of the specified type.
 func (s *Status) GetCondition(t apis.ConditionType) *apis.Condition {
 	for _, cond := range s.Conditions {
 		if cond.Type == t {
@@ -89,15 +89,15 @@ func (s *Status) GetCondition(t apis.ConditionType) *apis.Condition {
 // By default apis.ConditionReady and apis.ConditionSucceeded will be copied over to the
 // sink. Other conditions types are tested against a list of predicates. If any of the predicates
 // return true the condition type will be copied to the sink
-func (s *Status) ConvertTo(ctx context.Context, sink *Status, predicates ...func(apis.ConditionType) bool) {
-	sink.ObservedGeneration = s.ObservedGeneration
-	if s.Annotations != nil {
+func (source *Status) ConvertTo(ctx context.Context, sink *Status, predicates ...func(apis.ConditionType) bool) {
+	sink.ObservedGeneration = source.ObservedGeneration
+	if source.Annotations != nil {
 		// This will deep copy the map.
-		sink.Annotations = kmeta.UnionMaps(s.Annotations)
+		sink.Annotations = kmeta.UnionMaps(source.Annotations)
 	}
 
-	conditions := make(apis.Conditions, 0, len(s.Conditions))
-	for _, c := range s.Conditions {
+	conditions := make(apis.Conditions, 0, len(source.Conditions))
+	for _, c := range source.Conditions {
 
 		// Copy over the "happy" condition, which is the only condition that
 		// we can reliably transfer.

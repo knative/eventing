@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"go.opencensus.io/stats"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -155,9 +156,9 @@ func NewStackdriverClientConfigFromMap(config map[string]string) *StackdriverCli
 // record applies the `ros` Options to each measurement in `mss` and then records the resulting
 // measurements in the metricsConfig's designated backend.
 func (mc *metricsConfig) record(ctx context.Context, mss []stats.Measurement, ros ...stats.Options) error {
-	if mc == nil || mc.backendDestination == none {
-		// Don't record data points if the metric config is not initialized yet or if
-		// the defined backend is "none" explicitly.
+	if mc == nil {
+		// Don't record data points if the metric config is not initialized yet.
+		// At this point, it's unclear whether should record or not.
 		return nil
 	}
 
@@ -173,7 +174,7 @@ func (mc *metricsConfig) record(ctx context.Context, mss []stats.Measurement, ro
 	return mc.recorder(ctx, mss, ros...)
 }
 
-func createMetricsConfig(ctx context.Context, ops ExporterOptions) (*metricsConfig, error) {
+func createMetricsConfig(ops ExporterOptions, logger *zap.SugaredLogger) (*metricsConfig, error) {
 	var mc metricsConfig
 
 	if ops.Domain == "" {
@@ -269,7 +270,7 @@ func createMetricsConfig(ctx context.Context, ops ExporterOptions) (*metricsConf
 		mc.recorder = sdCustomMetricsRecorder(mc, allowCustomMetrics)
 
 		if scc.UseSecret {
-			secret, err := getStackdriverSecret(ctx, ops.Secrets)
+			secret, err := getStackdriverSecret(ops.Secrets)
 			if err != nil {
 				return nil, err
 			}
@@ -346,7 +347,7 @@ func prometheusPort() (int, error) {
 
 // JsonToMetricsOptions converts a json string of a
 // ExporterOptions. Returns a non-nil ExporterOptions always.
-func JsonToMetricsOptions(jsonOpts string) (*ExporterOptions, error) { // nolint No rename due to backwards incompatibility.
+func JsonToMetricsOptions(jsonOpts string) (*ExporterOptions, error) {
 	var opts ExporterOptions
 	if jsonOpts == "" {
 		return nil, errors.New("json options string is empty")
@@ -360,7 +361,7 @@ func JsonToMetricsOptions(jsonOpts string) (*ExporterOptions, error) { // nolint
 }
 
 // MetricsOptionsToJson converts a ExporterOptions to a json string.
-func MetricsOptionsToJson(opts *ExporterOptions) (string, error) { // nolint No rename due to backwards incompatibility.
+func MetricsOptionsToJson(opts *ExporterOptions) (string, error) {
 	if opts == nil {
 		return "", nil
 	}

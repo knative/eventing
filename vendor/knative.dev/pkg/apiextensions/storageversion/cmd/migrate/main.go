@@ -50,9 +50,9 @@ func main() {
 	logger.Infof("Migrating %d group resources", len(grs))
 
 	for _, gr := range grs {
-		logger.Info("Migrating group resource ", gr)
+		logger.Infof("Migrating group resource %s", gr)
 		if err := migrator.Migrate(ctx, gr); err != nil {
-			logger.Fatal("Failed to migrate: ", err)
+			logger.Fatalf("Failed to migrate: %s", err)
 		}
 	}
 
@@ -76,7 +76,7 @@ func setupLogger() *zap.SugaredLogger {
 
 	config, err := logging.NewConfigFromMap(nil)
 	if err != nil {
-		log.Fatal("Failed to create logging config: ", err)
+		log.Fatalf("Failed to create logging config: %s", err)
 	}
 
 	logger, _ := logging.NewLoggerFromConfig(config, component)

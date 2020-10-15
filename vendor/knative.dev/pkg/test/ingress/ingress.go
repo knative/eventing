@@ -17,7 +17,6 @@ limitations under the License.
 package ingress
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -33,12 +32,7 @@ const (
 )
 
 // GetIngressEndpoint gets the ingress public IP or hostname.
-// address - is the endpoint to which we should actually connect.
-// portMap - translates the request's port to the port on address to which the caller
-//    should connect.  This is used when the resolution to address goes through some
-//    sort of port-mapping, e.g. Kubernetes node ports.
-// err - an error when address/portMap cannot be established.
-func GetIngressEndpoint(ctx context.Context, kubeClientset kubernetes.Interface, endpointOverride string) (address string, portMap func(string) string, err error) {
+func GetIngressEndpoint(kubeClientset *kubernetes.Clientset) (string, error) {
 	ingressName := istioIngressName
 	if gatewayOverride := os.Getenv("GATEWAY_OVERRIDE"); gatewayOverride != "" {
 		ingressName = gatewayOverride
@@ -48,27 +42,15 @@ func GetIngressEndpoint(ctx context.Context, kubeClientset kubernetes.Interface,
 		ingressNamespace = gatewayNsOverride
 	}
 
-	ingress, err := kubeClientset.CoreV1().Services(ingressNamespace).Get(ctx, ingressName, metav1.GetOptions{})
+	ingress, err := kubeClientset.CoreV1().Services(ingressNamespace).Get(ingressName, metav1.GetOptions{})
 	if err != nil {
-		return "", nil, err
-	}
-
-	// If an override is provided, use it
-	if endpointOverride != "" {
-		return endpointOverride, func(port string) string {
-			for _, sp := range ingress.Spec.Ports {
-				if fmt.Sprint(sp.Port) == port {
-					return fmt.Sprint(sp.NodePort)
-				}
-			}
-			return port
-		}, nil
+		return "", err
 	}
 	endpoint, err := EndpointFromService(ingress)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
-	return endpoint, func(in string) string { return in }, nil
+	return endpoint, nil
 }
 
 // EndpointFromService extracts the endpoint from the service's ingress.

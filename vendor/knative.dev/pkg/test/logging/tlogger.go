@@ -137,7 +137,7 @@ func validateKeysAndValues(keysAndValues ...interface{}) bool {
 		_, isField := keysAndValues[i].(zapcore.Field)
 		_, isString := keysAndValues[i].(string)
 		if isField {
-			i++
+			i += 1
 		} else if isString {
 			if i == length-1 {
 				return false
@@ -160,24 +160,25 @@ func (o *TLogger) interfacesToFields(things ...interface{}) []interface{} {
 	return fields
 }
 
-func (o *TLogger) errorWithRuntimeCheck(stringThenKeysAndValues ...interface{}) (error, string, []interface{}) { //nolint Returning the error first is okay and expected here.
+func (o *TLogger) errorWithRuntimeCheck(stringThenKeysAndValues ...interface{}) (error, string, []interface{}) {
 	if len(stringThenKeysAndValues) == 0 {
 		return nil, "", nil
-	}
-	s, isString := stringThenKeysAndValues[0].(string)
-	if isString {
-		// Desired case (hopefully)
-		remainder := stringThenKeysAndValues[1:]
-		if !validateKeysAndValues(remainder...) {
-			remainder = o.interfacesToFields(remainder...)
+	} else {
+		s, isString := stringThenKeysAndValues[0].(string)
+		e, isError := stringThenKeysAndValues[0].(error)
+		if isString {
+			// Desired case (hopefully)
+			remainder := stringThenKeysAndValues[1:]
+			if !validateKeysAndValues(remainder...) {
+				remainder = o.interfacesToFields(remainder...)
+			}
+			return nil, s, remainder
+		} else if isError && len(stringThenKeysAndValues) == 1 {
+			return e, "", nil
+		} else {
+			return nil, "unstructured error", o.interfacesToFields(stringThenKeysAndValues...)
 		}
-		return nil, s, remainder
 	}
-	e, isError := stringThenKeysAndValues[0].(error)
-	if isError && len(stringThenKeysAndValues) == 1 {
-		return e, "", nil
-	}
-	return nil, "unstructured error", o.interfacesToFields(stringThenKeysAndValues...)
 }
 
 // Cleanup registers a cleanup callback.
@@ -346,8 +347,8 @@ func (o *TLogger) cloneWithNewLogger(l *zap.Logger) *TLogger {
 // If any are errors, it fails the subtest.
 // Currently experimental and likely to be removed
 func (o *TLogger) Collect(key string, value interface{}) {
-	list, hasKey := o.errs[key]
-	if hasKey {
+	list, has_key := o.errs[key]
+	if has_key {
 		list = append(list, value)
 	} else {
 		list = make([]interface{}, 1)

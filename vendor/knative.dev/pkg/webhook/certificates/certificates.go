@@ -23,7 +23,6 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -83,11 +82,11 @@ func (r *reconciler) reconcileCertificate(ctx context.Context) error {
 		// Check the expiration date of the certificate to see if it needs to be updated
 		cert, err := tls.X509KeyPair(secret.Data[certresources.ServerCert], secret.Data[certresources.ServerKey])
 		if err != nil {
-			logger.Warn("Error creating pem from certificate and key: ", err)
+			logger.Warnf("Error creating pem from certificate and key: %v", err)
 		} else {
 			certData, err := x509.ParseCertificate(cert.Certificate[0])
 			if err != nil {
-				logger.Error("Error parsing certificate: ", err)
+				logger.Errorf("Error parsing certificate: %v", err)
 			} else if time.Now().Add(oneWeek).Before(certData.NotAfter) {
 				return nil
 			}
@@ -102,6 +101,6 @@ func (r *reconciler) reconcileCertificate(ctx context.Context) error {
 		return err
 	}
 	secret.Data = newSecret.Data
-	_, err = r.client.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	_, err = r.client.CoreV1().Secrets(secret.Namespace).Update(secret)
 	return err
 }

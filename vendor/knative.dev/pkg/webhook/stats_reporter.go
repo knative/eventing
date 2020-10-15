@@ -55,6 +55,7 @@ var (
 	resourceGroupKey     = tag.MustNewKey("resource_group")
 	resourceVersionKey   = tag.MustNewKey("resource_version")
 	resourceResourceKey  = tag.MustNewKey("resource_resource")
+	resourceNameKey      = tag.MustNewKey("resource_name")
 	resourceNamespaceKey = tag.MustNewKey("resource_namespace")
 	admissionAllowedKey  = tag.MustNewKey("admission_allowed")
 )
@@ -92,6 +93,7 @@ func (r *reporter) ReportRequest(req *admissionv1.AdmissionRequest, resp *admiss
 		tag.Insert(resourceGroupKey, req.Resource.Group),
 		tag.Insert(resourceVersionKey, req.Resource.Version),
 		tag.Insert(resourceResourceKey, req.Resource.Resource),
+		tag.Insert(resourceNameKey, req.Name),
 		tag.Insert(resourceNamespaceKey, req.Namespace),
 		tag.Insert(admissionAllowedKey, strconv.FormatBool(resp.Allowed)),
 	)
@@ -115,6 +117,7 @@ func RegisterMetrics() {
 		resourceVersionKey,
 		resourceResourceKey,
 		resourceNamespaceKey,
+		resourceNameKey,
 		admissionAllowedKey}
 
 	if err := view.Register(

@@ -1,9 +1,8 @@
 # Duck Types
 
 Knative leverages duck-typing to interact with resources inside of Kubernetes
-without explicit knowledge of the full resource shape. `knative/pkg` defines
-three duck types that are used throughout Knative: `Addressable`, `Binding`, and
-`Source`.
+without explicit knowlage of the full resource shape. `knative/pkg` defines two
+duck types that are used throughout Knative: `Addressable` and `Source`.
 
 For APIs leveraging `ObjectReference`, the context of the resource in question
 identifies the duck-type. To enable the case where no `ObjectRefrence` is used,

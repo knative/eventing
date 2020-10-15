@@ -44,7 +44,7 @@ func main() {
 	pflag.Parse()
 
 	if err := generatorargs.Validate(genericArgs); err != nil {
-		klog.Fatal("Error: ", err)
+		klog.Fatalf("Error: %v", err)
 	}
 
 	// Run it.
@@ -53,7 +53,7 @@ func main() {
 		generators.DefaultNameSystem(),
 		generators.Packages,
 	); err != nil {
-		klog.Fatal("Error: ", err)
+		klog.Fatalf("Error: %v", err)
 	}
 	klog.V(2).Info("Completed successfully.")
 }

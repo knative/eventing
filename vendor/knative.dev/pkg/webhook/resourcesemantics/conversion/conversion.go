@@ -56,7 +56,7 @@ func (r *reconciler) Convert(
 	for _, obj := range req.Objects {
 		converted, err := r.convert(ctx, obj, req.DesiredAPIVersion)
 		if err != nil {
-			logging.FromContext(ctx).Error("Conversion failed: ", err)
+			logging.FromContext(ctx).Errorf("Conversion failed: %v", err)
 			res.Result.Status = metav1.StatusFailure
 			res.Result.Message = err.Error()
 			break
@@ -130,6 +130,7 @@ func (r *reconciler) convert(
 	} else {
 		logger.Infof("Could not get Accessor for %s: %v", formatGK(inGVK.GroupKind()), err)
 	}
+	logger.Infof("Converting %s to version %s", formatGVK(inGVK), targetVersion)
 	ctx = logging.WithLogger(ctx, logger)
 
 	if inGVK.Version == conv.HubVersion {

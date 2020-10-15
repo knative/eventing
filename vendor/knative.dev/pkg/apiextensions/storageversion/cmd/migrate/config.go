@@ -31,7 +31,7 @@ import (
 
 func configOrDie() *rest.Config {
 	var (
-		serverURL = flag.String("server", "",
+		masterURL = flag.String("master", "",
 			"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 		kubeconfig = flag.String("kubeconfig", "",
 			"Path to a kubeconfig. Only required if out-of-cluster.")
@@ -39,9 +39,9 @@ func configOrDie() *rest.Config {
 
 	flag.Parse()
 
-	cfg, err := getConfig(*serverURL, *kubeconfig)
+	cfg, err := getConfig(*masterURL, *kubeconfig)
 	if err != nil {
-		panic(fmt.Sprint("Error building kubeconfig:", err))
+		panic(fmt.Sprintf("Error building kubeconfig: %v", err))
 	}
 
 	return cfg
@@ -49,17 +49,17 @@ func configOrDie() *rest.Config {
 
 // getConfig returns a rest.Config to be used for kubernetes client creation.
 // It does so in the following order:
-//   1. Use the passed kubeconfig/serverURL.
+//   1. Use the passed kubeconfig/masterURL.
 //   2. Fallback to the KUBECONFIG environment variable.
 //   3. Fallback to in-cluster config.
 //   4. Fallback to the ~/.kube/config.
-func getConfig(serverURL, kubeconfig string) (*rest.Config, error) {
+func getConfig(masterURL, kubeconfig string) (*rest.Config, error) {
 	if kubeconfig == "" {
 		kubeconfig = os.Getenv("KUBECONFIG")
 	}
 	// If we have an explicit indication of where the kubernetes config lives, read that.
 	if kubeconfig != "" {
-		return clientcmd.BuildConfigFromFlags(serverURL, kubeconfig)
+		return clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	}
 	// If not, try the in-cluster config.
 	if c, err := rest.InClusterConfig(); err == nil {

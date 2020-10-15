@@ -23,7 +23,6 @@ import (
 	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apixlisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -71,7 +70,7 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 	// Look up the webhook secret, and fetch the CA cert bundle.
 	secret, err := r.secretLister.Secrets(system.Namespace()).Get(r.secretName)
 	if err != nil {
-		logger.Error("Error fetching secret: ", err)
+		logger.Errorf("Error fetching secret: %v", err)
 		return err
 	}
 
@@ -108,7 +107,7 @@ func (r *reconciler) reconcileCRD(ctx context.Context, cacert []byte, key string
 	} else if !ok {
 		logger.Infof("updating CRD")
 		crdClient := r.client.ApiextensionsV1().CustomResourceDefinitions()
-		if _, err := crdClient.Update(ctx, crd, metav1.UpdateOptions{}); err != nil {
+		if _, err := crdClient.Update(crd); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {

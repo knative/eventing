@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"path"
 	"sync"
-	"time"
 
 	sd "contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/resource"
@@ -50,8 +49,6 @@ const (
 	StackdriverSecretNameDefault = "stackdriver-service-account-key"
 	// secretDataFieldKey is the name of the k8s Secret field that contains the Secret's key.
 	secretDataFieldKey = "key.json"
-	// stackdriverApiTimeout is the timeout value of Stackdriver API service side.
-	stackdriverAPITimeout = 12 * time.Second
 )
 
 var (
@@ -69,7 +66,7 @@ var (
 	newStackdriverExporterFunc func(sd.Options) (view.Exporter, error)
 
 	// kubeclient is the in-cluster Kubernetes kubeclient, which is lazy-initialized on first use.
-	kubeclient kubernetes.Interface
+	kubeclient *kubernetes.Clientset
 	// initClientOnce is the lazy initializer for kubeclient.
 	initClientOnce sync.Once
 	// kubeclientInitErr capture an error during initClientOnce
@@ -88,10 +85,6 @@ var (
 	// metricToResourceLabels provides a quick lookup from a custom metric name to the set of tags
 	// which should be promoted to Stackdriver Resource labels via opencensus resources.
 	metricToResourceLabels = map[string]*resourceTemplate{}
-
-	// TestOverrideBundleCount is a variable for testing to reduce the size (number of metrics) buffered before
-	// Stackdriver will send a bundled metric report. Only applies if non-zero.
-	TestOverrideBundleCount = 0
 )
 
 type resourceTemplate struct {
@@ -193,14 +186,12 @@ func newStackdriverExporter(config *metricsConfig, logger *zap.SugaredLogger) (v
 		GetMetricPrefix:         mpf,
 		ReportingInterval:       config.reportingPeriod,
 		DefaultMonitoringLabels: &sd.Labels{},
-		Timeout:                 stackdriverAPITimeout,
-		BundleCountThreshold:    TestOverrideBundleCount,
 	})
 	if err != nil {
 		logger.Errorw("Failed to create the Stackdriver exporter: ", zap.Error(err))
 		return nil, nil, err
 	}
-	logger.Info("Created Opencensus Stackdriver exporter with config ", config)
+	logger.Infof("Created Opencensus Stackdriver exporter with config %v", config)
 	// We have to return a ResourceExporterFactory here to enable tracking resources, even though we always poll for them.
 	return &pollOnlySDExporter{e},
 		func(r *resource.Resource) (view.Exporter, error) { return &pollOnlySDExporter{}, nil },
@@ -291,7 +282,7 @@ func getStackdriverExporterClientOptions(config *metricsConfig) ([]option.Client
 	// SetStackdriverSecretLocation must have been called by calling package for this to work.
 	if config.stackdriverClientConfig.UseSecret {
 		if config.secret == nil {
-			return co, fmt.Errorf("no secret provided for component %q; cannot use stackdriver-use-secret=true", config.component)
+			return co, fmt.Errorf("No secret provided for component %q; cannot use stackdriver-use-secret=true", config.component)
 		}
 
 		if opt, err := convertSecretToExporterOption(config.secret); err == nil {
@@ -341,7 +332,7 @@ func getMetricPrefixFunc(metricTypePrefix, customMetricTypePrefix string) func(n
 // getStackdriverSecret returns the Kubernetes Secret specified in the given config.
 // SetStackdriverSecretLocation must have been called by calling package for this to work.
 // TODO(anniefu): Update exporter if Secret changes (https://github.com/knative/pkg/issues/842)
-func getStackdriverSecret(ctx context.Context, secretFetcher SecretFetcher) (*corev1.Secret, error) {
+func getStackdriverSecret(secretFetcher SecretFetcher) (*corev1.Secret, error) {
 	stackdriverMtx.RLock()
 	defer stackdriverMtx.RUnlock()
 
@@ -359,7 +350,7 @@ func getStackdriverSecret(ctx context.Context, secretFetcher SecretFetcher) (*co
 			return nil, err
 		}
 
-		sec, secErr = kubeclient.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
+		sec, secErr = kubeclient.CoreV1().Secrets(secretNamespace).Get(secretName, metav1.GetOptions{})
 	}
 
 	if secErr != nil {
@@ -374,7 +365,7 @@ func convertSecretToExporterOption(secret *corev1.Secret) (option.ClientOption, 
 	if data, ok := secret.Data[secretDataFieldKey]; ok {
 		return option.WithCredentialsJSON(data), nil
 	}
-	return nil, fmt.Errorf("expected Secret to store key in data field named [%s]", secretDataFieldKey)
+	return nil, fmt.Errorf("Expected Secret to store key in data field named [%s]", secretDataFieldKey)
 }
 
 // ensureKubeclient is the lazy initializer for kubeclient.

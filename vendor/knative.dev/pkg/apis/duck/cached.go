@@ -17,7 +17,6 @@ limitations under the License.
 package duck
 
 import (
-	"context"
 	"sync"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,7 +36,7 @@ type CachedInformerFactory struct {
 var _ InformerFactory = (*CachedInformerFactory)(nil)
 
 // Get implements InformerFactory.
-func (cif *CachedInformerFactory) Get(ctx context.Context, gvr schema.GroupVersionResource) (cache.SharedIndexInformer, cache.GenericLister, error) {
+func (cif *CachedInformerFactory) Get(gvr schema.GroupVersionResource) (cache.SharedIndexInformer, cache.GenericLister, error) {
 	cif.m.Lock()
 
 	if cif.cache == nil {
@@ -58,7 +57,7 @@ func (cif *CachedInformerFactory) Get(ctx context.Context, gvr schema.GroupVersi
 				return
 			}
 
-			ic.inf, ic.lister, ic.err = cif.Delegate.Get(ctx, gvr)
+			ic.inf, ic.lister, ic.err = cif.Delegate.Get(gvr)
 		}
 		cif.cache[gvr] = ic
 	}

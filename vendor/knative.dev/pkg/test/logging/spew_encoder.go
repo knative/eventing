@@ -29,7 +29,7 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
-	"go.uber.org/zap/zapcore"
+	. "go.uber.org/zap/zapcore"
 )
 
 var (
@@ -42,7 +42,7 @@ var (
 )
 
 func init() {
-	zap.RegisterEncoder("spew", func(encoderConfig zapcore.EncoderConfig) (zapcore.Encoder, error) {
+	zap.RegisterEncoder("spew", func(encoderConfig EncoderConfig) (Encoder, error) {
 		return NewSpewEncoder(encoderConfig), nil
 	})
 }
@@ -54,21 +54,21 @@ func init() {
 // designed to make human-readable log only and get the most information to the user on any data type.
 //
 // Code is mostly from console_encoder.go in zapcore.
-func NewSpewEncoder(cfg zapcore.EncoderConfig) *SpewEncoder {
+func NewSpewEncoder(cfg EncoderConfig) *SpewEncoder {
 	enc := SpewEncoder{}
-	enc.MapObjectEncoder = zapcore.NewMapObjectEncoder()
+	enc.MapObjectEncoder = NewMapObjectEncoder()
 	enc.EncoderConfig = &cfg
 	return &enc
 }
 
 // SpewEncoder implements zapcore.Encoder interface
 type SpewEncoder struct {
-	*zapcore.MapObjectEncoder
-	*zapcore.EncoderConfig
+	*MapObjectEncoder
+	*EncoderConfig
 }
 
 // Implements zapcore.Encoder interface
-func (enc *SpewEncoder) Clone() zapcore.Encoder {
+func (enc *SpewEncoder) Clone() Encoder {
 	n := NewSpewEncoder(*(enc.EncoderConfig))
 	for k, v := range enc.Fields {
 		n.Fields[k] = v
@@ -86,7 +86,7 @@ func putSliceEncoder(e *sliceArrayEncoder) {
 }
 
 // Implements zapcore.Encoder interface.
-func (enc *SpewEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+func (enc *SpewEncoder) EncodeEntry(ent Entry, fields []Field) (*buffer.Buffer, error) {
 	line := _pool.Get()
 
 	// Could probably rewrite this portion and remove the copied
@@ -106,7 +106,7 @@ func (enc *SpewEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (
 
 		if nameEncoder == nil {
 			// Fall back to FullNameEncoder for backward compatibility.
-			nameEncoder = zapcore.FullNameEncoder
+			nameEncoder = FullNameEncoder
 		}
 
 		nameEncoder(ent.LoggerName, arr)
@@ -140,19 +140,19 @@ func (enc *SpewEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (
 	if enc.LineEnding != "" {
 		line.AppendString(enc.LineEnding)
 	} else {
-		line.AppendString(zapcore.DefaultLineEnding)
+		line.AppendString(DefaultLineEnding)
 	}
 	return line, nil
 }
 
-func (enc *SpewEncoder) writeContext(line *buffer.Buffer, extra []zapcore.Field) {
+func (enc *SpewEncoder) writeContext(line *buffer.Buffer, extra []Field) {
 	if len(extra) == 0 && len(enc.Fields) == 0 {
 		return
 	}
 
 	// This could probably be more efficient, but .AddTo() is convenient
 
-	context := zapcore.NewMapObjectEncoder()
+	context := NewMapObjectEncoder()
 	for k, v := range enc.Fields {
 		context.Fields[k] = v
 	}

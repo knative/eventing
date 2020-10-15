@@ -155,11 +155,7 @@ func init() {
 			stats.UnitNone,
 		),
 	}
-	opts := kubemetrics.RegisterOpts{
-		RequestLatency: cp.NewLatencyMetric(),
-		RequestResult:  cp.NewResultMetric(),
-	}
-	kubemetrics.Register(opts)
+	kubemetrics.Register(cp.NewLatencyMetric(), cp.NewResultMetric())
 
 	views := []*view.View{{
 		Description: "Depth of the work queue",

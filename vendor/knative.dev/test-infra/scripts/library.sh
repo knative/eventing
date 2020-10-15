@@ -21,6 +21,10 @@
 # GCP project where all tests related resources live
 readonly KNATIVE_TESTS_PROJECT=knative-tests
 
+# Default GKE version to be used with Knative Serving
+readonly SERVING_GKE_VERSION=gke-latest
+readonly SERVING_GKE_IMAGE=cos
+
 # Conveniently set GOPATH if unset
 if [[ ! -v GOPATH ]]; then
   export GOPATH="$(go env GOPATH)"
@@ -69,12 +73,12 @@ function abort() {
 # Parameters: $1 - character to use for the box.
 #             $2 - banner message.
 function make_banner() {
-  local msg="$1$1$1$1 $2 $1$1$1$1"
-  local border="${msg//[-0-9A-Za-z _.,\/()\']/$1}"
-  echo -e "${border}\n${msg}\n${border}"
-  # TODO(adrcunha): Remove once logs have timestamps on Prow
-  # For details, see https://github.com/kubernetes/test-infra/issues/10100
-  echo -e "$1$1$1$1 $(TZ='America/Los_Angeles' date)\n${border}"
+    local msg="$1$1$1$1 $2 $1$1$1$1"
+    local border="${msg//[-0-9A-Za-z _.,\/()\']/$1}"
+    echo -e "${border}\n${msg}\n${border}"
+    # TODO(adrcunha): Remove once logs have timestamps on Prow
+    # For details, see https://github.com/kubernetes/test-infra/issues/10100
+    echo -e "$1$1$1$1 $(TZ='America/Los_Angeles' date)\n${border}"
 }
 
 # Simple header for logging purposes.
@@ -176,8 +180,21 @@ function wait_until_pods_running() {
 # Waits until all batch jobs complete in the given namespace.
 # Parameters: $1 - namespace.
 function wait_until_batch_job_complete() {
-  echo "Waiting until all batch jobs in namespace $1 run to completion."
-  kubectl wait job --for=condition=Complete --all -n "$1" --timeout=5m || return 1
+  echo -n "Waiting until all batch jobs in namespace $1 run to completion."
+  for i in {1..150}; do  # timeout after 5 minutes
+    local jobs=$(kubectl get jobs -n $1 --no-headers \
+                 -ocustom-columns='n:{.metadata.name},c:{.spec.completions},s:{.status.succeeded}')
+    # All jobs must be complete
+    local not_complete=$(echo "${jobs}" | awk '{if ($2!=$3) print $0}' | wc -l)
+    if [[ ${not_complete} -eq 0 ]]; then
+      echo -e "\nAll jobs are complete:\n${jobs}"
+      return 0
+    fi
+    echo -n "."
+    sleep 2
+  done
+  echo -e "\n\nERROR: timeout waiting for jobs to complete\n${jobs}"
+  return 1
 }
 
 # Waits until the given service has an external address (IP/hostname).
@@ -298,6 +315,44 @@ function dump_app_logs() {
   done
 }
 
+# Sets the given user as cluster admin.
+# Parameters: $1 - user
+#             $2 - cluster name
+#             $3 - cluster region
+#             $4 - cluster zone, optional
+function acquire_cluster_admin_role() {
+  echo "Acquiring cluster-admin role for user '$1'"
+  local geoflag="--region=$3"
+  [[ -n $4 ]] && geoflag="--zone=$3-$4"
+  # Get the password of the admin and use it, as the service account (or the user)
+  # might not have the necessary permission.
+  local password=$(gcloud --format="value(masterAuth.password)" \
+      container clusters describe $2 ${geoflag})
+  if [[ -n "${password}" ]]; then
+    # Cluster created with basic authentication
+    kubectl config set-credentials cluster-admin \
+        --username=admin --password=${password}
+  else
+    local cert=$(mktemp)
+    local key=$(mktemp)
+    echo "Certificate in ${cert}, key in ${key}"
+    gcloud --format="value(masterAuth.clientCertificate)" \
+      container clusters describe $2 ${geoflag} | base64 --decode > ${cert}
+    gcloud --format="value(masterAuth.clientKey)" \
+      container clusters describe $2 ${geoflag} | base64 --decode > ${key}
+    kubectl config set-credentials cluster-admin \
+      --client-certificate=${cert} --client-key=${key}
+  fi
+  kubectl config set-context $(kubectl config current-context) \
+      --user=cluster-admin
+  kubectl create clusterrolebinding cluster-admin-binding \
+      --clusterrole=cluster-admin \
+      --user=$1
+  # Reset back to the default account
+  gcloud container clusters get-credentials \
+      $2 ${geoflag} --project $(gcloud config get-value project)
+}
+
 # Run a command through tee and capture its output.
 # Parameters: $1 - file where the output will be stored.
 #             $2... - command to run.
@@ -353,13 +408,10 @@ function report_go_test() {
   report="$(mktemp)"
   local xml
   xml="$(mktemp_with_extension "${ARTIFACTS}"/junit_XXXXXXXX xml)"
-  local json
-  json="$(mktemp_with_extension "${ARTIFACTS}"/json_XXXXXXXX json)"
   echo "Running go test with args: ${go_test_args[*]}"
   # TODO(chizhg): change to `--format testname`?
-  capture_output "${report}" gotestsum --format "${GO_TEST_VERBOSITY:-standard-verbose}" \
+  capture_output "${report}" gotestsum --format standard-verbose \
     --junitfile "${xml}" --junitfile-testsuite-name relative --junitfile-testcase-classname relative \
-    --jsonfile "${json}" \
     -- "${go_test_args[@]}"
   local failed=$?
   echo "Finished run, return code is ${failed}"
@@ -498,80 +550,6 @@ function run_go_tool() {
   ${tool} "$@"
 }
 
-# Add function call to trap
-# Parameters: $1 - Function to call
-#             $2...$n - Signals for trap
-function add_trap {
-  local cmd=$1
-  shift
-  for trap_signal in "$@"; do
-    local current_trap
-    current_trap="$(trap -p "$trap_signal" | cut -d\' -f2)"
-    local new_cmd="($cmd)"
-    [[ -n "${current_trap}" ]] && new_cmd="${current_trap};${new_cmd}"
-    trap -- "${new_cmd}" "$trap_signal"
-  done
-}
-
-# Update go deps.
-# Parameters (parsed as flags):
-#   "--upgrade", bool, do upgrade.
-#   "--release <version>" used with upgrade. The release version to upgrade
-#                         Knative components. ex: --release v0.18. Defaults to
-#                         "master".
-# Additional dependencies can be included in the upgrade by providing them in a
-# global env var: FLOATING_DEPS
-function go_update_deps() {
-  cd "${REPO_ROOT_DIR}" || return 1
-
-  export GO111MODULE=on
-  export GOFLAGS=""
-
-  echo "=== Update Deps for Golang"
-
-  local UPGRADE=0
-  local VERSION="master"
-  while [[ $# -ne 0 ]]; do
-    parameter=$1
-    case ${parameter} in
-      --upgrade) UPGRADE=1 ;;
-      --release) shift; VERSION="$1" ;;
-      *) abort "unknown option ${parameter}" ;;
-    esac
-    shift
-  done
-
-  if (( UPGRADE )); then
-    echo "--- Upgrading to ${VERSION}"
-    FLOATING_DEPS+=( $(run_go_tool knative.dev/test-infra/buoy buoy float ${REPO_ROOT_DIR}/go.mod --release ${VERSION} --domain knative.dev) )
-    if (( ${#FLOATING_DEPS[@]} )); then
-      echo "Floating deps to ${FLOATING_DEPS[@]}"
-      go get -d ${FLOATING_DEPS[@]}
-    else
-      echo "Nothing to upgrade."
-    fi
-  fi
-
-  echo "--- Go mod tidy and vendor"
-
-  # Prune modules.
-  go mod tidy
-  go mod vendor
-
-  echo "--- Removing unwanted vendor files"
-
-  # Remove unwanted vendor files
-  find vendor/ \( -name "OWNERS" -o -name "OWNERS_ALIASES" -o -name "BUILD" -o -name "BUILD.bazel" -o -name "*_test.go" \) -print0 | xargs -0 rm -f
-
-  export GOFLAGS=-mod=vendor
-
-  echo "--- Updating licenses"
-  update_licenses third_party/VENDOR-LICENSE "./..."
-
-  echo "--- Removing broken symlinks"
-  remove_broken_symlinks ./vendor
-}
-
 # Run kntest tool, error out and ask users to install it if it's not currently installed.
 # Parameters: $1..$n - parameters passed to the tool.
 function run_kntest() {
@@ -608,6 +586,45 @@ function check_licenses() {
   # Check that we don't have any forbidden licenses.
   run_go_tool github.com/google/go-licenses go-licenses check "${REPO_ROOT_DIR}/..." || \
     { echo "--- FAIL: go-licenses failed the license check"; return 1; }
+}
+
+# Run the given linter on the given files, checking it exists first.
+# Parameters: $1 - tool
+#             $2 - tool purpose (for error message if tool not installed)
+#             $3 - tool parameters (quote if multiple parameters used)
+#             $4..$n - files to run linter on
+function run_lint_tool() {
+  local checker=$1
+  local params=$3
+  if ! hash ${checker} 2>/dev/null; then
+    warning "${checker} not installed, not $2"
+    return 127
+  fi
+  shift 3
+  local failed=0
+  for file in $@; do
+    ${checker} ${params} ${file} || failed=1
+  done
+  return ${failed}
+}
+
+# Check links in the given markdown files.
+# Parameters: $1...$n - files to inspect
+function check_links_in_markdown() {
+  # https://github.com/raviqqe/liche
+  local config="${REPO_ROOT_DIR}/test/markdown-link-check-config.rc"
+  [[ ! -e ${config} ]] && config="${_TEST_INFRA_SCRIPTS_DIR}/markdown-link-check-config.rc"
+  local options="$(grep '^-' ${config} | tr \"\n\" ' ')"
+  run_lint_tool liche "checking links in markdown files" "-d ${REPO_ROOT_DIR} ${options}" $@
+}
+
+# Check format of the given markdown files.
+# Parameters: $1..$n - files to inspect
+function lint_markdown() {
+  # https://github.com/markdownlint/markdownlint
+  local config="${REPO_ROOT_DIR}/test/markdown-lint-config.rc"
+  [[ ! -e ${config} ]] && config="${_TEST_INFRA_SCRIPTS_DIR}/markdown-lint-config.rc"
+  run_lint_tool mdl "linting markdown files" "-c ${config}" $@
 }
 
 # Return whether the given parameter is an integer.

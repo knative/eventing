@@ -19,12 +19,12 @@ package metrics
 import (
 	"context"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"go.uber.org/atomic"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/metrics"
 	"k8s.io/client-go/util/workqueue"
@@ -67,20 +67,22 @@ func (m counterMetric) Inc() {
 type gaugeMetric struct {
 	mutators []tag.Mutator
 	measure  *stats.Int64Measure
-	total    atomic.Int64
+	total    int64
 }
 
-var _ workqueue.GaugeMetric = (*gaugeMetric)(nil)
+var (
+	_ workqueue.GaugeMetric = (*gaugeMetric)(nil)
+)
 
 // Inc implements CounterMetric
 func (m *gaugeMetric) Inc() {
-	total := m.total.Inc()
+	total := atomic.AddInt64(&m.total, 1)
 	Record(context.Background(), m.measure.M(total), stats.WithTags(m.mutators...))
 }
 
 // Dec implements GaugeMetric
 func (m *gaugeMetric) Dec() {
-	total := m.total.Dec()
+	total := atomic.AddInt64(&m.total, -1)
 	Record(context.Background(), m.measure.M(total), stats.WithTags(m.mutators...))
 }
 
@@ -110,7 +112,9 @@ type latencyMetric struct {
 	measure *stats.Float64Measure
 }
 
-var _ metrics.LatencyMetric = (*latencyMetric)(nil)
+var (
+	_ metrics.LatencyMetric = (*latencyMetric)(nil)
+)
 
 // Observe implements LatencyMetric
 func (m latencyMetric) Observe(verb string, u url.URL, t time.Duration) {

@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -60,7 +59,7 @@ func NewURIResolver(ctx context.Context, callback func(types.NamespacedName)) *U
 }
 
 // URIFromDestination resolves a v1beta1.Destination into a URI string.
-func (r *URIResolver) URIFromDestination(ctx context.Context, dest duckv1beta1.Destination, parent interface{}) (string, error) {
+func (r *URIResolver) URIFromDestination(dest duckv1beta1.Destination, parent interface{}) (string, error) {
 	var deprecatedObjectReference *corev1.ObjectReference
 	if !(dest.DeprecatedAPIVersion == "" && dest.DeprecatedKind == "" && dest.DeprecatedName == "" && dest.DeprecatedNamespace == "") {
 		deprecatedObjectReference = &corev1.ObjectReference{
@@ -80,7 +79,7 @@ func (r *URIResolver) URIFromDestination(ctx context.Context, dest duckv1beta1.D
 		ref = deprecatedObjectReference
 	}
 	if ref != nil {
-		url, err := r.URIFromObjectReference(ctx, ref, parent)
+		url, err := r.URIFromObjectReference(ref, parent)
 		if err != nil {
 			return "", err
 		}
@@ -105,9 +104,9 @@ func (r *URIResolver) URIFromDestination(ctx context.Context, dest duckv1beta1.D
 }
 
 // URIFromDestinationV1 resolves a v1.Destination into a URL.
-func (r *URIResolver) URIFromDestinationV1(ctx context.Context, dest duckv1.Destination, parent interface{}) (*apis.URL, error) {
+func (r *URIResolver) URIFromDestinationV1(dest duckv1.Destination, parent interface{}) (*apis.URL, error) {
 	if dest.Ref != nil {
-		url, err := r.URIFromKReference(ctx, dest.Ref, parent)
+		url, err := r.URIFromKReference(dest.Ref, parent)
 		if err != nil {
 			return nil, err
 		}
@@ -131,24 +130,23 @@ func (r *URIResolver) URIFromDestinationV1(ctx context.Context, dest duckv1.Dest
 	return nil, errors.New("destination missing Ref and URI, expected at least one")
 }
 
-func (r *URIResolver) URIFromKReference(ctx context.Context, ref *duckv1.KReference, parent interface{}) (*apis.URL, error) {
-	return r.URIFromObjectReference(ctx, &corev1.ObjectReference{Name: ref.Name, Namespace: ref.Namespace, APIVersion: ref.APIVersion, Kind: ref.Kind}, parent)
+func (r *URIResolver) URIFromKReference(ref *duckv1.KReference, parent interface{}) (*apis.URL, error) {
+	return r.URIFromObjectReference(&corev1.ObjectReference{Name: ref.Name, Namespace: ref.Namespace, APIVersion: ref.APIVersion, Kind: ref.Kind}, parent)
 }
 
 // URIFromObjectReference resolves an ObjectReference to a URI string.
-func (r *URIResolver) URIFromObjectReference(ctx context.Context, ref *corev1.ObjectReference, parent interface{}) (*apis.URL, error) {
+func (r *URIResolver) URIFromObjectReference(ref *corev1.ObjectReference, parent interface{}) (*apis.URL, error) {
 	if ref == nil {
-		return nil, apierrs.NewBadRequest("ref is nil")
+		return nil, errors.New("ref is nil")
 	}
 
-	gvr, _ := meta.UnsafeGuessKindToResource(ref.GroupVersionKind())
 	if err := r.tracker.TrackReference(tracker.Reference{
 		APIVersion: ref.APIVersion,
 		Kind:       ref.Kind,
 		Namespace:  ref.Namespace,
 		Name:       ref.Name,
 	}, parent); err != nil {
-		return nil, apierrs.NewNotFound(gvr.GroupResource(), ref.Name)
+		return nil, fmt.Errorf("failed to track %+v: %w", ref, err)
 	}
 
 	// K8s Services are special cased. They can be called, even though they do not satisfy the
@@ -163,29 +161,30 @@ func (r *URIResolver) URIFromObjectReference(ctx context.Context, ref *corev1.Ob
 		return url, nil
 	}
 
-	_, lister, err := r.informerFactory.Get(ctx, gvr)
+	gvr, _ := meta.UnsafeGuessKindToResource(ref.GroupVersionKind())
+	_, lister, err := r.informerFactory.Get(gvr)
 	if err != nil {
-		return nil, apierrs.NewNotFound(gvr.GroupResource(), "Lister")
+		return nil, fmt.Errorf("failed to get lister for %+v: %w", gvr, err)
 	}
 
 	obj, err := lister.ByNamespace(ref.Namespace).Get(ref.Name)
 	if err != nil {
-		return nil, apierrs.NewNotFound(gvr.GroupResource(), ref.Name)
+		return nil, fmt.Errorf("failed to get ref %+v: %w", ref, err)
 	}
 
 	addressable, ok := obj.(*duckv1.AddressableType)
 	if !ok {
-		return nil, apierrs.NewBadRequest(fmt.Sprintf("%+v (%T) is not an AddressableType", ref, ref))
+		return nil, fmt.Errorf("%+v (%T) is not an AddressableType", ref, ref)
 	}
 	if addressable.Status.Address == nil {
-		return nil, apierrs.NewBadRequest(fmt.Sprintf("address not set for %+v", ref))
+		return nil, fmt.Errorf("address not set for %+v", ref)
 	}
 	url := addressable.Status.Address.URL
 	if url == nil {
-		return nil, apierrs.NewBadRequest(fmt.Sprintf("URL missing in address of %+v", ref))
+		return nil, fmt.Errorf("URL missing in address of %+v", ref)
 	}
 	if url.Host == "" {
-		return nil, apierrs.NewBadRequest(fmt.Sprintf("hostname missing in address of %+v", ref))
+		return nil, fmt.Errorf("hostname missing in address of %+v", ref)
 	}
 	return url, nil
 }

@@ -153,7 +153,7 @@ func ChooseSubset(from sets.String, n int, target string) sets.String {
 		}
 		// Already matched this one. Continue to the next index.
 		for selection.Has(root) {
-			root++
+			root += 1
 			if root == hpl {
 				root = 0
 			}

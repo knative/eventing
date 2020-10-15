@@ -87,7 +87,7 @@ func (ac *reconciler) Reconcile(ctx context.Context, key string) error {
 	// Look up the webhook secret, and fetch the CA cert bundle.
 	secret, err := ac.secretlister.Secrets(system.Namespace()).Get(ac.secretName)
 	if err != nil {
-		logger.Error("Error fetching secret: ", err)
+		logger.Errorf("Error fetching secret: %v", err)
 		return err
 	}
 	caCert, ok := secret.Data[certresources.CACert]
@@ -114,7 +114,7 @@ func (ac *reconciler) Admit(ctx context.Context, request *admissionv1.AdmissionR
 	switch request.Operation {
 	case admissionv1.Create, admissionv1.Update:
 	default:
-		logger.Info("Unhandled webhook operation, letting it through ", request.Operation)
+		logger.Infof("Unhandled webhook operation, letting it through %v", request.Operation)
 		return &admissionv1.AdmissionResponse{Allowed: true}
 	}
 
@@ -186,11 +186,6 @@ func (ac *reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 			MatchExpressions: []metav1.LabelSelectorRequirement{{
 				Key:      "webhooks.knative.dev/exclude",
 				Operator: metav1.LabelSelectorOpDoesNotExist,
-			}, {
-				// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
-				// See knative/pkg#1590 for details.
-				Key:      "control-plane",
-				Operator: metav1.LabelSelectorOpDoesNotExist,
 			}},
 		}
 		webhook.Webhooks[i].ClientConfig.CABundle = caCert
@@ -205,7 +200,7 @@ func (ac *reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	} else if !ok {
 		logger.Info("Updating webhook")
 		mwhclient := ac.client.AdmissionregistrationV1().MutatingWebhookConfigurations()
-		if _, err := mwhclient.Update(ctx, webhook, metav1.UpdateOptions{}); err != nil {
+		if _, err := mwhclient.Update(webhook); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {
@@ -228,7 +223,7 @@ func (ac *reconciler) mutate(ctx context.Context, req *admissionv1.AdmissionRequ
 	logger := logging.FromContext(ctx)
 	handler, ok := ac.handlers[gvk]
 	if !ok {
-		logger.Error("Unhandled kind: ", gvk)
+		logger.Errorf("Unhandled kind: %v", gvk)
 		return nil, fmt.Errorf("unhandled kind: %v", gvk)
 	}
 
@@ -279,7 +274,7 @@ func (ac *reconciler) mutate(ctx context.Context, req *admissionv1.AdmissionRequ
 
 		s, ok := oldObj.(apis.HasSpec)
 		if ok {
-			setUserInfoAnnotations(ctx, s, req.Resource.Group)
+			SetUserInfoAnnotations(s, ctx, req.Resource.Group)
 		}
 
 		if req.SubResource == "" {
@@ -323,7 +318,7 @@ func (ac *reconciler) setUserInfoAnnotations(ctx context.Context, patches duck.J
 
 	b, a := new.DeepCopyObject().(apis.HasSpec), nh
 
-	setUserInfoAnnotations(ctx, nh, groupName)
+	SetUserInfoAnnotations(nh, ctx, groupName)
 
 	patch, err := duck.CreatePatch(b, a)
 	if err != nil {

@@ -67,7 +67,7 @@ func (g *reconcilerReconcilerGenerator) Imports(c *generator.Context) (imports [
 func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
 	sw := generator.NewSnippetWriter(w, c, "{{", "}}")
 
-	klog.V(5).Info("processing type ", t)
+	klog.V(5).Infof("processing type %v", t)
 
 	m := map[string]interface{}{
 		"type":          t,
@@ -131,14 +131,6 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 			Package: "k8s.io/apimachinery/pkg/apis/meta/v1",
 			Name:    "GetOptions",
 		}),
-		"metav1PatchOptions": c.Universe.Function(types.Name{
-			Package: "k8s.io/apimachinery/pkg/apis/meta/v1",
-			Name:    "PatchOptions",
-		}),
-		"metav1UpdateOptions": c.Universe.Function(types.Name{
-			Package: "k8s.io/apimachinery/pkg/apis/meta/v1",
-			Name:    "UpdateOptions",
-		}),
 		"zapSugaredLogger": c.Universe.Type(types.Name{
 			Package: "go.uber.org/zap",
 			Name:    "SugaredLogger",
@@ -154,10 +146,6 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 		"contextContext": c.Universe.Type(types.Name{
 			Package: "context",
 			Name:    "Context",
-		}),
-		"kmpSafeDiff": c.Universe.Function(types.Name{
-			Package: "knative.dev/pkg/kmp",
-			Name:    "SafeDiff",
 		}),
 		"fmtErrorf":           c.Universe.Package("fmt").Function("Errorf"),
 		"reflectDeepEqual":    c.Universe.Package("reflect").Function("DeepEqual"),
@@ -306,13 +294,13 @@ var reconcilerNewReconciler = `
 func NewReconciler(ctx {{.contextContext|raw}}, logger *{{.zapSugaredLogger|raw}}, client {{.clientsetInterface|raw}}, lister {{.resourceLister|raw}}, recorder {{.recordEventRecorder|raw}}, r Interface{{if .hasClass}}, classValue string{{end}}, options ...{{.controllerOptions|raw}} ) {{.controllerReconciler|raw}} {
 	// Check the options function input. It should be 0 or 1.
 	if len(options) > 1 {
-		logger.Fatal("Up to one options struct is supported, found: ", len(options))
+		logger.Fatalf("up to one options struct is supported, found %d", len(options))
 	}
 
 	// Fail fast when users inadvertently implement the other LeaderAware interface.
 	// For the typed reconcilers, Promote shouldn't take any arguments.
 	if _, ok := r.({{.reconcilerLeaderAware|raw}}); ok {
-		logger.Fatalf("%T implements the incorrect LeaderAware interface. Promote() should not take an argument as genreconciler handles the enqueuing automatically.", r)
+		logger.Fatalf("%T implements the incorrect LeaderAware interface.  Promote() should not take an argument as genreconciler handles the enqueuing automatically.", r)
 	}
 	// TODO: Consider validating when folks implement ReadOnlyFinalizer, but not Finalizer.
 
@@ -362,16 +350,16 @@ var reconcilerImplFactory = `
 func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) error {
 	logger := {{.loggingFromContext|raw}}(ctx)
 
-	// Initialize the reconciler state. This will convert the namespace/name
+	// Initialize the reconciler state. This will convert the namespace/name 
 	// string into a distinct namespace and name, determin if this instance of
 	// the reconciler is the leader, and any additional interfaces implemented
 	// by the reconciler. Returns an error is the resource key is invalid.
 	s, err := newState(key, r)
 	if err != nil {
-		logger.Error("Invalid resource key: ", key)
+		logger.Errorf("invalid resource key: %s", key)
 		return nil
 	}
-
+	
 	// If we are not the leader, and we don't implement either ReadOnly
 	// observer interfaces, then take a fast-path out.
 	if s.isNotLeaderNorObserver() {
@@ -396,7 +384,7 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 
 	if {{.apierrsIsNotFound|raw}}(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logger.Debugf("Resource %q no longer exists", key)
+		logger.Debugf("resource %q no longer exists", key)
 		return nil
 	} else if err != nil {
 		return err
@@ -429,9 +417,7 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 			return {{.fmtErrorf|raw}}("failed to set finalizers: %w", err)
 		}
 		{{if .isKRShaped}}
-		if !r.skipStatusUpdates {
-			reconciler.PreProcessReconcile(ctx, resource)
-		}
+		reconciler.PreProcessReconcile(ctx, resource)
 		{{end}}
 
 		// Reconcile this copy of the resource and then write back any status
@@ -439,9 +425,7 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 		reconcileEvent = do(ctx, resource)
 
 		{{if .isKRShaped}}
-		if !r.skipStatusUpdates {
-			reconciler.PostProcessReconcile(ctx, resource, original)
-		}
+		reconciler.PostProcessReconcile(ctx, resource, original)
 		{{end}}
 
 	case {{.doFinalizeKind|raw}}:
@@ -474,7 +458,7 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 		// the elected leader is expected to write modifications.
 		logger.Warn("Saw status changes when we aren't the leader!")
 	default:
-		if err = r.updateStatus(ctx, original, resource); err != nil {
+		if err = r.updateStatus(original, resource); err != nil {
 			logger.Warnw("Failed to update resource status", zap.Error(err))
 			r.Recorder.Eventf(resource, {{.corev1EventTypeWarning|raw}}, "UpdateFailed",
 				"Failed to update status for %q: %v", resource.Name, err)
@@ -506,7 +490,7 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 `
 
 var reconcilerStatusFactory = `
-func (r *reconcilerImpl) updateStatus(ctx {{.contextContext|raw}}, existing *{{.type|raw}}, desired *{{.type|raw}}) error {
+func (r *reconcilerImpl) updateStatus(existing *{{.type|raw}}, desired *{{.type|raw}}) error {
 	existing = existing.DeepCopy()
 	return {{.reconcilerRetryUpdateConflicts|raw}}(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
@@ -516,7 +500,7 @@ func (r *reconcilerImpl) updateStatus(ctx {{.contextContext|raw}}, existing *{{.
 			{{else}}
 			getter := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(desired.Namespace)
 			{{end}}
-			existing, err = getter.Get(ctx, desired.Name, {{.metav1GetOptions|raw}}{})
+			existing, err = getter.Get(desired.Name, {{.metav1GetOptions|raw}}{})
 			if err != nil {
 				return err
 			}
@@ -527,10 +511,6 @@ func (r *reconcilerImpl) updateStatus(ctx {{.contextContext|raw}}, existing *{{.
 			return nil
 		}
 
-		if diff, err := {{.kmpSafeDiff|raw}}(existing.Status, desired.Status); err == nil && diff != "" {
-			{{.loggingFromContext|raw}}(ctx).Debug("Updating status with: ", diff)
-		}
-
 		existing.Status = desired.Status
 
 		{{if .nonNamespaced}}
@@ -538,7 +518,7 @@ func (r *reconcilerImpl) updateStatus(ctx {{.contextContext|raw}}, existing *{{.
 		{{else}}
 		updater := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(existing.Namespace)
 		{{end}}
-		_, err = updater.UpdateStatus(ctx, existing, {{.metav1UpdateOptions|raw}}{})
+		_, err = updater.UpdateStatus(existing)
 		return err
 	})
 }
@@ -603,7 +583,7 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx {{.contextContext|raw}}, r
 	patcher := r.Client.{{.group}}{{.version}}().{{.type|apiGroup}}(resource.Namespace)
 	{{end}}
 	resourceName := resource.Name
-	resource, err = patcher.Patch(ctx, resourceName, {{.typesMergePatchType|raw}}, patch, {{.metav1PatchOptions|raw}}{})
+	resource, err = patcher.Patch(resourceName, {{.typesMergePatchType|raw}}, patch)
 	if err != nil {
 		r.Recorder.Eventf(resource, {{.corev1EventTypeWarning|raw}}, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resourceName, err)
