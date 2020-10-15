@@ -31,7 +31,7 @@ import (
 )
 
 func (p *prober) Verify() ([]error, int) {
-	nc := nodes.Client(p.client.Kube.Kube, p.log)
+	nc := nodes.Client(p.client.Kube, p.log)
 	node, err := nc.RandomWorkerNode()
 	ensure.NoError(err)
 	address := nc.GuessNodeExternalAddress(node)

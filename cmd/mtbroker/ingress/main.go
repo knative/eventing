@@ -27,13 +27,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
-	cmdbroker "knative.dev/eventing/cmd/mtbroker"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	"knative.dev/eventing/pkg/kncloudevents"
-	broker "knative.dev/eventing/pkg/mtbroker"
-	"knative.dev/eventing/pkg/mtbroker/ingress"
-	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -44,7 +37,15 @@ import (
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
+
+	cmdbroker "knative.dev/eventing/cmd/mtbroker"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	"knative.dev/eventing/pkg/kncloudevents"
+	broker "knative.dev/eventing/pkg/mtbroker"
+	"knative.dev/eventing/pkg/mtbroker/ingress"
+	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 // TODO make these constants configurable (either as env variables, config map, or part of broker spec).

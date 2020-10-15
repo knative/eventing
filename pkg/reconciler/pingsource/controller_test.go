@@ -21,8 +21,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/pkg/configmap"
-	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/tracing/config"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
@@ -31,6 +34,7 @@ import (
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 func TestNew(t *testing.T) {
@@ -38,7 +42,7 @@ func TestNew(t *testing.T) {
 	c := NewController(ctx, configmap.NewStaticWatcher(
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "config-observability",
+				Name:      metrics.ConfigMapName(),
 				Namespace: "knative-eventing",
 			},
 			Data: map[string]string{
@@ -46,7 +50,7 @@ func TestNew(t *testing.T) {
 			},
 		}, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "config-logging",
+				Name:      logging.ConfigMapName(),
 				Namespace: "knative-eventing",
 			},
 			Data: map[string]string{
@@ -56,7 +60,7 @@ func TestNew(t *testing.T) {
 			},
 		}, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "config-tracing",
+				Name:      config.ConfigName,
 				Namespace: "knative-eventing",
 			},
 			Data: map[string]string{

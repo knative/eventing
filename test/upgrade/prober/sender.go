@@ -61,7 +61,7 @@ func (p *prober) deploySender(ctx context.Context) {
 			},
 		},
 	}
-	_, err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).
+	_, err := p.client.Kube.CoreV1().Pods(p.client.Namespace).
 		Create(ctx, pod, metav1.CreateOptions{})
 	ensure.NoError(err)
 
@@ -73,7 +73,7 @@ func (p *prober) deploySender(ctx context.Context) {
 func (p *prober) removeSender(ctx context.Context) {
 	p.log.Infof("Remove of sender pod: %v", senderName)
 
-	err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).
+	err := p.client.Kube.CoreV1().Pods(p.client.Namespace).
 		Delete(ctx, senderName, metav1.DeleteOptions{})
 	ensure.NoError(err)
 }

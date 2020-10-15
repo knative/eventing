@@ -20,125 +20,59 @@ on:
 
 jobs:
 
-  downstream-sample-source:
-    name: Sample Source
+  downstream-knative:
+    name: Unit Test
     strategy:
+      fail-fast: false # Keep running if one leg fails.
       matrix:
-        go-version: [1.15.x]
-        platform: [ubuntu-latest]
+        include:
+          - repo: eventing-autoscaler-keda
+            org: knative-sandbox
+          - repo: eventing-awssqs
+            org: knative-sandbox
+          - repo: eventing-camel
+            org: knative-sandbox
+          - repo: eventing-ceph
+            org: knative-sandbox
+          - repo: eventing-couchdb
+            org: knative-sandbox
+          - repo: eventing-github
+            org: knative-sandbox
+          - repo: eventing-gitlab
+            org: knative-sandbox
+          - repo: eventing-kafka
+            org: knative-sandbox
+          - repo: eventing-kafka-broker
+            org: knative-sandbox
+          - repo: eventing-natss
+            org: knative-sandbox
+          - repo: eventing-prometheus
+            org: knative-sandbox
+          - repo: eventing-rabbitmq
+            org: knative-sandbox
 
-    runs-on: ${{ matrix.platform }}
-
+    runs-on: ubuntu-latest
     env:
       GOPATH: ${{ github.workspace }}
-
     steps:
-
-    - name: Set up Go ${{ matrix.go-version }}
+    - name: Set up Go 1.15.x
       uses: actions/setup-go@v2
       with:
-        go-version: ${{ matrix.go-version }}
-      id: go
-
+        go-version: 1.15.x
     - name: Install Dependencies
       run: |
         go get github.com/google/go-licenses
-
     - name: Checkout Upstream
       uses: actions/checkout@v2
       with:
         path: ./src/knative.dev/${{ github.event.repository.name }}
-
     - name: Checkout Downstream
       uses: actions/checkout@v2
       with:
-        repository: knative-sandbox/sample-source
-        path: ./src/knative.dev/sample-source
-
+        repository: ${{ matrix.org }}/${{ matrix.repo }}
+        path: ./src/knative.dev/${{ matrix.repo }}
     - name: Test Downstream
       uses: knative-sandbox/downstream-test-go@v1.0.1
       with:
         upstream-module: knative.dev/${{ github.event.repository.name }}
-        downstream-module: knative.dev/sample-source
-
-  downstream-eventing-kafka-broker:
-    name: Eventing Kafka Broker
-    strategy:
-      matrix:
-        go-version: [1.15.x]
-        platform: [ubuntu-latest]
-
-    runs-on: ${{ matrix.platform }}
-
-    env:
-      GOPATH: ${{ github.workspace }}
-
-    steps:
-
-      - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go-version }}
-        id: go
-
-      - name: Install Dependencies
-        run: |
-          go get github.com/google/go-licenses
-
-      - name: Checkout Upstream
-        uses: actions/checkout@v2
-        with:
-          path: ./src/knative.dev/${{ github.event.repository.name }}
-
-      - name: Checkout Downstream
-        uses: actions/checkout@v2
-        with:
-          repository: knative-sandbox/eventing-kafka-broker
-          path: ./src/knative.dev/eventing-kafka-broker
-
-      - name: Test Downstream
-        uses: knative-sandbox/downstream-test-go@v1.0.1
-        with:
-          upstream-module: knative.dev/${{ github.event.repository.name }}
-          downstream-module: knative.dev/eventing-kafka-broker
-
-  downstream-eventing-kafka:
-    name: Eventing Kafka
-    strategy:
-      matrix:
-        go-version: [1.15.x]
-        platform: [ubuntu-latest]
-
-    runs-on: ${{ matrix.platform }}
-
-    env:
-      GOPATH: ${{ github.workspace }}
-
-    steps:
-
-      - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go-version }}
-        id: go
-
-      - name: Install Dependencies
-        run: |
-          go get github.com/google/go-licenses
-
-      - name: Checkout Upstream
-        uses: actions/checkout@v2
-        with:
-          path: ./src/knative.dev/${{ github.event.repository.name }}
-
-      - name: Checkout Downstream
-        uses: actions/checkout@v2
-        with:
-          repository: knative-sandbox/eventing-kafka
-          path: ./src/knative.dev/eventing-kafka
-
-      - name: Test Downstream
-        uses: knative-sandbox/downstream-test-go@v1.0.1
-        with:
-          upstream-module: knative.dev/${{ github.event.repository.name }}
-          downstream-module: knative.dev/eventing-kafka
+        downstream-module: knative.dev/${{ matrix.repo }}
