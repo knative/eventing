@@ -39,14 +39,14 @@ func Setup(t *testing.T, client *testlib.Client) {
 
 // GetClusterDomain gets the Cluster's domain, e.g. 'cluster.local'.
 func GetClusterDomain(t *testing.T, client *testlib.Client) string {
-	d, err := getClusterDomain(context.Background(), client.Kube.Kube, resources.SystemNamespace)
+	d, err := getClusterDomain(context.Background(), client.Kube, resources.SystemNamespace)
 	if err != nil {
 		t.Fatal("Unable to get cluster domain:", err)
 	}
 	return d
 }
 
-func getClusterDomain(ctx context.Context, kubeClientset *kubernetes.Clientset, configMapNamespace string) (string, error) {
+func getClusterDomain(ctx context.Context, kubeClientset kubernetes.Interface, configMapNamespace string) (string, error) {
 	// This a lightly altered version of knative.dev/pkg/test/zipkin/util.go's
 	// SetupZipkinTracingFromConfigTracing.
 	// TODO Move this function to knative/pkg.
