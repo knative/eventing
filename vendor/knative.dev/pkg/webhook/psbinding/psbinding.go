@@ -134,6 +134,11 @@ var (
 			Key:      duck.BindingExcludeLabel,
 			Operator: metav1.LabelSelectorOpNotIn,
 			Values:   []string{"true"},
+		}, {
+			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
+			// See knative/pkg#1590 for details.
+			Key:      "control-plane",
+			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/exclude: "true"
@@ -143,6 +148,11 @@ var (
 			Key:      duck.BindingIncludeLabel,
 			Operator: metav1.LabelSelectorOpIn,
 			Values:   []string{"true"},
+		}, {
+			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
+			// See knative/pkg#1590 for details.
+			Key:      "control-plane",
+			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/include: "true"
@@ -154,7 +164,7 @@ func (ac *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Look up the webhook secret, and fetch the CA cert bundle.
 	secret, err := ac.SecretLister.Secrets(system.Namespace()).Get(ac.SecretName)
 	if err != nil {
-		logging.FromContext(ctx).Errorf("Error fetching secret: %v", err)
+		logging.FromContext(ctx).Error("Error fetching secret: ", err)
 		return err
 	}
 	caCert, ok := secret.Data[certresources.CACert]
@@ -176,7 +186,7 @@ func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1.AdmissionR
 	switch request.Operation {
 	case admissionv1.Create, admissionv1.Update:
 	default:
-		logging.FromContext(ctx).Infof("Unhandled webhook operation, letting it through %v", request.Operation)
+		logging.FromContext(ctx).Info("Unhandled webhook operation, letting it through ", request.Operation)
 		return &admissionv1.AdmissionResponse{Allowed: true}
 	}
 
@@ -369,7 +379,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	if ok := equality.Semantic.DeepEqual(configuredWebhook, webhook); !ok {
 		logging.FromContext(ctx).Info("Updating webhook")
 		mwhclient := ac.Client.AdmissionregistrationV1().MutatingWebhookConfigurations()
-		if _, err := mwhclient.Update(webhook); err != nil {
+		if _, err := mwhclient.Update(ctx, webhook, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {

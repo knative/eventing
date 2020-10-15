@@ -45,6 +45,9 @@ func newOpenCensusExporter(config *metricsConfig, logger *zap.SugaredLogger) (vi
 	} else {
 		opts = append(opts, ocagent.WithInsecure())
 	}
+	if TestOverrideBundleCount > 0 {
+		opts = append(opts, ocagent.WithDataBundlerOptions(0, TestOverrideBundleCount))
+	}
 	e, err := ocagent.NewExporter(opts...)
 	if err != nil {
 		logger.Errorw("Failed to create the OpenCensus exporter.", zap.Error(err))
@@ -52,11 +55,15 @@ func newOpenCensusExporter(config *metricsConfig, logger *zap.SugaredLogger) (vi
 	}
 	logger.Infow("Created OpenCensus exporter with config:", zap.Any("config", *config))
 	view.RegisterExporter(e)
-	return e, getFactory(opts), nil
+	return e, getFactory(e, opts), nil
 }
 
-func getFactory(stored []ocagent.ExporterOption) ResourceExporterFactory {
+func getFactory(defaultExporter view.Exporter, stored []ocagent.ExporterOption) ResourceExporterFactory {
 	return func(r *resource.Resource) (view.Exporter, error) {
+		if r == nil || (r.Type == "" && len(r.Labels) == 0) {
+			// Don't create duplicate exporters for the default exporter.
+			return defaultExporter, nil
+		}
 		opts := append(stored, ocagent.WithResourceDetector(
 			func(context.Context) (*resource.Resource, error) {
 				return r, nil
@@ -92,6 +99,7 @@ func getCredentials(component string, secret *corev1.Secret, logger *zap.Sugared
 		return nil
 	}
 	return credentials.NewTLS(&tls.Config{
+		MinVersion: tls.VersionTLS12,
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			cert, err := tls.X509KeyPair(secret.Data["client-cert.pem"], secret.Data["client-key.pem"])
 			if err != nil {

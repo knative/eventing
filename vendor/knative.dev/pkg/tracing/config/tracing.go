@@ -40,28 +40,6 @@ const (
 	stackdriverProjectIDKey = "stackdriver-project-id"
 )
 
-var (
-	// OnePercentSampling is a configuration that samples 1% of the requests.
-	// TODO(#1712): Remove this and pull "static" configuration from the
-	// environment instead.
-	OnePercentSampling = &Config{
-		Backend:        Zipkin,
-		Debug:          false,
-		SampleRate:     0.01,
-		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
-	}
-
-	// AlwaysSample is a configuration that samples 100% of the requests and sends them to Zipkin.
-	// It is expected to be used only for testing purposes (e.g. in e2e tests).
-	// TODO(#1712): Remove this and pull "static" configuration from the environment instead.
-	AlwaysSample = &Config{
-		Backend:        Zipkin,
-		Debug:          true,
-		SampleRate:     1.0,
-		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
-	}
-)
-
 // BackendType specifies the backend to use for tracing
 type BackendType string
 
@@ -158,7 +136,8 @@ func NewTracingConfigFromConfigMap(config *corev1.ConfigMap) (*Config, error) {
 
 // JsonToTracingConfig converts a json string of a Config.
 // Returns a non-nil Config always and an eventual error.
-func JsonToTracingConfig(jsonCfg string) (*Config, error) {
+func JsonToTracingConfig(jsonCfg string) (*Config, error) { //nolint:stylecheck for backcompat.
+
 	if jsonCfg == "" {
 		return NoopConfig(), errors.New("empty json tracing config")
 	}
@@ -176,7 +155,7 @@ func JsonToTracingConfig(jsonCfg string) (*Config, error) {
 }
 
 // TracingConfigToJson converts a Config to a json string.
-func TracingConfigToJson(cfg *Config) (string, error) {
+func TracingConfigToJson(cfg *Config) (string, error) { //nolint:stylecheck for backcompat.
 	if cfg == nil {
 		return "", nil
 	}

@@ -45,6 +45,14 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
+// SubResourcesReconcilerInterface is used to reconcile binding related
+// sub-resources. Reconcile is executed after Binding's ReconcileSubject
+// and ReconcileDeletion will be executed before Binding's ReconcileDeletion
+type SubResourcesReconcilerInterface interface {
+	Reconcile(ctx context.Context, fb Bindable) error
+	ReconcileDeletion(ctx context.Context, fb Bindable) error
+}
+
 var jsonLabelPatch = map[string]interface{}{
 	"metadata": map[string]interface{}{
 		"labels": map[string]string{duck.BindingIncludeLabel: "true"},
@@ -88,6 +96,9 @@ type BaseReconciler struct {
 
 	// Namespace Lister
 	NamespaceLister corev1listers.NamespaceLister
+
+	// Sub-resources reconciler. Used to reconcile Binding related resources
+	SubResourcesReconciler SubResourcesReconcilerInterface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -99,7 +110,7 @@ func (r *BaseReconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		logging.FromContext(ctx).Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key: ", key)
 		return nil
 	}
 
@@ -151,6 +162,12 @@ func (r *BaseReconciler) reconcile(ctx context.Context, fb Bindable) error {
 	if fb.GetDeletionTimestamp() != nil {
 		// Check for a DeletionTimestamp.  If present, elide the normal
 		// reconcile logic and do our finalizer handling.
+		if r.SubResourcesReconciler != nil {
+			// If a SubResourceReconciler is defined, finalize related resources
+			if err := r.SubResourcesReconciler.ReconcileDeletion(ctx, fb); err != nil {
+				return err
+			}
+		}
 		return r.ReconcileDeletion(ctx, fb)
 	}
 	// Make sure that our conditions have been initialized.
@@ -165,6 +182,12 @@ func (r *BaseReconciler) reconcile(ctx context.Context, fb Bindable) error {
 	// Perform our Binding's Do() method on the subject(s) of the Binding.
 	if err := r.ReconcileSubject(ctx, fb, fb.Do); err != nil {
 		return err
+	}
+	if r.SubResourcesReconciler != nil {
+		// If a SubResourceReconciler is defined, reconcile related resources
+		if err := r.SubResourcesReconciler.Reconcile(ctx, fb); err != nil {
+			return err
+		}
 	}
 
 	// Update the observed generation once we have successfully reconciled
@@ -184,7 +207,7 @@ func (r *BaseReconciler) ReconcileDeletion(ctx context.Context, fb Bindable) err
 
 	// If it is our turn to finalize the Binding, then first undo the effect
 	// of our Binding on the resource.
-	logging.FromContext(ctx).Infof("Removing the binding for %s", fb.GetName())
+	logging.FromContext(ctx).Info("Removing the binding for ", fb.GetName())
 	if err := r.ReconcileSubject(ctx, fb, fb.Undo); apierrs.IsNotFound(err) || apierrs.IsForbidden(err) {
 		// If the subject has been deleted, then there is nothing to undo.
 	} else if err != nil {
@@ -224,7 +247,7 @@ func (r *BaseReconciler) EnsureFinalizer(ctx context.Context, fb kmeta.Accessor)
 	}
 
 	// ... and apply it.
-	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(fb.GetName(),
+	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(ctx, fb.GetName(),
 		types.MergePatchType, patch, metav1.PatchOptions{})
 	return err
 }
@@ -247,7 +270,7 @@ func (r *BaseReconciler) RemoveFinalizer(ctx context.Context, fb kmeta.Accessor)
 	}
 
 	// ... and apply it.
-	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(fb.GetName(),
+	_, err = r.DynamicClient.Resource(r.GVR).Namespace(fb.GetNamespace()).Patch(ctx, fb.GetName(),
 		types.MergePatchType, patch, metav1.PatchOptions{})
 	return err
 }
@@ -256,10 +279,10 @@ func (r *BaseReconciler) labelNamespace(ctx context.Context, subject tracker.Ref
 
 	namespaceObject, err := r.NamespaceLister.Get(subject.Namespace)
 	if apierrs.IsNotFound(err) {
-		logging.FromContext(ctx).Infof("Error getting namespace (not found): %v", err)
+		logging.FromContext(ctx).Info("Error getting namespace (not found): ", err)
 		return err
 	} else if err != nil {
-		logging.FromContext(ctx).Infof("Error getting namespace: %v", err)
+		logging.FromContext(ctx).Info("Error getting namespace: ", err)
 		return err
 	}
 
@@ -281,7 +304,7 @@ func (r *BaseReconciler) labelNamespace(ctx context.Context, subject tracker.Ref
 		Resource: "namespaces",
 	}
 
-	_, err = r.DynamicClient.Resource(gvr).Patch(subject.Namespace, types.MergePatchType, patch, metav1.PatchOptions{})
+	_, err = r.DynamicClient.Resource(gvr).Patch(ctx, subject.Namespace, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Infof("Error applying patch to namespace: %s: %v", subject.Namespace, err)
 		return err
@@ -311,7 +334,7 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 
 	// Use the GVR of the subject(s) to get ahold of a lister that we can
 	// use to fetch our PodSpecable resources.
-	_, lister, err := r.Factory.Get(gvr)
+	_, lister, err := r.Factory.Get(ctx, gvr)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Error getting a lister for resource '%+v': %v", gvr, err)
 		fb.GetBindingStatus().MarkBindingUnavailable("SubjectUnavailable", err.Error())
@@ -390,7 +413,7 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 			// a Job started or completed, which can be fine.  Consider treating
 			// certain error codes as acceptable.
 			_, err = r.DynamicClient.Resource(gvr).Namespace(ps.Namespace).Patch(
-				ps.Name, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+				ctx, ps.Name, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
 			if err != nil {
 				return fmt.Errorf("failed binding subject %s: %w", ps.Name, err)
 			}
@@ -412,19 +435,19 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 func (r *BaseReconciler) UpdateStatus(ctx context.Context, desired Bindable) error {
 	actual, err := r.Get(desired.GetNamespace(), desired.GetName())
 	if err != nil {
-		logging.FromContext(ctx).Errorf("Error fetching actual: %v", err)
+		logging.FromContext(ctx).Error("Error fetching actual: ", err)
 		return err
 	}
 
 	// Convert to unstructured for use with the dynamic client.
 	ua, err := duck.ToUnstructured(actual)
 	if err != nil {
-		logging.FromContext(ctx).Errorf("Error converting actual: %v", err)
+		logging.FromContext(ctx).Error("Error converting actual: ", err)
 		return err
 	}
 	ud, err := duck.ToUnstructured(desired)
 	if err != nil {
-		logging.FromContext(ctx).Errorf("Error converting desired: %v", err)
+		logging.FromContext(ctx).Error("Error converting desired: ", err)
 		return err
 	}
 
@@ -440,6 +463,6 @@ func (r *BaseReconciler) UpdateStatus(ctx context.Context, desired Bindable) err
 	forUpdate := ua
 	forUpdate.Object["status"] = desiredStatus
 	_, err = r.DynamicClient.Resource(r.GVR).Namespace(desired.GetNamespace()).UpdateStatus(
-		forUpdate, metav1.UpdateOptions{})
+		ctx, forUpdate, metav1.UpdateOptions{})
 	return err
 }

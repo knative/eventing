@@ -36,6 +36,7 @@ import (
 	corev1 "k8s.io/client-go/listers/core/v1"
 	record "k8s.io/client-go/tools/record"
 	controller "knative.dev/pkg/controller"
+	kmp "knative.dev/pkg/kmp"
 	logging "knative.dev/pkg/logging"
 	reconciler "knative.dev/pkg/reconciler"
 )
@@ -123,13 +124,13 @@ var _ reconciler.LeaderAware = (*reconcilerImpl)(nil)
 func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client kubernetes.Interface, lister corev1.NamespaceLister, recorder record.EventRecorder, r Interface, options ...controller.Options) controller.Reconciler {
 	// Check the options function input. It should be 0 or 1.
 	if len(options) > 1 {
-		logger.Fatalf("up to one options struct is supported, found %d", len(options))
+		logger.Fatal("Up to one options struct is supported, found: ", len(options))
 	}
 
 	// Fail fast when users inadvertently implement the other LeaderAware interface.
 	// For the typed reconcilers, Promote shouldn't take any arguments.
 	if _, ok := r.(reconciler.LeaderAware); ok {
-		logger.Fatalf("%T implements the incorrect LeaderAware interface.  Promote() should not take an argument as genreconciler handles the enqueuing automatically.", r)
+		logger.Fatalf("%T implements the incorrect LeaderAware interface. Promote() should not take an argument as genreconciler handles the enqueuing automatically.", r)
 	}
 	// TODO: Consider validating when folks implement ReadOnlyFinalizer, but not Finalizer.
 
@@ -182,7 +183,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	// by the reconciler. Returns an error is the resource key is invalid.
 	s, err := newState(key, r)
 	if err != nil {
-		logger.Errorf("invalid resource key: %s", key)
+		logger.Error("Invalid resource key: ", key)
 		return nil
 	}
 
@@ -208,7 +209,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 
 	if errors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logger.Debugf("resource %q no longer exists", key)
+		logger.Debugf("Resource %q no longer exists", key)
 		return nil
 	} else if err != nil {
 		return err
@@ -267,7 +268,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 		// the elected leader is expected to write modifications.
 		logger.Warn("Saw status changes when we aren't the leader!")
 	default:
-		if err = r.updateStatus(original, resource); err != nil {
+		if err = r.updateStatus(ctx, original, resource); err != nil {
 			logger.Warnw("Failed to update resource status", zap.Error(err))
 			r.Recorder.Eventf(resource, v1.EventTypeWarning, "UpdateFailed",
 				"Failed to update status for %q: %v", resource.Name, err)
@@ -297,7 +298,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *reconcilerImpl) updateStatus(existing *v1.Namespace, desired *v1.Namespace) error {
+func (r *reconcilerImpl) updateStatus(ctx context.Context, existing *v1.Namespace, desired *v1.Namespace) error {
 	existing = existing.DeepCopy()
 	return reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
@@ -305,7 +306,7 @@ func (r *reconcilerImpl) updateStatus(existing *v1.Namespace, desired *v1.Namesp
 
 			getter := r.Client.CoreV1().Namespaces()
 
-			existing, err = getter.Get(desired.Name, metav1.GetOptions{})
+			existing, err = getter.Get(ctx, desired.Name, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -316,11 +317,15 @@ func (r *reconcilerImpl) updateStatus(existing *v1.Namespace, desired *v1.Namesp
 			return nil
 		}
 
+		if diff, err := kmp.SafeDiff(existing.Status, desired.Status); err == nil && diff != "" {
+			logging.FromContext(ctx).Debug("Updating status with: ", diff)
+		}
+
 		existing.Status = desired.Status
 
 		updater := r.Client.CoreV1().Namespaces()
 
-		_, err = updater.UpdateStatus(existing)
+		_, err = updater.UpdateStatus(ctx, existing, metav1.UpdateOptions{})
 		return err
 	})
 }
@@ -378,7 +383,7 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 	patcher := r.Client.CoreV1().Namespaces()
 
 	resourceName := resource.Name
-	resource, err = patcher.Patch(resourceName, types.MergePatchType, patch)
+	resource, err = patcher.Patch(ctx, resourceName, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		r.Recorder.Eventf(resource, v1.EventTypeWarning, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resourceName, err)
