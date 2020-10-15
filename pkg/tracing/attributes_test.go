@@ -48,23 +48,20 @@ func TestTriggerMessagingDestination(t *testing.T) {
 }
 
 func TestMessagingMessageIDAttribute(t *testing.T) {
-	type args struct {
-		ID string
-	}
 	tests := []struct {
 		name string
-		args args
+		ID   string
 		want trace.Attribute
 	}{
 		{
 			name: "foo",
-			args: args{ID: "foo"},
+			ID:   "foo",
 			want: trace.StringAttribute("messaging.message_id", "foo"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MessagingMessageIDAttribute(tt.args.ID); !reflect.DeepEqual(got, tt.want) {
+			if got := MessagingMessageIDAttribute(tt.ID); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MessagingMessageIDAttribute() = %v, want %v", got, tt.want)
 			}
 		})
@@ -72,28 +69,25 @@ func TestMessagingMessageIDAttribute(t *testing.T) {
 }
 
 func TestBrokerMessagingDestinationAttribute(t *testing.T) {
-	type args struct {
-		b types.NamespacedName
-	}
+
 	tests := []struct {
-		name string
-		args args
-		want trace.Attribute
+		name          string
+		namespaceName types.NamespacedName
+		want          trace.Attribute
 	}{
 		{
 			name: "foo",
-			args: args{
-				b: types.NamespacedName{
-					Namespace: "default",
-					Name:      "foo",
-				},
+			namespaceName: types.NamespacedName{
+				Namespace: "default",
+				Name:      "foo",
 			},
+
 			want: trace.StringAttribute("messaging.destination", "broker:foo.default"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := BrokerMessagingDestinationAttribute(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+			if got := BrokerMessagingDestinationAttribute(tt.namespaceName); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BrokerMessagingDestinationAttribute() = %v, want %v", got, tt.want)
 			}
 		})
@@ -101,28 +95,25 @@ func TestBrokerMessagingDestinationAttribute(t *testing.T) {
 }
 
 func TestTriggerMessagingDestinationAttribute(t *testing.T) {
-	type args struct {
-		t types.NamespacedName
-	}
+
 	tests := []struct {
-		name string
-		args args
-		want trace.Attribute
+		name          string
+		namespaceName types.NamespacedName
+		want          trace.Attribute
 	}{
 		{
 			name: "foo",
-			args: args{
-				t: types.NamespacedName{
-					Namespace: "default",
-					Name:      "foo",
-				},
+			namespaceName: types.NamespacedName{
+				Namespace: "default",
+				Name:      "foo",
 			},
+
 			want: trace.StringAttribute("messaging.destination", "trigger:foo.default"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := TriggerMessagingDestinationAttribute(tt.args.t); !reflect.DeepEqual(got, tt.want) {
+			if got := TriggerMessagingDestinationAttribute(tt.namespaceName); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("TriggerMessagingDestinationAttribute() = %v, want %v", got, tt.want)
 			}
 		})
