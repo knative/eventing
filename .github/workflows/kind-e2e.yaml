@@ -142,6 +142,9 @@ jobs:
            -f config/sugar/500-controller.yaml \
            `# Install the in-memory channel` \
            -f config/channels/in-memory-channel
+
+        # Change the cluster domain to the correct one.
+        sed -i "s/svc\.cluster\.local/svc\.${CLUSTER_SUFFIX}/g" test/config/config-tracing.yaml
         ko apply --platform=all -Pf test/config/
 
         # Be KinD to these tests.
