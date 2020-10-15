@@ -18,7 +18,14 @@ package tracing
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+	"strings"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -28,4 +35,47 @@ import (
 // Setup sets up port forwarding to Zipkin.
 func Setup(t *testing.T, client *testlib.Client) {
 	zipkin.SetupZipkinTracingFromConfigTracingOrFail(context.Background(), t, client.Kube.Kube, resources.SystemNamespace)
+}
+
+// GetClusterDomain gets the Cluster's domain, e.g. 'cluster.local'.
+func GetClusterDomain(t *testing.T, client *testlib.Client) string {
+	d, err := getClusterDomain(context.Background(), client.Kube.Kube, resources.SystemNamespace)
+	if err != nil {
+		t.Fatalf("Unable to get cluster domain: %v", err)
+	}
+	return d
+}
+
+func getClusterDomain(ctx context.Context, kubeClientset *kubernetes.Clientset, configMapNamespace string) (string, error) {
+	// This a lightly altered version of knative.dev/pkg/test/zipkin/util.go's
+	// SetupZipkinTracingFromConfigTracing.
+	// TODO Move this function to knative/pkg.
+	cm, err := kubeClientset.CoreV1().ConfigMaps(configMapNamespace).Get(ctx, "config-tracing", metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("error while retrieving config-tracing config map: %w", err)
+	}
+	c, err := tracingconfig.NewTracingConfigFromConfigMap(cm)
+	if err != nil {
+		return "", fmt.Errorf("error while parsing config-tracing config map: %w", err)
+	}
+	zipkinEndpointURL, err := url.Parse(c.ZipkinEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("error while parsing the zipkin endpoint in config-tracing config map: %w", err)
+	}
+	domain, err := parseClusterDomainFromHostname(zipkinEndpointURL.Host)
+	if err != nil {
+		return "", fmt.Errorf("error while parsing the Zipkin endpoint in config-tracing config map: %w", err)
+	}
+
+	return domain, nil
+}
+
+func parseClusterDomainFromHostname(hostname string) (string, error) {
+	// hostname will be something like 'name.ns.svc.clusterDomain' where clusterDomain is something
+	// like 'cluster.local'.
+	parts := strings.SplitN(hostname, ".", 4)
+	if len(parts) < 3 || parts[2] != "svc" {
+		return "", fmt.Errorf("could not extract namespace/name from %s", hostname)
+	}
+	return parts[1], nil
 }
