@@ -99,7 +99,7 @@ func TestSinkBindingV1Deployment(t *testing.T) {
 					Containers: []corev1.Container{{
 						Name:            imageName,
 						Image:           pkgTest.ImagePath(imageName),
-						ImagePullPolicy: corev1.PullAlways,
+						ImagePullPolicy: corev1.PullIfNotPresent,
 						Args:            []string{"--msg=" + message},
 						Env: []corev1.EnvVar{{
 							Name:  "POD_NAME",
@@ -181,7 +181,7 @@ func TestSinkBindingV1CronJob(t *testing.T) {
 							Containers: []corev1.Container{{
 								Name:            imageName,
 								Image:           pkgTest.ImagePath(imageName),
-								ImagePullPolicy: corev1.PullAlways,
+								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args:            []string{"--msg=" + message},
 								Env: []corev1.EnvVar{{
 									Name:  "ONE_SHOT",
