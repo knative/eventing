@@ -136,33 +136,42 @@ func TestDefaultsConfiguration(t *testing.T) {
 		name:    "all specified values",
 		wantErr: false,
 		wantDefaults: &Defaults{
-			NamespaceDefaultsConfig: map[string]*ClassAndKRef{
+			NamespaceDefaultsConfig: map[string]*ClassAndBrokerConfig{
 				"some-namespace": {
 					BrokerClass: "somenamespaceclass",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothername",
-						Namespace:  "someothernamespace",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
 					},
 				},
 				"some-namespace-too": {
 					BrokerClass: "somenamespaceclasstoo",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothernametoo",
-						Namespace:  "someothernamespacetoo",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
 					},
 				},
 			},
-			ClusterDefault: &ClassAndKRef{
+			ClusterDefault: &ClassAndBrokerConfig{
 				BrokerClass: "clusterbrokerclass",
-				KReference: &duckv1.KReference{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
-					Namespace:  "knative-eventing",
-					Name:       "somename",
+				BrokerConfig: &BrokerConfig{
+					KReference: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "somename",
+					},
+					Delivery: nil,
 				},
 			},
 		},
@@ -200,13 +209,16 @@ func TestDefaultsConfiguration(t *testing.T) {
 		wantErr: false,
 		wantDefaults: &Defaults{
 			//			NamespaceDefaultsConfig: map[string]*duckv1.KReference{},
-			ClusterDefault: &ClassAndKRef{
+			ClusterDefault: &ClassAndBrokerConfig{
 				BrokerClass: "clusterbrokerclass",
-				KReference: &duckv1.KReference{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
-					Namespace:  "knative-eventing",
-					Name:       "somename",
+				BrokerConfig: &BrokerConfig{
+					KReference: &duckv1.KReference{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+						Namespace:  "knative-eventing",
+						Name:       "somename",
+					},
+					Delivery: nil,
 				},
 			},
 		},
@@ -230,23 +242,29 @@ func TestDefaultsConfiguration(t *testing.T) {
 		name:    "only namespace defaults",
 		wantErr: false,
 		wantDefaults: &Defaults{
-			NamespaceDefaultsConfig: map[string]*ClassAndKRef{
+			NamespaceDefaultsConfig: map[string]*ClassAndBrokerConfig{
 				"some-namespace": {
 					BrokerClass: "brokerclassnamespace",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothername",
-						Namespace:  "someothernamespace",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
 					},
 				},
 				"some-namespace-too": {
 					BrokerClass: "brokerclassnamespacetoo",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothernametoo",
-						Namespace:  "someothernamespacetoo",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
 					},
 				},
 			},
@@ -278,24 +296,30 @@ func TestDefaultsConfiguration(t *testing.T) {
 		name:    "only namespace config default, cluster brokerclass",
 		wantErr: false,
 		wantDefaults: &Defaults{
-			ClusterDefault: &ClassAndKRef{
+			ClusterDefault: &ClassAndBrokerConfig{
 				BrokerClass: "clusterbrokerclass",
 			},
-			NamespaceDefaultsConfig: map[string]*ClassAndKRef{
+			NamespaceDefaultsConfig: map[string]*ClassAndBrokerConfig{
 				"some-namespace": {
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothername",
-						Namespace:  "someothernamespace",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
 					},
 				},
 				"some-namespace-too": {
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothernametoo",
-						Namespace:  "someothernamespacetoo",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
 					},
 				},
 			},
@@ -327,25 +351,31 @@ func TestDefaultsConfiguration(t *testing.T) {
 		name:    "one namespace config default, namespace config default with class, cluster brokerclass",
 		wantErr: false,
 		wantDefaults: &Defaults{
-			ClusterDefault: &ClassAndKRef{
+			ClusterDefault: &ClassAndBrokerConfig{
 				BrokerClass: "clusterbrokerclass",
 			},
-			NamespaceDefaultsConfig: map[string]*ClassAndKRef{
+			NamespaceDefaultsConfig: map[string]*ClassAndBrokerConfig{
 				"some-namespace": {
 					BrokerClass: "namespacebrokerclass",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothername",
-						Namespace:  "someothernamespace",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothername",
+							Namespace:  "someothernamespace",
+						},
+						Delivery: nil,
 					},
 				},
 				"some-namespace-too": {
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "someothernametoo",
-						Namespace:  "someothernamespacetoo",
+					BrokerConfig: &BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "someothernametoo",
+							Namespace:  "someothernamespacetoo",
+						},
+						Delivery: nil,
 					},
 				},
 			},

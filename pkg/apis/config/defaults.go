@@ -70,34 +70,69 @@ func NewDefaultsConfigFromConfigMap(config *corev1.ConfigMap) (*Defaults, error)
 type Defaults struct {
 	// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
 	// Namespace is the key, the value is the KReference to the config.
-	NamespaceDefaultsConfig map[string]*ClassAndKRef `json:"namespaceDefaults,omitempty"`
+	NamespaceDefaultsConfig map[string]*ClassAndBrokerConfig `json:"namespaceDefaults,omitempty"`
 
 	// ClusterDefaultBrokerConfig is the default broker config for all the namespaces that
 	// are not in NamespaceDefaultBrokerConfigs.
-	ClusterDefault *ClassAndKRef `json:"clusterDefault,omitempty"`
+	ClusterDefault *ClassAndBrokerConfig `json:"clusterDefault,omitempty"`
 }
 
-// ClassAndKRef contains configuration for a given namespace for broker. Allows
-// configuring both the Class of the Broker as well as the reference to the
-// config it should use
-type ClassAndKRef struct {
-	BrokerClass        string `json:"brokerClass,omitempty"`
+// ClassAndBrokerConfig contains configuration for a given namespace for broker. Allows
+// configuring the Class of the Broker, the reference to the
+// config it should use and it's delivery.
+type ClassAndBrokerConfig struct {
+	BrokerClass   string `json:"brokerClass,omitempty"`
+	*BrokerConfig `json:",inline"`
+}
+
+// BrokerConfig contains configuration for a given namespace for broker. Allows
+// configuring the reference to the
+// config it should use and it's delivery.
+type BrokerConfig struct {
 	*duckv1.KReference `json:",inline"`
+	Delivery           *DeliveryConfig `json:"delivery,omitempty"`
+}
+
+// DeliveryConfig contains the delivery options for event senders,
+type DeliveryConfig struct {
+	// DeadLetterSink is the sink receiving event that could not be sent to
+	// a destination.
+	// +optional
+	DeadLetterSink *duckv1.Destination `json:"deadLetterSink,omitempty"`
+
+	// Retry is the minimum number of retries the sender should attempt when
+	// sending an event before moving it to the dead letter sink.
+	// +optional
+	Retry *int32 `json:"retry,omitempty"`
+
+	// BackoffPolicy is the retry backoff policy (linear, exponential).
+	// +optional
+	BackoffPolicy *string `json:"backoffPolicy,omitempty"`
+
+	// BackoffDelay is the delay before retrying.
+	// More information on Duration format:
+	//  - https://www.iso.org/iso-8601-date-and-time-format.html
+	//  - https://en.wikipedia.org/wiki/ISO_8601
+	//
+	// For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
+	// For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.
+	// +optional
+	BackoffDelay *string `json:"backoffDelay,omitempty"`
 }
 
 // GetBrokerConfig returns a namespace specific Broker Configuration, and if
 // that doesn't exist, return a Cluster Default and if that doesn't exist
 // return an error.
-func (d *Defaults) GetBrokerConfig(ns string) (*duckv1.KReference, error) {
+func (d *Defaults) GetBrokerConfig(ns string) (*BrokerConfig, error) {
 	if d == nil {
 		return nil, errors.New("Defaults are nil")
 	}
 	value, present := d.NamespaceDefaultsConfig[ns]
-	if present && value.KReference != nil {
-		return value.KReference, nil
+	if present && value.BrokerConfig != nil {
+		return value.BrokerConfig, nil
 	}
-	if d.ClusterDefault != nil && d.ClusterDefault.KReference != nil {
-		return d.ClusterDefault.KReference, nil
+	if d.ClusterDefault != nil && d.ClusterDefault.BrokerConfig != nil {
+		return d.ClusterDefault.BrokerConfig, nil
 	}
 	return nil, errors.New("Defaults for Broker Configurations have not been set up.")
 }

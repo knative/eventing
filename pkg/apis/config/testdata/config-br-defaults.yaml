@@ -34,6 +34,17 @@ data:
         kind: ConfigMap
         name: somename
         namespace: knative-eventing
+        delivery:
+          retry: 3
+          deadLetterSink:
+            ref:
+              apiVersion: serving.knative.dev/v1
+              kind: Service
+              name: handle-error
+              namespace: knative-eventing
+          backoffPolicy: exponential
+          backoffDelay: 3s
+
       namespaceDefaults:
         some-namespace:
           brokerClass: someotherbrokerclass
@@ -41,3 +52,13 @@ data:
           kind: ConfigMap
           name: someothername
           namespace: someothernamespace
+          delivery:
+            retry: 5
+            deadLetterSink:
+              ref:
+                apiVersion: serving.knative.dev/v1
+                kind: Service
+                name: someother-handle-error
+                namespace: someothernamespace
+            backoffPolicy: linear
+            backoffDelay: 5s
