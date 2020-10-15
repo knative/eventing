@@ -41,7 +41,7 @@ func Setup(t *testing.T, client *testlib.Client) {
 func GetClusterDomain(t *testing.T, client *testlib.Client) string {
 	d, err := getClusterDomain(context.Background(), client.Kube.Kube, resources.SystemNamespace)
 	if err != nil {
-		t.Fatalf("Unable to get cluster domain: %v", err)
+		t.Fatal("Unable to get cluster domain:", err)
 	}
 	return d
 }
