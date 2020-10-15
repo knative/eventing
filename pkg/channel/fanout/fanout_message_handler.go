@@ -149,7 +149,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
-				dispatchResultForFanout, err := f.dispatch(ctx, m, h)
+				dispatchResultForFanout := f.dispatch(ctx, m, h)
 				if dispatchResultForFanout.info != nil && dispatchResultForFanout.info.Time > channel.NoDuration {
 					if dispatchResultForFanout.info.ResponseCode > channel.NoResponse {
 						_ = (*r).ReportEventDispatchTime(&reportArgs, dispatchResultForFanout.info.ResponseCode, dispatchResultForFanout.info.Time)
@@ -158,6 +158,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 
 					}
 				}
+				err = dispatchResultForFanout.err
 				if err != nil {
 					channel.ReportEventCountMetricsForDispatchError(err, f.reporter, reportArgs)
 				} else {
@@ -190,7 +191,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 		reportArgs := channel.ReportArgs{}
 		reportArgs.EventType = string(te)
 		reportArgs.Ns = ref.Namespace
-		dispatchResultForFanout, err := f.dispatch(ctx, bufferedMessage, additionalHeaders)
+		dispatchResultForFanout := f.dispatch(ctx, bufferedMessage, additionalHeaders)
 		if dispatchResultForFanout.info != nil && dispatchResultForFanout.info.Time > channel.NoDuration {
 			if dispatchResultForFanout.info.ResponseCode > channel.NoResponse {
 				_ = f.reporter.ReportEventDispatchTime(&reportArgs, dispatchResultForFanout.info.ResponseCode, dispatchResultForFanout.info.Time)
@@ -198,6 +199,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 				_ = f.reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, dispatchResultForFanout.info.Time)
 			}
 		}
+		err = dispatchResultForFanout.err
 		if err != nil {
 			channel.ReportEventCountMetricsForDispatchError(err, f.reporter, reportArgs)
 		} else {
@@ -215,7 +217,7 @@ func (f *MessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *net
 
 // dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.Message, additionalHeaders nethttp.Header) (dispatchResult, error) {
+func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.Message, additionalHeaders nethttp.Header) dispatchResult {
 	subs := len(f.config.Subscriptions)
 
 	// Bind the lifecycle of the buffered message to the number of subs
@@ -252,15 +254,17 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 			}
 			if dispatchResult.err != nil {
 				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
-				return dispatchResultForFanout, dispatchResult.err
+				dispatchResultForFanout.err = dispatchResult.err
+				return dispatchResultForFanout
 			}
 		case <-time.After(f.timeout):
 			f.logger.Error("Fanout timed out")
-			return dispatchResultForFanout, errors.New("fanout timed out")
+			dispatchResultForFanout.err = errors.New("fanout timed out")
+			return dispatchResultForFanout
 		}
 	}
 	// All Subscriptions returned err = nil.
-	return dispatchResultForFanout, nil
+	return dispatchResultForFanout
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
