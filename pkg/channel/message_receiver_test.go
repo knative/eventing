@@ -224,7 +224,7 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 		Backend:        tracingconfig.Zipkin,
 		Debug:          true,
 		SampleRate:     1.0,
-		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+		ZipkinEndpoint: "http://zipkin.zipkin.svc.cluster.local:9411/api/v2/spans",
 	}))
 
 	p, err := cloudevents.NewHTTP(
