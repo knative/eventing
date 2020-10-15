@@ -28,11 +28,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/binding/spec"
-
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/buffering"
-	"github.com/cloudevents/sdk-go/v2/types"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
@@ -133,7 +130,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 			}
 
 			parentSpan := trace.FromContext(ctx)
-			te := TypeExtractorTransformer("")
+			te := kncloudevents.TypeExtractorTransformer("")
 			transformers = append(transformers, &te)
 			// Message buffering here is done before starting the dispatch goroutine
 			// Because the message could be closed before the buffering happens
@@ -153,7 +150,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 				ctx = trace.NewContext(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout, err := f.dispatch(ctx, m, h)
-				if dispatchResultForFanout.info.Time > channel.NoDuration {
+				if dispatchResultForFanout.info != nil && dispatchResultForFanout.info.Time > channel.NoDuration {
 					if dispatchResultForFanout.info.ResponseCode > channel.NoResponse {
 						_ = (*r).ReportEventDispatchTime(&reportArgs, dispatchResultForFanout.info.ResponseCode, dispatchResultForFanout.info.Time)
 					} else {
@@ -162,13 +159,11 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 					}
 				}
 				if err != nil {
-					if _, ok := err.(*channel.UnknownChannelError); ok {
-						_ = (*r).ReportEventCount(args, nethttp.StatusNotFound)
-					} else {
-						_ = (*r).ReportEventCount(args, nethttp.StatusInternalServerError)
-					}
+					channel.ReportEventCountMetricsForDispatchError(err, f.reporter, reportArgs)
 				} else {
-					_ = (*r).ReportEventCount(args, nethttp.StatusAccepted)
+					if dispatchResultForFanout.info != nil {
+						_ = (*r).ReportEventCount(args, nethttp.StatusAccepted)
+					}
 				}
 
 			}(bufferedMessage, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
@@ -182,7 +177,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 			return nil
 		}
 
-		te := TypeExtractorTransformer("")
+		te := kncloudevents.TypeExtractorTransformer("")
 		transformers = append(transformers, &te)
 		// We buffer the message to send it several times
 		bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
@@ -196,7 +191,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 		reportArgs.EventType = string(te)
 		reportArgs.Ns = ref.Namespace
 		dispatchResultForFanout, err := f.dispatch(ctx, bufferedMessage, additionalHeaders)
-		if dispatchResultForFanout.info.Time > channel.NoDuration {
+		if dispatchResultForFanout.info != nil && dispatchResultForFanout.info.Time > channel.NoDuration {
 			if dispatchResultForFanout.info.ResponseCode > channel.NoResponse {
 				_ = f.reporter.ReportEventDispatchTime(&reportArgs, dispatchResultForFanout.info.ResponseCode, dispatchResultForFanout.info.Time)
 			} else {
@@ -204,13 +199,11 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 			}
 		}
 		if err != nil {
-			if _, ok := err.(*channel.UnknownChannelError); ok {
-				_ = f.reporter.ReportEventCount(&reportArgs, nethttp.StatusNotFound)
-			} else {
-				_ = f.reporter.ReportEventCount(&reportArgs, nethttp.StatusInternalServerError)
-			}
+			channel.ReportEventCountMetricsForDispatchError(err, f.reporter, reportArgs)
 		} else {
-			_ = f.reporter.ReportEventCount(&reportArgs, dispatchResultForFanout.info.ResponseCode)
+			if dispatchResultForFanout.info != nil {
+				_ = f.reporter.ReportEventCount(&reportArgs, dispatchResultForFanout.info.ResponseCode)
+			}
 		}
 		return err
 	}
@@ -238,7 +231,7 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 
 	var totalDispatchTimeForFanout time.Duration = channel.NoDuration
 	dispatchResultForFanout := dispatchResult{
-		info: channel.DispatchExecutionInfo{
+		info: &channel.DispatchExecutionInfo{
 			Time:         channel.NoDuration,
 			ResponseCode: channel.NoResponse,
 		},
@@ -246,15 +239,17 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 	for range f.config.Subscriptions {
 		select {
 		case dispatchResult := <-errorCh:
-			if dispatchResult.info.Time > channel.NoDuration {
-				if totalDispatchTimeForFanout > channel.NoDuration {
-					totalDispatchTimeForFanout += dispatchResult.info.Time
-				} else {
-					totalDispatchTimeForFanout = dispatchResult.info.Time
+			if dispatchResult.info != nil {
+				if dispatchResult.info.Time > channel.NoDuration {
+					if totalDispatchTimeForFanout > channel.NoDuration {
+						totalDispatchTimeForFanout += dispatchResult.info.Time
+					} else {
+						totalDispatchTimeForFanout = dispatchResult.info.Time
+					}
 				}
+				dispatchResultForFanout.info.Time = totalDispatchTimeForFanout
+				dispatchResultForFanout.info.ResponseCode = dispatchResult.info.ResponseCode
 			}
-			dispatchResultForFanout.info.Time = totalDispatchTimeForFanout
-			dispatchResultForFanout.info.ResponseCode = dispatchResult.info.ResponseCode
 			if dispatchResult.err != nil {
 				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
 				return dispatchResultForFanout, dispatchResult.err
@@ -270,7 +265,7 @@ func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.M
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) (channel.DispatchExecutionInfo, error) {
+func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) (*channel.DispatchExecutionInfo, error) {
 	return f.dispatcher.DispatchMessageWithRetries(
 		ctx,
 		message,
@@ -284,19 +279,5 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 
 type dispatchResult struct {
 	err  error
-	info channel.DispatchExecutionInfo
-}
-
-type TypeExtractorTransformer string
-
-func (a *TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
-	_, ty := reader.GetAttribute(spec.Type)
-	if ty != nil {
-		tyParsed, err := types.ToString(ty)
-		if err != nil {
-			return err
-		}
-		*a = TypeExtractorTransformer(tyParsed)
-	}
-	return nil
+	info *channel.DispatchExecutionInfo
 }

@@ -44,12 +44,12 @@ type MessageDispatcher interface {
 	// DispatchMessage dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
-	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) (DispatchExecutionInfo, error)
+	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) (*DispatchExecutionInfo, error)
 
 	// DispatchMessageWithRetries dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
-	DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, config *kncloudevents.RetryConfig) (DispatchExecutionInfo, error)
+	DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, config *kncloudevents.RetryConfig) (*DispatchExecutionInfo, error)
 }
 
 // MessageDispatcherImpl is the 'real' MessageDispatcher used everywhere except unit tests.
@@ -61,6 +61,11 @@ type MessageDispatcherImpl struct {
 	supportedSchemes sets.String
 
 	logger *zap.Logger
+}
+
+type DispatchExecutionInfo struct {
+	Time         time.Duration
+	ResponseCode int
 }
 
 // NewMessageDispatcher creates a new Message dispatcher that can dispatch
@@ -87,11 +92,11 @@ func NewMessageDispatcherFromSender(logger *zap.Logger, sender *kncloudevents.HT
 	}
 }
 
-func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) (DispatchExecutionInfo, error) {
+func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) (*DispatchExecutionInfo, error) {
 	return d.DispatchMessageWithRetries(ctx, message, additionalHeaders, destination, reply, deadLetter, nil)
 }
 
-func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, retriesConfig *kncloudevents.RetryConfig) (DispatchExecutionInfo, error) {
+func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL, retriesConfig *kncloudevents.RetryConfig) (*DispatchExecutionInfo, error) {
 	// All messages that should be finished at the end of this function
 	// are placed in this slice
 	var messagesToFinish []binding.Message
@@ -110,7 +115,7 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	// Otherwise, they are filled with the original message
 	var responseMessage cloudevents.Message
 	var responseAdditionalHeaders nethttp.Header
-	var dispatchExecutionInfo DispatchExecutionInfo
+	var dispatchExecutionInfo *DispatchExecutionInfo
 	if destination != nil {
 		var err error
 		// Try to send to destination
@@ -175,7 +180,7 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	return dispatchExecutionInfo, nil
 }
 
-func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header, configs *kncloudevents.RetryConfig) (context.Context, cloudevents.Message, nethttp.Header, DispatchExecutionInfo, error) {
+func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header, configs *kncloudevents.RetryConfig) (context.Context, cloudevents.Message, nethttp.Header, *DispatchExecutionInfo, error) {
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	execInfo := DispatchExecutionInfo{
@@ -187,7 +192,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 
 	req, err := d.sender.NewCloudEventRequestWithTarget(ctx, url.String())
 	if err != nil {
-		return ctx, nil, nil, execInfo, err
+		return ctx, nil, nil, &execInfo, err
 	}
 
 	if span.IsRecordingEvents() {
@@ -196,7 +201,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 		err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	}
 	if err != nil {
-		return ctx, nil, nil, execInfo, err
+		return ctx, nil, nil, &execInfo, err
 	}
 
 	start := time.Now()
@@ -205,7 +210,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	if err != nil {
 		execInfo.Time = dispatchTime
 		execInfo.ResponseCode = nethttp.StatusInternalServerError
-		return ctx, nil, nil, execInfo, err
+		return ctx, nil, nil, &execInfo, err
 	}
 
 	if response != nil {
@@ -216,15 +221,15 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	if isFailure(response.StatusCode) {
 		_ = response.Body.Close()
 		// Reject non-successful responses.
-		return ctx, nil, nil, execInfo, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
+		return ctx, nil, nil, &execInfo, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
 	}
 	responseMessage := http.NewMessageFromHttpResponse(response)
 	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
 		_ = response.Body.Close()
 		d.logger.Debug("Response is a non event, discarding it", zap.Int("status_code", response.StatusCode))
-		return ctx, nil, nil, execInfo, nil
+		return ctx, nil, nil, &execInfo, nil
 	}
-	return ctx, responseMessage, utils.PassThroughHeaders(response.Header), execInfo, nil
+	return ctx, responseMessage, utils.PassThroughHeaders(response.Header), &execInfo, nil
 }
 
 func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
@@ -246,9 +251,4 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 func isFailure(statusCode int) bool {
 	return statusCode < nethttp.StatusOK /* 200 */ ||
 		statusCode >= nethttp.StatusMultipleChoices /* 300 */
-}
-
-type DispatchExecutionInfo struct {
-	Time         time.Duration
-	ResponseCode int
 }
