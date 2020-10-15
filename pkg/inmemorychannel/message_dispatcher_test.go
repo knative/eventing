@@ -119,7 +119,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 		Backend:        tracingconfig.Zipkin,
 		Debug:          true,
 		SampleRate:     1.0,
-		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+		ZipkinEndpoint: "http://zipkin.zipkin.svc.cluster.local:9411/api/v2/spans",
 	})
 
 	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
