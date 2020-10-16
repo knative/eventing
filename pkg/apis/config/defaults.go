@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 
 	"github.com/ghodss/yaml"
 
@@ -92,7 +92,7 @@ type ClassAndBrokerConfig struct {
 // config it should use and it's delivery.
 type BrokerConfig struct {
 	*duckv1.KReference `json:",inline"`
-	Delivery           *eventingv1.DeliverySpec `json:"delivery,omitempty"`
+	Delivery           *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // GetBrokerConfig returns a namespace specific Broker Configuration, and if
