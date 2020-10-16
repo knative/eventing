@@ -71,11 +71,16 @@ func getClusterDomain(ctx context.Context, kubeClientset kubernetes.Interface, c
 }
 
 func parseClusterDomainFromHostname(hostname string) (string, error) {
-	// hostname will be something like 'name.ns.svc.clusterDomain' where clusterDomain is something
+	// hostname will be something like 'name.ns.svc.clusterDomain:port' where clusterDomain is something
 	// like 'cluster.local'.
-	parts := strings.SplitN(hostname, ".", 4)
+	hostAndPort := strings.SplitN(hostname, ":", 2)
+	host := hostAndPort[0]
+	parts := strings.SplitN(host, ".", 4)
 	if len(parts) < 3 || parts[2] != "svc" {
 		return "", fmt.Errorf("could not extract namespace/name from %s", hostname)
 	}
-	return parts[1], nil
+	if len(parts) == 3 {
+		return "", nil
+	}
+	return parts[3], nil
 }
