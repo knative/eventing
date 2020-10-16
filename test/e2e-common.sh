@@ -47,6 +47,9 @@ readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
 # Config tracing config.
 readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
+# Installs Zipkin for tracing tests.
+readonly KNATIVE_EVENTING_MONITORING_YAML="test/config/monitoring.yaml"
+
 # PreInstall script for v0.18
 readonly PRE_INSTALL_V018="config/pre-install/v0.18.0"
 
@@ -101,6 +104,17 @@ function scale_controlplane() {
   done
 }
 
+# Install Knative Monitoring in the current cluster.
+# Parameters: $1 - Knative Monitoring manifest.
+# This is a lightly modified verion of start_knative_monitoring() from test-infra's library.sh.
+function start_knative_eventing_monitoring() {
+  header "Starting Knative Eventing Monitoring"
+  subheader "Installing Knative Eventing Monitoring"
+  echo "Installing Monitoring from $1"
+  kubectl apply -f "$1" || return 1
+  wait_until_pods_running knative-eventing || return 1
+}
+
 # This installs everything from the config dir but then removes the Channel Based Broker.
 # TODO: This should only install the core.
 # Args:
@@ -152,8 +166,8 @@ function install_knative_eventing() {
     --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
   if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
     echo ">> Installing Knative Monitoring"
-    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+    start_knative_eventing_monitoring "${KNATIVE_EVENTING_MONITORING_YAML}" || fail_test "Knative Monitoring did not come up"
+    UNINSTALL_LIST+=( "${KNATIVE_EVENTING_MONITORING_YAML}" )
   else
     echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
   fi
