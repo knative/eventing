@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+
 	"github.com/ghodss/yaml"
 
 	corev1 "k8s.io/api/core/v1"
@@ -90,34 +92,7 @@ type ClassAndBrokerConfig struct {
 // config it should use and it's delivery.
 type BrokerConfig struct {
 	*duckv1.KReference `json:",inline"`
-	Delivery           *DeliveryConfig `json:"delivery,omitempty"`
-}
-
-// DeliveryConfig contains the delivery options for event senders,
-type DeliveryConfig struct {
-	// DeadLetterSink is the sink receiving event that could not be sent to
-	// a destination.
-	// +optional
-	DeadLetterSink *duckv1.Destination `json:"deadLetterSink,omitempty"`
-
-	// Retry is the minimum number of retries the sender should attempt when
-	// sending an event before moving it to the dead letter sink.
-	// +optional
-	Retry *int32 `json:"retry,omitempty"`
-
-	// BackoffPolicy is the retry backoff policy (linear, exponential).
-	// +optional
-	BackoffPolicy *string `json:"backoffPolicy,omitempty"`
-
-	// BackoffDelay is the delay before retrying.
-	// More information on Duration format:
-	//  - https://www.iso.org/iso-8601-date-and-time-format.html
-	//  - https://en.wikipedia.org/wiki/ISO_8601
-	//
-	// For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
-	// For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.
-	// +optional
-	BackoffDelay *string `json:"backoffDelay,omitempty"`
+	Delivery           *eventingv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // GetBrokerConfig returns a namespace specific Broker Configuration, and if

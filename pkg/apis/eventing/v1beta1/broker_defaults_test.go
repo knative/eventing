@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+
 	"k8s.io/utils/pointer"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 
@@ -45,7 +47,7 @@ var (
 							Namespace:  "knative-eventing",
 							Name:       "kafka-channel",
 						},
-						Delivery: &config.DeliveryConfig{
+						Delivery: &eventingduckv1.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
 								Ref: &duckv1.KReference{
 									Kind:       "Service",
@@ -55,7 +57,7 @@ var (
 								},
 							},
 							Retry:         pointer.Int32Ptr(5),
-							BackoffPolicy: pointer.StringPtr("exponential"),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
 							BackoffDelay:  pointer.StringPtr("5s"),
 						},
 					},
@@ -69,7 +71,7 @@ var (
 							Namespace:  "knative-eventing",
 							Name:       "natss-channel",
 						},
-						Delivery: &config.DeliveryConfig{
+						Delivery: &eventingduckv1.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
 								Ref: &duckv1.KReference{
 									Kind:       "Service",
@@ -79,7 +81,7 @@ var (
 								},
 							},
 							Retry:         pointer.Int32Ptr(3),
-							BackoffPolicy: pointer.StringPtr("exponential"),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
 							BackoffDelay:  pointer.StringPtr("3s"),
 						},
 					},
@@ -92,7 +94,7 @@ var (
 							Kind:       "ConfigMap",
 							Name:       "natss-channel",
 						},
-						Delivery: &config.DeliveryConfig{
+						Delivery: &eventingduckv1.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
 								Ref: &duckv1.KReference{
 									Kind:       "Service",
@@ -102,7 +104,7 @@ var (
 								},
 							},
 							Retry:         pointer.Int32Ptr(5),
-							BackoffPolicy: pointer.StringPtr("linear"),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("linear")),
 							BackoffDelay:  pointer.StringPtr("5s"),
 						},
 					},
@@ -117,7 +119,7 @@ var (
 						Namespace:  "knative-eventing",
 						Name:       "imc-channel",
 					},
-					Delivery: &config.DeliveryConfig{
+					Delivery: &eventingduckv1.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
 								Kind:       "Service",
@@ -127,7 +129,7 @@ var (
 							},
 						},
 						Retry:         pointer.Int32Ptr(3),
-						BackoffPolicy: pointer.StringPtr("exponential"),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
 						BackoffDelay:  pointer.StringPtr("5s"),
 					},
 				},

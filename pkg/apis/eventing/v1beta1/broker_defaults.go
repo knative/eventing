@@ -41,12 +41,8 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 			bs.Config = c.KReference
 		}
 		if bs.Delivery == nil && c.Delivery != nil {
-			bs.Delivery = &eventingduckv1beta1.DeliverySpec{
-				DeadLetterSink: c.Delivery.DeadLetterSink,
-				Retry:          c.Delivery.Retry,
-				BackoffPolicy:  (*eventingduckv1beta1.BackoffPolicyType)(c.Delivery.BackoffPolicy),
-				BackoffDelay:   c.Delivery.BackoffDelay,
-			}
+			bs.Delivery = &eventingduckv1beta1.DeliverySpec{}
+			bs.Delivery.ConvertFrom(ctx, c.Delivery)
 		}
 	}
 	// Default the namespace if not given

@@ -44,7 +44,7 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 			bs.Delivery = &eventingduckv1.DeliverySpec{
 				DeadLetterSink: c.Delivery.DeadLetterSink,
 				Retry:          c.Delivery.Retry,
-				BackoffPolicy:  (*eventingduckv1.BackoffPolicyType)(c.Delivery.BackoffPolicy),
+				BackoffPolicy:  c.Delivery.BackoffPolicy,
 				BackoffDelay:   c.Delivery.BackoffDelay,
 			}
 		}
