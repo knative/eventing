@@ -145,6 +145,15 @@ func (l *Listers) GetParallelLister() flowslisters.ParallelLister {
 func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {
 	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1.ApiServerSource{}))
 }
+
+func (l *Listers) GetSinkBindingLister() sourcelisters.SinkBindingLister {
+	return sourcelisters.NewSinkBindingLister(l.indexerFor(&sourcesv1.SinkBinding{}))
+}
+
+func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister {
+	return sourcelisters.NewContainerSourceLister(l.indexerFor(&sourcesv1.ContainerSource{}))
+}
+
 func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {
 	return appsv1listers.NewDeploymentLister(l.indexerFor(&appsv1.Deployment{}))
 }

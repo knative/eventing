@@ -661,6 +661,23 @@ func (c *Client) CreateContainerSourceV1Beta1OrFail(containerSource *sourcesv1be
 	c.Tracker.AddObj(containerSource)
 }
 
+// CreateContainerSourceV1OrFail will create a v1 ContainerSource.
+func (c *Client) CreateContainerSourceV1OrFail(containerSource *sourcesv1.ContainerSource) {
+	c.T.Logf("Creating containersource %+v", containerSource)
+	containerInterface := c.Eventing.SourcesV1().ContainerSources(c.Namespace)
+	err := c.RetryWebhookErrors(func(attempts int) (err error) {
+		_, e := containerInterface.Create(context.Background(), containerSource, metav1.CreateOptions{})
+		if e != nil {
+			c.T.Logf("Failed to create containersource %q: %v", containerSource.Name, e)
+		}
+		return e
+	})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
+	}
+	c.Tracker.AddObj(containerSource)
+}
+
 // CreatePingSourceV1Alpha2OrFail will create an PingSource
 func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.PingSource) {
 	c.T.Logf("Creating pingsource %+v", pingSource)

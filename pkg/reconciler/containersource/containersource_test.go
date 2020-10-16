@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/tracker"
 
@@ -38,7 +35,8 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
 
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/containersource"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/containersource"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -49,7 +47,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -73,7 +71,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1beta1",
+			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
 )
@@ -98,10 +96,10 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "error creating sink binding",
 			Objects: []runtime.Object{
-				NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key: testNS + "/" + sourceName,
@@ -113,28 +111,28 @@ func TestAllCases(t *testing.T) {
 			},
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
-					WithInitContainerSourceConditionsV1B1,
-					WithContainerSourceStatusObservedGenerationV1B1(generation),
-					WithContainerUnobservedGenerationV1B1(),
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
+					WithContainerUnobservedGeneration(),
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeSinkBinding(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeSinkBinding(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), nil),
 			},
 		}, {
 			Name: "error creating deployment",
 			Objects: []runtime.Object{
-				NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key: testNS + "/" + sourceName,
@@ -147,31 +145,31 @@ func TestAllCases(t *testing.T) {
 			},
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
-					WithInitContainerSourceConditionsV1B1,
-					WithContainerSourceStatusObservedGenerationV1B1(generation),
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeSinkBinding(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeSinkBinding(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), nil),
-				makeDeployment(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), nil),
 			},
 		}, {
 			Name: "successfully reconciled and not ready",
 			Objects: []runtime.Object{
-				NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key: testNS + "/" + sourceName,
@@ -181,43 +179,43 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, sourceReconciled, "ContainerSource reconciled: \"%s/%s\"", testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
-					WithInitContainerSourceConditionsV1B1,
-					WithContainerSourceStatusObservedGenerationV1B1(generation),
-					WithContainerSourcePropagateReceiveAdapterStatusV1B1(makeDeployment(NewContainerSourceV1Beta1(sourceName, testNS,
-						WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-						WithContainerSourceUIDV1B1(sourceUID),
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
+					WithContainerSourcePropagateReceiveAdapterStatus(makeDeployment(NewContainerSource(sourceName, testNS,
+						WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+						WithContainerSourceUID(sourceUID),
 					), nil)),
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeSinkBinding(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeSinkBinding(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), nil),
-				makeDeployment(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), nil),
 			},
 		}, {
 			Name: "successfully reconciled and ready",
 			Objects: []runtime.Object{
-				NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
-				makeSinkBinding(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeSinkBinding(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), &conditionTrue),
-				makeDeployment(NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceUIDV1B1(sourceUID),
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceUID(sourceUID),
 				), &conditionTrue),
 			},
 			Key: testNS + "/" + sourceName,
@@ -225,16 +223,16 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, sourceReconciled, "ContainerSource reconciled: \"%s/%s\"", testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewContainerSourceV1Beta1(sourceName, testNS,
-					WithContainerSourceUIDV1B1(sourceUID),
-					WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-					WithContainerSourceObjectMetaGenerationV1B1(generation),
-					WithInitContainerSourceConditionsV1B1,
-					WithContainerSourceStatusObservedGenerationV1B1(generation),
-					WithContainerSourcePropagateSinkbindingStatusV1B1(makeSinkBindingStatus(&conditionTrue)),
-					WithContainerSourcePropagateReceiveAdapterStatusV1B1(makeDeployment(NewContainerSourceV1Beta1(sourceName, testNS,
-						WithContainerSourceSpecV1B1(makeContainerSourceSpec(sinkDest)),
-						WithContainerSourceUIDV1B1(sourceUID),
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
+					WithContainerSourcePropagateSinkbindingStatus(makeSinkBindingStatus(&conditionTrue)),
+					WithContainerSourcePropagateReceiveAdapterStatus(makeDeployment(NewContainerSource(sourceName, testNS,
+						WithContainerSourceSpec(makeContainerSourceSpec(sinkDest)),
+						WithContainerSourceUID(sourceUID),
 					), &conditionTrue)),
 				),
 			}},
@@ -247,19 +245,19 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			kubeClientSet:         fakekubeclient.Get(ctx),
 			eventingClientSet:     fakeeventingclient.Get(ctx),
-			containerSourceLister: listers.GetContainerSourceV1beta1Lister(),
+			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
-			sinkBindingLister:     listers.GetSinkBindingV1beta1Lister(),
+			sinkBindingLister:     listers.GetSinkBindingLister(),
 		}
-		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceV1beta1Lister(), controller.GetEventRecorder(ctx), r)
+		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceLister(), controller.GetEventRecorder(ctx), r)
 	},
 		true,
 		logger,
 	))
 }
 
-func makeSinkBinding(source *sourcesv1beta1.ContainerSource, ready *corev1.ConditionStatus) *sourcesv1beta1.SinkBinding {
-	sb := &sourcesv1beta1.SinkBinding{
+func makeSinkBinding(source *sourcesv1.ContainerSource, ready *corev1.ConditionStatus) *sourcesv1.SinkBinding {
+	sb := &sourcesv1.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
@@ -267,9 +265,9 @@ func makeSinkBinding(source *sourcesv1beta1.ContainerSource, ready *corev1.Condi
 			Name:      sinkBindingName,
 			Namespace: source.Namespace,
 		},
-		Spec: sourcesv1beta1.SinkBindingSpec{
+		Spec: sourcesv1.SinkBindingSpec{
 			SourceSpec: source.Spec.SourceSpec,
-			BindingSpec: duckv1beta1.BindingSpec{
+			BindingSpec: duckv1.BindingSpec{
 				Subject: tracker.Reference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
@@ -285,7 +283,7 @@ func makeSinkBinding(source *sourcesv1beta1.ContainerSource, ready *corev1.Condi
 	return sb
 }
 
-func makeDeployment(source *sourcesv1beta1.ContainerSource, available *corev1.ConditionStatus) *appsv1.Deployment {
+func makeDeployment(source *sourcesv1.ContainerSource, available *corev1.ConditionStatus) *appsv1.Deployment {
 	template := source.Spec.Template
 
 	if template.Labels == nil {
@@ -331,7 +329,7 @@ func makeDeployment(source *sourcesv1beta1.ContainerSource, available *corev1.Co
 
 func getOwnerReferences() []metav1.OwnerReference {
 	return []metav1.OwnerReference{{
-		APIVersion:         sourcesv1beta1.SchemeGroupVersion.String(),
+		APIVersion:         sourcesv1.SchemeGroupVersion.String(),
 		Kind:               "ContainerSource",
 		Name:               sourceName,
 		Controller:         &trueVal,
@@ -340,8 +338,8 @@ func getOwnerReferences() []metav1.OwnerReference {
 	}}
 }
 
-func makeContainerSourceSpec(sink duckv1.Destination) sourcesv1beta1.ContainerSourceSpec {
-	return sourcesv1beta1.ContainerSourceSpec{
+func makeContainerSourceSpec(sink duckv1.Destination) sourcesv1.ContainerSourceSpec {
+	return sourcesv1.ContainerSourceSpec{
 		Template: corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -359,8 +357,8 @@ func makeContainerSourceSpec(sink duckv1.Destination) sourcesv1beta1.ContainerSo
 	}
 }
 
-func makeSinkBindingStatus(ready *corev1.ConditionStatus) *sourcesv1beta1.SinkBindingStatus {
-	return &sourcesv1beta1.SinkBindingStatus{
+func makeSinkBindingStatus(ready *corev1.ConditionStatus) *sourcesv1.SinkBindingStatus {
+	return &sourcesv1.SinkBindingStatus{
 		SourceStatus: duckv1.SourceStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{

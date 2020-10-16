@@ -23,23 +23,22 @@ import (
 	"fmt"
 	"testing"
 
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 
-	reconcilertestingv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
-func TestContainerSourceV1Beta1(t *testing.T) {
+func TestContainerSourceV1(t *testing.T) {
 	const (
 		containerSourceName = "e2e-container-source"
 		templateName        = "e2e-container-source-template"
@@ -68,10 +67,10 @@ func TestContainerSourceV1Beta1(t *testing.T) {
 		Name:  "POD_NAMESPACE",
 		Value: client.Namespace,
 	}}
-	containerSource := reconcilertestingv1beta1.NewContainerSource(
+	containerSource := reconcilertestingv1.NewContainerSource(
 		containerSourceName,
 		client.Namespace,
-		reconcilertestingv1beta1.WithContainerSourceSpec(sourcesv1beta1.ContainerSourceSpec{
+		reconcilertestingv1.WithContainerSourceSpec(sourcesv1.ContainerSourceSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: templateName,
@@ -91,7 +90,7 @@ func TestContainerSourceV1Beta1(t *testing.T) {
 			},
 		}),
 	)
-	client.CreateContainerSourceV1Beta1OrFail(containerSource)
+	client.CreateContainerSourceV1OrFail(containerSource)
 
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
