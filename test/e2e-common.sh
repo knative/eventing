@@ -64,8 +64,8 @@ readonly TMP_DIR
 readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
 
 # This the namespace used to install and test Knative Eventing.
-export TEST_EVENTING_NAMESPACE
-TEST_EVENTING_NAMESPACE="${TEST_EVENTING_NAMESPACE:-"knative-eventing-"$(cat /dev/urandom \
+export SYSTEM_NAMESPACE
+SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(cat /dev/urandom \
   | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
 latest_version() {
@@ -96,11 +96,11 @@ function knative_setup() {
 function scale_controlplane() {
   for deployment in "$@"; do
     # Make sure all pods run in leader-elected mode.
-    kubectl -n "${TEST_EVENTING_NAMESPACE}" scale deployment "$deployment" --replicas=0 || failed=1
+    kubectl -n "${SYSTEM_NAMESPACE}" scale deployment "$deployment" --replicas=0 || failed=1
     # Give it time to kill the pods.
     sleep 5
     # Scale up components for HA tests
-    kubectl -n "${TEST_EVENTING_NAMESPACE}" scale deployment "$deployment" --replicas="${REPLICAS}" || failed=1
+    kubectl -n "${SYSTEM_NAMESPACE}" scale deployment "$deployment" --replicas="${REPLICAS}" || failed=1
   done
 }
 
@@ -120,8 +120,8 @@ function start_knative_eventing_monitoring() {
 # Args:
 #  - $1 - if passed, it will be used as eventing config directory
 function install_knative_eventing() {
-  echo ">> Creating ${TEST_EVENTING_NAMESPACE} namespace if it does not exist"
-  kubectl get ns ${TEST_EVENTING_NAMESPACE} || kubectl create namespace ${TEST_EVENTING_NAMESPACE}
+  echo ">> Creating ${SYSTEM_NAMESPACE} namespace if it does not exist"
+  kubectl get ns ${SYSTEM_NAMESPACE} || kubectl create namespace ${SYSTEM_NAMESPACE}
   local kne_config
   kne_config="${1:-${EVENTING_CONFIG}}"
   # Install Knative Eventing in the current cluster.
@@ -130,7 +130,7 @@ function install_knative_eventing() {
     local TMP_CONFIG_DIR=${TMP_DIR}/config
     mkdir -p ${TMP_CONFIG_DIR}
     cp -r ${kne_config}/* ${TMP_CONFIG_DIR}
-    find ${TMP_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+    find ${TMP_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
     ko apply --strict -f "${TMP_CONFIG_DIR}" || return $?
   else
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
@@ -139,7 +139,7 @@ function install_knative_eventing() {
       || fail_test "Unable to download latest knative/eventing file."
 
     # Replace the default system namespace with the test's system namespace.
-    sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" ${EVENTING_RELEASE_YAML}
+    sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_RELEASE_YAML}
 
     echo "Knative EVENTING YAML: ${EVENTING_RELEASE_YAML}"
 
@@ -149,15 +149,15 @@ function install_knative_eventing() {
 
   # Setup config tracing for tracing tests
   local TMP_CONFIG_TRACING_CONFIG=${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" ${CONFIG_TRACING_CONFIG} > ${TMP_CONFIG_TRACING_CONFIG}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${CONFIG_TRACING_CONFIG} > ${TMP_CONFIG_TRACING_CONFIG}
   kubectl replace -f ${TMP_CONFIG_TRACING_CONFIG}
 
   scale_controlplane eventing-webhook eventing-controller
 
-  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing did not come up"
+  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing did not come up"
 
   echo "check the config map"
-  kubectl get configmaps -n ${TEST_EVENTING_NAMESPACE}
+  kubectl get configmaps -n ${SYSTEM_NAMESPACE}
   if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
 
   # Ensure knative monitoring is installed only once
@@ -194,49 +194,49 @@ function run_preinstall_V018() {
   local TMP_PRE_INSTALL_V018=${TMP_DIR}/pre_install
   mkdir -p ${TMP_PRE_INSTALL_V018}
   cp -r ${PRE_INSTALL_V018}/* ${TMP_PRE_INSTALL_V018}
-  find ${TMP_PRE_INSTALL_V018} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  find ${TMP_PRE_INSTALL_V018} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
   ko apply --strict -f "${TMP_PRE_INSTALL_V018}" || return 1
-  wait_until_batch_job_complete ${TEST_EVENTING_NAMESPACE} || return 1
+  wait_until_batch_job_complete ${SYSTEM_NAMESPACE} || return 1
 }
 
 function install_mt_broker() {
   local TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG=${TMP_DIR}/${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" ${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} > ${TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} > ${TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG}
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
 
   local TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR=${TMP_DIR}/channel_based_config
   mkdir -p ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR}
   cp -r ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR}/* ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR}
-  find ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  find ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
 
   scale_controlplane mt-broker-controller
 
-  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
+  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
 function install_sugar() {
   local TMP_SUGAR_CONTROLLER_CONFIG_DIR=${TMP_DIR}/${SUGAR_CONTROLLER_CONFIG_DIR}
   mkdir -p ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
   cp -r ${SUGAR_CONTROLLER_CONFIG_DIR}/* ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
-  find ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  find ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} || return 1
-  kubectl -n ${TEST_EVENTING_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
+  kubectl -n ${SYSTEM_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
 
   scale_controlplane sugar-controller
 
-  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Knative Eventing Sugar Controller did not come up"
+  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing Sugar Controller did not come up"
 }
 
 function unleash_duck() {
   echo "enable debug logging"
   cat test/config/config-logging.yaml | \
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" | \
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
     ko apply --strict -f - || return $?
 
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" | \
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
     ko apply --strict -f - || return $?
 }
 
@@ -245,7 +245,7 @@ function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
-  wait_until_object_does_not_exist namespaces ${TEST_EVENTING_NAMESPACE}
+  wait_until_object_does_not_exist namespaces ${SYSTEM_NAMESPACE}
 
   echo ">> Uninstalling dependencies"
   for i in ${!UNINSTALL_LIST[@]}; do
@@ -309,13 +309,13 @@ function install_channel_crds() {
   local TMP_IN_MEMORY_CHANNEL_CONFIG_DIR=${TMP_DIR}/in_memory_channel_config
   mkdir -p ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR}
   cp -r ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}/* ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR}
-  find ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${TEST_EVENTING_NAMESPACE}/g" {} +
+  find ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
   ko apply --strict -f ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} || return 1
 
   # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
   # scale_controlplane imc-controller imc-dispatcher
 
-  wait_until_pods_running ${TEST_EVENTING_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
+  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
 }
 
 function uninstall_channel_crds() {
@@ -327,7 +327,7 @@ function uninstall_channel_crds() {
 function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
-  local namespace=${TEST_EVENTING_NAMESPACE}
+  local namespace=${SYSTEM_NAMESPACE}
   for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}'); do
     for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
       echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"

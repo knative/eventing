@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/system"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -133,7 +133,7 @@ func (c *Client) runCleanup() (err error) {
 }
 
 func getTracingConfig(c kubernetes.Interface) (corev1.EnvVar, error) {
-	cm, err := c.CoreV1().ConfigMaps(resources.SystemNamespace).Get(context.Background(), configtracing.ConfigName, metav1.GetOptions{})
+	cm, err := c.CoreV1().ConfigMaps(system.Namespace()).Get(context.Background(), configtracing.ConfigName, metav1.GetOptions{})
 	if err != nil {
 		return corev1.EnvVar{}, fmt.Errorf("error while retrieving the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
 	}
