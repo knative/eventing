@@ -138,6 +138,6 @@ func TestNewK8sServiceWithFailingOption(t *testing.T) {
 	}
 	_, err := NewK8sService(imc, func(svc *corev1.Service) error { return errors.New("test-induced failure") })
 	if err == nil {
-		t.Fatalf("Expcted error from new service but got none")
+		t.Fatalf("Expected error from new service but got none")
 	}
 }
