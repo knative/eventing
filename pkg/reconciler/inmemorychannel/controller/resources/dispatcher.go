@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -87,6 +88,11 @@ func MakeDispatcher(args DispatcherArgs) *v1.Deployment {
 								Name:          "metrics",
 								ContainerPort: 9090,
 							}},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser:    pointer.Int64Ptr(1000),
+								RunAsGroup:   pointer.Int64Ptr(1000),
+								RunAsNonRoot: pointer.BoolPtr(true),
+							},
 						},
 					},
 				},
