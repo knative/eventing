@@ -26,7 +26,7 @@ import (
 )
 
 /*
-TestEventTransformationForSubscriptiop tests the following scenario:
+TestEventTransformationForSubscription tests the following scenario:
 
              1            2                 5            6                  7
 EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> Service(Logger)
