@@ -402,7 +402,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 		}
 	}
 
-	// Now obj is suppposed to be a Channelable, so check it.
+	// Now obj is supposed to be a Channelable, so check it.
 	ch, ok := obj.(*eventingduckv1alpha1.ChannelableCombined)
 	if !ok {
 		logging.FromContext(ctx).Errorw("Failed to convert to Channelable Object", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
