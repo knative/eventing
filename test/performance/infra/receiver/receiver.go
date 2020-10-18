@@ -104,7 +104,7 @@ func (r *Receiver) Run(ctx context.Context) {
 		}
 	}()
 
-	// When the testing service is degradated, there is a chance that the end message is not received
+	// When the testing service is degraded, there is a chance that the end message is not received
 	// This timer sends to endCh a signal to stop processing events and start tear down of receiver
 	timeoutTimer := time.AfterFunc(r.timeout, func() {
 		log.Printf("Receiver timeout")
