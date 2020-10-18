@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	// SubscriptionssResource represents a Knative Subscription
+	// SubscriptionsResource represents a Knative Subscription
 	SubscriptionsResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "subscriptions",
