@@ -344,7 +344,7 @@ func TestParallelReady(t *testing.T) {
 		subs:     []*messagingv1beta1.Subscription{getSubscription("sub0", true)},
 		want:     true,
 	}, {
-		name:     "ingress true, one channelable ready, one not, two subsriptions ready",
+		name:     "ingress true, one channelable ready, one not, two subscriptions ready",
 		ichannel: getChannelable(true),
 		channels: []*duckv1beta1.Channelable{getChannelable(true), getChannelable(false)},
 		fsubs:    []*messagingv1beta1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},

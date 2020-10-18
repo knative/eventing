@@ -326,7 +326,7 @@ func TestSequenceReady(t *testing.T) {
 		subs:     []*messagingv1.Subscription{getSubscription("sub0", true)},
 		want:     true,
 	}, {
-		name:     "one channelable ready, one not, two subsriptions ready",
+		name:     "one channelable ready, one not, two subscriptions ready",
 		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
 		subs:     []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     false,
