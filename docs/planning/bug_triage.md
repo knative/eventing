@@ -58,7 +58,7 @@ process.
     release cycles. If we will not work on it in next 2-3 release cycles, then
     we should close the bug upon triaging. [Remember the goal](#Goal).
   - Bugs with priority/critical-urgent and priority/important-soon bugs should
-    have an assigned owner who has acknoledged the ownership of the bug.
+    have an assigned owner who has acknowledged the ownership of the bug.
   - TODO: Update these guidelines based on learning from triage meetings. Triage
     team will own and update this document and WG lead will approve the changes.
 - In case of conflict, final decision will be taken by WG lead.
