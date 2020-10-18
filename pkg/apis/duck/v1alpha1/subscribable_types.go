@@ -117,7 +117,7 @@ var (
 // This is w.r.t https://github.com/knative/eventing/pull/1685#discussion_r314797276
 // Due to change in the API, we support reading of SubscribableTypeStatus#DeprecatedSubscribableStatus in a logical way
 // where we read the V2 value first and if the value is absent then we read the V1 value,
-// Having this function here makes it convinient to read the default value at runtime.
+// Having this function here makes it convenient to read the default value at runtime.
 func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
 	return s.SubscribableStatus
 }
