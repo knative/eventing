@@ -65,7 +65,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
 	// 2. For each of the Branches:
 	//     2.1 create a Subscription to the fronting Channel, subscribe the filter and send reply to the filter Channel
-	//     2.2 create a Subscription to the filter Channel, subcribe the subscriber and send reply to
+	//     2.2 create a Subscription to the filter Channel, subscribe the subscriber and send reply to
 	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each branch in the list
 	if p.DeletionTimestamp != nil {
