@@ -63,7 +63,7 @@ func TestContainerSourceDefaults(t *testing.T) {
 				},
 			},
 		},
-		"one with ontainer name one without": {
+		"one with container name one without": {
 			initial: ContainerSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
