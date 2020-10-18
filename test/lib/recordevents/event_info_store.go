@@ -52,7 +52,7 @@ func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName
 
 // Stateful store of events received by the recordevents pod it is pointed at.
 // This pulls events from the pod during any Find or Wait call, storing them
-// locally and triming them from the remote pod store.
+// locally and trimming them from the remote pod store.
 type EventInfoStore struct {
 	tb testing.TB
 
