@@ -329,7 +329,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 				message = bindingshttp.NewMessage(response.Header, nil)
 			}
 			if message.ReadEncoding() != binding.EncodingUnknown {
-				t.Error("Expected EncodingUnkwnown. Actual:", message.ReadEncoding())
+				t.Error("Expected EncodingUnknown. Actual:", message.ReadEncoding())
 			}
 		})
 	}
