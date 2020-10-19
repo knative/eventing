@@ -164,7 +164,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 			r.logger.Info("Could not extract channel", zap.Error(err))
 			response.WriteHeader(nethttp.StatusInternalServerError)
 		}
-		ReportEventCountMetricsForDispatchError(err, r.reporter, args)
+		ReportEventCountMetricsForDispatchError(err, r.reporter, &args)
 		return
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
@@ -191,11 +191,11 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	response.WriteHeader(nethttp.StatusAccepted)
 }
 
-func ReportEventCountMetricsForDispatchError(err error, reporter StatsReporter, args ReportArgs) {
+func ReportEventCountMetricsForDispatchError(err error, reporter StatsReporter, args *ReportArgs) {
 	if _, ok := err.(*UnknownChannelError); ok {
-		_ = reporter.ReportEventCount(&args, nethttp.StatusNotFound)
+		_ = reporter.ReportEventCount(args, nethttp.StatusNotFound)
 	} else {
-		_ = reporter.ReportEventCount(&args, nethttp.StatusInternalServerError)
+		_ = reporter.ReportEventCount(args, nethttp.StatusInternalServerError)
 	}
 }
 
