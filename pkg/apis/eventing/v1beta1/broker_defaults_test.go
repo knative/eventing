@@ -20,6 +20,11 @@ import (
 	"context"
 	"testing"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+
+	"k8s.io/utils/pointer"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -33,40 +38,100 @@ var (
 		Defaults: &config.Defaults{
 			// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
 			// Namespace is the key, the value is the KReference to the config.
-			NamespaceDefaultsConfig: map[string]*config.ClassAndKRef{
+			NamespaceDefaultsConfig: map[string]*config.ClassAndBrokerConfig{
 				"mynamespace": {
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Namespace:  "knative-eventing",
-						Name:       "kafka-channel",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "knative-eventing",
+							Name:       "kafka-channel",
+						},
+						Delivery: &eventingduckv1.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Kind:       "Service",
+									Namespace:  "default",
+									Name:       "handle-error",
+									APIVersion: "serving.knative.dev/v1",
+								},
+							},
+							Retry:         pointer.Int32Ptr(5),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+							BackoffDelay:  pointer.StringPtr("5s"),
+						},
 					},
 				},
 				"mynamespace2": {
 					BrokerClass: "mynamespace2class",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Namespace:  "knative-eventing",
-						Name:       "natss-channel",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Namespace:  "knative-eventing",
+							Name:       "natss-channel",
+						},
+						Delivery: &eventingduckv1.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Kind:       "Service",
+									Namespace:  "knative-eventing",
+									Name:       "handle-error",
+									APIVersion: "serving.knative.dev/v1",
+								},
+							},
+							Retry:         pointer.Int32Ptr(3),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+							BackoffDelay:  pointer.StringPtr("3s"),
+						},
 					},
 				},
 				"mynamespace3": {
 					BrokerClass: "mynamespace3class",
-					KReference: &duckv1.KReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "natss-channel",
+					BrokerConfig: &config.BrokerConfig{
+						KReference: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "natss-channel",
+						},
+						Delivery: &eventingduckv1.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Kind:       "Service",
+									Namespace:  "mynamespace3",
+									Name:       "handle-error",
+									APIVersion: "serving.knative.dev/v1",
+								},
+							},
+							Retry:         pointer.Int32Ptr(5),
+							BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("linear")),
+							BackoffDelay:  pointer.StringPtr("5s"),
+						},
 					},
 				},
 			},
-			ClusterDefault: &config.ClassAndKRef{
+			ClusterDefault: &config.ClassAndBrokerConfig{
 				BrokerClass: eventing.MTChannelBrokerClassValue,
-				KReference: &duckv1.KReference{
-					APIVersion: "v1",
-					Kind:       "ConfigMap",
-					Namespace:  "knative-eventing",
-					Name:       "imc-channel",
+				BrokerConfig: &config.BrokerConfig{
+					KReference: &duckv1.KReference{
+						APIVersion: "v1",
+						Kind:       "ConfigMap",
+						Namespace:  "knative-eventing",
+						Name:       "imc-channel",
+					},
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "knative-eventing",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(3),
+						BackoffPolicy: (*eventingduckv1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
 				},
 			},
 		},
@@ -92,6 +157,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Namespace:  "knative-eventing",
 						Name:       "imc-channel",
 					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "knative-eventing",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(3),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
 				},
 			},
 		},
@@ -108,6 +186,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Kind:       "ConfigMap",
 						Namespace:  "knative-eventing",
 						Name:       "imc-channel",
+					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "knative-eventing",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(3),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("5s"),
 					},
 				},
 			},
@@ -142,6 +233,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						APIVersion: SchemeGroupVersion.String(),
 						Kind:       "OtherChannel",
 					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "knative-eventing",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(3),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
 				},
 			},
 		},
@@ -162,6 +266,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Namespace:  "knative-eventing",
 						Name:       "kafka-channel",
 						APIVersion: "v1",
+					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "default",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("5s"),
 					},
 				},
 			},
@@ -184,6 +301,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Name:       "natss-channel",
 						APIVersion: "v1",
 					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "mynamespace3",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("linear")),
+						BackoffDelay:  pointer.StringPtr("5s"),
+					},
 				},
 			},
 		},
@@ -205,6 +335,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Name:       "natss-channel",
 						APIVersion: "v1",
 					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "knative-eventing",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(3),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("exponential")),
+						BackoffDelay:  pointer.StringPtr("3s"),
+					},
 				},
 			},
 		},
@@ -216,6 +359,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Kind:       "ConfigMap",
 						Name:       "natss-channel",
 						APIVersion: "v1",
+					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "rando",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("linear")),
+						BackoffDelay:  pointer.StringPtr("5s"),
 					},
 				},
 			},
@@ -233,6 +389,19 @@ func TestBrokerSetDefaults(t *testing.T) {
 						Namespace:  "randons",
 						Name:       "natss-channel",
 						APIVersion: "v1",
+					},
+					Delivery: &eventingduckv1beta1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Service",
+								Namespace:  "rando",
+								Name:       "handle-error",
+								APIVersion: "serving.knative.dev/v1",
+							},
+						},
+						Retry:         pointer.Int32Ptr(5),
+						BackoffPolicy: (*eventingduckv1beta1.BackoffPolicyType)(pointer.StringPtr("linear")),
+						BackoffDelay:  pointer.StringPtr("5s"),
 					},
 				},
 			},

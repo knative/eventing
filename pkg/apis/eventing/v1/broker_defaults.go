@@ -19,6 +19,8 @@ package v1
 import (
 	"context"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+
 	"knative.dev/eventing/pkg/apis/config"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
@@ -32,16 +34,23 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	if bs.Config != nil {
-		// Default the namespace if not given
-		bs.Config.SetDefaults(ctx)
-		return
-	}
-
 	cfg := config.FromContextOrDefaults(ctx)
 	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
 	if err == nil {
-		c.SetDefaults(ctx)
-		bs.Config = c
+		if bs.Config == nil {
+			bs.Config = c.KReference
+		}
+		if bs.Delivery == nil && c.Delivery != nil {
+			bs.Delivery = &eventingduckv1.DeliverySpec{
+				DeadLetterSink: c.Delivery.DeadLetterSink,
+				Retry:          c.Delivery.Retry,
+				BackoffPolicy:  c.Delivery.BackoffPolicy,
+				BackoffDelay:   c.Delivery.BackoffDelay,
+			}
+		}
+	}
+	// Default the namespace if not given
+	if bs.Config != nil {
+		bs.Config.SetDefaults(ctx)
 	}
 }
