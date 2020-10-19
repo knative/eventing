@@ -393,7 +393,7 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 	for _, ps := range referents {
 		ps := ps
 		eg.Go(func() error {
-			// Do the binding to the pod speccable.
+			// Do the binding to the pod specable.
 			orig := ps.DeepCopy()
 			mutation(ctx, ps)
 
