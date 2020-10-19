@@ -150,7 +150,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 				ctx = trace.NewContext(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, m, h)
-				_ = parseFanoutResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
+				_ = parseFanoutResultAndReportMetrics(dispatchResultForFanout, *r, reportArgs)
 			}(bufferedMessage, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
 			return nil
 		}
