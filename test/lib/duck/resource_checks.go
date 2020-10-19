@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This file contains functions which check resources until they
-// get into the state desired by the caller or time out.
-
 package duck
 
 import (
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,10 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -43,17 +39,21 @@ const (
 // it is done, returns an error or timeout.
 func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
-		return isResourceReady(untyped, err)
+		return checkResourceReady(dynamicClient, obj)
 	})
+}
+
+func checkResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) (bool, error) {
+	untyped, err := GetGenericObject(dynamicClient, obj, &kresourceForReadiness{})
+	return isResourceReady(untyped, err)
 }
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
 func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		untypeds, err := GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
+		untypeds, err := GetGenericObjectList(dynamicClient, objList, &kresourceForReadiness{})
 		for _, untyped := range untypeds {
-			if isReady, err := isResourceReady(untyped, err); !isReady {
+			if isReady, err := isResourceReady(untyped, err); !isReady || err != nil {
 				return isReady, err
 			}
 		}
@@ -72,17 +72,26 @@ func isResourceReady(obj runtime.Object, err error) (bool, error) {
 		// Return error to stop the polling.
 		return false, err
 	}
-
-	if pod, isPod := obj.(*corev1.Pod); isPod {
-		return isPodRunning(pod), nil
+	kr, iskresourceForReadiness := obj.(*kresourceForReadiness)
+	if !iskresourceForReadiness {
+		return false, fmt.Errorf("obj is not *kresourceForReadiness, actually %T", obj)
 	}
 
-	kr := obj.(*duckv1beta1.KResource)
+	if isPod(kr) {
+		return isPodRunning(kr), nil
+	}
+
 	ready := kr.Status.GetCondition(apis.ConditionReady)
 	return ready != nil && ready.IsTrue(), nil
 }
 
+func isPod(obj runtime.Object) bool {
+	apiVersion, kind := obj.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+	return apiVersion == "v1" && kind == "Pod"
+}
+
 // isPodRunning will check the status conditions of the pod and return true if it's Running or Succeeded.
-func isPodRunning(pod *corev1.Pod) bool {
-	return pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded
+func isPodRunning(pod *kresourceForReadiness) bool {
+	return pod.Status.Phase == string(corev1.PodRunning) ||
+		pod.Status.Phase == string(corev1.PodSucceeded)
 }
