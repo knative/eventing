@@ -23,23 +23,24 @@ import (
 	"strings"
 	"testing"
 
+	"knative.dev/pkg/system"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/test/zipkin"
 )
 
 // Setup sets up port forwarding to Zipkin.
 func Setup(t *testing.T, client *testlib.Client) {
-	zipkin.SetupZipkinTracingFromConfigTracingOrFail(context.Background(), t, client.Kube, resources.SystemNamespace)
+	zipkin.SetupZipkinTracingFromConfigTracingOrFail(context.Background(), t, client.Kube, system.Namespace())
 }
 
 // GetClusterDomain gets the Cluster's domain, e.g. 'cluster.local'.
 func GetClusterDomain(t *testing.T, client *testlib.Client) string {
-	d, err := getClusterDomain(context.Background(), client.Kube, resources.SystemNamespace)
+	d, err := getClusterDomain(context.Background(), client.Kube, system.Namespace())
 	if err != nil {
 		t.Fatal("Unable to get cluster domain:", err)
 	}

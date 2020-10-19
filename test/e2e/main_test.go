@@ -23,7 +23,7 @@ import (
 
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/system"
 )
 
 var setup = testlib.Setup
@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 
 	exit := m.Run()
 
-	testlib.ExportLogs(testlib.SystemLogsDir, resources.SystemNamespace)
+	testlib.ExportLogs(testlib.SystemLogsDir, system.Namespace())
 
 	os.Exit(exit)
 }
