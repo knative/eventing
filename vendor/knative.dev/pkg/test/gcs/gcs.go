@@ -164,7 +164,7 @@ func (g *GCSClient) ListChildrenFiles(ctx context.Context, bucketName, dirPath s
 func (g *GCSClient) ListDirectChildren(ctx context.Context, bucketName, dirPath string) ([]string, error) {
 	// If there are 2 directories named "foo" and "foobar",
 	// then given storagePath "foo" will get files both under "foo" and "foobar".
-	// Add trailling slash to storagePath, so that only gets children under given directory.
+	// Add trailing slash to storagePath, so that only gets children under given directory.
 	return g.listChildren(ctx, bucketName, dirPath, "/")
 }
 
