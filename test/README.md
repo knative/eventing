@@ -92,7 +92,7 @@ go test -v -tags=e2e -count=1 ./test/e2e
 ```
 
 By default, tests run against images with the `latest` tag. To override this
-bevavior you can specify a different tag through `-tag`:
+behavior you can specify a different tag through `-tag`:
 
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e -tag e2e

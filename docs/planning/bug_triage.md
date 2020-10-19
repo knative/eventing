@@ -34,7 +34,7 @@ process.
   triage will be assigned a priority or closed.
 - During each release/sprint planning, all priority/important-soon and some of
   priority/important-longterm bugs need to be accounted while committing to new
-  features and improvements. These will be marked with approapriate release
+  features and improvements. These will be marked with appropriate release
   along with the planned features.
 - Bugs marked with current release always take priority over feature work in a
   particular release. This will help maintain a balance between code quality,
@@ -58,7 +58,7 @@ process.
     release cycles. If we will not work on it in next 2-3 release cycles, then
     we should close the bug upon triaging. [Remember the goal](#Goal).
   - Bugs with priority/critical-urgent and priority/important-soon bugs should
-    have an assigned owner who has acknoledged the ownership of the bug.
+    have an assigned owner who has acknowledged the ownership of the bug.
   - TODO: Update these guidelines based on learning from triage meetings. Triage
     team will own and update this document and WG lead will approve the changes.
 - In case of conflict, final decision will be taken by WG lead.

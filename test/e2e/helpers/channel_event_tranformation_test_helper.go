@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-// EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
+// EventTransformationForSubscriptionTestHelper is the helper function for channel_event_transformation_test
 func EventTransformationForSubscriptionTestHelper(
 	ctx context.Context,
 	t *testing.T,

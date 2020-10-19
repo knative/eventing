@@ -1,7 +1,7 @@
 # In-Memory Channels
 
 In-memory channels are a best effort channel. They have the following
-characterics:
+characteristics:
 
 - **No Persistence**.
   - When a Pod goes down, messages go with it.

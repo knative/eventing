@@ -31,7 +31,7 @@ const (
 	InMemoryChannelConditionReady = apis.ConditionReady
 
 	// InMemoryChannelConditionDispatcherReady has status True when a Dispatcher deployment is ready
-	// Keyed off appsv1.DeploymentAvaialble, which means minimum available replicas required are up
+	// Keyed off appsv1.DeploymentAvailable, which means minimum available replicas required are up
 	// and running for at least minReadySeconds.
 	InMemoryChannelConditionDispatcherReady apis.ConditionType = "DispatcherReady"
 

@@ -127,7 +127,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 
 				}
 				if !timeoutSet {
-					t.Error("Expected timout to be set")
+					t.Error("Expected timeout to be set")
 				}
 
 			}

@@ -62,7 +62,7 @@ var FlowsParallelTypeMeta = FlowsTypeMeta(resources.FlowsParallelKind)
 // FlowsSequenceTypeMeta is the TypeMeta ref for Sequence (in flows.knative.dev).
 var FlowsSequenceTypeMeta = FlowsTypeMeta(resources.FlowsSequenceKind)
 
-// FlowsTypeMeta returns the TypeMeta ref for an eventing messaing resource.
+// FlowsTypeMeta returns the TypeMeta ref for an eventing messaging resource.
 func FlowsTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
 		Kind:       kind,

@@ -45,7 +45,7 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
                    |-------> Trigger3 -------> Channel --------> Subscription --------> Service(Logger2)
 
 Explanation:
-Trigger1 filters the orignal event and tranforms it to a new event,
+Trigger1 filters the orignal event and transforms it to a new event,
 Trigger2 logs all events,
 Trigger3 filters the transformed event and sends it to Channel.
 

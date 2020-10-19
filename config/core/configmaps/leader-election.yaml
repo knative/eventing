@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
   annotations:
-    knative.dev/example-checksum: "6cf53e10"
+    knative.dev/example-checksum: "a255a6cc"
 data:
   _example: |
     ################################
@@ -47,5 +47,5 @@ data:
     renewDeadline: "10s"
 
     # retryPeriod is how long the leader election client waits between tries of
-    # actions; 2 seconds is the value used by core kuberntes controllers.
+    # actions; 2 seconds is the value used by core kubernetes controllers.
     retryPeriod: "2s"
