@@ -34,8 +34,8 @@ process.
   triage will be assigned a priority or closed.
 - During each release/sprint planning, all priority/important-soon and some of
   priority/important-longterm bugs need to be accounted while committing to new
-  features and improvements. These will be marked with appropriate release
-  along with the planned features.
+  features and improvements. These will be marked with appropriate release along
+  with the planned features.
 - Bugs marked with current release always take priority over feature work in a
   particular release. This will help maintain a balance between code quality,
   bug triage bar, and incoming feature rate.
