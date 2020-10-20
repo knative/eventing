@@ -24,8 +24,12 @@ import (
 	"runtime"
 	"text/template"
 
+	"k8s.io/utils/pointer"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+
 	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
@@ -39,6 +43,7 @@ const (
 	configFilename   = "config.toml"
 	watholaEventNs   = "com.github.cardil.wathola"
 	healthEndpoint   = "/healthz"
+	brokerClass      = "MTChannelBasedBroker"
 )
 
 var (
@@ -53,7 +58,18 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deployBroker() {
-	p.client.CreateBrokerV1Beta1OrFail(brokerName)
+	numRetries := int32(5)
+	backoff := eventingduckv1beta1.BackoffPolicyLinear
+	p.client.CreateBrokerV1Beta1OrFail(brokerName,
+		resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+		func(broker *v1beta1.Broker) {
+			broker.Spec.Delivery = &eventingduckv1beta1.DeliverySpec{
+				Retry:         &numRetries,
+				BackoffPolicy: &backoff,
+				BackoffDelay:  pointer.StringPtr("PT1S"),
+			}
+		},
+	)
 }
 
 func (p *prober) fetchBrokerUrl() (*apis.URL, error) {
