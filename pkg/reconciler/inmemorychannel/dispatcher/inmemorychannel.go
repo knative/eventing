@@ -18,10 +18,8 @@ package dispatcher
 
 import (
 	"context"
-
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
-
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -29,7 +27,6 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/inmemorychannel"
 )
 
@@ -37,69 +34,84 @@ import (
 type Reconciler struct {
 	eventDispatcherConfigStore *channel.EventDispatcherConfigStore
 	dispatcher                 inmemorychannel.MessageDispatcher
-	inmemorychannelLister      listers.InMemoryChannelLister
-	inmemorychannelInformer    cache.SharedIndexInformer
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
-	// This is a special Reconciler that does the following:
-	// 1. Lists the inmemory channels.
-	// 2. Creates a multi-channel-fanout-config.
-	// 3. Calls the inmemory channel dispatcher's updateConfig func with the new multi-channel-fanout-config.
-	channels, err := r.inmemorychannelLister.List(labels.Everything())
+	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
+
+	config, err := r.newConfigForInMemoryChannel(imc)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error listing InMemory channels")
+		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
 	}
 
-	inmemoryChannels := make([]*v1.InMemoryChannel, 0)
-	for _, imc := range channels {
-		if imc.Status.IsReady() {
-			inmemoryChannels = append(inmemoryChannels, imc)
+	if imc.Status.Address == nil || imc.Status.Address.URL == nil {
+		logging.FromContext(ctx).Info("No address for IMC, skipping")
+		return nil
+	}
+	// First grab the MultiChannelFanoutMessage handler
+	multiHandler := r.dispatcher.GetHandler(ctx)
+	handler := multiHandler.GetChannelHandler(config.HostName)
+	if handler == nil {
+		// No handler yet, create one.
+		fanoutHandler, err := fanout.NewFanoutMessageHandler(logging.FromContext(ctx).Desugar(), channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()), config.FanoutConfig)
+		if err != nil {
+			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
+			return err
+		}
+		multiHandler.SetChannelHandler(config.HostName, fanoutHandler)
+	} else {
+		// Just update the config if necessary.
+		haveSubs := handler.GetSubscriptions(ctx)
+		for _, s := range haveSubs {
+			logging.FromContext(ctx).Info("Have subscription", zap.String("have",s.String()))
+		}
+		for _, s := range config.FanoutConfig.Subscriptions {
+			logging.FromContext(ctx).Info("Want subscription", zap.String("want", s.String()))
+		}
+
+		if !equality.Semantic.DeepDerivative(config.FanoutConfig.Subscriptions, haveSubs) {
+			logging.FromContext(ctx).Info("Updating fanout config (-old +new)", zap.Any("want", config.FanoutConfig.Subscriptions), zap.Any("have", haveSubs))
+			handler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)
 		}
 	}
-
-	config, err := r.newConfigFromInMemoryChannels(inmemoryChannels)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error creating config from in memory channels")
-		return err
-	}
-	err = r.dispatcher.UpdateConfig(ctx, r.eventDispatcherConfigStore.GetConfig(), config)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
-		return err
-	}
-
 	return nil
 }
 
-// newConfigFromInMemoryChannels creates a new Config from the list of inmemory channels.
-func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1.InMemoryChannel) (*multichannelfanout.Config, error) {
-	cc := make([]multichannelfanout.ChannelConfig, 0)
-	for _, c := range channels {
-
-		subs := make([]fanout.Subscription, len(c.Spec.Subscribers))
-		for _, sub := range c.Spec.Subscribers {
-			conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
-			if err != nil {
-				return nil, err
-			}
-
-			subs = append(subs, *conf)
-		}
-
-		channelConfig := multichannelfanout.ChannelConfig{
-			Namespace: c.Namespace,
-			Name:      c.Name,
-			HostName:  c.Status.Address.URL.Host,
-			FanoutConfig: fanout.Config{
-				AsyncHandler:  true,
-				Subscriptions: subs,
-			},
-		}
-		cc = append(cc, channelConfig)
+func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
+	config, err := r.newConfigForInMemoryChannel(imc)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
+		return err
 	}
-	return &multichannelfanout.Config{
-		ChannelConfigs: cc,
+	logging.FromContext(ctx).Info("Removing dispatcher")
+	multiHandler := r.dispatcher.GetHandler(ctx)
+	multiHandler.DeleteChannelHandler(config.HostName)
+	return nil
+}
+
+// newConfigForInMemoryChannel creates a new Config for a single inmemory channel.
+func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+	subs := make([]fanout.Subscription, len(imc.Spec.Subscribers))
+
+	for _, sub := range imc.Spec.Subscribers {
+		conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
+		if err != nil {
+			return nil, err
+		}
+		if conf.DeadLetter == nil && conf.Reply == nil && conf.Subscriber == nil {
+			continue
+		}
+		subs = append(subs, *conf)
+	}
+
+	return &multichannelfanout.ChannelConfig{
+		Namespace: imc.Namespace,
+		Name:      imc.Name,
+		HostName:  imc.Status.Address.URL.Host,
+		FanoutConfig: fanout.Config{
+			AsyncHandler:  true,
+			Subscriptions: subs,
+		},
 	}, nil
 }

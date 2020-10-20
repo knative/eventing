@@ -251,7 +251,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		t.Fatal(err)
 	}
 
-	h, err := NewMessageHandler(
+	h, err := NewFanoutMessageHandler(
 		logger,
 		channel.NewMessageDispatcher(logger),
 		Config{

@@ -49,7 +49,7 @@ type MessageHandler struct {
 type UpdateConfig func(config *multichannelfanout.Config) error
 
 // NewMessageHandler creates a new swappable.Handler.
-func NewMessageHandler(handler *multichannelfanout.MessageHandler, logger *zap.Logger, reporter channel.StatsReporter) *MessageHandler {
+func NewMessageHandler(handler multichannelfanout.MultiChannelMessageHandler, logger *zap.Logger, reporter channel.StatsReporter) *MessageHandler {
 	h := &MessageHandler{
 		logger:   logger.With(zap.String("httpHandler", "swappable")),
 		reporter: reporter,
@@ -69,13 +69,13 @@ func NewEmptyMessageHandler(context context.Context, logger *zap.Logger, message
 
 // GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
 // requests to.
-func (h *MessageHandler) GetHandler() *multichannelfanout.MessageHandler {
-	return h.fanout.Load().(*multichannelfanout.MessageHandler)
+func (h *MessageHandler) GetHandler() multichannelfanout.MultiChannelMessageHandler {
+	return h.fanout.Load().(multichannelfanout.MultiChannelMessageHandler)
 }
 
-// SetHandler sets a new multichannelfanout.MessageHandler to delegate all subsequent
+// SetHandler sets a new multichannelfanout.MultiChannelMessageHandler to delegate all subsequent
 // HTTP requests to.
-func (h *MessageHandler) SetHandler(nh *multichannelfanout.MessageHandler) {
+func (h *MessageHandler) SetHandler(nh multichannelfanout.MultiChannelMessageHandler) {
 	h.fanout.Store(nh)
 }
 
@@ -89,7 +89,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig 
 
 	h.updateLock.Lock()
 	defer h.updateLock.Unlock()
-
+/*
 	ih := h.GetHandler()
 	if diff := ih.ConfigDiff(*config); diff != "" {
 		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
@@ -100,6 +100,7 @@ func (h *MessageHandler) UpdateConfig(context context.Context, dispatcherConfig 
 		}
 		h.SetHandler(newIh)
 	}
+	*/
 	return nil
 }
 

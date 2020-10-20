@@ -18,6 +18,10 @@ package dispatcher
 
 import (
 	"context"
+	corev1 "k8s.io/api/core/v1"
+	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/channel/fanout"
+	"net/http"
 	"testing"
 
 	"k8s.io/utils/pointer"
@@ -90,6 +94,12 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
 			WantErr: false,
 		}, {
 			Name: "with subscribers",
@@ -104,6 +114,13 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelSubscribers(subscribers),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
+
 			WantErr: false,
 		}, {
 			Name: "subscriber with delivery spec",
@@ -133,6 +150,12 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
 			WantErr: false,
 		},
 	}
@@ -140,19 +163,63 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			inmemorychannelLister: listers.GetInMemoryChannelLister(),
-			// TODO: FIx
-			inmemorychannelInformer:    nil,
-			dispatcher:                 &fakeDispatcher{},
+			dispatcher:                 &fakeDispatcher{handler: NewFakeMultiChannelHandler()},
 			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
-			controller.GetEventRecorder(ctx), r)
+			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName})
 	}, false, logger))
 }
 
-type fakeDispatcher struct{}
+func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
+}
+
+func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
+}
+
+type fakeMultiChannelHandler struct {
+	handlers map[string]fanout.MessageHandler
+}
+
+func NewFakeMultiChannelHandler() *fakeMultiChannelHandler {
+	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.MessageHandler, 1)}
+}
+func (f *fakeMultiChannelHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+
+}
+
+func (f *fakeMultiChannelHandler) SetChannelHandler(host string, handler fanout.MessageHandler) {
+	f.handlers[host] = handler
+}
+
+func (f *fakeMultiChannelHandler) DeleteChannelHandler(host string) {
+	delete(f.handlers, host)
+}
+
+func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.MessageHandler {
+	return f.handlers[host]
+}
+
+type fakeDispatcher struct{
+	handler multichannelfanout.MultiChannelMessageHandler
+}
+
+func (d *fakeDispatcher) GetHandler(_ context.Context) multichannelfanout.MultiChannelMessageHandler {
+	return d.handler
+}
 
 func (d *fakeDispatcher) UpdateConfig(_ context.Context, _ channel.EventDispatcherConfig, _ *multichannelfanout.Config) error {
 	// TODO set error

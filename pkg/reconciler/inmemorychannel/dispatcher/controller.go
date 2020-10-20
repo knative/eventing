@@ -29,10 +29,8 @@ import (
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 
 	"go.uber.org/zap"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/pkg/tracing"
@@ -49,6 +47,7 @@ const (
 	readTimeout  = 15 * time.Minute
 	writeTimeout = 15 * time.Minute
 	port         = 8080
+	finalizerName = "imc-dispatcher"
 )
 
 type envConfig struct {
@@ -97,14 +96,12 @@ func NewController(
 
 	r := &Reconciler{
 		dispatcher:              inMemoryDispatcher,
-		inmemorychannelLister:   inmemorychannelInformer.Lister(),
-		inmemorychannelInformer: informer,
 	}
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
-		return controller.Options{SkipStatusUpdates: true}
+		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
 
-	// Nothing to filer, enqueue all imcs if configmap updates.
+	// Nothing to filter, enqueue all imcs if configmap updates.
 	noopFilter := func(interface{}) bool { return true }
 	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(string, interface{}) {
 		impl.FilteredGlobalResync(noopFilter, informer)
@@ -117,11 +114,7 @@ func NewController(
 	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	// Watch for inmemory channels.
-	r.inmemorychannelInformer.AddEventHandler(
-		cache.FilteringResourceEventHandler{
-			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
-			Handler:    controller.HandleAll(impl.Enqueue),
-		})
+	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Start the dispatcher.
 	go func() {

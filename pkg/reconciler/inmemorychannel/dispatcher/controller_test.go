@@ -17,10 +17,7 @@ limitations under the License.
 package dispatcher
 
 import (
-	"os"
 	"testing"
-
-	"knative.dev/eventing/pkg/apis/eventing"
 
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
@@ -56,3 +53,5 @@ func TestNewInNamespace(t *testing.T) {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }
+
+

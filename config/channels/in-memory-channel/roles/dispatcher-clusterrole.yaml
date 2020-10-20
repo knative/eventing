@@ -42,13 +42,14 @@ rules:
     verbs:
       - create
       - patch
-# Updates the status to reflect subscribable status.
+# Updates the finalizer so we can remove our handlers when channel is deleted
   - apiGroups:
       - messaging.knative.dev
     resources:
-      - inmemorychannels/status
+      - inmemorychannels/finalizers
+      - inmemorychannels
     verbs:
-      - update
+      - patch
   - apiGroups:
       - coordination.k8s.io
     resources:

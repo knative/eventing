@@ -29,6 +29,7 @@ import (
 
 type MessageDispatcher interface {
 	UpdateConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error
+	GetHandler(ctx context.Context) multichannelfanout.MultiChannelMessageHandler
 }
 
 type InMemoryMessageDispatcher struct {
@@ -48,6 +49,12 @@ type InMemoryMessageDispatcherArgs struct {
 
 func (d *InMemoryMessageDispatcher) UpdateConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error {
 	return d.handler.UpdateConfig(ctx, dispatcherConfig, config)
+}
+
+// GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
+// requests to.
+func (d *InMemoryMessageDispatcher) GetHandler(ctx context.Context) multichannelfanout.MultiChannelMessageHandler {
+	return d.handler.GetHandler()
 }
 
 // Start starts the inmemory dispatcher's message processing.
