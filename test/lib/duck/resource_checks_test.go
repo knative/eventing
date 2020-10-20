@@ -158,10 +158,11 @@ func TestCheckResourceReady(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			dc := fake.NewSimpleDynamicClient(scheme, tc.obj)
 			apiVersion, kind := tc.obj.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-			metaResource := resources.NewMetaResource(om.Name, om.Namespace, &metav1.TypeMeta{
+			typeMeta := metav1.TypeMeta{
 				APIVersion: apiVersion,
 				Kind:       kind,
-			})
+			}
+			metaResource := resources.NewMetaResource(om.Name, om.Namespace, &typeMeta)
 			ready, err := checkResourceReady(dc, metaResource)
 			if ready != tc.isReady {
 				t.Errorf("Unexpected readiness. Expected %v, actually %v", tc.isReady, ready)

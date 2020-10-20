@@ -14,19 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file contains functions which check resources until they
+// get into the state desired by the caller or time out.
+
 package duck
 
 import (
-	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 const (
@@ -43,22 +47,36 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaRe
 	})
 }
 
-func checkResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) (bool, error) {
-	untyped, err := GetGenericObject(dynamicClient, obj, &kresourceForReadiness{})
-	return isResourceReady(untyped, err)
-}
-
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
 func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		untypeds, err := GetGenericObjectList(dynamicClient, objList, &kresourceForReadiness{})
-		for _, untyped := range untypeds {
-			if isReady, err := isResourceReady(untyped, err); !isReady || err != nil {
-				return isReady, err
-			}
-		}
-		return true, nil
+		return checkResourcesReady(dynamicClient, objList)
+
 	})
+}
+
+func getGenericResource(tm metav1.TypeMeta) runtime.Object {
+	if tm.APIVersion == "v1" && tm.Kind == "Pod" {
+		return &corev1.Pod{}
+	}
+	return &duckv1beta1.KResource{}
+}
+
+func checkResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) (bool, error) {
+	gr := getGenericResource(obj.TypeMeta)
+	untyped, err := GetGenericObject(dynamicClient, obj, gr)
+	return isResourceReady(untyped, err)
+}
+
+func checkResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) (bool, error) {
+	gr := getGenericResource(objList.TypeMeta)
+	untypeds, err := GetGenericObjectList(dynamicClient, objList, gr)
+	for _, untyped := range untypeds {
+		if isReady, err := isResourceReady(untyped, err); !isReady || err != nil {
+			return isReady, err
+		}
+	}
+	return true, nil
 }
 
 // isResourceReady leverage duck-type to check if the given obj is in ready state
@@ -72,26 +90,17 @@ func isResourceReady(obj runtime.Object, err error) (bool, error) {
 		// Return error to stop the polling.
 		return false, err
 	}
-	kr, iskresourceForReadiness := obj.(*kresourceForReadiness)
-	if !iskresourceForReadiness {
-		return false, fmt.Errorf("obj is not *kresourceForReadiness, actually %T", obj)
+
+	if pod, isPod := obj.(*corev1.Pod); isPod {
+		return isPodRunning(pod), nil
 	}
 
-	if isPod(kr) {
-		return isPodRunning(kr), nil
-	}
-
+	kr := obj.(*duckv1beta1.KResource)
 	ready := kr.Status.GetCondition(apis.ConditionReady)
 	return ready != nil && ready.IsTrue(), nil
 }
 
-func isPod(obj runtime.Object) bool {
-	apiVersion, kind := obj.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-	return apiVersion == "v1" && kind == "Pod"
-}
-
 // isPodRunning will check the status conditions of the pod and return true if it's Running or Succeeded.
-func isPodRunning(pod *kresourceForReadiness) bool {
-	return pod.Status.Phase == string(corev1.PodRunning) ||
-		pod.Status.Phase == string(corev1.PodSucceeded)
+func isPodRunning(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded
 }
