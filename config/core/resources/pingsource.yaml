@@ -170,6 +170,9 @@ spec:
     - name: Sink
       type: string
       jsonPath: .status.sinkUri
+    - name: Schedule
+      type: string
+      jsonPath: .spec.schedule
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
