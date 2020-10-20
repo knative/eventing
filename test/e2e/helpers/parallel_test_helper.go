@@ -77,7 +77,6 @@ func ParallelTestHelper(t *testing.T,
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 				recordevents.DeployEventRecordOrFail(
-					ctx,
 					client,
 					subPodName,
 					recordevents.ReplyWithAppendedData(subPodName),
@@ -187,7 +186,6 @@ func ParallelV1TestHelper(t *testing.T,
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 				recordevents.DeployEventRecordOrFail(
-					ctx,
 					client,
 					subPodName,
 					recordevents.ReplyWithAppendedData(subPodName),
