@@ -58,7 +58,7 @@ readonly EVENTING_POST_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-post-install-jo
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
 declare -A RELEASES
 RELEASES=(
-  [${EVENTING_YAML}]="${EVENTING_CORE_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL}"
+  [${EVENTING_YAML}]="${EVENTING_CORE_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 )
 readonly RELEASES
 # Flags for all ko commands
@@ -111,7 +111,7 @@ for yaml in "${!RELEASES[@]}"; do
   echo "" > ${yaml}
   for component in ${RELEASES[${yaml}]}; do
     echo "---" >> ${yaml}
-    echo "# ${component}" >> ${yaml}
+    echo "# ${component##*/}" >> ${yaml}
     cat ${component} >> ${yaml}
   done
 done

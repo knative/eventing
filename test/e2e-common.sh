@@ -148,10 +148,10 @@ function install_knative_eventing() {
   echo "Installing Knative Eventing from: ${kne_config}"
   if [[ "$1" == "HEAD" ]]; then
     build_knative_from_source
-    local EVENTING_RELEASE_NAME=${TMP_DIR}/${EVENTING_YAML##*/}
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_YAML} > ${EVENTING_RELEASE_NAME}
+    local EVENTING_CORE_NAME=${TMP_DIR}/${EVENTING_CORE_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_CORE_YAML} > ${EVENTING_CORE_NAME}
     kubectl apply \
-      -f "${EVENTING_RELEASE_NAME}" || return 1
+      -f "${EVENTING_CORE_NAME}" || return 1
   else
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
     # Download the latest release of Knative Eventing.
