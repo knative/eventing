@@ -74,7 +74,7 @@ func SequenceTestHelper(t *testing.T,
 			podName := config.podName
 			msgAppender := config.msgAppender
 			recordevents.DeployEventRecordOrFail(
-				ctx, client, podName,
+				client, podName,
 				recordevents.ReplyWithAppendedData(msgAppender),
 			)
 
@@ -189,7 +189,7 @@ func SequenceV1TestHelper(t *testing.T,
 			podName := config.podName
 			msgAppender := config.msgAppender
 			recordevents.DeployEventRecordOrFail(
-				ctx, client, podName,
+				client, podName,
 				recordevents.ReplyWithAppendedData(msgAppender),
 			)
 

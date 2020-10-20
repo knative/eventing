@@ -41,7 +41,7 @@ func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreat
 	brokerName := strings.ToLower(channel)
 
 	subscriberName := "dumper-empty"
-	recordevents.DeployEventRecordOrFail(context.TODO(), client, subscriberName)
+	recordevents.DeployEventRecordOrFail(client, subscriberName)
 
 	client.CreateTriggerOrFailV1Beta1("testtrigger",
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),

@@ -17,8 +17,6 @@ limitations under the License.
 package recordevents
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -92,7 +90,7 @@ func ReplyWithAppendedData(appendData string) EventRecordOption {
 }
 
 // DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
-func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
+func DeployEventRecordOrFail(client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
 	client.CreateServiceAccountOrFail(name)
 	client.CreateRoleOrFail(resources.Role(name,
 		resources.WithRuleForRole(&rbacv1.PolicyRule{
@@ -110,11 +108,11 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 
 	eventRecordPod := eventRecordPod(name, name)
 	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(name))...)
-	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
+	err := pkgtest.WaitForPodRunning(client.Kube, name, client.Namespace)
 	if err != nil {
 		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", name, errors.WithStack(err))
 	}
-	client.WaitForServiceEndpointsOrFail(ctx, name, 1)
+	client.WaitForServiceEndpointsOrFail(name, 1)
 	return eventRecordPod
 }
 
@@ -132,7 +130,7 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name:            imageName,
-				Image:           test.ImagePath(imageName),
+				Image:           pkgtest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
 				Env: []corev1.EnvVar{{
 					Name: "SYSTEM_NAMESPACE",

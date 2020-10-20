@@ -56,7 +56,7 @@ func NewFromEnv(ctx context.Context) recordevents.EventLog {
 }
 
 func NewEventLog(ctx context.Context, agentName string, podName string) recordevents.EventLog {
-	on, err := kubeclient.Get(ctx).CoreV1().Pods(system.Namespace()).Get(ctx, podName, metav1.GetOptions{})
+	on, err := kubeclient.Get(ctx).CoreV1().Pods(system.Namespace()).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Fatal("Error while trying to retrieve the pod", err)
 	}

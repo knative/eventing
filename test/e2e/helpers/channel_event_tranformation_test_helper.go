@@ -63,7 +63,6 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 		recordevents.DeployEventRecordOrFail(
-			ctx,
 			client,
 			transformationPodName,
 			recordevents.ReplyWithTransformedEvent(

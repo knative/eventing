@@ -67,11 +67,10 @@ func setupChannelTracingWithReply(
 	client.CreateChannelOrFail(replyChannelName, channel)
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
-	recordEventsPod := recordevents.DeployEventRecordOrFail(ctx, client, recordEventsPodName)
+	recordEventsPod := recordevents.DeployEventRecordOrFail(client, recordEventsPodName)
 
 	// Create the subscriber, a Pod that mutates the event.
 	transformerPod := recordevents.DeployEventRecordOrFail(
-		ctx,
 		client,
 		"transformer",
 		recordevents.ReplyWithTransformedEvent(

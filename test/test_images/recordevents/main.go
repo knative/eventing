@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -38,8 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error while reading the cfg", err)
 	}
-	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
-	ctx, _ := injection.EnableInjectionOrDie(nil, cfg)
+	ctx, _ := injection.Default.SetupInformers(context.TODO(), cfg)
 
 	if err := test_images.ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)

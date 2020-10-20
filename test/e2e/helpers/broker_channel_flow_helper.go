@@ -105,7 +105,6 @@ func BrokerChannelFlowWithTransformation(t *testing.T,
 
 		// create the transformation service for trigger1
 		recordevents.DeployEventRecordOrFail(
-			ctx,
 			client,
 			transformationPodName,
 			recordevents.ReplyWithTransformedEvent(

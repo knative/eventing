@@ -79,7 +79,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 		)
 
 		// Create a logger (EventRecord) Pod and a K8s Service that points to it.
-		_ = recordevents.DeployEventRecordOrFail(ctx, client, loggerPodName)
+		_ = recordevents.DeployEventRecordOrFail(client, loggerPodName)
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 		loggerTrigger := client.CreateTriggerOrFailV1Beta1(
@@ -92,7 +92,6 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 		// Create a transformer Pod (recordevents with transform reply) that replies with the same event as the input,
 		// except the reply's event's type is changed to bar.
 		eventTransformerPod := recordevents.DeployEventRecordOrFail(
-			ctx,
 			client,
 			"transformer",
 			recordevents.ReplyWithTransformedEvent(

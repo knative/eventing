@@ -71,7 +71,6 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 
 	// create the transformation service
 	recordevents.DeployEventRecordOrFail(
-		ctx,
 		client,
 		transformationPodName,
 		recordevents.ReplyWithTransformedEvent(
