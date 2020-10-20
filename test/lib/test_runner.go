@@ -194,7 +194,7 @@ func TearDown(client *Client) {
 		client.T.Logf("Could not list events in the namespace %q: %v", client.Namespace, err)
 	} else {
 		for _, e := range el.Items {
-			client.T.Logf("EVENT: %s", formatEvent(&e))
+			client.T.Log("EVENT: ", formatEvent(&e))
 		}
 	}
 
@@ -218,19 +218,19 @@ func formatEvent(e *corev1.Event) string {
 	return strings.Join([]string{`Event{`,
 		`ObjectMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", e.ObjectMeta), "ObjectMeta", "v1.ObjectMeta", 1), `&`, ``, 1),
 		`InvolvedObject:` + strings.Replace(strings.Replace(e.InvolvedObject.String(), "ObjectReference", "ObjectReference", 1), `&`, ``, 1),
-		`Reason:` + fmt.Sprintf("%v", e.Reason),
-		`Message:` + fmt.Sprintf("%v", e.Message),
+		`Reason:` + e.Reason,
+		`Message:` + e.Message,
 		`Source:` + strings.Replace(strings.Replace(e.Source.String(), "EventSource", "EventSource", 1), `&`, ``, 1),
 		`FirstTimestamp:` + e.FirstTimestamp.String(),
 		`LastTimestamp:` + e.LastTimestamp.String(),
-		`Count:` + fmt.Sprintf("%v", e.Count),
+		`Count:` + string(e.Count),
 		`Type:` + e.Type,
 		`EventTime:` + e.EventTime.String(),
 		`Series:` + strings.Replace(e.Series.String(), "EventSeries", "EventSeries", 1),
 		`Action:` + e.Action,
 		`Related:` + strings.Replace(e.Related.String(), "ObjectReference", "ObjectReference", 1),
-		`ReportingController:` + fmt.Sprintf("%v", e.ReportingController),
-		`ReportingInstance:` + fmt.Sprintf("%v", e.ReportingInstance),
+		`ReportingController:` + e.ReportingController,
+		`ReportingInstance:` + e.ReportingInstance,
 		`}`,
 	}, "\n")
 }
