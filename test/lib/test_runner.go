@@ -194,7 +194,7 @@ func TearDown(client *Client) {
 		client.T.Logf("Could not list events in the namespace %q: %v", client.Namespace, err)
 	} else {
 		for _, e := range el.Items {
-			client.T.Log("EVENT: ", formatEvent(&e))
+			client.T.Log(formatEvent(&e))
 		}
 	}
 
