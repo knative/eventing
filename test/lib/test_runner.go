@@ -216,7 +216,7 @@ func TearDown(client *Client) {
 
 func formatEvent(e *corev1.Event) string {
 	return strings.Join([]string{`Event{`,
-		`ObjectMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", e.ObjectMeta), "ObjectMeta", "v1.ObjectMeta", 1), `&`, ``, 1),
+		`ObjectMeta:` + strings.Replace(strings.Replace(e.ObjectMeta.String(), "ObjectMeta", "v1.ObjectMeta", 1), `&`, ``, 1),
 		`InvolvedObject:` + strings.Replace(strings.Replace(e.InvolvedObject.String(), "ObjectReference", "ObjectReference", 1), `&`, ``, 1),
 		`Reason:` + e.Reason,
 		`Message:` + e.Message,
