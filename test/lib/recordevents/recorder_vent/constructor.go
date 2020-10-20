@@ -22,8 +22,6 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
-	"knative.dev/pkg/system"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -39,9 +37,10 @@ import (
 )
 
 type envConfig struct {
-	AgentName string `envconfig:"AGENT_NAME" default:"observer-default" required:"true"`
-	PodName   string `envconfig:"POD_NAME" required:"true"`
-	Port      int    `envconfig:"PORT" default:"8080" required:"true"`
+	AgentName    string `envconfig:"AGENT_NAME" default:"observer-default" required:"true"`
+	PodName      string `envconfig:"POD_NAME" required:"true"`
+	PodNamespace string `envconfig:"POD_NAMESPACE" required:"true"`
+	Port         int    `envconfig:"PORT" default:"8080" required:"true"`
 }
 
 func NewFromEnv(ctx context.Context) recordevents.EventLog {
@@ -52,21 +51,21 @@ func NewFromEnv(ctx context.Context) recordevents.EventLog {
 
 	logging.FromContext(ctx).Infof("Recorder vent environment configuration: %+v", env)
 
-	return NewEventLog(ctx, env.AgentName, env.PodName)
+	return NewEventLog(ctx, env.AgentName, env.PodName, env.PodNamespace)
 }
 
-func NewEventLog(ctx context.Context, agentName string, podName string) recordevents.EventLog {
-	on, err := kubeclient.Get(ctx).CoreV1().Pods(system.Namespace()).Get(podName, metav1.GetOptions{})
+func NewEventLog(ctx context.Context, agentName string, podName string, podNamespace string) recordevents.EventLog {
+	on, err := kubeclient.Get(ctx).CoreV1().Pods(podNamespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Fatal("Error while trying to retrieve the pod", err)
 	}
 
 	logging.FromContext(ctx).Infof("Going to send events to pod '%s' in namespace '%s'", on.Name, on.Namespace)
 
-	return &recorder{out: createRecorder(ctx, agentName), on: on}
+	return &recorder{out: createRecorder(ctx, agentName, podNamespace), on: on}
 }
 
-func createRecorder(ctx context.Context, agentName string) record.EventRecorder {
+func createRecorder(ctx context.Context, agentName string, namespace string) record.EventRecorder {
 	logger := logging.FromContext(ctx)
 
 	recorder := controller.GetEventRecorder(ctx)
@@ -91,7 +90,7 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
 			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events(system.Namespace())},
+				&v1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events(namespace)},
 			),
 		}
 		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: agentName})

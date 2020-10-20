@@ -106,7 +106,7 @@ func DeployEventRecordOrFail(client *testlib.Client, name string, options ...Eve
 	))
 	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
 
-	eventRecordPod := eventRecordPod(name, name)
+	eventRecordPod := recordEventsPod("recordevents", name, name, client.Namespace)
 	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(name))...)
 	err := pkgtest.WaitForPodRunning(client.Kube, name, client.Namespace)
 	if err != nil {
@@ -116,12 +116,7 @@ func DeployEventRecordOrFail(client *testlib.Client, name string, options ...Eve
 	return eventRecordPod
 }
 
-// eventRecordPod creates a Pod that stores received events for test retrieval.
-func eventRecordPod(name string, serviceAccountName string) *corev1.Pod {
-	return recordEventsPod("recordevents", name, serviceAccountName)
-}
-
-func recordEventsPod(imageName string, name string, serviceAccountName string) *corev1.Pod {
+func recordEventsPod(imageName string, name string, serviceAccountName string, namespace string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -137,6 +132,9 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 					ValueFrom: &corev1.EnvVarSource{
 						FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 					},
+				}, {
+					Name:  "POD_NAMESPACE",
+					Value: namespace,
 				}, {
 					Name:  "OBSERVER",
 					Value: "recorder-" + name,
