@@ -14,6 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package channel is a placeholder that allows us to pull in config files
+// Package deployments is a placeholder that allows us to pull in config files
 // via go mod vendor.
-package channel
+package deployments
