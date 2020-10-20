@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sequencestepper
+spec:
+  containers:
+    - name: sequencestepper
+      image: ko://knative.dev/eventing/test/test_images/sequencestepper
+
