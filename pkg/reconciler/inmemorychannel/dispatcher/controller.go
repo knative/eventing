@@ -20,6 +20,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/kelseyhightower/envconfig"
+	"knative.dev/pkg/kmeta"
+
 	"knative.dev/pkg/logging"
 
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
@@ -47,6 +51,12 @@ const (
 	port         = 8080
 )
 
+type envConfig struct {
+	// TODO: change this environment variable to something like "PodGroupName".
+	PodName       string `envconfig:"POD_NAME" required:"true"`
+	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
+}
+
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
@@ -60,8 +70,15 @@ func NewController(
 	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
 		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatalw("Failed to process env var", zap.Error(err))
+	}
 
-	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()))
+	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
+
+	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()), reporter)
+
 	if err != nil {
 		logger.Fatalw("Error creating swappable.MessageHandler", zap.Error(err))
 	}

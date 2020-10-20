@@ -56,12 +56,12 @@ type MessageHandler struct {
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config) (*MessageHandler, error) {
+func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
 	handlers := make(map[string]*fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler, err := fanout.NewMessageHandler(logger, messageDispatcher, cc.FanoutConfig)
+		handler, err := fanout.NewMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter)
 		if err != nil {
 			logger.Error("Failed creating new fanout handler.", zap.Error(err))
 			return nil, err
@@ -98,8 +98,8 @@ func ignoreCheckRetryAndBackFunctions() cmp.Option {
 
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
 // new Handler uses conf, rather than copying the existing Handler's config.
-func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, conf Config) (*MessageHandler, error) {
-	return NewMessageHandler(ctx, h.logger, channel.NewMessageDispatcherFromConfig(h.logger, dispatcherConfig), conf)
+func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
+	return NewMessageHandler(ctx, h.logger, channel.NewMessageDispatcherFromConfig(h.logger, dispatcherConfig), conf, reporter)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the
