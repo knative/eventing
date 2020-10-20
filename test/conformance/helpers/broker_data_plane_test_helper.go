@@ -316,7 +316,7 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 		source := "origin-for-reply"
 		event.SetSource(source)
 		msg := []byte(`{"msg":"Transformed!"}`)
-		transformPod := recordevents.DeployEventRecordOrFail(
+		recordevents.DeployEventRecordOrFail(
 			client,
 			"transformer-pod",
 			recordevents.ReplyWithTransformedEvent(
@@ -325,7 +325,6 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 				string(msg),
 			),
 		)
-		client.CreatePodOrFail(transformPod, testlib.WithService("transformer-pod"))
 		client.WaitForServiceEndpointsOrFail("transformer-pod", 1)
 		transformTrigger := client.CreateTriggerOrFailV1Beta1(
 			"transform-trigger",
