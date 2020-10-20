@@ -52,13 +52,13 @@ readonly EVENTING_CORE_YAML=${YAML_OUTPUT_DIR}/"eventing-core.yaml"
 readonly EVENTING_CRDS_YAML=${YAML_OUTPUT_DIR}/"eventing-crds.yaml"
 readonly EVENTING_SUGAR_CONTROLLER_YAML=${YAML_OUTPUT_DIR}/"eventing-sugar-controller.yaml"
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
-readonly EVENTING_IN_MEMORY_CHANNEL=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
-readonly EVENTING_PRE_INSTALL=${YAML_OUTPUT_DIR}/"eventing-pre-install-jobs.yaml"
-readonly EVENTING_POST_INSTALL=${YAML_OUTPUT_DIR}/"eventing-post-install-jobs.yaml"
-readonly EVENTING=${YAML_OUTPUT_DIR}"/eventing.yaml"
+readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
+readonly EVENTING_PRE_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-pre-install-jobs.yaml"
+readonly EVENTING_POST_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-post-install-jobs.yaml"
+readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
 declare -A RELEASES
 RELEASES=(
-  [${EVENTING}]="${EVENTING_CORE_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL}"
+  [${EVENTING_YAML}]="${EVENTING_CORE_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL}"
 )
 readonly RELEASES
 # Flags for all ko commands
@@ -92,18 +92,18 @@ ko resolve ${KO_FLAGS} -f config/sugar/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_S
 ko resolve ${KO_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_MT_CHANNEL_BROKER_YAML}"
 
 # Create in memory channel yaml
-ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL}"
+ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
 # Create v0.18.0 pre-install job yaml. Upgrades some resources' storage versions.
-ko resolve ${KO_FLAGS} -f config/pre-install/v0.18.0/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_PRE_INSTALL}"
+ko resolve ${KO_FLAGS} -f config/pre-install/v0.18.0/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_PRE_INSTALL_YAML}"
 
-all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL} ${EVENTING_PRE_INSTALL} ${EVENTING})
+all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_PRE_INSTALL_YAML} ${EVENTING})
 
   # # Template for POST_INSTALL usage:
   # # Create vX.Y.Z post-install job yaml.
-  # ko resolve ${KO_FLAGS} -f config/post-install/vX.Y.Z/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL}"
-  # # If used, add  ${POST_INSTALL} to all_yamls,
-  # all_yamls+=(${POST_INSTALL})
+  # ko resolve ${KO_FLAGS} -f config/post-install/vX.Y.Z/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_YAML}"
+  # # If used, add  ${EVENTING_POST_INSTALL_YAML} to all_yamls,
+  # all_yamls+=(${EVENTING_POST_INSTALL_YAML})
 
 # Assemble the release
 for yaml in "${!RELEASES[@]}"; do

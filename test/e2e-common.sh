@@ -84,7 +84,7 @@ UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
-  install_knative_eventing
+  install_knative_eventing "HEAD"
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"
 
@@ -115,10 +115,30 @@ function start_knative_eventing_monitoring() {
   wait_until_pods_running knative-eventing || return 1
 }
 
+# Create all manifests required to install Knative Eventing.
+# This will build everything from the current source.
+# All generated YAMLs will be available and pointed by the corresponding
+# environment variables as set in /hack/generate-yamls.sh.
+function build_knative_from_source() {
+  local YAML_LIST="$(mktemp)"
+
+  # Generate manifests, capture environment variables pointing to the YAML files.
+  local FULL_OUTPUT="$( \
+      source $(dirname $0)/../hack/generate-yamls.sh ${REPO_ROOT_DIR} ${YAML_LIST} ; \
+      set | grep _YAML=/)"
+  local LOG_OUTPUT="$(echo "${FULL_OUTPUT}" | grep -v _YAML=/)"
+  local ENV_OUTPUT="$(echo "${FULL_OUTPUT}" | grep '^[_0-9A-Z]\+_YAML=/')"
+  [[ -z "${LOG_OUTPUT}" || -z "${ENV_OUTPUT}" ]] && fail_test "Error generating manifests"
+  # Only import the environment variables pointing to the YAML files.
+  echo "${LOG_OUTPUT}"
+  echo -e "Generated manifests:\n${ENV_OUTPUT}"
+  eval "${ENV_OUTPUT}"
+}
+
 # This installs everything from the config dir but then removes the Channel Based Broker.
 # TODO: This should only install the core.
 # Args:
-#  - $1 - if passed, it will be used as eventing config directory
+# Parameters: $1 - Knative Eventing version "HEAD" or "latest-release".
 function install_knative_eventing() {
   echo ">> Creating ${SYSTEM_NAMESPACE} namespace if it does not exist"
   kubectl get ns ${SYSTEM_NAMESPACE} || kubectl create namespace ${SYSTEM_NAMESPACE}
@@ -126,16 +146,17 @@ function install_knative_eventing() {
   kne_config="${1:-${EVENTING_CONFIG}}"
   # Install Knative Eventing in the current cluster.
   echo "Installing Knative Eventing from: ${kne_config}"
-  if [ -d "${kne_config}" ]; then
-    local TMP_CONFIG_DIR=${TMP_DIR}/config
-    mkdir -p ${TMP_CONFIG_DIR}
-    cp -r ${kne_config}/* ${TMP_CONFIG_DIR}
-    find ${TMP_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
-    ko apply --strict -f "${TMP_CONFIG_DIR}" || return $?
+  if [[ "$1" == "HEAD" ]]; then
+    build_knative_from_source
+    local EVENTING_RELEASE_NAME=${TMP_DIR}/${EVENTING_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_YAML} > ${EVENTING_RELEASE_NAME}
+    kubectl apply \
+      -f "${EVENTING_RELEASE_NAME}" || return 1
   else
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
     # Download the latest release of Knative Eventing.
-    wget "${kne_config}" -O "${EVENTING_RELEASE_YAML}" \
+    local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
+    wget "${url}/eventing.yaml" -O "${EVENTING_RELEASE_YAML}" \
       || fail_test "Unable to download latest knative/eventing file."
 
     # Replace the default system namespace with the test's system namespace.
@@ -176,17 +197,15 @@ function install_knative_eventing() {
 function install_head {
   # Install Knative Eventing from HEAD in the current cluster.
   echo ">> Installing Knative Eventing from HEAD"
-  install_knative_eventing || \
+  install_knative_eventing "HEAD" || \
     fail_test "Knative HEAD installation failed"
 }
 
 function install_latest_release() {
   header ">> Installing Knative Eventing latest public release"
-  local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
-  local yaml="eventing.yaml"
 
   install_knative_eventing \
-    "${url}/${yaml}" || \
+    "latest-release" || \
     fail_test "Knative latest release installation failed"
 }
 
