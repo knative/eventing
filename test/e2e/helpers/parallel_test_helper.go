@@ -71,8 +71,11 @@ func ParallelTestHelper(t *testing.T,
 			for branchNumber, cse := range tc.branchesConfig {
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
-				filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
-				client.CreatePodOrFail(filterPod, testlib.WithService(filterPodName))
+				if cse.filter {
+					recordevents.DeployEventRecordOrFail(client, filterPodName)
+				} else {
+					recordevents.DeployEventRecordOrFail(client, filterPodName, recordevents.EchoEvent)
+				}
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
@@ -180,8 +183,11 @@ func ParallelV1TestHelper(t *testing.T,
 			for branchNumber, cse := range tc.branchesConfig {
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
-				filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
-				client.CreatePodOrFail(filterPod, testlib.WithService(filterPodName))
+				if cse.filter {
+					recordevents.DeployEventRecordOrFail(client, filterPodName)
+				} else {
+					recordevents.DeployEventRecordOrFail(client, filterPodName, recordevents.EchoEvent)
+				}
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
