@@ -76,8 +76,12 @@ func ParallelTestHelper(t *testing.T,
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
-				subPod := resources.SequenceStepperPod(subPodName, subPodName)
-				client.CreatePodOrFail(subPod, testlib.WithService(subPodName))
+				recordevents.DeployEventRecordOrFail(
+					ctx,
+					client,
+					subPodName,
+					recordevents.ReplyWithAppendedData(subPodName),
+				)
 
 				parallelBranches[branchNumber] = v1beta1.ParallelBranch{
 					Filter: &duckv1.Destination{
@@ -182,8 +186,12 @@ func ParallelV1TestHelper(t *testing.T,
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
-				subPod := resources.SequenceStepperPod(subPodName, subPodName)
-				client.CreatePodOrFail(subPod, testlib.WithService(subPodName))
+				recordevents.DeployEventRecordOrFail(
+					ctx,
+					client,
+					subPodName,
+					recordevents.ReplyWithAppendedData(subPodName),
+				)
 
 				parallelBranches[branchNumber] = flowsv1.ParallelBranch{
 					Filter: &duckv1.Destination{
