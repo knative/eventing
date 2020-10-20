@@ -62,13 +62,15 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		if err := eventAfterTransformation.SetData(cloudevents.ApplicationJSON, []byte(transformedEventBody)); err != nil {
 			t.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
-		transformationPod := resources.EventTransformationPod(
+		recordevents.DeployEventRecordOrFail(
+			client,
 			transformationPodName,
-			eventAfterTransformation.Type(),
-			eventAfterTransformation.Source(),
-			eventAfterTransformation.Data(),
+			recordevents.ReplyWithTransformedEvent(
+				eventAfterTransformation.Type(),
+				eventAfterTransformation.Source(),
+				string(eventAfterTransformation.Data()),
+			),
 		)
-		client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)

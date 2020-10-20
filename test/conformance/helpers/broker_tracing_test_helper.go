@@ -29,6 +29,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/lib/sender"
 )
@@ -78,8 +79,7 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 		)
 
 		// Create a logger (EventRecord) Pod and a K8s Service that points to it.
-		logPod := resources.EventRecordPod(loggerPodName)
-		client.CreatePodOrFail(logPod, testlib.WithService(loggerPodName))
+		_ = recordevents.DeployEventRecordOrFail(client, loggerPodName)
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 		loggerTrigger := client.CreateTriggerOrFailV1Beta1(
@@ -89,15 +89,17 @@ func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName),
 		)
 
-		// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
+		// Create a transformer Pod (recordevents with transform reply) that replies with the same event as the input,
 		// except the reply's event's type is changed to bar.
-		eventTransformerPod := resources.EventTransformationPod(
+		eventTransformerPod := recordevents.DeployEventRecordOrFail(
+			client,
 			"transformer",
-			etLogger,
-			senderName,
-			[]byte(eventBody),
+			recordevents.ReplyWithTransformedEvent(
+				etLogger,
+				senderName,
+				eventBody,
+			),
 		)
-		client.CreatePodOrFail(eventTransformerPod, testlib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
 		transformerTrigger := client.CreateTriggerOrFailV1Beta1(

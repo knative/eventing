@@ -70,13 +70,15 @@ func EventTransformationForTriggerTestHelper(t *testing.T,
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 	// create the transformation service
-	transformationPod := resources.EventTransformationPod(
+	recordevents.DeployEventRecordOrFail(
+		client,
 		transformationPodName,
-		transformedEventType,
-		transformedEventSource,
-		[]byte(transformedBody),
+		recordevents.ReplyWithTransformedEvent(
+			transformedEventType,
+			transformedEventSource,
+			transformedBody,
+		),
 	)
-	client.CreatePodOrFail(transformationPod, testlib.WithService(transformationPodName))
 
 	// create trigger1 for event transformation
 	if triggerVersion == "v1" {
