@@ -74,7 +74,7 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1beta1.PingSource) cron.Ent
 	event := cloudevents.NewEvent()
 	event.SetType(sourcesv1beta1.PingSourceEventType)
 	event.SetSource(sourcesv1beta1.PingSourceSource(source.Namespace, source.Name))
-	event.SetData(cloudevents.ApplicationJSON, message(source.Spec.JsonData))
+	event.SetData(cloudevents.ApplicationJSON, makeMessage(source.Spec.JsonData))
 	if source.Spec.CloudEventOverrides != nil && source.Spec.CloudEventOverrides.Extensions != nil {
 		for key, override := range source.Spec.CloudEventOverrides.Extensions {
 			event.SetExtension(key, override)
@@ -114,7 +114,7 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) {
 func (a *cronJobsRunner) Stop() {
 	ctx := a.cron.Stop() // no more ticks
 	if ctx != nil {
-		// wait for all jobs to be done.
+		// Wait for all jobs to be done.
 		<-ctx.Done()
 	}
 }
@@ -123,11 +123,12 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 	return func() {
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
-		defer a.Logger.Debug("finished sending cloudevent id: ", event.ID())
+		defer a.Logger.Debug("Finished sending cloudevent id: ", event.ID())
 		target := cecontext.TargetFrom(ctx).String()
 		source := event.Context.GetSource()
-		// nolint:gosec // Cryptographic randomness not necessary here.
-		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) // provide a delay so not all ping fired instantaneously distribute load on resources.
+
+		// Provide a delay so not all ping fired instantaneously distribute load on resources.
+		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) //nolint:gosec // Cryptographic randomness not necessary here.
 
 		a.Logger.Debugf("sending cloudevent id: %s, source: %s, target: %s", event.ID(), source, target)
 
@@ -136,20 +137,19 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 			a.Logger.Error("failed to send cloudevent result: ", zap.Any("result", result),
 				zap.String("source", source), zap.String("target", target), zap.String("id", event.ID()))
 		}
-
 	}
 }
 
-type Message struct {
+type message struct {
 	Body string `json:"body"`
 }
 
-func message(body string) interface{} {
+func makeMessage(body string) interface{} {
 	// try to marshal the body into an interface.
 	var objmap map[string]*json.RawMessage
 	if err := json.Unmarshal([]byte(body), &objmap); err != nil {
-		// default to a wrapped message.
-		return Message{Body: body}
+		// Default to a wrapped message.
+		return message{Body: body}
 	}
 	return objmap
 }
