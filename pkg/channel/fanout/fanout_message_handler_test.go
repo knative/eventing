@@ -19,6 +19,11 @@ package fanout
 import (
 	"context"
 	"errors"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/kncloudevents"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -42,6 +47,54 @@ var (
 	replaceSubscriber = apis.HTTP("replaceSubscriber").URL()
 	replaceReplier    = apis.HTTP("replaceReplier").URL()
 )
+
+func TestSubscriberSpecToFanoutConfig(t *testing.T) {
+	three := int32(3)
+	linear := eventingduckv1.BackoffPolicyLinear
+	delay := "PT1S"
+	spec := &eventingduckv1.SubscriberSpec{
+		SubscriberURI: apis.HTTP("subscriber.example.com"),
+		ReplyURI:      apis.HTTP("reply.example.com"),
+		Delivery: &eventingduckv1.DeliverySpec{
+			DeadLetterSink: &pkgduckv1.Destination{
+				Ref: &pkgduckv1.KReference{
+					Kind:       "mykind",
+					Namespace:  "mynamespace",
+					Name:       "myname",
+					APIVersion: "myapiversion",
+				},
+				URI: apis.HTTP("dls.example.com"),
+			},
+			Retry:         &three,
+			BackoffPolicy: &linear,
+			BackoffDelay:  &delay,
+		},
+	}
+	want := Subscription{
+		Subscriber: apis.HTTP("subscriber.example.com").URL(),
+		Reply:      apis.HTTP("reply.example.com").URL(),
+		DeadLetter: apis.HTTP("dls.example.com").URL(),
+		RetryConfig: &kncloudevents.RetryConfig{
+			RetryMax: 3,
+		},
+	}
+	got, err := SubscriberSpecToFanoutConfig(*spec)
+	if err != nil {
+		t.Error("Failed to convers using SubscriberSpecToFanoutConfig:", err)
+	}
+	if diff := cmp.Diff(&want, got, cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
+		t.Error("Unexpected diff", diff)
+	}
+}
+
+func TestGetSetSubscriptions(t *testing.T) {
+	h := &FanoutMessageHandler{subscriptions: make([]Subscription, 0)}
+	subs := h.GetSubscriptions(context.TODO())
+	if len(subs) != 0 {
+		t.Errorf("Wanted 0 subs, got %d", len(subs))
+	}
+	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}})
+}
 
 func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {

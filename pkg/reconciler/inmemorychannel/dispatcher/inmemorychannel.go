@@ -34,6 +34,8 @@ import (
 type Reconciler struct {
 	eventDispatcherConfigStore *channel.EventDispatcherConfigStore
 	dispatcher                 inmemorychannel.MessageDispatcher
+	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
+	reporter                   channel.StatsReporter
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
@@ -50,21 +52,20 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return nil
 	}
 	// First grab the MultiChannelFanoutMessage handler
-	multiHandler := r.dispatcher.GetHandler(ctx)
-	handler := multiHandler.GetChannelHandler(config.HostName)
+	handler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
 	if handler == nil {
 		// No handler yet, create one.
-		fanoutHandler, err := fanout.NewFanoutMessageHandler(logging.FromContext(ctx).Desugar(), channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()), config.FanoutConfig)
+		fanoutHandler, err := fanout.NewFanoutMessageHandler(logging.FromContext(ctx).Desugar(), channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()), config.FanoutConfig, r.reporter)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
 			return err
 		}
-		multiHandler.SetChannelHandler(config.HostName, fanoutHandler)
+		r.multiChannelMessageHandler.SetChannelHandler(config.HostName, fanoutHandler)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := handler.GetSubscriptions(ctx)
 		for _, s := range haveSubs {
-			logging.FromContext(ctx).Info("Have subscription", zap.String("have",s.String()))
+			logging.FromContext(ctx).Info("Have subscription", zap.String("have", s.String()))
 		}
 		for _, s := range config.FanoutConfig.Subscriptions {
 			logging.FromContext(ctx).Info("Want subscription", zap.String("want", s.String()))
@@ -85,8 +86,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) 
 		return err
 	}
 	logging.FromContext(ctx).Info("Removing dispatcher")
-	multiHandler := r.dispatcher.GetHandler(ctx)
-	multiHandler.DeleteChannelHandler(config.HostName)
+	r.multiChannelMessageHandler.DeleteChannelHandler(config.HostName)
 	return nil
 }
 

@@ -17,7 +17,10 @@ limitations under the License.
 package dispatcher
 
 import (
+	"os"
 	"testing"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"

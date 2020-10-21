@@ -57,8 +57,7 @@ func (s Subscription) String() string {
 
 // Config for a fanout.MessageHandler.
 type Config struct {
-	subscriptionsMutex sync.RWMutex
-	Subscriptions      []Subscription `json:"subscriptions"`
+	Subscriptions []Subscription `json:"subscriptions"`
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
@@ -76,7 +75,12 @@ type MessageHandler interface {
 
 // MessageHandler is a http.Handler that takes a single request in and fans it out to N other servers.
 type FanoutMessageHandler struct {
-	config Config
+	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
+	// It is expected to be false when used as a sidecar.
+	asyncHandler bool
+
+	subscriptionsMutex sync.RWMutex
+	subscriptions      []Subscription
 
 	receiver   *channel.MessageReceiver
 	dispatcher channel.MessageDispatcher
@@ -93,11 +97,15 @@ type FanoutMessageHandler struct {
 
 func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter) (*FanoutMessageHandler, error) {
 	handler := &FanoutMessageHandler{
-		logger:     logger,
-		config:     config,
-		dispatcher: messageDispatcher,
-		timeout:    defaultTimeout,
-		reporter:   reporter,
+		logger:       logger,
+		dispatcher:   messageDispatcher,
+		timeout:      defaultTimeout,
+		reporter:     reporter,
+		asyncHandler: config.AsyncHandler,
+	}
+	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
+	for i := range config.Subscriptions {
+		handler.subscriptions[i] = config.Subscriptions[i]
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -123,6 +131,7 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 
 	var deadLetter *url.URL
 	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+		// TODO: Bug, this does not seem to support refing the Ref field.
 		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 
@@ -139,27 +148,27 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 }
 
 func (f *FanoutMessageHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {
-	f.config.subscriptionsMutex.Lock()
-	defer f.config.subscriptionsMutex.Unlock()
+	f.subscriptionsMutex.Lock()
+	defer f.subscriptionsMutex.Unlock()
 	s := make([]Subscription, len(subs))
 	for i := range subs {
 		s = append(s, subs[i])
 	}
-	f.config.Subscriptions = s
+	f.subscriptions = s
 }
 
 func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscription {
-	f.config.subscriptionsMutex.RLock()
-	defer f.config.subscriptionsMutex.RUnlock()
-	ret := make([]Subscription, len(f.config.Subscriptions))
-	for i := range f.config.Subscriptions {
-		ret = append(ret, f.config.Subscriptions[i])
+	f.subscriptionsMutex.RLock()
+	defer f.subscriptionsMutex.RUnlock()
+	ret := make([]Subscription, len(f.subscriptions))
+	for i := range f.subscriptions {
+		ret = append(ret, f.subscriptions[i])
 	}
 	return ret
 }
 
 func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error {
-	if f.config.AsyncHandler {
+	if f.asyncHandler {
 		return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
 			subs := f.GetSubscriptions(ctx)
 
@@ -244,7 +253,7 @@ func parseFanoutResultAndReportMetrics(result dispatchResult, reporter channel.S
 	return err
 }
 
-// dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
+// dispatch takes the event, fans it out to each subscription in subs. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
 func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, bufferedMessage binding.Message, additionalHeaders nethttp.Header) dispatchResult {
 	// Bind the lifecycle of the buffered message to the number of subs

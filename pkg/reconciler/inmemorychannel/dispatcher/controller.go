@@ -18,6 +18,9 @@ package dispatcher
 
 import (
 	"context"
+	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/pkg/injection"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,15 +41,14 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/channel"
-	"knative.dev/eventing/pkg/channel/swappable"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
 )
 
 const (
-	readTimeout  = 15 * time.Minute
-	writeTimeout = 15 * time.Minute
-	port         = 8080
+	readTimeout   = 15 * time.Minute
+	writeTimeout  = 15 * time.Minute
+	port          = 8080
 	finalizerName = "imc-dispatcher"
 )
 
@@ -76,11 +78,7 @@ func NewController(
 
 	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
-	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()), reporter)
-
-	if err != nil {
-		logger.Fatalw("Error creating swappable.MessageHandler", zap.Error(err))
-	}
+	sh := multichannelfanout.NewMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()), reporter)
 
 	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         port,
@@ -95,7 +93,9 @@ func NewController(
 	informer := inmemorychannelInformer.Informer()
 
 	r := &Reconciler{
-		dispatcher:              inMemoryDispatcher,
+		dispatcher:                 inMemoryDispatcher,
+		multiChannelMessageHandler: sh,
+		reporter:                   reporter,
 	}
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
@@ -114,7 +114,11 @@ func NewController(
 	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	// Watch for inmemory channels.
-	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	inmemorychannelInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
+			Handler:    controller.HandleAll(impl.Enqueue),
+		})
 
 	// Start the dispatcher.
 	go func() {

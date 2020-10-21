@@ -28,17 +28,12 @@ package multichannelfanout
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"reflect"
-	"sync"
-	"time"
-
-	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"net/http"
+	"sync"
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
-	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 type MultiChannelMessageHandler interface {
@@ -58,17 +53,23 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 // on, and then delegates handling of that request to the single fanout.FanoutMessageHandler corresponding to
 // that Channel.
 type MessageHandler struct {
-	logger   *zap.Logger
+	logger       *zap.Logger
 	handlersLock sync.RWMutex
-	handlers map[string]fanout.MessageHandler
-	config   Config
+	handlers     map[string]fanout.MessageHandler
 }
 
 // NewHandler creates a new Handler.
+func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, reporter channel.StatsReporter) *MessageHandler {
+	return &MessageHandler{
+		logger:   logger,
+		handlers: make(map[string]fanout.MessageHandler),
+	}
+}
 
-func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
+// NewMessageHandlerWithConfig creates a new Handler with the specified configuration. This is really meant for tests
+// where you want to apply a fully specified configuration for tests. Reconciler operates on single channel at a time.
+func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
 	handlers := make(map[string]fanout.MessageHandler, len(conf.ChannelConfigs))
-
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
@@ -83,10 +84,8 @@ func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher 
 		}
 		handlers[key] = handler
 	}
-
 	return &MessageHandler{
 		logger:   logger,
-		config:   conf,
 		handlers: handlers,
 	}, nil
 }
@@ -107,29 +106,6 @@ func (h *MessageHandler) GetChannelHandler(host string) fanout.MessageHandler {
 	h.handlersLock.RLock()
 	defer h.handlersLock.RUnlock()
 	return h.handlers[host]
-}
-
-
-// ConfigDiffs diffs the new config with the existing config. If there are no differences, then the
-// empty string is returned. If there are differences, then a non-empty string is returned
-// describing the differences.
-func (h *MessageHandler) ConfigDiff(updated Config) string {
-	return cmp.Diff(h.config, updated, ignoreCheckRetryAndBackFunctions())
-}
-
-func ignoreCheckRetryAndBackFunctions() cmp.Option {
-	return cmp.FilterPath(func(path cmp.Path) bool {
-		// is of type kncloudevents.Backoff?
-		return path.Last().Type().Kind() == reflect.TypeOf(kncloudevents.Backoff(func(attemptNum int, resp *http.Response) time.Duration { return 0 })).Kind() ||
-			// is of type kncloudevents.CheckRetry?
-			path.Last().Type().Kind() == reflect.TypeOf(kncloudevents.CheckRetry(func(ctx context.Context, resp *http.Response, err error) (bool, error) { return false, nil })).Kind()
-	}, cmp.Ignore())
-}
-
-// CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
-// new Handler uses conf, rather than copying the existing Handler's config.
-func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
-	return NewMessageHandler(ctx, h.logger, channel.NewMessageDispatcherFromConfig(h.logger, dispatcherConfig), conf, reporter)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the
