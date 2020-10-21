@@ -88,7 +88,7 @@ func TestTriggerValidation(t *testing.T) {
 			}},
 		want: &apis.FieldError{
 			Paths:   []string{dependencyAnnotationPath},
-			Message: "The provided annotation was not a corev1.ObjectReference: \"invalid dependency annotation\"",
+			Message: `The provided annotation was not a corev1.ObjectReference: "invalid dependency annotation"`,
 			Details: "invalid character 'i' looking for beginning of value",
 		},
 	}, {
@@ -97,7 +97,7 @@ func TestTriggerValidation(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: "test-ns-1",
 				Annotations: map[string]string{
-					DependencyAnnotation: "{\"kind\":\"PingSource\",\"namespace\":\"test-ns-2\", \"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
+					DependencyAnnotation: `{"kind":"PingSource","namespace":"test-ns-2", "name":"test-ping-source","apiVersion":"sources.knative.dev/v1alpha1"}`,
 				}},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
@@ -106,7 +106,7 @@ func TestTriggerValidation(t *testing.T) {
 			}},
 		want: &apis.FieldError{
 			Paths:   []string{dependencyAnnotationPath + "." + "namespace"},
-			Message: "Namespace must be empty or equal to the trigger namespace \"test-ns-1\"",
+			Message: `Namespace must be empty or equal to the trigger namespace "test-ns-1"`,
 		},
 	},
 		{
@@ -115,7 +115,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: "{\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
+						DependencyAnnotation: `{"name":"test-ping-source","apiVersion":"sources.knative.dev/v1alpha1"}`,
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
@@ -132,7 +132,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: "{\"kind\":\"PingSource\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
+						DependencyAnnotation: `{"kind":"PingSource","apiVersion":"sources.knative.dev/v1alpha1"}`,
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
@@ -149,7 +149,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\"}",
+						DependencyAnnotation: `{"kind":"CronJobSource","name":"test-cronjob-source"}`,
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
@@ -212,7 +212,7 @@ func TestTriggerValidation(t *testing.T) {
 				}},
 			want: &apis.FieldError{
 				Paths:   []string{injectionAnnotationPath},
-				Message: "The provided injection annotation value can only be \"enabled\" or \"disabled\", not \"wut\"",
+				Message: `The provided injection annotation value can only be "enabled" or "disabled", not "wut"`,
 			},
 		},
 	}
@@ -277,7 +277,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{
-			Message: "Invalid attribute name: \"0invalid\"",
+			Message: `Invalid attribute name: "0invalid"`,
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
@@ -292,7 +292,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{
-			Message: "Invalid attribute name: \"invALID\"",
+			Message: `Invalid attribute name: "invALID"`,
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
@@ -348,7 +348,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.ts.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: Validate TriggerSpec (-want, +got) = %v", test.name, diff)
+				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
 			}
 		})
 	}

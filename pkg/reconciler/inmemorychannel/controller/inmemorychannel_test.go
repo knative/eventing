@@ -286,7 +286,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelDeploymentReady(),
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
-					WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", "Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
+					WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", `Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: "test-imc-kn-channel"`),
 				),
 			}},
 			WantEvents: []string{

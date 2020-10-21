@@ -322,7 +322,7 @@ func makeCloudEvent() cloudevents.Event {
 	event.SetSource("/mycontext")
 	event.SetID("A234-1234-1234")
 	event.SetExtension("comexampleextension", "value")
-	event.SetData(cloudevents.ApplicationXML, "<much wow=\"xml\"/>")
+	event.SetData(cloudevents.ApplicationXML, `<much wow="xml"/>`)
 	return event
 }
 
