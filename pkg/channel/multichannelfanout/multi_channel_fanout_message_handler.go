@@ -28,9 +28,10 @@ package multichannelfanout
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
+
+	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"

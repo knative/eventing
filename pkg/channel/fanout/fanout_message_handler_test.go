@@ -19,16 +19,17 @@ package fanout
 import (
 	"context"
 	"errors"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/kncloudevents"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/kncloudevents"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"

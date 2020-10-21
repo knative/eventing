@@ -18,10 +18,11 @@ package dispatcher
 
 import (
 	"context"
+	"time"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/pkg/injection"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"

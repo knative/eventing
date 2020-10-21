@@ -18,11 +18,12 @@ package dispatcher
 
 import (
 	"context"
+	"net/http"
+	"testing"
+
 	corev1 "k8s.io/api/core/v1"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/channel/fanout"
-	"net/http"
-	"testing"
 
 	"k8s.io/utils/pointer"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -213,7 +214,7 @@ func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.MessageH
 	return f.handlers[host]
 }
 
-type fakeDispatcher struct{
+type fakeDispatcher struct {
 	handler multichannelfanout.MultiChannelMessageHandler
 }
 

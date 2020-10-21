@@ -56,5 +56,3 @@ func TestNewInNamespace(t *testing.T) {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }
-
-

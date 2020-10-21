@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/logging"
