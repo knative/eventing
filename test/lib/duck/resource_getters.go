@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/util/retry"
-	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 
 	"knative.dev/eventing/test/lib/resources"
@@ -59,7 +58,7 @@ func RetryWebhookErrors(updater func(int) error) error {
 func GetGenericObject(
 	dynamicClient dynamic.Interface,
 	obj *resources.MetaResource,
-	rtype apis.Listable,
+	rtype runtime.Object,
 ) (runtime.Object, error) {
 	// get the resource's namespace and gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(obj.GroupVersionKind())
@@ -90,7 +89,7 @@ func GetGenericObject(
 func GetGenericObjectList(
 	dynamicClient dynamic.Interface,
 	objList *resources.MetaResourceList,
-	rtype apis.Listable,
+	rtype runtime.Object,
 ) ([]runtime.Object, error) {
 	// get the resource's namespace and gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(objList.GroupVersionKind())
