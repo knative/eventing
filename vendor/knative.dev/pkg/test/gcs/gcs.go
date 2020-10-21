@@ -31,7 +31,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-//nolint — there's also Client so they collide.
+//nolint // there's also Client so they collide.
 type GCSClient struct {
 	*storage.Client
 }
