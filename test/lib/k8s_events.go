@@ -35,6 +35,8 @@ type EventListener struct {
 
 	lock     sync.Mutex
 	handlers []EventHandler
+
+	eventsSeen int
 }
 
 // NewEventListener creates a new event listener
@@ -59,7 +61,9 @@ func NewEventListener(client kubernetes.Interface, namespace string, logf func(s
 
 	go func() {
 		eventsInformer.Run(ctx.Done())
-		logf("EventListener stopped")
+		el.lock.Lock()
+		defer el.lock.Unlock()
+		logf("EventListener stopped, %v events seen", el.eventsSeen)
 	}()
 
 	return &el
@@ -68,15 +72,19 @@ func NewEventListener(client kubernetes.Interface, namespace string, logf func(s
 func (el *EventListener) handle(event *corev1.Event) {
 	el.lock.Lock()
 	defer el.lock.Unlock()
+	el.eventsSeen++
 	for _, handler := range el.handlers {
 		handler(event)
 	}
 }
 
-func (el *EventListener) AddHandler(handler EventHandler) {
+func (el *EventListener) AddHandler(handler EventHandler) int {
 	el.lock.Lock()
 	defer el.lock.Unlock()
 	el.handlers = append(el.handlers, handler)
+	// Return the number of events that have already been seen. This helps debug scenarios where
+	// the expected event was seen, but only before this handler was added.
+	return el.eventsSeen
 }
 
 func (el *EventListener) Stop() {

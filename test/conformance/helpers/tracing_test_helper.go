@@ -65,14 +65,17 @@ func tracingTest(
 	tracinghelper.Setup(t, client)
 	clusterDomain := tracinghelper.GetClusterDomain(t, client)
 
-	// Setup the test infrastructure
-	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true, clusterDomain)
-
-	// Start the event info store and assert the event was received correctly
+	// Start the event info store. Note this is done _before_ we setup the infrastructure, which
+	// sends the event.
 	targetTracker, err := recordevents.NewEventInfoStore(client, recordEventsPodName, client.Namespace)
 	if err != nil {
 		t.Fatal("Pod tracker failed:", err)
 	}
+
+	// Setup the test infrastructure
+	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true, clusterDomain)
+
+	// Assert that the event was seen.
 	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))
 
 	// Match the trace
