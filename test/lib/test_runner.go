@@ -223,7 +223,7 @@ func formatEvent(e *corev1.Event) string {
 		`Source:` + strings.Replace(strings.Replace(e.Source.String(), "EventSource", "EventSource", 1), `&`, ``, 1),
 		`FirstTimestamp:` + e.FirstTimestamp.String(),
 		`LastTimestamp:` + e.LastTimestamp.String(),
-		`Count:` + string(e.Count),
+		`Count:` + fmt.Sprintf("%d", e.Count),
 		`Type:` + e.Type,
 		`EventTime:` + e.EventTime.String(),
 		`Series:` + strings.Replace(e.Series.String(), "EventSeries", "EventSeries", 1),
