@@ -38,11 +38,7 @@ func (c *Client) SendEventToAddressable(
 	event cloudevents.Event,
 	option ...func(*corev1.Pod),
 ) {
-	uri, err := c.GetAddressableURI(addressableName, typemeta)
-	if err != nil {
-		c.T.Fatalf("Failed to get the URI for %+v-%s", typemeta, addressableName)
-	}
-	c.SendEvent(ctx, senderName, uri, event, option...)
+	c.SendEvent(ctx, senderName, c.WaitForAddressableURIOrFail(addressableName, typemeta), event, option...)
 }
 
 // SendEvent will create a sender pod, which will send the given event to the given url.
@@ -74,11 +70,7 @@ func (c *Client) SendRequestToAddressable(
 	body string,
 	option ...func(*corev1.Pod),
 ) {
-	uri, err := c.GetAddressableURI(addressableName, typemeta)
-	if err != nil {
-		c.T.Fatalf("Failed to get the URI for %+v-%s", typemeta, addressableName)
-	}
-	c.SendRequest(ctx, senderName, uri, headers, body, option...)
+	c.SendRequest(ctx, senderName, c.WaitForAddressableURIOrFail(addressableName, typemeta), headers, body, option...)
 }
 
 // SendRequest will create a sender pod, which will send the given request to the given url.

@@ -19,15 +19,18 @@ package lib
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	pkgTest "knative.dev/pkg/test"
+
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // LabelNamespace labels the given namespace with the labels map.
@@ -47,16 +50,22 @@ func (c *Client) LabelNamespace(labels map[string]string) error {
 	return err
 }
 
-// GetAddressableURI returns the URI of the addressable resource.
+// WaitForAddressableURIOrFail waits for a given addressable to be resolved and returns the URI of the addressable resource.
 // To use this function, the given resource must have implemented the Addressable duck-type.
-func (c *Client) GetAddressableURI(addressableName string, typeMeta *metav1.TypeMeta) (string, error) {
-	namespace := c.Namespace
-	metaAddressable := resources.NewMetaResource(addressableName, namespace, typeMeta)
-	u, err := duck.GetAddressableURI(c.Dynamic, metaAddressable)
+func (c *Client) WaitForAddressableURIOrFail(addressableName string, typeMeta *metav1.TypeMeta) string {
+	metaAddressable := resources.NewMetaResource(addressableName, c.Namespace, typeMeta)
+	var u url.URL
+	err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+		u, err = duck.GetAddressableURI(c.Dynamic, metaAddressable)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	})
 	if err != nil {
-		return "", errors.WithStack(err)
+		c.T.Fatalf("Error while trying to resolve '%s' of type %v: %+v", addressableName, typeMeta, errors.WithStack(err))
 	}
-	return u.String(), nil
+	return u.String()
 }
 
 // WaitForResourceReadyOrFail waits for the resource to become ready or fail.
