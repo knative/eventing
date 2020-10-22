@@ -216,7 +216,7 @@ function run_preinstall_V018() {
   else
     echo "use exist EVENTING_PRE_INSTALL_YAML"
   fi
-  local EVENTING_PRE_INSTALL_NAME=${TMP_DIR}/${EVENTING_PRE_INSTALL_YAML=##*/}
+  local EVENTING_PRE_INSTALL_NAME=${TMP_DIR}/${EVENTING_PRE_INSTALL_YAML##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_PRE_INSTALL_YAML} > ${EVENTING_PRE_INSTALL_NAME}
   kubectl apply \
     -f "${EVENTING_PRE_INSTALL_NAME}" || return 1
