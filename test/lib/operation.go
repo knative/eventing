@@ -50,9 +50,9 @@ func (c *Client) LabelNamespace(labels map[string]string) error {
 	return err
 }
 
-// WaitForAddressableURIOrFail waits for a given addressable to be resolved and returns the URI of the addressable resource.
+// WaitForAddressableURLOrFail waits for a given addressable to be resolved and returns the URI of the addressable resource.
 // To use this function, the given resource must have implemented the Addressable duck-type.
-func (c *Client) WaitForAddressableURIOrFail(addressableName string, typeMeta *metav1.TypeMeta) string {
+func (c *Client) WaitForAddressableURLOrFail(addressableName string, typeMeta *metav1.TypeMeta) string {
 	metaAddressable := resources.NewMetaResource(addressableName, c.Namespace, typeMeta)
 	var u url.URL
 	err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {

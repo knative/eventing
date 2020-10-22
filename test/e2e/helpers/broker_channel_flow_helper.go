@@ -158,7 +158,7 @@ func BrokerChannelFlowWithTransformation(
 		client.WaitForResourceReadyOrFail(channelName, &channel)
 
 		// create trigger3 to receive the transformed event, and send it to the channel
-		channelURL := client.WaitForAddressableURIOrFail(channelName, &channel)
+		channelURL := client.WaitForAddressableURLOrFail(channelName, &channel)
 		if triggerVersion == "v1" {
 			client.CreateTriggerV1OrFail(
 				triggerName3,

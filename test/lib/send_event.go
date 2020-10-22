@@ -38,7 +38,7 @@ func (c *Client) SendEventToAddressable(
 	event cloudevents.Event,
 	option ...func(*corev1.Pod),
 ) {
-	c.SendEvent(ctx, senderName, c.WaitForAddressableURIOrFail(addressableName, typemeta), event, option...)
+	c.SendEvent(ctx, senderName, c.WaitForAddressableURLOrFail(addressableName, typemeta), event, option...)
 }
 
 // SendEvent will create a sender pod, which will send the given event to the given url.
@@ -70,7 +70,7 @@ func (c *Client) SendRequestToAddressable(
 	body string,
 	option ...func(*corev1.Pod),
 ) {
-	c.SendRequest(ctx, senderName, c.WaitForAddressableURIOrFail(addressableName, typemeta), headers, body, option...)
+	c.SendRequest(ctx, senderName, c.WaitForAddressableURLOrFail(addressableName, typemeta), headers, body, option...)
 }
 
 // SendRequest will create a sender pod, which will send the given request to the given url.
