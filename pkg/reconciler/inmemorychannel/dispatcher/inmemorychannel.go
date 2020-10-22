@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/eventing/pkg/kncloudevents"
