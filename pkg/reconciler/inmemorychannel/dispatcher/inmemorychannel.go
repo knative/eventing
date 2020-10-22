@@ -18,9 +18,11 @@ package dispatcher
 
 import (
 	"context"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"knative.dev/eventing/pkg/kncloudevents"
 
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -64,15 +66,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := handler.GetSubscriptions(ctx)
-		for _, s := range haveSubs {
-			logging.FromContext(ctx).Info("Have subscription", zap.String("have", s.String()))
-		}
-		for _, s := range config.FanoutConfig.Subscriptions {
-			logging.FromContext(ctx).Info("Want subscription", zap.String("want", s.String()))
-		}
-
-		if !equality.Semantic.DeepDerivative(config.FanoutConfig.Subscriptions, haveSubs) {
-			logging.FromContext(ctx).Info("Updating fanout config (-old +new)", zap.Any("want", config.FanoutConfig.Subscriptions), zap.Any("have", haveSubs))
+		if diff := cmp.Diff(config.FanoutConfig.Subscriptions, haveSubs, cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
+			logging.FromContext(ctx).Info("Updating fanout config: ", zap.String("Diff", diff))
 			handler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)
 		}
 	}
@@ -80,14 +75,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
-	config, err := r.newConfigForInMemoryChannel(imc)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
-		return err
+	if imc.Status.Address != nil &&
+		imc.Status.Address.URL != nil {
+		if hostName := imc.Status.Address.URL.Host; hostName != "" {
+			logging.FromContext(ctx).Info("Removing dispatcher")
+			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+		}
 	}
-	logging.FromContext(ctx).Info("Removing dispatcher")
-	r.multiChannelMessageHandler.DeleteChannelHandler(config.HostName)
 	return nil
+
 }
 
 // newConfigForInMemoryChannel creates a new Config for a single inmemory channel.

@@ -56,17 +56,26 @@ const (
 )
 
 var (
-	subscribers = []eventingduckv1.SubscriberSpec{{
+	subscriber1 = eventingduckv1.SubscriberSpec{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
 		ReplyURI:      apis.HTTP("sink2"),
-	}, {
+	}
+	subscriber2 = eventingduckv1.SubscriberSpec{
 		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    2,
 		SubscriberURI: apis.HTTP("call2"),
 		ReplyURI:      apis.HTTP("sink2"),
-	}}
+	}
+	subscriber3 = eventingduckv1.SubscriberSpec{
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    2,
+		SubscriberURI: apis.HTTP("call3"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}
+
+	subscribers = []eventingduckv1.SubscriberSpec{subscriber1, subscriber2}
 )
 
 func init() {
@@ -234,7 +243,7 @@ func TestAllCases(t *testing.T) {
 								},
 								Retry:         pointer.Int32Ptr(10),
 								BackoffPolicy: &backoffPolicy,
-								BackoffDelay:  pointer.StringPtr("PT1S"),
+								BackoffDelay:  pointer.StringPtr("garbage"),
 							},
 						},
 					}),
@@ -264,14 +273,22 @@ func TestAllCases(t *testing.T) {
 }
 
 func TestReconciler_ReconcileKind(t *testing.T) {
+	subscription1, err := fanout.SubscriberSpecToFanoutConfig(subscriber1)
+	if err != nil {
+		t.Error(err)
+	}
+	subscription2, err := fanout.SubscriberSpecToFanoutConfig(subscriber2)
+	if err != nil {
+		t.Error(err)
+	}
+
 	testCases := map[string]struct {
 		imc        *v1.InMemoryChannel
-		handler    fanout.MessageHandler
 		subs       []fanout.Subscription
 		wantSubs   []fanout.Subscription
 		wantResult reconciler.Event
 	}{
-		"with subscribers, added": {
+		"with no existing subscribers, 2 added": {
 			imc: NewInMemoryChannel(imcName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -280,29 +297,147 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
 				WithInMemoryChannelAddress(channelServiceAddress)),
+			wantSubs: []fanout.Subscription{
+				{Subscriber: apis.HTTP("call1").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+				{Subscriber: apis.HTTP("call2").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+			},
+		},
+		"with one subscriber, one added": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers(subscribers),
+				WithInMemoryChannelAddress(channelServiceAddress)),
+			subs: []fanout.Subscription{*subscription1},
+			wantSubs: []fanout.Subscription{
+				{Subscriber: apis.HTTP("call1").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+				{Subscriber: apis.HTTP("call2").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+			},
+		},
+		"with two subscribers, none added": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers(subscribers),
+				WithInMemoryChannelAddress(channelServiceAddress)),
+			subs: []fanout.Subscription{*subscription1, *subscription2},
+			wantSubs: []fanout.Subscription{
+				{Subscriber: apis.HTTP("call1").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+				{Subscriber: apis.HTTP("call2").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+			},
+		},
+		"with two subscribers, one removed": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1}),
+				WithInMemoryChannelAddress(channelServiceAddress)),
+			subs: []fanout.Subscription{*subscription1, *subscription2},
+			wantSubs: []fanout.Subscription{
+				{Subscriber: apis.HTTP("call1").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+			},
+		},
+		"with two subscribers, one removed one added": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1, subscriber3}),
+				WithInMemoryChannelAddress(channelServiceAddress)),
+			subs: []fanout.Subscription{*subscription1, *subscription2},
+			wantSubs: []fanout.Subscription{
+				{Subscriber: apis.HTTP("call1").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+				{Subscriber: apis.HTTP("call3").URL(),
+					Reply: apis.HTTP("sink2").URL()},
+			},
 		},
 	}
 	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			handler := NewFakeMultiChannelHandler()
-			if tc.handler != nil {
-				handler.SetChannelHandler(channelServiceAddress, tc.handler)
-			}
-			r := &Reconciler{
-				multiChannelMessageHandler: handler,
-			}
-			e := r.ReconcileKind(context.TODO(), tc.imc)
-			if e != tc.wantResult {
-				t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
-			}
-			channelHandler := handler.GetChannelHandler(channelServiceAddress)
-			if channelHandler == nil {
-				t.Error("Did not get handler")
-			}
-			if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO())); diff != "" {
-				t.Error("unexpected subs (+want/-got)", diff)
-			}
-		})
+		// Just run the tests once with no existing handler (creates the handler) and once
+		// with an existing, so we exercise both paths at once.
+		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+			t.Run("handler-"+n, func(t *testing.T) {
+				handler := NewFakeMultiChannelHandler()
+				if fanoutHandler != nil {
+					fanoutHandler.SetSubscriptions(context.TODO(), tc.subs)
+					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
+				}
+				r := &Reconciler{
+					multiChannelMessageHandler: handler,
+				}
+				e := r.ReconcileKind(context.TODO(), tc.imc)
+				if e != tc.wantResult {
+					t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
+				}
+				channelHandler := handler.GetChannelHandler(channelServiceAddress)
+				if channelHandler == nil {
+					t.Error("Did not get handler")
+				}
+				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO())); diff != "" {
+					t.Error("unexpected subs (+want/-got)", diff)
+				}
+			})
+		}
+	}
+}
+
+func TestReconciler_FinalizeKind(t *testing.T) {
+	testCases := map[string]struct {
+		imc        *v1.InMemoryChannel
+		wantResult reconciler.Event
+	}{
+		"With address": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInMemoryChannelDeleted,
+				WithInMemoryChannelAddress(channelServiceAddress)),
+		},
+	}
+	for n, tc := range testCases {
+		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+			t.Run("handler-"+n, func(t *testing.T) {
+				handler := NewFakeMultiChannelHandler()
+				if fanoutHandler != nil {
+					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
+				}
+				r := &Reconciler{
+					multiChannelMessageHandler: handler,
+				}
+				e := r.FinalizeKind(context.TODO(), tc.imc)
+				if e != tc.wantResult {
+					t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
+				}
+				if handler.GetChannelHandler(channelServiceAddress) != nil {
+					t.Error("Got handler")
+				}
+			})
+		}
 	}
 }
 

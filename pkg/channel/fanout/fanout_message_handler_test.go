@@ -106,6 +106,12 @@ func TestGetSetSubscriptions(t *testing.T) {
 		t.Error("Wanted 2 subs, got: ", len(subs))
 
 	}
+	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}, {Subscriber: apis.HTTP("subscriber3.example.com").URL()}})
+	subs = h.GetSubscriptions(context.TODO())
+	if len(subs) != 2 {
+		t.Error("Wanted 2 subs, got: ", len(subs))
+
+	}
 
 }
 

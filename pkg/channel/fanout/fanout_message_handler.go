@@ -24,7 +24,6 @@ package fanout
 import (
 	"context"
 	"errors"
-	"fmt"
 	nethttp "net/http"
 	"net/url"
 	"sync"
@@ -49,10 +48,6 @@ type Subscription struct {
 	Reply       *url.URL
 	DeadLetter  *url.URL
 	RetryConfig *kncloudevents.RetryConfig
-}
-
-func (s Subscription) String() string {
-	return fmt.Sprintf("%q %q %q %v", s.Subscriber, s.Reply, s.DeadLetter, s.RetryConfig)
 }
 
 // Config for a fanout.MessageHandler.
