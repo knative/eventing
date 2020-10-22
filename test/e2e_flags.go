@@ -30,16 +30,16 @@ import (
 
 const (
 	ChannelUsage = "The names of the channel type metas, separated by comma. " +
-		"Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel," +
-		"messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\"."
+		`Example: "messaging.knative.dev/v1alpha1:InMemoryChannel,` +
+		`messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel".`
 	BrokerClassUsage = "Which brokerclass to test, requires the proper Broker " +
 		"implementation to have been installed, and only one value. brokerclass " +
 		"must be (for now) 'MTChannelBasedBroker'."
 	SourceUsage = "The names of the source type metas, separated by comma. " +
-		"Example: \"sources.knative.dev/v1alpha1:ApiServerSource," +
-		"sources.knative.dev/v1alpha1:PingSource\"."
+		`Example: "sources.knative.dev/v1alpha1:ApiServerSource,` +
+		`sources.knative.dev/v1alpha1:PingSource".`
 	BrokerUsage = "The name of the broker type metas, separated by comma. " +
-		"Example: \"eventing.knative.dev/v1beta1:MTChannelBasedBroker"
+		`Example: "eventing.knative.dev/v1beta1:MTChannelBasedBroker`
 	BrokerNameUsage = "When testing a pre-existing broker, specify the Broker name so the conformance tests " +
 		"won't create their own."
 	BrokerNamespaceUsage = "When testing a pre-existing broker, this variable specifies the namespace the broker can be found in."

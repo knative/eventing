@@ -478,7 +478,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: subscribers.eventing.knative.dev \"dlc\" not found"),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.eventing.knative.dev "dlc" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -488,7 +488,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: subscribers.eventing.knative.dev \"dlc\" not found"),
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.eventing.knative.dev "dlc" not found`),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},

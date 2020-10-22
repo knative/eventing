@@ -176,7 +176,7 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, sinkBindingCreated, "SinkBinding created %q", sinkBindingName),
 				Eventf(corev1.EventTypeNormal, deploymentCreated, "Deployment created %q", deploymentName),
-				Eventf(corev1.EventTypeNormal, sourceReconciled, "ContainerSource reconciled: \"%s/%s\"", testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -220,7 +220,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, sourceReconciled, "ContainerSource reconciled: \"%s/%s\"", testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,

@@ -50,7 +50,7 @@ func (ei *EventInfo) String() string {
 	if ei.Event != nil {
 		return ei.Event.String()
 	} else {
-		return fmt.Sprintf("invalid event \"%s\"", ei.Error)
+		return fmt.Sprintf("invalid event %q", ei.Error)
 	}
 }
 
