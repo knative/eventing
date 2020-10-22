@@ -81,7 +81,7 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 	}
 	got, err := SubscriberSpecToFanoutConfig(*spec)
 	if err != nil {
-		t.Error("Failed to convers using SubscriberSpecToFanoutConfig:", err)
+		t.Error("Failed to convert using SubscriberSpecToFanoutConfig:", err)
 	}
 	if diff := cmp.Diff(&want, got, cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
 		t.Error("Unexpected diff", diff)
@@ -92,7 +92,7 @@ func TestGetSetSubscriptions(t *testing.T) {
 	h := &FanoutMessageHandler{subscriptions: make([]Subscription, 0)}
 	subs := h.GetSubscriptions(context.TODO())
 	if len(subs) != 0 {
-		t.Errorf("Wanted 0 subs, got %d", len(subs))
+		t.Error("Wanted 0 subs, got: ", len(subs))
 	}
 	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}})
 }

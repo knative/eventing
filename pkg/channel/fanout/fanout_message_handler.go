@@ -152,7 +152,7 @@ func (f *FanoutMessageHandler) SetSubscriptions(ctx context.Context, subs []Subs
 	defer f.subscriptionsMutex.Unlock()
 	s := make([]Subscription, len(subs))
 	for i := range subs {
-		s = append(s, subs[i])
+		s[i] = subs[i]
 	}
 	f.subscriptions = s
 }
@@ -162,7 +162,7 @@ func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscript
 	defer f.subscriptionsMutex.RUnlock()
 	ret := make([]Subscription, len(f.subscriptions))
 	for i := range f.subscriptions {
-		ret = append(ret, f.subscriptions[i])
+		ret[i] = f.subscriptions[i]
 	}
 	return ret
 }

@@ -18,6 +18,8 @@ package dispatcher
 
 import (
 	"context"
+	"github.com/google/go-cmp/cmp"
+	"knative.dev/pkg/reconciler"
 	"net/http"
 	"testing"
 
@@ -52,13 +54,8 @@ const (
 	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
 )
 
-func init() {
-	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
-}
-
-func TestAllCases(t *testing.T) {
-	subscribers := []eventingduckv1.SubscriberSpec{{
+var (
+	subscribers = []eventingduckv1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
@@ -69,7 +66,14 @@ func TestAllCases(t *testing.T) {
 		SubscriberURI: apis.HTTP("call2"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}}
+)
 
+func init() {
+	// Add types to scheme
+	_ = v1.AddToScheme(scheme.Scheme)
+}
+
+func TestAllCases(t *testing.T) {
 	backoffPolicy := eventingduckv1.BackoffPolicyLinear
 
 	imcKey := testNS + "/" + imcName
@@ -81,6 +85,19 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name:    "updated configuration, no channels",
 			Key:     imcKey,
+			WantErr: false,
+		}, {
+			Name: "imc not ready",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS, WithInitInMemoryChannelConditions),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
 			WantErr: false,
 		}, {
 			Name: "updated configuration, one channel",
@@ -157,6 +174,79 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
 			},
 			WantErr: false,
+		}, {
+			Name: "subscriber with invalid delivery spec",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{
+						{
+							UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+							Generation:    1,
+							SubscriberURI: apis.HTTP("call1"),
+							ReplyURI:      apis.HTTP("sink2"),
+							Delivery: &eventingduckv1.DeliverySpec{
+								DeadLetterSink: &duckv1.Destination{
+									URI: apis.HTTP("www.example.com"),
+								},
+								Retry:         pointer.Int32Ptr(10),
+								BackoffPolicy: &backoffPolicy,
+								BackoffDelay:  pointer.StringPtr("garbage"),
+							},
+						},
+					}),
+					WithInMemoryChannelAddress(channelServiceAddress)),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to parse Spec.BackoffDelay: expected 'P' period mark at the start: garbage"),
+			},
+			WantErr: true,
+		}, {
+			Name: "IMC deleted",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelFinalizers(finalizerName),
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{
+						{
+							UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+							Generation:    1,
+							SubscriberURI: apis.HTTP("call1"),
+							ReplyURI:      apis.HTTP("sink2"),
+							Delivery: &eventingduckv1.DeliverySpec{
+								DeadLetterSink: &duckv1.Destination{
+									URI: apis.HTTP("www.example.com"),
+								},
+								Retry:         pointer.Int32Ptr(10),
+								BackoffPolicy: &backoffPolicy,
+								BackoffDelay:  pointer.StringPtr("PT1S"),
+							},
+						},
+					}),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithInMemoryChannelDeleted),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchRemoveFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
+			WantErr: false,
 		},
 	}
 
@@ -170,6 +260,49 @@ func TestAllCases(t *testing.T) {
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
 			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName})
 	}, false, logger))
+}
+
+func TestReconciler_ReconcileKind(t *testing.T) {
+	testCases := map[string]struct {
+		imc        *v1.InMemoryChannel
+		handler    fanout.MessageHandler
+		subs       []fanout.Subscription
+		wantSubs   []fanout.Subscription
+		wantResult reconciler.Event
+	}{
+		"with subscribers, added": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers(subscribers),
+				WithInMemoryChannelAddress(channelServiceAddress)),
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			handler := NewFakeMultiChannelHandler()
+			if tc.handler != nil {
+				handler.SetChannelHandler(channelServiceAddress, tc.handler)
+			}
+			r := &Reconciler{
+				multiChannelMessageHandler: handler,
+			}
+			e := r.ReconcileKind(context.TODO(), tc.imc)
+			if e != tc.wantResult {
+				t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
+			}
+			channelHandler := handler.GetChannelHandler(channelServiceAddress)
+			if channelHandler == nil {
+				t.Error("Did not get handler")
+			}
+			if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO())); diff != "" {
+				t.Error("unexpected subs (+want/-got)", diff)
+			}
+		})
+	}
 }
 
 func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {

@@ -46,8 +46,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return err
 	}
 
-	if imc.Status.Address == nil || imc.Status.Address.URL == nil {
-		logging.FromContext(ctx).Info("No address for IMC, skipping")
+	if !imc.Status.IsReady() {
+		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
 		return nil
 	}
 	// First grab the MultiChannelFanoutMessage handler
@@ -93,7 +93,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) 
 func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
 	subs := make([]fanout.Subscription, len(imc.Spec.Subscribers))
 
-	for _, sub := range imc.Spec.Subscribers {
+	for i, sub := range imc.Spec.Subscribers {
 		conf, err := fanout.SubscriberSpecToFanoutConfig(sub)
 		if err != nil {
 			return nil, err
@@ -101,7 +101,7 @@ func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*mult
 		if conf.DeadLetter == nil && conf.Reply == nil && conf.Subscriber == nil {
 			continue
 		}
-		subs = append(subs, *conf)
+		subs[i] = *conf
 	}
 
 	return &multichannelfanout.ChannelConfig{

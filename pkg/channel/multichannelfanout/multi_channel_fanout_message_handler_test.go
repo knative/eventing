@@ -38,7 +38,7 @@ var (
 	replaceDomain = apis.HTTP("replaceDomain").URL()
 )
 
-func TestNewMessageHandler(t *testing.T) {
+func TestNewMessageHandlerWithConfig(t *testing.T) {
 	testCases := []struct {
 		name      string
 		config    Config
@@ -82,6 +82,36 @@ func TestNewMessageHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewMessageHandler(t *testing.T) {
+	handlerName := "handler.example.com"
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
+
+	handler := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
+	h := handler.GetChannelHandler(handlerName)
+	if len(handler.handlers) != 0 {
+		t.Errorf("non-empty handler map on creation")
+	}
+	if h != nil {
+		t.Errorf("Found handler for %q but not expected", handlerName)
+	}
+	f, err := fanout.NewFanoutMessageHandler(logger, channel.NewMessageDispatcher(logger), fanout.Config{}, reporter)
+	if err != nil {
+		t.Error("Failed to create FanoutMessagHandler: ", err)
+	}
+	handler.SetChannelHandler(handlerName, f)
+	h = handler.GetChannelHandler(handlerName)
+	if h == nil {
+		t.Error("Did not find handler")
+	}
+	handler.DeleteChannelHandler(handlerName)
+	h = handler.GetChannelHandler(handlerName)
+	if h != nil {
+		t.Error("Found handler, but not supposed to be there after deleting")
+	}
+
 }
 
 func TestServeHTTPMessageHandler(t *testing.T) {
