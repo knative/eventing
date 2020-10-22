@@ -95,6 +95,18 @@ func TestGetSetSubscriptions(t *testing.T) {
 		t.Error("Wanted 0 subs, got: ", len(subs))
 	}
 	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}})
+	subs = h.GetSubscriptions(context.TODO())
+	if len(subs) != 1 {
+		t.Error("Wanted 1 subs, got: ", len(subs))
+
+	}
+	h.SetSubscriptions(context.TODO(), []Subscription{{Subscriber: apis.HTTP("subscriber.example.com").URL()}, {Subscriber: apis.HTTP("subscriber2.example.com").URL()}})
+	subs = h.GetSubscriptions(context.TODO())
+	if len(subs) != 2 {
+		t.Error("Wanted 2 subs, got: ", len(subs))
+
+	}
+
 }
 
 func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {

@@ -40,16 +40,17 @@ type Reconciler struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
 
+	if !imc.Status.IsReady() {
+		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
+		return nil
+	}
+
 	config, err := r.newConfigForInMemoryChannel(imc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
 	}
 
-	if !imc.Status.IsReady() {
-		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
-		return nil
-	}
 	// First grab the MultiChannelFanoutMessage handler
 	handler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
 	if handler == nil {

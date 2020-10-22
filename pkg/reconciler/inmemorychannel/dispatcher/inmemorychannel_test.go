@@ -18,10 +18,11 @@ package dispatcher
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
-	"knative.dev/pkg/reconciler"
 	"net/http"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"knative.dev/pkg/reconciler"
 
 	corev1 "k8s.io/api/core/v1"
 	clientgotesting "k8s.io/client-go/testing"
