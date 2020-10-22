@@ -28,13 +28,11 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/inmemorychannel"
 )
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	eventDispatcherConfigStore *channel.EventDispatcherConfigStore
-	dispatcher                 inmemorychannel.MessageDispatcher
 	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
 	reporter                   channel.StatsReporter
 }

@@ -94,7 +94,6 @@ func NewController(
 	informer := inmemorychannelInformer.Informer()
 
 	r := &Reconciler{
-		dispatcher:                 inMemoryDispatcher,
 		multiChannelMessageHandler: sh,
 		reporter:                   reporter,
 	}

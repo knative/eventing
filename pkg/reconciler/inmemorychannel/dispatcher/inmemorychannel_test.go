@@ -43,7 +43,6 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
@@ -164,7 +163,7 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			dispatcher:                 &fakeDispatcher{handler: NewFakeMultiChannelHandler()},
+			multiChannelMessageHandler: NewFakeMultiChannelHandler(),
 			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
@@ -212,17 +211,4 @@ func (f *fakeMultiChannelHandler) DeleteChannelHandler(host string) {
 
 func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.MessageHandler {
 	return f.handlers[host]
-}
-
-type fakeDispatcher struct {
-	handler multichannelfanout.MultiChannelMessageHandler
-}
-
-func (d *fakeDispatcher) GetHandler(_ context.Context) multichannelfanout.MultiChannelMessageHandler {
-	return d.handler
-}
-
-func (d *fakeDispatcher) UpdateConfig(_ context.Context, _ channel.EventDispatcherConfig, _ *multichannelfanout.Config) error {
-	// TODO set error
-	return nil
 }
