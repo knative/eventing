@@ -213,8 +213,10 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		return
 	}
 
+	h.logger.Debug("Successfully dispatched message", zap.Any("target", target))
+
 	// If there is an event in the response write it to the response
-	statusCode, err := writeResponse(ctx, writer, response, ttl)
+	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 		// Ok, so writeResponse will return the HTTPStatus of the function. That may have
@@ -263,7 +265,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	return resp, err
 }
 
-func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32) (int, error) {
+func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32, target string) (int, error) {
 	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
 
@@ -278,6 +280,7 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 		if n != 0 {
 			return resp.StatusCode, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
 		}
+		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		return resp.StatusCode, nil
 	}
 
@@ -298,6 +301,8 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
 	}
+
+	h.logger.Debug("Replied with a CloudEvent response", zap.Any("target", target))
 
 	return resp.StatusCode, nil
 }
