@@ -119,16 +119,6 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
 				}
 
-				// Check history
-				if h, ok := e.Extensions()[EventHistory]; !ok {
-					return fmt.Errorf("test receiver func -- history not added")
-				} else {
-					expectedHistory := "test-name.test-namespace.svc." + network.GetClusterDomainName()
-					if h != expectedHistory {
-						return fmt.Errorf("test receiver func -- bad history: %v", h)
-					}
-				}
-
 				return nil
 			},
 			expected: nethttp.StatusAccepted,
