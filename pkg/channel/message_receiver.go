@@ -178,7 +178,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
 		return
 	}
-	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{AddHistory(host)}, utils.PassThroughHeaders(request.Header))
+	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
