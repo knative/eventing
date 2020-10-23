@@ -603,7 +603,6 @@ github.com/google/gofuzz v1.1.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/licenseclassifier v0.0.0-20190926221455-842c0d70d702 h1:nVgx26pAe6l/02mYomOuZssv28XkacGw/0WeiTVorqw=
 github.com/google/licenseclassifier v0.0.0-20190926221455-842c0d70d702/go.mod h1:qsqn2hxC+vURpyBRygGUuinTO42MFRLcsmQ/P8v94+M=
 github.com/google/licenseclassifier v0.0.0-20200402202327-879cb1424de0/go.mod h1:qsqn2hxC+vURpyBRygGUuinTO42MFRLcsmQ/P8v94+M=
-github.com/google/licenseclassifier v0.0.0-20200708223521-3d09a0ea2f39 h1:nkr7S2ETn5pAuBeeoZggV5nXSwOm4nBLz3vscQfA/A8=
 github.com/google/licenseclassifier v0.0.0-20200708223521-3d09a0ea2f39/go.mod h1:qsqn2hxC+vURpyBRygGUuinTO42MFRLcsmQ/P8v94+M=
 github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3 h1:/o5e44nTD/QEEiWPGSFT3bSqcq3Qg7q27N9bv4gKh5M=
 github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3/go.mod h1:YzLcVlL+NqWnmUEPuhS1LxDDwGO9WNbVlEXaF4IH35g=
@@ -1448,7 +1447,6 @@ golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200523222454-059865788121/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200610111108-226ff32320da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200802091954-4b90ce9b60b3 h1:qDJKu1y/1SjhWac4BQZjLljqvqiWUhjmDMnonmVGDAU=
 golang.org/x/sys v0.0.0-20200802091954-4b90ce9b60b3/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200803210538-64077c9b5642/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200828194041-157a740278f4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
