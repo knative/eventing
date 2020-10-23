@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"k8s.io/client-go/rest"
-	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	_ "knative.dev/pkg/system/testing"
 
@@ -39,7 +39,7 @@ func main() {
 		log.Fatal("Error while reading the cfg", err)
 	}
 	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
-	ctx, _ := injection.EnableInjectionOrDie(nil, cfg)
+	ctx := sharedmain.EnableInjectionOrDie(nil, cfg)
 
 	if err := test_images.ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
