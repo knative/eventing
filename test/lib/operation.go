@@ -72,7 +72,7 @@ func (c *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMe
 		if untyped != nil {
 			c.T.Errorf("Object that did not become ready %v-%s when dumping error state: %+v", *typemeta, name, untyped)
 		}
-		c.T.Fatalf("Failed to get %v-%s ready: %+v", *typemeta, name, errors.WithStack(err))
+		c.T.Fatalf("Failed to get %s-%s ready: %+v", typemeta, name, errors.WithStack(err))
 	}
 }
 
