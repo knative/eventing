@@ -102,6 +102,7 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	resolver := GetURIResolver(ctx)
 	if resolver == nil {
 		logging.FromContext(ctx).Errorf("No Resolver associated with context for sink: %+v", sb)
+		return
 	}
 	uri, err := resolver.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
