@@ -84,7 +84,7 @@ func ReplyTransformerFunc(replyEventType string, replyEventSource string, replyE
 		logging.FromContext(ctx).Infow("Replying with", zap.Stringer("event", outputEvent))
 		err := cehttp.WriteResponseWriter(ctx, binding.ToMessage(&outputEvent), 200, writer)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Error while writing the event as response", err)
+			logging.FromContext(ctx).Warnw("Error while writing the event as response", zap.Error(err))
 		}
 	}
 }
