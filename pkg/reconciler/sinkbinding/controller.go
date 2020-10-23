@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -100,7 +99,7 @@ func NewController(
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		return v1beta1.WithURIResolver(ctx, sbResolver), nil
+		return v1.WithURIResolver(ctx, sbResolver), nil
 	}
 	c.Tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	c.Factory = &duck.CachedInformerFactory{
@@ -135,14 +134,14 @@ func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.
 
 func WithContextFactory(ctx context.Context, handler func(types.NamespacedName)) psbinding.BindableContext {
 	r := resolver.NewURIResolver(ctx, handler)
+
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		return v1.WithURIResolver(ctx, r), nil
 	}
 }
 
 func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
-	sb := b.(*v1beta1.SinkBinding)
-	r := v1.GetURIResolver(ctx)
+	sb := b.(*v1.SinkBinding)
 	if s.res == nil {
 		err := fmt.Errorf("Resolver is nil")
 		logging.FromContext(ctx).Errorf("%w", err)

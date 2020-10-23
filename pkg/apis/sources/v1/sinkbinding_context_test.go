@@ -41,3 +41,12 @@ func TestGetSinkURI(t *testing.T) {
 		t.Errorf("GetSinkURI() = %v, wanted %v", got, want)
 	}
 }
+
+func TestGetURIResolver(t *testing.T) {
+	ctx := context.Background()
+
+	if resolver := GetURIResolver(ctx); resolver != nil {
+		t.Errorf("GetURIResolver() = %v, wanted nil", resolver)
+	}
+
+}
