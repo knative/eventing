@@ -34,7 +34,7 @@ import (
 )
 
 var podMeta = metav1.TypeMeta{
-	Kind:       "pod",
+	Kind:       "Pod",
 	APIVersion: "v1",
 }
 
