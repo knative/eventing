@@ -96,9 +96,6 @@ func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*mult
 		if err != nil {
 			return nil, err
 		}
-		if conf.DeadLetter == nil && conf.Reply == nil && conf.Subscriber == nil {
-			continue
-		}
 		subs[i] = *conf
 	}
 
