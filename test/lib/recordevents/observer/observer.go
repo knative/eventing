@@ -25,6 +25,7 @@ import (
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/test/lib/recordevents"
@@ -135,7 +136,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	}
 	err := o.EventLogs.Vent(eventInfo)
 	if err != nil {
-		logging.FromContext(o.ctx).Warn("Error while venting the recorded event", err)
+		logging.FromContext(o.ctx).Warnw("Error while venting the recorded event", zap.Error(err))
 	}
 
 	o.replyFunc(o.ctx, writer, eventInfo)
