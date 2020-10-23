@@ -24,10 +24,19 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 )
+
+func init() {
+	duckv1.AddToScheme(scheme.Scheme)
+}
 
 func TestSinkBindingGetConditionSet(t *testing.T) {
 	r := &SinkBinding{}
@@ -88,6 +97,8 @@ func TestSinkBindingSetObsGen(t *testing.T) {
 }
 
 func TestSinkBindingStatusIsReady(t *testing.T) {
+	sink := apis.HTTP("table.ns.svc.cluster.local/flip")
+	sink.Scheme = "uri"
 	tests := []struct {
 		name string
 		s    *SinkBindingStatus
@@ -105,10 +116,20 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
-		name: "mark available",
+		name: "mark binding unavailable",
 		s: func() *SinkBindingStatus {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
+			s.MarkBindingUnavailable("TheReason", "this is the message")
+			return s
+		}(),
+		want: false,
+	}, {
+		name: "mark sink",
+		s: func() *SinkBindingStatus {
+			s := &SinkBindingStatus{}
+			s.InitializeConditions()
+			s.MarkSink(sink)
 			s.MarkBindingUnavailable("TheReason", "this is the message")
 			return s
 		}(),
@@ -118,6 +139,7 @@ func TestSinkBindingStatusIsReady(t *testing.T) {
 		s: func() *SinkBindingStatus {
 			s := &SinkBindingStatus{}
 			s.InitializeConditions()
+			s.MarkSink(sink)
 			s.MarkBindingAvailable()
 			return s
 		}(),
@@ -275,10 +297,12 @@ func TestSinkBindingUndo(t *testing.T) {
 }
 
 func TestSinkBindingDo(t *testing.T) {
-	sinkURI := &apis.URL{
-		Scheme: "http",
-		Host:   "thing.ns.svc.cluster.local",
-		Path:   "/a/path",
+	destination := duckv1.Destination{
+		URI: &apis.URL{
+			Scheme: "http",
+			Host:   "thing.ns.svc.cluster.local",
+			Path:   "/a/path",
+		},
 	}
 
 	overrides := duckv1.CloudEventOverrides{Extensions: map[string]string{"foo": "bar"}}
@@ -298,7 +322,7 @@ func TestSinkBindingDo(t *testing.T) {
 							Image: "busybox",
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
-								Value: sinkURI.String(),
+								Value: destination.URI.String(),
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -317,7 +341,7 @@ func TestSinkBindingDo(t *testing.T) {
 							Image: "busybox",
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
-								Value: sinkURI.String(),
+								Value: destination.URI.String(),
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -357,7 +381,7 @@ func TestSinkBindingDo(t *testing.T) {
 							Image: "busybox",
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
-								Value: sinkURI.String(),
+								Value: destination.URI.String(),
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -408,7 +432,7 @@ func TestSinkBindingDo(t *testing.T) {
 							Image: "busybox",
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
-								Value: sinkURI.String(),
+								Value: destination.URI.String(),
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -425,7 +449,7 @@ func TestSinkBindingDo(t *testing.T) {
 								Value: "INGA",
 							}, {
 								Name:  "K_SINK",
-								Value: sinkURI.String(),
+								Value: destination.URI.String(),
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -438,7 +462,7 @@ func TestSinkBindingDo(t *testing.T) {
 								Value: "INGA",
 							}, {
 								Name:  "K_SINK",
-								Value: sinkURI.String(),
+								Value: destination.URI.String(),
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -453,11 +477,14 @@ func TestSinkBindingDo(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.in
-
-			ctx := WithSinkURI(context.Background(), sinkURI)
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, got)
+			ctx = addressable.WithDuck(ctx)
+			r := resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
+			ctx = WithURIResolver(context.Background(), r)
 
 			sb := &SinkBinding{Spec: SinkBindingSpec{
 				SourceSpec: duckv1.SourceSpec{
+					Sink:                destination,
 					CloudEventOverrides: &overrides,
 				},
 			}}

@@ -33,7 +33,9 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
-var sbCondSet = apis.NewLivingConditionSet()
+var sbCondSet = apis.NewLivingConditionSet(
+	SinkBindingConditionSinkProvided,
+)
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
 func (*SinkBinding) GetConditionSet() apis.ConditionSet {
@@ -82,16 +84,31 @@ func (sbs *SinkBindingStatus) MarkBindingAvailable() {
 	sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionReady)
 }
 
+// MarkSink sets the condition that the source has a sink configured.
+func (sbs *SinkBindingStatus) MarkSink(uri *apis.URL) {
+	sbs.SinkURI = uri
+	if uri != nil {
+		sbCondSet.Manage(sbs).MarkTrue(SinkBindingConditionSinkProvided)
+	} else {
+		sbCondSet.Manage(sbs).MarkFalse(SinkBindingConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+	}
+}
+
 // Do implements psbinding.Bindable
 func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 	// First undo so that we can just unconditionally append below.
 	sb.Undo(ctx, ps)
 
-	uri := GetSinkURI(ctx)
-	if uri == nil {
-		logging.FromContext(ctx).Errorf("No sink URI associated with context for %+v", sb)
+	resolver := GetURIResolver(ctx)
+	if resolver == nil {
+		logging.FromContext(ctx).Errorf("No Resolver associated with context for sink: %+v", sb)
+	}
+	uri, err := resolver.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("URI could not be extracted from destination: ", zap.Error(err))
 		return
 	}
+	sb.Status.MarkSink(uri)
 
 	var ceOverrides string
 	if sb.Spec.CloudEventOverrides != nil {
