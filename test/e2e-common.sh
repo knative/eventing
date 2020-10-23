@@ -90,8 +90,6 @@ function knative_setup() {
 
   install_sugar || fail_test "Could not install Sugar Controller"
 
-  install_channel_crds || fail_test "Could not install IMC Channel"
-
   unleash_duck || fail_test "Could not unleash the chaos duck"
 }
 
@@ -322,15 +320,15 @@ function test_setup() {
 
 # Tear down resources used in the eventing tests.
 function test_teardown() {
-  true
+  uninstall_test_resources
 }
 
 function install_test_resources() {
-  true
+  install_channel_crds || return 1
 }
 
 function uninstall_test_resources() {
-  true
+  uninstall_channel_crds
 }
 
 function install_channel_crds() {
@@ -352,6 +350,11 @@ function install_channel_crds() {
   wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
 }
 
+function uninstall_channel_crds() {
+  echo "Uninstalling In-Memory Channel CRD"
+  local EVENTING_IN_MEMORY_CHANNEL_NAME=${TMP_DIR}/${EVENTING_IN_MEMORY_CHANNEL_YAML##*/}
+  kubectl delete --ignore-not-found=true -f "${EVENTING_IN_MEMORY_CHANNEL_NAME}" || return 1
+}
 
 function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
