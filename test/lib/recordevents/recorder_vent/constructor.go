@@ -19,16 +19,18 @@ package recorder_vent
 import (
 	"context"
 	"log"
-	"strings"
+	"math/rand"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/apimachinery/pkg/api/errors"
+	restclient "k8s.io/client-go/rest"
 	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -43,6 +45,11 @@ type envConfig struct {
 	PodName   string `envconfig:"POD_NAME" required:"true"`
 	Port      int    `envconfig:"PORT" default:"8080" required:"true"`
 }
+
+const (
+	maxRetry      = 5
+	sleepDuration = 5 * time.Second
+)
 
 func NewFromEnv(ctx context.Context) recordevents.EventLog {
 	var env envConfig
@@ -73,25 +80,11 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 	if recorder == nil {
 		// Create event broadcaster
 		logger.Debug("Creating event broadcaster")
-		eventBroadcaster := record.NewBroadcasterWithCorrelatorOptions(record.CorrelatorOptions{
-			KeyFunc: func(event *corev1.Event) (aggregateKey string, localKey string) {
-				return strings.Join([]string{
-					event.Source.Component,
-					event.Source.Host,
-					event.InvolvedObject.Kind,
-					event.InvolvedObject.Namespace,
-					event.InvolvedObject.Name,
-					string(event.InvolvedObject.UID),
-					event.InvolvedObject.APIVersion,
-					event.Type,
-					event.Reason,
-				}, ""), string(event.UID)
-			},
-		})
+		eventBroadcaster := record.NewBroadcaster()
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
-			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: kubeclient.Get(ctx).CoreV1().Events(system.Namespace())},
+			eventBroadcaster.StartEventWatcher(
+				sendToSink(ctx, kubeclient.Get(ctx).CoreV1().Events(system.Namespace()).CreateWithEventNamespace),
 			),
 		}
 		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: agentName})
@@ -105,4 +98,58 @@ func createRecorder(ctx context.Context, agentName string) record.EventRecorder 
 	}
 
 	return recorder
+}
+
+func sendToSink(ctx context.Context, sender func(*corev1.Event) (*corev1.Event, error)) func(*corev1.Event) {
+	return func(event *corev1.Event) {
+		tries := 0
+		for {
+			if recordEvent(ctx, sender, event) {
+				break
+			}
+			tries++
+			if tries >= maxRetry {
+				logging.FromContext(ctx).Errorf("Unable to write event '%s' (retry limit exceeded!)", event.Name)
+				break
+			}
+			// Randomize the first sleep so that various clients won't all be
+			// synced up if the master goes down.
+			if tries == 1 {
+				time.Sleep(time.Duration(float64(sleepDuration) * rand.Float64()))
+			} else {
+				time.Sleep(sleepDuration)
+			}
+		}
+	}
+}
+
+func recordEvent(ctx context.Context, sender func(*corev1.Event) (*corev1.Event, error), event *corev1.Event) bool {
+	newEv, err := sender(event)
+	if err == nil {
+		logging.FromContext(ctx).Infof("Event '%s' sent correctly, uuid: %s", newEv.Name, newEv.UID)
+		return true
+	}
+
+	// If we can't contact the server, then hold everything while we keep trying.
+	// Otherwise, something about the event is malformed and we should abandon it.
+	switch err.(type) {
+	case *restclient.RequestConstructionError:
+		// We will construct the request the same next time, so don't keep trying.
+		logging.FromContext(ctx).Errorf("Unable to construct event '%s': '%v' (will not retry!)", event.Name, err)
+		return true
+	case *errors.StatusError:
+		if errors.IsAlreadyExists(err) {
+			logging.FromContext(ctx).Infof("Server rejected event '%s': '%v' (will not retry!)", event.Name, err)
+		} else {
+			logging.FromContext(ctx).Errorf("Server rejected event '%s': '%v' (will not retry!)", event.Name, err)
+		}
+		return true
+	case *errors.UnexpectedObjectError:
+		// We don't expect this; it implies the server's response didn't match a
+		// known pattern. Go ahead and retry.
+	default:
+		// This case includes actual http transport errors. Go ahead and retry.
+	}
+	logging.FromContext(ctx).Errorf("Unable to write event: '%v' (may retry after sleeping)", err)
+	return false
 }
