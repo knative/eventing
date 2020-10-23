@@ -45,7 +45,7 @@ func main() {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
 	}
 
-	obs := observer.NewFromEnv(
+	obs := observer.NewFromEnv(ctx,
 		recorder_vent.NewFromEnv(ctx),
 	)
 

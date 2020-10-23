@@ -50,7 +50,7 @@ func NewFromEnv(ctx context.Context) recordevents.EventLog {
 		log.Fatal("Failed to process env var", err)
 	}
 
-	logging.FromContext(ctx).Infof("Environment configuration: %+v", env)
+	logging.FromContext(ctx).Infof("Recorder vent environment configuration: %+v", env)
 
 	return NewEventLog(ctx, env.AgentName, env.PodName)
 }

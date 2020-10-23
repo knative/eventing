@@ -28,12 +28,9 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	pkgTest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
@@ -41,34 +38,6 @@ const (
 	retryInterval = 4 * time.Second
 	retryTimeout  = 4 * time.Minute
 )
-
-type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
-
-func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
-	client.CreateServiceAccountOrFail(name)
-	client.CreateRoleOrFail(resources.Role(name,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"get"},
-		}),
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{rbacv1.VerbAll},
-		}),
-	))
-	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
-
-	eventRecordPod := EventRecordPod(name, name)
-	client.CreatePodOrFail(eventRecordPod, append(options, testlib.WithService(name))...)
-	err := pkgTest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
-	if err != nil {
-		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", name, errors.WithStack(err))
-	}
-	client.WaitForServiceEndpointsOrFail(ctx, name, 1)
-	return eventRecordPod
-}
 
 // Deploys a new recordevents pod and start the associated EventInfoStore
 func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {

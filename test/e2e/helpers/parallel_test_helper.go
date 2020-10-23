@@ -74,13 +74,20 @@ func ParallelTestHelper(
 			for branchNumber, cse := range tc.branchesConfig {
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
-				filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
-				client.CreatePodOrFail(filterPod, testlib.WithService(filterPodName))
+				if cse.filter {
+					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName)
+				} else {
+					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName, recordevents.EchoEvent)
+				}
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
-				subPod := resources.SequenceStepperPod(subPodName, subPodName)
-				client.CreatePodOrFail(subPod, testlib.WithService(subPodName))
+				recordevents.DeployEventRecordOrFail(
+					ctx,
+					client,
+					subPodName,
+					recordevents.ReplyWithAppendedData(subPodName),
+				)
 
 				parallelBranches[branchNumber] = v1beta1.ParallelBranch{
 					Filter: &duckv1.Destination{
@@ -183,13 +190,20 @@ func ParallelV1TestHelper(
 			for branchNumber, cse := range tc.branchesConfig {
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
-				filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
-				client.CreatePodOrFail(filterPod, testlib.WithService(filterPodName))
+				if cse.filter {
+					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName)
+				} else {
+					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName, recordevents.EchoEvent)
+				}
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
-				subPod := resources.SequenceStepperPod(subPodName, subPodName)
-				client.CreatePodOrFail(subPod, testlib.WithService(subPodName))
+				recordevents.DeployEventRecordOrFail(
+					ctx,
+					client,
+					subPodName,
+					recordevents.ReplyWithAppendedData(subPodName),
+				)
 
 				parallelBranches[branchNumber] = flowsv1.ParallelBranch{
 					Filter: &duckv1.Destination{
