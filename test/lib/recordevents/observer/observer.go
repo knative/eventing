@@ -22,6 +22,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"knative.dev/eventing/test/lib/dropevents"
+
 	cloudeventsbindings "github.com/cloudevents/sdk-go/v2/binding"
 	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
@@ -39,9 +41,14 @@ type Observer struct {
 	// EventLogs is the list of EventLog implementors to vent observed events.
 	EventLogs recordevents.EventLogs
 
-	ctx       context.Context
-	seq       uint64
+	ctx context.Context
+	seq uint64
+	// Increment this for every dropped event that we see
+	dropSeq   uint64
 	replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
+	// If configured to drop some events, counter keeps track of how many should
+	// be dropped.
+	counter *dropevents.CounterHandler
 }
 
 type envConfig struct {
@@ -63,6 +70,13 @@ type envConfig struct {
 	// This string to append in the data field in the reply, if enabled.
 	// This will threat the data as text/plain field
 	ReplyAppendData string `envconfig:"REPLY_APPEND_DATA" default:"" required:"false"`
+
+	// If events should be dropped, specify the strategy here.
+	SkipStrategy string `envconfig:"SKIP_ALGORITHM" default:"" required:"false"`
+
+	// If events should be dropped according to Linear policy, this controls
+	// how many events are dropped.
+	SkipCounter uint64 `envconfig:"SKIP_COUNTER" default:"0"" required:"false"`
 }
 
 func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observer {
@@ -82,11 +96,19 @@ func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observ
 		replyFunc = NoOpReply
 	}
 
+	var skipper dropevents.Skipper
+	if env.SkipStrategy != "" {
+		skipper = dropevents.SkipperAlgorithmWithCount(env.SkipStrategy, env.SkipCounter)
+	}
+
 	return &Observer{
 		Name:      env.ObserverName,
 		EventLogs: eventLogs,
 		ctx:       ctx,
 		replyFunc: replyFunc,
+		counter: &dropevents.CounterHandler{
+			Skipper: skipper,
+		},
 	}
 }
 
@@ -136,12 +158,33 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		Origin:      request.RemoteAddr,
 		Observer:    o.Name,
 		Time:        time.Now(),
-		Sequence:    atomic.AddUint64(&o.seq, 1),
 	}
+	shouldSkip := false
+	if o.counter != nil {
+		shouldSkip = o.counter.Skip()
+	}
+
+	// We still want to emit the event to make it easier to see what we had oberved, but
+	// we want to transform it a little bit before emitting so that it does not count
+	// as the real event that we want to emit.
+	if shouldSkip {
+		eventInfo.Sequence = atomic.AddUint64(&o.dropSeq, 1)
+		eventInfo.Event.SetType("dropped-" + eventInfo.Event.Type())
+	} else {
+		// Increment the sequence only if we're not dropping so that we do not
+		// introduce side effects.
+		eventInfo.Sequence = atomic.AddUint64(&o.seq, 1)
+	}
+
 	err := o.EventLogs.Vent(eventInfo)
 	if err != nil {
 		logging.FromContext(o.ctx).Warnw("Error while venting the recorded event", zap.Error(err))
 	}
 
-	o.replyFunc(o.ctx, writer, eventInfo)
+	if shouldSkip {
+		// Trigger a redelivery
+		writer.WriteHeader(http.StatusConflict)
+	} else {
+		o.replyFunc(o.ctx, writer, eventInfo)
+	}
 }
