@@ -135,7 +135,7 @@ func (e *EnvConfig) SetComponent(component string) {
 
 func (e *EnvConfig) GetMetricsConfig() (*metrics.ExporterOptions, error) {
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
-	metricsConfig, err := metrics.JsonToMetricsOptions(e.MetricsConfigJson)
+	metricsConfig, err := metrics.JSONToOptions(e.MetricsConfigJson)
 	if err != nil {
 		return nil, err
 	}

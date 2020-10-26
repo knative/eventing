@@ -147,7 +147,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
 
-	metricsConfig, err := metrics.MetricsOptionsToJson(r.configs.MetricsConfig())
+	metricsConfig, err := metrics.OptionsToJSON(r.configs.MetricsConfig())
 	if err != nil {
 		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}

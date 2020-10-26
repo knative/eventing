@@ -230,7 +230,7 @@ func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
 // metricsConfigEnvVar returns an EnvVar containing the serialized metrics
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) metricsConfigEnvVar() corev1.EnvVar {
-	cfg, err := metrics.MetricsOptionsToJson(cw.MetricsConfig())
+	cfg, err := metrics.OptionsToJSON(cw.MetricsConfig())
 	if err != nil {
 		cw.logger.Warnw("Error while serializing metrics config", zap.Error(err))
 	}
