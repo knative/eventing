@@ -156,7 +156,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(apis.HTTP(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, network.GetClusterDomainName())))
+	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
 
 	imc.Status.Subscribers = make([]eventingduck.SubscriberStatus, 0)
 	for _, sub := range imc.Spec.Subscribers {

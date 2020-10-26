@@ -101,7 +101,7 @@ kind: "InMemoryChannel"
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 
-	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", network.GetClusterDomainName())
+	triggerChannelHostname = network.GetServiceHostname("foo", "bar")
 	triggerChannelURL      = fmt.Sprintf("http://%s", triggerChannelHostname)
 
 	filterServiceName  = "broker-filter"
@@ -127,12 +127,12 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
+	sinkDNS = network.GetServiceHostname("sink", "mynamespace")
 	sinkURI = "http://" + sinkDNS
 
 	brokerAddress = &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, network.GetClusterDomainName()),
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 )
@@ -772,7 +772,7 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 func makeServiceURI() *apis.URL {
 	return &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("broker-filter.%s.svc.%s", systemNS, network.GetClusterDomainName()),
+		Host:   network.GetServiceHostname("broker-filter", systemNS),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }

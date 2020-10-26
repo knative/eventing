@@ -541,7 +541,7 @@ func makeChannelService(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, network.GetClusterDomainName()),
+			ExternalName: network.GetServiceHostname(dispatcherName, testNS),
 		},
 	}
 }
@@ -561,7 +561,7 @@ func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, network.GetClusterDomainName()),
+			ExternalName: network.GetServiceHostname(dispatcherName, testNS),
 		},
 	}
 }
