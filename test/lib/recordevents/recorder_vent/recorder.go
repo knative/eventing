@@ -33,8 +33,6 @@ import (
 	"knative.dev/eventing/test/lib/recordevents"
 )
 
-const SequenceAnnotation = "recordevents/sequence"
-
 type recorder struct {
 	ctx       context.Context
 	namespace string
@@ -52,9 +50,8 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 	t := time.Now()
 	event := &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%v.%x", r.ref.Name, observed.Sequence),
-			Namespace:   r.namespace,
-			Annotations: map[string]string{SequenceAnnotation: fmt.Sprintf("%d", observed.Sequence)},
+			Name:      fmt.Sprintf("%v.%d", r.ref.Name, observed.Sequence),
+			Namespace: r.namespace,
 		},
 		InvolvedObject: *r.ref,
 		Reason:         recordevents.CloudEventObservedReason,
