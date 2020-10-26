@@ -76,7 +76,7 @@ type envConfig struct {
 
 	// If events should be dropped according to Linear policy, this controls
 	// how many events are dropped.
-	SkipCounter uint64 `envconfig:"SKIP_COUNTER" default:"0"" required:"false"`
+	SkipCounter uint64 `envconfig:"SKIP_COUNTER" default:"0" required:"false"`
 }
 
 func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observer {
