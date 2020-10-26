@@ -751,7 +751,7 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 		}
 	}
 
-	c.applyTracingEnv(&pod.Spec)
+	c.applyAdditionalEnv(&pod.Spec)
 
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		c.T.Logf("Creating pod %+v", pod)
@@ -782,7 +782,7 @@ func (c *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...fu
 		}
 	}
 
-	c.applyTracingEnv(&deploy.Spec.Template.Spec)
+	c.applyAdditionalEnv(&deploy.Spec.Template.Spec)
 
 	c.T.Logf("Creating deployment %+v", deploy)
 	if _, err := c.Kube.AppsV1().Deployments(deploy.Namespace).Create(context.Background(), deploy, metav1.CreateOptions{}); err != nil {
@@ -803,7 +803,7 @@ func (c *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...f
 		}
 	}
 
-	c.applyTracingEnv(&cronjob.Spec.JobTemplate.Spec.Template.Spec)
+	c.applyAdditionalEnv(&cronjob.Spec.JobTemplate.Spec.Template.Spec)
 
 	c.T.Logf("Creating cronjob %+v", cronjob)
 	if _, err := c.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(context.Background(), cronjob, metav1.CreateOptions{}); err != nil {
@@ -917,8 +917,11 @@ func (c *Client) CreateRBACResourcesForBrokers() {
 	)
 }
 
-func (c *Client) applyTracingEnv(pod *corev1.PodSpec) {
+func (c *Client) applyAdditionalEnv(pod *corev1.PodSpec) {
 	for i := 0; i < len(pod.Containers); i++ {
 		pod.Containers[i].Env = append(pod.Containers[i].Env, c.tracingEnv)
+		if c.loggingEnv != nil {
+			pod.Containers[i].Env = append(pod.Containers[i].Env, *c.loggingEnv)
+		}
 	}
 }
