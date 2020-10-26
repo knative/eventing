@@ -42,7 +42,6 @@ type SetupTracingTestInfrastructureFunc func(
 	client *testlib.Client,
 	loggerPodName string,
 	senderPublishTrace bool,
-	clusterDomain string,
 ) (tracinghelper.TestSpanTree, cetest.EventMatcher)
 
 // tracingTest bootstraps the test and then executes the assertions on the received event and on the spans
@@ -63,7 +62,6 @@ func tracingTest(
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.
 	tracinghelper.Setup(t, client)
-	clusterDomain := tracinghelper.GetClusterDomain(t, client)
 
 	// Start the event info store. Note this is done _before_ we setup the infrastructure, which
 	// sends the event.
@@ -73,7 +71,7 @@ func tracingTest(
 	}
 
 	// Setup the test infrastructure
-	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true, clusterDomain)
+	expectedTestSpan, eventMatcher := setupInfrastructure(ctx, t, &channel, client, recordEventsPodName, true)
 
 	// Assert that the event was seen.
 	matches := targetTracker.AssertAtLeast(1, recordevents.MatchEvent(eventMatcher))

@@ -20,6 +20,6 @@ import (
 	"fmt"
 )
 
-func k8sServiceHost(domain, namespace, svcName string) string {
-	return fmt.Sprintf("%s.%s.svc.%s", svcName, namespace, domain)
+func k8sServiceHost(namespace, svcName string) string {
+	return fmt.Sprintf("%s.%s.svc", svcName, namespace)
 }

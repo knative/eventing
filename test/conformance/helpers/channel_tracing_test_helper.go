@@ -60,7 +60,6 @@ func setupChannelTracingWithReply(
 	client *testlib.Client,
 	recordEventsPodName string,
 	senderPublishTrace bool,
-	clusterDomain string,
 ) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
 	eventSource := "sender"
 	// Create the Channels.
@@ -138,7 +137,7 @@ func setupChannelTracingWithReply(
 		Span: tracinghelper.MatchHTTPSpanNoReply(
 			model.Server,
 			tracinghelper.WithHTTPHostAndPath(
-				fmt.Sprintf("%s-kn-channel.%s.svc.%s", channelName, client.Namespace, clusterDomain),
+				fmt.Sprintf("%s-kn-channel.%s.svc", channelName, client.Namespace),
 				"/",
 			),
 		),
@@ -148,7 +147,7 @@ func setupChannelTracingWithReply(
 				Span: tracinghelper.MatchHTTPSpanWithReply(
 					model.Client,
 					tracinghelper.WithHTTPHostAndPath(
-						fmt.Sprintf("%s.%s.svc.%s", transformerPod.Name, client.Namespace, clusterDomain),
+						fmt.Sprintf("%s.%s.svc", transformerPod.Name, client.Namespace),
 						"/",
 					),
 				),
@@ -158,7 +157,7 @@ func setupChannelTracingWithReply(
 						Span: tracinghelper.MatchHTTPSpanWithReply(
 							model.Server,
 							tracinghelper.WithHTTPHostAndPath(
-								fmt.Sprintf("%s.%s.svc.%s", transformerPod.Name, client.Namespace, clusterDomain),
+								fmt.Sprintf("%s.%s.svc", transformerPod.Name, client.Namespace),
 								"/",
 							),
 							tracinghelper.WithLocalEndpointServiceName(transformerPod.Name),
@@ -171,7 +170,7 @@ func setupChannelTracingWithReply(
 				Span: tracinghelper.MatchHTTPSpanNoReply(
 					model.Client,
 					tracinghelper.WithHTTPHostAndPath(
-						fmt.Sprintf("%s-kn-channel.%s.svc.%s", replyChannelName, client.Namespace, clusterDomain),
+						fmt.Sprintf("%s-kn-channel.%s.svc", replyChannelName, client.Namespace),
 						"",
 					),
 				),
@@ -181,7 +180,7 @@ func setupChannelTracingWithReply(
 						Span: tracinghelper.MatchHTTPSpanNoReply(
 							model.Server,
 							tracinghelper.WithHTTPHostAndPath(
-								fmt.Sprintf("%s-kn-channel.%s.svc.%s", replyChannelName, client.Namespace, clusterDomain),
+								fmt.Sprintf("%s-kn-channel.%s.svc", replyChannelName, client.Namespace),
 								"/",
 							),
 						),
@@ -191,7 +190,7 @@ func setupChannelTracingWithReply(
 								Span: tracinghelper.MatchHTTPSpanNoReply(
 									model.Client,
 									tracinghelper.WithHTTPHostAndPath(
-										fmt.Sprintf("%s.%s.svc.%s", recordEventsPod.Name, client.Namespace, clusterDomain),
+										fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace),
 										"/",
 									),
 								),
@@ -201,7 +200,7 @@ func setupChannelTracingWithReply(
 										Span: tracinghelper.MatchHTTPSpanNoReply(
 											model.Server,
 											tracinghelper.WithHTTPHostAndPath(
-												fmt.Sprintf("%s.%s.svc.%s", recordEventsPod.Name, client.Namespace, clusterDomain),
+												fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace),
 												"/",
 											),
 											tracinghelper.WithLocalEndpointServiceName(recordEventsPod.Name),
@@ -222,7 +221,7 @@ func setupChannelTracingWithReply(
 			Span: tracinghelper.MatchHTTPSpanNoReply(
 				model.Client,
 				tracinghelper.WithHTTPHostAndPath(
-					fmt.Sprintf("%s-kn-channel.%s.svc.%s", channelName, client.Namespace, clusterDomain),
+					fmt.Sprintf("%s-kn-channel.%s.svc", channelName, client.Namespace),
 					"",
 				),
 				tracinghelper.WithLocalEndpointServiceName("sender"),
