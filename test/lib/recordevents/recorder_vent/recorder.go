@@ -109,11 +109,7 @@ func (r *recorder) trySendEvent(event *corev1.Event) (bool, error) {
 		logging.FromContext(r.ctx).Errorf("Unable to construct event '%s': '%v' (will not retry!)", event.Name, err)
 		return true, err
 	case *apierrors.StatusError:
-		if apierrors.IsAlreadyExists(err) {
-			logging.FromContext(r.ctx).Infof("Server rejected event '%s'. Reason: '%v' (will not retry!). Event: %v", event.Name, err, event)
-		} else {
-			logging.FromContext(r.ctx).Errorf("Server rejected event '%s'. Reason: '%v' (will not retry!). Event: %v", event.Name, err, event)
-		}
+		logging.FromContext(r.ctx).Errorf("Server rejected event '%s'. Reason: '%v' (will not retry!). Event: %v", event.Name, err, event)
 		return true, err
 	case *apierrors.UnexpectedObjectError:
 		// We don't expect this; it implies the server's response didn't match a
