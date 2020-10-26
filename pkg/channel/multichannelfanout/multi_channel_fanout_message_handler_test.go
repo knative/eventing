@@ -25,7 +25,6 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
-	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
@@ -39,7 +38,7 @@ var (
 	replaceDomain = apis.HTTP("replaceDomain").URL()
 )
 
-func TestNewMessageHandler(t *testing.T) {
+func TestNewMessageHandlerWithConfig(t *testing.T) {
 	testCases := []struct {
 		name      string
 		config    Config
@@ -64,7 +63,7 @@ func TestNewMessageHandler(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			_, err := NewMessageHandler(
+			_, err := NewMessageHandlerWithConfig(
 				context.TODO(),
 				logger,
 				channel.NewMessageDispatcher(logger),
@@ -85,136 +84,34 @@ func TestNewMessageHandler(t *testing.T) {
 	}
 }
 
-func TestCopyMessageHandlerWithNewConfig(t *testing.T) {
-	orig := Config{
-		ChannelConfigs: []ChannelConfig{
-			{
-				Namespace: "default",
-				Name:      "c1",
-				FanoutConfig: fanout.Config{
-					Subscriptions: []fanout.Subscription{
-						{
-							Subscriber: apis.HTTP("subscriberdomain").URL(),
-						},
-					},
-				},
-			},
-		},
-	}
-	updated := Config{
-		ChannelConfigs: []ChannelConfig{
-			{
-				Namespace: "default",
-				Name:      "somethingdifferent",
-				FanoutConfig: fanout.Config{
-					Subscriptions: []fanout.Subscription{
-						{
-							Reply: apis.HTTP("replydomain").URL(),
-						},
-					},
-				},
-			},
-		},
-	}
-	if cmp.Equal(orig, updated) {
-		t.Errorf("Orig and updated must be different")
-	}
+func TestNewMessageHandler(t *testing.T) {
+	handlerName := "handler.example.com"
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
-	h, err := NewMessageHandler(
-		context.TODO(),
-		logger,
-		channel.NewMessageDispatcher(logger),
-		orig,
-		reporter,
-	)
+
+	handler := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
+	h := handler.GetChannelHandler(handlerName)
+	if len(handler.handlers) != 0 {
+		t.Errorf("non-empty handler map on creation")
+	}
+	if h != nil {
+		t.Errorf("Found handler for %q but not expected", handlerName)
+	}
+	f, err := fanout.NewFanoutMessageHandler(logger, channel.NewMessageDispatcher(logger), fanout.Config{}, reporter)
 	if err != nil {
-		t.Error("Unable to create handler,", err)
+		t.Error("Failed to create FanoutMessagHandler: ", err)
+	}
+	handler.SetChannelHandler(handlerName, f)
+	h = handler.GetChannelHandler(handlerName)
+	if h == nil {
+		t.Error("Did not find handler")
+	}
+	handler.DeleteChannelHandler(handlerName)
+	h = handler.GetChannelHandler(handlerName)
+	if h != nil {
+		t.Error("Found handler, but not supposed to be there after deleting")
 	}
 
-	option := ignoreCheckRetryAndBackFunctions()
-	if diff := cmp.Diff(h.config, orig, option); diff != "" {
-		t.Errorf("Incorrect config. Expected '%v'. Actual '%v' - diff: %s", orig, h.config, diff)
-	}
-
-	newH, err := h.CopyWithNewConfig(context.TODO(), channel.EventDispatcherConfig{}, updated, reporter)
-	if err != nil {
-		t.Error("Unable to copy handler:", err)
-	}
-
-	if h.logger != newH.logger {
-		t.Errorf("Did not copy logger")
-	}
-
-	if diff := cmp.Diff(newH.config, updated, option); diff != "" {
-		t.Errorf("Incorrect copied config. Expected '%v'. Actual '%v' - diff: %s", updated, newH.config, diff)
-	}
-}
-
-func TestConfigDiffMessageHandler(t *testing.T) {
-	config := Config{
-		ChannelConfigs: []ChannelConfig{
-			{
-				Namespace: "default",
-				Name:      "c1",
-				FanoutConfig: fanout.Config{
-					Subscriptions: []fanout.Subscription{
-						{
-							Subscriber: apis.HTTP("subscriberdomain").URL(),
-						},
-					},
-				},
-			},
-		},
-	}
-	testCases := []struct {
-		name         string
-		orig         Config
-		updated      Config
-		expectedDiff bool
-	}{
-		{
-			name:         "same",
-			orig:         config,
-			updated:      config,
-			expectedDiff: false,
-		},
-		{
-			name: "different",
-			orig: config,
-			updated: Config{
-				ChannelConfigs: []ChannelConfig{
-					{
-						Namespace: "default",
-						Name:      "c1",
-						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
-								{
-									Subscriber: apis.HTTP("different").URL(),
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedDiff: true,
-		},
-	}
-	reporter := channel.NewStatsReporter("testcontainer", "testpod")
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
-			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.orig, reporter)
-			if err != nil {
-				t.Error("Unable to create handler:", err)
-			}
-			diff := h.ConfigDiff(tc.updated)
-
-			if hasDiff := diff != ""; hasDiff != tc.expectedDiff {
-				t.Errorf("Unexpected diff result. Expected %v. Actual %v - diff: %s", tc.expectedDiff, hasDiff, diff)
-			}
-		})
-	}
 }
 
 func TestServeHTTPMessageHandler(t *testing.T) {
@@ -301,7 +198,7 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 
 			logger := zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller()))
 			reporter := channel.NewStatsReporter("testcontainer", "testpod")
-			h, err := NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter)
+			h, err := NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), tc.config, reporter)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}

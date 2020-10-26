@@ -20,9 +20,7 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
-// Config for a multichannelfanout.Handler.
 type Config struct {
-	// The configuration of each channel in this handler.
 	ChannelConfigs []ChannelConfig
 }
 

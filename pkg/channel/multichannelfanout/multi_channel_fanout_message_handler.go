@@ -29,16 +29,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
-	"time"
+	"sync"
 
-	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
-	"knative.dev/eventing/pkg/kncloudevents"
 )
+
+type MultiChannelMessageHandler interface {
+	http.Handler
+	SetChannelHandler(host string, handler fanout.MessageHandler)
+	DeleteChannelHandler(host string)
+	GetChannelHandler(host string) fanout.MessageHandler
+}
 
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
 // MakeChannelKey.
@@ -47,21 +51,30 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 }
 
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
-// on, and then delegates handling of that request to the single fanout.MessageHandler corresponding to
+// on, and then delegates handling of that request to the single fanout.FanoutMessageHandler corresponding to
 // that Channel.
 type MessageHandler struct {
-	logger   *zap.Logger
-	handlers map[string]*fanout.MessageHandler
-	config   Config
+	logger       *zap.Logger
+	handlersLock sync.RWMutex
+	handlers     map[string]fanout.MessageHandler
 }
 
 // NewHandler creates a new Handler.
-func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
-	handlers := make(map[string]*fanout.MessageHandler, len(conf.ChannelConfigs))
+func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, reporter channel.StatsReporter) *MessageHandler {
+	return &MessageHandler{
+		logger:   logger,
+		handlers: make(map[string]fanout.MessageHandler),
+	}
+}
+
+// NewMessageHandlerWithConfig creates a new Handler with the specified configuration. This is really meant for tests
+// where you want to apply a fully specified configuration for tests. Reconciler operates on single channel at a time.
+func NewMessageHandlerWithConfig(_ context.Context, logger *zap.Logger, messageDispatcher channel.MessageDispatcher, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
+	handlers := make(map[string]fanout.MessageHandler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler, err := fanout.NewMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter)
+		handler, err := fanout.NewFanoutMessageHandler(logger, messageDispatcher, cc.FanoutConfig, reporter)
 		if err != nil {
 			logger.Error("Failed creating new fanout handler.", zap.Error(err))
 			return nil, err
@@ -72,42 +85,36 @@ func NewMessageHandler(_ context.Context, logger *zap.Logger, messageDispatcher 
 		}
 		handlers[key] = handler
 	}
-
 	return &MessageHandler{
 		logger:   logger,
-		config:   conf,
 		handlers: handlers,
 	}, nil
 }
 
-// ConfigDiffs diffs the new config with the existing config. If there are no differences, then the
-// empty string is returned. If there are differences, then a non-empty string is returned
-// describing the differences.
-func (h *MessageHandler) ConfigDiff(updated Config) string {
-	return cmp.Diff(h.config, updated, ignoreCheckRetryAndBackFunctions())
+func (h *MessageHandler) SetChannelHandler(host string, handler fanout.MessageHandler) {
+	h.handlersLock.Lock()
+	defer h.handlersLock.Unlock()
+	h.handlers[host] = handler
 }
 
-func ignoreCheckRetryAndBackFunctions() cmp.Option {
-	return cmp.FilterPath(func(path cmp.Path) bool {
-		// is of type kncloudevents.Backoff?
-		return path.Last().Type().Kind() == reflect.TypeOf(kncloudevents.Backoff(func(attemptNum int, resp *http.Response) time.Duration { return 0 })).Kind() ||
-			// is of type kncloudevents.CheckRetry?
-			path.Last().Type().Kind() == reflect.TypeOf(kncloudevents.CheckRetry(func(ctx context.Context, resp *http.Response, err error) (bool, error) { return false, nil })).Kind()
-	}, cmp.Ignore())
+func (h *MessageHandler) DeleteChannelHandler(host string) {
+	h.handlersLock.Lock()
+	defer h.handlersLock.Unlock()
+	delete(h.handlers, host)
 }
 
-// CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
-// new Handler uses conf, rather than copying the existing Handler's config.
-func (h *MessageHandler) CopyWithNewConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, conf Config, reporter channel.StatsReporter) (*MessageHandler, error) {
-	return NewMessageHandler(ctx, h.logger, channel.NewMessageDispatcherFromConfig(h.logger, dispatcherConfig), conf, reporter)
+func (h *MessageHandler) GetChannelHandler(host string) fanout.MessageHandler {
+	h.handlersLock.RLock()
+	defer h.handlersLock.RUnlock()
+	return h.handlers[host]
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.MessageHandler, based on the
 // request's channel key.
 func (h *MessageHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	channelKey := request.Host
-	fh, ok := h.handlers[channelKey]
-	if !ok {
+	fh := h.GetChannelHandler(channelKey)
+	if fh == nil {
 		h.logger.Info("Unable to find a handler for request", zap.String("channelKey", channelKey))
 		response.WriteHeader(http.StatusInternalServerError)
 		return

@@ -31,7 +31,6 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/channel/swappable"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
@@ -40,21 +39,6 @@ import (
 func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	logger := zap.NewNop()
 	reporter := channel.NewStatsReporter("testcontainer", "testpod")
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, nil, reporter)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
-		Port:         8080,
-		ReadTimeout:  1 * time.Minute,
-		WriteTimeout: 1 * time.Minute,
-		Handler:      sh,
-		Logger:       logger,
-	}
-
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
-	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
 
 	channelAUrl := mustParseUrl(b, "http://channela.svc/")
 	transformationsUrl := mustParseUrl(b, "http://transformations.svc/")
@@ -96,14 +80,22 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	httpSender.Client = mockedHTTPClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
 
-	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config, reporter)
+	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config, reporter)
 	if err != nil {
 		b.Fatal(err)
 	}
+	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+		Port:         8080,
+		ReadTimeout:  1 * time.Minute,
+		WriteTimeout: 1 * time.Minute,
+		Handler:      multiChannelFanoutHandler,
+		Logger:       logger,
+	}
 
-	sh.SetHandler(multiChannelFanoutHandler)
+	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
+	httpSender.Client = mockedHTTPClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
 
 	// Start the bench
 	b.ResetTimer()
