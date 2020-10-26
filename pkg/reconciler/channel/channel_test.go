@@ -53,7 +53,7 @@ const (
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, channelName)
 
-	backingChannelHostname = fmt.Sprintf("foo.bar.svc.%s", network.GetClusterDomainName())
+	backingChannelHostname = network.GetServiceHostname("foo", "bar")
 )
 
 func init() {

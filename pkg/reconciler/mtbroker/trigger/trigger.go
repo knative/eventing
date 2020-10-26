@@ -37,12 +37,12 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
-	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/network"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
@@ -151,7 +151,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 	recorder := controller.GetEventRecorder(ctx)
 	uri := &apis.URL{
 		Scheme: "http",
-		Host:   names.ServiceHostName("broker-filter", system.Namespace()),
+		Host:   network.GetServiceHostname("broker-filter", system.Namespace()),
 		Path:   path.Generate(t),
 	}
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not
