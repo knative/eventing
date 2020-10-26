@@ -435,19 +435,19 @@ func (r *BaseReconciler) ReconcileSubject(ctx context.Context, fb Bindable, muta
 func (r *BaseReconciler) UpdateStatus(ctx context.Context, desired Bindable) error {
 	actual, err := r.Get(desired.GetNamespace(), desired.GetName())
 	if err != nil {
-		logging.FromContext(ctx).Error("Error fetching actual: ", err)
+		logging.FromContext(ctx).Errorw("Error fetching actual", zap.Error(err))
 		return err
 	}
 
 	// Convert to unstructured for use with the dynamic client.
 	ua, err := duck.ToUnstructured(actual)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error converting actual: ", err)
+		logging.FromContext(ctx).Errorw("Error converting actual", zap.Error(err))
 		return err
 	}
 	ud, err := duck.ToUnstructured(desired)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error converting desired: ", err)
+		logging.FromContext(ctx).Errorw("Error converting desired", zap.Error(err))
 		return err
 	}
 
