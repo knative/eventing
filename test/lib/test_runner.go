@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -193,7 +194,24 @@ func TearDown(client *Client) {
 	if err != nil {
 		client.T.Logf("Could not list events in the namespace %q: %v", client.Namespace, err)
 	} else {
-		for _, e := range el.Items {
+		// Elements has to be ordered first
+		items := el.Items
+		sort.SliceStable(items, func(i, j int) bool {
+			// Some events might not contain last timestamp, in that case we fallback to event time
+			iTime := items[i].LastTimestamp.Time
+			if iTime.IsZero() {
+				iTime = items[i].EventTime.Time
+			}
+
+			jTime := items[j].LastTimestamp.Time
+			if jTime.IsZero() {
+				jTime = items[j].EventTime.Time
+			}
+
+			return iTime.Before(jTime)
+		})
+
+		for _, e := range items {
 			client.T.Log(formatEvent(&e))
 		}
 	}

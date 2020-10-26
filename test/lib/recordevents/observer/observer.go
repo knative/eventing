@@ -46,7 +46,7 @@ type Observer struct {
 
 type envConfig struct {
 	// ObserverName is used to identify this instance of the observer.
-	ObserverName string `envconfig:"OBSERVER_NAME" default:"observer-default" required:"true"`
+	ObserverName string `envconfig:"POD_NAME" default:"observer-default" required:"true"`
 
 	// Reply is used to define if the observer should reply back
 	Reply bool `envconfig:"REPLY" default:"false" required:"false"`
@@ -120,6 +120,10 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
 	header := request.Header
+	// Host header is removed from the request.Header map by net/http
+	if request.Host != "" {
+		header.Set("Host", request.Host)
+	}
 
 	eventErrStr := ""
 	if eventErr != nil {
