@@ -53,16 +53,15 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 			Name:      fmt.Sprintf("%v.%d", r.ref.Name, observed.Sequence),
 			Namespace: r.namespace,
 		},
-		InvolvedObject:      *r.ref,
-		Reason:              recordevents.CloudEventObservedReason,
-		Message:             string(b),
-		Source:              corev1.EventSource{Component: r.agentName},
-		FirstTimestamp:      metav1.Time{Time: t},
-		LastTimestamp:       metav1.Time{Time: t},
-		EventTime:           metav1.MicroTime{Time: t},
-		Count:               1,
-		Type:                corev1.EventTypeNormal,
-		ReportingController: "recordevents",
+		InvolvedObject: *r.ref,
+		Reason:         recordevents.CloudEventObservedReason,
+		Message:        string(b),
+		Source:         corev1.EventSource{Component: r.agentName},
+		FirstTimestamp: metav1.Time{Time: t},
+		LastTimestamp:  metav1.Time{Time: t},
+		EventTime:      metav1.MicroTime{Time: t},
+		Count:          1,
+		Type:           corev1.EventTypeNormal,
 	}
 
 	return r.recordEvent(event)
@@ -70,12 +69,6 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 
 func (r *recorder) recordEvent(event *corev1.Event) error {
 	tries := 0
-	// Make a copy before modification, because there could be multiple listeners.
-	// Events are safe to copy like this.
-	eventCopy := *event
-	event = &eventCopy
-
-	// Add the sequence number
 	for {
 		done, err := r.trySendEvent(event)
 		if done {
