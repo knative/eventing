@@ -19,12 +19,13 @@ package recorder_vent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -46,6 +47,10 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 	if err != nil {
 		return err
 	}
+	message := string(b)
+	if message == "" {
+		return errors.New("event message cannot be empty!")
+	}
 
 	t := time.Now()
 	event := &corev1.Event{
@@ -53,18 +58,15 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 			Name:      fmt.Sprintf("%v.%d", r.ref.Name, observed.Sequence),
 			Namespace: r.namespace,
 		},
-		InvolvedObject:      *r.ref,
-		Reason:              recordevents.CloudEventObservedReason,
-		Message:             string(b),
-		Source:              corev1.EventSource{Component: r.agentName},
-		FirstTimestamp:      metav1.Time{Time: t},
-		LastTimestamp:       metav1.Time{Time: t},
-		EventTime:           metav1.MicroTime{Time: t},
-		Count:               1,
-		Type:                corev1.EventTypeNormal,
-		Action:              "Propagated",
-		ReportingController: "recordevents",
-		ReportingInstance:   r.agentName,
+		InvolvedObject: *r.ref,
+		Reason:         recordevents.CloudEventObservedReason,
+		Message:        message,
+		Source:         corev1.EventSource{Component: r.agentName},
+		FirstTimestamp: metav1.Time{Time: t},
+		LastTimestamp:  metav1.Time{Time: t},
+		EventTime:      metav1.MicroTime{Time: t},
+		Count:          1,
+		Type:           corev1.EventTypeNormal,
 	}
 
 	return r.recordEvent(event)
@@ -93,7 +95,7 @@ func (r *recorder) recordEvent(event *corev1.Event) error {
 }
 
 func (r *recorder) trySendEvent(event *corev1.Event) (bool, error) {
-	newEv, err := kubeclient.Get(r.ctx).CoreV1().Events(r.namespace).CreateWithEventNamespace(event)
+	newEv, err := kubeclient.Get(r.ctx).CoreV1().Events(r.namespace).Create(r.ctx, event, metav1.CreateOptions{})
 	if err == nil {
 		logging.FromContext(r.ctx).Infof("Event '%s' sent correctly, uuid: %s", newEv.Name, newEv.UID)
 		return true, nil
@@ -106,14 +108,14 @@ func (r *recorder) trySendEvent(event *corev1.Event) (bool, error) {
 		// We will construct the request the same next time, so don't keep trying.
 		logging.FromContext(r.ctx).Errorf("Unable to construct event '%s': '%v' (will not retry!)", event.Name, err)
 		return true, err
-	case *errors.StatusError:
-		if errors.IsAlreadyExists(err) {
-			logging.FromContext(r.ctx).Infof("Server rejected event '%s': '%v' (will not retry!)", event.Name, err)
+	case *apierrors.StatusError:
+		if apierrors.IsAlreadyExists(err) {
+			logging.FromContext(r.ctx).Infof("Server rejected event '%s'. Reason: '%v' (will not retry!). Event: %v", event.Name, err, event)
 		} else {
-			logging.FromContext(r.ctx).Errorf("Server rejected event '%s': '%v' (will not retry!)", event.Name, err)
+			logging.FromContext(r.ctx).Errorf("Server rejected event '%s'. Reason: '%v' (will not retry!). Event: %v", event.Name, err, event)
 		}
 		return true, err
-	case *errors.UnexpectedObjectError:
+	case *apierrors.UnexpectedObjectError:
 		// We don't expect this; it implies the server's response didn't match a
 		// known pattern. Go ahead and retry.
 	default:
