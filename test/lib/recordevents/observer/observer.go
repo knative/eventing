@@ -178,7 +178,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 
 	err := o.EventLogs.Vent(eventInfo)
 	if err != nil {
-		logging.FromContext(o.ctx).Warnw("Error while venting the recorded event", zap.Error(err))
+		logging.FromContext(o.ctx).Fatalf("Error while venting the recorded event", zap.Error(err))
 	}
 
 	if shouldSkip {

@@ -17,18 +17,30 @@ limitations under the License.
 package recorder_vent
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"math/rand"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/test/lib/recordevents"
 )
 
+const SequenceAnnotation = "recordevents/sequence"
+
 type recorder struct {
-	out record.EventRecorder
-	on  runtime.Object
+	ctx       context.Context
+	namespace string
+	agentName string
+
+	ref *corev1.ObjectReference
 }
 
 func (r *recorder) Vent(observed recordevents.EventInfo) error {
@@ -37,7 +49,82 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 		return err
 	}
 
-	r.out.Eventf(r.on, corev1.EventTypeNormal, recordevents.CloudEventObservedReason, "%s", string(b))
+	t := time.Now()
+	event := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%v.%x", r.ref.Name, observed.Sequence),
+			Namespace:   r.namespace,
+			Annotations: map[string]string{SequenceAnnotation: fmt.Sprintf("%d", observed.Sequence)},
+		},
+		InvolvedObject: *r.ref,
+		Reason:         recordevents.CloudEventObservedReason,
+		Message:        string(b),
+		Source:         corev1.EventSource{Component: r.agentName},
+		FirstTimestamp: metav1.Time{Time: t},
+		LastTimestamp:  metav1.Time{Time: t},
+		EventTime:      metav1.MicroTime{Time: t},
+		Count:          1,
+		Type:           corev1.EventTypeNormal,
+	}
 
-	return nil
+	return r.recordEvent(event)
+}
+
+func (r *recorder) recordEvent(event *corev1.Event) error {
+	tries := 0
+	// Make a copy before modification, because there could be multiple listeners.
+	// Events are safe to copy like this.
+	eventCopy := *event
+	event = &eventCopy
+
+	// Add the sequence number
+	for {
+		done, err := r.trySendEvent(event)
+		if done {
+			return nil
+		}
+		tries++
+		if tries >= maxRetry {
+			logging.FromContext(r.ctx).Errorf("Unable to write event '%s' (retry limit exceeded!)", event.Name)
+			return err
+		}
+		// Randomize the first sleep so that various clients won't all be
+		// synced up if the master goes down.
+		if tries == 1 {
+			time.Sleep(time.Duration(float64(sleepDuration) * rand.Float64()))
+		} else {
+			time.Sleep(sleepDuration)
+		}
+	}
+}
+
+func (r *recorder) trySendEvent(event *corev1.Event) (bool, error) {
+	newEv, err := kubeclient.Get(r.ctx).CoreV1().Events(r.namespace).CreateWithEventNamespace(event)
+	if err == nil {
+		logging.FromContext(r.ctx).Infof("Event '%s' sent correctly, uuid: %s", newEv.Name, newEv.UID)
+		return true, nil
+	}
+
+	// If we can't contact the server, then hold everything while we keep trying.
+	// Otherwise, something about the event is malformed and we should abandon it.
+	switch err.(type) {
+	case *restclient.RequestConstructionError:
+		// We will construct the request the same next time, so don't keep trying.
+		logging.FromContext(r.ctx).Errorf("Unable to construct event '%s': '%v' (will not retry!)", event.Name, err)
+		return true, err
+	case *errors.StatusError:
+		if errors.IsAlreadyExists(err) {
+			logging.FromContext(r.ctx).Infof("Server rejected event '%s': '%v' (will not retry!)", event.Name, err)
+		} else {
+			logging.FromContext(r.ctx).Errorf("Server rejected event '%s': '%v' (will not retry!)", event.Name, err)
+		}
+		return true, err
+	case *errors.UnexpectedObjectError:
+		// We don't expect this; it implies the server's response didn't match a
+		// known pattern. Go ahead and retry.
+	default:
+		// This case includes actual http transport errors. Go ahead and retry.
+	}
+	logging.FromContext(r.ctx).Errorf("Unable to write event: '%v' (may retry after sleeping)", err)
+	return false, err
 }

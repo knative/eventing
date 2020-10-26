@@ -25,6 +25,7 @@ import (
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/test/lib/recordevents/logger_vent"
 	"knative.dev/eventing/test/lib/recordevents/observer"
 	"knative.dev/eventing/test/lib/recordevents/recorder_vent"
 	"knative.dev/eventing/test/test_images"
@@ -44,6 +45,7 @@ func main() {
 	}
 
 	obs := observer.NewFromEnv(ctx,
+		logger_vent.Logger(logging.FromContext(ctx).Infof),
 		recorder_vent.NewFromEnv(ctx),
 	)
 
