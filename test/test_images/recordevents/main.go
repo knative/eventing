@@ -17,11 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"log"
+
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 	_ "knative.dev/pkg/system/testing"
-	"log"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/test/lib/recordevents/observer"
