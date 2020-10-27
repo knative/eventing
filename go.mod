@@ -40,8 +40,8 @@ require (
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/pkg v0.0.0-20201027121533-273ba59a1132
-	knative.dev/test-infra v0.0.0-20201026182042-46291de4ab66
+	knative.dev/hack v0.0.0-20201027221733-0d7f2f064b7b
+	knative.dev/pkg v0.0.0-20201027223833-826303ca0653
 	sigs.k8s.io/yaml v1.2.0
 )
 

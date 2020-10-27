@@ -22,7 +22,7 @@ import (
 	_ "knative.dev/pkg/configmap/hash-gen"
 	_ "knative.dev/pkg/hack"
 	_ "knative.dev/pkg/testutils/clustermanager/perf-tests"
-	_ "knative.dev/test-infra/scripts"
+	_ "knative.dev/hack"
 
 	// Needed for the storage version too.
 	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
