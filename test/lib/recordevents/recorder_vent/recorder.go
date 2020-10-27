@@ -54,18 +54,14 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 			Name:      fmt.Sprintf("%v.%d", r.ref.Name, observed.Sequence),
 			Namespace: r.namespace,
 		},
-		InvolvedObject:      *r.ref,
-		Reason:              recordevents.CloudEventObservedReason,
-		Message:             message,
-		Source:              corev1.EventSource{Component: r.agentName},
-		FirstTimestamp:      metav1.Time{Time: t},
-		LastTimestamp:       metav1.Time{Time: t},
-		EventTime:           metav1.MicroTime{Time: t},
-		Count:               1,
-		Type:                corev1.EventTypeNormal,
-		Action:              "Published",
-		ReportingController: "knative.dev/recordevents",
-		ReportingInstance:   r.ref.Name,
+		InvolvedObject: *r.ref,
+		Reason:         recordevents.CloudEventObservedReason,
+		Message:        message,
+		Source:         corev1.EventSource{Component: r.agentName},
+		FirstTimestamp: metav1.Time{Time: t},
+		LastTimestamp:  metav1.Time{Time: t},
+		Count:          1,
+		Type:           corev1.EventTypeNormal,
 	}
 
 	return r.recordEvent(event)
@@ -94,7 +90,7 @@ func (r *recorder) recordEvent(event *corev1.Event) error {
 }
 
 func (r *recorder) trySendEvent(event *corev1.Event) (bool, error) {
-	newEv, err := kubeclient.Get(r.ctx).CoreV1().Events(r.namespace).Create(r.ctx, event, metav1.CreateOptions{})
+	newEv, err := kubeclient.Get(r.ctx).CoreV1().Events(r.namespace).CreateWithEventNamespace(event)
 	if err == nil {
 		logging.FromContext(r.ctx).Infof("Event '%s' sent correctly, uuid: %s", newEv.Name, newEv.UID)
 		return true, nil

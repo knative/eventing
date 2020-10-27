@@ -151,6 +151,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 			headers[k] = v
 		}
 	}
+	// Host header is removed from the request.Header map by net/http
 	if request.Host != "" {
 		headers.Set("Host", request.Host)
 	}
