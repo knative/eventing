@@ -17,9 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"testing"
+
 	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"testing"
 
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"

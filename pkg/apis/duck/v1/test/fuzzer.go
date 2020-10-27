@@ -17,8 +17,9 @@ limitations under the License.
 package test
 
 import (
-	"knative.dev/eventing/pkg/apis/duck/v1"
 	"math/rand"
+
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 
 	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
