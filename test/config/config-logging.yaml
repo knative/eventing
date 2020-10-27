@@ -27,7 +27,7 @@ data:
       "development": false,
       "outputPaths": ["stdout"],
       "errorOutputPaths": ["stderr"],
-      "encoding": "json",
+      "encoding": "console",
       "encoderConfig": {
         "timeKey": "ts",
         "levelKey": "level",
@@ -42,5 +42,3 @@ data:
         "callerEncoder": ""
       }
     }
-  # Log level overrides
-  loglevel.mt-broker-controller: "debug"
