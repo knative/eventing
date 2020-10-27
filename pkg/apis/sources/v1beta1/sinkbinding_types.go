@@ -72,6 +72,10 @@ const (
 	// SinkBindingConditionReady is configured to indicate whether the Binding
 	// has been configured for resources subject to its runtime contract.
 	SinkBindingConditionReady = apis.ConditionReady
+
+	// SinkBindingConditionSinkProvided is configured to indicate whether the
+	// sink has been properly extracted from the resolver.
+	SinkBindingConditionSinkProvided apis.ConditionType = "SinkProvided"
 )
 
 // SinkBindingStatus communicates the observed state of the SinkBinding (from the controller).
