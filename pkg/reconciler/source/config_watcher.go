@@ -256,7 +256,9 @@ func (cw *ConfigWatcher) tracingConfigEnvVar() corev1.EnvVar {
 }
 
 // EmptyVarsGenerator generates empty env vars. Intended to be used in tests.
-type EmptyVarsGenerator struct{}
+type EmptyVarsGenerator struct {
+	ConfigAccessor
+}
 
 var _ ConfigAccessor = (*EmptyVarsGenerator)(nil)
 
@@ -266,16 +268,4 @@ func (g *EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
 		{Name: EnvMetricsCfg},
 		{Name: EnvTracingCfg},
 	}
-}
-
-func (*EmptyVarsGenerator) LoggingConfig() *logging.Config {
-	return nil
-}
-
-func (*EmptyVarsGenerator) MetricsConfig() *metrics.ExporterOptions {
-	return nil
-}
-
-func (*EmptyVarsGenerator) TracingConfig() *tracingconfig.Config {
-	return nil
 }
