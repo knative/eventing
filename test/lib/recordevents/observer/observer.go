@@ -46,9 +46,7 @@ type Observer struct {
 	// Increment this for every dropped event that we see
 	dropSeq   uint64
 	replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
-	// If configured to drop some events, counter keeps track of how many should
-	// be dropped.
-	counter *dropevents.CounterHandler
+	counter   *dropevents.CounterHandler
 }
 
 type envConfig struct {
@@ -95,20 +93,26 @@ func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observ
 		logging.FromContext(ctx).Info("Observer won't reply with an event")
 		replyFunc = NoOpReply
 	}
+	var counter *dropevents.CounterHandler
 
-	o := &Observer{
+	if env.SkipStrategy != "" {
+		counter = &dropevents.CounterHandler{
+			Skipper: dropevents.SkipperAlgorithmWithCount(env.SkipStrategy, env.SkipCounter),
+		}
+	} else {
+		counter = &dropevents.CounterHandler{
+			// Don't skip anything, since count is 0. nop skipper.
+			Skipper: dropevents.SkipperAlgorithmWithCount(dropevents.Sequence, 0),
+		}
+	}
+
+	return &Observer{
 		Name:      env.ObserverName,
 		EventLogs: eventLogs,
 		ctx:       ctx,
 		replyFunc: replyFunc,
+		counter:   counter,
 	}
-
-	if env.SkipStrategy != "" {
-		o.counter = &dropevents.CounterHandler{
-			Skipper: dropevents.SkipperAlgorithmWithCount(env.SkipStrategy, env.SkipCounter),
-		}
-	}
-	return o
 }
 
 // Start will create the CloudEvents client and start listening for inbound
@@ -158,10 +162,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		Observer:    o.Name,
 		Time:        time.Now(),
 	}
-	shouldSkip := false
-	if o.counter != nil {
-		shouldSkip = o.counter.Skip()
-	}
+	shouldSkip := o.counter.Skip()
 
 	// We still want to emit the event to make it easier to see what we had oberved, but
 	// we want to transform it a little bit before emitting so that it does not count
