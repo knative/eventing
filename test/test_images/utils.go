@@ -71,8 +71,13 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 }
 
 // ConfigureTracing can be used in test-images to configure tracing
-func ConfigureLogging(ctx context.Context) context.Context {
+func ConfigureLogging(ctx context.Context, name string) context.Context {
 	loggingEnv := os.Getenv(ConfigLoggingEnv)
-	l, _ := logging.NewLogger(loggingEnv, "")
+	conf, err := logging.JsonToLoggingConfig(loggingEnv)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Error while trying to read the config logging env: ", err)
+		return ctx
+	}
+	l, _ := logging.NewLoggerFromConfig(conf, name)
 	return logging.WithLogger(ctx, l)
 }
