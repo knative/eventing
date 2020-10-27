@@ -19,7 +19,6 @@ package recorder_vent
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -48,8 +47,8 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 		return err
 	}
 	message := string(b)
-	if message == "" {
-		return errors.New("event message cannot be empty!")
+	if len(message) == 0 || len(message) > 1024 {
+		return fmt.Errorf("invalid message length: '%d'", len(message))
 	}
 
 	t := time.Now()

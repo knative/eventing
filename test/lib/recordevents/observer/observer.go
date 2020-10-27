@@ -19,6 +19,7 @@ package observer
 import (
 	"context"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -144,6 +145,12 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
+	headers := make(map[string][]string)
+	for k, v := range request.Header {
+		if !strings.HasSuffix(strings.ToLower(k), "ce-") {
+			headers[k] = v
+		}
+	}
 	header := request.Header
 	// Host header is removed from the request.Header map by net/http
 	if request.Host != "" {
