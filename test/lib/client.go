@@ -174,5 +174,5 @@ func getLoggingConfig(c kubernetes.Interface) (*corev1.EnvVar, error) {
 		return nil, fmt.Errorf("error while serializing the %s config map: %+v", logging.ConfigMapName(), errors.WithStack(err))
 	}
 
-	return &corev1.EnvVar{Name: test_images.ConfigLoggingEnv, Value: configSerialized}, nil
+	return &corev1.EnvVar{Name: ti.ConfigLoggingEnv, Value: configSerialized}, nil
 }
