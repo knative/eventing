@@ -135,9 +135,6 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 						FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 					},
 				}, {
-					Name:  "OBSERVER",
-					Value: "recorder-" + name,
-				}, {
 					Name: "POD_NAME",
 					ValueFrom: &corev1.EnvVarSource{
 						FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
