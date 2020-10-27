@@ -42,16 +42,36 @@ type EventInfo struct {
 	Observer    string              `json:"observer,omitempty"`
 	Time        time.Time           `json:"time,omitempty"`
 	Sequence    uint64              `json:"sequence"`
+	Dropped     bool                `json:"dropped"`
 }
 
-// Pretty print the event. Meant for debugging.  This formats the validation error
-// or the full event as appropriate.  This does NOT format the headers.
+// Pretty print the event. Meant for debugging.
 func (ei *EventInfo) String() string {
+	var sb strings.Builder
+	sb.WriteString("-- EventInfo --\n")
 	if ei.Event != nil {
-		return ei.Event.String()
-	} else {
-		return fmt.Sprintf("invalid event \"%s\"", ei.Error)
+		sb.WriteString("--- Event ---\n")
+		sb.WriteString(ei.Event.String())
+		sb.WriteRune('\n')
+		sb.WriteRune('\n')
 	}
+	if ei.Error != "" {
+		sb.WriteString("--- Error ---\n")
+		sb.WriteString(ei.Error)
+		sb.WriteRune('\n')
+		sb.WriteRune('\n')
+	}
+	sb.WriteString("--- HTTP headers ---\n")
+	for k, v := range ei.HTTPHeaders {
+		sb.WriteString("  " + k + ": " + v[0] + "\n")
+	}
+	sb.WriteRune('\n')
+	sb.WriteString("--- Origin: '" + ei.Origin + "' ---\n")
+	sb.WriteString("--- Observer: '" + ei.Observer + "' ---\n")
+	sb.WriteString("--- Time: " + ei.Time.String() + " ---\n")
+	sb.WriteString(fmt.Sprintf("--- Sequence: %d ---\n", ei.Sequence))
+	sb.WriteString(fmt.Sprintf("--- Dropped: %v ---\n", ei.Dropped))
+	return sb.String()
 }
 
 // This is mainly used for providing better failure messages
