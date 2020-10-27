@@ -216,7 +216,7 @@ func maybeAppendEnvVar(envs []corev1.EnvVar, env corev1.EnvVar, cond bool) []cor
 // loggingConfigEnvVar returns an EnvVar containing the serialized logging
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
-	cfg, err := logging.LoggingConfigToJson(cw.LoggingConfig())
+	cfg, err := logging.ConfigToJSON(cw.LoggingConfig())
 	if err != nil {
 		cw.logger.Warnw("Error while serializing logging config", zap.Error(err))
 	}
@@ -244,7 +244,7 @@ func (cw *ConfigWatcher) metricsConfigEnvVar() corev1.EnvVar {
 // tracingConfigEnvVar returns an EnvVar containing the serialized tracing
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) tracingConfigEnvVar() corev1.EnvVar {
-	cfg, err := tracingconfig.TracingConfigToJson(cw.TracingConfig())
+	cfg, err := tracingconfig.TracingConfigToJSON(cw.TracingConfig())
 	if err != nil {
 		cw.logger.Warnw("Error while serializing tracing config", zap.Error(err))
 	}

@@ -57,7 +57,7 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 		return tracing.SetupStaticPublishing(logger, serviceName, config.NoopConfig())
 	}
 
-	conf, err := config.JsonToTracingConfig(tracingEnv)
+	conf, err := config.JSONToTracingConfig(tracingEnv)
 	if err != nil {
 		return err
 	}

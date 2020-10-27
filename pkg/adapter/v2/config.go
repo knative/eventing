@@ -144,7 +144,7 @@ func (e *EnvConfig) GetMetricsConfig() (*metrics.ExporterOptions, error) {
 
 func (e *EnvConfig) GetLogger() *zap.SugaredLogger {
 	if e.logger == nil {
-		loggingConfig, err := logging.JsonToLoggingConfig(e.LoggingConfigJson)
+		loggingConfig, err := logging.JSONToConfig(e.LoggingConfigJson)
 		if err != nil {
 			// Use default logging config.
 			if loggingConfig, err = logging.NewConfigFromMap(map[string]string{}); err != nil {
@@ -180,7 +180,7 @@ func (e *EnvConfig) GetSinktimeout() int {
 }
 
 func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) error {
-	config, err := tracingconfig.JsonToTracingConfig(e.TracingConfigJson)
+	config, err := tracingconfig.JSONToTracingConfig(e.TracingConfigJson)
 	if err != nil {
 		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
@@ -221,8 +221,8 @@ func (e *EnvConfig) defaultLeaderElectionConfig() *kle.ComponentConfig {
 	}
 }
 
-// LeaderElectionComponentConfigToJson converts a ComponentConfig to a json string.
-func LeaderElectionComponentConfigToJson(cfg *kle.ComponentConfig) (string, error) {
+// LeaderElectionComponentConfigToJSON converts a ComponentConfig to a json string.
+func LeaderElectionComponentConfigToJSON(cfg *kle.ComponentConfig) (string, error) {
 	if cfg == nil {
 		return "", nil
 	}
