@@ -1878,8 +1878,8 @@ knative.dev/pkg v0.0.0-20200505191044-3da93ebb24c2/go.mod h1:Q6sL35DdGs8hIQZKdaC
 knative.dev/pkg v0.0.0-20200515002500-16d7b963416f/go.mod h1:tMOHGbxtRz8zYFGEGpV/bpoTEM1o89MwYFC4YJXl3GY=
 knative.dev/pkg v0.0.0-20200528142800-1c6815d7e4c9/go.mod h1:QgNZTxnwpB/oSpNcfnLVlw+WpEwwyKAvJlvR3hgeltA=
 knative.dev/pkg v0.0.0-20200711004937-22502028e31a/go.mod h1:AqAJV6rYi8IGikDjJ/9ZQd9qKdkXVlesVnVjwx62YB8=
-knative.dev/pkg v0.0.0-20201026165541-2bc79285d20c h1:vxm1WaA1LdGkHl1dA2C4e6x0nxef9BKdRTclNtSQMDk=
-knative.dev/pkg v0.0.0-20201026165541-2bc79285d20c/go.mod h1:pc2VrtK69NrLtGMc6Gu0BL8IOfmph6KNvIDVrFqqW3Q=
+knative.dev/pkg v0.0.0-20201026232541-37583c54bfc3 h1:YnoV/NKU0jt607ub1ra1RqCWMcoo9QLf8By9PAo8SSE=
+knative.dev/pkg v0.0.0-20201026232541-37583c54bfc3/go.mod h1:pc2VrtK69NrLtGMc6Gu0BL8IOfmph6KNvIDVrFqqW3Q=
 knative.dev/test-infra v0.0.0-20200407185800-1b88cb3b45a5/go.mod h1:xcdUkMJrLlBswIZqL5zCuBFOC22WIPMQoVX1L35i0vQ=
 knative.dev/test-infra v0.0.0-20200505052144-5ea2f705bb55/go.mod h1:WqF1Azka+FxPZ20keR2zCNtiQA1MP9ZB4BH4HuI+SIU=
 knative.dev/test-infra v0.0.0-20200513011557-d03429a76034/go.mod h1:aMif0KXL4g19YCYwsy4Ocjjz5xgPlseYV+B95Oo4JGE=
@@ -1887,8 +1887,8 @@ knative.dev/test-infra v0.0.0-20200519015156-82551620b0a9/go.mod h1:A5b2OAXTOeHT
 knative.dev/test-infra v0.0.0-20200707183444-aed09e56ddc7/go.mod h1:RjYAhXnZqeHw9+B0zsbqSPlae0lCvjekO/nw5ZMpLCs=
 knative.dev/test-infra v0.0.0-20201022003632-7d3ea6019158 h1:i6DIeWY1imJVNS6OH+VcBvYpVOkYWDe/AR2rUYTxcxE=
 knative.dev/test-infra v0.0.0-20201022003632-7d3ea6019158/go.mod h1:lm0U0k6ARXr8Po0LcSTCfETg63LOF3ajUxcoqy5JSH0=
-knative.dev/test-infra v0.0.0-20201023182438-7efa632471b9 h1:o6YXgT0otF0/uibFvexmTtGtu5A8LXIRO6LtnSUB54w=
-knative.dev/test-infra v0.0.0-20201023182438-7efa632471b9/go.mod h1:84HgSlMIp+oCx//g2Js61OxSVgdvrRYQMfMMr9kSSn4=
+knative.dev/test-infra v0.0.0-20201026182042-46291de4ab66 h1:4GjjfWLzfsxN7xm+vkdC4AWqgTlw5mSQmTdSqPVfjlM=
+knative.dev/test-infra v0.0.0-20201026182042-46291de4ab66/go.mod h1:84HgSlMIp+oCx//g2Js61OxSVgdvrRYQMfMMr9kSSn4=
 mvdan.cc/interfacer v0.0.0-20180901003855-c20040233aed/go.mod h1:Xkxe497xwlCKkIaQYRfC7CSLworTXY9RMqwhhCm+8Nc=
 mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b/go.mod h1:2odslEg/xrtNQqCYg2/jCoyKnw3vv5biOc3JnIcYfL4=
 mvdan.cc/unparam v0.0.0-20190720180237-d51796306d8f/go.mod h1:4G1h5nDURzA3bwVMZIVpwbkw+04kSxk3rAtzlimaUJw=

@@ -37,7 +37,7 @@ import (
 	configtracing "knative.dev/pkg/tracing/config"
 
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
-	"knative.dev/eventing/test/test_images"
+	ti "knative.dev/eventing/test/test_images"
 )
 
 // Client holds instances of interfaces for making requests to Knative.
@@ -143,10 +143,10 @@ func getTracingConfig(c kubernetes.Interface) (corev1.EnvVar, error) {
 		return corev1.EnvVar{}, fmt.Errorf("error while parsing the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
 	}
 
-	configSerialized, err := configtracing.TracingConfigToJson(config)
+	configSerialized, err := configtracing.TracingConfigToJSON(config)
 	if err != nil {
 		return corev1.EnvVar{}, fmt.Errorf("error while serializing the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
 	}
 
-	return corev1.EnvVar{Name: test_images.ConfigTracingEnv, Value: configSerialized}, nil
+	return corev1.EnvVar{Name: ti.ConfigTracingEnv, Value: configSerialized}, nil
 }

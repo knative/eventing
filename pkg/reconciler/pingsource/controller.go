@@ -54,7 +54,7 @@ func NewController(
 	}
 
 	cc := leaderElectionConfig.GetComponentConfig(mtcomponent)
-	leConfig, err := adapter.LeaderElectionComponentConfigToJson(&cc)
+	leConfig, err := adapter.LeaderElectionComponentConfigToJSON(&cc)
 	if err != nil {
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
