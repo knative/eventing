@@ -96,20 +96,19 @@ func NewFromEnv(ctx context.Context, eventLogs ...recordevents.EventLog) *Observ
 		replyFunc = NoOpReply
 	}
 
-	var skipper dropevents.Skipper
-	if env.SkipStrategy != "" {
-		skipper = dropevents.SkipperAlgorithmWithCount(env.SkipStrategy, env.SkipCounter)
-	}
-
-	return &Observer{
+	o := &Observer{
 		Name:      env.ObserverName,
 		EventLogs: eventLogs,
 		ctx:       ctx,
 		replyFunc: replyFunc,
-		counter: &dropevents.CounterHandler{
-			Skipper: skipper,
-		},
 	}
+
+	if env.SkipStrategy != "" {
+		o.counter = &dropevents.CounterHandler{
+			Skipper: dropevents.SkipperAlgorithmWithCount(env.SkipStrategy, env.SkipCounter),
+		}
+	}
+	return o
 }
 
 // Start will create the CloudEvents client and start listening for inbound
