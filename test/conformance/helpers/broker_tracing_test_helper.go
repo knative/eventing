@@ -19,6 +19,7 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -70,7 +71,6 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		client *testlib.Client,
 		loggerPodName string,
 		senderPublishTrace bool,
-		clusterDomain string,
 	) (tracinghelper.TestSpanTree, cetest.EventMatcher) {
 		// Create a configmap used by the broker.
 		client.CreateBrokerConfigMapOrFail("br", channel)
@@ -141,8 +141,8 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		// 6. Logger pod receives the event from the Broker Filter for the "logger" trigger.
 
 		// Useful constants we will use below.
-		loggerSVCHost := k8sServiceHost(clusterDomain, client.Namespace, loggerPodName)
-		transformerSVCHost := k8sServiceHost(clusterDomain, client.Namespace, eventTransformerPod.Name)
+		loggerSVCHost := k8sServiceHost(client.Namespace, loggerPodName)
+		transformerSVCHost := k8sServiceHost(client.Namespace, eventTransformerPod.Name)
 
 		transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 			Note: "3. Broker Filter for the 'transformer' trigger sends the event to the transformer pod.",
@@ -215,20 +215,20 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 
 func ingressSpan(broker *v1beta1.Broker, eventID string) *tracinghelper.SpanMatcher {
 	return &tracinghelper.SpanMatcher{
-		Tags: map[string]string{
-			"messaging.system":      "knative",
-			"messaging.destination": fmt.Sprintf("broker:%s.%s", broker.Name, broker.Namespace),
-			"messaging.message_id":  eventID,
+		Tags: map[string]*regexp.Regexp{
+			"messaging.system":      regexp.MustCompile("^knative$"),
+			"messaging.destination": regexp.MustCompile(fmt.Sprintf("^broker:%s.%s$", broker.Name, broker.Namespace)),
+			"messaging.message_id":  regexp.MustCompile("^" + eventID + "$"),
 		},
 	}
 }
 
 func triggerSpan(trigger *v1beta1.Trigger, eventID string) *tracinghelper.SpanMatcher {
 	return &tracinghelper.SpanMatcher{
-		Tags: map[string]string{
-			"messaging.system":      "knative",
-			"messaging.destination": fmt.Sprintf("trigger:%s.%s", trigger.Name, trigger.Namespace),
-			"messaging.message_id":  eventID,
+		Tags: map[string]*regexp.Regexp{
+			"messaging.system":      regexp.MustCompile("^knative$"),
+			"messaging.destination": regexp.MustCompile(fmt.Sprintf("^trigger:%s.%s$", trigger.Name, trigger.Namespace)),
+			"messaging.message_id":  regexp.MustCompile("^" + eventID + "$"),
 		},
 	}
 }
