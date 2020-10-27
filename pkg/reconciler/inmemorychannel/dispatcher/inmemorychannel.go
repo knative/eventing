@@ -67,8 +67,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	} else {
 		// Just update the config if necessary.
 		haveSubs := handler.GetSubscriptions(ctx)
-		// TODO(vaikas): This misses some updates.
-		// https://github.com/knative/eventing/issues/4375
+
+		// Ignore the closures, we stash the values that we can tell from if the values have actually changed.
 		if diff := cmp.Diff(config.FanoutConfig.Subscriptions, haveSubs, cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
 			logging.FromContext(ctx).Info("Updating fanout config: ", zap.String("Diff", diff))
 			handler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)

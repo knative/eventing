@@ -21,6 +21,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"knative.dev/eventing/pkg/kncloudevents"
+
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/pkg/reconciler"
 
@@ -56,12 +59,27 @@ const (
 )
 
 var (
+	three       = int32(3)
+	linear      = eventingduckv1.BackoffPolicyLinear
+	exponential = eventingduckv1.BackoffPolicyExponential
+
 	subscriber1 = eventingduckv1.SubscriberSpec{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
 		SubscriberURI: apis.HTTP("call1"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}
+	subscriber1WithLinearRetry = eventingduckv1.SubscriberSpec{
+		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: apis.HTTP("call1"),
+		ReplyURI:      apis.HTTP("sink2"),
+		Delivery: &eventingduckv1.DeliverySpec{
+			Retry:         &three,
+			BackoffPolicy: &linear,
+		},
+	}
+
 	subscriber2 = eventingduckv1.SubscriberSpec{
 		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    2,
@@ -370,6 +388,24 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 					Reply: apis.HTTP("sink2").URL()},
 			},
 		},
+		"with one subscriber, with delivery spec changed": {
+			imc: NewInMemoryChannel(imcName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1WithLinearRetry}),
+				WithInMemoryChannelAddress(channelServiceAddress)),
+			subs: []fanout.Subscription{{Subscriber: apis.HTTP("call1").URL(),
+				Reply:       apis.HTTP("sink2").URL(),
+				RetryConfig: &kncloudevents.RetryConfig{RetryMax: 2, BackoffPolicy: &exponential}}},
+			wantSubs: []fanout.Subscription{
+				{Subscriber: apis.HTTP("call1").URL(),
+					Reply:       apis.HTTP("sink2").URL(),
+					RetryConfig: &kncloudevents.RetryConfig{RetryMax: 3, BackoffPolicy: &linear}},
+			},
+		},
 	}
 	for n, tc := range testCases {
 		// Just run the tests once with no existing handler (creates the handler) and once
@@ -396,7 +432,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				if channelHandler == nil {
 					t.Error("Did not get handler")
 				}
-				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO())); diff != "" {
+				if diff := cmp.Diff(tc.wantSubs, channelHandler.GetSubscriptions(context.TODO()), cmpopts.IgnoreFields(kncloudevents.RetryConfig{}, "Backoff", "CheckRetry")); diff != "" {
 					t.Error("unexpected subs (+want/-got)", diff)
 				}
 			})
