@@ -32,6 +32,20 @@ const (
 	NumberKey        = "NUMBER"
 )
 
+// count is only used for SKIP_ALGORITHM=Sequence.
+func SkipperAlgorithmWithCount(algorithm string, count uint64) Skipper {
+	switch algorithm {
+	case Fibonacci:
+		return &dropeventsfibonacci.Fibonacci{Prev: 1, Current: 1}
+
+	case Sequence:
+		return dropeventsfirst.First{N: count}
+
+	default:
+		panic("unknown algorithm: " + algorithm)
+	}
+}
+
 func SkipperAlgorithm(algorithm string) Skipper {
 
 	switch algorithm {
