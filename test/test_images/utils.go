@@ -17,6 +17,7 @@ limitations under the License.
 package test_images
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracing"
 	"knative.dev/pkg/tracing/config"
 )
@@ -47,7 +49,10 @@ func ParseDurationStr(durationStr string, defaultDuration int) time.Duration {
 	return duration
 }
 
-const ConfigTracingEnv = "K_CONFIG_TRACING"
+const (
+	ConfigTracingEnv = "K_CONFIG_TRACING"
+	ConfigLoggingEnv = "K_CONFIG_LOGGING"
+)
 
 // ConfigureTracing can be used in test-images to configure tracing
 func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
@@ -63,4 +68,16 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 	}
 
 	return tracing.SetupStaticPublishing(logger, serviceName, conf)
+}
+
+// ConfigureTracing can be used in test-images to configure tracing
+func ConfigureLogging(ctx context.Context, name string) context.Context {
+	loggingEnv := os.Getenv(ConfigLoggingEnv)
+	conf, err := logging.JsonToLoggingConfig(loggingEnv)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Error while trying to read the config logging env: ", err)
+		return ctx
+	}
+	l, _ := logging.NewLoggerFromConfig(conf, name)
+	return logging.WithLogger(ctx, l)
 }
