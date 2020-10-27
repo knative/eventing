@@ -42,6 +42,7 @@ type EventInfo struct {
 	Observer    string              `json:"observer,omitempty"`
 	Time        time.Time           `json:"time,omitempty"`
 	Sequence    uint64              `json:"sequence"`
+	Dropped     bool                `json:"dropped"`
 }
 
 // Pretty print the event. Meant for debugging.
@@ -69,6 +70,7 @@ func (ei *EventInfo) String() string {
 	sb.WriteString("--- Observer: '" + ei.Observer + "' ---\n")
 	sb.WriteString("--- Time: " + ei.Time.String() + " ---\n")
 	sb.WriteString(fmt.Sprintf("--- Sequence: %d ---\n", ei.Sequence))
+	sb.WriteString(fmt.Sprintf("--- Dropped: %v ---\n", ei.Dropped))
 	return sb.String()
 }
 
