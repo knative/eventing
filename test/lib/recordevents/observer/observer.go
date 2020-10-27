@@ -151,10 +151,8 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 			headers[k] = v
 		}
 	}
-	header := request.Header
-	// Host header is removed from the request.Header map by net/http
 	if request.Host != "" {
-		header.Set("Host", request.Host)
+		headers["Host"] = []string{request.Host}
 	}
 
 	eventErrStr := ""
@@ -164,7 +162,7 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	eventInfo := recordevents.EventInfo{
 		Error:       eventErrStr,
 		Event:       event,
-		HTTPHeaders: header,
+		HTTPHeaders: headers,
 		Origin:      request.RemoteAddr,
 		Observer:    o.Name,
 		Time:        time.Now(),
