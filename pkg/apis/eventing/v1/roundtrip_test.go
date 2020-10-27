@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	fuzz "github.com/google/gofuzz"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
@@ -24,6 +26,37 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	pkgfuzzer "knative.dev/pkg/apis/testing/fuzzer"
 	"knative.dev/pkg/apis/testing/roundtrip"
+)
+
+// FuzzerFuncs includes fuzzing funcs for knative.dev/eventing v1 types
+//
+// For other examples see
+// https://github.com/kubernetes/apimachinery/blob/master/pkg/apis/meta/fuzzer/fuzzer.go
+var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
+	func(codecs serializer.CodecFactory) []interface{} {
+		return []interface{}{
+			func(s *TriggerStatus, c fuzz.Continue) {
+				c.FuzzNoCustom(s) // fuzz the status object
+
+				// Clear the random fuzzed condition
+				s.Status.SetConditions(nil)
+
+				// Fuzz the known conditions except their type value
+				s.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&s.Status, c)
+			},
+			func(s *BrokerStatus, c fuzz.Continue) {
+				c.FuzzNoCustom(s) // fuzz the status object
+
+				// Clear the random fuzzed condition
+				s.Status.SetConditions(nil)
+
+				// Fuzz the known conditions except their type value
+				s.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&s.Status, c)
+			},
+		}
+	},
 )
 
 func TestEventingRoundTripTypesToJSON(t *testing.T) {
