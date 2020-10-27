@@ -19,6 +19,7 @@ package observer
 import (
 	"context"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -41,10 +42,8 @@ type Observer struct {
 	// EventLogs is the list of EventLog implementors to vent observed events.
 	EventLogs recordevents.EventLogs
 
-	ctx context.Context
-	seq uint64
-	// Increment this for every dropped event that we see
-	dropSeq   uint64
+	ctx       context.Context
+	seq       uint64
 	replyFunc func(context.Context, http.ResponseWriter, recordevents.EventInfo)
 	counter   *dropevents.CounterHandler
 }
@@ -144,41 +143,45 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
-	header := request.Header
+	headers := make(http.Header)
+	for k, v := range request.Header {
+		if !strings.HasPrefix(k, "Ce-") {
+			headers[k] = v
+		}
+	}
 	// Host header is removed from the request.Header map by net/http
 	if request.Host != "" {
-		header.Set("Host", request.Host)
+		headers.Set("Host", request.Host)
 	}
 
 	eventErrStr := ""
 	if eventErr != nil {
 		eventErrStr = eventErr.Error()
 	}
+
+	shouldSkip := o.counter.Skip()
+
 	eventInfo := recordevents.EventInfo{
 		Error:       eventErrStr,
 		Event:       event,
-		HTTPHeaders: header,
+		HTTPHeaders: headers,
 		Origin:      request.RemoteAddr,
 		Observer:    o.Name,
 		Time:        time.Now(),
+		Sequence:    atomic.AddUint64(&o.seq, 1),
+		Dropped:     shouldSkip,
 	}
-	shouldSkip := o.counter.Skip()
 
 	// We still want to emit the event to make it easier to see what we had oberved, but
 	// we want to transform it a little bit before emitting so that it does not count
 	// as the real event that we want to emit.
 	if shouldSkip {
-		eventInfo.Sequence = atomic.AddUint64(&o.dropSeq, 1)
 		eventInfo.Event.SetType("dropped-" + eventInfo.Event.Type())
-	} else {
-		// Increment the sequence only if we're not dropping so that we do not
-		// introduce side effects.
-		eventInfo.Sequence = atomic.AddUint64(&o.seq, 1)
 	}
 
 	err := o.EventLogs.Vent(eventInfo)
 	if err != nil {
-		logging.FromContext(o.ctx).Warnw("Error while venting the recorded event", zap.Error(err))
+		logging.FromContext(o.ctx).Fatalw("Error while venting the recorded event", zap.Error(err))
 	}
 
 	if shouldSkip {
