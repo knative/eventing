@@ -42,5 +42,3 @@ data:
         "callerEncoder": ""
       }
     }
-  # Log level overrides
-  loglevel.mt-broker-controller: "debug"
