@@ -169,7 +169,7 @@ func getLoggingConfig(c kubernetes.Interface) (*corev1.EnvVar, error) {
 		return nil, fmt.Errorf("error while parsing the %s config map: %+v", logging.ConfigMapName(), errors.WithStack(err))
 	}
 
-	configSerialized, err := logging.LoggingConfigToJson(config)
+	configSerialized, err := logging.ConfigToJSON(config)
 	if err != nil {
 		return nil, fmt.Errorf("error while serializing the %s config map: %+v", logging.ConfigMapName(), errors.WithStack(err))
 	}

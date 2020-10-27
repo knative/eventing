@@ -39,6 +39,8 @@ func ParseHeaders(serializedHeaders string) http.Header {
 	return h
 }
 
+// ParseDurationStr parses `durationStr` as number of seconds (not time.Duration string),
+// if parsing fails, returns back default duration.
 func ParseDurationStr(durationStr string, defaultDuration int) time.Duration {
 	var duration time.Duration
 	if d, err := strconv.Atoi(durationStr); err != nil {
@@ -73,7 +75,7 @@ func ConfigureTracing(logger *zap.SugaredLogger, serviceName string) error {
 // ConfigureTracing can be used in test-images to configure tracing
 func ConfigureLogging(ctx context.Context, name string) context.Context {
 	loggingEnv := os.Getenv(ConfigLoggingEnv)
-	conf, err := logging.JsonToLoggingConfig(loggingEnv)
+	conf, err := logging.JSONToConfig(loggingEnv)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Error while trying to read the config logging env: ", err)
 		return ctx
