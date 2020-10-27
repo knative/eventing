@@ -145,14 +145,14 @@ func (o *Observer) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	defer m.Finish(nil)
 
 	event, eventErr := cloudeventsbindings.ToEvent(context.TODO(), m)
-	headers := make(map[string][]string)
+	headers := make(http.Header)
 	for k, v := range request.Header {
-		if !strings.HasSuffix(strings.ToLower(k), "ce-") {
+		if !strings.HasPrefix(k, "Ce-") {
 			headers[k] = v
 		}
 	}
 	if request.Host != "" {
-		headers["Host"] = []string{request.Host}
+		headers.Set("Host", request.Host)
 	}
 
 	eventErrStr := ""
