@@ -14,19 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package test
 
 import (
 	"math/rand"
+
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 
 	fuzz "github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-var linear = BackoffPolicyLinear
-var exponential = BackoffPolicyExponential
-var bops = []*BackoffPolicyType{nil, &linear, &exponential}
+var linear = v1.BackoffPolicyLinear
+var exponential = v1.BackoffPolicyExponential
+var bops = []*v1.BackoffPolicyType{nil, &linear, &exponential}
 
 // FuzzerFuncs includes fuzzing funcs for knative.dev/duck v1 types
 // In particular it makes sure that Delivery has only valid BackoffPolicyType in it.
@@ -36,7 +38,7 @@ var bops = []*BackoffPolicyType{nil, &linear, &exponential}
 var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 	func(codecs serializer.CodecFactory) []interface{} {
 		return []interface{}{
-			func(ds *DeliverySpec, c fuzz.Continue) {
+			func(ds *v1.DeliverySpec, c fuzz.Continue) {
 				c.FuzzNoCustom(ds) // fuzz the DeliverySpec
 				if ds.BackoffPolicy != nil && *ds.BackoffPolicy == "" {
 					ds.BackoffPolicy = nil

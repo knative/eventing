@@ -19,13 +19,47 @@ package v1beta1
 import (
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"knative.dev/eventing/pkg/apis/duck/v1/test"
+
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	duckerfuzzer "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	pkgfuzzer "knative.dev/pkg/apis/testing/fuzzer"
 	"knative.dev/pkg/apis/testing/roundtrip"
+)
+
+// FuzzerFuncs includes fuzzing funcs for knative.dev/eventing v1 types
+//
+// For other examples see
+// https://github.com/kubernetes/apimachinery/blob/master/pkg/apis/meta/fuzzer/fuzzer.go
+var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
+	func(codecs serializer.CodecFactory) []interface{} {
+		return []interface{}{
+			func(s *v1.TriggerStatus, c fuzz.Continue) {
+				c.FuzzNoCustom(s) // fuzz the status object
+
+				// Clear the random fuzzed condition
+				s.Status.SetConditions(nil)
+
+				// Fuzz the known conditions except their type value
+				s.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&s.Status, c)
+			},
+			func(s *v1.BrokerStatus, c fuzz.Continue) {
+				c.FuzzNoCustom(s) // fuzz the status object
+
+				// Clear the random fuzzed condition
+				s.Status.SetConditions(nil)
+
+				// Fuzz the known conditions except their type value
+				s.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&s.Status, c)
+			},
+		}
+	},
 )
 
 func TestEventingRoundTripTypesToJSON(t *testing.T) {
@@ -34,7 +68,7 @@ func TestEventingRoundTripTypesToJSON(t *testing.T) {
 
 	fuzzerFuncs := fuzzer.MergeFuzzerFuncs(
 		pkgfuzzer.Funcs,
-		v1.FuzzerFuncs,
+		FuzzerFuncs,
 	)
 	roundtrip.ExternalTypesViaJSON(t, scheme, fuzzerFuncs)
 }
@@ -58,8 +92,8 @@ func TestEventingRoundTripTypesToBetaHub(t *testing.T) {
 
 	fuzzerFuncs := fuzzer.MergeFuzzerFuncs(
 		pkgfuzzer.Funcs,
-		v1.FuzzerFuncs,
-		duckerfuzzer.FuzzerFuncs,
+		FuzzerFuncs,
+		test.FuzzerFuncs,
 	)
 
 	roundtrip.ExternalTypesViaHub(t, scheme, hubs, fuzzerFuncs)
