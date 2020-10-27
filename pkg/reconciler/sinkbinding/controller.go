@@ -18,6 +18,7 @@ package sinkbinding
 
 import (
 	"context"
+	"fmt"
 
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
@@ -44,6 +45,10 @@ import (
 const (
 	controllerAgentName = "sinkbinding-controller"
 )
+
+type SinkBindingSubResourcesReconciler struct {
+	res *resolver.URIResolver
+}
 
 // NewController returns a new SinkBinding reconciler.
 func NewController(
@@ -89,7 +94,14 @@ func NewController(
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	c.WithContext = WithContextFactory(ctx, impl.EnqueueKey)
+	sbResolver := resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
+		res: sbResolver,
+	}
+
+	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
+		return v1beta1.WithURIResolver(ctx, sbResolver), nil
+	}
 	c.Tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	c.Factory = &duck.CachedInformerFactory{
 		Delegate: &duck.EnqueueInformerFactory{
@@ -125,12 +137,29 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 	r := resolver.NewURIResolver(ctx, handler)
 
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
-		sb := b.(*v1beta1.SinkBinding)
-		uri, err := r.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
-		if err != nil {
-			return nil, err
-		}
-		sb.Status.SinkURI = uri
-		return v1beta1.WithSinkURI(ctx, sb.Status.SinkURI), nil
+		return v1beta1.WithURIResolver(ctx, r), nil
 	}
+}
+
+func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
+	sb := b.(*v1beta1.SinkBinding)
+	if s.res == nil {
+		err := fmt.Errorf("Resolver is nil")
+		logging.FromContext(ctx).Errorf("%w", err)
+		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
+		return err
+	}
+	uri, err := s.res.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
+	if err != nil {
+		logging.FromContext(ctx).Errorf("Failed to get URI from Destination: %w", err)
+		sb.Status.MarkBindingUnavailable("NoURI", "URI could not be extracted from destination ")
+		return err
+	}
+	sb.Status.MarkSink(uri)
+	return nil
+}
+
+// I'm just here so I won't get fined
+func (*SinkBindingSubResourcesReconciler) ReconcileDeletion(ctx context.Context, b psbinding.Bindable) error {
+	return nil
 }
