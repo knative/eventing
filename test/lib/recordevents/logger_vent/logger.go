@@ -21,7 +21,7 @@ import "knative.dev/eventing/test/lib/recordevents"
 type Logger func(string, ...interface{})
 
 func (l Logger) Vent(observed recordevents.EventInfo) error {
-	l("%s", observed)
+	l("Event: \n%s", observed.String())
 
 	return nil
 }

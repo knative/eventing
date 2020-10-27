@@ -47,9 +47,6 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 		return err
 	}
 	message := string(b)
-	if len(message) == 0 || len(message) > 1024 {
-		return fmt.Errorf("invalid message length: '%d'", len(message))
-	}
 
 	t := time.Now()
 	event := &corev1.Event{
@@ -57,15 +54,18 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 			Name:      fmt.Sprintf("%v.%d", r.ref.Name, observed.Sequence),
 			Namespace: r.namespace,
 		},
-		InvolvedObject: *r.ref,
-		Reason:         recordevents.CloudEventObservedReason,
-		Message:        message,
-		Source:         corev1.EventSource{Component: r.agentName},
-		FirstTimestamp: metav1.Time{Time: t},
-		LastTimestamp:  metav1.Time{Time: t},
-		EventTime:      metav1.MicroTime{Time: t},
-		Count:          1,
-		Type:           corev1.EventTypeNormal,
+		InvolvedObject:      *r.ref,
+		Reason:              recordevents.CloudEventObservedReason,
+		Message:             message,
+		Source:              corev1.EventSource{Component: r.agentName},
+		FirstTimestamp:      metav1.Time{Time: t},
+		LastTimestamp:       metav1.Time{Time: t},
+		EventTime:           metav1.MicroTime{Time: t},
+		Count:               1,
+		Type:                corev1.EventTypeNormal,
+		Action:              "Published",
+		ReportingController: "knative.dev/recordevents",
+		ReportingInstance:   r.ref.Name,
 	}
 
 	return r.recordEvent(event)
