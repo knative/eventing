@@ -26,7 +26,7 @@ require (
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.22.4
 	go.opentelemetry.io/otel v0.2.3
-	go.uber.org/atomic v1.6.0
+	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.15.0
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/tools v0.0.0-20201022035929-9cf592e881e9 // indirect

@@ -321,7 +321,7 @@ go.opencensus.io/trace/tracestate
 go.opentelemetry.io/otel/api/core
 go.opentelemetry.io/otel/api/propagation
 go.opentelemetry.io/otel/api/trace
-# go.uber.org/atomic v1.6.0
+# go.uber.org/atomic v1.7.0
 ## explicit
 go.uber.org/atomic
 # go.uber.org/automaxprocs v1.3.0
