@@ -142,7 +142,12 @@ func (s *HTTPMessageSender) SendWithRetries(req *nethttp.Request, config *RetryC
 		},
 	}
 
-	return retryableClient.Do(&retryablehttp.Request{Request: req})
+	retryableReq, err := retryablehttp.FromRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return retryableClient.Do(retryableReq)
 }
 
 func NoRetries() RetryConfig {
