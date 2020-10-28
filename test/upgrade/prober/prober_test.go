@@ -27,7 +27,7 @@ import (
 const (
 	defaultConfigFilename = "config.toml"
 	servingEnvName        = "E2E_UPGRADE_TESTS_SERVING_USE"
-	configFilenameEnvName = "E2E_UPGRADE_TESTS_WATHOLA_CONFIG_FILENAME"
+	configFilenameEnvName = "E2E_UPGRADE_TESTS_CONFIGFILENAME"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -57,7 +57,7 @@ func TestNewConfig(t *testing.T) {
 
 			assert.Equal(t, s.servingUse, config.Serving.Use)
 			assert.True(t, config.Serving.ScaleToZero)
-			assert.Equal(t, s.configFilename, config.Wathola.Config.Filename)
+			assert.Equal(t, s.configFilename, config.ConfigFilename)
 		})
 	}
 }

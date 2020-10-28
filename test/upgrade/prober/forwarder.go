@@ -78,20 +78,20 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 						"name":  "forwarder",
 						"image": pkgTest.ImagePath(forwarderName),
 						"volumeMounts": []map[string]interface{}{{
-							"name":      p.config.Wathola.Config.Name,
-							"mountPath": p.config.Wathola.Config.MountPoint,
+							"name":      p.config.ConfigMapName,
+							"mountPath": p.config.ConfigMountPoint,
 							"readOnly":  true,
 						}},
 						"readinessProbe": map[string]interface{}{
 							"httpGet": map[string]interface{}{
-								"path": p.config.Wathola.HealthEndpoint,
+								"path": p.config.HealthEndpoint,
 							},
 						},
 					}},
 					"volumes": []map[string]interface{}{{
-						"name": p.config.Wathola.Config.Name,
+						"name": p.config.ConfigMapName,
 						"configMap": map[string]interface{}{
-							"name": p.config.Wathola.Config.Name,
+							"name": p.config.ConfigMapName,
 						},
 					}},
 				},

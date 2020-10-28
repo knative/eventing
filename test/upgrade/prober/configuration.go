@@ -50,7 +50,7 @@ var eventTypes = []string{"step", "finished"}
 
 // Config represents a configuration for prober.
 type Config struct {
-	Wathola       WatholaConfig
+	Wathola
 	Namespace     string
 	Interval      time.Duration
 	FinishedSleep time.Duration
@@ -58,19 +58,19 @@ type Config struct {
 	FailOnErrors  bool
 }
 
-// WatholaConfig represents options related strictly to wathola testing tool.
-type WatholaConfig struct {
-	Config           ConfigMapConfig
+// Wathola represents options related strictly to wathola testing tool.
+type Wathola struct {
+	ConfigMap
 	EventsTypePrefix string
 	HealthEndpoint   string
 	BrokerName       string
 }
 
-// ConfigMapConfig represents options of wathola config toml file.
-type ConfigMapConfig struct {
-	Name       string
-	MountPoint string
-	Filename   string
+// ConfigMap represents options of wathola config toml file.
+type ConfigMap struct {
+	ConfigMapName    string
+	ConfigMountPoint string
+	ConfigFilename   string
 }
 
 // ServingConfig represents a options for serving test component (wathola-forwarder).
@@ -92,11 +92,11 @@ func NewConfig(namespace string) *Config {
 			Use:         false,
 			ScaleToZero: true,
 		},
-		Wathola: WatholaConfig{
-			Config: ConfigMapConfig{
-				Name:       defaultConfigName,
-				MountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
-				Filename:   defaultConfigFilename,
+		Wathola: Wathola{
+			ConfigMap: ConfigMap{
+				ConfigMapName:    defaultConfigName,
+				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
+				ConfigFilename:   defaultConfigFilename,
 			},
 			EventsTypePrefix: defaultWatholaEventsPrefix,
 			HealthEndpoint:   defaultHealthEndpoint,
@@ -120,53 +120,53 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deployBroker() {
-	p.client.CreateBrokerV1Beta1OrFail(p.config.Wathola.BrokerName)
+	p.client.CreateBrokerV1Beta1OrFail(p.config.BrokerName)
 }
 
 func (p *prober) fetchBrokerURL() (*apis.URL, error) {
 	namespace := p.config.Namespace
 	p.log.Debugf("Fetching %s broker URL for ns %s",
-		p.config.Wathola.BrokerName, namespace)
+		p.config.BrokerName, namespace)
 	meta := resources.NewMetaResource(
-		p.config.Wathola.BrokerName, p.config.Namespace, testlib.BrokerTypeMeta,
+		p.config.BrokerName, p.config.Namespace, testlib.BrokerTypeMeta,
 	)
 	err := duck.WaitForResourceReady(p.client.Dynamic, meta)
 	if err != nil {
 		return nil, err
 	}
 	broker, err := p.client.Eventing.EventingV1beta1().Brokers(namespace).Get(
-		context.Background(), p.config.Wathola.BrokerName, metav1.GetOptions{},
+		context.Background(), p.config.BrokerName, metav1.GetOptions{},
 	)
 	if err != nil {
 		return nil, err
 	}
 	url := broker.Status.Address.URL
 	p.log.Debugf("%s broker URL for ns %s is %v",
-		p.config.Wathola.BrokerName, namespace, url)
+		p.config.BrokerName, namespace, url)
 	return url, nil
 }
 
 func (p *prober) deployConfigMap() {
-	name := p.config.Wathola.Config.Name
+	name := p.config.ConfigMapName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
 	brokerURL, err := p.fetchBrokerURL()
 	ensure.NoError(err)
-	configData := p.compileTemplate(p.config.Wathola.Config.Filename, brokerURL)
+	configData := p.compileTemplate(p.config.ConfigFilename, brokerURL)
 	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{
-		p.config.Wathola.Config.Filename: configData,
+		p.config.ConfigFilename: configData,
 	})
 }
 
 func (p *prober) deployTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
-		fullType := fmt.Sprintf("%v.%v", p.config.Wathola.EventsTypePrefix, eventType)
+		fullType := fmt.Sprintf("%v.%v", p.config.EventsTypePrefix, eventType)
 		subscriberOption := resources.WithSubscriberServiceRefForTriggerV1Beta1(receiverName)
 		if p.config.Serving.Use {
 			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
 		}
 		p.client.CreateTriggerOrFailV1Beta1(name,
-			resources.WithBrokerV1Beta1(p.config.Wathola.BrokerName),
+			resources.WithBrokerV1Beta1(p.config.BrokerName),
 			resources.WithAttributesTriggerFilterV1Beta1(
 				eventingv1beta1.TriggerAnyFilter,
 				fullType,
