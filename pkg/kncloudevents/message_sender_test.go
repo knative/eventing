@@ -20,10 +20,14 @@ import (
 	"context"
 	nethttp "net/http"
 	"net/http/httptest"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/cloudevents/sdk-go/v2/binding/buffering"
+	bindingtest "github.com/cloudevents/sdk-go/v2/binding/test"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/pointer"
 
@@ -177,14 +181,9 @@ func TestHttpMessageSenderSendWithRetries(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			n := 0
-			var mu sync.Mutex
+			var n int32
 			server := httptest.NewServer(nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
-				mu.Lock()
-				n++
-				mu.Unlock()
-
+				atomic.AddInt32(&n, 1)
 				writer.WriteHeader(tt.wantStatus)
 			}))
 
@@ -203,11 +202,61 @@ func TestHttpMessageSenderSendWithRetries(t *testing.T) {
 				t.Errorf("SendWithRetries() got = %v, want %v", got.StatusCode, nethttp.StatusServiceUnavailable)
 				return
 			}
-			if n != tt.wantDispatch {
-				t.Errorf("expected %d retries got %d", tt.config.RetryMax, n)
-				return
+			if count := int(atomic.LoadInt32(&n)); count != tt.wantDispatch {
+				t.Fatalf("expected %d retries got %d", tt.config.RetryMax, count)
 			}
 		})
+	}
+}
+
+func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
+	t.Parallel()
+
+	const wantToSkip = 9
+	config := &RetryConfig{
+		RetryMax: wantToSkip,
+		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+			return true, nil
+		},
+		Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+			return time.Millisecond * 50 * time.Duration(attemptNum)
+		},
+	}
+
+	var n uint32
+	server := httptest.NewServer(nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+		thisReqN := atomic.AddUint32(&n, 1)
+		if thisReqN <= wantToSkip {
+			writer.WriteHeader(nethttp.StatusServiceUnavailable)
+		} else {
+			writer.WriteHeader(nethttp.StatusAccepted)
+		}
+	}))
+
+	sender := &HttpMessageSender{
+		Client: nethttp.DefaultClient,
+	}
+
+	request, err := nethttp.NewRequest("POST", server.URL, nil)
+	assert.Nil(t, err)
+
+	// Create a message similar to the one we send with channels
+	mockMessage := bindingtest.MustCreateMockBinaryMessage(cetest.FullEvent())
+	bufferedMessage, err := buffering.BufferMessage(context.TODO(), mockMessage)
+	assert.Nil(t, err)
+
+	err = cehttp.WriteRequest(context.TODO(), bufferedMessage, request)
+	assert.Nil(t, err)
+
+	got, err := sender.SendWithRetries(request, config)
+	if err != nil {
+		t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
+	}
+	if got.StatusCode != nethttp.StatusAccepted {
+		t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, nethttp.StatusAccepted)
+	}
+	if count := atomic.LoadUint32(&n); count != wantToSkip+1 {
+		t.Fatalf("expected %d count got %d", wantToSkip+1, count)
 	}
 }
 
