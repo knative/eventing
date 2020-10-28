@@ -76,7 +76,9 @@ func TestSubscriberSpecToFanoutConfig(t *testing.T) {
 		Reply:      apis.HTTP("reply.example.com").URL(),
 		DeadLetter: apis.HTTP("dls.example.com").URL(),
 		RetryConfig: &kncloudevents.RetryConfig{
-			RetryMax: 3,
+			RetryMax:      3,
+			BackoffPolicy: &linear,
+			BackoffDelay:  &delay,
 		},
 	}
 	got, err := SubscriberSpecToFanoutConfig(*spec)
