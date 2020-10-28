@@ -168,8 +168,8 @@ func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 			if got.StatusCode != http.StatusServiceUnavailable {
 				t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, http.StatusServiceUnavailable)
 			}
-			if int(n.Load()) != tt.wantDispatch {
-				t.Fatalf("expected %d retries got %d", tt.config.RetryMax, n)
+			if count := int(n.Load()); count != tt.wantDispatch {
+				t.Fatalf("expected %d retries got %d", tt.config.RetryMax, count)
 			}
 		})
 	}
