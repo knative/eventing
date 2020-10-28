@@ -51,10 +51,12 @@ func (p *prober) deployReceiverPod(ctx context.Context) {
 		Spec: corev1.PodSpec{
 			Volumes: []corev1.Volume{
 				{
-					Name: configName,
+					Name: p.config.ConfigMapName,
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: configName},
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: p.config.ConfigMapName,
+							},
 						},
 					},
 				},
@@ -65,15 +67,15 @@ func (p *prober) deployReceiverPod(ctx context.Context) {
 					Image: pkgTest.ImagePath(receiverName),
 					VolumeMounts: []corev1.VolumeMount{
 						{
-							Name:      configName,
+							Name:      p.config.ConfigMapName,
 							ReadOnly:  true,
-							MountPath: configMountPoint,
+							MountPath: p.config.ConfigMountPoint,
 						},
 					},
 					ReadinessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							HTTPGet: &corev1.HTTPGetAction{
-								Path: healthEndpoint,
+								Path: p.config.HealthEndpoint,
 								Port: intstr.FromInt(watholaconfig.DefaultReceiverPort),
 							},
 						},
