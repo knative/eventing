@@ -124,6 +124,7 @@ func (p *prober) deploy(ctx context.Context) {
 func (p *prober) remove() {
 	if p.config.Serving.Use {
 		p.removeForwarder()
+		p.removeReceiverKService()
 	}
 	ensure.NoError(p.client.Tracker.Clean(true))
 }

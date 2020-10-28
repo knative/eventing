@@ -22,21 +22,23 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/test/lib/nodes"
 )
 
 func (p *prober) Verify() ([]error, int) {
-	nc := nodes.Client(p.client.Kube, p.log)
-	node, err := nc.RandomWorkerNode()
-	ensure.NoError(err)
-	address := nc.GuessNodeExternalAddress(node)
-	p.log.Debugf("Address resolved: %v, type: %v", address.Address, address.Type)
-	report := fetchReceiverReport(address, p.log)
+	var urlResolver func() *url.URL
+	if p.config.Serving.Use {
+		urlResolver = p.receiverKServiceAddress
+	} else {
+		urlResolver = p.receiverAddressByWorkerExternalAddressNodePort
+	}
+	u := urlResolver()
+	report := fetchReceiverReport(u, p.log)
 	p.log.Infof("Fetched receiver report. Events propagated: %v. "+
 		"State: %v", report.Events, report.State)
 	if report.State == "active" {
@@ -53,10 +55,22 @@ func (p *prober) Finish(ctx context.Context) {
 	p.removeSender(ctx)
 }
 
-func fetchReceiverReport(address *corev1.NodeAddress, log *zap.SugaredLogger) *Report {
-	u := fmt.Sprintf("http://%s:%d/report", address.Address, receiverNodePort)
+func (p *prober) receiverAddressByWorkerExternalAddressNodePort() *url.URL {
+	nc := nodes.Client(p.client.Kube, p.log)
+	node, err := nc.RandomWorkerNode()
+	ensure.NoError(err)
+	address := nc.GuessNodeExternalAddress(node)
+	p.log.Debugf("Address resolved: %v, type: %v", address.Address, address.Type)
+
+	u, err := url.Parse(fmt.Sprintf("http://%s:%d/report",
+		address.Address, receiverNodePort))
+	ensure.NoError(err)
+	return u
+}
+
+func fetchReceiverReport(u *url.URL, log *zap.SugaredLogger) *Report {
 	log.Infof("Fetching receiver report from: %v", u)
-	resp, err := http.Get(u)
+	resp, err := http.Get(u.String())
 	ensure.NoError(err)
 	if resp.StatusCode != 200 {
 		var b strings.Builder

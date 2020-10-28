@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/wavesoftware/go-ensure"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	testlib "knative.dev/eventing/test/lib"
@@ -28,24 +29,22 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
-var (
-	forwarderName = "wathola-forwarder"
-)
+var forwarderName = "wathola-forwarder"
 
 func (p *prober) deployForwarder(ctx context.Context) {
-	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
+	p.log.Info("Deploy forwarder knative service: ", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	service := p.forwarderKService(forwarderName, p.client.Namespace)
 	_, err := serving.Create(context.Background(), service, metav1.CreateOptions{})
 	ensure.NoError(err)
 
 	sc := p.servingClient()
-	testlib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
+	testlib.WaitFor(fmt.Sprint("forwarder knative service be ready: ", forwarderName), func() error {
 		return duck.WaitForKServiceReady(sc, forwarderName, p.client.Namespace)
 	})
 
 	if p.config.Serving.ScaleToZero {
-		testlib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
+		testlib.WaitFor(fmt.Sprint("forwarder scales to zero: ", forwarderName), func() error {
 			return duck.WaitForKServiceScales(ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
@@ -54,49 +53,47 @@ func (p *prober) deployForwarder(ctx context.Context) {
 }
 
 func (p *prober) removeForwarder() {
-	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
+	p.log.Info("Remove forwarder knative service: ", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	err := serving.Delete(context.Background(), forwarderName, metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
 
 func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstructured {
-	obj := map[string]interface{}{
-		"apiVersion": resources.KServiceType.APIVersion,
-		"kind":       resources.KServiceType.Kind,
-		"metadata": map[string]interface{}{
-			"name":      name,
-			"namespace": namespace,
-			"labels": map[string]string{
-				"serving.knative.dev/visibility": "cluster-local",
-			},
+	return kService(metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
+		Labels: map[string]string{
+			"serving.knative.dev/visibility": "cluster-local",
 		},
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"containers": []map[string]interface{}{{
-						"name":  "forwarder",
-						"image": pkgTest.ImagePath(forwarderName),
-						"volumeMounts": []map[string]interface{}{{
-							"name":      p.config.ConfigMapName,
-							"mountPath": p.config.ConfigMountPoint,
-							"readOnly":  true,
-						}},
-						"readinessProbe": map[string]interface{}{
-							"httpGet": map[string]interface{}{
-								"path": p.config.HealthEndpoint,
-							},
-						},
-					}},
-					"volumes": []map[string]interface{}{{
-						"name": p.config.ConfigMapName,
-						"configMap": map[string]interface{}{
-							"name": p.config.ConfigMapName,
-						},
-					}},
+	}, corev1.PodSpec{
+		Containers: []corev1.Container{{
+			Name:  "forwarder",
+			Image: pkgTest.ImagePath(forwarderName),
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      p.config.ConfigMapName,
+					MountPath: p.config.ConfigMountPoint,
+					ReadOnly:  true,
 				},
 			},
-		},
-	}
-	return &unstructured.Unstructured{Object: obj}
+			ReadinessProbe: &corev1.Probe{
+				Handler: corev1.Handler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path: p.config.HealthEndpoint,
+					},
+				},
+			},
+		}},
+		Volumes: []corev1.Volume{{
+			Name: p.config.ConfigMapName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: p.config.ConfigMapName,
+					},
+				},
+			},
+		}},
+	})
 }
