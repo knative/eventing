@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [ 'master' ]
 
+  schedule:
+  - cron: '0 */4 * * *'
+
 defaults:
   run:
     shell: bash
@@ -199,3 +202,17 @@ jobs:
             echo '::endgroup::'
           done
         fi
+
+    - name: Post failure notice to Slack
+      uses: rtCamp/action-slack-notify@v2.1.0
+      if: ${{ failure() && github.event_name != 'pull_request' }}
+      env:
+        SLACK_ICON: http://github.com/knative.png?size=48
+        SLACK_USERNAME: github-actions
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+        SLACK_CHANNEL: 'eventing'
+        MSG_MINIMAL: 'true'
+        SLACK_TITLE: Periodic e2e on kind on ${{ matrix.k8s-version }} failed.
+        SLACK_MESSAGE: |
+          For detailed logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
