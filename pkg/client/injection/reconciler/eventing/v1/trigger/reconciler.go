@@ -392,15 +392,15 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 	patcher := r.Client.EventingV1().Triggers(resource.Namespace)
 
 	resourceName := resource.Name
-	resource, err = patcher.Patch(ctx, resourceName, types.MergePatchType, patch, metav1.PatchOptions{})
+	updated, err := patcher.Patch(ctx, resourceName, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
-		r.Recorder.Eventf(resource, corev1.EventTypeWarning, "FinalizerUpdateFailed",
+		r.Recorder.Eventf(existing, corev1.EventTypeWarning, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resourceName, err)
 	} else {
-		r.Recorder.Eventf(resource, corev1.EventTypeNormal, "FinalizerUpdate",
+		r.Recorder.Eventf(updated, corev1.EventTypeNormal, "FinalizerUpdate",
 			"Updated %q finalizers", resource.GetName())
 	}
-	return resource, err
+	return updated, err
 }
 
 func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx context.Context, resource *v1.Trigger) (*v1.Trigger, error) {
