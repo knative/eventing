@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
@@ -48,37 +47,6 @@ type Prober interface {
 	deploy(ctx context.Context)
 	// remove a prober from cluster
 	remove()
-}
-
-// Config represents a configuration for prober
-type Config struct {
-	Namespace     string
-	Interval      time.Duration
-	Serving       ServingConfig
-	FinishedSleep time.Duration
-	FailOnErrors  bool
-}
-
-type ServingConfig struct {
-	Use         bool
-	ScaleToZero bool
-}
-
-func NewConfig(namespace string) *Config {
-	config := &Config{
-		Namespace:     "",
-		Interval:      Interval,
-		FinishedSleep: 5 * time.Second,
-		FailOnErrors:  true,
-		Serving: ServingConfig{
-			Use:         false,
-			ScaleToZero: true,
-		},
-	}
-	err := envconfig.Process("e2e_upgrade_tests", config)
-	ensure.NoError(err)
-	config.Namespace = namespace
-	return config
 }
 
 // RunEventProber starts a single Prober of the given domain.
