@@ -59,7 +59,6 @@ jobs:
       GO111MODULE: off
       KO_DOCKER_REPO: kind.local
       SYSTEM_NAMESPACE: knative-eventing
-      TEST_EVENTING_NAMESPACE: knative-eventing
       # Use a semi-random cluster suffix, but somewhat predictable
       # so reruns don't just give us a completely new value.
       CLUSTER_SUFFIX: c${{ github.run_id }}.local
