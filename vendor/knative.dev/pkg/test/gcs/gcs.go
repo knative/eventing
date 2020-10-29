@@ -136,11 +136,11 @@ func (g *GCSClient) getObjectsAttrs(ctx context.Context, bucketName, storagePath
 
 	for {
 		attrs, err := it.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("error iterating: %v", err)
+			return nil, fmt.Errorf("error iterating: %w", err)
 		}
 		allAttrs = append(allAttrs, attrs)
 	}
