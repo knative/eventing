@@ -47,6 +47,7 @@ rules:
       - messaging.knative.dev
     resources:
       - inmemorychannels/finalizers
+      - inmemorychannels/status
       - inmemorychannels
     verbs:
       - patch

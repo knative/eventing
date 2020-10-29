@@ -42,6 +42,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/channel"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
 )
@@ -96,6 +97,7 @@ func NewController(
 	r := &Reconciler{
 		multiChannelMessageHandler: sh,
 		reporter:                   reporter,
+		messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
 	}
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
