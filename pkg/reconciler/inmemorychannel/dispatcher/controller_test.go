@@ -20,6 +20,9 @@ import (
 	"os"
 	"testing"
 
+	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 
 	"knative.dev/pkg/configmap"
@@ -32,6 +35,9 @@ import (
 func TestNew(t *testing.T) {
 	ctx, cancel, _ := SetupFakeContextWithCancel(t)
 	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
 
 	os.Setenv("SCOPE", eventing.ScopeCluster)
 	os.Setenv("POD_NAME", "testpod")
@@ -46,6 +52,9 @@ func TestNew(t *testing.T) {
 func TestNewInNamespace(t *testing.T) {
 	ctx, cancel, _ := SetupFakeContextWithCancel(t)
 	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
 
 	os.Setenv("SCOPE", eventing.ScopeNamespace)
 	os.Setenv("POD_NAME", "testpod")
