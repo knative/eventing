@@ -19,9 +19,16 @@ package v1
 import (
 	"context"
 
+	"k8s.io/utils/pointer"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"github.com/rickb777/date/period"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
+)
+
+var (
+	_ apis.Validatable = (*DeliverySpec)(nil)
+	_ apis.Defaultable = (*DeliverySpec)(nil)
 )
 
 // DeliverySpec contains the delivery options for event senders,
@@ -81,6 +88,17 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 	return errs
+}
+
+func (ds *DeliverySpec) SetDefaults(ctx context.Context) {
+	if ds.Retry == nil {
+		// Let's pick a default that a least cover the upgrade scenario.
+		// While there is no upper-bound on how long it takes for a
+		// subscriber to be back online, 10 seconds should be more than enough
+		ds.Retry = pointer.Int32Ptr(10)
+		ds.BackoffPolicy = (*BackoffPolicyType)(pointer.StringPtr(string(BackoffPolicyExponential)))
+		ds.BackoffDelay = pointer.StringPtr("PT0.1S")
+	}
 }
 
 // BackoffPolicyType is the type for backoff policies

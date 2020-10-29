@@ -20,6 +20,8 @@ import (
 	"context"
 
 	"knative.dev/eventing/pkg/apis/messaging"
+
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 func (imc *InMemoryChannel) SetDefaults(ctx context.Context) {
@@ -39,5 +41,8 @@ func (imc *InMemoryChannel) SetDefaults(ctx context.Context) {
 }
 
 func (imcs *InMemoryChannelSpec) SetDefaults(ctx context.Context) {
-	// TODO: Nothing to default here...
+	if imcs.Delivery == nil {
+		imcs.Delivery = new(duckv1.DeliverySpec)
+		imcs.Delivery.SetDefaults(ctx)
+	}
 }
