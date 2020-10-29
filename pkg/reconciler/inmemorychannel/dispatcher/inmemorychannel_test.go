@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"testing"
 
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/eventing/pkg/kncloudevents"
 
@@ -56,6 +58,8 @@ const (
 	testNS                = "test-namespace"
 	imcName               = "test-imc"
 	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
+	twoSubscriberPatch    = `{"status":{"subscribers":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}}`
+	oneSubscriberPatch    = `{"status":{"subscribers":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}}`
 )
 
 var (
@@ -161,6 +165,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
+				patchSubscriberBytes(testNS, imcName, twoSubscriberPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -197,6 +202,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
+				patchSubscriberBytes(testNS, imcName, oneSubscriberPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -283,6 +289,7 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			multiChannelMessageHandler: NewFakeMultiChannelHandler(),
 			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
+			messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -408,6 +415,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
+		ctx := context.Background()
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
 		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
@@ -423,6 +431,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
+					messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
 				}
 				e := r.ReconcileKind(context.TODO(), tc.imc)
 				if e != tc.wantResult {
@@ -475,6 +484,14 @@ func TestReconciler_FinalizeKind(t *testing.T) {
 			})
 		}
 	}
+}
+
+func patchSubscriberBytes(namespace, name, patch string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	action.Patch = []byte(patch)
+	return action
 }
 
 func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
