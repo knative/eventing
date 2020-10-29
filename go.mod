@@ -5,16 +5,16 @@ go 1.14
 require (
 	github.com/cloudevents/sdk-go/v2 v2.2.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.1.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/openzipkin/zipkin-go v0.2.2
+	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/pelletier/go-toml v1.8.0
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
@@ -24,14 +24,13 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
 	github.com/wavesoftware/go-ensure v1.0.0
-	go.opencensus.io v0.22.4
+	go.opencensus.io v0.22.5
 	go.opentelemetry.io/otel v0.2.3
 	go.uber.org/atomic v1.7.0
-	go.uber.org/zap v1.15.0
+	go.uber.org/zap v1.16.0
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/tools v0.0.0-20201022035929-9cf592e881e9 // indirect
-	google.golang.org/api v0.33.0 // indirect
-	google.golang.org/grpc v1.31.1
+	google.golang.org/grpc v1.33.1
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 	k8s.io/api v0.18.8
@@ -40,8 +39,8 @@ require (
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/hack v0.0.0-20201027221733-0d7f2f064b7b
-	knative.dev/pkg v0.0.0-20201028121234-58d43f05028e
+	knative.dev/hack v0.0.0-20201028205534-fe80f1c8af68
+	knative.dev/pkg v0.0.0-20201028171634-6a24d54694a8
 	sigs.k8s.io/yaml v1.2.0
 )
 
