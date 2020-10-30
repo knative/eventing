@@ -115,7 +115,7 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 		return fmt.Errorf("creating JSON patch: %w", err)
 	}
 	// If there is nothing to patch, we are good, just return.
-	// Empty patch is []], hence we check for that.
+	// Empty patch is [], hence we check for that.
 	if len(jsonPatch) == 0 {
 		return nil
 	}
