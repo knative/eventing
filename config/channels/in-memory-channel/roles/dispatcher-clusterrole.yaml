@@ -43,10 +43,13 @@ rules:
       - create
       - patch
 # Updates the finalizer so we can remove our handlers when channel is deleted
+# Patches the status.subscribers to reflect when the subscription dataplane has been
+# configured.
   - apiGroups:
       - messaging.knative.dev
     resources:
       - inmemorychannels/finalizers
+      - inmemorychannels/status
       - inmemorychannels
     verbs:
       - patch

@@ -18,6 +18,11 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -27,10 +32,13 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
+	"knative.dev/pkg/apis/duck"
 )
 
 // Reconciler reconciles InMemory Channels.
@@ -38,6 +46,7 @@ type Reconciler struct {
 	eventDispatcherConfigStore *channel.EventDispatcherConfigStore
 	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
 	reporter                   channel.StatsReporter
+	messagingClientSet         messagingv1.MessagingV1Interface
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
@@ -74,7 +83,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 			handler.SetSubscriptions(ctx, config.FanoutConfig.Subscriptions)
 		}
 	}
-	return nil
+
+	// Then patch the subscribers to reflect that they are now ready to go
+	return r.patchSubscriberStatus(ctx, imc)
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
@@ -86,7 +97,39 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) 
 		}
 	}
 	return nil
+}
 
+func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemoryChannel) error {
+	after := imc.DeepCopy()
+
+	after.Status.Subscribers = make([]eventingduckv1.SubscriberStatus, 0)
+	for _, sub := range imc.Spec.Subscribers {
+		after.Status.Subscribers = append(after.Status.Subscribers, eventingduckv1.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
+		})
+	}
+	jsonPatch, err := duck.CreatePatch(imc, after)
+	if err != nil {
+		return fmt.Errorf("creating JSON patch: %w", err)
+	}
+	// If there is nothing to patch, we are good, just return.
+	// Empty patch is [], hence we check for that.
+	if len(jsonPatch) == 0 {
+		return nil
+	}
+
+	patch, err := jsonPatch.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("marshaling JSON patch: %w", err)
+	}
+	patched, err := r.messagingClientSet.InMemoryChannels(imc.Namespace).Patch(ctx, imc.Name, types.JSONPatchType, patch, metav1.PatchOptions{}, "status")
+	if err != nil {
+		return fmt.Errorf("Failed patching: %w", err)
+	}
+	logging.FromContext(ctx).Debugw("Patched resource", zap.Any("patch", patch), zap.Any("patched", patched))
+	return nil
 }
 
 // newConfigForInMemoryChannel creates a new Config for a single inmemory channel.

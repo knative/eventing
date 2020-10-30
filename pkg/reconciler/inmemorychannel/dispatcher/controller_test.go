@@ -28,6 +28,8 @@ import (
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
+	// Fake injection client
+	_ "knative.dev/eventing/pkg/client/injection/client/fake"
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 )
