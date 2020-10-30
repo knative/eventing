@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -55,11 +57,12 @@ import (
 )
 
 const (
-	testNS                = "test-namespace"
-	imcName               = "test-imc"
-	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
-	twoSubscriberPatch    = `{"status":{"subscribers":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}}`
-	oneSubscriberPatch    = `{"status":{"subscribers":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}}`
+	testNS                            = "test-namespace"
+	imcName                           = "test-imc"
+	channelServiceAddress             = "test-imc-kn-channel.test-namespace.svc.cluster.local"
+	twoSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"},{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
+	oneSubscriberPatch                = `[{"op":"add","path":"/status/subscribers","value":[{"observedGeneration":1,"ready":"True","uid":"2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1"}]}]`
+	oneSubscriberRemovedOneAddedPatch = `[{"op":"add","path":"/status/subscribers/2","value":{"observedGeneration":2,"ready":"True","uid":"34c5aec8-deb6-11e8-9f32-f2801f1b9fd1"}},{"op":"remove","path":"/status/subscribers/0"}]`
 )
 
 var (
@@ -67,15 +70,22 @@ var (
 	linear      = eventingduckv1.BackoffPolicyLinear
 	exponential = eventingduckv1.BackoffPolicyExponential
 
+	subscriber1UID        = types.UID("2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1")
+	subscriber2UID        = types.UID("34c5aec8-deb6-11e8-9f32-f2801f1b9fd1")
+	subscriber3UID        = types.UID("43995566-deb6-11e8-9f32-f2801f1b9fd1")
+	subscriber1Generation = int64(1)
+	subscriber2Generation = int64(2)
+	subscriber3Generation = int64(2)
+
 	subscriber1 = eventingduckv1.SubscriberSpec{
-		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    1,
+		UID:           subscriber1UID,
+		Generation:    subscriber1Generation,
 		SubscriberURI: apis.HTTP("call1"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}
 	subscriber1WithLinearRetry = eventingduckv1.SubscriberSpec{
-		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    1,
+		UID:           subscriber1UID,
+		Generation:    subscriber1Generation,
 		SubscriberURI: apis.HTTP("call1"),
 		ReplyURI:      apis.HTTP("sink2"),
 		Delivery: &eventingduckv1.DeliverySpec{
@@ -85,14 +95,14 @@ var (
 	}
 
 	subscriber2 = eventingduckv1.SubscriberSpec{
-		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    2,
+		UID:           subscriber2UID,
+		Generation:    subscriber2Generation,
 		SubscriberURI: apis.HTTP("call2"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}
 	subscriber3 = eventingduckv1.SubscriberSpec{
-		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    2,
+		UID:           subscriber3UID,
+		Generation:    subscriber3Generation,
 		SubscriberURI: apis.HTTP("call3"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}
@@ -166,6 +176,80 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
 				patchSubscriberBytes(testNS, imcName, twoSubscriberPatch),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
+
+			WantErr: false,
+			/* TODO: Add support to pkg for subresources for InduceFailure so we can test status patch fail
+			}, {
+
+			Name: "with subscribers, patch fails",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers(subscribers),
+					WithInMemoryChannelAddress(channelServiceAddress)),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("patch", "InMemoryChannels/status"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
+
+			WantErr: false,
+			*/
+		}, {
+			Name: "with subscribers, no patch",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers(subscribers),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber1UID), subscriber1Generation),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber2UID), subscriber2Generation),
+					WithInMemoryChannelAddress(channelServiceAddress)),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+			},
+
+			WantErr: false,
+		}, {
+			Name: "with subscribers, one removed one added to status",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers(subscribers),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber3UID), subscriber3Generation),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber1UID), subscriber1Generation),
+					WithInMemoryChannelAddress(channelServiceAddress)),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, imcName),
+				patchSubscriberBytes(testNS, imcName, oneSubscriberRemovedOneAddedPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -415,7 +499,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		ctx := context.Background()
+		ctx, fakeEventingClient := fakeeventingclient.With(context.Background(), tc.imc)
 		// Just run the tests once with no existing handler (creates the handler) and once
 		// with an existing, so we exercise both paths at once.
 		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
@@ -431,9 +515,9 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				}
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
-					messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
+					messagingClientSet:         fakeEventingClient.MessagingV1(),
 				}
-				e := r.ReconcileKind(context.TODO(), tc.imc)
+				e := r.ReconcileKind(ctx, tc.imc)
 				if e != tc.wantResult {
 					t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
 				}

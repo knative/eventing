@@ -109,8 +109,14 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 			Ready:              corev1.ConditionTrue,
 		})
 	}
-	patch, err := duck.CreateMergePatch(imc, after)
+	jsonPatch, err := duck.CreatePatch(imc, after)
 	if err != nil {
+		logging.FromContext(ctx).Warnw("Failed to create JSON patch", zap.Error(err))
+		return err
+	}
+	patch, err := jsonPatch.MarshalJSON()
+	if err != nil {
+		logging.FromContext(ctx).Warnw("Failed to marshal JSON patch", zap.Error(err))
 		return err
 	}
 	// If there is nothing to patch, we are good, just return.
@@ -118,7 +124,7 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 	if len(patch) <= 2 {
 		return nil
 	}
-	patched, err := r.messagingClientSet.InMemoryChannels(imc.Namespace).Patch(ctx, imc.Name, types.MergePatchType, patch, metav1.PatchOptions{}, "status")
+	patched, err := r.messagingClientSet.InMemoryChannels(imc.Namespace).Patch(ctx, imc.Name, types.JSONPatchType, patch, metav1.PatchOptions{}, "status")
 	if err != nil {
 		logging.FromContext(ctx).Warnw("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return err
