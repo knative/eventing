@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -37,6 +36,7 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	"knative.dev/pkg/apis/duck"
 )
 
