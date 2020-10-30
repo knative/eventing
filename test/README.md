@@ -38,6 +38,9 @@ Eventing system, upload test images to `$KO_DOCKER_REPO`, and run all
 
 [`e2e-tests.sh`](./e2e-tests.sh) is the entry point for running all e2e tests.
 
+In this section we use GCP as an example, other platforms might need different
+options.
+
 You can run it simply with:
 
 ```shell
