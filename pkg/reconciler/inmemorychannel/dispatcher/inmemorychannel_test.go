@@ -23,8 +23,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/eventing/pkg/kncloudevents"
 
@@ -373,7 +371,7 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			multiChannelMessageHandler: NewFakeMultiChannelHandler(),
 			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
-			messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
+			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),

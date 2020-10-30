@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,25 +112,23 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 	}
 	jsonPatch, err := duck.CreatePatch(imc, after)
 	if err != nil {
-		logging.FromContext(ctx).Warnw("Failed to create JSON patch", zap.Error(err))
-		return err
-	}
-	patch, err := jsonPatch.MarshalJSON()
-	if err != nil {
-		logging.FromContext(ctx).Warnw("Failed to marshal JSON patch", zap.Error(err))
-		return err
+		return fmt.Errorf("creating JSON patch: %w", err)
 	}
 	// If there is nothing to patch, we are good, just return.
-	// Empty patch is {}, hence we check for that.
-	if len(patch) <= 2 {
+	// Empty patch is []], hence we check for that.
+	if len(jsonPatch) == 0 {
 		return nil
+	}
+
+	patch, err := jsonPatch.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("marshaling JSON patch: %w", err)
 	}
 	patched, err := r.messagingClientSet.InMemoryChannels(imc.Namespace).Patch(ctx, imc.Name, types.JSONPatchType, patch, metav1.PatchOptions{}, "status")
 	if err != nil {
-		logging.FromContext(ctx).Warnw("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
-		return err
+		return fmt.Errorf("Failed patching: %w", err)
 	}
-	logging.FromContext(ctx).Infow("Patched resource", zap.Any("patch", patch), zap.Any("patched", patched))
+	logging.FromContext(ctx).Debugw("Patched resource", zap.Any("patch", patch), zap.Any("patched", patched))
 	return nil
 }
 
