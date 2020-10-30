@@ -180,9 +180,7 @@ func TestAllCases(t *testing.T) {
 			},
 
 			WantErr: false,
-			/* TODO: Add support to pkg for subresources for InduceFailure so we can test status patch fail
-			}, {
-
+		}, {
 			Name: "with subscribers, patch fails",
 			Key:  imcKey,
 			Objects: []runtime.Object{
@@ -196,17 +194,17 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("patch", "InMemoryChannels/status"),
+				InduceFailure("patch", "inmemorychannels/status"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
+				patchSubscriberBytes(testNS, imcName, twoSubscriberPatch),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "FinalizerUpdate", "Updated %q finalizers", imcName),
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
+				Eventf(corev1.EventTypeWarning, "InternalError", "Failed patching: inducing failure for patch inmemorychannels"),
 			},
-
-			WantErr: false,
-			*/
+			WantErr: true,
 		}, {
 			Name: "with subscribers, no patch",
 			Key:  imcKey,
