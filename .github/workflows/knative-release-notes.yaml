@@ -15,7 +15,7 @@
 # This file is automagically synced here from github.com/knative-sandbox/.github
 # repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
 
-name: 'Release Notes'
+name: 'foo Release Notes'
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ on:
         required: true
 
 jobs:
-  release-notes:
+  goo-release-notes:
     name: Release Notes
     runs-on: 'ubuntu-latest'
 
