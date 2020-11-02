@@ -53,10 +53,10 @@ jobs:
       - name: Generate Notes
         run: |
           release-notes \
-            -start-sha ${{ github.event.inputs.start-sha }} \
-            -end-sha   ${{ github.event.inputs.end-sha }} \
+            --start-sha ${{ github.event.inputs.start-sha }} \
+            --end-sha   ${{ github.event.inputs.end-sha }} \
             --repo-path "$(pwd)" \
-            --output release-notes.md
+            --output    release-notes.md
 
       - name: Display Notes
         run: |
