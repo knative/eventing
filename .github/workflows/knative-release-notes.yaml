@@ -20,6 +20,10 @@ name: 'Release Notes'
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch? (master)'
+        required: true
+        default: 'master'
       start-sha:
         description: 'Start SHA? [inclusive]'
         required: true
@@ -52,9 +56,10 @@ jobs:
 
       - name: Generate Notes
         run: |
-          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
           release-notes \
+            --branch    ${{ github.event.inputs.branch }} \
             --start-sha ${{ github.event.inputs.start-sha }} \
             --end-sha   ${{ github.event.inputs.end-sha }} \
             --repo-path "$(pwd)" \
