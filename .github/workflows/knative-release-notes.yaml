@@ -52,6 +52,8 @@ jobs:
 
       - name: Generate Notes
         run: |
+          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
           release-notes \
             --start-sha ${{ github.event.inputs.start-sha }} \
             --end-sha   ${{ github.event.inputs.end-sha }} \
