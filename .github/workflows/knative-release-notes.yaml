@@ -70,8 +70,8 @@ jobs:
         run: |
           cat release-notes.md
 
-      - name: Archive Release Notes
-        uses: actions/upload-artifact@v2
-        with:
-          name: release-notes.md
-          path: release-notes.md
+      # - name: Archive Release Notes
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: release-notes.md
+      #     path: release-notes.md
