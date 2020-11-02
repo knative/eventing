@@ -15,7 +15,7 @@
 # This file is automagically synced here from github.com/knative-sandbox/.github
 # repo by knobots: https://github.com/knative-sandbox/knobots and will be overwritten.
 
-name: 'Release Notes'
+name: 'Generate Release Notes'
 
 on:
   workflow_dispatch:
