@@ -126,8 +126,7 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 
 	var deadLetter *url.URL
 	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
-		// TODO: Bug(?) this does not seem to support refing the Ref field.
-		// https://github.com/knative/eventing/issues/4376
+		// Subscription reconcilers resolves the URI.
 		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 
