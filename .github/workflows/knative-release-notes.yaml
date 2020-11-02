@@ -1,0 +1,64 @@
+# Copyright 2020 The Knative Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is automagically synced here from github.com/knative-sandbox/.github
+# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
+
+name: 'Release Notes'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start-sha:
+        description: 'Start SHA? [inclusive]'
+        required: true
+      end-sha:
+        description: 'End SHA? [inclusive]'
+        required: true
+
+jobs:
+  release-notes:
+    name: Release Notes
+    runs-on: 'ubuntu-latest'
+
+    steps:
+      - name: Defaults
+        run: |
+          echo ORG=$(echo '${{ github.repository }}' | awk -F '/' '{print $1}') >> $GITHUB_ENV
+          echo REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}') >> $GITHUB_ENV
+          echo REQUIRED_AUTHOR="" >> $GITHUB_ENV
+
+      - name: Set up Go 1.15.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+
+      - name: Install Dependencies
+        run: GO111MODULE=on go get k8s.io/release/cmd/release-notes
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Generate Notes
+        run: |
+          release-notes \
+            -start-sha ${{ github.event.inputs.start-sha }} \
+            -end-sha   ${{ github.event.inputs.end-sha }} \
+            --repo-path "$(pwd)" \
+            --output release-notes.md
+
+      - name: Display Notes
+        run: |
+          cat release-notes.md
+
