@@ -88,7 +88,7 @@ func addSourcesInitializers() {
 	)
 	sourcesTestRunner.AddComponentSetupClientOption(
 		testlib.PingSourceTypeMeta,
-		setupclientoptions.PingSourceV1B1ClientSetupOption(
+		setupclientoptions.PingSourceV1B2ClientSetupOption(
 			ctx, pingSrcName, recordEventsPingPodName),
 	)
 }

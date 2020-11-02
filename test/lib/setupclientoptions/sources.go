@@ -20,13 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
+	eventingtestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -69,10 +71,10 @@ func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode s
 	}
 }
 
-// PingSourceV1B1ClientSetupOption returns a ClientSetupOption that can be used
+// PingSourceV1B2ClientSetupOption returns a ClientSetupOption that can be used
 // to create a new PingSource. It creates a RecordEvents pod and a
 // PingSource object with the RecordEvent pod as its sink.
-func PingSourceV1B1ClientSetupOption(ctx context.Context, name string, recordEventsPodName string) testlib.SetupClientOption {
+func PingSourceV1B2ClientSetupOption(ctx context.Context, name string, recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
 
 		// create event logger pod and service
@@ -80,11 +82,12 @@ func PingSourceV1B1ClientSetupOption(ctx context.Context, name string, recordEve
 
 		// create cron job source
 		data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-		source := eventingtesting.NewPingSourceV1Beta1(
+		source := eventingtestingv1beta2.NewPingSource(
 			name,
 			client.Namespace,
-			eventingtesting.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-				JsonData: data,
+			eventingtestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+				ContentType: cloudevents.ApplicationJSON,
+				Data:        data,
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
 						Ref: resources.KnativeRefForService(recordEventsPodName, client.Namespace),
@@ -92,7 +95,7 @@ func PingSourceV1B1ClientSetupOption(ctx context.Context, name string, recordEve
 				},
 			}),
 		)
-		client.CreatePingSourceV1Beta1OrFail(source)
+		client.CreatePingSourceV1Beta2OrFail(source)
 
 		// wait for all test resources to be ready
 		client.WaitForAllTestResourcesReadyOrFail(ctx)

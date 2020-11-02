@@ -23,9 +23,9 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
 )
 
 // TODO: code generation
@@ -33,10 +33,10 @@ import (
 // MTAdapter is the interface the multi-tenant PingSource adapter must implement
 type MTAdapter interface {
 	// Update is called when the source is ready and when the specification and/or status has changed.
-	Update(ctx context.Context, source *v1beta1.PingSource)
+	Update(ctx context.Context, source *v1beta2.PingSource)
 
 	// Remove is called when the source has been deleted.
-	Remove(ctx context.Context, source *v1beta1.PingSource)
+	Remove(ctx context.Context, source *v1beta2.PingSource)
 }
 
 // NewController initializes the controller. This is called by the shared adapter Main

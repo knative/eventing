@@ -22,15 +22,17 @@ import (
 	"fmt"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	"knative.dev/eventing/pkg/reconciler/sugar"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -45,7 +47,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		defaultBrokerName    = sugarresources.DefaultBrokerName
 		triggerName          = "trigger-annotation"
 		subscriberName       = "subscriber-annotation"
-		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta1"}`
+		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta2"}`
 		pingSourceName       = "test-ping-source-annotation"
 		// Every 1 minute starting from now
 		schedule = "*/1 * * * *"
@@ -74,12 +76,13 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	)
 
 	jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())
-	pingSource := eventingtesting.NewPingSourceV1Beta1(
+	pingSource := eventingtestingv1beta2.NewPingSource(
 		pingSourceName,
 		client.Namespace,
-		eventingtesting.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-			Schedule: schedule,
-			JsonData: jsonData,
+		eventingtestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+			Schedule:    schedule,
+			ContentType: cloudevents.ApplicationJSON,
+			Data:        jsonData,
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
@@ -93,13 +96,13 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 		}),
 	)
 
-	client.CreatePingSourceV1Beta1OrFail(pingSource)
+	client.CreatePingSourceV1Beta2OrFail(pingSource)
 
 	// Trigger should become ready after pingSource was created
 	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
 
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
-		HasSource(sourcesv1beta1.PingSourceSource(client.Namespace, pingSourceName)),
+		HasSource(sourcesv1beta2.PingSourceSource(client.Namespace, pingSourceName)),
 		HasData([]byte(jsonData)),
 	))
 }
