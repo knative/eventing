@@ -38,7 +38,7 @@ jobs:
 
     env:
       REQUIRED_AUTHOR: ""
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
     steps:
       - name: Defaults
