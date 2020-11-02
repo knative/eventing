@@ -13,9 +13,9 @@
 # limitations under the License.
 
 # This file is automagically synced here from github.com/knative-sandbox/.github
-# repo by knobots: https://github.com/knative-sandbox/knobots and will be overwritten.
+# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
 
-name: 'Generate Release Notes'
+name: 'Release Notes'
 
 on:
   workflow_dispatch:
@@ -36,17 +36,14 @@ jobs:
     name: Release Notes
     runs-on: 'ubuntu-latest'
 
-    env:
-      REQUIRED_AUTHOR: ""
-      GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
     steps:
       - name: Defaults
         run: |
           echo ORG=$(echo '${{ github.repository }}' | awk -F '/' '{print $1}') >> $GITHUB_ENV
           echo REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}') >> $GITHUB_ENV
+          echo REQUIRED_AUTHOR="" >> $GITHUB_ENV
 
-      - name: Set up Go
+      - name: Set up Go 1.15.x
         uses: actions/setup-go@v2
         with:
           go-version: 1.15.x
@@ -59,6 +56,8 @@ jobs:
 
       - name: Generate Notes
         run: |
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
           release-notes \
             --branch    ${{ github.event.inputs.branch }} \
             --start-sha ${{ github.event.inputs.start-sha }} \
@@ -69,9 +68,3 @@ jobs:
       - name: Display Notes
         run: |
           cat release-notes.md
-
-      # - name: Archive Release Notes
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: release-notes.md
-      #     path: release-notes.md
