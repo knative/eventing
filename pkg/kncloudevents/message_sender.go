@@ -189,6 +189,6 @@ func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) 
 	return retryConfig, nil
 }
 
-func checkRetry(_ context.Context, resp *nethttp.Response, _ error) (bool, error) {
-	return resp != nil && resp.StatusCode >= 300, nil
+func checkRetry(_ context.Context, resp *nethttp.Response, err error) (bool, error) {
+	return !(resp != nil && resp.StatusCode < 300), err
 }
