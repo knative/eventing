@@ -37,13 +37,13 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 	k8s.io/api v0.18.8
-	k8s.io/apiextensions-apiserver v0.18.4
+	k8s.io/apiextensions-apiserver v0.18.8
 	k8s.io/apimachinery v0.18.8
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/hack v0.0.0-20201102193445-9349aeeb6701
-	knative.dev/pkg v0.0.0-20201102194004-c6a8219d518d
+	knative.dev/hack v0.0.0-20201103151104-3d5abc3a0075
+	knative.dev/pkg v0.0.0-20201103163404-5514ab0c1fdf
 	sigs.k8s.io/yaml v1.2.0
 )
 
