@@ -20,7 +20,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	nethttp "net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
@@ -148,14 +147,14 @@ func TestHttpMessageSenderSendWithRetries(t *testing.T) {
 			name: "5 max retry",
 			config: &RetryConfig{
 				RetryMax: 5,
-				CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+				CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 					return true, nil
 				},
-				Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+				Backoff: func(attemptNum int, resp *http.Response) time.Duration {
 					return time.Millisecond
 				},
 			},
-			wantStatus:   nethttp.StatusServiceUnavailable,
+			wantStatus:   http.StatusServiceUnavailable,
 			wantDispatch: 6,
 			wantErr:      false,
 		},
@@ -163,20 +162,20 @@ func TestHttpMessageSenderSendWithRetries(t *testing.T) {
 			name: "1 max retry",
 			config: &RetryConfig{
 				RetryMax: 1,
-				CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+				CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 					return true, nil
 				},
-				Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+				Backoff: func(attemptNum int, resp *http.Response) time.Duration {
 					return time.Millisecond
 				},
 			},
-			wantStatus:   nethttp.StatusServiceUnavailable,
+			wantStatus:   http.StatusServiceUnavailable,
 			wantDispatch: 2,
 			wantErr:      false,
 		},
 		{
 			name:         "with no retryConfig",
-			wantStatus:   nethttp.StatusServiceUnavailable,
+			wantStatus:   http.StatusServiceUnavailable,
 			wantDispatch: 1,
 			wantErr:      false,
 		},
@@ -184,24 +183,24 @@ func TestHttpMessageSenderSendWithRetries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var n int32
-			server := httptest.NewServer(nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 				atomic.AddInt32(&n, 1)
 				writer.WriteHeader(tt.wantStatus)
 			}))
 
 			sender := &HttpMessageSender{
-				Client: nethttp.DefaultClient,
+				Client: http.DefaultClient,
 			}
 
-			request, err := nethttp.NewRequest("POST", server.URL, nil)
+			request, err := http.NewRequest("POST", server.URL, nil)
 			assert.Nil(t, err)
 			got, err := sender.SendWithRetries(request, tt.config)
 			if (err != nil) != tt.wantErr || got == nil {
 				t.Errorf("SendWithRetries() error = %v, wantErr %v or got nil", err, tt.wantErr)
 				return
 			}
-			if got.StatusCode != nethttp.StatusServiceUnavailable {
-				t.Errorf("SendWithRetries() got = %v, want %v", got.StatusCode, nethttp.StatusServiceUnavailable)
+			if got.StatusCode != http.StatusServiceUnavailable {
+				t.Errorf("SendWithRetries() got = %v, want %v", got.StatusCode, http.StatusServiceUnavailable)
 				return
 			}
 			if count := int(atomic.LoadInt32(&n)); count != tt.wantDispatch {
@@ -295,29 +294,29 @@ func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
 	const wantToSkip = 9
 	config := &RetryConfig{
 		RetryMax: wantToSkip,
-		CheckRetry: func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+		CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 			return true, nil
 		},
-		Backoff: func(attemptNum int, resp *nethttp.Response) time.Duration {
+		Backoff: func(attemptNum int, resp *http.Response) time.Duration {
 			return time.Millisecond * 50 * time.Duration(attemptNum)
 		},
 	}
 
 	var n uint32
-	server := httptest.NewServer(nethttp.HandlerFunc(func(writer nethttp.ResponseWriter, request *nethttp.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		thisReqN := atomic.AddUint32(&n, 1)
 		if thisReqN <= wantToSkip {
-			writer.WriteHeader(nethttp.StatusServiceUnavailable)
+			writer.WriteHeader(http.StatusServiceUnavailable)
 		} else {
-			writer.WriteHeader(nethttp.StatusAccepted)
+			writer.WriteHeader(http.StatusAccepted)
 		}
 	}))
 
 	sender := &HttpMessageSender{
-		Client: nethttp.DefaultClient,
+		Client: http.DefaultClient,
 	}
 
-	request, err := nethttp.NewRequest("POST", server.URL, nil)
+	request, err := http.NewRequest("POST", server.URL, nil)
 	assert.Nil(t, err)
 
 	// Create a message similar to the one we send with channels
@@ -332,8 +331,8 @@ func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
 	}
-	if got.StatusCode != nethttp.StatusAccepted {
-		t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, nethttp.StatusAccepted)
+	if got.StatusCode != http.StatusAccepted {
+		t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, http.StatusAccepted)
 	}
 	if count := atomic.LoadUint32(&n); count != wantToSkip+1 {
 		t.Fatalf("expected %d count got %d", wantToSkip+1, count)
@@ -341,7 +340,6 @@ func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
 }
 
 func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
-	const retryMax = 10
 	linear := eventingduck.BackoffPolicyLinear
 	tests := []struct {
 		name     string
