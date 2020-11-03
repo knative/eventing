@@ -18,9 +18,6 @@ package kncloudevents
 
 import (
 	"context"
-	"fmt"
-	"math"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -186,10 +183,9 @@ func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 
 func TestRetriesOnNetworkErrors(t *testing.T) {
 
-	port := rand.Int31n(math.MaxUint16-1024) + 1024
 	n := int32(10)
 	linear := duckv1.BackoffPolicyLinear
-	target := fmt.Sprint("127.0.0.1:", port)
+	target := "127.0.0.1:63468"
 
 	calls := make(chan struct{})
 	defer close(calls)
@@ -203,7 +199,6 @@ func TestRetriesOnNetworkErrors(t *testing.T) {
 		for range calls {
 
 			nCalls++
-
 			// Simulate that the target service is back up.
 			//
 			// First n/2-1 calls we get connection refused since there is no server running.
