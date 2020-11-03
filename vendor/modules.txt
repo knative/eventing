@@ -68,6 +68,7 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
+## explicit
 github.com/beorn7/perks/quantile
 # github.com/blang/semver/v4 v4.0.0
 github.com/blang/semver/v4
@@ -198,6 +199,7 @@ github.com/jmespath/go-jmespath
 # github.com/joho/godotenv v1.3.0
 github.com/joho/godotenv
 # github.com/json-iterator/go v1.1.10
+## explicit
 github.com/json-iterator/go
 # github.com/jstemmer/go-junit-report v0.9.1
 github.com/jstemmer/go-junit-report
@@ -257,6 +259,7 @@ github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/log
 github.com/prometheus/common/model
 # github.com/prometheus/procfs v0.0.11
+## explicit
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
@@ -957,10 +960,10 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20201028205534-fe80f1c8af68
+# knative.dev/hack v0.0.0-20201102193445-9349aeeb6701
 ## explicit
 knative.dev/hack
-# knative.dev/pkg v0.0.0-20201030122234-256ae893994a
+# knative.dev/pkg v0.0.0-20201102194004-c6a8219d518d
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
