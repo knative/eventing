@@ -86,7 +86,7 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
-			State: "failure",
+			State:  "failure",
 			Events: 0,
 			Thrown: []string{"Report wasn't fetched"},
 		},
@@ -172,7 +172,7 @@ func waitForJobIsCompleted(ctx context.Context, client kubernetes.Interface, job
 	span := logging.GetEmitableSpan(ctx, fmt.Sprint("waitForJobIsCompleted/", jobName))
 	defer span.End()
 
-	return wait.PollImmediate(time.Second, 2 * time.Minute, func() (bool, error) {
+	return wait.PollImmediate(time.Second, 2*time.Minute, func() (bool, error) {
 		j, err := jobs.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return true, err

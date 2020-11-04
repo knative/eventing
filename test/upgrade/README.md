@@ -55,7 +55,7 @@ entire upgrade/downgrade process. When the upgrade completes, we make sure that
 all of those events propagated just once.
 
 To achieve that a [wathola tool](test/upgrade/prober/wathola) was prepared. It
-consists of 4 components: _sender_, _forwarder_, _receiver_, and _fetcher_. 
+consists of 4 components: _sender_, _forwarder_, _receiver_, and _fetcher_.
 _Sender_ is the usual Kubernetes deployment that publishes events to the default
 `broker` with given interval. When it closes (by either `SIGTERM`, or `SIGINT`),
 an `finished` event is generated. _Forwarder_ is a knative serving service that
@@ -64,7 +64,7 @@ and forwards them to given target. _Receiver_ is an ordinary deployment that
 collects events from multiple forwarders and has an endpoint `/report` that can
 be polled to get the status of sent events. To fetch the report from within the
 cluster _fetcher_ comes in. It's a simple one time job, that will fetch report
-from _receiver_ and print it on stdout as JSON. That enable test client to 
+from _receiver_ and print it on stdout as JSON. That enable test client to
 download _fetcher_ logs and parse JSON to get the report.
 
 Diagram below describe the setup:
@@ -72,21 +72,21 @@ Diagram below describe the setup:
 ```
                    K8s cluster                            |     Test machine
                                                           |
- (deploym.)         (ksvc)            (deploym.)          |                
+ (deploym.)         (ksvc)            (deploym.)          |
 +--------+       +-----------+       +----------+         |    +------------+
 |        |       |           ++      |          |         |    |            |
 | Sender |   +-->| Forwarder ||----->+ Receiver |         |    + TestProber |
 |        |   |   |           ||      |          |<---+    |    |            |
 +---+----+   |   +------------|      +----------+    |    |    +------------+
-    |        |    +-----------+                      |    |                
-    |        |                                       |    |                
-    |        |                              +---------+   |                
-    |     +--+-----+       +---------+      |         |   |                
-    +----->        |       |         +-+    + Fetcher |   |                
-          | Broker | < - > | Trigger | |    |         |   |                
-          |        |       |         | |    +---------+   |                
-          +--------+       +---------+ |       (job)      |                
-           (default)        +----------+                  |                
+    |        |    +-----------+                      |    |
+    |        |                                       |    |
+    |        |                              +---------+   |
+    |     +--+-----+       +---------+      |         |   |
+    +----->        |       |         +-+    + Fetcher |   |
+          | Broker | < - > | Trigger | |    |         |   |
+          |        |       |         | |    +---------+   |
+          +--------+       +---------+ |       (job)      |
+           (default)        +----------+                  |
 ```
 
 #### Probe test configuration
