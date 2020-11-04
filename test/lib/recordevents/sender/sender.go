@@ -116,7 +116,7 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 
 	var baseEvent *cloudevents.Event
 	if env.InputEvent != "" {
-		if err := json.Unmarshal([]byte(env.InputEvent), baseEvent); err != nil {
+		if err := json.Unmarshal([]byte(env.InputEvent), &baseEvent); err != nil {
 			return fmt.Errorf("unable to unmarshal the event from json: %w", err)
 		}
 	}
