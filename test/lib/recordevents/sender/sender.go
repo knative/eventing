@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	nethttp "net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,7 +142,7 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 				event.SetExtension("sequence", sequence)
 			}
 			if env.IncrementalId {
-				event.SetID(fmt.Sprintf("%d", sequence))
+				event.SetID(strconv.Itoa(sequence))
 			}
 
 			logging.FromContext(ctx).Info("I'm going to send\n", event)
