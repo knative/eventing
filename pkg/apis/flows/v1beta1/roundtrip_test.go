@@ -17,18 +17,24 @@ limitations under the License.
 package v1beta1
 
 import (
+	"math/rand"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"knative.dev/eventing/pkg/apis/duck/v1/test"
-
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	pkgfuzzer "knative.dev/pkg/apis/testing/fuzzer"
 	"knative.dev/pkg/apis/testing/roundtrip"
+)
+
+var (
+	linear      = duckv1.BackoffPolicyLinear
+	exponential = duckv1.BackoffPolicyExponential
+	bops        = []*duckv1.BackoffPolicyType{nil, &linear, &exponential}
 )
 
 // FuzzerFuncs includes fuzzing funcs for knative.dev/flows v1 types
@@ -57,6 +63,15 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				// Fuzz the known conditions except their type value
 				s.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&s.Status, c)
+			},
+			func(ds *duckv1.DeliverySpec, c fuzz.Continue) {
+				c.FuzzNoCustom(ds) // fuzz the DeliverySpec
+				if ds.BackoffPolicy != nil && *ds.BackoffPolicy == "" {
+					ds.BackoffPolicy = nil
+				} else {
+					//nolint:gosec // Cryptographic randomness is not necessary.
+					ds.BackoffPolicy = bops[rand.Intn(3)]
+				}
 			},
 		}
 	},
@@ -92,7 +107,6 @@ func TestFlowsRoundTripTypesToBetaHub(t *testing.T) {
 	fuzzerFuncs := fuzzer.MergeFuzzerFuncs(
 		pkgfuzzer.Funcs,
 		FuzzerFuncs,
-		test.FuzzerFuncs,
 	)
 
 	roundtrip.ExternalTypesViaHub(t, scheme, hubs, fuzzerFuncs)
