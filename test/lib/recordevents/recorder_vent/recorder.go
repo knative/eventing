@@ -50,11 +50,11 @@ func (r *recorder) Vent(observed recordevents.EventInfo) error {
 
 	t := time.Now()
 	// Note: DO NOT SET EventTime, or you'll trigger k8s api server hilarity:
-	// - https://github.com/kubernetes/kubernetes/issues/95913
+	// - https://githubger.com/kubernetes/kubernetes/issues/95913
 	// - https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/events.go#L122
 	event := &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%v.%d", r.ref.Name, observed.Sequence),
+			Name:      fmt.Sprintf("%v.%v.%d", r.ref.Name, observed.Kind, observed.Sequence),
 			Namespace: r.namespace,
 		},
 		InvolvedObject: *r.ref,

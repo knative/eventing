@@ -84,6 +84,16 @@ func HasAdditionalHeader(key, value string) EventInfoMatcher {
 	}
 }
 
+// MatchKind matches the kind of EventInfo
+func MatchKind(kind EventKind) EventInfoMatcher {
+	return func(info EventInfo) error {
+		if kind != info.Kind {
+			return fmt.Errorf("event kind don't match. Expected: '%s', Actual: '%s'", kind, info.Kind)
+		}
+		return nil
+	}
+}
+
 // MatchHeartBeatsImageMessage matches that the data field of the event, in the format of the heartbeats image, contains the following msg field
 func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 	return cetest.AllOf(
