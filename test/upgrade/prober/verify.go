@@ -115,6 +115,7 @@ func (p *prober) deployFetcher(ctx context.Context) {
 					},
 				},
 				Spec: corev1.PodSpec{
+					RestartPolicy: corev1.RestartPolicyNever,
 					Volumes: []corev1.Volume{{
 						Name: p.config.ConfigMapName,
 						VolumeSource: corev1.VolumeSource{
