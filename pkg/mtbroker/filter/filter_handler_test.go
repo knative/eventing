@@ -540,7 +540,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			defer h.response.Body.Close()
 			body, err := ioutil.ReadAll(h.response.Body)
 			if err != nil {
-				h.t.Fatalf("Unable to read body: %v", err)
+				h.t.Fatal("Unable to read body: ", err)
 			}
 			resp.Write(body)
 		}
