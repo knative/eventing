@@ -20,15 +20,12 @@ import (
 	"context"
 	"time"
 
-	"knative.dev/pkg/logging"
-
-	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
@@ -36,7 +33,9 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/swappable"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 )
 
@@ -88,7 +87,10 @@ func NewController(
 
 	// Nothing to filer, enqueue all imcs if configmap updates.
 	noopFilter := func(interface{}) bool { return true }
-	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(string, interface{}) {
+	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(key string, val interface{}) {
+		conf := val.(channel.EventDispatcherConfig)
+		kncloudevents.ConfigureConnectionArgs(&conf.ConnectionArgs)
+
 		impl.FilteredGlobalResync(noopFilter, informer)
 	})
 	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
