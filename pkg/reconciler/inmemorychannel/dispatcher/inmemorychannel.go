@@ -26,9 +26,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"knative.dev/eventing/pkg/kncloudevents"
-
 	"go.uber.org/zap"
+
+	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -38,7 +38,7 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
-	"knative.dev/pkg/apis/duck"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 // Reconciler reconciles InMemory Channels.
@@ -67,7 +67,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	handler := r.multiChannelMessageHandler.GetChannelHandler(config.HostName)
 	if handler == nil {
 		// No handler yet, create one.
-		fanoutHandler, err := fanout.NewFanoutMessageHandler(logging.FromContext(ctx).Desugar(), channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()), config.FanoutConfig, r.reporter)
+		fanoutHandler, err := fanout.NewFanoutMessageHandler(
+			logging.FromContext(ctx).Desugar(),
+			channel.NewMessageDispatcher(logging.FromContext(ctx).Desugar()),
+			config.FanoutConfig,
+			r.reporter,
+		)
 		if err != nil {
 			logging.FromContext(ctx).Error("Failed to create a new fanout.MessageHandler", err)
 			return err

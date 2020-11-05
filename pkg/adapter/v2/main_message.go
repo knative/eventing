@@ -108,7 +108,7 @@ func MainMessageAdapterWithContext(ctx context.Context, component string, ector 
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpBindingsSender, err := kncloudevents.NewHTTPMessageSender(nil, env.GetSink())
+	httpBindingsSender, err := kncloudevents.NewHTTPMessageSenderWithTarget(env.GetSink())
 	if err != nil {
 		logger.Fatal("error building cloud event client", zap.Error(err))
 	}

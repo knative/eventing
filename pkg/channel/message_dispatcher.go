@@ -68,15 +68,9 @@ type DispatchExecutionInfo struct {
 	ResponseCode int
 }
 
-// NewMessageDispatcher creates a new Message dispatcher that can dispatch
-// events to HTTP destinations.
-func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
-	return NewMessageDispatcherFromConfig(logger, defaultEventDispatcherConfig)
-}
-
 // NewMessageDispatcherFromConfig creates a new Message dispatcher based on config.
-func NewMessageDispatcherFromConfig(logger *zap.Logger, config EventDispatcherConfig) *MessageDispatcherImpl {
-	sender, err := kncloudevents.NewHTTPMessageSender(&config.ConnectionArgs, "")
+func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
 	if err != nil {
 		logger.Fatal("Unable to create cloudevents binding sender", zap.Error(err))
 	}

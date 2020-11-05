@@ -75,13 +75,12 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
-
-	connectionArgs := kncloudevents.ConnectionArgs{
+	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
+	})
 
-	sender, err := kncloudevents.NewHTTPMessageSender(&connectionArgs, "")
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message sender: %w", err)
 	}

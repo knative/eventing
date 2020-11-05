@@ -256,7 +256,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 	}()
 
 	// Ok now everything should be ready to send the event
-	httpsender, err := kncloudevents.NewHTTPMessageSender(nil, channelAProxy.URL)
+	httpsender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelAProxy.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

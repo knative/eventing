@@ -248,7 +248,7 @@ func TestRetriesOnNetworkErrors(t *testing.T) {
 	req, err := http.NewRequest("POST", "http://"+target, nil)
 	assert.Nil(t, err)
 
-	sender, err := NewHTTPMessageSender(nil, "")
+	sender, err := NewHTTPMessageSenderWithTarget("")
 	assert.Nil(t, err)
 
 	_, err = sender.SendWithRetries(req, &r)
