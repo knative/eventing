@@ -80,7 +80,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	})
 
-	sender, err := kncloudevents.NewHTTPMessageSender("")
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message sender: %w", err)
 	}

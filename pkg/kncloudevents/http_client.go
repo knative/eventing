@@ -61,7 +61,8 @@ func getClient() *nethttp.Client {
 }
 
 // ConfigureConnectionArgs configures the new connection args.
-// The existing client won't be affected, but a new one will be created
+// The existing client won't be affected, but a new one will be created.
+// Use sparingly, because it might lead to creating a lot of clients, none of them sharing their connection pool!
 func ConfigureConnectionArgs(ca *ConnectionArgs) {
 	if ca == nil {
 		return

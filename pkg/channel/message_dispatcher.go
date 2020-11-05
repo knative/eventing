@@ -70,7 +70,7 @@ type DispatchExecutionInfo struct {
 
 // NewMessageDispatcherFromConfig creates a new Message dispatcher based on config.
 func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
-	sender, err := kncloudevents.NewHTTPMessageSender("")
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
 	if err != nil {
 		logger.Fatal("Unable to create cloudevents binding sender", zap.Error(err))
 	}
