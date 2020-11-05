@@ -218,17 +218,8 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
-		// Ok, so writeResponse will return the HTTPStatus of the function. That may have
-		// succeeded (200), but it may have returned a malformed event, so if the
-		// function succeeded, convert this to an StatusBadGateway instead to indicate
-		// error. Note that we could just use StatusInternalServerError, but to distinguish
-		// between the two failure cases, we use a different code here.
-		if statusCode == http.StatusOK {
-			statusCode = http.StatusBadGateway
-		}
 	}
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
-	writer.WriteHeader(statusCode)
 }
 
 func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, error) {
@@ -264,6 +255,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	return resp, err
 }
 
+// The return values are the status
 func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32, target string) (int, error) {
 	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
@@ -277,20 +269,28 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		n, _ := response.BodyReader.Read(body)
 		response.BodyReader.Close()
 		if n != 0 {
-			return resp.StatusCode, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
+			// Note that we could just use StatusInternalServerError, but to distinguish
+			// between the failure cases, we use a different code here.
+			writer.WriteHeader(http.StatusBadGateway)
+			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
 		}
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
+		writer.WriteHeader(resp.StatusCode)
 		return resp.StatusCode, nil
 	}
 
 	event, err := binding.ToEvent(ctx, response)
 	if err != nil {
+		// Like in the above case, we could just use StatusInternalServerError, but to distinguish
+		// between the failure cases, we use a different code here.
+		writer.WriteHeader(http.StatusBadGateway)
 		// Malformed event, reply with err
-		return resp.StatusCode, err
+		return http.StatusBadGateway, err
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
 	if err := broker.SetTTL(event.Context, ttl); err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
 		return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
 	}
 
