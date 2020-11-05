@@ -38,7 +38,7 @@ type holder struct {
 
 var clientHolder = holder{}
 
-// The used http client is a singleton, so the same http client is reused across all the application.
+// The used HTTP client is a singleton, so the same http client is reused across all the application.
 // If connection args is modified, client is cleaned and a new one is created.
 func getClient() *nethttp.Client {
 	clientHolder.clientMutex.Lock()
