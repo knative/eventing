@@ -71,12 +71,10 @@ func (ei *EventInfo) String() string {
 		sb.WriteString("--- Event ---\n")
 		sb.WriteString(ei.Event.String())
 		sb.WriteRune('\n')
-		sb.WriteRune('\n')
 	}
 	if ei.Error != "" {
 		sb.WriteString("--- Error ---\n")
 		sb.WriteString(ei.Error)
-		sb.WriteRune('\n')
 		sb.WriteRune('\n')
 	}
 	if len(ei.HTTPHeaders) != 0 {
@@ -98,6 +96,7 @@ func (ei *EventInfo) String() string {
 	sb.WriteString("--- Observer: '" + ei.Observer + "' ---\n")
 	sb.WriteString("--- Time: " + ei.Time.String() + " ---\n")
 	sb.WriteString(fmt.Sprintf("--- Sequence: %d ---\n", ei.Sequence))
+	sb.WriteString("--------------------\n")
 	return sb.String()
 }
 
@@ -113,7 +112,7 @@ type SearchedInfo struct {
 // Pretty print the SearchedInfor for error messages
 func (s *SearchedInfo) String() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%d events seen, last %d events (total events seen %d, events ignored %d):",
+	sb.WriteString(fmt.Sprintf("%d events seen, last %d events (total events seen %d, events ignored %d):\n",
 		s.TotalEvent, len(s.LastNEvent), s.storeEventsSeen, s.storeEventsNotMine))
 	for _, ei := range s.LastNEvent {
 		sb.WriteString(ei.String())
