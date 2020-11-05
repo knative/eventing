@@ -279,7 +279,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 			returnedEvent:             makeDifferentEvent(),
 		},
-		"Returned malformed Cloud Event": {
+		"Returned non empty non event response": {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
@@ -287,7 +287,27 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 			expectedStatus:            http.StatusBadGateway,
+			response:                  makeNonEmptyResponse(),
+		},
+		"Returned malformed Cloud Event": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusOK,
 			response:                  makeMalformedEventResponse(),
+		},
+		"Returned malformed structured Cloud Event": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusBadGateway,
+			response:                  makeMalformedStructuredEventResponse(),
 		},
 		"Returned empty body 200": {
 			triggers: []*eventingv1beta1.Trigger{
@@ -512,15 +532,18 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if h.response != nil {
-		defer h.response.Body.Close()
-		body, err := ioutil.ReadAll(h.response.Body)
-		if err != nil {
-			h.t.Fatalf("Unable to read body: %v", err)
+		for k, v := range h.response.Header {
+			resp.Header().Set(k, v[0])
 		}
 		resp.WriteHeader(h.response.StatusCode)
-		resp.Header().Set("Content-Type", "garbage")
-		resp.Header().Set("Content-Length", fmt.Sprintf("%d", len(body)))
-		resp.Write(body)
+		if h.response.Body != nil {
+			defer h.response.Body.Close()
+			body, err := ioutil.ReadAll(h.response.Body)
+			if err != nil {
+				h.t.Fatalf("Unable to read body: %v", err)
+			}
+			resp.Write(body)
+		}
 	}
 }
 
@@ -608,7 +631,7 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 	return &e
 }
 
-func makeMalformedEventResponse() *http.Response {
+func makeNonEmptyResponse() *http.Response {
 	r := &http.Response{
 		Status:     "200 OK",
 		StatusCode: 200,
@@ -623,6 +646,34 @@ func makeMalformedEventResponse() *http.Response {
 	return r
 }
 
+func makeMalformedEventResponse() *http.Response {
+	r := &http.Response{
+		Status:     "200 OK",
+		StatusCode: 200,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header:     make(http.Header),
+	}
+	r.Header.Set("Ce-Specversion", "9000.1")
+	return r
+}
+
+func makeMalformedStructuredEventResponse() *http.Response {
+	r := &http.Response{
+		Status:     "200 OK",
+		StatusCode: 200,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte("{}"))),
+		Header:     make(http.Header),
+	}
+	r.Header.Set("Content-Type", cloudevents.ApplicationCloudEventsJSON)
+
+	return r
+}
+
 func makeEmptyResponse(status int) *http.Response {
 	s := fmt.Sprintf("%d OK", status)
 	r := &http.Response{
@@ -631,10 +682,7 @@ func makeEmptyResponse(status int) *http.Response {
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
 		Header:     make(http.Header),
 	}
-	r.Header.Set("Content-Type", "garbage")
-	r.Header.Set("Content-Length", "0")
 	return r
 }
