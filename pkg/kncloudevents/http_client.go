@@ -65,15 +65,12 @@ func getClient() *nethttp.Client {
 // The existing client won't be affected, but a new one will be created.
 // Use sparingly, because it might lead to creating a lot of clients, none of them sharing their connection pool!
 func ConfigureConnectionArgs(ca *ConnectionArgs) {
-	if ca == nil {
-		return
-	}
-
 	clientHolder.clientMutex.Lock()
 	defer clientHolder.clientMutex.Unlock()
 
 	// Check if same config
 	if clientHolder.connectionArgs != nil &&
+		ca != nil &&
 		ca.MaxIdleConns == clientHolder.connectionArgs.MaxIdleConns &&
 		ca.MaxIdleConnsPerHost == clientHolder.connectionArgs.MaxIdleConnsPerHost {
 		return
