@@ -271,7 +271,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		response.BodyReader.Close()
 		if n != 0 {
 			// Note that we could just use StatusInternalServerError, but to distinguish
-			// between the two failure cases, we use a different code here.
+			// between the failure cases, we use a different code here.
 			writer.WriteHeader(http.StatusBadGateway)
 			return resp.StatusCode, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
 		}
@@ -282,8 +282,8 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 
 	event, err := binding.ToEvent(ctx, response)
 	if err != nil {
-		// Note that we could just use StatusInternalServerError, but to distinguish
-		// between the two failure cases, we use a different code here.
+		// Like in the above case, we could just use StatusInternalServerError, but to distinguish
+		// between the failure cases, we use a different code here.
 		writer.WriteHeader(http.StatusBadGateway)
 		// Malformed event, reply with err
 		return resp.StatusCode, err
@@ -291,8 +291,6 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
 	if err := broker.SetTTL(event.Context, ttl); err != nil {
-		// Note that we could just use StatusInternalServerError, but to distinguish
-		// between the two failure cases, we use a different code here.
 		writer.WriteHeader(http.StatusInternalServerError)
 		return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
 	}
