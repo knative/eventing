@@ -21,7 +21,10 @@ import (
 	"time"
 
 	"k8s.io/client-go/tools/cache"
+
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/kncloudevents"
+
 	"knative.dev/pkg/injection"
 
 	"github.com/google/uuid"
@@ -103,13 +106,15 @@ func NewController(
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
 
-	// Nothing to filter, enqueue all imcs if configmap updates.
-	noopFilter := func(interface{}) bool { return true }
-	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(string, interface{}) {
-		impl.FilteredGlobalResync(noopFilter, informer)
+	globalSyncAfterDispatcherConfigUpdate := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(key string, val interface{}) {
+		conf := val.(channel.EventDispatcherConfig)
+		kncloudevents.ConfigureConnectionArgs(&conf.ConnectionArgs)
+
+		// Nothing to filter, enqueue all imcs if configmap updates.
+		impl.FilteredGlobalResync(func(interface{}) bool { return true }, informer)
 	})
 	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
-	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), resyncIMCs)
+	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), globalSyncAfterDispatcherConfigUpdate)
 	configStore.WatchConfigs(cmw)
 	r.eventDispatcherConfigStore = configStore
 

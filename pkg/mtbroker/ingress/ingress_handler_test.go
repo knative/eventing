@@ -33,6 +33,7 @@ import (
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	broker "knative.dev/eventing/pkg/mtbroker"
@@ -213,7 +214,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				annotatedBrokers = append(annotatedBrokers, b)
 			}
 			listers := reconcilertestingv1.NewListers(annotatedBrokers)
-			sender, _ := kncloudevents.NewHTTPMessageSender(nil, "")
+			sender, _ := kncloudevents.NewHTTPMessageSender("")
 			h := &Handler{
 				Sender:       sender,
 				Defaulter:    tc.defaulter,

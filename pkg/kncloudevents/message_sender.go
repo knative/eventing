@@ -25,15 +25,8 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rickb777/date/period"
-	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-)
-
-const (
-	defaultRetryWaitMin = 1 * time.Second
-	defaultRetryWaitMax = 30 * time.Second
 )
 
 var noRetries = RetryConfig{
@@ -46,41 +39,13 @@ var noRetries = RetryConfig{
 	},
 }
 
-// ConnectionArgs allow to configure connection parameters to the underlying
-// HTTP Client transport.
-type ConnectionArgs struct {
-	// MaxIdleConns refers to the max idle connections, as in net/http/transport.
-	MaxIdleConns int
-	// MaxIdleConnsPerHost refers to the max idle connections per host, as in net/http/transport.
-	MaxIdleConnsPerHost int
-}
-
-func (ca *ConnectionArgs) ConfigureTransport(transport *nethttp.Transport) {
-	if ca == nil {
-		return
-	}
-	transport.MaxIdleConns = ca.MaxIdleConns
-	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
-}
-
 type HTTPMessageSender struct {
 	Client *nethttp.Client
 	Target string
 }
 
-func NewHTTPMessageSender(connectionArgs *ConnectionArgs, target string) (*HTTPMessageSender, error) {
-	// Add connection options to the default transport.
-	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-	connectionArgs.ConfigureTransport(base)
-	// Add output tracing.
-	client := &nethttp.Client{
-		Transport: &ochttp.Transport{
-			Base:        base,
-			Propagation: tracecontextb3.TraceContextEgress,
-		},
-	}
-
-	return &HTTPMessageSender{Client: client, Target: target}, nil
+func NewHTTPMessageSender(target string) (*HTTPMessageSender, error) {
+	return &HTTPMessageSender{Client: getClient(), Target: target}, nil
 }
 
 func (s *HTTPMessageSender) NewCloudEventRequest(ctx context.Context) (*nethttp.Request, error) {
