@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"go.uber.org/zap"
+	configmaptesting "knative.dev/pkg/configmap/testing"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -66,4 +67,25 @@ func TestNewInNamespace(t *testing.T) {
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+func TestGlobalSyncWithCMUpdate(t *testing.T) {
+	ctx, cancel, _ := SetupFakeContextWithCancel(t)
+	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
+
+	cmw := &configmap.InformedWatcher{}
+
+	os.Setenv("SCOPE", eventing.ScopeNamespace)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
+	c := NewController(ctx, cmw)
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+
+	cmw.OnChange(configmaptesting.ConfigMapFromTestFile(t, "config-event-dispatcher", "MaxIdleConnections", "MaxIdleConnectionsPerHost"))
 }
