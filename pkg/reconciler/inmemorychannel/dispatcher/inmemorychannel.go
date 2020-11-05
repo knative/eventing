@@ -26,14 +26,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-
-	"knative.dev/eventing/pkg/kncloudevents"
-
 	"go.uber.org/zap"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/reconciler"
 
 	"knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -41,6 +38,7 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 // Reconciler reconciles InMemory Channels.

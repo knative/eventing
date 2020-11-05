@@ -24,8 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/kncloudevents"
-
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
@@ -36,6 +34,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
