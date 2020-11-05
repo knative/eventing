@@ -213,7 +213,7 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 	}
 
 	// If there is an event in the response write it to the response
-	statusCode, err := writeResponse(ctx, writer, response, ttl)
+	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 	}
