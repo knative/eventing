@@ -30,23 +30,24 @@ const (
 	defaultRetryWaitMax = 30 * time.Second
 )
 
-var (
-	// Mutex to write the below globals
+type holder struct {
 	clientMutex    sync.Mutex
 	connectionArgs *ConnectionArgs
 	client         **nethttp.Client
-)
+}
 
-// The used http client is a singleton, so the same http client is reused across all the application
-// If connection args is modified, client is cleaned and a new one is created
+var clientHolder = holder{}
+
+// The used http client is a singleton, so the same http client is reused across all the application.
+// If connection args is modified, client is cleaned and a new one is created.
 func getClient() *nethttp.Client {
-	clientMutex.Lock()
-	defer clientMutex.Unlock()
+	clientHolder.clientMutex.Lock()
+	defer clientHolder.clientMutex.Unlock()
 
-	if client == nil {
+	if clientHolder.client == nil {
 		// Add connection options to the default transport.
 		var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
-		connectionArgs.configureTransport(base)
+		clientHolder.connectionArgs.configureTransport(base)
 		c := &nethttp.Client{
 			// Add output tracing.
 			Transport: &ochttp.Transport{
@@ -54,10 +55,10 @@ func getClient() *nethttp.Client {
 				Propagation: tracecontextb3.TraceContextEgress,
 			},
 		}
-		client = &c
+		clientHolder.client = &c
 	}
 
-	return *client
+	return *clientHolder.client
 }
 
 // ConfigureConnectionArgs configures the new connection args.
@@ -68,24 +69,26 @@ func ConfigureConnectionArgs(ca *ConnectionArgs) {
 		return
 	}
 
-	clientMutex.Lock()
-	defer clientMutex.Unlock()
+	clientHolder.clientMutex.Lock()
+	defer clientHolder.clientMutex.Unlock()
 
 	// Check if same config
-	if connectionArgs != nil && ca.MaxIdleConns == connectionArgs.MaxIdleConns && ca.MaxIdleConnsPerHost == connectionArgs.MaxIdleConnsPerHost {
+	if clientHolder.connectionArgs != nil &&
+		ca.MaxIdleConns == clientHolder.connectionArgs.MaxIdleConns &&
+		ca.MaxIdleConnsPerHost == clientHolder.connectionArgs.MaxIdleConnsPerHost {
 		return
 	}
 
-	if client != nil {
+	if clientHolder.client != nil {
 		// Let's try to clean up a bit the existing client
 		// Note: this won't remove it nor close it
-		(*client).CloseIdleConnections()
+		(*clientHolder.client).CloseIdleConnections()
 
 		// Setting client to nil
-		client = nil
+		clientHolder.client = nil
 	}
 
-	connectionArgs = ca
+	clientHolder.connectionArgs = ca
 }
 
 // ConnectionArgs allow to configure connection parameters to the underlying
