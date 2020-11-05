@@ -273,7 +273,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 			// Note that we could just use StatusInternalServerError, but to distinguish
 			// between the failure cases, we use a different code here.
 			writer.WriteHeader(http.StatusBadGateway)
-			return resp.StatusCode, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
+			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
 		}
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(resp.StatusCode)
@@ -286,7 +286,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		// between the failure cases, we use a different code here.
 		writer.WriteHeader(http.StatusBadGateway)
 		// Malformed event, reply with err
-		return resp.StatusCode, err
+		return http.StatusBadGateway, err
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
