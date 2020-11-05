@@ -32,15 +32,17 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/apis"
+
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/pkg/apis"
 )
 
 const (
@@ -364,7 +366,11 @@ func TestReceiver(t *testing.T) {
 				tc.request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 			responseWriter := httptest.NewRecorder()
-			r.ServeHTTP(responseWriter, tc.request)
+			r.ServeHTTP(&responseWriterWithInvocationsCheck{
+				ResponseWriter: responseWriter,
+				headersWritten: atomic.NewBool(false),
+				t:              t,
+			}, tc.request)
 
 			response := responseWriter.Result()
 
@@ -423,6 +429,19 @@ func TestReceiver(t *testing.T) {
 			}
 		})
 	}
+}
+
+type responseWriterWithInvocationsCheck struct {
+	http.ResponseWriter
+	headersWritten *atomic.Bool
+	t              *testing.T
+}
+
+func (r *responseWriterWithInvocationsCheck) WriteHeader(statusCode int) {
+	if !r.headersWritten.CAS(false, true) {
+		r.t.Fatal("WriteHeader invoked more than once")
+	}
+	r.ResponseWriter.WriteHeader(statusCode)
 }
 
 type mockReporter struct {
