@@ -54,34 +54,39 @@ we run a prober test that continually sends events to a service during the
 entire upgrade/downgrade process. When the upgrade completes, we make sure that
 all of those events propagated just once.
 
-To achieve that a tool was prepared (https://github.com/cardil/wathola). It
-consists of 3 components: _sender_, _forwarder_, and _receiver_. _Sender_ is the
-usual Kubernetes pod that publishes events to the default `broker` with given
-interval. When it closes (by either `SIGTERM`, or `SIGINT`), an `finished` event
-is generated. _Forwarder_ is a knative serving service that scales from zero to
-receive the requested traffic. _Forwarders_ receive events and forwards them to
-given target. _Receiver_ is an ordinary pod that collects events from multiple
-forwarders and has an endpoint `/report` that can be polled to get the status of
-sent events.
+To achieve that a [wathola tool](test/upgrade/prober/wathola) was prepared. It
+consists of 4 components: _sender_, _forwarder_, _receiver_, and _fetcher_.
+_Sender_ is the usual Kubernetes deployment that publishes events to the default
+`broker` with given interval. When it terminates (by either `SIGTERM`, or `SIGINT`),
+a `finished` event is generated. _Forwarder_ is a knative serving service that
+scales up from zero to receive the sent events and forward them to given target
+which is the _receiver_ in our case. _Receiver_ is an ordinary deployment that
+collects events from multiple forwarders and has an endpoint `/report` that can
+be polled to get the status of received events. To fetch the report from within the
+cluster _fetcher_ comes in. It's a simple one time job, that will fetch the report
+from _receiver_ and print it on stdout as JSON. That enables the test client to
+download _fetcher_ logs and parse the JSON to get the final report.
 
 Diagram below describe the setup:
 
 ```
-  (pod)              (ksvc)             (pod)
-+--------+       +-----------+       +----------+
-|        |       |           ++      |          |
-| Sender |   +-->| Forwarder ||----->+ Receiver |
-|        |   |   |           ||      |          |
-+---+----+   |   +------------|      +----------+
-    |        |    +-----------+
-    |        |
-    |        |
-    |     +--+-----+       +---------+
-    +----->        |       |         +-+
-          | Broker | < - - | Trigger | |
-          |        |       |         | |
-          +--------+       +---------+ |
-           (default)        +----------+
+                   K8s cluster                            |     Test machine
+                                                          |
+ (deploym.)         (ksvc)            (deploym.)          |
++--------+       +-----------+       +----------+         |    +------------+
+|        |       |           ++      |          |         |    |            |
+| Sender |   +-->| Forwarder ||----->+ Receiver |         |    + TestProber |
+|        |   |   |           ||      |          |<---+    |    |            |
++---+----+   |   +------------|      +----------+    |    |    +------------+
+    |        |    +-----------+                      |    |
+    |        |                                       |    |
+    |        |                              +---------+   |
+    |     +--+-----+       +---------+      |         |   |
+    +----->        |       |         +-+    + Fetcher |   |
+          | Broker | < - > | Trigger | |    |         |   |
+          |        |       |         | |    +---------+   |
+          +--------+       +---------+ |       (job)      |
+           (default)        +----------+                  |
 ```
 
 #### Probe test configuration
