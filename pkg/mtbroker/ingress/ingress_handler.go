@@ -96,7 +96,7 @@ func (h *Handler) getChannelAddress(name, namespace string) (string, error) {
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(h))
+	return h.Receiver.StartListen(ctx, health.WithLivenessCheck(health.WithReadinessCheck(h)))
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
