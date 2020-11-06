@@ -162,7 +162,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 	ceWant := want.DeepCopy()
 	ceWant.Spec.Template.Spec.Containers[0].Env = append(ceWant.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "K_CE_OVERRIDES",
-		Value: `{"1":"one"}`,
+		Value: `{"extensions":{"1":"one"}}`,
 	})
 
 	testCases := map[string]struct {
