@@ -54,8 +54,8 @@ func simpleSubject(name, namespace string) *string {
 
 func TestMakeAddEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj                           interface{}
-		source                        string
+		obj                   interface{}
+		source                string
 		ceOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
@@ -68,8 +68,8 @@ func TestMakeAddEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source:                        "unit-test",
-			obj:                           simplePod("unit", "test"),
+			source:                "unit-test",
+			obj:                   simplePod("unit", "test"),
 			ceOverridesExtensions: ceOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
@@ -99,8 +99,8 @@ func TestMakeAddEvent(t *testing.T) {
 
 func TestMakeUpdateEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj                           interface{}
-		source                        string
+		obj                   interface{}
+		source                string
 		ceOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
@@ -113,8 +113,8 @@ func TestMakeUpdateEvent(t *testing.T) {
 			wantErr: "new resource can not be nil",
 		},
 		"simple pod": {
-			source:                        "unit-test",
-			obj:                           simplePod("unit", "test"),
+			source:                "unit-test",
+			obj:                   simplePod("unit", "test"),
 			ceOverridesExtensions: ceOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
@@ -144,8 +144,8 @@ func TestMakeUpdateEvent(t *testing.T) {
 
 func TestMakeDeleteEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj                           interface{}
-		source                        string
+		obj                   interface{}
+		source                string
 		ceOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
@@ -158,8 +158,8 @@ func TestMakeDeleteEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source:                        "unit-test",
-			obj:                           simplePod("unit", "test"),
+			source:                "unit-test",
+			obj:                   simplePod("unit", "test"),
 			ceOverridesExtensions: ceOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
@@ -189,8 +189,8 @@ func TestMakeDeleteEvent(t *testing.T) {
 
 func TestMakeAddRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj                           interface{}
-		source                        string
+		obj                   interface{}
+		source                string
 		ceOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
@@ -203,8 +203,8 @@ func TestMakeAddRefEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source:                        "unit-test",
-			obj:                           simplePod("unit", "test"),
+			source:                "unit-test",
+			obj:                   simplePod("unit", "test"),
 			ceOverridesExtensions: ceOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
@@ -234,8 +234,8 @@ func TestMakeAddRefEvent(t *testing.T) {
 
 func TestMakeUpdateRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj                           interface{}
-		source                        string
+		obj                   interface{}
+		source                string
 		ceOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
@@ -248,8 +248,8 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 			wantErr: "new resource can not be nil",
 		},
 		"simple pod": {
-			source:                        "unit-test",
-			obj:                           simplePod("unit", "test"),
+			source:                "unit-test",
+			obj:                   simplePod("unit", "test"),
 			ceOverridesExtensions: ceOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
@@ -279,8 +279,8 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 
 func TestMakeDeleteRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj                           interface{}
-		source                        string
+		obj                   interface{}
+		source                string
 		ceOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
@@ -293,8 +293,8 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source:                        "unit-test",
-			obj:                           simplePod("unit", "test"),
+			source:                "unit-test",
+			obj:                   simplePod("unit", "test"),
 			ceOverridesExtensions: ceOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
