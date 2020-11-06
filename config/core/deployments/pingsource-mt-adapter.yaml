@@ -38,6 +38,7 @@ spec:
           image: ko://knative.dev/eventing/cmd/mtping
           env:
             - name: SYSTEM_NAMESPACE
+              value: ''
               valueFrom:
                 fieldRef:
                   apiVersion: v1
