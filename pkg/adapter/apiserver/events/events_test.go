@@ -29,7 +29,10 @@ import (
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
 )
 
-var contentType = "application/json"
+var (
+	contentType                   = "application/json"
+	cloudEventOverridesExtensions = map[string]string{"ext1": "value1", "ext2": "value2"}
+)
 
 func simplePod(name, namespace string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
@@ -51,8 +54,9 @@ func simpleSubject(name, namespace string) *string {
 
 func TestMakeAddEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj    interface{}
-		source string
+		obj                           interface{}
+		source                        string
+		cloudEventOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
 		wantData string
@@ -64,8 +68,9 @@ func TestMakeAddEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source: "unit-test",
-			obj:    simplePod("unit", "test"),
+			source:                        "unit-test",
+			obj:                           simplePod("unit", "test"),
+			cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
 					Type:            "dev.knative.apiserver.resource.add",
@@ -76,6 +81,8 @@ func TestMakeAddEvent(t *testing.T) {
 						"kind":      "Pod",
 						"name":      "unit",
 						"namespace": "test",
+						"ext1":      "value1",
+						"ext2":      "value2",
 					},
 				}.AsV1(),
 			},
@@ -84,7 +91,7 @@ func TestMakeAddEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeAddEvent(tc.source, tc.obj, false)
+			got, err := events.MakeAddEvent(tc.source, tc.obj, false, tc.cloudEventOverridesExtensions)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -92,8 +99,9 @@ func TestMakeAddEvent(t *testing.T) {
 
 func TestMakeUpdateEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj    interface{}
-		source string
+		obj                           interface{}
+		source                        string
+		cloudEventOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
 		wantData string
@@ -105,8 +113,9 @@ func TestMakeUpdateEvent(t *testing.T) {
 			wantErr: "new resource can not be nil",
 		},
 		"simple pod": {
-			source: "unit-test",
-			obj:    simplePod("unit", "test"),
+			source:                        "unit-test",
+			obj:                           simplePod("unit", "test"),
+			cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
 					Type:            "dev.knative.apiserver.resource.update",
@@ -117,6 +126,8 @@ func TestMakeUpdateEvent(t *testing.T) {
 						"kind":      "Pod",
 						"name":      "unit",
 						"namespace": "test",
+						"ext1":      "value1",
+						"ext2":      "value2",
 					},
 				}.AsV1(),
 			},
@@ -125,7 +136,7 @@ func TestMakeUpdateEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeUpdateEvent(tc.source, tc.obj, false)
+			got, err := events.MakeUpdateEvent(tc.source, tc.obj, false, tc.cloudEventOverridesExtensions)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -133,8 +144,9 @@ func TestMakeUpdateEvent(t *testing.T) {
 
 func TestMakeDeleteEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj    interface{}
-		source string
+		obj                           interface{}
+		source                        string
+		cloudEventOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
 		wantData string
@@ -146,8 +158,9 @@ func TestMakeDeleteEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source: "unit-test",
-			obj:    simplePod("unit", "test"),
+			source:                        "unit-test",
+			obj:                           simplePod("unit", "test"),
+			cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
 					Type:            "dev.knative.apiserver.resource.delete",
@@ -158,6 +171,8 @@ func TestMakeDeleteEvent(t *testing.T) {
 						"kind":      "Pod",
 						"name":      "unit",
 						"namespace": "test",
+						"ext1":      "value1",
+						"ext2":      "value2",
 					},
 				}.AsV1(),
 			},
@@ -166,7 +181,7 @@ func TestMakeDeleteEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeDeleteEvent(tc.source, tc.obj, false)
+			got, err := events.MakeDeleteEvent(tc.source, tc.obj, false, tc.cloudEventOverridesExtensions)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -174,8 +189,9 @@ func TestMakeDeleteEvent(t *testing.T) {
 
 func TestMakeAddRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj    interface{}
-		source string
+		obj                           interface{}
+		source                        string
+		cloudEventOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
 		wantData string
@@ -187,8 +203,9 @@ func TestMakeAddRefEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source: "unit-test",
-			obj:    simplePod("unit", "test"),
+			source:                        "unit-test",
+			obj:                           simplePod("unit", "test"),
+			cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
 					Type:            "dev.knative.apiserver.ref.add",
@@ -199,6 +216,8 @@ func TestMakeAddRefEvent(t *testing.T) {
 						"kind":      "Pod",
 						"name":      "unit",
 						"namespace": "test",
+						"ext1":      "value1",
+						"ext2":      "value2",
 					},
 				}.AsV1(),
 			},
@@ -207,7 +226,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeAddEvent(tc.source, tc.obj, true)
+			got, err := events.MakeAddEvent(tc.source, tc.obj, true, tc.cloudEventOverridesExtensions)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -215,8 +234,9 @@ func TestMakeAddRefEvent(t *testing.T) {
 
 func TestMakeUpdateRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj    interface{}
-		source string
+		obj                           interface{}
+		source                        string
+		cloudEventOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
 		wantData string
@@ -228,8 +248,9 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 			wantErr: "new resource can not be nil",
 		},
 		"simple pod": {
-			source: "unit-test",
-			obj:    simplePod("unit", "test"),
+			source:                        "unit-test",
+			obj:                           simplePod("unit", "test"),
+			cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
 					Type:            "dev.knative.apiserver.ref.update",
@@ -240,6 +261,8 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 						"kind":      "Pod",
 						"name":      "unit",
 						"namespace": "test",
+						"ext1":      "value1",
+						"ext2":      "value2",
 					},
 				}.AsV1(),
 			},
@@ -248,7 +271,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeUpdateEvent(tc.source, tc.obj, true)
+			got, err := events.MakeUpdateEvent(tc.source, tc.obj, true, tc.cloudEventOverridesExtensions)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -256,8 +279,9 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 
 func TestMakeDeleteRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj    interface{}
-		source string
+		obj                           interface{}
+		source                        string
+		cloudEventOverridesExtensions map[string]string
 
 		want     *cloudevents.Event
 		wantData string
@@ -269,8 +293,9 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 			wantErr: "resource can not be nil",
 		},
 		"simple pod": {
-			source: "unit-test",
-			obj:    simplePod("unit", "test"),
+			source:                        "unit-test",
+			obj:                           simplePod("unit", "test"),
+			cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV1{
 					Type:            "dev.knative.apiserver.ref.delete",
@@ -281,6 +306,8 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 						"kind":      "Pod",
 						"name":      "unit",
 						"namespace": "test",
+						"ext1":      "value1",
+						"ext2":      "value2",
 					},
 				}.AsV1(),
 			},
@@ -289,7 +316,7 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeDeleteEvent(tc.source, tc.obj, true)
+			got, err := events.MakeDeleteEvent(tc.source, tc.obj, true, tc.cloudEventOverridesExtensions)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}

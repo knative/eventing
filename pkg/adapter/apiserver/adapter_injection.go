@@ -65,14 +65,20 @@ func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClie
 	if err := json.Unmarshal([]byte(env.ConfigJson), &config); err != nil {
 		panic("failed to create config from json")
 	}
-
+	cloudEventOverridesExtensions := make(map[string]string)
+	if len(env.CEOverrides) > 0 {
+		if err := json.Unmarshal([]byte(env.CEOverrides), &cloudEventOverridesExtensions); err != nil {
+			panic("failed to create cloudEventOverridesExtensions from json")
+		}
+	}
 	return &apiServerAdapter{
-		discover: kubeclient.Get(ctx).Discovery(),
-		k8s:      dynamicclient.Get(ctx),
-		ce:       ceClient,
-		source:   Get(ctx),
-		name:     env.Name,
-		config:   config,
+		discover:                      kubeclient.Get(ctx).Discovery(),
+		k8s:                           dynamicclient.Get(ctx),
+		ce:                            ceClient,
+		source:                        Get(ctx),
+		name:                          env.Name,
+		config:                        config,
+		cloudEventOverridesExtensions: cloudEventOverridesExtensions,
 
 		logger: logger,
 	}

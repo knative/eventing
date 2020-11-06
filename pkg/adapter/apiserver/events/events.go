@@ -27,7 +27,7 @@ import (
 	sources "knative.dev/eventing/pkg/apis/sources"
 )
 
-func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
+func MakeAddEvent(source string, obj interface{}, ref bool, cloudEventOverridesExtensions map[string]string) (cloudevents.Event, error) {
 	if obj == nil {
 		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
@@ -43,10 +43,10 @@ func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, 
 		eventType = sources.ApiServerSourceAddEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, eventType, object, data, cloudEventOverridesExtensions)
 }
 
-func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
+func MakeUpdateEvent(source string, obj interface{}, ref bool, cloudEventOverridesExtensions map[string]string) (cloudevents.Event, error) {
 	if obj == nil {
 		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
@@ -62,10 +62,10 @@ func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 		eventType = sources.ApiServerSourceUpdateEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, eventType, object, data, cloudEventOverridesExtensions)
 }
 
-func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
+func MakeDeleteEvent(source string, obj interface{}, ref bool, cloudEventOverridesExtensions map[string]string) (cloudevents.Event, error) {
 	if obj == nil {
 		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
@@ -81,7 +81,7 @@ func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 		eventType = sources.ApiServerSourceDeleteEventType
 	}
 
-	return makeEvent(source, eventType, object, data)
+	return makeEvent(source, eventType, object, data, cloudEventOverridesExtensions)
 }
 
 func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
@@ -93,7 +93,7 @@ func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 	}
 }
 
-func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (cloudevents.Event, error) {
+func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}, cloudEventOverridesExtensions map[string]string) (cloudevents.Event, error) {
 	resourceName := obj.GetName()
 	kind := obj.GetKind()
 	namespace := obj.GetNamespace()
@@ -112,6 +112,9 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 	event.SetExtension("kind", kind)
 	event.SetExtension("name", resourceName)
 	event.SetExtension("namespace", namespace)
+	for key, override := range cloudEventOverridesExtensions {
+		event.SetExtension(key, override)
+	}
 	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
 		return event, err
 	}

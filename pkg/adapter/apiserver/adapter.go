@@ -46,10 +46,11 @@ type apiServerAdapter struct {
 
 	config Config
 
-	discover discovery.DiscoveryInterface
-	k8s      dynamic.Interface
-	source   string // TODO: who dis?
-	name     string // TODO: who dis?
+	discover                      discovery.DiscoveryInterface
+	k8s                           dynamic.Interface
+	source                        string // TODO: who dis?
+	name                          string // TODO: who dis?
+	cloudEventOverridesExtensions map[string]string
 }
 
 func (a *apiServerAdapter) Start(ctx context.Context) error {
@@ -63,10 +64,11 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 	resyncPeriod := 10 * time.Hour
 
 	var delegate cache.Store = &resourceDelegate{
-		ce:     a.ce,
-		source: a.source,
-		logger: a.logger,
-		ref:    a.config.EventMode == v1alpha2.ReferenceMode,
+		ce:                            a.ce,
+		source:                        a.source,
+		cloudEventOverridesExtensions: a.cloudEventOverridesExtensions,
+		logger:                        a.logger,
+		ref:                           a.config.EventMode == v1alpha2.ReferenceMode,
 	}
 
 	if a.config.ResourceOwner != nil {
