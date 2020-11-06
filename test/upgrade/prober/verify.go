@@ -35,8 +35,13 @@ import (
 	"knative.dev/pkg/test/logging"
 )
 
-const fetcherName = "wathola-fetcher"
+const (
+	fetcherName     = "wathola-fetcher"
+	jobWaitInterval = time.Second
+	jobWaitTimeout  = 5 * time.Minute
+)
 
+// Verify will verify prober state after finished has been send.
 func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	report := p.fetchReport(ctx)
 	p.log.Infof("Fetched receiver report. Events propagated: %v. "+
@@ -51,6 +56,7 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	return errs, report.Events
 }
 
+// Finish terminates sender which sends finished event.
 func (p *prober) Finish(ctx context.Context) {
 	p.removeSender(ctx)
 }
@@ -72,15 +78,16 @@ func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
 		case "warning":
 			logFunc = log.Warn
 		}
-		logFunc("Fetcher: ", entry.Datetime, " ", entry.Message)
+		logFunc("Reply of fetcher log: ", entry.Datetime, " ", entry.Message)
 	}
 }
 
 func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	ns := p.config.Namespace
-	p.deployFetcher(ctx)
+	job := p.deployFetcher(ctx)
 	defer p.deleteFetcher(ctx)
-	pod := p.succeededJobPod(ctx, fetcherName, ns)
+	pod, err := p.findSucceededPod(ctx, job)
+	ensure.NoError(err)
 	bytes, err := pkgTest.PodLogs(ctx, p.client.Kube, pod.Name, fetcherName, ns)
 	ensure.NoError(err)
 	ex := &fetcher.Execution{
@@ -96,7 +103,7 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	return ex
 }
 
-func (p *prober) deployFetcher(ctx context.Context) {
+func (p *prober) deployFetcher(ctx context.Context) *batchv1.Job {
 	p.log.Info("Deploying fetcher job: ", fetcherName)
 	jobs := p.client.Kube.BatchV1().Jobs(p.config.Namespace)
 	var replicas int32 = 1
@@ -139,11 +146,13 @@ func (p *prober) deployFetcher(ctx context.Context) {
 			},
 		},
 	}
-	_, err := jobs.Create(ctx, fetcherJob, metav1.CreateOptions{})
+	created, err := jobs.Create(ctx, fetcherJob, metav1.CreateOptions{})
 	ensure.NoError(err)
 	p.log.Info("Waiting for fetcher job to succeed: ", fetcherName)
-	err = waitForJobIsCompleted(ctx, p.client.Kube, fetcherName, p.config.Namespace)
+	err = waitForJobToComplete(ctx, p.client.Kube, fetcherName, p.config.Namespace)
 	ensure.NoError(err)
+
+	return created
 }
 
 func (p *prober) deleteFetcher(ctx context.Context) {
@@ -153,27 +162,29 @@ func (p *prober) deleteFetcher(ctx context.Context) {
 	ensure.NoError(err)
 }
 
-func (p *prober) succeededJobPod(ctx context.Context, jobName, namespace string) *corev1.Pod {
-	pods := p.client.Kube.CoreV1().Pods(namespace)
+func (p *prober) findSucceededPod(ctx context.Context, job *batchv1.Job) (*corev1.Pod, error) {
+	pods := p.client.Kube.CoreV1().Pods(job.Namespace)
 	podList, err := pods.List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprint("job-name=", jobName),
+		LabelSelector: fmt.Sprint("job-name=", job.Name),
 	})
 	ensure.NoError(err)
 	for _, pod := range podList.Items {
 		if pod.Status.Phase == corev1.PodSucceeded {
-			return &pod
+			return &pod, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf(
+		"could't find succeeded pod for job: %s", job.Name,
+	)
 }
 
-func waitForJobIsCompleted(ctx context.Context, client kubernetes.Interface, jobName, namespace string) error {
+func waitForJobToComplete(ctx context.Context, client kubernetes.Interface, jobName, namespace string) error {
 	jobs := client.BatchV1().Jobs(namespace)
 
-	span := logging.GetEmitableSpan(ctx, fmt.Sprint("waitForJobIsCompleted/", jobName))
+	span := logging.GetEmitableSpan(ctx, fmt.Sprint("waitForJobToComplete/", jobName))
 	defer span.End()
 
-	return wait.PollImmediate(time.Second, 2*time.Minute, func() (bool, error) {
+	return wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
 		j, err := jobs.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return true, err
