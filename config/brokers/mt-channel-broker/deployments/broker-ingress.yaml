@@ -34,16 +34,18 @@ spec:
       - name: ingress
         terminationMessagePolicy: FallbackToLogsOnError
         image: ko://knative.dev/eventing/cmd/mtbroker/ingress
-        livenessProbe:
+        readinessProbe: &probe
           failureThreshold: 3
           httpGet:
             path: /healthz
             port: 8080
             scheme: HTTP
-          initialDelaySeconds: 5
           periodSeconds: 2
           successThreshold: 1
           timeoutSeconds: 1
+        livenessProbe:
+          <<: *probe
+          initialDelaySeconds: 5
         resources:
           requests:
             cpu: 100m
