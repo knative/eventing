@@ -151,10 +151,10 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 
 	envs = append(envs, args.Configs.ToEnvVars()...)
 
-	if args.Source.Spec.CloudEventOverrides != nil && args.Source.Spec.CloudEventOverrides.Extensions != nil {
-		ceJson, err := json.Marshal(args.Source.Spec.CloudEventOverrides.Extensions)
+	if args.Source.Spec.CloudEventOverrides != nil {
+		ceJson, err := json.Marshal(args.Source.Spec.CloudEventOverrides)
 		if err != nil {
-			return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides.Extensions, err)
+			return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides, err)
 		}
 		envs = append(envs, corev1.EnvVar{Name: adapter.EnvConfigCEOverrides, Value: string(ceJson)})
 	}
