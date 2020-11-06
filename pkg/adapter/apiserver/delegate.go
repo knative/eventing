@@ -26,10 +26,10 @@ import (
 )
 
 type resourceDelegate struct {
-	ce                            cloudevents.Client
-	source                        string
-	cloudEventOverridesExtensions map[string]string
-	ref                           bool
+	ce                    cloudevents.Client
+	source                string
+	ceOverridesExtensions map[string]string
+	ref                   bool
 
 	logger *zap.SugaredLogger
 }
@@ -37,7 +37,7 @@ type resourceDelegate struct {
 var _ cache.Store = (*resourceDelegate)(nil)
 
 func (a *resourceDelegate) Add(obj interface{}) error {
-	event, err := events.MakeAddEvent(a.source, obj, a.ref, a.cloudEventOverridesExtensions)
+	event, err := events.MakeAddEvent(a.source, obj, a.ref, a.ceOverridesExtensions)
 	if err != nil {
 		a.logger.Infow("event creation failed", zap.Error(err))
 		return err
@@ -50,7 +50,7 @@ func (a *resourceDelegate) Add(obj interface{}) error {
 }
 
 func (a *resourceDelegate) Update(obj interface{}) error {
-	event, err := events.MakeUpdateEvent(a.source, obj, a.ref, a.cloudEventOverridesExtensions)
+	event, err := events.MakeUpdateEvent(a.source, obj, a.ref, a.ceOverridesExtensions)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
 		return err
@@ -63,7 +63,7 @@ func (a *resourceDelegate) Update(obj interface{}) error {
 }
 
 func (a *resourceDelegate) Delete(obj interface{}) error {
-	event, err := events.MakeDeleteEvent(a.source, obj, a.ref, a.cloudEventOverridesExtensions)
+	event, err := events.MakeDeleteEvent(a.source, obj, a.ref, a.ceOverridesExtensions)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
 		return err
