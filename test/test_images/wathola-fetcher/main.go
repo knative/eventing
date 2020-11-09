@@ -1,5 +1,3 @@
-// +build tools
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,16 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tools
+package main
 
 import (
-	_ "knative.dev/hack"
-	_ "knative.dev/pkg/configmap/hash-gen"
-	_ "knative.dev/pkg/hack"
-
-	// Needed for the storage version too.
-	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
-
-	// For chaos testing the leaderelection stuff.
-	_ "knative.dev/pkg/leaderelection/chaosduck"
+	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 )
+
+func main() {
+	fetcher.New().FetchReport()
+}
