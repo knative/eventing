@@ -47,7 +47,7 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	p.log.Infof("Fetched receiver report. Events propagated: %v. "+
 		"State: %v", report.Events, report.State)
 	if report.State == "active" {
-		panic(errors.New("report fetched to early, receiver is in active state"))
+		panic(errors.New("report fetched too early, receiver is in active state"))
 	}
 	errs := make([]error, 0)
 	for _, t := range report.Thrown {
