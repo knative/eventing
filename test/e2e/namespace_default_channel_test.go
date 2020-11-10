@@ -109,8 +109,12 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	spec := createdObj.Object["spec"]
-	assert.NotNil(t, spec)
+	spec := createdObj.Object["spec"].(map[string]interface{})
+	spec = spec["channelTemplate"].(map[string]interface{})
+	spec = spec["spec"].(map[string]interface{})
+	spec = spec["delivery"].(map[string]interface{})
 
-	t.Log(spec)
+	assert.Equal(t, "PT0.5S", spec["backoffDelay"])
+	assert.Equal(t, int64(5), spec["retry"])
+	assert.Equal(t, "exponential", spec["backoffPolicy"])
 }

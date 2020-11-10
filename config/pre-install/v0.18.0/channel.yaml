@@ -75,6 +75,7 @@ spec:
                         created. Passed in verbatim to the Channel CRD as Spec
                         section.
                     type: object
+                    x-kubernetes-preserve-unknown-fields: true
               delivery: &deliverySpec
                 description: DeliverySpec contains options controlling the event delivery
                 type: object
