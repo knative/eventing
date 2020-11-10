@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"knative.dev/pkg/kmp"
 	"knative.dev/pkg/system"
@@ -69,7 +70,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 	configTests := []struct {
 		name                string
 		wantErr             bool
-		wantChannelDefaults interface{}
+		wantChannelDefaults *ChannelDefaults
 		config              *corev1.ConfigMap
 	}{{
 		name:    "defaults configuration",
@@ -165,6 +166,41 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
         some-namespace:
           apiVersion: messaging.knative.dev/v1beta1
           kind: InMemoryChannel
+`,
+			},
+		},
+	}, {
+		name:    "only namespace default with spec",
+		wantErr: false,
+		wantChannelDefaults: &ChannelDefaults{
+			NamespaceDefaults: map[string]*ChannelTemplateSpec{
+				"some-namespace": {
+					TypeMeta: v1.TypeMeta{
+						APIVersion: "messaging.knative.dev/v1beta1",
+						Kind:       "InMemoryChannel",
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`{"delivery":{"backoffDelay":"PT0.5S","backoffPolicy":"exponential","retry":5}}`),
+					},
+				},
+			},
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      ChannelDefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-ch-config": `
+      namespaceDefaults:
+        some-namespace:
+          apiVersion: messaging.knative.dev/v1beta1
+          kind: InMemoryChannel
+          spec:
+            delivery:
+              retry: 5
+              backoffDelay: PT0.5S
+              backoffPolicy: exponential
 `,
 			},
 		},
