@@ -184,12 +184,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	// Check if the event should be sent.
 	ctx = logging.WithLogger(ctx, h.logger.Sugar())
-	filterResult, err := filterEvent(ctx, t.Spec.Filter, *event)
-	if err != nil {
-		h.logger.Error("Error while filtering", zap.Error(err))
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	filterResult := filterEvent(ctx, t.Spec.Filter, *event)
 
 	if filterResult == eventfilter.FailFilter {
 		// We do not count the event. The event will be counted in the broker ingress.
@@ -329,15 +324,15 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigg
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, event cloudevents.Event) (eventfilter.FilterResult, error) {
+func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
 	if filter == nil {
-		return eventfilter.NoFilter, nil
+		return eventfilter.NoFilter
 	}
 	var filters eventfilter.Filters
 	if filter.Attributes != nil && len(filter.Attributes) != 0 {
 		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
 	}
-	return filters.Filter(ctx, event), nil
+	return filters.Filter(ctx, event)
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
