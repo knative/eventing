@@ -103,17 +103,20 @@ github.com/cloudevents/sdk-go/v2/test
 github.com/cloudevents/sdk-go/v2/types
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dlclark/regexp2 v1.2.0
+# github.com/dlclark/regexp2 v1.4.0
 ## explicit
 github.com/dlclark/regexp2
 github.com/dlclark/regexp2/syntax
-# github.com/dop251/goja v0.0.0-20200721192441-a695b0cdd498
+# github.com/dop251/goja v0.0.0-20201107160812-7545ac6de48a
 ## explicit
 github.com/dop251/goja
 github.com/dop251/goja/ast
 github.com/dop251/goja/file
+github.com/dop251/goja/ftoa
+github.com/dop251/goja/ftoa/internal/fast
 github.com/dop251/goja/parser
 github.com/dop251/goja/token
+github.com/dop251/goja/unistring
 # github.com/emicklei/go-restful v2.9.5+incompatible
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log

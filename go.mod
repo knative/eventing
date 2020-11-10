@@ -5,7 +5,10 @@ go 1.14
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.2.0
+	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/dop251/goja v0.0.0-20201107160812-7545ac6de48a
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.1.0
