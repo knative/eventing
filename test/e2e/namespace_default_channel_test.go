@@ -117,4 +117,11 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 	assert.Equal(t, "PT0.5S", spec["backoffDelay"])
 	assert.Equal(t, int64(5), spec["retry"])
 	assert.Equal(t, "exponential", spec["backoffPolicy"])
+
+	imc, err := c.Eventing.MessagingV1().InMemoryChannels(c.Namespace).Get(ctx, "xyx", metav1.GetOptions{})
+	assert.NotNil(t, err)
+
+	assert.Equal(t, "PT0.5S", imc.Spec.Delivery.BackoffPolicy)
+	assert.Equal(t, int64(5), imc.Spec.Delivery.Retry)
+	assert.Equal(t, "exponential", imc.Spec.Delivery.BackoffPolicy)
 }
