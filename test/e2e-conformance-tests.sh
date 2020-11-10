@@ -32,7 +32,7 @@ source "$(dirname "$0")/e2e-common.sh"
 
 initialize $@ --skip-istio-addon
 
-echo "Running tests with Multi Tenant Channel Based Broker"
-go_test_e2e -timeout=30m -parallel=12 ./test/conformance -brokers=eventing.knative.dev/v1beta1:MTChannelBasedBroker -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource || fail_test
+echo "Running Conformance tests for: Multi Tenant Channel Based Broker (v1beta1), Channel (v1beta1, v1), InMemoryChannel (v1beta1, v1) , ApiServerSource (v1beta1, v1), ContainerSource (v1alpha2, v1) and PingSource (v1beta1)"
+go_test_e2e -timeout=30m -parallel=12 ./test/conformance -brokers=eventing.knative.dev/v1beta1:MTChannelBasedBroker -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel  -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource,sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource || fail_test
 
 success
