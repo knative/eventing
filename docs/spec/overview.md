@@ -10,7 +10,7 @@ API defines several resources that can be reduced down to well understood
 contracts. These eventing resource interfaces may be fulfilled by other
 Kubernetes objects and then composed in the same way as the concrete objects.
 The interfaces are ([Addressable](interfaces.md#addressable),
-[Subscribable](interfaces.md#Subscribable), [Callable](interfaces.md#callable)).
+[Callable](interfaces.md#callable)).
 For more details, see [Interface Contracts](interfaces.md).
 
 - A **Trigger** describes a filter on event attributes which should be delivered
