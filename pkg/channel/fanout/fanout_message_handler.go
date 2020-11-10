@@ -236,10 +236,8 @@ func parseFanoutResultAndReportMetrics(result dispatchResult, reporter channel.S
 	err := result.err
 	if err != nil {
 		channel.ReportEventCountMetricsForDispatchError(err, reporter, &reportArgs)
-	} else {
-		if result.info != nil {
-			_ = reporter.ReportEventCount(&reportArgs, result.info.ResponseCode)
-		}
+	} else if result.info != nil {
+		_ = reporter.ReportEventCount(&reportArgs, result.info.ResponseCode)
 	}
 	return err
 }

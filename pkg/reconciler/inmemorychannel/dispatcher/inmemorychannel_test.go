@@ -27,6 +27,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/reconciler"
 
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +65,6 @@ const (
 )
 
 var (
-	three       = int32(3)
 	linear      = eventingduckv1.BackoffPolicyLinear
 	exponential = eventingduckv1.BackoffPolicyExponential
 
@@ -87,7 +87,7 @@ var (
 		SubscriberURI: apis.HTTP("call1"),
 		ReplyURI:      apis.HTTP("sink2"),
 		Delivery: &eventingduckv1.DeliverySpec{
-			Retry:         &three,
+			Retry:         ptr.Int32(3),
 			BackoffPolicy: &linear,
 		},
 	}
@@ -116,7 +116,7 @@ func init() {
 func TestAllCases(t *testing.T) {
 	backoffPolicy := eventingduckv1.BackoffPolicyLinear
 
-	imcKey := testNS + "/" + imcName
+	const imcKey = testNS + "/" + imcName
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -173,7 +173,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
-				patchSubscriberBytes(testNS, imcName, twoSubscriberPatch),
+				makePatch(testNS, imcName, twoSubscriberPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -198,7 +198,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
-				patchSubscriberBytes(testNS, imcName, twoSubscriberPatch),
+				makePatch(testNS, imcName, twoSubscriberPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -245,7 +245,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
-				patchSubscriberBytes(testNS, imcName, oneSubscriberRemovedOneAddedPatch),
+				makePatch(testNS, imcName, oneSubscriberRemovedOneAddedPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -282,7 +282,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, imcName),
-				patchSubscriberBytes(testNS, imcName, oneSubscriberPatch),
+				makePatch(testNS, imcName, oneSubscriberPatch),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
@@ -367,7 +367,7 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			multiChannelMessageHandler: NewFakeMultiChannelHandler(),
+			multiChannelMessageHandler: newFakeMultiChannelHandler(),
 			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
 		}
@@ -504,7 +504,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 		}
 		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
-				handler := NewFakeMultiChannelHandler()
+				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					fanoutHandler.SetSubscriptions(context.TODO(), tc.subs)
 					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
@@ -547,7 +547,7 @@ func TestReconciler_FinalizeKind(t *testing.T) {
 		}
 		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
 			t.Run("handler-"+n, func(t *testing.T) {
-				handler := NewFakeMultiChannelHandler()
+				handler := newFakeMultiChannelHandler()
 				if fanoutHandler != nil {
 					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
 				}
@@ -566,42 +566,35 @@ func TestReconciler_FinalizeKind(t *testing.T) {
 	}
 }
 
-func patchSubscriberBytes(namespace, name, patch string) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-	action.Patch = []byte(patch)
-	return action
+func makePatch(namespace, name, patch string) clientgotesting.PatchActionImpl {
+	return clientgotesting.PatchActionImpl{
+		ActionImpl: clientgotesting.ActionImpl{
+			Namespace: namespace,
+		},
+		Name:  name,
+		Patch: []byte(patch),
+	}
 }
 
 func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
-	action.Patch = []byte(patch)
-	return action
+	return makePatch(namespace, name,
+		`{"metadata":{"finalizers":["`+finalizerName+`"],"resourceVersion":""}}`)
 }
 
 func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
-	action.Patch = []byte(patch)
-	return action
+	return makePatch(namespace, name,
+		`{"metadata":{"finalizers":[],"resourceVersion":""}}`)
 }
 
 type fakeMultiChannelHandler struct {
 	handlers map[string]fanout.MessageHandler
 }
 
-func NewFakeMultiChannelHandler() *fakeMultiChannelHandler {
+func newFakeMultiChannelHandler() *fakeMultiChannelHandler {
 	return &fakeMultiChannelHandler{handlers: make(map[string]fanout.MessageHandler, 1)}
 }
-func (f *fakeMultiChannelHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 
-}
+func (f *fakeMultiChannelHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {}
 
 func (f *fakeMultiChannelHandler) SetChannelHandler(host string, handler fanout.MessageHandler) {
 	f.handlers[host] = handler
