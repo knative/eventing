@@ -74,7 +74,8 @@ spec:
                     description: Spec defines the Spec to use for each channel
                         created. Passed in verbatim to the Channel CRD as Spec
                         section.
-                    type: string
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
               delivery: &deliverySpec
                 description: DeliverySpec contains options controlling the event delivery
                 type: object
