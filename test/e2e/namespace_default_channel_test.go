@@ -102,10 +102,15 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 		},
 	}
 
-	_, err = c.Dynamic.
+	createdObj, err := c.Dynamic.
 		Resource(schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "channels"}).
 		Namespace(c.Namespace).
 		Create(ctx, obj, metav1.CreateOptions{})
 
 	assert.Nil(t, err)
+
+	spec := createdObj.Object["spec"]
+	assert.NotNil(t, spec)
+
+	t.Log(spec)
 }
