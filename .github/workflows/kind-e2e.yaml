@@ -163,7 +163,7 @@ jobs:
 
     - name: Wait for things to be up
       run: |
-        kubectl wait pod --for=condition=Ready -n ${SYSTEM_NAMESPACE} -l '!job-name'
+        kubectl -v 9 wait pod --for=condition=Ready -n ${SYSTEM_NAMESPACE} -l '!job-name'
 
     - name: Run e2e Tests
       run: |
