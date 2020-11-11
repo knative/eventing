@@ -40,45 +40,45 @@ func TestAttributesFilter_Filter(t *testing.T) {
 		want   eventfilter.FilterResult
 	}{
 		"Wrong type": {
-			filter: attributesFilter("some-other-type", ""),
+			filter: attributes("some-other-type", ""),
 			want:   eventfilter.FailFilter,
 		},
 		"Wrong type with attribs": {
-			filter: attributesFilter("some-other-type", ""),
+			filter: attributes("some-other-type", ""),
 			want:   eventfilter.FailFilter,
 		},
 		"Wrong source": {
-			filter: attributesFilter("", "some-other-source"),
+			filter: attributes("", "some-other-source"),
 			want:   eventfilter.FailFilter,
 		},
 		"Wrong source with attribs": {
-			filter: attributesFilter("", "some-other-source"),
+			filter: attributes("", "some-other-source"),
 			want:   eventfilter.FailFilter,
 		},
 		"Wrong extension": {
-			filter: attributesFilter("", "some-other-source"),
+			filter: attributes("", "some-other-source"),
 			want:   eventfilter.FailFilter,
 		},
 		"Any": {
-			filter: attributesFilter("", ""),
+			filter: attributes("", ""),
 			want:   eventfilter.PassFilter,
 		},
 		"Specific": {
-			filter: attributesFilter(eventType, eventSource),
+			filter: attributes(eventType, eventSource),
 			want:   eventfilter.PassFilter,
 		},
 		"Extension with attribs": {
-			filter: attributesWithExtensionFilter(eventType, eventSource, extensionValue),
+			filter: attributesWithExtension(eventType, eventSource, extensionValue),
 			event:  makeEventWithExtension(extensionName, extensionValue),
 			want:   eventfilter.PassFilter,
 		},
 		"Any with attribs - Arrival extension": {
-			filter: attributesFilter("", ""),
+			filter: attributes("", ""),
 			event:  makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
 			want:   eventfilter.PassFilter,
 		},
 		"Wrong Extension with attribs": {
-			filter: attributesWithExtensionFilter(eventType, eventSource, "some-other-extension-value"),
+			filter: attributesWithExtension(eventType, eventSource, "some-other-extension-value"),
 			event:  makeEventWithExtension(extensionName, extensionValue),
 			want:   eventfilter.FailFilter,
 		},
@@ -111,14 +111,14 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 	return e
 }
 
-func attributesFilter(t, s string) map[string]string {
+func attributes(t, s string) map[string]string {
 	return map[string]string{
 		"type":   t,
 		"source": s,
 	}
 }
 
-func attributesWithExtensionFilter(t, s, e string) map[string]string {
+func attributesWithExtension(t, s, e string) map[string]string {
 	return map[string]string{
 		"type":        t,
 		"source":      s,

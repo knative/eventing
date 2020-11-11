@@ -27,13 +27,14 @@ import (
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
-type AttributesFilter map[string]string
+type attributesFilter map[string]string
 
+// NewAttributesFilter returns an event filter which performs the exact match on the attributes
 func NewAttributesFilter(attrs map[string]string) eventfilter.Filter {
-	return AttributesFilter(attrs)
+	return attributesFilter(attrs)
 }
 
-func (attrs AttributesFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
@@ -71,3 +72,5 @@ func (attrs AttributesFilter) Filter(ctx context.Context, event cloudevents.Even
 	}
 	return eventfilter.PassFilter
 }
+
+var _ eventfilter.Filter = attributesFilter{}

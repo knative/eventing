@@ -46,6 +46,7 @@ func (x FilterResult) And(y FilterResult) FilterResult {
 
 // Filter is an interface representing an event filter of the trigger filter
 type Filter interface {
+	// Filter compute the predicate on the provided event and returns the result of the matching
 	Filter(ctx context.Context, event cloudevents.Event) FilterResult
 }
 
@@ -56,6 +57,10 @@ func (filters Filters) Filter(ctx context.Context, event cloudevents.Event) Filt
 	res := NoFilter
 	for _, f := range filters {
 		res = res.And(f.Filter(ctx, event))
+		// Short circuit to optimize it
+		if res == FailFilter {
+			return FailFilter
+		}
 	}
 	return res
 }
