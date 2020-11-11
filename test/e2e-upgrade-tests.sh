@@ -58,7 +58,6 @@ echo "Prober PID is ${PROBER_PID}"
 wait_for_file ${PROBER_READY_FILE} || fail_test
 
 header "Performing upgrade to HEAD"
-run_preinstall_V018 || fail_test 'Running preinstall 0.18 failed'
 install_head || fail_test 'Installing HEAD version of eventing failed'
 install_channel_crds || fail_test 'Installing HEAD channel CRDs failed'
 install_mt_broker || fail_test 'Installing HEAD Broker failed'
