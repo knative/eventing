@@ -34,6 +34,18 @@ spec:
       containers:
       - name: dispatcher
         image: ko://knative.dev/eventing/cmd/in_memory/channel_dispatcher
+        readinessProbe: &probe
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
+        livenessProbe:
+          <<: *probe
+          initialDelaySeconds: 5
         env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
@@ -52,5 +64,8 @@ spec:
           - name: CONTAINER_NAME
             value: dispatcher
         ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
           - containerPort: 9090
             name: metrics
