@@ -50,9 +50,6 @@ readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 # Installs Zipkin for tracing tests.
 readonly KNATIVE_EVENTING_MONITORING_YAML="test/config/monitoring.yaml"
 
-# PreInstall script for v0.18
-readonly PRE_INSTALL_V018="config/pre-install/v0.18.0"
-
 # The number of controlplane replicas to run.
 readonly REPLICAS=3
 
@@ -188,15 +185,6 @@ function install_latest_release() {
   install_knative_eventing \
     "${url}/${yaml}" || \
     fail_test "Knative latest release installation failed"
-}
-
-function run_preinstall_V018() {
-  local TMP_PRE_INSTALL_V018=${TMP_DIR}/pre_install
-  mkdir -p ${TMP_PRE_INSTALL_V018}
-  cp -r ${PRE_INSTALL_V018}/* ${TMP_PRE_INSTALL_V018}
-  find ${TMP_PRE_INSTALL_V018} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
-  ko apply --strict -f "${TMP_PRE_INSTALL_V018}" || return 1
-  wait_until_batch_job_complete ${SYSTEM_NAMESPACE} || return 1
 }
 
 function install_mt_broker() {
