@@ -64,3 +64,5 @@ func (filters Filters) Filter(ctx context.Context, event cloudevents.Event) Filt
 	}
 	return res
 }
+
+var _ Filter = Filters{}
