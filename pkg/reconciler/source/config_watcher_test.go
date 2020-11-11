@@ -55,7 +55,7 @@ func TestNewConfigWatcher_defaults(t *testing.T) {
 			name: "With empty data",
 			cmw:  configMapWatcherWithEmptyData(),
 			// logging defaults to Knative's defaults
-			expectLoggingContains: `{"zap-logger-config":"{\n  \"level\": \"info\"`,
+			expectLoggingContains: ``,
 			// metrics defaults to empty ConfigMap
 			expectMetricsContains: `"ConfigMap":{}`,
 			// tracing defaults to None backend
