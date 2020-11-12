@@ -35,6 +35,9 @@ type FilterBenchmark struct {
 var Filter eventfilter.Filter
 var Result eventfilter.FilterResult
 
+// RunFilterBenchmarks executes 2 benchmark runs for each of the provided bench cases:
+// 1. "Creation: ..." benchmark measures the time/mem to create the filter, given the filter constructor and the argument
+// 2. "Run: ..." benchmark measures the time/mem to execute the filter, given a pre-built filter instance and the provided event
 func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.Filter, filterBenchmarks ...FilterBenchmark) {
 	for _, fb := range filterBenchmarks {
 		b.Run("Creation: "+fb.name, func(b *testing.B) {
