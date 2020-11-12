@@ -17,19 +17,29 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"log"
 
+	"github.com/kelseyhightower/envconfig"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/recordevents/logger_vent"
-	"knative.dev/eventing/test/lib/recordevents/observer"
+	"knative.dev/eventing/test/lib/recordevents/receiver"
 	"knative.dev/eventing/test/lib/recordevents/recorder_vent"
+	"knative.dev/eventing/test/lib/recordevents/sender"
 	"knative.dev/eventing/test/test_images"
 )
+
+type envConfig struct {
+	EventGenerators []string `envconfig:"EVENT_GENERATORS" required:"true"`
+	EventLogs       []string `envconfig:"EVENT_LOGS" required:"true"`
+}
 
 func main() {
 	cfg, err := rest.InClusterConfig()
@@ -44,16 +54,51 @@ func main() {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
 	}
 
-	obs := observer.NewFromEnv(ctx,
-		logger_vent.Logger(logging.FromContext(ctx).Infof),
-		recorder_vent.NewFromEnv(ctx),
-	)
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logging.FromContext(ctx).Fatal("Failed to process env var", err)
+	}
 
-	err = obs.Start(ctx, kncloudevents.CreateHandler)
+	eventLogs := createEventLogs(ctx, env.EventLogs)
+	err = startEventGenerators(ctx, env.EventGenerators, eventLogs)
 
 	if err != nil {
-		logging.FromContext(ctx).Fatal("Error during start", err)
+		logging.FromContext(ctx).Fatal("Error during start: ", err)
 	}
 
 	logging.FromContext(ctx).Info("Closing the recordevents process")
+}
+
+func createEventLogs(ctx context.Context, logTypes []string) *recordevents.EventLogs {
+	var l []recordevents.EventLog
+	for _, logType := range logTypes {
+		switch recordevents.EventLogType(logType) {
+		case recordevents.RecorderEventLog:
+			l = append(l, recorder_vent.NewFromEnv(ctx))
+		case recordevents.LoggerEventLog:
+			l = append(l, logger_vent.Logger(logging.FromContext(ctx).Named("event logger").Infof))
+		default:
+			logging.FromContext(ctx).Fatal("Cannot recognize event log type: ", logType)
+		}
+	}
+	return recordevents.NewEventLogs(l...)
+}
+
+func startEventGenerators(ctx context.Context, genTypes []string, eventLogs *recordevents.EventLogs) error {
+	errs, _ := errgroup.WithContext(ctx)
+	for _, genType := range genTypes {
+		switch recordevents.EventGeneratorType(genType) {
+		case recordevents.ReceiverEventGenerator:
+			errs.Go(func() error {
+				return receiver.NewFromEnv(ctx, eventLogs).Start(ctx, kncloudevents.CreateHandler)
+			})
+		case recordevents.SenderEventGenerator:
+			errs.Go(func() error {
+				return sender.Start(ctx, eventLogs)
+			})
+		default:
+			logging.FromContext(ctx).Fatal("Cannot recognize event generator type: ", genType)
+		}
+	}
+	return errs.Wait()
 }

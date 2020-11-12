@@ -16,18 +16,44 @@ limitations under the License.
 
 package recordevents
 
+import "sync"
+
 // EventLog is the contract for an event logger to vent an event.
 type EventLog interface {
 	Vent(observed EventInfo) error
 }
 
-type EventLogs []EventLog
+// EventLogs is a struct to hold different EventLog and run them, guarded by a lock
+type EventLogs struct {
+	mutex sync.Mutex
+	logs  []EventLog
+}
 
-func (e EventLogs) Vent(observed EventInfo) error {
-	for _, el := range e {
+func NewEventLogs(logs ...EventLog) *EventLogs {
+	return &EventLogs{logs: logs}
+}
+
+func (e *EventLogs) Vent(observed EventInfo) error {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	for _, el := range e.logs {
 		if err := el.Vent(observed); err != nil {
 			return err
 		}
 	}
 	return nil
 }
+
+type EventGeneratorType string
+
+const (
+	ReceiverEventGenerator EventGeneratorType = "receiver"
+	SenderEventGenerator   EventGeneratorType = "sender"
+)
+
+type EventLogType string
+
+const (
+	RecorderEventLog EventLogType = "recorder"
+	LoggerEventLog   EventLogType = "logger"
+)

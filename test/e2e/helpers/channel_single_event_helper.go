@@ -30,7 +30,6 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/eventing/test/lib/sender"
 )
 
 type SubscriptionVersion string
@@ -109,14 +108,20 @@ func SingleEventForChannelTestHelper(
 			st.Fatalf("Cannot set the payload of the event: %s", err.Error())
 		}
 
-		client.SendEventToAddressable(
+		//TODO(slinkydeveloper) this is temporary, it will be replaced with SendEventToAddressable
+		uri, err := client.GetAddressableURI(channelName, &channel)
+		if err != nil {
+			client.T.Fatalf("Failed to get the URI for %+v-%s", &channel, channelName)
+		}
+
+		recordevents.DeployEventSenderOrFail(
 			ctx,
+			client,
 			senderName,
-			channelName,
-			&channel,
-			event,
-			sender.WithEncoding(encoding),
-			sender.EnableIncrementalId(),
+			uri,
+			recordevents.InputEvent(event),
+			recordevents.InputEncoding(encoding),
+			recordevents.EnableIncrementalId(),
 		)
 
 		// verify the logger service receives the event
