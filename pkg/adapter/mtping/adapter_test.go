@@ -65,7 +65,7 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 	ctx, _ := rectesting.SetupFakeContext(t)
 	adapter := mtpingAdapter{
 		logger:    logging.FromContext(ctx),
-		runner:    &dummyRunner{},
+		runner:    &testRunner{},
 		entryidMu: sync.RWMutex{},
 		entryids:  make(map[string]cron.EntryID),
 	}
@@ -92,11 +92,11 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 	}
 }
 
-type dummyRunner struct {
+type testRunner struct {
 	CronJobRunner
 }
 
-func (*dummyRunner) AddSchedule(*sourcesv1beta1.PingSource) cron.EntryID {
+func (*testRunner) AddSchedule(*sourcesv1beta1.PingSource) cron.EntryID {
 	return cron.EntryID(1)
 }
-func (*dummyRunner) RemoveSchedule(cron.EntryID) {}
+func (*testRunner) RemoveSchedule(cron.EntryID) {}

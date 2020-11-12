@@ -9,7 +9,7 @@ consumers can sample from using filters on CloudEvent
 [context attributes](https://github.com/cloudevents/spec/blob/master/spec.md#context-attributes).
 Event producers can deliver events into the bucket without needing to understand
 the exact mechanics of routing to specific consumers. Event producers and
-consumers are decoupled temporally but also through a deliberately black-box
+consumers are decoupled temporally but also through a deliberately closed-box
 abstraction which can optimize the underlying routing layer dynamically.
 
 ## Definitions
@@ -56,7 +56,7 @@ Historical storage and replay of events is not part of the Broker design or MVP.
 
 Broker implements the "Addressable" duck type to allow Source custom resources
 to target the Broker. Broker DNS names should also be predictable (e.g.
-`default-broker` for the `default` Broker), to enable whitebox event producers
+`default-broker` for the `default` Broker), to enable event producers
 to target the Broker without needing to reconcile against the "Addressable" duck
 type.
 

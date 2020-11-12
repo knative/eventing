@@ -29,7 +29,7 @@ import (
 )
 
 func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &dummyObject{}
+	good, bad := &PingSource{}, &testObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

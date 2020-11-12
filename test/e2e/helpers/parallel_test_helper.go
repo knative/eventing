@@ -131,7 +131,7 @@ func ParallelTestHelper(
 
 			// send CloudEvent to the Parallel
 			event := cloudevents.NewEvent()
-			event.SetID("dummy")
+			event.SetID("test")
 
 			eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 			event.SetSource(eventSource)
@@ -247,7 +247,7 @@ func ParallelV1TestHelper(
 
 			// send CloudEvent to the Parallel
 			event := cloudevents.NewEvent()
-			event.SetID("dummy")
+			event.SetID("test")
 
 			eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 			event.SetSource(eventSource)

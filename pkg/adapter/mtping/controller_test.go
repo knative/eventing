@@ -28,24 +28,24 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
 )
 
-type dummyAdapter struct{}
+type testAdapter struct{}
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, &dummyAdapter{})
+	c := NewController(ctx, &testAdapter{})
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }
 
-func (dummyAdapter) Start(ctx context.Context) error {
+func (testAdapter) Start(ctx context.Context) error {
 	return nil
 }
 
-func (dummyAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
+func (testAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
 }
 
-func (dummyAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
+func (testAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
 }

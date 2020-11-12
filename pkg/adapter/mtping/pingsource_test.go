@@ -168,7 +168,7 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		r := &Reconciler{mtadapter: dummyAdapter{}}
+		r := &Reconciler{mtadapter: testAdapter{}}
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetPingSourceV1beta1Lister(),
 			controller.GetEventRecorder(ctx), r)

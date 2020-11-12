@@ -145,7 +145,7 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 
 	// send CloudEvent to the channel
 	event := cloudevents.NewEvent()
-	event.SetID("dummy")
+	event.SetID("test")
 	eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 	event.SetSource(eventSource)
 	event.SetType(testlib.DefaultEventType)
