@@ -10,19 +10,27 @@ import (
 )
 
 type FilterBenchmark struct {
-	name   string
-	filter eventfilter.Filter
-	event  cloudevents.Event
+	name  string
+	arg   interface{}
+	event cloudevents.Event
 }
 
 // Avoid DCE
+var F eventfilter.Filter
 var R eventfilter.FilterResult
 
-func RunFilterBenchmarks(b *testing.B, filterBenchmarks ...FilterBenchmark) {
+func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.Filter, filterBenchmarks ...FilterBenchmark) {
 	for _, fb := range filterBenchmarks {
-		b.Run(fb.name, func(b *testing.B) {
+		b.Run("Parse: "+fb.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				R = fb.filter.Filter(context.TODO(), fb.event)
+				F = filterCtor(fb.arg)
+			}
+		})
+		// Filter to use for the run
+		f := filterCtor(fb.arg)
+		b.Run("Run: "+fb.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				R = f.Filter(context.TODO(), fb.event)
 			}
 		})
 	}
