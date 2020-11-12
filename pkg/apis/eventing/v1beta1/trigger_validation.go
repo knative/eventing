@@ -27,7 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"knative.dev/eventing/pkg/eventfilter"
+	"knative.dev/eventing/pkg/eventfilter/jsengine"
 )
 
 var (
@@ -62,7 +62,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 			}
 		}
 		if ts.Filter.JsExpression != "" {
-			_, err := eventfilter.ParseFilterExpr(ts.Filter.JsExpression)
+			_, err := jsengine.ParseFilterExpr(ts.Filter.JsExpression)
 			if err != nil {
 				fe := &apis.FieldError{
 					Message: fmt.Sprintf("Invalid filter expression: %q", err),

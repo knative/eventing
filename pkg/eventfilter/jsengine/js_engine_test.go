@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package eventfilter
+package jsengine
 
 import (
 	"testing"
@@ -45,7 +45,7 @@ func TestTimeout(t *testing.T) {
 	compiled, err := goja.CompileAST(program, false)
 	require.NoError(t, err)
 
-	_, err = RunFilter(test.MinEvent(), compiled)
+	_, err = runFilter(test.MinEvent(), compiled)
 	require.IsType(t, &goja.InterruptedError{}, err, "error is an interrupted error")
 }
 
@@ -144,7 +144,7 @@ func TestRunFilter(t *testing.T) {
 		t.Run(tc.expression, func(t *testing.T) {
 			program, err := ParseFilterExpr(tc.expression)
 			require.NoError(t, err)
-			res, err := RunFilter(event, program)
+			res, err := runFilter(event, program)
 			require.NoError(t, err)
 			require.Equal(t, tc.result, res)
 		})

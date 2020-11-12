@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package eventfilter
+package jsengine
 
 import (
 	"time"
@@ -29,6 +29,8 @@ import (
 
 const timeout = time.Second * 2
 
+// ParseFilterExpr parses src as a javascript filter expression.
+// Returns error if src syntax is invalid or if src root AST element is not an expression statement.
 func ParseFilterExpr(src string) (*goja.Program, error) {
 	program, err := parser.ParseFile(nil, "", src, 0)
 	if err != nil {
@@ -42,7 +44,7 @@ func ParseFilterExpr(src string) (*goja.Program, error) {
 	return goja.CompileAST(program, false)
 }
 
-func RunFilter(event cloudevents.Event, program *goja.Program) (bool, error) {
+func runFilter(event cloudevents.Event, program *goja.Program) (bool, error) {
 	vm := goja.New()
 	obj, err := configureEventObject(vm, event)
 	if err != nil {
@@ -127,7 +129,7 @@ func coerceToJsTypes(vm *goja.Runtime, val interface{}) goja.Value {
 
 func runWithSafeTimeout(duration time.Duration, vm *goja.Runtime, program *goja.Program) (goja.Value, error) {
 	time.AfterFunc(duration, func() {
-		vm.Interrupt("execution timeout")
+		vm.Interrupt("filter execution timeout, stop running Doom on this filter!")
 	})
 
 	return vm.RunProgram(program)

@@ -36,6 +36,7 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
+	"knative.dev/eventing/pkg/eventfilter/jsengine"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
@@ -325,6 +326,7 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigg
 }
 
 func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
+	//TODO can we cache the filter instances somewhere?
 	if filter == nil {
 		return eventfilter.NoFilter
 	}
@@ -332,16 +334,17 @@ func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, eve
 	if filter.Attributes != nil && len(filter.Attributes) != 0 {
 		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
 	}
+	if filter.JsExpression != "" {
+		filter, err := jsengine.NewJsFilter(filter.JsExpression)
+		if err != nil {
+			// This error should not happen here, because we check on the webhook that the expression can be properly parsed
+			logging.FromContext(ctx).Error("Something went wrong with js expressions, the filter expression is invalid. This is probably due to a bug of mtbroker")
+			// Let's make sure user notice it
+			return eventfilter.FailFilter
+		}
+		filters = append(filters, filter)
 
-	//		//TODO check on webhook side if the provided js is a correct expression
-	//		//TODO cache the already parsed ast
-	//
-	//		program, err := ParseFilterExpr(filter.Expression)
-	//		if err != nil {
-	//			return failFilter, err
-	//		}
-	//		res, err := RunFilter(*event, program)
-
+	}
 	return filters.Filter(ctx, event)
 }
 
