@@ -21,7 +21,7 @@ var R eventfilter.FilterResult
 
 func RunFilterBenchmarks(b *testing.B, filterCtor func(interface{}) eventfilter.Filter, filterBenchmarks ...FilterBenchmark) {
 	for _, fb := range filterBenchmarks {
-		b.Run("Parse: "+fb.name, func(b *testing.B) {
+		b.Run("Creation: "+fb.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				F = filterCtor(fb.arg)
 			}
