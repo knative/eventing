@@ -23,29 +23,26 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource/fake"
 
+	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource/fake"
 )
 
-type testAdapter struct{}
-
-func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
-
-	c := NewController(ctx, &testAdapter{})
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
-}
-
-func (testAdapter) Start(ctx context.Context) error {
-	return nil
+type testAdapter struct {
+	adapter.Adapter
 }
 
 func (testAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
 }
 
 func (testAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
+}
+
+func TestNew(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	if c := NewController(ctx, testAdapter{}); c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
 }
