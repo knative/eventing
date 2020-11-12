@@ -132,13 +132,6 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewInMemoryChannel(imcName, testNS, WithInitInMemoryChannelConditions),
 			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-			WantErr: false,
 		}, {
 			Name: "updated configuration, one channel",
 			Key:  imcKey,
@@ -151,13 +144,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-			WantErr: false,
 		}, {
 			Name: "with subscribers",
 			Key:  imcKey,
@@ -172,14 +158,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
 				makePatch(testNS, imcName, twoSubscriberPatch),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-
-			WantErr: false,
 		}, {
 			Name: "with subscribers, patch fails",
 			Key:  imcKey,
@@ -197,11 +177,9 @@ func TestAllCases(t *testing.T) {
 				InduceFailure("patch", "inmemorychannels/status"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
 				makePatch(testNS, imcName, twoSubscriberPatch),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
 				Eventf(corev1.EventTypeWarning, "InternalError", "Failed patching: inducing failure for patch inmemorychannels"),
 			},
 			WantErr: true,
@@ -220,14 +198,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber2UID), subscriber2Generation),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-
-			WantErr: false,
 		}, {
 			Name: "with subscribers, one removed one added to status",
 			Key:  imcKey,
@@ -244,14 +214,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
 				makePatch(testNS, imcName, oneSubscriberRemovedOneAddedPatch),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-
-			WantErr: false,
 		}, {
 			Name: "subscriber with delivery spec",
 			Key:  imcKey,
@@ -281,13 +245,8 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
 				makePatch(testNS, imcName, oneSubscriberPatch),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-			WantErr: false,
 		}, {
 			Name: "subscriber with invalid delivery spec",
 			Key:  imcKey,
@@ -316,11 +275,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithInMemoryChannelAddress(channelServiceAddress)),
 			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, imcName),
-			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
 				Eventf(corev1.EventTypeWarning, "InternalError", "failed to parse Spec.BackoffDelay: expected 'P' period mark at the start: garbage"),
 			},
 			WantErr: true,
@@ -354,13 +309,6 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelAddress(channelServiceAddress),
 					WithInMemoryChannelDeleted),
 			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchRemoveFinalizers(testNS, imcName),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", imcName),
-			},
-			WantErr: false,
 		},
 	}
 
@@ -529,7 +477,7 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 	}
 }
 
-func TestReconciler_FinalizeKind(t *testing.T) {
+func TestReconciler_ReconcileKindDeletion(t *testing.T) {
 	testCases := map[string]struct {
 		imc        *v1.InMemoryChannel
 		wantResult reconciler.Event
@@ -554,7 +502,7 @@ func TestReconciler_FinalizeKind(t *testing.T) {
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
 				}
-				e := r.FinalizeKind(context.TODO(), tc.imc)
+				e := r.ReconcileKind(context.TODO(), tc.imc)
 				if e != tc.wantResult {
 					t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
 				}
@@ -574,16 +522,6 @@ func makePatch(namespace, name, patch string) clientgotesting.PatchActionImpl {
 		Name:  name,
 		Patch: []byte(patch),
 	}
-}
-
-func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
-	return makePatch(namespace, name,
-		`{"metadata":{"finalizers":["`+finalizerName+`"],"resourceVersion":""}}`)
-}
-
-func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
-	return makePatch(namespace, name,
-		`{"metadata":{"finalizers":[],"resourceVersion":""}}`)
 }
 
 type fakeMultiChannelHandler struct {

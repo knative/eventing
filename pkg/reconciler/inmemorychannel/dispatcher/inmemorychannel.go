@@ -52,6 +52,18 @@ type Reconciler struct {
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
 
+	// If the IMC has been deleted just make sure the handler is removed.
+	if !imc.GetDeletionTimestamp().IsZero() {
+		if imc.Status.Address != nil &&
+			imc.Status.Address.URL != nil {
+			if hostName := imc.Status.Address.URL.Host; hostName != "" {
+				logging.FromContext(ctx).Info("Removing dispatcher")
+				r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+			}
+		}
+		return nil
+	}
+
 	if !imc.Status.IsReady() {
 		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
 		return nil
@@ -91,17 +103,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 
 	// Then patch the subscribers to reflect that they are now ready to go
 	return r.patchSubscriberStatus(ctx, imc)
-}
-
-func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
-	if imc.Status.Address != nil &&
-		imc.Status.Address.URL != nil {
-		if hostName := imc.Status.Address.URL.Host; hostName != "" {
-			logging.FromContext(ctx).Info("Removing dispatcher")
-			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
-		}
-	}
-	return nil
 }
 
 func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemoryChannel) error {
