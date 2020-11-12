@@ -1,7 +1,6 @@
-// +build preupgrade
-
 /*
  * Copyright 2020 The Knative Authors
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,10 +16,17 @@
 
 package upgrade
 
-import (
-	"testing"
-)
+import "time"
 
-func TestPreUpgrade(t *testing.T) {
-	runSmokeTest(t)
-}
+var (
+	// DefaultWaitTime holds a default value for WaitForStopEventConfiguration
+	// when used within a NewBackgroundVerification function.
+	DefaultWaitTime = 20 * time.Millisecond
+
+	// DefaultOnWait is a implementation that will be called by default for each
+	// wait performed by WaitForStopEvent when used within
+	// NewBackgroundVerification function.
+	DefaultOnWait = func(bc BackgroundContext, self WaitForStopEventConfiguration) {
+		// do nothing by default
+	}
+)

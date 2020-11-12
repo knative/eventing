@@ -213,6 +213,10 @@ github.com/konsorten/go-windows-terminal-sequences
 # github.com/lightstep/tracecontext.go v0.0.0-20181129014701-1757c391b1ac
 github.com/lightstep/tracecontext.go/traceparent
 github.com/lightstep/tracecontext.go/tracestate
+# github.com/magefile/mage v1.10.0
+## explicit
+github.com/magefile/mage/mg
+github.com/magefile/mage/sh
 # github.com/mailru/easyjson v0.7.1-0.20191009090205-6c0755d89d1e
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
@@ -1070,6 +1074,7 @@ knative.dev/pkg/test/monitoring
 knative.dev/pkg/test/prow
 knative.dev/pkg/test/slackutil
 knative.dev/pkg/test/spoof
+knative.dev/pkg/test/upgrade
 knative.dev/pkg/test/zipkin
 knative.dev/pkg/tracing
 knative.dev/pkg/tracing/config

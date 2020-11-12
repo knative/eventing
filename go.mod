@@ -15,6 +15,7 @@ require (
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/magefile/mage v1.10.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/pelletier/go-toml v1.8.0
