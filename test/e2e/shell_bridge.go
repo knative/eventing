@@ -1,18 +1,18 @@
 /*
- * Copyright 2020 The Knative Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+Copyright 2020 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package e2e
 
@@ -39,7 +39,7 @@ source %s
 
 %s
 `, e2eCommonScriptPath, funcName)
-	tmpfile, err := ioutil.TempFile("", funcName + "-*.sh")
+	tmpfile, err := ioutil.TempFile("", funcName+"-*.sh")
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ source %s
 func environment(data []string, keyval func(item string) (key, val string)) map[string]string {
 	items := make(map[string]string)
 	for _, item := range data {
-	key, val := keyval(item)
+		key, val := keyval(item)
 		items[key] = val
 	}
 	return items
