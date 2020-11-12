@@ -58,7 +58,7 @@ func EventTransformationForSubscriptionTestHelper(
 
 		// create transformation pod and service
 		eventAfterTransformation := cloudevents.NewEvent()
-		eventAfterTransformation.SetID("dummy-transformed")
+		eventAfterTransformation.SetID("test-transformed")
 		eventAfterTransformation.SetSource(eventSource)
 		eventAfterTransformation.SetType(testlib.DefaultEventType)
 		transformedEventBody := fmt.Sprintf(`{"msg":"eventBody %s"}`, uuid.New().String())
@@ -121,7 +121,7 @@ func EventTransformationForSubscriptionTestHelper(
 
 		// send  CloudEvent to the first channel
 		eventToSend := cloudevents.NewEvent()
-		eventToSend.SetID("dummy")
+		eventToSend.SetID("test")
 		eventToSend.SetSource(eventSource)
 		eventToSend.SetType(testlib.DefaultEventType)
 		eventBody := fmt.Sprintf(`{"msg":"TestEventTransformation %s"}`, uuid.New().String())

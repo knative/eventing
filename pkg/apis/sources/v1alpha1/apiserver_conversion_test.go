@@ -36,18 +36,18 @@ import (
 )
 
 // implement apis.Convertible
-type dummyObject struct{}
+type testObject struct{}
 
-func (*dummyObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+func (*testObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	return errors.New("Won't go")
 }
 
-func (*dummyObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+func (*testObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	return errors.New("Won't go")
 }
 
 func TestApiServerSourceConversionBadType(t *testing.T) {
-	good, bad := &ApiServerSource{}, &dummyObject{}
+	good, bad := &ApiServerSource{}, &testObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
 		t.Errorf("ConvertTo() = %#v, wanted error", bad)

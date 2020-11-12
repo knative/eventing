@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 data:
-  # The ConfigMapFromTestFile helper method expects a key named "_example" and it's dummy here.
+  # The ConfigMapFromTestFile helper method expects a key named "_example" and it's sample here.
   _example: |
-    dummy: "nothing"
+    sample: "nothing"
   MaxIdleConnections: 20

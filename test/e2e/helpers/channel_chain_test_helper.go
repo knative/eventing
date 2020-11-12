@@ -100,7 +100,7 @@ func ChannelChainTestHelper(
 
 		// send CloudEvent to the first channel
 		event := cloudevents.NewEvent()
-		event.SetID("dummy")
+		event.SetID("test")
 		event.SetSource(eventSource)
 		event.SetType(testlib.DefaultEventType)
 
