@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -28,7 +29,7 @@ import (
 )
 
 // TestBrokerWithExpressionTrigger tests broker filter using JS expressions
-func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator) {
+func TestBrokerWithExpressionTrigger(ctx context.Context, t *testing.T, brokerCreator BrokerCreator) {
 	client := testlib.Setup(t, true)
 	defer testlib.TearDown(client)
 
@@ -38,8 +39,7 @@ func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator) 
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 
 	subscriberNamePass := "recordevents-expression-pass"
-	eventTrackerPass, _ := recordevents.StartEventRecordOrFail(client, subscriberNamePass)
-	defer eventTrackerPass.Cleanup()
+	eventTrackerPass, _ := recordevents.StartEventRecordOrFail(ctx, client, subscriberNamePass)
 
 	triggerNameOk := "trigger-expression-pass"
 	client.CreateTriggerOrFailV1Beta1(triggerNameOk,
@@ -49,8 +49,7 @@ func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator) 
 	)
 
 	subscriberNameFail := "recordevents-expression-fail"
-	eventTrackerFail, _ := recordevents.StartEventRecordOrFail(client, subscriberNameFail)
-	defer eventTrackerFail.Cleanup()
+	eventTrackerFail, _ := recordevents.StartEventRecordOrFail(ctx, client, subscriberNameFail)
 
 	triggerNameFail := "trigger-expression-fail"
 	client.CreateTriggerOrFailV1Beta1(triggerNameFail,
@@ -60,9 +59,9 @@ func TestBrokerWithExpressionTrigger(t *testing.T, brokerCreator BrokerCreator) 
 	)
 
 	// Wait for all test resources to become ready before sending the events.
-	client.WaitForAllTestResourcesReadyOrFail()
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-	client.SendEventToAddressable("sender", brokerName, testlib.BrokerTypeMeta, cetest.FullEvent())
+	client.SendEventToAddressable(ctx, "sender", brokerName, testlib.BrokerTypeMeta, cetest.FullEvent())
 
 	eventTrackerPass.AssertAtLeast(1, recordevents.MatchEvent(cetest.HasSpecVersion(cloudevents.VersionV1)))
 	eventTrackerFail.AssertNot(recordevents.MatchEvent(cetest.HasSpecVersion(cloudevents.VersionV1)))
