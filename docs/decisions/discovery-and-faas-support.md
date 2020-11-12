@@ -28,9 +28,9 @@ that are in scope for Knative eventing.
 1. **Integration scenario**
 
 - As a central platform team, I want to set up an integration with external,
-  software (e.g. SAP, Salesforce, etc), so that my development team can create 
+  software (e.g. SAP, Salesforce, etc), so that my development team can create
   extensions.
-- As a developer, I want to connect to external software without having to 
+- As a developer, I want to connect to external software without having to
   configure the connection
 
 ## Discovery
