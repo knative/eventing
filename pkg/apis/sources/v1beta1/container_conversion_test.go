@@ -37,7 +37,7 @@ func TestContainerSourceConversionBadType(t *testing.T) {
 	}
 
 	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = nil, wanted error")
+		t.Error("ConvertFrom() = nil, wanted error")
 	}
 }
 
