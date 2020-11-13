@@ -18,20 +18,14 @@ package e2e
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestShellScript(t *testing.T) {
-	la, err := time.LoadLocation("America/Los_Angeles")
-	if err != nil {
-		t.Fatal(err)
-	}
 	tests := []struct {
 		label   string
 		script  string
@@ -39,21 +33,18 @@ func TestShellScript(t *testing.T) {
 		out     string
 	}{
 		{
-			"shell", "LANG=C header utest", false,
-			fmt.Sprintf(`shell [OUT] ===============
-shell [OUT] ==== UTEST ====
-shell [OUT] ===============
-shell [OUT] ==== %s
-shell [OUT] ===============
-`, time.Now().In(la).Format(time.UnixDate)),
-		},
-		{
-			"sh", "exit 45", true,
+			"echo", "echo unit test", false,
+			"echo [OUT] unit test\n",
+		}, {
+			"echo-err", "echo unit test 1>&2", false,
+			"echo-err [ERR] unit test\n",
+		}, {
+			"exit", "exit 45", true,
 			"",
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.script, func(t *testing.T) {
+		t.Run(tt.label, func(t *testing.T) {
 			out := captureOutput(func() {
 				if err := ShellScript(tt.label, tt.script); (err != nil) != tt.wantErr {
 					t.Errorf("ShellScript() error = %v, wantErr %v", err, tt.wantErr)
