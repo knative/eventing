@@ -196,7 +196,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	// Finally start the adapter (blocking)
 	if err := adapter.Start(ctx); err != nil {
-		logging.FromContext(ctx).Warn("Start returned an error", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Start returned an error", zap.Error(err))
 	}
 }
 
