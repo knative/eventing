@@ -56,9 +56,8 @@ Historical storage and replay of events is not part of the Broker design or MVP.
 
 Broker implements the "Addressable" duck type to allow Source custom resources
 to target the Broker. Broker DNS names should also be predictable (e.g.
-`default-broker` for the `default` Broker), to enable event producers
-to target the Broker without needing to reconcile against the "Addressable" duck
-type.
+`default-broker` for the `default` Broker), to enable event producers to target
+the Broker without needing to reconcile against the "Addressable" duck type.
 
 #### Broker Object definition
 

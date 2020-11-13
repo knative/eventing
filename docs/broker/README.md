@@ -5,10 +5,10 @@ The `Broker` and `Trigger` CRDs are documented in the
 
 ## Implementations
 
-How Broker and Trigger are implemented should not matter to the end user.
-This section describes the specific implementations that are currently in the repository.
-However, **the implementation may change at any time, absolutely no guarantees are made about
-the implementation**.
+How Broker and Trigger are implemented should not matter to the end user. This
+section describes the specific implementations that are currently in the
+repository. However, **the implementation may change at any time, absolutely no
+guarantees are made about the implementation**.
 
 ### Multi Tenant Channel Based Broker
 
