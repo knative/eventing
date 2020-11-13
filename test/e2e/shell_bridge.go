@@ -66,13 +66,13 @@ source ./test/e2e-common.sh
 	}()
 	c := exec.Command(tmpfile.Name())
 	c.Env = os.Environ()
-	c.Stdout = NewPrefixer(os.Stdout, label + " [OUT] ")
-	c.Stderr = NewPrefixer(os.Stderr, label + " [ERR] ")
+	c.Stdout = NewPrefixer(os.Stdout, label+" [OUT] ")
+	c.Stderr = NewPrefixer(os.Stderr, label+" [ERR] ")
 	return c.Run()
 }
 
 type prefixer struct {
-	prefix      		string
+	prefix          string
 	writer          io.Writer
 	trailingNewline bool
 	buf             bytes.Buffer // reuse buffer to save allocations
