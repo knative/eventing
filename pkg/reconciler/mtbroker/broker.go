@@ -44,6 +44,7 @@ import (
 	duckapis "knative.dev/pkg/apis/duck"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/network"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 )
@@ -144,7 +145,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	// so we can route there appropriately.
 	b.Status.SetAddress(&apis.URL{
 		Scheme: "http",
-		Host:   names.ServiceHostName("broker-ingress", system.Namespace()),
+		Host:   network.GetServiceHostname("broker-ingress", system.Namespace()),
 		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
 	})
 

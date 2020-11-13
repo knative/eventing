@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/network"
 )
 
 const (
@@ -37,7 +38,7 @@ const (
 )
 
 func TestCreateExternalServiceAddress(t *testing.T) {
-	if want, got := "my-test-service.my-test-ns.svc.cluster.local", CreateExternalServiceAddress(testNS, serviceName); want != got {
+	if want, got := "my-test-service.my-test-ns.svc.cluster.local", network.GetServiceHostname(serviceName, testNS); want != got {
 		t.Errorf("Want: %q got %q", want, got)
 	}
 }

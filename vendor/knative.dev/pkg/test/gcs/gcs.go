@@ -31,7 +31,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-//nolint — there's also Client so they collide.
+//nolint // there's also Client so they collide.
 type GCSClient struct {
 	*storage.Client
 }
@@ -136,11 +136,11 @@ func (g *GCSClient) getObjectsAttrs(ctx context.Context, bucketName, storagePath
 
 	for {
 		attrs, err := it.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("error iterating: %v", err)
+			return nil, fmt.Errorf("error iterating: %w", err)
 		}
 		allAttrs = append(allAttrs, attrs)
 	}
@@ -164,7 +164,7 @@ func (g *GCSClient) ListChildrenFiles(ctx context.Context, bucketName, dirPath s
 func (g *GCSClient) ListDirectChildren(ctx context.Context, bucketName, dirPath string) ([]string, error) {
 	// If there are 2 directories named "foo" and "foobar",
 	// then given storagePath "foo" will get files both under "foo" and "foobar".
-	// Add trailling slash to storagePath, so that only gets children under given directory.
+	// Add trailing slash to storagePath, so that only gets children under given directory.
 	return g.listChildren(ctx, bucketName, dirPath, "/")
 }
 

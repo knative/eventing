@@ -20,11 +20,16 @@ import (
 	"os"
 	"testing"
 
+	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
+	// Fake injection client
+	_ "knative.dev/eventing/pkg/client/injection/client/fake"
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 )
@@ -32,8 +37,13 @@ import (
 func TestNew(t *testing.T) {
 	ctx, cancel, _ := SetupFakeContextWithCancel(t)
 	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
 
 	os.Setenv("SCOPE", eventing.ScopeCluster)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
@@ -44,8 +54,13 @@ func TestNew(t *testing.T) {
 func TestNewInNamespace(t *testing.T) {
 	ctx, cancel, _ := SetupFakeContextWithCancel(t)
 	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
 
 	os.Setenv("SCOPE", eventing.ScopeNamespace)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {

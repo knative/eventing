@@ -18,18 +18,24 @@ package kncloudevents
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/cloudevents/sdk-go/v2/binding/buffering"
+	bindingtest "github.com/cloudevents/sdk-go/v2/binding/test"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/atomic"
 	"k8s.io/utils/pointer"
+
+	"knative.dev/pkg/ptr"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/pkg/ptr"
 )
 
 // Test The RetryConfigFromDeliverySpec() Functionality
@@ -149,9 +155,9 @@ func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var n atomic.Int32
+			var n int32
 			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				n.Inc()
+				atomic.AddInt32(&n, 1)
 				writer.WriteHeader(tt.wantStatus)
 			}))
 
@@ -168,10 +174,139 @@ func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 			if got.StatusCode != http.StatusServiceUnavailable {
 				t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, http.StatusServiceUnavailable)
 			}
-			if int(n.Load()) != tt.wantDispatch {
-				t.Fatalf("expected %d retries got %d", tt.config.RetryMax, n)
+			if count := int(atomic.LoadInt32(&n)); count != tt.wantDispatch {
+				t.Fatalf("expected %d retries got %d", tt.config.RetryMax, count)
 			}
 		})
+	}
+}
+
+func TestRetriesOnNetworkErrors(t *testing.T) {
+
+	n := int32(10)
+	linear := duckv1.BackoffPolicyLinear
+	target := "127.0.0.1:63468"
+
+	calls := make(chan struct{})
+	defer close(calls)
+
+	nCalls := int32(0)
+
+	cont := make(chan struct{})
+	defer close(cont)
+
+	go func() {
+		for range calls {
+
+			nCalls++
+			// Simulate that the target service is back up.
+			//
+			// First n/2-1 calls we get connection refused since there is no server running.
+			// Now we start a server that responds with a retryable error, so we expect that
+			// the client continues to retry for a different reason.
+			//
+			// The last time we return 200, so we don't expect a new retry.
+			if n/2 == nCalls {
+
+				l, err := net.Listen("tcp", target)
+				assert.Nil(t, err)
+
+				s := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+					if n-1 != nCalls {
+						writer.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
+				}))
+				defer s.Close() //nolint // defers in this range loop won't run unless the channel gets closed
+
+				assert.Nil(t, s.Listener.Close())
+
+				s.Listener = l
+
+				s.Start()
+			}
+			cont <- struct{}{}
+		}
+	}()
+
+	r, err := RetryConfigFromDeliverySpec(duckv1.DeliverySpec{
+		Retry:         pointer.Int32Ptr(n),
+		BackoffPolicy: &linear,
+		BackoffDelay:  pointer.StringPtr("PT0.1S"),
+	})
+	assert.Nil(t, err)
+
+	checkRetry := r.CheckRetry
+
+	r.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		calls <- struct{}{}
+		<-cont
+
+		return checkRetry(ctx, resp, err)
+	}
+
+	req, err := http.NewRequest("POST", "http://"+target, nil)
+	assert.Nil(t, err)
+
+	sender, err := NewHTTPMessageSenderWithTarget("")
+	assert.Nil(t, err)
+
+	_, err = sender.SendWithRetries(req, &r)
+	assert.Nil(t, err)
+
+	// nCalls keeps track of how many times a call to check retry occurs.
+	// Since the number of request are n + 1 and the last one is successful the expected number of calls are n.
+	assert.Equal(t, n, nCalls, "expected %d got %d", n, nCalls)
+}
+
+func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
+	t.Parallel()
+
+	const wantToSkip = 9
+	config := &RetryConfig{
+		RetryMax: wantToSkip,
+		CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+			return true, nil
+		},
+		Backoff: func(attemptNum int, resp *http.Response) time.Duration {
+			return time.Millisecond * 50 * time.Duration(attemptNum)
+		},
+	}
+
+	var n uint32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		thisReqN := atomic.AddUint32(&n, 1)
+		if thisReqN <= wantToSkip {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			writer.WriteHeader(http.StatusAccepted)
+		}
+	}))
+
+	sender := &HTTPMessageSender{
+		Client: http.DefaultClient,
+	}
+
+	request, err := http.NewRequest("POST", server.URL, nil)
+	assert.Nil(t, err)
+
+	// Create a message similar to the one we send with channels
+	mockMessage := bindingtest.MustCreateMockBinaryMessage(cetest.FullEvent())
+	bufferedMessage, err := buffering.BufferMessage(context.TODO(), mockMessage)
+	assert.Nil(t, err)
+
+	err = cehttp.WriteRequest(context.TODO(), bufferedMessage, request)
+	assert.Nil(t, err)
+
+	got, err := sender.SendWithRetries(request, config)
+	if err != nil {
+		t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
+	}
+	if got.StatusCode != http.StatusAccepted {
+		t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, http.StatusAccepted)
+	}
+	if count := atomic.LoadUint32(&n); count != wantToSkip+1 {
+		t.Fatalf("expected %d count got %d", wantToSkip+1, count)
 	}
 }
 

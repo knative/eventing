@@ -124,7 +124,7 @@ func (b *standardBuilder) buildElector(ctx context.Context, la reconciler.Leader
 		// Use a local var which won't change across the for loop since it is
 		// used in a callback asynchronously.
 		bkt := bkt
-		rl, err := resourcelock.New(KnativeResourceLock,
+		rl, err := resourcelock.New(knativeResourceLock,
 			system.Namespace(), // use namespace we are running in
 			bkt.Name(),
 			b.kc.CoreV1(),
@@ -198,7 +198,7 @@ type statefulSetBuilder struct {
 
 func (b *statefulSetBuilder) buildElector(ctx context.Context, la reconciler.LeaderAware, enq func(reconciler.Bucket, types.NamespacedName)) (Elector, error) {
 	logger := logging.FromContext(ctx)
-	logger.Infof("%s will run in StatefulSet ordinal assignement mode with bucket name %s",
+	logger.Infof("%s will run in StatefulSet ordinal assignment mode with bucket name %s",
 		b.lec.Component, b.bkt.Name())
 
 	return &unopposedElector{

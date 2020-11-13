@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 
 	"github.com/pkg/errors"
@@ -37,7 +38,7 @@ import (
 	configtracing "knative.dev/pkg/tracing/config"
 
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
-	"knative.dev/eventing/test/test_images"
+	ti "knative.dev/eventing/test/test_images"
 )
 
 // Client holds instances of interfaces for making requests to Knative.
@@ -57,6 +58,7 @@ type Client struct {
 	podsCreated []string
 
 	tracingEnv corev1.EnvVar
+	loggingEnv *corev1.EnvVar
 
 	cleanup func()
 }
@@ -104,6 +106,11 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
+	client.loggingEnv, err = getLoggingConfig(client.Kube)
+	if err != nil {
+		t.Log("Cannot retrieve the logging config map: ", err)
+	}
+
 	return client, nil
 }
 
@@ -143,10 +150,29 @@ func getTracingConfig(c kubernetes.Interface) (corev1.EnvVar, error) {
 		return corev1.EnvVar{}, fmt.Errorf("error while parsing the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
 	}
 
-	configSerialized, err := configtracing.TracingConfigToJson(config)
+	configSerialized, err := configtracing.TracingConfigToJSON(config)
 	if err != nil {
 		return corev1.EnvVar{}, fmt.Errorf("error while serializing the %s config map: %+v", configtracing.ConfigName, errors.WithStack(err))
 	}
 
-	return corev1.EnvVar{Name: test_images.ConfigTracingEnv, Value: configSerialized}, nil
+	return corev1.EnvVar{Name: ti.ConfigTracingEnv, Value: configSerialized}, nil
+}
+
+func getLoggingConfig(c kubernetes.Interface) (*corev1.EnvVar, error) {
+	cm, err := c.CoreV1().ConfigMaps(system.Namespace()).Get(context.Background(), logging.ConfigMapName(), metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error while retrieving the %s config map: %+v", logging.ConfigMapName(), errors.WithStack(err))
+	}
+
+	config, err := logging.NewConfigFromMap(cm.Data)
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing the %s config map: %+v", logging.ConfigMapName(), errors.WithStack(err))
+	}
+
+	configSerialized, err := logging.ConfigToJSON(config)
+	if err != nil {
+		return nil, fmt.Errorf("error while serializing the %s config map: %+v", logging.ConfigMapName(), errors.WithStack(err))
+	}
+
+	return &corev1.EnvVar{Name: ti.ConfigLoggingEnv, Value: configSerialized}, nil
 }

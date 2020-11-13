@@ -31,7 +31,6 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/channel/swappable"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
@@ -39,22 +38,7 @@ import (
 // send -> channela -> sub aaaa -> transformationsServer -> channelb -> sub bbbb -> receiver
 func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	logger := zap.NewNop()
-
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
-		Port:         8080,
-		ReadTimeout:  1 * time.Minute,
-		WriteTimeout: 1 * time.Minute,
-		Handler:      sh,
-		Logger:       logger,
-	}
-
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
-	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 
 	channelAUrl := mustParseUrl(b, "http://channela.svc/")
 	transformationsUrl := mustParseUrl(b, "http://transformations.svc/")
@@ -92,18 +76,26 @@ func BenchmarkDispatcher_dispatch_ok_through_2_channels(b *testing.B) {
 	}
 
 	// Let's mock this stuff!
-	httpSender, err := kncloudevents.NewHTTPMessageSender(nil, channelAUrl.String())
+	httpSender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelAUrl.String())
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config, reporter)
+	if err != nil {
+		b.Fatal(err)
+	}
+	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+		Port:         8080,
+		ReadTimeout:  1 * time.Minute,
+		WriteTimeout: 1 * time.Minute,
+		Handler:      multiChannelFanoutHandler,
+		Logger:       logger,
+	}
+
+	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	requestHandler := kncloudevents.CreateHandler(dispatcher.handler)
 	httpSender.Client = mockedHTTPClient(clientMock(channelAUrl.Host, transformationsUrl.Host, channelBUrl.Host, receiverUrl.Host, requestHandler))
-
-	multiChannelFanoutHandler, err := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcherFromSender(logger, httpSender), config)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	sh.SetHandler(multiChannelFanoutHandler)
 
 	// Start the bench
 	b.ResetTimer()

@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/network"
@@ -67,26 +69,30 @@ func init() {
 
 func TestAllCases(t *testing.T) {
 	imcKey := testNS + "/" + imcName
+	subscriber1UID := types.UID("2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1")
+	subscriber2UID := types.UID("34c5aec8-deb6-11e8-9f32-f2801f1b9fd1")
+	subscriber1Generation := int64(1)
+	subscriber2Generation := int64(2)
 
 	subscribers := []eventingduckv1.SubscriberSpec{{
-		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    1,
+		UID:           subscriber1UID,
+		Generation:    subscriber1Generation,
 		SubscriberURI: apis.HTTP("call1"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}, {
-		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    2,
+		UID:           subscriber2UID,
+		Generation:    subscriber2Generation,
 		SubscriberURI: apis.HTTP("call2"),
 		ReplyURI:      apis.HTTP("sink2"),
 	}}
 
 	subscriberStatuses := []eventingduckv1.SubscriberStatus{{
-		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 1,
+		UID:                subscriber1UID,
+		ObservedGeneration: subscriber1Generation,
 		Ready:              "True",
 	}, {
-		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 2,
+		UID:                subscriber2UID,
+		ObservedGeneration: subscriber2Generation,
 		Ready:              "True",
 	}}
 
@@ -286,7 +292,7 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelDeploymentReady(),
 					WithInMemoryChannelServiceReady(),
 					WithInMemoryChannelEndpointsReady(),
-					WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", "Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
+					WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", `Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: "test-imc-kn-channel"`),
 				),
 			}},
 			WantEvents: []string{
@@ -301,6 +307,31 @@ func TestAllCases(t *testing.T) {
 				makeReadyEndpoints(),
 				NewInMemoryChannel(imcName, testNS,
 					WithInMemoryChannelSubscribers(subscribers)),
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewInMemoryChannel(imcName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelDeploymentReady(),
+					WithInMemoryChannelServiceReady(),
+					WithInMemoryChannelEndpointsReady(),
+					WithInMemoryChannelChannelServiceReady(),
+					WithInMemoryChannelSubscribers(subscribers),
+					WithInMemoryChannelAddress(channelServiceAddress),
+				),
+			}},
+		}, {
+			Name: "Works, channel exists with subscribers, in status, not modified",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				NewInMemoryChannel(imcName, testNS,
+					WithInMemoryChannelSubscribers(subscribers),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber1UID), subscriber1Generation),
+					WithInMemoryChannelReadySubscriberAndGeneration(string(subscriber2UID), subscriber2Generation)),
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 			},
 			WantErr: false,
@@ -541,7 +572,7 @@ func makeChannelService(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, network.GetClusterDomainName()),
+			ExternalName: network.GetServiceHostname(dispatcherName, testNS),
 		},
 	}
 }
@@ -561,7 +592,7 @@ func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherName, testNS, network.GetClusterDomainName()),
+			ExternalName: network.GetServiceHostname(dispatcherName, testNS),
 		},
 	}
 }

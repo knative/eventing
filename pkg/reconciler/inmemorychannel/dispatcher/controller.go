@@ -20,15 +20,24 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/client-go/tools/cache"
+
+	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/kncloudevents"
+
+	"knative.dev/pkg/injection"
+
+	"github.com/google/uuid"
+	"github.com/kelseyhightower/envconfig"
+	"knative.dev/pkg/kmeta"
+
 	"knative.dev/pkg/logging"
 
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 
 	"go.uber.org/zap"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/pkg/tracing"
@@ -36,16 +45,23 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/channel"
-	"knative.dev/eventing/pkg/channel/swappable"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
 )
 
 const (
-	readTimeout  = 15 * time.Minute
-	writeTimeout = 15 * time.Minute
-	port         = 8080
+	readTimeout   = 15 * time.Minute
+	writeTimeout  = 15 * time.Minute
+	port          = 8080
+	finalizerName = "imc-dispatcher"
 )
+
+type envConfig struct {
+	// TODO: change this environment variable to something like "PodGroupName".
+	PodName       string `envconfig:"POD_NAME" required:"true"`
+	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
+}
 
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
@@ -60,11 +76,14 @@ func NewController(
 	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
 		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
-
-	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()))
-	if err != nil {
-		logger.Fatalw("Error creating swappable.MessageHandler", zap.Error(err))
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatalw("Failed to process env var", zap.Error(err))
 	}
+
+	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
+
+	sh := multichannelfanout.NewMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()), reporter)
 
 	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         port,
@@ -79,28 +98,30 @@ func NewController(
 	informer := inmemorychannelInformer.Informer()
 
 	r := &Reconciler{
-		dispatcher:              inMemoryDispatcher,
-		inmemorychannelLister:   inmemorychannelInformer.Lister(),
-		inmemorychannelInformer: informer,
+		multiChannelMessageHandler: sh,
+		reporter:                   reporter,
+		messagingClientSet:         eventingclient.Get(ctx).MessagingV1(),
 	}
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
-		return controller.Options{SkipStatusUpdates: true}
+		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
 
-	// Nothing to filer, enqueue all imcs if configmap updates.
-	noopFilter := func(interface{}) bool { return true }
-	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(string, interface{}) {
-		impl.FilteredGlobalResync(noopFilter, informer)
+	globalSyncAfterDispatcherConfigUpdate := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(key string, val interface{}) {
+		conf := val.(channel.EventDispatcherConfig)
+		kncloudevents.ConfigureConnectionArgs(&conf.ConnectionArgs)
+
+		// Nothing to filter, enqueue all imcs if configmap updates.
+		impl.FilteredGlobalResync(func(interface{}) bool { return true }, informer)
 	})
 	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
-	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), resyncIMCs)
+	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), globalSyncAfterDispatcherConfigUpdate)
 	configStore.WatchConfigs(cmw)
 	r.eventDispatcherConfigStore = configStore
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	// Watch for inmemory channels.
-	r.inmemorychannelInformer.AddEventHandler(
+	inmemorychannelInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
 			Handler:    controller.HandleAll(impl.Enqueue),

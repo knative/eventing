@@ -157,7 +157,7 @@ func (r *URIResolver) URIFromObjectReference(ctx context.Context, ref *corev1.Ob
 	if ref.APIVersion == "v1" && ref.Kind == "Service" {
 		url := &apis.URL{
 			Scheme: "http",
-			Host:   ServiceHostName(ref.Name, ref.Namespace),
+			Host:   network.GetServiceHostname(ref.Name, ref.Namespace),
 			Path:   "/",
 		}
 		return url, nil
@@ -188,9 +188,4 @@ func (r *URIResolver) URIFromObjectReference(ctx context.Context, ref *corev1.Ob
 		return nil, apierrs.NewBadRequest(fmt.Sprintf("hostname missing in address of %+v", ref))
 	}
 	return url, nil
-}
-
-// ServiceHostName resolves the hostname for a Kubernetes Service.
-func ServiceHostName(serviceName, namespace string) string {
-	return fmt.Sprintf("%s.%s.svc.%s", serviceName, namespace, network.GetClusterDomainName())
 }

@@ -28,7 +28,6 @@ import (
 	. "github.com/cloudevents/sdk-go/v2/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	eventingchannel "knative.dev/eventing/pkg/channel"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -113,21 +112,7 @@ func channelDataPlaneSuccessTest(ctx context.Context, t *testing.T, channel meta
 	} else {
 		matchers = append(matchers, HasNoData())
 	}
-	// The extension matcher needs to match an eventual extension containing knativehistory extension
-	// (which is not mandatory by the spec)
-	extensions := event.Extensions()
-	extKeys := make([]string, 0, len(extensions))
-	for k := range extensions {
-		extKeys = append(extKeys, k)
-	}
-	extKeys = append(extKeys, eventingchannel.EventHistory)
-	matchers = append(matchers, AnyOf(
-		HasExactlyExtensions(event.Extensions()),
-		AllOf(
-			ContainsExactlyExtensions(extKeys...),
-			HasExtensions(event.Extensions()),
-		),
-	))
+	matchers = append(matchers, HasExactlyExtensions(event.Extensions()))
 
 	eventTracker.AssertExact(
 		1,

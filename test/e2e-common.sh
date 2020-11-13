@@ -18,7 +18,7 @@
 
 export GO111MODULE=on
 
-source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/e2e-tests.sh
+source $(dirname $0)/../vendor/knative.dev/hack/e2e-tests.sh
 
 # If gcloud is not available make it a no-op, not an error.
 which gcloud &>/dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
@@ -49,9 +49,6 @@ readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
 # Installs Zipkin for tracing tests.
 readonly KNATIVE_EVENTING_MONITORING_YAML="test/config/monitoring.yaml"
-
-# PreInstall script for v0.18
-readonly PRE_INSTALL_V018="config/pre-install/v0.18.0"
 
 # The number of controlplane replicas to run.
 readonly REPLICAS=3
@@ -206,20 +203,6 @@ function install_latest_release() {
   install_knative_eventing \
     "latest-release" || \
     fail_test "Knative latest release installation failed"
-}
-
-function run_preinstall_V018() {
-  if [[ -z "${EVENTING_PRE_INSTALL_YAML}" ]]; then
-    build_knative_from_source
-  else
-    echo "use exist EVENTING_PRE_INSTALL_YAML"
-  fi
-  local EVENTING_PRE_INSTALL_NAME=${TMP_DIR}/${EVENTING_PRE_INSTALL_YAML##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_PRE_INSTALL_YAML} > ${EVENTING_PRE_INSTALL_NAME}
-  kubectl apply \
-    -f "${EVENTING_PRE_INSTALL_NAME}" || return 1
-  UNINSTALL_LIST+=( "${EVENTING_PRE_INSTALL_NAME}" )
-  wait_until_batch_job_complete ${SYSTEM_NAMESPACE} || return 1
 }
 
 function install_mt_broker() {

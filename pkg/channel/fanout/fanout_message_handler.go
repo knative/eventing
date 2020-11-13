@@ -26,6 +26,7 @@ import (
 	"errors"
 	nethttp "net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -57,9 +58,24 @@ type Config struct {
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 
+// MessageHandler is an http.Handler but has methods for managing
+// the fanout Subscriptions. Get/Set methods are synchronized, and
+// GetSubscriptions returns a copy of the Subscriptions, so you can
+// use it to fetch a snapshot and use it after that safely.
+type MessageHandler interface {
+	nethttp.Handler
+	SetSubscriptions(ctx context.Context, subs []Subscription)
+	GetSubscriptions(ctx context.Context) []Subscription
+}
+
 // MessageHandler is a http.Handler that takes a single request in and fans it out to N other servers.
-type MessageHandler struct {
-	config Config
+type FanoutMessageHandler struct {
+	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
+	// It is expected to be false when used as a sidecar.
+	asyncHandler bool
+
+	subscriptionsMutex sync.RWMutex
+	subscriptions      []Subscription
 
 	receiver   *channel.MessageReceiver
 	dispatcher channel.MessageDispatcher
@@ -68,20 +84,27 @@ type MessageHandler struct {
 	// rather than a member variable.
 	timeout time.Duration
 
-	logger *zap.Logger
+	reporter channel.StatsReporter
+	logger   *zap.Logger
 }
 
 // NewMessageHandler creates a new fanout.MessageHandler.
-func NewMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config) (*MessageHandler, error) {
-	handler := &MessageHandler{
-		logger:     logger,
-		config:     config,
-		dispatcher: messageDispatcher,
-		timeout:    defaultTimeout,
+
+func NewFanoutMessageHandler(logger *zap.Logger, messageDispatcher channel.MessageDispatcher, config Config, reporter channel.StatsReporter) (*FanoutMessageHandler, error) {
+	handler := &FanoutMessageHandler{
+		logger:       logger,
+		dispatcher:   messageDispatcher,
+		timeout:      defaultTimeout,
+		reporter:     reporter,
+		asyncHandler: config.AsyncHandler,
+	}
+	handler.subscriptions = make([]Subscription, len(config.Subscriptions))
+	for i := range config.Subscriptions {
+		handler.subscriptions[i] = config.Subscriptions[i]
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger)
+	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger, reporter)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +126,7 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 
 	var deadLetter *url.URL
 	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+		// Subscription reconcilers resolves the URI.
 		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
 	}
 
@@ -118,40 +142,69 @@ func SubscriberSpecToFanoutConfig(sub eventingduckv1.SubscriberSpec) (*Subscript
 	return &Subscription{Subscriber: destination, Reply: reply, DeadLetter: deadLetter, RetryConfig: retryConfig}, nil
 }
 
-func createMessageReceiverFunction(f *MessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error {
-	if f.config.AsyncHandler {
-		return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
-			if len(f.config.Subscriptions) == 0 {
+func (f *FanoutMessageHandler) SetSubscriptions(ctx context.Context, subs []Subscription) {
+	f.subscriptionsMutex.Lock()
+	defer f.subscriptionsMutex.Unlock()
+	s := make([]Subscription, len(subs))
+	copy(s, subs)
+	f.subscriptions = s
+}
+
+func (f *FanoutMessageHandler) GetSubscriptions(ctx context.Context) []Subscription {
+	f.subscriptionsMutex.RLock()
+	defer f.subscriptionsMutex.RUnlock()
+	ret := make([]Subscription, len(f.subscriptions))
+	copy(ret, f.subscriptions)
+	return ret
+}
+
+func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.Transformer, nethttp.Header) error {
+	if f.asyncHandler {
+		return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+			subs := f.GetSubscriptions(ctx)
+
+			if len(subs) == 0 {
 				// Nothing to do here, finish the message and return
 				_ = message.Finish(nil)
 				return nil
 			}
 
 			parentSpan := trace.FromContext(ctx)
+			te := kncloudevents.TypeExtractorTransformer("")
+			transformers = append(transformers, &te)
 			// Message buffering here is done before starting the dispatch goroutine
 			// Because the message could be closed before the buffering happens
 			bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
 			if err != nil {
 				return err
 			}
+
+			reportArgs := channel.ReportArgs{}
+			reportArgs.EventType = string(te)
+			reportArgs.Ns = ref.Namespace
+
 			// We don't need the original message anymore
 			_ = message.Finish(nil)
-			go func(m binding.Message, h nethttp.Header, s *trace.Span) {
+			go func(m binding.Message, h nethttp.Header, s *trace.Span, r *channel.StatsReporter, args *channel.ReportArgs) {
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
-				_ = f.dispatch(ctx, m, h)
-			}(bufferedMessage, additionalHeaders, parentSpan)
+				dispatchResultForFanout := f.dispatch(ctx, subs, m, h)
+				_ = parseFanoutResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+			}(bufferedMessage, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
 			return nil
 		}
 	}
-	return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
-		if len(f.config.Subscriptions) == 0 {
+	return func(ctx context.Context, ref channel.ChannelReference, message binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+		subs := f.GetSubscriptions(ctx)
+		if len(subs) == 0 {
 			// Nothing to do here, finish the message and return
 			_ = message.Finish(nil)
 			return nil
 		}
 
+		te := kncloudevents.TypeExtractorTransformer("")
+		transformers = append(transformers, &te)
 		// We buffer the message to send it several times
 		bufferedMessage, err := buffering.CopyMessage(ctx, message, transformers...)
 		if err != nil {
@@ -159,48 +212,89 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 		}
 		// We don't need the original message anymore
 		_ = message.Finish(nil)
-		return f.dispatch(ctx, bufferedMessage, additionalHeaders)
+
+		reportArgs := channel.ReportArgs{}
+		reportArgs.EventType = string(te)
+		reportArgs.Ns = ref.Namespace
+		dispatchResultForFanout := f.dispatch(ctx, subs, bufferedMessage, additionalHeaders)
+		return parseFanoutResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 	}
 }
 
-func (f *MessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+func (f *FanoutMessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
 	f.receiver.ServeHTTP(response, request)
 }
 
-// dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
+func parseFanoutResultAndReportMetrics(result dispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
+	if result.info != nil && result.info.Time > channel.NoDuration {
+		if result.info.ResponseCode > channel.NoResponse {
+			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Time)
+		} else {
+			_ = reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, result.info.Time)
+		}
+	}
+	err := result.err
+	if err != nil {
+		channel.ReportEventCountMetricsForDispatchError(err, reporter, &reportArgs)
+	} else if result.info != nil {
+		_ = reporter.ReportEventCount(&reportArgs, result.info.ResponseCode)
+	}
+	return err
+}
+
+// dispatch takes the event, fans it out to each subscription in subs. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *MessageHandler) dispatch(ctx context.Context, bufferedMessage binding.Message, additionalHeaders nethttp.Header) error {
-	subs := len(f.config.Subscriptions)
-
+func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, bufferedMessage binding.Message, additionalHeaders nethttp.Header) dispatchResult {
 	// Bind the lifecycle of the buffered message to the number of subs
-	bufferedMessage = buffering.WithAcksBeforeFinish(bufferedMessage, subs)
+	bufferedMessage = buffering.WithAcksBeforeFinish(bufferedMessage, len(subs))
 
-	errorCh := make(chan error, subs)
-	for _, sub := range f.config.Subscriptions {
+	errorCh := make(chan dispatchResult, len(subs))
+	for _, sub := range subs {
 		go func(s Subscription) {
-			errorCh <- f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
+			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
+			errorCh <- dispatchResult{err: err, info: dispatchedResultPerSub}
 		}(sub)
 	}
 
-	for range f.config.Subscriptions {
+	var totalDispatchTimeForFanout time.Duration = channel.NoDuration
+	dispatchResultForFanout := dispatchResult{
+		info: &channel.DispatchExecutionInfo{
+			Time:         channel.NoDuration,
+			ResponseCode: channel.NoResponse,
+		},
+	}
+	for range subs {
 		select {
-		case err := <-errorCh:
-			if err != nil {
-				f.logger.Error("Fanout had an error", zap.Error(err))
-				return err
+		case dispatchResult := <-errorCh:
+			if dispatchResult.info != nil {
+				if dispatchResult.info.Time > channel.NoDuration {
+					if totalDispatchTimeForFanout > channel.NoDuration {
+						totalDispatchTimeForFanout += dispatchResult.info.Time
+					} else {
+						totalDispatchTimeForFanout = dispatchResult.info.Time
+					}
+				}
+				dispatchResultForFanout.info.Time = totalDispatchTimeForFanout
+				dispatchResultForFanout.info.ResponseCode = dispatchResult.info.ResponseCode
+			}
+			if dispatchResult.err != nil {
+				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
+				dispatchResultForFanout.err = dispatchResult.err
+				return dispatchResultForFanout
 			}
 		case <-time.After(f.timeout):
 			f.logger.Error("Fanout timed out")
-			return errors.New("fanout timed out")
+			dispatchResultForFanout.err = errors.New("fanout timed out")
+			return dispatchResultForFanout
 		}
 	}
 	// All Subscriptions returned err = nil.
-	return nil
+	return dispatchResultForFanout
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) error {
+func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub Subscription) (*channel.DispatchExecutionInfo, error) {
 	return f.dispatcher.DispatchMessageWithRetries(
 		ctx,
 		message,
@@ -210,4 +304,9 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 		sub.DeadLetter,
 		sub.RetryConfig,
 	)
+}
+
+type dispatchResult struct {
+	err  error
+	info *channel.DispatchExecutionInfo
 }

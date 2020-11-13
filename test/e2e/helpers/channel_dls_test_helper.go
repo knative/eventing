@@ -83,7 +83,7 @@ func ChannelDeadLetterSinkTestHelper(
 
 		// send CloudEvent to the first channel
 		event := cloudevents.NewEvent()
-		event.SetID("dummy")
+		event.SetID("test")
 		eventSource := fmt.Sprintf("http://%s.svc/", senderName)
 		event.SetSource(eventSource)
 		event.SetType(testlib.DefaultEventType)

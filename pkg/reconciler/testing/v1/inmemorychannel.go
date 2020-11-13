@@ -88,6 +88,12 @@ func WithInMemoryChannelDeploymentUnknown(reason, message string) InMemoryChanne
 	}
 }
 
+func WithInMemoryChannelFinalizers(finalizers ...string) InMemoryChannelOption {
+	return func(imc *v1.InMemoryChannel) {
+		imc.Finalizers = finalizers
+	}
+}
+
 func WithInMemoryChannelDeploymentReady() InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		imc.Status.PropagateDispatcherStatus(&appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}})

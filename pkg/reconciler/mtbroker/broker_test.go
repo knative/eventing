@@ -71,7 +71,7 @@ kind: "InMemoryChannel"
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 
-	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", network.GetClusterDomainName())
+	triggerChannelHostname = network.GetServiceHostname("foo", "bar")
 	triggerChannelURL      = fmt.Sprintf("http://%s", triggerChannelHostname)
 
 	filterServiceName  = "broker-filter"
@@ -79,7 +79,7 @@ var (
 
 	brokerAddress = &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, network.GetClusterDomainName()),
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 )
@@ -245,7 +245,7 @@ func TestReconcile(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithBrokerConfig(&duckv1.KReference{Kind: "Deployment", APIVersion: "v1", Name: "dummy"}),
+					WithBrokerConfig(&duckv1.KReference{Kind: "Deployment", APIVersion: "v1", Name: "test"}),
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
@@ -254,7 +254,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
-					WithBrokerConfig(&duckv1.KReference{Kind: "Deployment", APIVersion: "v1", Name: "dummy"}),
+					WithBrokerConfig(&duckv1.KReference{Kind: "Deployment", APIVersion: "v1", Name: "test"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]")),
 			}},

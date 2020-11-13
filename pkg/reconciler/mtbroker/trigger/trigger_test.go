@@ -84,7 +84,7 @@ const (
 	testSchedule                = "*/2 * * * *"
 	testData                    = "data"
 	sinkName                    = "testsink"
-	dependencyAnnotation        = "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1beta1\"}"
+	dependencyAnnotation        = `{"kind":"PingSource","name":"test-ping-source","apiVersion":"sources.knative.dev/v1beta1"}`
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
@@ -101,7 +101,7 @@ kind: "InMemoryChannel"
 var (
 	testKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 
-	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", network.GetClusterDomainName())
+	triggerChannelHostname = network.GetServiceHostname("foo", "bar")
 	triggerChannelURL      = fmt.Sprintf("http://%s", triggerChannelHostname)
 
 	filterServiceName  = "broker-filter"
@@ -127,12 +127,12 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
+	sinkDNS = network.GetServiceHostname("sink", "mynamespace")
 	sinkURI = "http://" + sinkDNS
 
 	brokerAddress = &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, network.GetClusterDomainName()),
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 )
@@ -523,7 +523,7 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", "propagating dependency readiness: getting the dependency: pingsources.sources.knative.dev \"test-ping-source\" not found"),
+				Eventf(corev1.EventTypeWarning, "InternalError", `propagating dependency readiness: getting the dependency: pingsources.sources.knative.dev "test-ping-source" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -536,7 +536,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: pingsources.sources.knative.dev \"test-ping-source\" not found"),
+					WithTriggerDependencyFailed("DependencyDoesNotExist", `Dependency does not exist: pingsources.sources.knative.dev "test-ping-source" not found`),
 				),
 			}},
 			WantErr: true,
@@ -772,7 +772,7 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 func makeServiceURI() *apis.URL {
 	return &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("broker-filter.%s.svc.%s", systemNS, network.GetClusterDomainName()),
+		Host:   network.GetServiceHostname("broker-filter", systemNS),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }

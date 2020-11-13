@@ -179,7 +179,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	logger := logging.FromContext(ctx)
 
 	// Initialize the reconciler state. This will convert the namespace/name
-	// string into a distinct namespace and name, determin if this instance of
+	// string into a distinct namespace and name, determine if this instance of
 	// the reconciler is the leader, and any additional interfaces implemented
 	// by the reconciler. Returns an error is the resource key is invalid.
 	s, err := newState(key, r)
@@ -392,15 +392,15 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 	patcher := r.Client.EventingV1beta1().Triggers(resource.Namespace)
 
 	resourceName := resource.Name
-	resource, err = patcher.Patch(ctx, resourceName, types.MergePatchType, patch, metav1.PatchOptions{})
+	updated, err := patcher.Patch(ctx, resourceName, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
-		r.Recorder.Eventf(resource, v1.EventTypeWarning, "FinalizerUpdateFailed",
+		r.Recorder.Eventf(existing, v1.EventTypeWarning, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resourceName, err)
 	} else {
-		r.Recorder.Eventf(resource, v1.EventTypeNormal, "FinalizerUpdate",
+		r.Recorder.Eventf(updated, v1.EventTypeNormal, "FinalizerUpdate",
 			"Updated %q finalizers", resource.GetName())
 	}
-	return resource, err
+	return updated, err
 }
 
 func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx context.Context, resource *v1beta1.Trigger) (*v1beta1.Trigger, error) {

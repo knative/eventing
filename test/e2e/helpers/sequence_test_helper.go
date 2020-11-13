@@ -128,7 +128,7 @@ func SequenceTestHelper(
 
 		// send CloudEvent to the Sequence
 		event := cloudevents.NewEvent()
-		event.SetID("dummy")
+		event.SetID("test")
 		eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 		event.SetSource(eventSource)
 		event.SetType(testlib.DefaultEventType)
@@ -246,7 +246,7 @@ func SequenceV1TestHelper(
 
 		// send CloudEvent to the Sequence
 		event := cloudevents.NewEvent()
-		event.SetID("dummy")
+		event.SetID("test")
 		eventSource := fmt.Sprintf("http://%s.svc/", senderPodName)
 		event.SetSource(eventSource)
 		event.SetType(testlib.DefaultEventType)

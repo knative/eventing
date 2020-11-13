@@ -183,11 +183,15 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 }
 
 func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Result) error {
-	err := errors.Unwrap(result)
-	if uerr, ok := err.(*url.Error); ok {
-		reportArgs.Timeout = uerr.Timeout()
+	var uErr *url.Error
+	if errors.As(result, &uErr) {
+		reportArgs.Timeout = uErr.Timeout()
 	}
-	reportArgs.Error = err.Error()
+
+	if result != nil {
+		reportArgs.Error = result.Error()
+	}
+
 	if rErr := c.reporter.ReportEventCount(reportArgs, 0); rErr != nil {
 		// metrics is not important enough to return an error if it is setup wrong.
 		// So combine reporter error with ce error if not nil.

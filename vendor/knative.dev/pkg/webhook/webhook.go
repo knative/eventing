@@ -63,7 +63,7 @@ type Options struct {
 }
 
 // Operation is the verb being operated on
-// it is aliasde in Validation from the k8s admission package
+// it is aliased in Validation from the k8s admission package
 type Operation = admissionv1.Operation
 
 // Operation types
@@ -209,7 +209,7 @@ func (wh *Webhook) Run(stop <-chan struct{}) error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Errorw("ListenAndServeTLS for admission webhook returned error", zap.Error(err))
 			return err
 		}

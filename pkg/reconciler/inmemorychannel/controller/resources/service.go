@@ -20,10 +20,6 @@ const (
 // ServiceOption can be used to optionally modify the K8s service in CreateK8sService
 type K8sServiceOption func(*corev1.Service) error
 
-func CreateExternalServiceAddress(namespace, service string) string {
-	return fmt.Sprintf("%s.%s.svc.%s", service, namespace, network.GetClusterDomainName())
-}
-
 func CreateChannelServiceName(name string) string {
 	return fmt.Sprintf("%s-kn-channel", name)
 }
@@ -34,7 +30,7 @@ func ExternalService(namespace, service string) K8sServiceOption {
 	return func(svc *corev1.Service) error {
 		svc.Spec = corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: CreateExternalServiceAddress(namespace, service),
+			ExternalName: network.GetServiceHostname(service, namespace),
 		}
 		return nil
 	}

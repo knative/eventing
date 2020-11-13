@@ -17,6 +17,7 @@ limitations under the License.
 package tracing
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -38,141 +39,136 @@ func TestSpanMatcher(t *testing.T) {
 		Name    string
 		Matcher *SpanMatcher
 		Spans   []SpanCase
-	}{
-		{
-			Name:    "empty matcher",
-			Matcher: &SpanMatcher{},
-			Spans: []SpanCase{{
-				Span:        &model.SpanModel{},
-				ShouldMatch: true,
-			}, {
-				Span: &model.SpanModel{
-					Kind: model.Server,
-					LocalEndpoint: &model.Endpoint{
-						ServiceName: "test-service-name",
-					},
-					Tags: map[string]string{
-						"test-tag":  "test-tag-value",
-						"other-tag": "other-tag-value",
-					},
+	}{{
+		Name:    "empty matcher",
+		Matcher: &SpanMatcher{},
+		Spans: []SpanCase{{
+			Span:        &model.SpanModel{},
+			ShouldMatch: true,
+		}, {
+			Span: &model.SpanModel{
+				Kind: model.Server,
+				LocalEndpoint: &model.Endpoint{
+					ServiceName: "test-service-name",
 				},
-				ShouldMatch: true,
-			}},
-		},
-		{
-			Name: "kind matcher",
-			Matcher: &SpanMatcher{
-				Kind: &serverKind,
+				Tags: map[string]string{
+					"test-tag":  "test-tag-value",
+					"other-tag": "other-tag-value",
+				},
 			},
-			Spans: []SpanCase{{
-				Span:        &model.SpanModel{},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					Kind: model.Server,
-				},
-				ShouldMatch: true,
-			}, {
-				Span: &model.SpanModel{
-					Kind: model.Client,
-				},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					Kind: model.Server,
-					LocalEndpoint: &model.Endpoint{
-						ServiceName: "test-service-name",
-					},
-					Tags: map[string]string{
-						"test-tag":  "test-tag-value",
-						"other-tag": "other-tag-value",
-					},
-				},
-				ShouldMatch: true,
-			}},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "kind matcher",
+		Matcher: &SpanMatcher{
+			Kind: &serverKind,
 		},
-		{
-			Name: "local endpoint service name matcher",
-			Matcher: &SpanMatcher{
-				LocalEndpointServiceName: "test-service-name",
+		Spans: []SpanCase{{
+			Span:        &model.SpanModel{},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
+				Kind: model.Server,
 			},
-			Spans: []SpanCase{{
-				Span:        &model.SpanModel{},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					LocalEndpoint: &model.Endpoint{
-						ServiceName: "test-service-name",
-					},
+			ShouldMatch: true,
+		}, {
+			Span: &model.SpanModel{
+				Kind: model.Client,
+			},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
+				Kind: model.Server,
+				LocalEndpoint: &model.Endpoint{
+					ServiceName: "test-service-name",
 				},
-				ShouldMatch: true,
-			}, {
-				Span: &model.SpanModel{
-					LocalEndpoint: &model.Endpoint{
-						ServiceName: "other-service-name",
-					},
+				Tags: map[string]string{
+					"test-tag":  "test-tag-value",
+					"other-tag": "other-tag-value",
 				},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					Kind: model.Server,
-					LocalEndpoint: &model.Endpoint{
-						ServiceName: "test-service-name",
-					},
-					Tags: map[string]string{
-						"test-tag":  "test-tag-value",
-						"other-tag": "other-tag-value",
-					},
-				},
-				ShouldMatch: true,
-			}},
+			},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "local endpoint service name matcher",
+		Matcher: &SpanMatcher{
+			LocalEndpointServiceName: "test-service-name",
 		},
-		{
-			Name: "tag matcher",
-			Matcher: &SpanMatcher{
+		Spans: []SpanCase{{
+			Span:        &model.SpanModel{},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
+				LocalEndpoint: &model.Endpoint{
+					ServiceName: "test-service-name",
+				},
+			},
+			ShouldMatch: true,
+		}, {
+			Span: &model.SpanModel{
+				LocalEndpoint: &model.Endpoint{
+					ServiceName: "other-service-name",
+				},
+			},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
+				Kind: model.Server,
+				LocalEndpoint: &model.Endpoint{
+					ServiceName: "test-service-name",
+				},
+				Tags: map[string]string{
+					"test-tag":  "test-tag-value",
+					"other-tag": "other-tag-value",
+				},
+			},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "tag matcher",
+		Matcher: &SpanMatcher{
+			Tags: map[string]*regexp.Regexp{
+				"test-tag": regexp.MustCompile("^test-tag-value$"),
+			},
+		},
+		Spans: []SpanCase{{
+			Span:        &model.SpanModel{},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
 				Tags: map[string]string{
 					"test-tag": "test-tag-value",
 				},
 			},
-			Spans: []SpanCase{{
-				Span:        &model.SpanModel{},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					Tags: map[string]string{
-						"test-tag": "test-tag-value",
-					},
+			ShouldMatch: true,
+		}, {
+			Span: &model.SpanModel{
+				Tags: map[string]string{
+					"test-tag": "other-tag-value",
 				},
-				ShouldMatch: true,
-			}, {
-				Span: &model.SpanModel{
-					Tags: map[string]string{
-						"test-tag": "other-tag-value",
-					},
+			},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
+				Tags: map[string]string{
+					"other-tag": "test-tag-value",
 				},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					Tags: map[string]string{
-						"other-tag": "test-tag-value",
-					},
+			},
+			ShouldMatch: false,
+		}, {
+			Span: &model.SpanModel{
+				Kind: model.Server,
+				LocalEndpoint: &model.Endpoint{
+					ServiceName: "test-service-name",
 				},
-				ShouldMatch: false,
-			}, {
-				Span: &model.SpanModel{
-					Kind: model.Server,
-					LocalEndpoint: &model.Endpoint{
-						ServiceName: "test-service-name",
-					},
-					Tags: map[string]string{
-						"test-tag":  "test-tag-value",
-						"other-tag": "other-tag-value",
-					},
+				Tags: map[string]string{
+					"test-tag":  "test-tag-value",
+					"other-tag": "other-tag-value",
 				},
-				ShouldMatch: true,
-			}},
-		},
-	}
+			},
+			ShouldMatch: true,
+		}},
+	}}
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
 			tc := tc
@@ -200,135 +196,107 @@ func TestMatchesSubtree(t *testing.T) {
 		Name         string
 		TestSpanTree *TestSpanTree
 		SpanTrees    []SpanTreeCase
-	}{
-		{
-			Name:         "empty test tree",
-			TestSpanTree: &TestSpanTree{},
-			SpanTrees: []SpanTreeCase{{
-				SpanTree:    &SpanTree{},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Client,
-						},
-					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"test-tag": "test-tag-value",
-							},
-						},
-					}},
-				},
-				ShouldMatch: true,
-			}},
+	}{{
+		Name:         "empty test tree",
+		TestSpanTree: &TestSpanTree{},
+		SpanTrees: []SpanTreeCase{{
+			SpanTree:    &SpanTree{},
+			ShouldMatch: true,
 		}, {
-			Name: "single node",
-			TestSpanTree: &TestSpanTree{
-				Span: &SpanMatcher{
-					Kind: &serverKind,
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
 				},
-			},
-			SpanTrees: []SpanTreeCase{{
-				SpanTree:    &SpanTree{},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
+				Children: []SpanTree{{
 					Span: model.SpanModel{
 						Kind: model.Client,
 					},
-				},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
+				}, {
 					Span: model.SpanModel{
-						Kind: model.Client,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Server,
+						Tags: map[string]string{
+							"test-tag": "test-tag-value",
 						},
-					}},
-				},
-				ShouldMatch: true,
-			}},
-		}, {
-			Name: "single child",
-			TestSpanTree: &TestSpanTree{
-				Span: &SpanMatcher{
-					Kind: &serverKind,
-				},
-				Children: []TestSpanTree{{
-					Span: &SpanMatcher{
-						Kind: &clientKind,
 					},
 				}},
 			},
-			SpanTrees: []SpanTreeCase{{
-				SpanTree: &SpanTree{
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "single node",
+		TestSpanTree: &TestSpanTree{
+			Span: &SpanMatcher{
+				Kind: &serverKind,
+			},
+		},
+		SpanTrees: []SpanTreeCase{{
+			SpanTree:    &SpanTree{},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+			},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Client,
+				},
+			},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Client,
+				},
+				Children: []SpanTree{{
 					Span: model.SpanModel{
 						Kind: model.Server,
 					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Client,
-						},
-					}},
+				}},
+			},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "single child",
+		TestSpanTree: &TestSpanTree{
+			Span: &SpanMatcher{
+				Kind: &serverKind,
+			},
+			Children: []TestSpanTree{{
+				Span: &SpanMatcher{
+					Kind: &clientKind,
 				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
+			}},
+		},
+		SpanTrees: []SpanTreeCase{{
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
 					Span: model.SpanModel{
 						Kind: model.Client,
 					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Server,
-						},
-					}},
+				}},
+			},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Client,
 				},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Kind: model.Server,
-						},
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Kind: model.Client,
-							},
-						}},
-					}},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
+				Children: []SpanTree{{
 					Span: model.SpanModel{
 						Kind: model.Server,
 					},
-					Children: []SpanTree{{
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Kind: model.Client,
-							},
-						}},
-					}},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
+				}},
+			},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Children: []SpanTree{{
 					Span: model.SpanModel{
 						Kind: model.Server,
 					},
@@ -336,205 +304,166 @@ func TestMatchesSubtree(t *testing.T) {
 						Span: model.SpanModel{
 							Kind: model.Client,
 						},
-						Children: []SpanTree{{}},
 					}},
+				}},
+			},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
 				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
+				Children: []SpanTree{{
 					Children: []SpanTree{{
 						Span: model.SpanModel{
 							Kind: model.Client,
 						},
-					}, {}},
+					}},
+				}},
+			},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
 				},
-				ShouldMatch: true,
+				Children: []SpanTree{{
+					Span: model.SpanModel{
+						Kind: model.Client,
+					},
+					Children: []SpanTree{{}},
+				}},
+			},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
+					Span: model.SpanModel{
+						Kind: model.Client,
+					},
+				}, {}},
+			},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "two children",
+		TestSpanTree: &TestSpanTree{
+			Span: &SpanMatcher{
+				Kind: &serverKind,
+			},
+			Children: []TestSpanTree{{
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^a$"),
+					},
+				},
+			}, {
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^b$"),
+					},
+				},
 			}},
 		},
-		{
-			Name: "two children",
-			TestSpanTree: &TestSpanTree{
-				Span: &SpanMatcher{
-					Kind: &serverKind,
+		SpanTrees: []SpanTreeCase{{
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
 				},
-				Children: []TestSpanTree{{
-					Span: &SpanMatcher{
+				Children: []SpanTree{{
+					Span: model.SpanModel{
 						Tags: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: &SpanMatcher{
+					Span: model.SpanModel{
 						Tags: map[string]string{
 							"child": "b",
 						},
 					},
 				}},
 			},
-			SpanTrees: []SpanTreeCase{{
-				SpanTree: &SpanTree{
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
 					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "b",
-							},
-						},
-					}},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "b",
-							},
-						},
-					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-					}},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-					}, {
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-					}},
-				},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "b",
-								},
-							},
-						}},
-					}},
-				},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						// This span is a red-herring. Although it matches child 'a',
-						// it cannot be used as match for 'a' in a complete sub-tree
-						// match since it is a parent of child 'b'. The matcher must
-						// therefore look for alternative matches for 'a' by recursing
-						// into its children.
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "a",
-								},
-							},
-						}, {
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "b",
-								},
-							},
-						}},
-					}},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "a",
-								},
-							},
-						}, {
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "b",
-								},
-							},
-						}},
-					}},
-				},
-				ShouldMatch: true,
-			}},
-		},
-		{
-			Name: "two identical children",
-			TestSpanTree: &TestSpanTree{
-				Span: &SpanMatcher{
-					Kind: &serverKind,
-				},
-				Children: []TestSpanTree{{
-					Span: &SpanMatcher{
 						Tags: map[string]string{
-							"child": "a",
+							"child": "b",
 						},
 					},
 				}, {
-					Span: &SpanMatcher{
+					Span: model.SpanModel{
 						Tags: map[string]string{
 							"child": "a",
 						},
 					},
 				}},
 			},
-			SpanTrees: []SpanTreeCase{{
-				SpanTree: &SpanTree{
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
 					Span: model.SpanModel{
-						Kind: model.Server,
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+				}, {
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+				}},
+			},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+					Children: []SpanTree{{
+						Span: model.SpanModel{
+							Tags: map[string]string{
+								"child": "b",
+							},
+						},
+					}},
+				}},
+			},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
+					// This span is a red-herring. Although it matches child 'a',
+					// it cannot be used as match for 'a' in a complete sub-tree
+					// match since it is a parent of child 'b'. The matcher must
+					// therefore look for alternative matches for 'a' by recursing
+					// into its children.
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
 					},
 					Children: []SpanTree{{
 						Span: model.SpanModel{
@@ -549,27 +478,15 @@ func TestMatchesSubtree(t *testing.T) {
 							},
 						},
 					}},
+				}},
+			},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
 				},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Span: model.SpanModel{
-							Tags: map[string]string{
-								"child": "a",
-							},
-						},
-					}},
-				},
-				ShouldMatch: false,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
+				Children: []SpanTree{{
 					Children: []SpanTree{{
 						Span: model.SpanModel{
 							Tags: map[string]string{
@@ -579,45 +496,147 @@ func TestMatchesSubtree(t *testing.T) {
 					}, {
 						Span: model.SpanModel{
 							Tags: map[string]string{
-								"child": "a",
+								"child": "b",
 							},
 						},
 					}},
+				}},
+			},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "two identical children",
+		TestSpanTree: &TestSpanTree{
+			Span: &SpanMatcher{
+				Kind: &serverKind,
+			},
+			Children: []TestSpanTree{{
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^a$"),
+					},
 				},
-				ShouldMatch: true,
+			}, {
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^a$"),
+					},
+				},
 			}},
 		},
-		{
-			Name: "three children",
-			TestSpanTree: &TestSpanTree{
-				Span: &SpanMatcher{
-					Kind: &serverKind,
+		SpanTrees: []SpanTreeCase{{
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
 				},
-				Children: []TestSpanTree{{
-					Span: &SpanMatcher{
+				Children: []SpanTree{{
+					Span: model.SpanModel{
 						Tags: map[string]string{
 							"child": "a",
 						},
 					},
 				}, {
-					Span: &SpanMatcher{
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "b",
+						},
+					},
+				}},
+			},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+				}},
+			},
+			ShouldMatch: false,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+				}, {
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+				}},
+			},
+			ShouldMatch: true,
+		}},
+	}, {
+		Name: "three children",
+		TestSpanTree: &TestSpanTree{
+			Span: &SpanMatcher{
+				Kind: &serverKind,
+			},
+			Children: []TestSpanTree{{
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^a$"),
+					},
+				},
+			}, {
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^b$"),
+					},
+				},
+			}, {
+				Span: &SpanMatcher{
+					Tags: map[string]*regexp.Regexp{
+						"child": regexp.MustCompile("^c$"),
+					},
+				},
+			}},
+		},
+		SpanTrees: []SpanTreeCase{{
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
+					Span: model.SpanModel{
+						Tags: map[string]string{
+							"child": "a",
+						},
+					},
+				}, {
+					Span: model.SpanModel{
 						Tags: map[string]string{
 							"child": "b",
 						},
 					},
 				}, {
-					Span: &SpanMatcher{
+					Span: model.SpanModel{
 						Tags: map[string]string{
 							"child": "c",
 						},
 					},
 				}},
 			},
-			SpanTrees: []SpanTreeCase{{
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
+			ShouldMatch: true,
+		}, {
+			SpanTree: &SpanTree{
+				Span: model.SpanModel{
+					Kind: model.Server,
+				},
+				Children: []SpanTree{{
 					Children: []SpanTree{{
 						Span: model.SpanModel{
 							Tags: map[string]string{
@@ -630,47 +649,20 @@ func TestMatchesSubtree(t *testing.T) {
 								"child": "b",
 							},
 						},
-					}, {
+					}},
+				}, {
+					Children: []SpanTree{{
 						Span: model.SpanModel{
 							Tags: map[string]string{
 								"child": "c",
 							},
 						},
 					}},
-				},
-				ShouldMatch: true,
-			}, {
-				SpanTree: &SpanTree{
-					Span: model.SpanModel{
-						Kind: model.Server,
-					},
-					Children: []SpanTree{{
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "a",
-								},
-							},
-						}, {
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "b",
-								},
-							},
-						}},
-					}, {
-						Children: []SpanTree{{
-							Span: model.SpanModel{
-								Tags: map[string]string{
-									"child": "c",
-								},
-							},
-						}},
-					}},
-				},
-				ShouldMatch: true,
-			}},
-		},
+				}},
+			},
+			ShouldMatch: true,
+		}},
+	},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {

@@ -216,7 +216,7 @@ func maybeAppendEnvVar(envs []corev1.EnvVar, env corev1.EnvVar, cond bool) []cor
 // loggingConfigEnvVar returns an EnvVar containing the serialized logging
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
-	cfg, err := logging.LoggingConfigToJson(cw.LoggingConfig())
+	cfg, err := logging.ConfigToJSON(cw.LoggingConfig())
 	if err != nil {
 		cw.logger.Warnw("Error while serializing logging config", zap.Error(err))
 	}
@@ -230,7 +230,7 @@ func (cw *ConfigWatcher) loggingConfigEnvVar() corev1.EnvVar {
 // metricsConfigEnvVar returns an EnvVar containing the serialized metrics
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) metricsConfigEnvVar() corev1.EnvVar {
-	cfg, err := metrics.MetricsOptionsToJson(cw.MetricsConfig())
+	cfg, err := metrics.OptionsToJSON(cw.MetricsConfig())
 	if err != nil {
 		cw.logger.Warnw("Error while serializing metrics config", zap.Error(err))
 	}
@@ -244,7 +244,7 @@ func (cw *ConfigWatcher) metricsConfigEnvVar() corev1.EnvVar {
 // tracingConfigEnvVar returns an EnvVar containing the serialized tracing
 // configuration from the ConfigWatcher.
 func (cw *ConfigWatcher) tracingConfigEnvVar() corev1.EnvVar {
-	cfg, err := tracingconfig.TracingConfigToJson(cw.TracingConfig())
+	cfg, err := tracingconfig.TracingConfigToJSON(cw.TracingConfig())
 	if err != nil {
 		cw.logger.Warnw("Error while serializing tracing config", zap.Error(err))
 	}
@@ -256,7 +256,9 @@ func (cw *ConfigWatcher) tracingConfigEnvVar() corev1.EnvVar {
 }
 
 // EmptyVarsGenerator generates empty env vars. Intended to be used in tests.
-type EmptyVarsGenerator struct{}
+type EmptyVarsGenerator struct {
+	ConfigAccessor
+}
 
 var _ ConfigAccessor = (*EmptyVarsGenerator)(nil)
 
@@ -266,16 +268,4 @@ func (g *EmptyVarsGenerator) ToEnvVars() []corev1.EnvVar {
 		{Name: EnvMetricsCfg},
 		{Name: EnvTracingCfg},
 	}
-}
-
-func (*EmptyVarsGenerator) LoggingConfig() *logging.Config {
-	return nil
-}
-
-func (*EmptyVarsGenerator) MetricsConfig() *metrics.ExporterOptions {
-	return nil
-}
-
-func (*EmptyVarsGenerator) TracingConfig() *tracingconfig.Config {
-	return nil
 }

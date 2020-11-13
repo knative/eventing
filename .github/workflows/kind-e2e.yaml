@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [ 'master' ]
 
+  schedule:
+  - cron: '0 */2 * * *'
+
 defaults:
   run:
     shell: bash
@@ -24,8 +27,7 @@ jobs:
 
         test-suite:
         - ./test/e2e
-        # TODO(https://github.com/knative/eventing/issues/4275): Enable this.
-        # - ./test/conformance
+        - ./test/conformance
 
         # Map between K8s and KinD versions.
         # This is attempting to make it a bit clearer what's being tested.
@@ -43,17 +45,20 @@ jobs:
 
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
-          extra-test-flags: -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel -sources=sources.knative.dev/v1alpha2:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1alpha2:PingSource
-        # TODO(https://github.com/knative/eventing/issues/4275): Enable this.
-        # - test-suite: ./test/conformance
-        #   extra-test-flags: -brokers=eventing.knative.dev/v1beta1:MTChannelBasedBroker -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource
-
+          extra-test-flags: >
+            -brokerclass=MTChannelBasedBroker
+            -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
+            -sources=sources.knative.dev/v1alpha2:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1alpha2:PingSource
+        - test-suite: ./test/conformance
+          extra-test-flags: >
+            -brokers=eventing.knative.dev/v1beta1:MTChannelBasedBroker
+            -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
+            -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource
     env:
       GOPATH: ${{ github.workspace }}
       GO111MODULE: off
       KO_DOCKER_REPO: kind.local
       SYSTEM_NAMESPACE: knative-eventing
-      TEST_EVENTING_NAMESPACE: knative-eventing
       # Use a semi-random cluster suffix, but somewhat predictable
       # so reruns don't just give us a completely new value.
       CLUSTER_SUFFIX: c${{ github.run_id }}.local
@@ -135,7 +140,7 @@ jobs:
         # Build and Publish our containers to the docker daemon (including test assets)
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
-        ko apply --platform=all -P \
+        ko apply -P \
            -f config/ \
            `# Install the MT Broker` \
            -f config/core/configmaps/default-broker.yaml \
@@ -146,8 +151,7 @@ jobs:
            -f config/channels/in-memory-channel
 
         # Change the cluster domain to the correct one.
-        sed -i "s/svc\.cluster\.local/svc\.${CLUSTER_SUFFIX}/g" test/config/config-tracing.yaml
-        ko apply --platform=all -Pf test/config/
+        ko apply -Pf test/config/
 
         # Be KinD to these tests.
         kubectl scale -n${SYSTEM_NAMESPACE} deployment/chaosduck --replicas=0
@@ -159,7 +163,7 @@ jobs:
 
     - name: Wait for things to be up
       run: |
-        kubectl wait pod --for=condition=Ready -n ${SYSTEM_NAMESPACE} -l '!job-name'
+        kubectl -v 9 wait pod --for=condition=Ready -n ${SYSTEM_NAMESPACE} -l '!job-name'
 
     - name: Run e2e Tests
       run: |
@@ -197,3 +201,17 @@ jobs:
             echo '::endgroup::'
           done
         fi
+
+    - name: Post failure notice to Slack
+      uses: rtCamp/action-slack-notify@v2.1.0
+      if: ${{ failure() && github.event_name != 'pull_request' }}
+      env:
+        SLACK_ICON: http://github.com/knative.png?size=48
+        SLACK_USERNAME: github-actions
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+        SLACK_CHANNEL: 'eventing'
+        MSG_MINIMAL: 'true'
+        SLACK_TITLE: Periodic e2e on kind on ${{ matrix.k8s-version }} failed.
+        SLACK_MESSAGE: |
+          For detailed logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -35,7 +35,7 @@ var (
 func (p *prober) deployForwarder(ctx context.Context) {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	service := forwarderKService(forwarderName, p.client.Namespace)
+	service := p.forwarderKService(forwarderName, p.client.Namespace)
 	_, err := serving.Create(context.Background(), service, metav1.CreateOptions{})
 	ensure.NoError(err)
 
@@ -60,7 +60,7 @@ func (p *prober) removeForwarder() {
 	ensure.NoError(err)
 }
 
-func forwarderKService(name, namespace string) *unstructured.Unstructured {
+func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstructured {
 	obj := map[string]interface{}{
 		"apiVersion": resources.KServiceType.APIVersion,
 		"kind":       resources.KServiceType.Kind,
@@ -78,20 +78,20 @@ func forwarderKService(name, namespace string) *unstructured.Unstructured {
 						"name":  "forwarder",
 						"image": pkgTest.ImagePath(forwarderName),
 						"volumeMounts": []map[string]interface{}{{
-							"name":      configName,
-							"mountPath": configMountPoint,
+							"name":      p.config.ConfigMapName,
+							"mountPath": p.config.ConfigMountPoint,
 							"readOnly":  true,
 						}},
 						"readinessProbe": map[string]interface{}{
 							"httpGet": map[string]interface{}{
-								"path": healthEndpoint,
+								"path": p.config.HealthEndpoint,
 							},
 						},
 					}},
 					"volumes": []map[string]interface{}{{
-						"name": configName,
+						"name": p.config.ConfigMapName,
 						"configMap": map[string]interface{}{
-							"name": configName,
+							"name": p.config.ConfigMapName,
 						},
 					}},
 				},

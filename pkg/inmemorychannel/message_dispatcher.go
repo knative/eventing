@@ -21,18 +21,16 @@ import (
 
 	"go.uber.org/zap"
 
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/channel/swappable"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 type MessageDispatcher interface {
-	UpdateConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error
+	GetHandler(ctx context.Context) multichannelfanout.MultiChannelMessageHandler
 }
 
 type InMemoryMessageDispatcher struct {
-	handler              *swappable.MessageHandler
+	handler              multichannelfanout.MultiChannelMessageHandler
 	httpBindingsReceiver *kncloudevents.HTTPMessageReceiver
 	writeTimeout         time.Duration
 	logger               *zap.Logger
@@ -42,12 +40,14 @@ type InMemoryMessageDispatcherArgs struct {
 	Port         int
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
-	Handler      *swappable.MessageHandler
+	Handler      multichannelfanout.MultiChannelMessageHandler
 	Logger       *zap.Logger
 }
 
-func (d *InMemoryMessageDispatcher) UpdateConfig(ctx context.Context, dispatcherConfig channel.EventDispatcherConfig, config *multichannelfanout.Config) error {
-	return d.handler.UpdateConfig(ctx, dispatcherConfig, config)
+// GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
+// requests to.
+func (d *InMemoryMessageDispatcher) GetHandler(ctx context.Context) multichannelfanout.MultiChannelMessageHandler {
+	return d.handler
 }
 
 // Start starts the inmemory dispatcher's message processing.

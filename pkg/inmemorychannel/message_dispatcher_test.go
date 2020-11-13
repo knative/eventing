@@ -41,7 +41,6 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/channel/swappable"
 	"knative.dev/eventing/pkg/kncloudevents"
 
 	logtesting "knative.dev/pkg/logging/testing"
@@ -49,11 +48,8 @@ import (
 
 func TestNewMessageDispatcher(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
-
-	if err != nil {
-		t.Fatalf("Failed to create handler")
-	}
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 
 	args := &InMemoryMessageDispatcherArgs{
 		Port:         8080,
@@ -73,10 +69,8 @@ func TestNewMessageDispatcher(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_close(t *testing.T) {
 	logger := logtesting.TestLogger(t).Desugar()
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
-	if err != nil {
-		t.Fatal(err)
-	}
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
+	sh := multichannelfanout.NewMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger), reporter)
 
 	port, err := freePort()
 	if err != nil {
@@ -110,6 +104,7 @@ func TestDispatcher_close(t *testing.T) {
 // This test emulates a real dispatcher usage
 func TestDispatcher_dispatch(t *testing.T) {
 	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+	reporter := channel.NewStatsReporter("testcontainer", "testpod")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,37 +117,10 @@ func TestDispatcher_dispatch(t *testing.T) {
 		ZipkinEndpoint: "http://zipkin.zipkin.svc.cluster.local:9411/api/v2/spans",
 	})
 
-	sh, err := swappable.NewEmptyMessageHandler(context.TODO(), logger, channel.NewMessageDispatcher(logger))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	port, err := freePort()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	logger.Info("Starting dispatcher", zap.Int("port", port))
-
-	dispatcherArgs := &InMemoryMessageDispatcherArgs{
-		Port:         port,
-		ReadTimeout:  1 * time.Minute,
-		WriteTimeout: 1 * time.Minute,
-		Handler:      sh,
-		Logger:       logger,
-	}
-
-	dispatcher := NewMessageDispatcher(dispatcherArgs)
-
-	serverCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start the dispatcher
-	go func() {
-		if err := dispatcher.Start(serverCtx); err != nil {
-			t.Error(err)
-		}
-	}()
 
 	// We need a channelaproxy and channelbproxy for handling correctly the Host header
 	channelAProxy := httptest.NewServer(createReverseProxy(t, "channela.svc", port))
@@ -260,13 +228,35 @@ func TestDispatcher_dispatch(t *testing.T) {
 		},
 	}
 
-	err = sh.UpdateConfig(context.TODO(), channel.EventDispatcherConfig{}, &config)
+	sh, err := multichannelfanout.NewMessageHandlerWithConfig(context.TODO(), logger, channel.NewMessageDispatcher(logger), config, reporter)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	logger.Info("Starting dispatcher", zap.Int("port", port))
+
+	dispatcherArgs := &InMemoryMessageDispatcherArgs{
+		Port:         port,
+		ReadTimeout:  1 * time.Minute,
+		WriteTimeout: 1 * time.Minute,
+		Handler:      sh,
+		Logger:       logger,
+	}
+
+	dispatcher := NewMessageDispatcher(dispatcherArgs)
+
+	serverCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start the dispatcher
+	go func() {
+		if err := dispatcher.Start(serverCtx); err != nil {
+			t.Error(err)
+		}
+	}()
+
 	// Ok now everything should be ready to send the event
-	httpsender, err := kncloudevents.NewHTTPMessageSender(nil, channelAProxy.URL)
+	httpsender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelAProxy.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

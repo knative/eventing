@@ -373,7 +373,7 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -430,7 +430,7 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
@@ -487,7 +487,7 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: testNS + "/" + sourceName,
 		WantEvents: []string{
-			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", `Deployment "apiserversource-test-apiserver-source-1234" updated`),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: rttestingv1.NewApiServerSource(sourceName, testNS,

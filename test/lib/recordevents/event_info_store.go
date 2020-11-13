@@ -61,6 +61,9 @@ type EventInfoStore struct {
 
 	lock      sync.Mutex
 	collected []EventInfo
+
+	eventsSeen    int
+	eventsNotMine int
 }
 
 // Creates an EventInfoStore that is used to iteratively download events recorded by the
@@ -72,9 +75,14 @@ func NewEventInfoStore(client *testlib.Client, podName string, podNamespace stri
 		podNamespace: podNamespace,
 	}
 
-	client.EventListener.AddHandler(store.handle)
+	numEventsAlreadyPresent := client.EventListener.AddHandler(store.handle)
+	client.T.Logf("EventInfoStore added to the EventListener, which has already seen %v events", numEventsAlreadyPresent)
 
 	return store, nil
+}
+
+func (ei *EventInfoStore) getDebugInfo() string {
+	return fmt.Sprintf("Pod '%s' in namespace '%s'", ei.podName, ei.podNamespace)
 }
 
 func (ei *EventInfoStore) getEventInfo() []EventInfo {
@@ -84,8 +92,12 @@ func (ei *EventInfoStore) getEventInfo() []EventInfo {
 }
 
 func (ei *EventInfoStore) handle(event *corev1.Event) {
+	ei.lock.Lock()
+	defer ei.lock.Unlock()
+	ei.eventsSeen += 1
 	// Filter events
 	if !ei.isMyEvent(event) {
+		ei.eventsNotMine += 1
 		return
 	}
 
@@ -96,8 +108,6 @@ func (ei *EventInfoStore) handle(event *corev1.Event) {
 		return
 	}
 
-	ei.lock.Lock()
-	defer ei.lock.Unlock()
 	ei.collected = append(ei.collected, eventInfo)
 }
 
@@ -120,7 +130,12 @@ func (ei *EventInfoStore) Find(matchers ...EventInfoMatcher) ([]EventInfo, Searc
 	f := AllOf(matchers...)
 	const maxLastEvents = 5
 	allMatch := []EventInfo{}
-	sInfo := SearchedInfo{}
+	ei.lock.Lock()
+	sInfo := SearchedInfo{
+		storeEventsSeen:    ei.eventsSeen,
+		storeEventsNotMine: ei.eventsNotMine,
+	}
+	ei.lock.Unlock()
 	lastEvents := []EventInfo{}
 	var nonMatchingErrors []error
 
@@ -211,9 +226,10 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 		count := len(allMatch)
 		if count < min {
 			internalErr = fmt.Errorf(
-				"FAIL MATCHING: saw %d/%d matching events.\nRecent events: \n%s\nMatch errors: \n%s\n",
+				"FAIL MATCHING: saw %d/%d matching events.\n- EventInfoStore-\n%s\n- Recent events -\n%s\n- Match errors -\n%s\n",
 				count,
 				min,
+				ei.getDebugInfo(),
 				&sInfo,
 				formatErrors(matchErrs),
 			)

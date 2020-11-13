@@ -21,7 +21,9 @@ import (
 	nethttp "net/http"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/spec"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/types"
 )
 
 func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request,
@@ -35,5 +37,19 @@ func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.
 		req.Header[k] = v
 	}
 
+	return nil
+}
+
+type TypeExtractorTransformer string
+
+func (a *TypeExtractorTransformer) Transform(reader binding.MessageMetadataReader, _ binding.MessageMetadataWriter) error {
+	_, ty := reader.GetAttribute(spec.Type)
+	if ty != nil {
+		tyParsed, err := types.ToString(ty)
+		if err != nil {
+			return err
+		}
+		*a = TypeExtractorTransformer(tyParsed)
+	}
 	return nil
 }

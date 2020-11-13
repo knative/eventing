@@ -34,6 +34,8 @@ import (
 
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	"knative.dev/eventing/pkg/eventfilter"
+	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
@@ -42,10 +44,6 @@ import (
 )
 
 const (
-	passFilter FilterResult = "pass"
-	failFilter FilterResult = "fail"
-	noFilter   FilterResult = "no_filter"
-
 	// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
 	//  Issue: https://github.com/knative/eventing/issues/1777
 	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
@@ -69,19 +67,15 @@ type Handler struct {
 	logger        *zap.Logger
 }
 
-// FilterResult has the result of the filtering operation.
-type FilterResult string
-
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
-
-	connectionArgs := kncloudevents.ConnectionArgs{
+	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
+	})
 
-	sender, err := kncloudevents.NewHTTPMessageSender(&connectionArgs, "")
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message sender: %w", err)
 	}
@@ -190,9 +184,9 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	// Check if the event should be sent.
 	ctx = logging.WithLogger(ctx, h.logger.Sugar())
-	filterResult := h.shouldSendEvent(ctx, &t.Spec, event)
+	filterResult := filterEvent(ctx, t.Spec.Filter, *event)
 
-	if filterResult == failFilter {
+	if filterResult == eventfilter.FailFilter {
 		// We do not count the event. The event will be counted in the broker ingress.
 		// If the filter didn't pass, it means that the event wasn't meant for this Trigger.
 		return
@@ -213,21 +207,14 @@ func (h *Handler) send(ctx context.Context, writer http.ResponseWriter, headers 
 		return
 	}
 
+	h.logger.Debug("Successfully dispatched message", zap.Any("target", target))
+
 	// If there is an event in the response write it to the response
-	statusCode, err := writeResponse(ctx, writer, response, ttl)
+	statusCode, err := h.writeResponse(ctx, writer, response, ttl, target)
 	if err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
-		// Ok, so writeResponse will return the HTTPStatus of the function. That may have
-		// succeeded (200), but it may have returned a malformed event, so if the
-		// function succeeded, convert this to an StatusBadGateway instead to indicate
-		// error. Note that we could just use StatusInternalServerError, but to distinguish
-		// between the two failure cases, we use a different code here.
-		if statusCode == http.StatusOK {
-			statusCode = http.StatusBadGateway
-		}
 	}
 	_ = h.reporter.ReportEventCount(reportArgs, statusCode)
-	writer.WriteHeader(statusCode)
 }
 
 func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target string, event *cloudevents.Event, reporterArgs *ReportArgs) (*http.Response, error) {
@@ -263,7 +250,8 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	return resp, err
 }
 
-func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32) (int, error) {
+// The return values are the status
+func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.Response, ttl int32, target string) (int, error) {
 	response := cehttp.NewMessageFromHttpResponse(resp)
 	defer response.Finish(nil)
 
@@ -276,19 +264,28 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 		n, _ := response.BodyReader.Read(body)
 		response.BodyReader.Close()
 		if n != 0 {
-			return resp.StatusCode, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
+			// Note that we could just use StatusInternalServerError, but to distinguish
+			// between the failure cases, we use a different code here.
+			writer.WriteHeader(http.StatusBadGateway)
+			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be or empty or a valid CloudEvent")
 		}
+		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
+		writer.WriteHeader(resp.StatusCode)
 		return resp.StatusCode, nil
 	}
 
 	event, err := binding.ToEvent(ctx, response)
 	if err != nil {
+		// Like in the above case, we could just use StatusInternalServerError, but to distinguish
+		// between the failure cases, we use a different code here.
+		writer.WriteHeader(http.StatusBadGateway)
 		// Malformed event, reply with err
-		return resp.StatusCode, err
+		return http.StatusBadGateway, err
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
 	if err := broker.SetTTL(event.Context, ttl); err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
 		return http.StatusInternalServerError, fmt.Errorf("failed to reset TTL: %w", err)
 	}
 
@@ -298,6 +295,8 @@ func writeResponse(ctx context.Context, writer http.ResponseWriter, resp *http.R
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
 	}
+
+	h.logger.Debug("Replied with a CloudEvent response", zap.Any("target", target))
 
 	return resp.StatusCode, nil
 }
@@ -325,54 +324,15 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigg
 	return t, nil
 }
 
-// shouldSendEvent determines whether event 'event' should be sent based on the triggerSpec 'ts'.
-// Currently it supports exact matching on event context attributes and extension attributes.
-// If no filter is present, shouldSendEvent returns passFilter.
-func (h *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1beta1.TriggerSpec, event *cloudevents.Event) FilterResult {
-	// No filter specified, default to passing everything.
-	if ts.Filter == nil || len(ts.Filter.Attributes) == 0 {
-		return noFilter
+func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil {
+		return eventfilter.NoFilter
 	}
-	return filterEventByAttributes(ctx, map[string]string(ts.Filter.Attributes), event)
-}
-
-func filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) FilterResult {
-	// Set standard context attributes. The attributes available may not be
-	// exactly the same as the attributes defined in the current version of the
-	// CloudEvents spec.
-	ce := map[string]interface{}{
-		"specversion":     event.SpecVersion(),
-		"type":            event.Type(),
-		"source":          event.Source(),
-		"subject":         event.Subject(),
-		"id":              event.ID(),
-		"time":            event.Time().String(),
-		"schemaurl":       event.DataSchema(),
-		"datacontenttype": event.DataContentType(),
-		"datamediatype":   event.DataMediaType(),
-		// TODO: use data_base64 when SDK supports it.
-		"datacontentencoding": event.DeprecatedDataContentEncoding(),
+	var filters eventfilter.Filters
+	if filter.Attributes != nil && len(filter.Attributes) != 0 {
+		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
 	}
-	ext := event.Extensions()
-	for k, v := range ext {
-		ce[k] = v
-	}
-
-	for k, v := range attrs {
-		var value interface{}
-		value, ok := ce[k]
-		// If the attribute does not exist in the event, return false.
-		if !ok {
-			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
-			return failFilter
-		}
-		// If the attribute is not set to any and is different than the one from the event, return false.
-		if v != eventingv1beta1.TriggerAnyFilter && v != value {
-			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
-			return failFilter
-		}
-	}
-	return passFilter
+	return filters.Filter(ctx, event)
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,

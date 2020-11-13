@@ -25,13 +25,13 @@ that are in scope for Knative eventing.
   events, without directly specifying the sender of the event (i.e., the Service
   generating the event).
 
-1. **Black-box integration scenario**
+1. **Integration scenario**
 
 - As a central platform team, I want to set up an integration with external,
-  black box software (e.g. SAP, Salesforce, etc), so that my development team
-  can create extensions.
-- As a developer, I want to connect to external black box software without
-  having to configure the connection
+  software (e.g. SAP, Salesforce, etc), so that my development team can create
+  extensions.
+- As a developer, I want to connect to external software without having to
+  configure the connection
 
 ## Discovery
 

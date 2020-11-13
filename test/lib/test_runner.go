@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,8 +194,25 @@ func TearDown(client *Client) {
 	if err != nil {
 		client.T.Logf("Could not list events in the namespace %q: %v", client.Namespace, err)
 	} else {
-		for _, e := range el.Items {
-			client.T.Logf("EVENT: %v", e)
+		// Elements has to be ordered first
+		items := el.Items
+		sort.SliceStable(items, func(i, j int) bool {
+			// Some events might not contain last timestamp, in that case we fallback to event time
+			iTime := items[i].LastTimestamp.Time
+			if iTime.IsZero() {
+				iTime = items[i].EventTime.Time
+			}
+
+			jTime := items[j].LastTimestamp.Time
+			if jTime.IsZero() {
+				jTime = items[j].EventTime.Time
+			}
+
+			return iTime.Before(jTime)
+		})
+
+		for _, e := range items {
+			client.T.Log(formatEvent(&e))
 		}
 	}
 
@@ -211,6 +230,27 @@ func TearDown(client *Client) {
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
 	}
+}
+
+func formatEvent(e *corev1.Event) string {
+	return strings.Join([]string{`Event{`,
+		`ObjectMeta:` + strings.Replace(strings.Replace(e.ObjectMeta.String(), "ObjectMeta", "v1.ObjectMeta", 1), `&`, ``, 1),
+		`InvolvedObject:` + strings.Replace(strings.Replace(e.InvolvedObject.String(), "ObjectReference", "ObjectReference", 1), `&`, ``, 1),
+		`Reason:` + e.Reason,
+		`Message:` + e.Message,
+		`Source:` + strings.Replace(strings.Replace(e.Source.String(), "EventSource", "EventSource", 1), `&`, ``, 1),
+		`FirstTimestamp:` + e.FirstTimestamp.String(),
+		`LastTimestamp:` + e.LastTimestamp.String(),
+		`Count:` + fmt.Sprintf("%d", e.Count),
+		`Type:` + e.Type,
+		`EventTime:` + e.EventTime.String(),
+		`Series:` + strings.Replace(e.Series.String(), "EventSeries", "EventSeries", 1),
+		`Action:` + e.Action,
+		`Related:` + strings.Replace(e.Related.String(), "ObjectReference", "ObjectReference", 1),
+		`ReportingController:` + e.ReportingController,
+		`ReportingInstance:` + e.ReportingInstance,
+		`}`,
+	}, "\n")
 }
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.

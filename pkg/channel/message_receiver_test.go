@@ -119,21 +119,12 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
 				}
 
-				// Check history
-				if h, ok := e.Extensions()[EventHistory]; !ok {
-					return fmt.Errorf("test receiver func -- history not added")
-				} else {
-					expectedHistory := "test-name.test-namespace.svc." + network.GetClusterDomainName()
-					if h != expectedHistory {
-						return fmt.Errorf("test receiver func -- bad history: %v", h)
-					}
-				}
-
 				return nil
 			},
 			expected: nethttp.StatusAccepted,
 		},
 	}
+	reporter := NewStatsReporter("testcontainer", "testpod")
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			// Default the common things.
@@ -148,7 +139,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -210,9 +201,10 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	method := nethttp.MethodPost
 	host := "test-name.test-namespace.svc." + network.GetClusterDomainName()
 
+	reporter := NewStatsReporter("testcontainer", "testpod")
 	logger, _ := zap.NewDevelopment()
 
-	r, err := NewMessageReceiver(receiverFunc, logger)
+	r, err := NewMessageReceiver(receiverFunc, logger, reporter)
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -249,12 +241,13 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 }
 
 func TestMessageReceiver_WrongRequest(t *testing.T) {
+	reporter := NewStatsReporter("testcontainer", "testpod")
 	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
+	r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), reporter)
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -272,6 +265,7 @@ func TestMessageReceiver_WrongRequest(t *testing.T) {
 
 func TestMessageReceiver_UnknownHost(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + network.GetClusterDomainName() + "/"
+	reporter := NewStatsReporter("testcontainer", "testpod")
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
@@ -279,6 +273,7 @@ func TestMessageReceiver_UnknownHost(t *testing.T) {
 	r, err := NewMessageReceiver(
 		f,
 		zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+		reporter,
 		ResolveMessageChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
 			return ChannelReference{}, UnknownHostError(s)
 		}))

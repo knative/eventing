@@ -38,7 +38,6 @@ import (
 	"knative.dev/pkg/apis"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
@@ -156,16 +155,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(apis.HTTP(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, network.GetClusterDomainName())))
-
-	imc.Status.Subscribers = make([]eventingduck.SubscriberStatus, 0)
-	for _, sub := range imc.Spec.Subscribers {
-		imc.Status.Subscribers = append(imc.Status.Subscribers, eventingduck.SubscriberStatus{
-			UID:                sub.UID,
-			ObservedGeneration: sub.Generation,
-			Ready:              corev1.ConditionTrue,
-		})
-	}
+	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

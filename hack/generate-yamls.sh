@@ -53,7 +53,6 @@ readonly EVENTING_CRDS_YAML=${YAML_OUTPUT_DIR}/"eventing-crds.yaml"
 readonly EVENTING_SUGAR_CONTROLLER_YAML=${YAML_OUTPUT_DIR}/"eventing-sugar-controller.yaml"
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
 readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
-readonly EVENTING_PRE_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-pre-install-jobs.yaml"
 readonly EVENTING_POST_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-post-install-jobs.yaml"
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
 declare -A RELEASES
@@ -94,10 +93,8 @@ ko resolve ${KO_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[
 # Create in memory channel yaml
 ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
-# Create v0.18.0 pre-install job yaml. Upgrades some resources' storage versions.
-ko resolve ${KO_FLAGS} -f config/pre-install/v0.18.0/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_PRE_INSTALL_YAML}"
 
-all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_PRE_INSTALL_YAML} ${EVENTING})
+all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING})
 
   # # Template for POST_INSTALL usage:
   # # Create vX.Y.Z post-install job yaml.

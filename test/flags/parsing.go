@@ -31,7 +31,7 @@ func csvToObjects(csvObjects string, validator Validator) []metav1.TypeMeta {
 		object := strings.TrimSpace(object)
 		split := strings.Split(object, ":")
 		if len(split) != 2 {
-			log.Fatalf("The given object name %q is invalid, it needs to be in the form \"apiVersion:Kind\".", object)
+			log.Fatalf(`The given object name %q is invalid, it needs to be in the form "apiVersion:Kind".`, object)
 		}
 		tm := metav1.TypeMeta{
 			APIVersion: split[0],

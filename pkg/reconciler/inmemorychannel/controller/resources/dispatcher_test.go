@@ -20,6 +20,8 @@ import (
 	"os"
 	"testing"
 
+	"k8s.io/utils/pointer"
+
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -104,6 +106,11 @@ func TestNewDispatcher(t *testing.T) {
 								Name:          "metrics",
 								ContainerPort: 9090,
 							}},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser:    pointer.Int64Ptr(1000),
+								RunAsGroup:   pointer.Int64Ptr(1000),
+								RunAsNonRoot: pointer.BoolPtr(true),
+							},
 						},
 					},
 				},

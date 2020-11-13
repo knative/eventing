@@ -18,7 +18,9 @@ package sharedmain
 
 import (
 	"context"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -73,12 +75,12 @@ func GetLoggingConfig(ctx context.Context) (*logging.Config, error) {
 	var loggingConfigMap *corev1.ConfigMap
 	// These timeout and retry interval are set by heuristics.
 	// e.g. istio sidecar needs a few seconds to configure the pod network.
+	var lastErr error
 	if err := wait.PollImmediate(1*time.Second, 5*time.Second, func() (bool, error) {
-		var err error
-		loggingConfigMap, err = kubeclient.Get(ctx).CoreV1().ConfigMaps(system.Namespace()).Get(ctx, logging.ConfigMapName(), metav1.GetOptions{})
-		return err == nil || apierrors.IsNotFound(err), nil
+		loggingConfigMap, lastErr = kubeclient.Get(ctx).CoreV1().ConfigMaps(system.Namespace()).Get(ctx, logging.ConfigMapName(), metav1.GetOptions{})
+		return lastErr == nil || apierrors.IsNotFound(lastErr), nil
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("timed out waiting for the condition: %w", lastErr)
 	}
 	if loggingConfigMap == nil {
 		return logging.NewConfigFromMap(nil)
@@ -202,7 +204,7 @@ func MainWithConfig(ctx context.Context, component string, cfg *rest.Config, cto
 	eg.Go(profilingServer.ListenAndServe)
 
 	// Many of the webhooks rely on configuration, e.g. configurable defaults, feature flags.
-	// So make sure that we have synchonized our configuration state before launching the
+	// So make sure that we have synchronized our configuration state before launching the
 	// webhooks, so that things are properly initialized.
 	logger.Info("Starting configuration manager...")
 	if err := cmw.Start(ctx.Done()); err != nil {
@@ -241,7 +243,7 @@ func MainWithConfig(ctx context.Context, component string, cfg *rest.Config, cto
 
 	profilingServer.Shutdown(context.Background())
 	// Don't forward ErrServerClosed as that indicates we're already shutting down.
-	if err := eg.Wait(); err != nil && err != http.ErrServerClosed {
+	if err := eg.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Errorw("Error while running server", zap.Error(err))
 	}
 }

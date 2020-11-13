@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/protobuf/proto" //nolint apis incompatible with the new version
+	"github.com/golang/protobuf/proto" //nolint // apis incompatible with the new version
 	mpb "github.com/google/mako/spec/proto/mako_go_proto"
 )
 
@@ -51,6 +51,7 @@ func getBenchmark() (*mpb.BenchmarkInfo, error) {
 	if koerr != nil {
 		data, err = ioutil.ReadFile(filepath.Join(configMako, env+".config"))
 		if err != nil {
+			//nolint: errorlint // It's fine not to wrap here.
 			return nil, fmt.Errorf("cannot load both from kodata and from config mako config map: %s, %s", koerr.Error(), err.Error())
 		}
 	}

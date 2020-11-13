@@ -22,7 +22,7 @@
 export PROJECT_NAME="knative-eventing-performance"
 export BENCHMARK_ROOT_PATH="$GOPATH/src/knative.dev/eventing/test/performance/benchmarks"
 
-source vendor/knative.dev/test-infra/scripts/performance-tests.sh
+source vendor/knative.dev/hack/performance-tests.sh
 
 # Vars used in this script
 export TEST_CONFIG_VARIANT="continuous"
