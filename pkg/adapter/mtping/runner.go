@@ -33,13 +33,13 @@ import (
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
 type CronJobRunner interface {
 	Start(stopCh <-chan struct{})
 	Stop()
-	AddSchedule(source *sourcesv1beta2.PingSource) cron.EntryID
+	AddSchedule(source *v1beta2.PingSource) cron.EntryID
 	RemoveSchedule(id cron.EntryID)
 }
 
@@ -70,7 +70,7 @@ func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interf
 	}
 }
 
-func (a *cronJobsRunner) AddSchedule(source *sourcesv1beta2.PingSource) cron.EntryID {
+func (a *cronJobsRunner) AddSchedule(source *v1beta2.PingSource) cron.EntryID {
 	event := makeEvent(source)
 
 	ctx := context.Background()
@@ -132,10 +132,10 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 	}
 }
 
-func makeEvent(source *sourcesv1beta2.PingSource) cloudevents.Event {
+func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
 	event := cloudevents.NewEvent()
-	event.SetType(sourcesv1beta2.PingSourceEventType)
-	event.SetSource(sourcesv1beta2.PingSourceSource(source.Namespace, source.Name))
+	event.SetType(v1beta2.PingSourceEventType)
+	event.SetSource(v1beta2.PingSourceSource(source.Namespace, source.Name))
 	if source.Spec.CloudEventOverrides != nil && source.Spec.CloudEventOverrides.Extensions != nil {
 		for key, override := range source.Spec.CloudEventOverrides.Extensions {
 			event.SetExtension(key, override)

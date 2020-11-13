@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -76,7 +76,7 @@ func TestAllCases(t *testing.T) {
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -103,7 +103,7 @@ func TestAllCases(t *testing.T) {
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule: testSchedule,
 						SourceSpec: duckv1.SourceSpec{
 							Sink:                sinkDest,
@@ -128,7 +128,7 @@ func TestAllCases(t *testing.T) {
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						DataBase64:  testDataBase64,
@@ -155,7 +155,7 @@ func TestAllCases(t *testing.T) {
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -177,7 +177,7 @@ func TestAllCases(t *testing.T) {
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -206,7 +206,7 @@ func TestAllCases(t *testing.T) {
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,

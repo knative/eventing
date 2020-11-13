@@ -58,7 +58,7 @@ func TestPingSource_GetGroupVersionKind(t *testing.T) {
 	gvk := src.GetGroupVersionKind()
 
 	if gvk.Kind != "PingSource" {
-		t.Errorf("Should be PingSource.")
+		t.Error("Should be PingSource.")
 	}
 }
 
@@ -66,7 +66,7 @@ func TestPingSource_PingSourceSource(t *testing.T) {
 	cePingSource := PingSourceSource("ns1", "job1")
 
 	if cePingSource != "/apis/v1/namespaces/ns1/pingsources/job1" {
-		t.Errorf("Should be '/apis/v1/namespaces/ns1/pingsources/job1'")
+		t.Error("Should be '/apis/v1/namespaces/ns1/pingsources/job1'")
 	}
 }
 

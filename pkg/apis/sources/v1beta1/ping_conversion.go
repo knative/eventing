@@ -30,11 +30,11 @@ import (
 const (
 	// V1B1SpecAnnotationKey is used to indicate that a v1beta2 object is converted from v1beta1
 	// also it can be used to downgrade such object to v1beta1
-	V1B1SpecAnnotationKey = "pingsources.sources.knative.dev/v1beta1-configuration"
+	V1B1SpecAnnotationKey = "pingsources.sources.knative.dev/v1beta1-spec"
 
 	// V1B2SpecAnnotationKey is used to indicate that a v1beta1 object is converted from v1beta2
 	// also it can be used to convert the v1beta1 object back to v1beta2, considering that v1beta2 introduces more features.
-	V1B2SpecAnnotationKey = "pingsources.sources.knative.dev/v1beta2-configuration"
+	V1B2SpecAnnotationKey = "pingsources.sources.knative.dev/v1beta2-spec"
 )
 
 type message struct {
@@ -108,7 +108,7 @@ func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) e
 }
 
 // ConvertFrom implements apis.Convertible
-// Converts obj from a higher version into v1beta1.PingSource. Only objects that are originally converted from v1beta1 are supported.
+// Converts obj from a higher version into v1beta1.PingSource.
 func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta2.PingSource:

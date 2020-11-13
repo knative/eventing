@@ -35,7 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
@@ -104,7 +104,7 @@ func TestAllCases(t *testing.T) {
 			Name: "missing sink",
 			Objects: []runtime.Object{
 				rtv1beta2.NewPingSource(sourceName, testNS,
-					rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -119,7 +119,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: rtv1beta2.NewPingSource(sourceName, testNS,
-					rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -143,7 +143,7 @@ func TestAllCases(t *testing.T) {
 			Name: "valid",
 			Objects: []runtime.Object{
 				rtv1beta2.NewPingSource(sourceName, testNS,
-					rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -163,7 +163,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: rtv1beta2.NewPingSource(sourceName, testNS,
-					rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -185,7 +185,7 @@ func TestAllCases(t *testing.T) {
 			Name: "valid with dataBase64",
 			Objects: []runtime.Object{
 				rtv1beta2.NewPingSource(sourceName, testNS,
-					rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						DataBase64:  testDataBase64,
@@ -205,7 +205,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: rtv1beta2.NewPingSource(sourceName, testNS,
-					rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						DataBase64:  testDataBase64,

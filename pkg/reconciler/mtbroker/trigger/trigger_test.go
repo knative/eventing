@@ -36,7 +36,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
@@ -892,27 +892,27 @@ func makeFalseStatusSubscription() *messagingv1.Subscription {
 	return s
 }
 
-func makeFalseStatusPingSource() *sourcesv1beta2.PingSource {
+func makeFalseStatusPingSource() *v1beta2.PingSource {
 	return rtv1beta2.NewPingSource(pingSourceName, testNS, rtv1beta2.WithPingSourceSinkNotFound)
 }
 
-func makeUnknownStatusCronJobSource() *sourcesv1beta2.PingSource {
+func makeUnknownStatusCronJobSource() *v1beta2.PingSource {
 	cjs := rtv1beta2.NewPingSource(pingSourceName, testNS)
 	cjs.Status.InitializeConditions()
 	return cjs
 }
 
-func makeGenerationNotEqualPingSource() *sourcesv1beta2.PingSource {
+func makeGenerationNotEqualPingSource() *v1beta2.PingSource {
 	c := makeFalseStatusPingSource()
 	c.Generation = currentGeneration
 	c.Status.ObservedGeneration = outdatedGeneration
 	return c
 }
 
-func makeReadyPingSource() *sourcesv1beta2.PingSource {
+func makeReadyPingSource() *v1beta2.PingSource {
 	u, _ := apis.ParseURL(sinkURI)
 	return rtv1beta2.NewPingSource(pingSourceName, testNS,
-		rtv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+		rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
 			Schedule:    testSchedule,
 			ContentType: testContentType,
 			Data:        testData,
