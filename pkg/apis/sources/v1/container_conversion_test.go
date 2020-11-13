@@ -25,10 +25,10 @@ func TestContainerSourceConversionBadType(t *testing.T) {
 	good, bad := &ContainerSource{}, &testObject{}
 
 	if err := good.ConvertTo(context.Background(), bad); err == nil {
-		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+		t.Error("ConvertTo() = nil, wanted error")
 	}
 
 	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+		t.Error("ConvertFrom() = nil, wanted error")
 	}
 }
