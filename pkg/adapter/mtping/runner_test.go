@@ -181,7 +181,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, tc.wantData, tc.src.Spec.CloudEventOverrides.Extensions)
+			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -263,11 +263,10 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner.Stop() // cron job because of delay is still running.
 
-	validateSent(t, ce, "some delayed data", nil)
+	validateSent(t, ce, "some delayed data", cloudevents.TextPlain, nil)
 }
 
-func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string,
-	extensions map[string]string) {
+func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string, wantContentType string, extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Error("Expected 1 event to be sent, got", got)
 	}
