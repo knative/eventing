@@ -18,7 +18,8 @@
 
 export GO111MODULE=on
 
-source $(dirname $0)/../vendor/knative.dev/hack/e2e-tests.sh
+# shellcheck disable=SC1090
+source "$(dirname "${BASH_SOURCE[0]}")/../vendor/knative.dev/hack/e2e-tests.sh"
 
 # If gcloud is not available make it a no-op, not an error.
 which gcloud &>/dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
@@ -62,8 +63,8 @@ readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
 
 # This the namespace used to install and test Knative Eventing.
 export SYSTEM_NAMESPACE
-SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(cat /dev/urandom \
-  | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
+SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
+  /dev/urandom | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
 latest_version() {
   local semver=$(git describe --match "v[0-9]*" --abbrev=0)

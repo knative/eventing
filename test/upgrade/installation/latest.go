@@ -17,7 +17,6 @@ limitations under the License.
 package installation
 
 import (
-	"knative.dev/eventing/test/e2e"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
@@ -25,7 +24,7 @@ func LatestStable() pkgupgrade.Operation {
 	return pkgupgrade.NewOperation("EventingLatestRelease", func(c pkgupgrade.Context) {
 		shellfunc := "install_latest_release"
 		c.Log.Info("Running shell function: ", shellfunc)
-		err := e2e.ShellOutFunction(shellfunc)
+		err := callShellFunction(shellfunc)
 		if err != nil {
 			c.T.Error(err)
 			return

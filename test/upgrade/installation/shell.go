@@ -16,25 +16,8 @@ limitations under the License.
 
 package installation
 
-import (
-	pkgupgrade "knative.dev/pkg/test/upgrade"
-)
+import "knative.dev/eventing/test/e2e"
 
-func GitHead() pkgupgrade.Operation {
-	return pkgupgrade.NewOperation("EventingGitHead", func(c pkgupgrade.Context) {
-		ops := []string{
-			"install_head",
-			"install_channel_crds",
-			"install_mt_broker",
-			"install_sugar",
-		}
-		for _, shellfunc := range ops {
-			c.Log.Info("Running shell function: ", shellfunc)
-			err := callShellFunction(shellfunc)
-			if err != nil {
-				c.T.Error(err)
-				return
-			}
-		}
-	})
+func callShellFunction(funcName string) error {
+	return e2e.ShellScript(funcName, funcName)
 }

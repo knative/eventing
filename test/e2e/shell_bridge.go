@@ -17,33 +17,45 @@ limitations under the License.
 package e2e
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
-	"strings"
-
-	"github.com/magefile/mage/sh"
 )
 
-func ShellOutFunction(funcName string) error {
-	_, filename, _, ok := runtime.Caller(1)
+// ShellScript calls a shell function defined in e2e-common shell library.
+func ShellScript(label, script string) error {
+	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		return fmt.Errorf("can't get caller for self")
 	}
-	e2eCommonScriptPath := path.Join(path.Dir(filename), "../e2e-common.sh")
-	script := fmt.Sprintf(`#!/usr/bin/env bash
+	rootPath := path.Join(path.Dir(filename), "../..")
+	scriptContent := fmt.Sprintf(`#!/usr/bin/env bash
+
 set -Eeuo pipefail
-source %s
+
+cd "%s"
+source ./test/e2e-common.sh
 
 %s
-`, e2eCommonScriptPath, funcName)
-	tmpfile, err := ioutil.TempFile("", funcName+"-*.sh")
+`, rootPath, script)
+	tmpfile, err := ioutil.TempFile("", "shellout-*.sh")
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(tmpfile.Name(), []byte(script), 0755)
+	_, err = tmpfile.WriteString(scriptContent)
+	if err != nil {
+		return err
+	}
+	err = tmpfile.Chmod(0700)
+	if err != nil {
+		return err
+	}
+	err = tmpfile.Close()
 	if err != nil {
 		return err
 	}
@@ -52,21 +64,63 @@ source %s
 		// clean up
 		_ = os.Remove(tmpfile.Name())
 	}()
-	return sh.RunWithV(environment(os.Environ(), keyval), tmpfile.Name())
+	c := exec.Command(tmpfile.Name())
+	c.Env = os.Environ()
+	c.Stdout = NewPrefixer(os.Stdout, label + " [OUT] ")
+	c.Stderr = NewPrefixer(os.Stderr, label + " [ERR] ")
+	return c.Run()
 }
 
-func environment(data []string, keyval func(item string) (key, val string)) map[string]string {
-	items := make(map[string]string)
-	for _, item := range data {
-		key, val := keyval(item)
-		items[key] = val
+type prefixer struct {
+	prefix      		string
+	writer          io.Writer
+	trailingNewline bool
+	buf             bytes.Buffer // reuse buffer to save allocations
+}
+
+// NewPrefixer creates a new prefixer that forwards all calls to Write() to
+// writer.Write() with all lines prefixed with the value of prefix. Having a
+// function instead of a static prefix allows to print timestamps or other
+// changing information.
+func NewPrefixer(writer io.Writer, prefix string) io.Writer {
+	return &prefixer{prefix: prefix, writer: writer, trailingNewline: true}
+}
+
+func (pf *prefixer) Write(payload []byte) (int, error) {
+	pf.buf.Reset() // clear the buffer
+
+	for _, b := range payload {
+		if pf.trailingNewline {
+			pf.buf.WriteString(pf.prefix)
+			pf.trailingNewline = false
+		}
+
+		pf.buf.WriteByte(b)
+
+		if b == '\n' {
+			// do not print the prefix right after the newline character as this might
+			// be the very last character of the stream and we want to avoid a trailing prefix.
+			pf.trailingNewline = true
+		}
 	}
-	return items
+
+	n, err := pf.writer.Write(pf.buf.Bytes())
+	if err != nil {
+		// never return more than original length to satisfy io.Writer interface
+		if n > len(payload) {
+			n = len(payload)
+		}
+		return n, err
+	}
+
+	// return original length to satisfy io.Writer interface
+	return len(payload), nil
 }
 
-func keyval(item string) (key, val string) {
-	splits := strings.Split(item, "=")
-	key = splits[0]
-	val = splits[1]
-	return
+// EnsureNewline prints a newline if the last character written wasn't a newline unless nothing has ever been written.
+// The purpose of this method is to avoid ending the output in the middle of the line.
+func (pf *prefixer) EnsureNewline() {
+	if !pf.trailingNewline {
+		_, _ = fmt.Fprintln(pf.writer)
+	}
 }
