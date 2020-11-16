@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 
 	"knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -93,17 +94,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	return r.patchSubscriberStatus(ctx, imc)
 }
 
-func (r *Reconciler) FinalizeKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
-	if imc.Status.Address != nil &&
-		imc.Status.Address.URL != nil {
-		if hostName := imc.Status.Address.URL.Host; hostName != "" {
-			logging.FromContext(ctx).Info("Removing dispatcher")
-			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
-		}
-	}
-	return nil
-}
-
 func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemoryChannel) error {
 	after := imc.DeepCopy()
 
@@ -158,4 +148,23 @@ func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*mult
 			Subscriptions: subs,
 		},
 	}, nil
+}
+
+func (r *Reconciler) deleteFunc(obj interface{}) {
+	if obj == nil {
+		return
+	}
+	acc, err := kmeta.DeletionHandlingAccessor(obj)
+	if err != nil {
+		return
+	}
+	imc, ok := acc.(*v1.InMemoryChannel)
+	if !ok || imc == nil {
+		return
+	}
+	if imc.Status.Address != nil && imc.Status.Address.URL != nil {
+		if hostName := imc.Status.Address.URL.Host; hostName != "" {
+			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+		}
+	}
 }
