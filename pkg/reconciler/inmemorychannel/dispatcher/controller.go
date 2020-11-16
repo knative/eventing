@@ -122,6 +122,15 @@ func NewController(
 
 	// Watch for inmemory channels.
 	inmemorychannelInformer.Informer().AddEventHandler(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: cache.FilteringResourceEventHandler{
+				FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
+				Handler:    impl.Enqueue,
+			},
+			AddFunc:    h,
+			UpdateFunc: PassNew(h),
+			DeleteFunc: h,
+	}
 		cache.FilteringResourceEventHandler{
 			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
 			Handler:    controller.HandleAll(impl.Enqueue),
