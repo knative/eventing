@@ -18,8 +18,9 @@ package dispatcher
 
 import (
 	"context"
-	"knative.dev/pkg/injection"
 	"time"
+
+	"knative.dev/pkg/injection"
 
 	"k8s.io/client-go/tools/cache"
 
