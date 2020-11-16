@@ -143,17 +143,18 @@ func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
 	}
 
 	// Set event data, at most one of data and dataBase64 exists.
-	// 1. If dataBase64 exists, then it's binary data, set event.DataEncoded to dataBase64.
+	// 1. If dataBase64 exists, then it's binary data, set event.DataEncoded to []byte(dataBase64)
 	// 2. If data exists, then it's not binary data
-	//    a. If contentType is not `application/json`, set event.DataEncoded to data
-	//    b. If contentType is `application/json`, unmarshal it into an interface, event.DataEncoded will be json.Marshal(data)
-
+	//  a. If contentType is not `application/json`, set event.DataEncoded to []byte(data)
+	//  b. If contentType is `application/json`, unmarshal it into an interface, event.DataEncoded will be json.Marshal(interface),
+	//    this is to be compatible with the existing v1beta1 PingSource -> CloudEvent conversion logic, to make sure
+	//    that `data` is populated in the cloudevent json format instead of `data_base64`, and not breaking subscribers
+	//    that does not leverage cloudevents sdk.
 	var data interface{}
 	if source.Spec.DataBase64 != "" {
 		data = []byte(source.Spec.DataBase64)
 	} else if source.Spec.Data != "" {
 		switch source.Spec.ContentType {
-		// TODO: Do we need to deal with `application/cloudevents+json` and `application/cloudevents-batch+json`?
 		case cloudevents.ApplicationJSON:
 			// unmarshal the body into an interface, JSON validation is done in pingsource_validation
 			// ignoring the error returned by json.Unmarshal here.
@@ -161,7 +162,7 @@ func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
 			_ = json.Unmarshal([]byte(source.Spec.Data), &objmap)
 			data = objmap
 		default:
-			data = source.Spec.Data
+			data = []byte(source.Spec.Data)
 		}
 	}
 

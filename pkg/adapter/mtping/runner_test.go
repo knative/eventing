@@ -41,6 +41,7 @@ const (
 	threeSecondsTillNextMinCronJob = 60 - 3
 	sampleData                     = "some data"
 	sampleJSONData                 = `{"msg":"some data"}`
+	sampleXmlData                  = "<pre>Value</pre>"
 	sampleDataBase64               = "c29tZSBkYXRh"                 // "some data"
 	sampleJSONDataBase64           = "eyJtc2ciOiJzb21lIGRhdGEifQ==" // {"msg":"some data"}
 )
@@ -163,6 +164,28 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        sampleJSONDataBase64,
 			wantContentType: cloudevents.ApplicationJSON,
+		}, "TestAddRunRemoveScheduleWithXmlData": {
+			src: &v1beta2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: v1beta2.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * ?",
+					Data:        sampleXmlData,
+					ContentType: cloudevents.ApplicationXML,
+				},
+				Status: v1beta2.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        sampleXmlData,
+			wantContentType: cloudevents.ApplicationXML,
 		},
 	}
 	for n, tc := range testCases {
@@ -271,11 +294,17 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 		t.Error("Expected 1 event to be sent, got", got)
 	}
 
-	if got := ce.Sent()[0].Data(); string(got) != wantData {
+	event := ce.Sent()[0]
+
+	if gotContentType := event.DataContentType(); gotContentType != wantContentType {
+		t.Errorf("Expected event with contentType=%q to be sent, got %q", wantContentType, gotContentType)
+	}
+
+	if got := event.Data(); string(got) != wantData {
 		t.Errorf("Expected %q event to be sent, got %q", wantData, got)
 	}
 
-	gotExtensions := ce.Sent()[0].Context.GetExtensions()
+	gotExtensions := event.Context.GetExtensions()
 
 	if extensions == nil && gotExtensions != nil {
 		t.Error("Expected event with no extension overrides, got:", gotExtensions)
