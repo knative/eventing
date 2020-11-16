@@ -18,14 +18,13 @@ package dispatcher
 
 import (
 	"context"
+	"knative.dev/pkg/injection"
 	"time"
 
 	"k8s.io/client-go/tools/cache"
 
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/kncloudevents"
-
-	"knative.dev/pkg/injection"
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
@@ -122,19 +121,13 @@ func NewController(
 
 	// Watch for inmemory channels.
 	inmemorychannelInformer.Informer().AddEventHandler(
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: cache.FilteringResourceEventHandler{
-				FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
-				Handler:    impl.Enqueue,
-			},
-			AddFunc:    h,
-			UpdateFunc: PassNew(h),
-			DeleteFunc: h,
-	}
 		cache.FilteringResourceEventHandler{
 			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
-			Handler:    controller.HandleAll(impl.Enqueue),
-		})
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc:    impl.Enqueue,
+				UpdateFunc: controller.PassNew(impl.Enqueue),
+				DeleteFunc: r.deleteFunc,
+			}})
 
 	// Start the dispatcher.
 	go func() {

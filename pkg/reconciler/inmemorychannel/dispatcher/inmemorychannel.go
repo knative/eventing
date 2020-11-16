@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 
 	"knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 
@@ -51,18 +52,6 @@ type Reconciler struct {
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
-
-	// If the IMC has been deleted just make sure the handler is removed.
-	if !imc.GetDeletionTimestamp().IsZero() {
-		if imc.Status.Address != nil &&
-			imc.Status.Address.URL != nil {
-			if hostName := imc.Status.Address.URL.Host; hostName != "" {
-				logging.FromContext(ctx).Info("Removing dispatcher")
-				r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
-			}
-		}
-		return nil
-	}
 
 	if !imc.Status.IsReady() {
 		logging.FromContext(ctx).Debug("IMC is not ready, skipping")
@@ -159,4 +148,20 @@ func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*mult
 			Subscriptions: subs,
 		},
 	}, nil
+}
+
+func (r *Reconciler) deleteFunc(obj interface{}) {
+	if acc, err := kmeta.DeletionHandlingAccessor(obj); err == nil {
+		if imc, ok := acc.(*v1.InMemoryChannel); ok {
+			// If the IMC has been deleted just make sure the handler is removed.
+			if !imc.GetDeletionTimestamp().IsZero() {
+				if imc.Status.Address != nil &&
+					imc.Status.Address.URL != nil {
+					if hostName := imc.Status.Address.URL.Host; hostName != "" {
+						r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
+					}
+				}
+			}
+		}
+	}
 }

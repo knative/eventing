@@ -477,10 +477,9 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 	}
 }
 
-func TestReconciler_ReconcileKindDeletion(t *testing.T) {
+func TestReconciler_Deletion(t *testing.T) {
 	testCases := map[string]struct {
-		imc        *v1.InMemoryChannel
-		wantResult reconciler.Event
+		imc *v1.InMemoryChannel
 	}{
 		"With address": {
 			imc: NewInMemoryChannel(imcName, testNS,
@@ -502,10 +501,7 @@ func TestReconciler_ReconcileKindDeletion(t *testing.T) {
 				r := &Reconciler{
 					multiChannelMessageHandler: handler,
 				}
-				e := r.ReconcileKind(context.TODO(), tc.imc)
-				if e != tc.wantResult {
-					t.Errorf("Results differ, want %v have %v", tc.wantResult, e)
-				}
+				r.deleteFunc(tc.imc)
 				if handler.GetChannelHandler(channelServiceAddress) != nil {
 					t.Error("Got handler")
 				}
