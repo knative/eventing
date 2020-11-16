@@ -18,9 +18,8 @@ package channel
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	knconfigmap "knative.dev/pkg/configmap"
+	"knative.dev/pkg/configmap"
 
-	"knative.dev/eventing/pkg/configmap"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
@@ -50,37 +49,33 @@ type EventDispatcherConfig struct {
 
 // NewEventDisPatcherConfigFromConfigMap converts a k8s configmap into EventDispatcherConfig.
 func NewEventDisPatcherConfigFromConfigMap(config *corev1.ConfigMap) (EventDispatcherConfig, error) {
-	c := EventDispatcherConfig{}
-	requests := []configmap.ReadIntRequest{
-		{
-			Key:          "MaxIdleConnections",
-			DefaultValue: defaultMaxIdleConnections,
-			Field:        &c.MaxIdleConns,
-		},
-		{
-			Key:          "MaxIdleConnectionsPerHost",
-			DefaultValue: defaultMaxIdleConnectionsPerHost,
-			Field:        &c.MaxIdleConnsPerHost,
+	c := EventDispatcherConfig{
+		ConnectionArgs: kncloudevents.ConnectionArgs{
+			MaxIdleConns:        defaultMaxIdleConnections,
+			MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 		},
 	}
-	err := configmap.ReadInt(requests, config)
+	err := configmap.Parse(
+		config.Data,
+		configmap.AsInt("MaxIdleConnections", &c.MaxIdleConns),
+		configmap.AsInt("MaxIdleConnectionsPerHost", &c.MaxIdleConnsPerHost))
 	return c, err
 }
 
 // EventDispatcherConfigStore loads/unloads untyped configuration from configmap.
 type EventDispatcherConfigStore struct {
-	logger knconfigmap.Logger
-	*knconfigmap.UntypedStore
+	logger configmap.Logger
+	*configmap.UntypedStore
 }
 
 // NewEventDispatcherConfigStore creates a configuration Store
-func NewEventDispatcherConfigStore(logger knconfigmap.Logger, onAfterStore ...func(name string, value interface{})) *EventDispatcherConfigStore {
+func NewEventDispatcherConfigStore(logger configmap.Logger, onAfterStore ...func(name string, value interface{})) *EventDispatcherConfigStore {
 	return &EventDispatcherConfigStore{
 		logger: logger,
-		UntypedStore: knconfigmap.NewUntypedStore(
+		UntypedStore: configmap.NewUntypedStore(
 			"event_dispatcher",
 			logger,
-			knconfigmap.Constructors{
+			configmap.Constructors{
 				EventDispatcherConfigMap: NewEventDisPatcherConfigFromConfigMap,
 			},
 			onAfterStore...,
