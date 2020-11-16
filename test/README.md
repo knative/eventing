@@ -53,11 +53,13 @@ and run the end-to-end tests. After the tests finishes, it will delete the
 cluster._
 
 If you have already created your own Kubernetes cluster but haven't installed
-Knative, you can run with `test/e2e-tests.sh --run-tests --gcp-project-id=$PROJECT_ID`.
+Knative, you can run with
+`test/e2e-tests.sh --run-tests --gcp-project-id=$PROJECT_ID`.
 
 If you have set up a running environment that meets
 [the e2e test environment requirements](#environment-requirements), you can run
-with `test/e2e-tests.sh --run-tests --skip-knative-setup --gcp-project-id=$PROJECT_ID`.
+with
+`test/e2e-tests.sh --run-tests --skip-knative-setup --gcp-project-id=$PROJECT_ID`.
 
 ## Running tests with `go test` command
 
