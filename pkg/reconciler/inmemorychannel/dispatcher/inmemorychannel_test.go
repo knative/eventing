@@ -477,6 +477,38 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 	}
 }
 
+func TestReconciler_InvalidInputs(t *testing.T) {
+	testCases := map[string]struct {
+		imc interface{}
+	}{
+		"nil": {},
+		"With no address": {
+			imc: NewInMemoryChannel(imcName, testNS, WithInMemoryChannelDeleted),
+		},
+		"With invalid type": {
+			imc: &subscriber1,
+		},
+	}
+	for n, tc := range testCases {
+		fh, err := fanout.NewFanoutMessageHandler(nil, channel.NewMessageDispatcher(nil), fanout.Config{}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, fanoutHandler := range []fanout.MessageHandler{nil, fh} {
+			t.Run("handler-"+n, func(t *testing.T) {
+				handler := newFakeMultiChannelHandler()
+				if fanoutHandler != nil {
+					handler.SetChannelHandler(channelServiceAddress, fanoutHandler)
+				}
+				r := &Reconciler{
+					multiChannelMessageHandler: handler,
+				}
+				r.deleteFunc(tc.imc)
+			})
+		}
+	}
+}
+
 func TestReconciler_Deletion(t *testing.T) {
 	testCases := map[string]struct {
 		imc *v1.InMemoryChannel

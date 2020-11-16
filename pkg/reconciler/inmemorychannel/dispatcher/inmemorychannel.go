@@ -151,12 +151,15 @@ func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*mult
 }
 
 func (r *Reconciler) deleteFunc(obj interface{}) {
+	if obj == nil {
+		return
+	}
 	acc, err := kmeta.DeletionHandlingAccessor(obj)
 	if err != nil {
 		return
 	}
 	imc, ok := acc.(*v1.InMemoryChannel)
-	if !ok {
+	if !ok || imc == nil {
 		return
 	}
 	if imc.Status.Address != nil && imc.Status.Address.URL != nil {
