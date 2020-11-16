@@ -174,6 +174,8 @@ func FilterWithNameAndNamespace(namespace, name string) func(obj interface{}) bo
 	}
 }
 
+type filterFunc func(obj interface{}) bool
+
 // Impl is our core controller implementation.  It handles queuing and feeding work
 // from the queue to an implementation of Reconciler.
 type Impl struct {
@@ -203,15 +205,22 @@ type Impl struct {
 
 	// StatsReporter is used to send common controller metrics.
 	statsReporter StatsReporter
+
+	// GlobalResyncFilterFunc is used to filter our objects from
+	// the shared cache on a global resync, be default and if not
+	// set by the controller implemenation, it will default to
+	// allowing every object in the cache
+	GlobalResyncFilterFunc filterFunc
 }
 
 // ControllerOptions encapsulates options for creating a new controller,
 // including throttling and stats behavior.
 type ControllerOptions struct { //nolint // for backcompat.
-	WorkQueueName string
-	Logger        *zap.SugaredLogger
-	Reporter      StatsReporter
-	RateLimiter   workqueue.RateLimiter
+	WorkQueueName          string
+	Logger                 *zap.SugaredLogger
+	Reporter               StatsReporter
+	RateLimiter            workqueue.RateLimiter
+	GlobalResyncFilterFunc filterFunc
 }
 
 // NewImpl instantiates an instance of our controller that will feed work to the
@@ -236,12 +245,16 @@ func NewImplFull(r Reconciler, options ControllerOptions) *Impl {
 	if options.Reporter == nil {
 		options.Reporter = MustNewStatsReporter(options.WorkQueueName, options.Logger)
 	}
+	if options.GlobalResyncFilterFunc == nil {
+		options.GlobalResyncFilterFunc = func(obj interface{}) bool { return true }
+	}
 	return &Impl{
-		Name:          options.WorkQueueName,
-		Reconciler:    r,
-		workQueue:     newTwoLaneWorkQueue(options.WorkQueueName, options.RateLimiter),
-		logger:        logger,
-		statsReporter: options.Reporter,
+		Name:                   options.WorkQueueName,
+		Reconciler:             r,
+		workQueue:              newTwoLaneWorkQueue(options.WorkQueueName, options.RateLimiter),
+		logger:                 logger,
+		statsReporter:          options.Reporter,
+		GlobalResyncFilterFunc: options.GlobalResyncFilterFunc,
 	}
 }
 
@@ -542,19 +555,18 @@ func (c *Impl) handleErr(err error, key types.NamespacedName) {
 
 // GlobalResync enqueues into the slow lane all objects from the passed SharedInformer
 func (c *Impl) GlobalResync(si cache.SharedInformer) {
-	alwaysTrue := func(interface{}) bool { return true }
-	c.FilteredGlobalResync(alwaysTrue, si)
+	c.FilteredGlobalResync(c.GlobalResyncFilterFunc, si)
 }
 
 // FilteredGlobalResync enqueues all objects from the
 // SharedInformer that pass the filter function in to the slow queue.
-func (c *Impl) FilteredGlobalResync(f func(interface{}) bool, si cache.SharedInformer) {
+func (c *Impl) FilteredGlobalResync(_ func(interface{}) bool, si cache.SharedInformer) {
 	if c.workQueue.ShuttingDown() {
 		return
 	}
 	list := si.GetStore().List()
 	for _, obj := range list {
-		if f(obj) {
+		if c.GlobalResyncFilterFunc(obj) {
 			c.EnqueueSlow(obj)
 		}
 	}
@@ -711,4 +723,19 @@ func safeKey(key types.NamespacedName) string {
 		return key.Name
 	}
 	return key.String()
+}
+
+// This is a filterFunc for leaderelection informer and listers
+type filterFuncKey struct{}
+
+func WithFilterFunc(ctx context.Context, filter filterFunc) context.Context {
+	return context.WithValue(ctx, filterFuncKey{}, filter)
+}
+
+func GetFilterFunc(ctx context.Context) filterFunc {
+	value := ctx.Value(filterFuncKey{})
+	if value == nil {
+		return func(interface{}) bool { return true }
+	}
+	return value.(filterFunc)
 }

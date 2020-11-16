@@ -61,6 +61,7 @@ func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsF
 
 	lister := customresourcedefinitionInformer.Lister()
 
+	filterFunc := controller.GetFilterFunc(ctx)
 	rec := &reconcilerImpl{
 		LeaderAwareFuncs: reconciler.LeaderAwareFuncs{
 			PromoteFunc: func(bkt reconciler.Bucket, enq func(reconciler.Bucket, types.NamespacedName)) error {
@@ -69,11 +70,12 @@ func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsF
 					return err
 				}
 				for _, elt := range all {
-					// TODO: Consider letting users specify a filter in options.
-					enq(bkt, types.NamespacedName{
-						Namespace: elt.GetNamespace(),
-						Name:      elt.GetName(),
-					})
+					if ok := filterFunc(elt); ok {
+						enq(bkt, types.NamespacedName{
+							Namespace: elt.GetNamespace(),
+							Name:      elt.GetName(),
+						})
+					}
 				}
 				return nil
 			},

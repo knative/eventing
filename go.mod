@@ -3,7 +3,6 @@ module knative.dev/eventing
 go 1.14
 
 require (
-	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.2.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.3
@@ -13,14 +12,12 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
-	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/pelletier/go-toml v1.8.0
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/procfs v0.0.11 // indirect
 	github.com/rickb777/date v1.13.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
@@ -42,7 +39,7 @@ require (
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/hack v0.0.0-20201103151104-3d5abc3a0075
+	knative.dev/hack v0.0.0-20201112185459-01a34c573bd8
 	knative.dev/pkg v0.0.0-20201103163404-5514ab0c1fdf
 	sigs.k8s.io/yaml v1.2.0
 )
@@ -54,4 +51,5 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
 	k8s.io/client-go => k8s.io/client-go v0.18.8
 	k8s.io/code-generator => k8s.io/code-generator v0.18.8
+	knative.dev/pkg => github.com/lberk/pkg v0.0.0-20201116203858-2b82a3a38ce6
 )
