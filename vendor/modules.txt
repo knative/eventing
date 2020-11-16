@@ -266,6 +266,11 @@ github.com/prometheus/procfs/internal/util
 # github.com/prometheus/statsd_exporter v0.15.0
 github.com/prometheus/statsd_exporter/pkg/mapper
 github.com/prometheus/statsd_exporter/pkg/mapper/fsm
+# github.com/qri-io/jsonpointer v0.1.1
+github.com/qri-io/jsonpointer
+# github.com/qri-io/jsonschema v0.2.0
+## explicit
+github.com/qri-io/jsonschema
 # github.com/rickb777/date v1.13.0
 ## explicit
 github.com/rickb777/date/period
