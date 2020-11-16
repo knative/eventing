@@ -81,7 +81,7 @@ UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
-  install_knative_eventing
+  install_knative_eventing "HEAD"
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"
 
@@ -112,27 +112,47 @@ function start_knative_eventing_monitoring() {
   wait_until_pods_running knative-eventing || return 1
 }
 
-# This installs everything from the config dir but then removes the Channel Based Broker.
+# Create all manifests required to install Knative Eventing.
+# This will build everything from the current source.
+# All generated YAMLs will be available and pointed by the corresponding
+# environment variables as set in /hack/generate-yamls.sh.
+function build_knative_from_source() {
+  local YAML_LIST="$(mktemp)"
+
+  # Generate manifests, capture environment variables pointing to the YAML files.
+  local FULL_OUTPUT="$( \
+      source $(dirname $0)/../hack/generate-yamls.sh ${REPO_ROOT_DIR} ${YAML_LIST} ; \
+      set | grep _YAML=/)"
+  local LOG_OUTPUT="$(echo "${FULL_OUTPUT}" | grep -v _YAML=/)"
+  local ENV_OUTPUT="$(echo "${FULL_OUTPUT}" | grep '^[_0-9A-Z]\+_YAML=/')"
+  [[ -z "${LOG_OUTPUT}" || -z "${ENV_OUTPUT}" ]] && fail_test "Error generating manifests"
+  # Only import the environment variables pointing to the YAML files.
+  echo "${LOG_OUTPUT}"
+  echo -e "Generated manifests:\n${ENV_OUTPUT}"
+  eval "${ENV_OUTPUT}"
+}
+
 # TODO: This should only install the core.
+# Install Knative Eventing in current cluster
 # Args:
-#  - $1 - if passed, it will be used as eventing config directory
+# Parameters: $1 - Knative Eventing version "HEAD" or "latest-release".
 function install_knative_eventing() {
   echo ">> Creating ${SYSTEM_NAMESPACE} namespace if it does not exist"
   kubectl get ns ${SYSTEM_NAMESPACE} || kubectl create namespace ${SYSTEM_NAMESPACE}
-  local kne_config
-  kne_config="${1:-${EVENTING_CONFIG}}"
   # Install Knative Eventing in the current cluster.
-  echo "Installing Knative Eventing from: ${kne_config}"
-  if [ -d "${kne_config}" ]; then
-    local TMP_CONFIG_DIR=${TMP_DIR}/config
-    mkdir -p ${TMP_CONFIG_DIR}
-    cp -r ${kne_config}/* ${TMP_CONFIG_DIR}
-    find ${TMP_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
-    ko apply --strict -f "${TMP_CONFIG_DIR}" || return $?
+  echo "Installing Knative Eventing from: ${1}"
+  if [[ "$1" == "HEAD" ]]; then
+    build_knative_from_source
+    local EVENTING_CORE_NAME=${TMP_DIR}/${EVENTING_CORE_YAML##*/}
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_CORE_YAML} > ${EVENTING_CORE_NAME}
+    kubectl apply \
+      -f "${EVENTING_CORE_NAME}" || return 1
+    UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
   else
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
     # Download the latest release of Knative Eventing.
-    wget "${kne_config}" -O "${EVENTING_RELEASE_YAML}" \
+    local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
+    wget "${url}/eventing.yaml" -O "${EVENTING_RELEASE_YAML}" \
       || fail_test "Unable to download latest knative/eventing file."
 
     # Replace the default system namespace with the test's system namespace.
@@ -173,43 +193,45 @@ function install_knative_eventing() {
 function install_head {
   # Install Knative Eventing from HEAD in the current cluster.
   echo ">> Installing Knative Eventing from HEAD"
-  install_knative_eventing || \
+  install_knative_eventing "HEAD" || \
     fail_test "Knative HEAD installation failed"
 }
 
 function install_latest_release() {
   header ">> Installing Knative Eventing latest public release"
-  local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
-  local yaml="eventing.yaml"
 
   install_knative_eventing \
-    "${url}/${yaml}" || \
+    "latest-release" || \
     fail_test "Knative latest release installation failed"
 }
 
 function install_mt_broker() {
-  local TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG=${TMP_DIR}/${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} > ${TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG}
-  ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG} || return 1
-
-  local TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR=${TMP_DIR}/channel_based_config
-  mkdir -p ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR}
-  cp -r ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR}/* ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR}
-  find ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
-  ko apply --strict -f ${TMP_MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
-
+  if [[ -z "${EVENTING_MT_CHANNEL_BROKER_YAML}" ]]; then
+    build_knative_from_source
+  else
+    echo "use exist EVENTING_MT_CHANNEL_BROKER_YAML"
+  fi
+  local EVENTING_MT_CHANNEL_BROKER_NAME=${TMP_DIR}/${EVENTING_MT_CHANNEL_BROKER_YAML##*/}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_MT_CHANNEL_BROKER_YAML} > ${EVENTING_MT_CHANNEL_BROKER_NAME}
+  kubectl apply \
+    -f "${EVENTING_MT_CHANNEL_BROKER_NAME}" || return 1
+  UNINSTALL_LIST+=( "${EVENTING_MT_CHANNEL_BROKER_NAME}" )
   scale_controlplane mt-broker-controller
 
   wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
 function install_sugar() {
-  local TMP_SUGAR_CONTROLLER_CONFIG_DIR=${TMP_DIR}/${SUGAR_CONTROLLER_CONFIG_DIR}
-  mkdir -p ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
-  cp -r ${SUGAR_CONTROLLER_CONFIG_DIR}/* ${TMP_SUGAR_CONTROLLER_CONFIG_DIR}
-  find ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
-  ko apply --strict -f ${TMP_SUGAR_CONTROLLER_CONFIG_DIR} || return 1
-  kubectl -n ${SYSTEM_NAMESPACE} set env deployment/sugar-controller BROKER_INJECTION_DEFAULT=true || return 1
+  if [[ -z "${EVENTING_SUGAR_CONTROLLER_YAML}" ]]; then
+    build_knative_from_source
+  else
+    echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
+  fi
+  local EVENTING_SUGAR_CONTROLLER_NAME=${TMP_DIR}/${EVENTING_SUGAR_CONTROLLER_YAML##*/}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_SUGAR_CONTROLLER_YAML} > ${EVENTING_SUGAR_CONTROLLER_NAME}
+  kubectl apply \
+    -f "${EVENTING_SUGAR_CONTROLLER_NAME}" || return 1
+  UNINSTALL_LIST+=( "${EVENTING_SUGAR_CONTROLLER_NAME}" )
 
   scale_controlplane sugar-controller
 
@@ -294,11 +316,16 @@ function uninstall_test_resources() {
 
 function install_channel_crds() {
   echo "Installing In-Memory Channel CRD"
-  local TMP_IN_MEMORY_CHANNEL_CONFIG_DIR=${TMP_DIR}/in_memory_channel_config
-  mkdir -p ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR}
-  cp -r ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}/* ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR}
-  find ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} -type f -name "*.yaml" -exec sed -i "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" {} +
-  ko apply --strict -f ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR} || return 1
+  if [[ -z "${EVENTING_IN_MEMORY_CHANNEL_YAML}" ]]; then
+    build_knative_from_source
+  else
+    echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
+  fi
+  local EVENTING_IN_MEMORY_CHANNEL_NAME=${TMP_DIR}/${EVENTING_IN_MEMORY_CHANNEL_YAML##*/}
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_IN_MEMORY_CHANNEL_YAML} > ${EVENTING_IN_MEMORY_CHANNEL_NAME}
+  kubectl apply \
+    -f "${EVENTING_IN_MEMORY_CHANNEL_NAME}" || return 1
+  UNINSTALL_LIST+=( "${EVENTING_IN_MEMORY_CHANNEL_NAME}" )
 
   # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
   # scale_controlplane imc-controller imc-dispatcher
@@ -308,8 +335,8 @@ function install_channel_crds() {
 
 function uninstall_channel_crds() {
   echo "Uninstalling In-Memory Channel CRD"
-  local TMP_IN_MEMORY_CHANNEL_CONFIG_DIR=${TMP_DIR}/in_memory_channel_config
-  ko delete --ignore-not-found=true --now --timeout 60s -f ${TMP_IN_MEMORY_CHANNEL_CONFIG_DIR}
+  local EVENTING_IN_MEMORY_CHANNEL_NAME=${TMP_DIR}/${EVENTING_IN_MEMORY_CHANNEL_YAML##*/}
+  kubectl delete --ignore-not-found=true -f "${EVENTING_IN_MEMORY_CHANNEL_NAME}" || return 1
 }
 
 function dump_extra_cluster_state() {
