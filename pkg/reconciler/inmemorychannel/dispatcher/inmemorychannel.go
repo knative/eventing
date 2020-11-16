@@ -151,17 +151,17 @@ func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*mult
 }
 
 func (r *Reconciler) deleteFunc(obj interface{}) {
-	if acc, err := kmeta.DeletionHandlingAccessor(obj); err == nil {
-		if imc, ok := acc.(*v1.InMemoryChannel); ok {
-			// If the IMC has been deleted just make sure the handler is removed.
-			if !imc.GetDeletionTimestamp().IsZero() {
-				if imc.Status.Address != nil &&
-					imc.Status.Address.URL != nil {
-					if hostName := imc.Status.Address.URL.Host; hostName != "" {
-						r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
-					}
-				}
-			}
+	acc, err := kmeta.DeletionHandlingAccessor(obj)
+	if err != nil {
+		return
+	}
+	imc, ok := acc.(*v1.InMemoryChannel)
+	if !ok {
+		return
+	}
+	if imc.Status.Address != nil && imc.Status.Address.URL != nil {
+		if hostName := imc.Status.Address.URL.Host; hostName != "" {
+			r.multiChannelMessageHandler.DeleteChannelHandler(hostName)
 		}
 	}
 }
