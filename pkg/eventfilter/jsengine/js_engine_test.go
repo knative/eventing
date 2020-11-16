@@ -17,6 +17,7 @@ limitations under the License.
 package jsengine
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/test"
@@ -139,6 +140,9 @@ func TestRunFilter(t *testing.T) {
 	}, {
 		expression: `event.exint === 42`,
 		result:     true,
+	}, {
+		expression: fmt.Sprintf(`(event.type === "---%s") || (event.type === "%s" ? event.id !== "%s" : event.id === "%s")`, event.Type(), event.Type(), event.ID(), event.ID()),
+		result:     false,
 	}}
 	for _, tc := range tests {
 		t.Run(tc.expression, func(t *testing.T) {
