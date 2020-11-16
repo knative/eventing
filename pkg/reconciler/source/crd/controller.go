@@ -27,7 +27,7 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
-	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
+	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 )
 
@@ -43,7 +43,8 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 	crdInformer := crdinfomer.Get(ctx)
-
+	filterFunc := pkgreconciler.LabelFilterFunc(sources.SourceDuckLabelKey, sources.SourceDuckLabelValue, false)
+	ctx = controller.WithFilterFunc(ctx, filterFunc)
 	r := &Reconciler{
 		ogctx:       ctx,
 		ogcmw:       cmw,
@@ -55,10 +56,21 @@ func NewController(
 		}
 	})
 
+	impl.GlobalResyncFilterFunc = filterFunc
+
+	grCb := func(obj interface{}) {
+		impl.FilteredGlobalResync(filterFunc, crdInformer.Informer())
+	}
+
 	logger.Info("Setting up event handlers")
 	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckLabelKey, sources.SourceDuckLabelValue, false),
+		FilterFunc: filterFunc,
 		Handler:    controller.HandleAll(impl.Enqueue),
+	})
+
+	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: filterFunc,
+		Handler:    controller.HandleAll(grCb),
 	})
 
 	return impl

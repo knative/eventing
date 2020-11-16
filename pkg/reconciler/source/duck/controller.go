@@ -27,7 +27,9 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
 
+	"knative.dev/eventing/pkg/apis/sources"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype"
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
@@ -67,7 +69,15 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 		impl := controller.NewImpl(r, logger, ReconcilerName)
 
 		logger.Info("Setting up event handlers")
-		sourceInformer.AddEventHandler(controller.HandleAll(impl.Enqueue))
+		sourceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckLabelKey, sources.SourceDuckLabelValue, false),
+			Handler:    controller.HandleAll(impl.Enqueue),
+		})
+
+		crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckLabelKey, sources.SourceDuckLabelValue, false),
+			Handler:    controller.HandleAll(impl.Enqueue),
+		})
 
 		eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 			FilterFunc: controller.FilterControllerGVK(gvk),
