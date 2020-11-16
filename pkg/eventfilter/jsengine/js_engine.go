@@ -32,27 +32,97 @@ const timeout = time.Second * 2
 // ParseFilterExpr parses src as a javascript filter expression.
 // Returns error if src syntax is invalid or if src root AST element is not an expression statement.
 func ParseFilterExpr(src string) (*goja.Program, error) {
-	program, err := parser.ParseFile(nil, "", src, 0)
+	fakeProgram, err := parser.ParseFile(nil, "", src, 0)
 	if err != nil {
 		return nil, errors.WithStack(errors.Wrap(err, "error while parsing filter expression"))
 	}
 
-	if _, ok := program.Body[0].(*ast.ExpressionStatement); !ok {
+	exprStmt, ok := fakeProgram.Body[0].(*ast.ExpressionStatement)
+	if !ok {
 		return nil, errors.WithStack(errors.New("program body should be just an expression: " + src))
+	} else if err := expressionStaticAnalysis(src, exprStmt.Expression); err != nil {
+		return nil, err
 	}
+
+	if len(fakeProgram.DeclarationList) != 0 {
+		return nil, errors.WithStack(errors.New("found list of declared values, program body should be just an expression: " + src))
+	}
+
+	// Create the real ast with the function declaration the evaluator expects
+	program, err := parser.ParseFile(nil, "", "function test(event) { return "+src+"; }", 0)
+	if err != nil {
+		return nil, errors.WithStack(errors.Wrap(err, "error while parsing the final script"))
+	}
+
+	//&ast.Program{
+	//	// Noop statement
+	//	Body: []ast.Statement{&ast.EmptyStatement{}},
+	//	DeclarationList: []ast.Declaration{&ast.FunctionDeclaration{
+	//		Function: &ast.FunctionLiteral{
+	//			Name:            &ast.Identifier{Name: unistring.NewFromString("test")},
+	//			ParameterList:   &ast.ParameterList{List: []*ast.Identifier{{Name: unistring.NewFromString("event")}}},
+	//			Body:            &ast.BlockStatement{
+	//				List: []ast.Statement{
+	//					&ast.ReturnStatement{Argument: exprStmt.Expression},
+	//				},
+	//			},
+	//			Source:          "function test(event) { return " + src + "; }",
+	//			DeclarationList: nil,
+	//		},
+	//	}},
+	//	File: fakeProgram.File,
+	//}
 
 	return goja.CompileAST(program, false)
 }
 
-func runFilter(event cloudevents.Event, program *goja.Program) (bool, error) {
-	vm := goja.New()
-	obj, err := configureEventObject(vm, event)
+func expressionStaticAnalysis(originalSrc string, expressions ...ast.Expression) error {
+	for _, expression := range expressions {
+		switch e := expression.(type) {
+		case *ast.ArrayLiteral:
+			return expressionStaticAnalysis(originalSrc, e.Value...)
+		case *ast.AssignExpression:
+			return errors.WithStack(errors.New("found assignment statement, program body should be just an expression: " + originalSrc))
+		case *ast.BinaryExpression:
+			return expressionStaticAnalysis(originalSrc, e.Left, e.Right)
+		case *ast.BracketExpression:
+			return expressionStaticAnalysis(originalSrc, e.Left, e.Member)
+		case *ast.CallExpression:
+			return expressionStaticAnalysis(originalSrc, append(e.ArgumentList, e.Callee)...)
+		case *ast.ConditionalExpression:
+			return expressionStaticAnalysis(originalSrc, e.Test, e.Alternate, e.Consequent)
+		case *ast.DotExpression:
+			return expressionStaticAnalysis(originalSrc, e.Left)
+		case *ast.FunctionLiteral:
+			return errors.WithStack(errors.New("found function literal, program body should be just an expression: " + originalSrc))
+		case *ast.NewExpression:
+			return expressionStaticAnalysis(originalSrc, append(e.ArgumentList, e.Callee)...)
+		case *ast.SequenceExpression:
+			return expressionStaticAnalysis(originalSrc, e.Sequence...)
+		case *ast.UnaryExpression:
+			return expressionStaticAnalysis(originalSrc, e.Operand)
+		case *ast.VariableExpression:
+			return expressionStaticAnalysis(originalSrc, e.Initializer)
+		}
+	}
+	return nil
+}
+
+func runFilter(event cloudevents.Event, vm *goja.Runtime) (bool, error) {
+	eventObj, err := configureEventObject(vm, event)
 	if err != nil {
 		return false, err
 	}
-	vm.Set("event", obj)
+	testFn, ok := goja.AssertFunction(vm.Get("test"))
+	if !ok {
+		return false, errors.New("Something weird is going on here")
+	}
 
-	val, err := runWithSafeTimeout(timeout, vm, program)
+	timer := time.AfterFunc(timeout, func() {
+		vm.Interrupt("filter execution timeout, stop running Doom on this filter!")
+	})
+	defer timer.Stop()
+	val, err := testFn(goja.Undefined(), eventObj)
 	if err != nil {
 		return false, err
 	}
@@ -127,10 +197,11 @@ func coerceToJsTypes(vm *goja.Runtime, val interface{}) goja.Value {
 	return vm.ToValue(val)
 }
 
-func runWithSafeTimeout(duration time.Duration, vm *goja.Runtime, program *goja.Program) (goja.Value, error) {
-	time.AfterFunc(duration, func() {
-		vm.Interrupt("filter execution timeout, stop running Doom on this filter!")
+func runProgramWithSafeTimeout(duration time.Duration, vm *goja.Runtime, program *goja.Program) (goja.Value, error) {
+	t := time.AfterFunc(duration, func() {
+		vm.Interrupt("filter instantiation timeout, stop running Doom on this filter!")
 	})
+	defer t.Stop()
 
 	return vm.RunProgram(program)
 }
