@@ -81,13 +81,10 @@ func NewBackgroundOperation(name string, setup func(c Context),
 // After that happen a handler is invoked to verify environment state and report
 // failures.
 func WaitForStopEvent(bc BackgroundContext, w WaitForStopEventConfiguration) {
-	log := bc.Log
 	for {
 		select {
 		case stopEvent := <-bc.Stop:
-			log.Infof("%s have received a stop event: %s", w.Name, stopEvent.Name())
-			w.OnStop(stopEvent)
-			close(stopEvent.Finished)
+			handleStopEvent(stopEvent, bc, w)
 			return
 		default:
 			w.OnWait(bc, w)
@@ -103,6 +100,16 @@ func (c Configuration) logger() *zap.SugaredLogger {
 // Name returns a friendly human readable text.
 func (s *StopEvent) Name() string {
 	return s.name
+}
+
+func handleStopEvent(
+	se StopEvent,
+	bc BackgroundContext,
+	wc WaitForStopEventConfiguration,
+) {
+	bc.Log.Infof("%s have received a stop event: %s", wc.Name, se.Name())
+	defer close(se.Finished)
+	wc.OnStop(se)
 }
 
 func enrichSuite(s *Suite) *enrichedSuite {
