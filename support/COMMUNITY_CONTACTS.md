@@ -84,8 +84,8 @@ your timeslot with others by sending PRs.
 | 2020-10-12 | [matzew](https://github.com/matzew)                   |
 | 2020-11-16 | [lberk](https://github.com/lberk)                     |
 | 2020-11-23 | [pierDipi](https://github.com/pierDipi)               |
-| 2020-11-30 | [aliok](https://github.com/aliok)                     |
+| 2020-11-30 | [grantr](https://github.com/grantr)                   |
 | 2020-12-07 | [n3wscott](https://github.com/n3wscott)               |
 | 2020-12-14 | [vaikas](https://github.com/vaikas)                   |
-| 2020-12-21 | [grantr](https://github.com/grantr)                   |
-| 2020-12-28 | [lionelvillard](https://github.com/lionelvillard)     |
+| 2020-12-21 | [aliok](https://github.com/aliok)                     |
+| 2020-12-28 | [aliok](https://github.com/aliok)                     |
