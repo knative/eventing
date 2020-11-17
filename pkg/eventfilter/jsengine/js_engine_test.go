@@ -51,8 +51,12 @@ func TestEventKeys(t *testing.T) {
 	obj, err := configureEventObject(vm, event)
 	require.NoError(t, err)
 
-	vm.Set("event", obj)
-	val, err := vm.RunString("Object.keys(event)")
+	_, err = vm.RunString("function test(event) { return Object.keys(event); }")
+	require.NoError(t, err)
+
+	testFn, ok := goja.AssertFunction(vm.Get("test"))
+	require.True(t, ok)
+	val, err := testFn(goja.Undefined(), obj)
 	require.NoError(t, err)
 
 	s := val.Export()
@@ -81,8 +85,12 @@ func TestAccessExtension(t *testing.T) {
 	obj, err := configureEventObject(vm, event)
 	require.NoError(t, err)
 
-	vm.Set("event", obj)
-	val, err := vm.RunString("event.someint")
+	_, err = vm.RunString("function test(event) { return event.someint; }")
+	require.NoError(t, err)
+
+	testFn, ok := goja.AssertFunction(vm.Get("test"))
+	require.True(t, ok)
+	val, err := testFn(goja.Undefined(), obj)
 	require.NoError(t, err)
 
 	s := val.Export()
@@ -96,8 +104,12 @@ func TestDate(t *testing.T) {
 	obj, err := configureEventObject(vm, event)
 	require.NoError(t, err)
 
-	vm.Set("event", obj)
-	val, err := vm.RunString("event.time.getFullYear()")
+	_, err = vm.RunString("function test(event) { return event.time.getFullYear(); }")
+	require.NoError(t, err)
+
+	testFn, ok := goja.AssertFunction(vm.Get("test"))
+	require.True(t, ok)
+	val, err := testFn(goja.Undefined(), obj)
 	require.NoError(t, err)
 
 	s := val.Export()
