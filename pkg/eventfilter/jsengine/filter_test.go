@@ -19,6 +19,7 @@ package jsengine
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/test"
@@ -67,4 +68,32 @@ func TestJsFilter(t *testing.T) {
 			require.Equal(t, tt.want, filter.Filter(context.TODO(), event))
 		})
 	}
+}
+
+func TestFilterParallel(t *testing.T) {
+	event := test.FullEvent()
+
+	filter, err := NewJsFilter(fmt.Sprintf(
+		`(event.type === "---%s") || (event.type === "%s" ? event.id !== "%s" : event.id === "%s")`,
+		event.Type(),
+		event.Type(),
+		event.ID(),
+		event.ID()),
+	)
+	require.NoError(t, err)
+
+	const iterations = 1000
+
+	wg := sync.WaitGroup{}
+	wg.Add(iterations)
+
+	for i := 0; i < iterations; i++ {
+		go func() {
+			for i := 0; i < iterations; i++ {
+				require.Equal(t, eventfilter.FailFilter, filter.Filter(context.TODO(), event))
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
