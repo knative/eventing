@@ -77,7 +77,7 @@ func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) e
 			delete(annotations, V1B2SpecAnnotationKey)
 		}
 
-		// cannot unmarshal, do a normal conversion
+		// if V1B2SpecAnnotationKey does not exist or we cannot unmarshal it, do a normal conversion
 		if !ok {
 			sink.Spec = v1beta2.PingSourceSpec{
 				SourceSpec: source.Spec.SourceSpec,
@@ -97,7 +97,10 @@ func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) e
 
 		// marshal and store v1beta1.PingSource.Spec into V1B1SpecAnnotationKey
 		// this is to help if we need to convert back to v1beta1.PingSource
-		v1beta1Spec, _ := json.Marshal(source.Spec)
+		v1beta1Spec, err := json.Marshal(source.Spec)
+		if err != nil {
+			return fmt.Errorf("error marshalling source.Spec: %v, err: %v", source.Spec, err)
+		}
 		annotations[V1B1SpecAnnotationKey] = string(v1beta1Spec)
 		sink.SetAnnotations(annotations)
 
@@ -136,7 +139,10 @@ func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) e
 
 		// marshal and store v1beta2.PingSource.Spec into V1B2SpecAnnotationKey
 		// this is to help if we need to convert back to v1beta2.PingSource
-		v1beta2Configuration, _ := json.Marshal(source.Spec)
+		v1beta2Configuration, err := json.Marshal(source.Spec)
+		if err != nil {
+			return fmt.Errorf("error marshalling source.Spec: %v, err: %v", source.Spec, err)
+		}
 		annotations[V1B2SpecAnnotationKey] = string(v1beta2Configuration)
 		sink.SetAnnotations(annotations)
 

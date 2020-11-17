@@ -19,6 +19,7 @@ package mtping
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -71,7 +72,10 @@ func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interf
 }
 
 func (a *cronJobsRunner) AddSchedule(source *v1beta2.PingSource) cron.EntryID {
-	event := makeEvent(source)
+	event, err := makeEvent(source)
+	if err != nil {
+		a.Logger.Error("failed to makeEvent: ", zap.Error(err))
+	}
 
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, source.Status.SinkURI.String())
@@ -132,7 +136,7 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 	}
 }
 
-func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
+func makeEvent(source *v1beta2.PingSource) (cloudevents.Event, error) {
 	event := cloudevents.NewEvent()
 	event.SetType(v1beta2.PingSourceEventType)
 	event.SetSource(v1beta2.PingSourceSource(source.Namespace, source.Name))
@@ -149,7 +153,7 @@ func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
 	//  b. If contentType is `application/json`, unmarshal it into an interface, event.DataEncoded will be json.Marshal(interface),
 	//    this is to be compatible with the existing v1beta1 PingSource -> CloudEvent conversion logic, to make sure
 	//    that `data` is populated in the cloudevent json format instead of `data_base64`, and not breaking subscribers
-	//    that does not leverage cloudevents sdk.
+	//    that do not leverage cloudevents sdk.
 	var data interface{}
 	if source.Spec.DataBase64 != "" {
 		data = []byte(source.Spec.DataBase64)
@@ -159,7 +163,9 @@ func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
 			// unmarshal the body into an interface, JSON validation is done in pingsource_validation
 			// ignoring the error returned by json.Unmarshal here.
 			var objmap map[string]*json.RawMessage
-			_ = json.Unmarshal([]byte(source.Spec.Data), &objmap)
+			if err := json.Unmarshal([]byte(source.Spec.Data), &objmap); err != nil {
+				return event, fmt.Errorf("error unmarshalling source.Spec.Data: %v, err: %v", source.Spec.Data, err)
+			}
 			data = objmap
 		default:
 			data = []byte(source.Spec.Data)
@@ -167,8 +173,10 @@ func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
 	}
 
 	if data != nil {
-		_ = event.SetData(source.Spec.ContentType, data)
+		if err := event.SetData(source.Spec.ContentType, data); err != nil {
+			return event, fmt.Errorf("error when SetData(%v, %v), err: %v", source.Spec.ContentType, data, err)
+		}
 	}
 
-	return event
+	return event, nil
 }

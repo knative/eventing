@@ -68,7 +68,7 @@ type PingSourceSpec struct {
 	// List of valid timezone values: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 	Timezone string `json:"timezone,omitempty"`
 
-	// ContentType is the media type of Data or DataBase64. Default is empty
+	// ContentType is the media type of Data or DataBase64. Default is empty.
 	// +optional
 	ContentType string `json:"contentType,omitempty"`
 

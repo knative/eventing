@@ -64,8 +64,7 @@ spec:
                         will also be set to "application/json".'
                     type: string
                 schedule:
-                    description: 'Schedule is the cronjob schedule. Defaults to `* * *
-                        * *`.'
+                    description: 'Schedule is the cronjob schedule. Defaults to `* * * * *`.'
                     type: string
                 sink:
                     description: 'Sink is a reference to an object that will resolve to
@@ -214,8 +213,7 @@ spec:
                         will also be set to "application/json".'
                     type: string
                 schedule:
-                    description: 'Schedule is the cronjob schedule. Defaults to `* * *
-                        * *`.'
+                    description: 'Schedule is the cronjob schedule. Defaults to `* * * * *`.'
                     type: string
                 sink:
                     description: 'Sink is a reference to an object that will resolve to
@@ -349,7 +347,7 @@ spec:
                       type: string
                     x-kubernetes-preserve-unknown-fields: true
               contentType:
-                description: 'ContentType is the media type of `data` or `dataBase64`. Default is empty'
+                description: 'ContentType is the media type of `data` or `dataBase64`. Default is empty.'
                 type: string
               data:
                 description: 'Data is data used as the body of the event posted to the sink. Default is empty.
@@ -357,11 +355,10 @@ spec:
                 type: string
               dataBase64:
                 description: 'DataBase64 is base64 encoded binary data used as the body of the event posted to the sink.
-                        Mutually exclusive with `data`.'
+                        Default is empty. Mutually exclusive with `data`.'
                 type: string
               schedule:
-                description: 'Schedule is the cron schedule. Defaults to `* * *
-                        * *`.'
+                description: 'Schedule is the cron schedule. Defaults to `* * * * *`.'
                 type: string
               sink:
                 description: 'Sink is a reference to an object that will resolve to

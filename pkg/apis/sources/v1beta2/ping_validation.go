@@ -56,27 +56,26 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if cs.Data != "" && cs.DataBase64 != "" {
 		errs = errs.Also(apis.ErrMultipleOneOf("data", "dataBase64"))
-	} else {
-		if cs.DataBase64 != "" {
-			decoded, err := base64.StdEncoding.DecodeString(cs.DataBase64)
-			// invalid base64 string
-			if err != nil {
-				errs = errs.Also(apis.ErrInvalidValue(err, "dataBase64"))
-			} else {
-				// validate if the decoded base64 string is valid JSON
-				if cs.ContentType == cloudevents.ApplicationJSON {
-					if err := validateJSON(string(decoded)); err != nil {
-						errs = errs.Also(apis.ErrInvalidValue(err, "dataBase64"))
-					}
+	} else if cs.DataBase64 != "" {
+		decoded, err := base64.StdEncoding.DecodeString(cs.DataBase64)
+		// invalid base64 string
+		if err != nil {
+			errs = errs.Also(apis.ErrInvalidValue(err, "dataBase64"))
+		} else {
+			// validate if the decoded base64 string is valid JSON
+			if cs.ContentType == cloudevents.ApplicationJSON {
+				if err := validateJSON(string(decoded)); err != nil {
+					errs = errs.Also(apis.ErrInvalidValue(err, "dataBase64"))
 				}
 			}
-		} else if cs.Data != "" && cs.ContentType == cloudevents.ApplicationJSON {
-			// validate if data is valid JSON
-			if err := validateJSON(cs.Data); err != nil {
-				errs = errs.Also(apis.ErrInvalidValue(err, "data"))
-			}
+		}
+	} else if cs.Data != "" && cs.ContentType == cloudevents.ApplicationJSON {
+		// validate if data is valid JSON
+		if err := validateJSON(cs.Data); err != nil {
+			errs = errs.Also(apis.ErrInvalidValue(err, "data"))
 		}
 	}
+
 	return errs
 }
 
