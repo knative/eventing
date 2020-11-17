@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/pkg/apis"
@@ -32,56 +34,158 @@ import (
 	rectesting "knative.dev/pkg/reconciler/testing"
 
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
-const threeSecondsTillNextMinCronJob = 60 - 3
+const (
+	threeSecondsTillNextMinCronJob = 60 - 3
+	sampleData                     = "some data"
+	sampleJSONData                 = `{"msg":"some data"}`
+	sampleXmlData                  = "<pre>Value</pre>"
+	sampleDataBase64               = "c29tZSBkYXRh"                 // "some data"
+	sampleJSONDataBase64           = "eyJtc2ciOiJzb21lIGRhdGEifQ==" // {"msg":"some data"}
+)
 
 func TestAddRunRemoveSchedules(t *testing.T) {
 	testCases := map[string]struct {
-		src   *sourcesv1beta1.PingSource
-		delay time.Duration
+		src             *v1beta2.PingSource
+		wantContentType string
+		wantData        string
 	}{
 		"TestAddRunRemoveSchedule": {
-			src: &sourcesv1beta1.PingSource{
+			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns",
 				},
-				Spec: sourcesv1beta1.PingSourceSpec{
+				Spec: v1beta2.PingSourceSpec{
 					SourceSpec: duckv1.SourceSpec{
 						CloudEventOverrides: &duckv1.CloudEventOverrides{},
 					},
-					Schedule: "* * * * ?",
-					JsonData: "some data",
+					Schedule:    "* * * * ?",
+					ContentType: cloudevents.TextPlain,
+					Data:        sampleData,
 				},
-				Status: sourcesv1beta1.PingSourceStatus{
+				Status: v1beta2.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{Path: "a sink"},
 					},
 				},
 			},
+			wantData:        sampleData,
+			wantContentType: cloudevents.TextPlain,
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
-			src: &sourcesv1beta1.PingSource{
+			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns",
 				},
-				Spec: sourcesv1beta1.PingSourceSpec{
+				Spec: v1beta2.PingSourceSpec{
 					SourceSpec: duckv1.SourceSpec{
 						CloudEventOverrides: &duckv1.CloudEventOverrides{
 							Extensions: map[string]string{"1": "one", "2": "two"},
 						},
 					},
-					Schedule: "* * * * ?",
-					JsonData: "some data",
+					Schedule:    "* * * * ?",
+					ContentType: cloudevents.TextPlain,
+					Data:        sampleData,
 				},
-				Status: sourcesv1beta1.PingSourceStatus{
+				Status: v1beta2.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{Path: "a sink"},
 					},
 				},
 			},
+			wantData:        sampleData,
+			wantContentType: cloudevents.TextPlain,
+		}, "TestAddRunRemoveScheduleWithDataBase64": {
+			src: &v1beta2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: v1beta2.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * ?",
+					ContentType: cloudevents.TextPlain,
+					DataBase64:  sampleDataBase64,
+				},
+				Status: v1beta2.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        sampleDataBase64,
+			wantContentType: cloudevents.TextPlain,
+		}, "TestAddRunRemoveScheduleWithJsonData": {
+			src: &v1beta2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: v1beta2.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * ?",
+					Data:        sampleJSONData,
+					ContentType: cloudevents.ApplicationJSON,
+				},
+				Status: v1beta2.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        sampleJSONData,
+			wantContentType: cloudevents.ApplicationJSON,
+		}, "TestAddRunRemoveScheduleWithJsonDataBase64": {
+			src: &v1beta2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: v1beta2.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * ?",
+					DataBase64:  sampleJSONDataBase64,
+					ContentType: cloudevents.ApplicationJSON,
+				},
+				Status: v1beta2.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        sampleJSONDataBase64,
+			wantContentType: cloudevents.ApplicationJSON,
+		}, "TestAddRunRemoveScheduleWithXmlData": {
+			src: &v1beta2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: v1beta2.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{},
+					},
+					Schedule:    "* * * * ?",
+					Data:        sampleXmlData,
+					ContentType: cloudevents.ApplicationXML,
+				},
+				Status: v1beta2.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        sampleXmlData,
+			wantContentType: cloudevents.ApplicationXML,
 		},
 	}
 	for n, tc := range testCases {
@@ -100,7 +204,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, `{"body":"some data"}`, tc.src.Spec.CloudEventOverrides.Extensions)
+			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -153,19 +257,20 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	go func() {
 		runner.AddSchedule(
-			&sourcesv1beta1.PingSource{
+			&v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
 					Namespace: "test-ns",
 				},
-				Spec: sourcesv1beta1.PingSourceSpec{
+				Spec: v1beta2.PingSourceSpec{
 					SourceSpec: duckv1.SourceSpec{
 						CloudEventOverrides: &duckv1.CloudEventOverrides{},
 					},
-					Schedule: "* * * * *",
-					JsonData: "some delayed data",
+					Schedule:    "* * * * *",
+					ContentType: cloudevents.TextPlain,
+					Data:        "some delayed data",
 				},
-				Status: sourcesv1beta1.PingSourceStatus{
+				Status: v1beta2.PingSourceStatus{
 					SourceStatus: duckv1.SourceStatus{
 						SinkURI: &apis.URL{Path: "a delayed sink"},
 					},
@@ -181,21 +286,25 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner.Stop() // cron job because of delay is still running.
 
-	validateSent(t, ce, `{"body":"some delayed data"}`, nil)
-
+	validateSent(t, ce, "some delayed data", cloudevents.TextPlain, nil)
 }
 
-func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string,
-	extensions map[string]string) {
+func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string, wantContentType string, extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Error("Expected 1 event to be sent, got", got)
 	}
 
-	if got := ce.Sent()[0].Data(); string(got) != wantData {
+	event := ce.Sent()[0]
+
+	if gotContentType := event.DataContentType(); gotContentType != wantContentType {
+		t.Errorf("Expected event with contentType=%q to be sent, got %q", wantContentType, gotContentType)
+	}
+
+	if got := event.Data(); string(got) != wantData {
 		t.Errorf("Expected %q event to be sent, got %q", wantData, got)
 	}
 
-	gotExtensions := ce.Sent()[0].Context.GetExtensions()
+	gotExtensions := event.Context.GetExtensions()
 
 	if extensions == nil && gotExtensions != nil {
 		t.Error("Expected event with no extension overrides, got:", gotExtensions)

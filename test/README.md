@@ -32,17 +32,19 @@ test/presubmit-tests.sh --integration-tests
 _Note that if the tests you are running include `integration tests`, it will
 create a new GKE cluster in project `$PROJECT_ID`, start Knative Serving and
 Eventing system, upload test images to `$KO_DOCKER_REPO`, and run all
-`e2e-*tests.sh` scripts under [`test`](.). After the tests finish, it will
-delete the cluster._
+`e2e-*tests.sh` scripts under [`test`](.)._
 
 ### E2E tests
 
 [`e2e-tests.sh`](./e2e-tests.sh) is the entry point for running all e2e tests.
 
+In this section we use GCP as an example, other platforms might need different
+options.
+
 You can run it simply with:
 
 ```shell
-test/e2e-tests.sh
+test/e2e-tests.sh --gcp-project-id=$PROJECT_ID
 ```
 
 _By default, it will create a new GKE cluster in project `$PROJECT_ID`, start
@@ -51,11 +53,13 @@ and run the end-to-end tests. After the tests finishes, it will delete the
 cluster._
 
 If you have already created your own Kubernetes cluster but haven't installed
-Knative, you can run with `test/e2e-tests.sh --run-tests`.
+Knative, you can run with
+`test/e2e-tests.sh --run-tests --gcp-project-id=$PROJECT_ID`.
 
 If you have set up a running environment that meets
 [the e2e test environment requirements](#environment-requirements), you can run
-with `test/e2e-tests.sh --run-tests --skip-knative-setup`.
+with
+`test/e2e-tests.sh --run-tests --skip-knative-setup --gcp-project-id=$PROJECT_ID`.
 
 ## Running tests with `go test` command
 

@@ -19,66 +19,17 @@
 
 source $(dirname $0)/../vendor/knative.dev/hack/release.sh
 
-readonly EVENTING_CORE_YAML="eventing-core.yaml"
-readonly EVENTING_CRDS_YAML="eventing-crds.yaml"
-readonly SUGAR_CONTROLLER_YAML="eventing-sugar-controller.yaml"
-readonly MT_CHANNEL_BROKER_YAML="mt-channel-broker.yaml"
-readonly IN_MEMORY_CHANNEL="in-memory-channel.yaml"
-readonly POST_INSTALL="eventing-post-install-jobs.yaml"
-
-declare -A RELEASES
-RELEASES=(
-  ["eventing.yaml"]="${EVENTING_CORE_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL}"
-)
-readonly RELEASES
-
 function build_release() {
-  # Update release labels if this is a tagged release
-  if [[ -n "${TAG}" ]]; then
-    echo "Tagged release, updating release labels to eventing.knative.dev/release: \"${TAG}\""
-    LABEL_YAML_CMD=(sed -e "s|eventing.knative.dev/release: devel|eventing.knative.dev/release: \"${TAG}\"|")
-  else
-    echo "Untagged release, will NOT update release labels"
-    LABEL_YAML_CMD=(cat)
+  # Run `generate-yamls.sh`, which should be versioned with the
+  # branch since the detail of building may change over time.
+  local YAML_LIST="$(mktemp)"
+  export TAG
+  $(dirname $0)/generate-yamls.sh "${REPO_ROOT_DIR}" "${YAML_LIST}"
+  ARTIFACTS_TO_PUBLISH=$(cat "${YAML_LIST}" | tr '\n' ' ')
+  if (( ! PUBLISH_RELEASE )); then
+    # Copy the generated YAML files to the repo root dir if not publishing.
+    cp ${ARTIFACTS_TO_PUBLISH} ${REPO_ROOT_DIR}
   fi
-
-  # Build the components
-  echo "Building Knative Eventing"
-  # Create eventing core yaml
-  ko resolve ${KO_FLAGS} -R -f config/core/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CORE_YAML}"
-
-  # Create eventing crds yaml
-  ko resolve ${KO_FLAGS} -f config/core/resources/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CRDS_YAML}"
-
-  # Create sugar controller yaml
-  ko resolve ${KO_FLAGS} -f config/sugar/ | "${LABEL_YAML_CMD[@]}" > "${SUGAR_CONTROLLER_YAML}"
-
-  # Create mt channel broker yaml
-  ko resolve ${KO_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[@]}" > "${MT_CHANNEL_BROKER_YAML}"
-
-  # Create in memory channel yaml
-  ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${IN_MEMORY_CHANNEL}"
-
-  local all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${SUGAR_CONTROLLER_YAML} ${MT_CHANNEL_BROKER_YAML} ${IN_MEMORY_CHANNEL})
-
-  # # Template for POST_INSTALL usage:
-  # # Create vX.Y.Z post-install job yaml.
-  # ko resolve ${KO_FLAGS} -f config/post-install/vX.Y.Z/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL}"
-  # # If used, add  ${POST_INSTALL} to all_yamls,
-  # all_yamls+=(${POST_INSTALL})
-
-  # Assemble the release
-  for yaml in "${!RELEASES[@]}"; do
-    echo "Assembling Knative Eventing - ${yaml}"
-    echo "" > ${yaml}
-    for component in ${RELEASES[${yaml}]}; do
-      echo "---" >> ${yaml}
-      echo "# ${component}" >> ${yaml}
-      cat ${component} >> ${yaml}
-    done
-    all_yamls+=(${yaml})
-  done
-  ARTIFACTS_TO_PUBLISH="${all_yamls[@]}"
 }
 
 main $@

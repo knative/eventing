@@ -35,6 +35,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
 var scheme = runtime.NewScheme()
@@ -51,6 +52,7 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	sourcesv1alpha1.AddToScheme,
 	sourcesv1alpha2.AddToScheme,
 	sourcesv1beta1.AddToScheme,
+	sourcesv1beta2.AddToScheme,
 	sourcesv1.AddToScheme,
 }
 

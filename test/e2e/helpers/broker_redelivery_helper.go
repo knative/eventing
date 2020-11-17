@@ -114,7 +114,7 @@ func brokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 
 	client.SendEventToAddressable(ctx, senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
-	allEventTracker.AssertAtLeast(1, recordevents.MatchEvent(AllOf(
+	allEventTracker.AssertAtLeast(1, recordevents.MatchKind(recordevents.EventReceived), recordevents.MatchEvent(AllOf(
 		HasSource(eventSource),
 		HasType(eventType),
 		HasData([]byte(eventBody)),

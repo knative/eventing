@@ -42,9 +42,9 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
@@ -85,7 +85,7 @@ type Reconciler struct {
 // Check that our Reconciler implements ReconcileKind
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta2.PingSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -134,14 +134,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta1.PingSour
 	}
 
 	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
-		Type:   v1beta1.PingSourceEventType,
-		Source: v1beta1.PingSourceSource(source.Namespace, source.Name),
+		Type:   v1beta2.PingSourceEventType,
+		Source: v1beta2.PingSourceSource(source.Namespace, source.Name),
 	}}
 
 	return nil
 }
 
-func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta1.PingSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta2.PingSource) (*appsv1.Deployment, error) {
 	loggingConfig, err := logging.ConfigToJSON(r.configs.LoggingConfig())
 	if err != nil {
 		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))

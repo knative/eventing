@@ -27,6 +27,7 @@ import (
 )
 
 // EnableTracing enables tracing in sender pod
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events
 func EnableTracing() func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(
@@ -38,6 +39,7 @@ func EnableTracing() func(*corev1.Pod) {
 }
 
 // EnableIncrementalId creates a new incremental id for each event sent from the sender pod. Supported only by event-sender
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events
 func EnableIncrementalId() func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(
@@ -49,6 +51,7 @@ func EnableIncrementalId() func(*corev1.Pod) {
 }
 
 // WithEncoding forces the encoding of the event to send from the sender pod. Supported only by event-sender
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events
 func WithEncoding(encoding cloudevents.Encoding) func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(
@@ -60,6 +63,7 @@ func WithEncoding(encoding cloudevents.Encoding) func(*corev1.Pod) {
 }
 
 // WithResponseSink sends the response information as CloudEvent to another sink
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events and start an EventInfoStore on it to assert the responses
 func WithResponseSink(responseSink string) func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(
@@ -71,6 +75,7 @@ func WithResponseSink(responseSink string) func(*corev1.Pod) {
 }
 
 // WithEncoding forces the encoding of the event to send from the sender pod. Supported only by event-sender
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events
 func WithAdditionalHeaders(headers map[string]string) func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(
@@ -82,6 +87,7 @@ func WithAdditionalHeaders(headers map[string]string) func(*corev1.Pod) {
 }
 
 // EventSenderPod creates a Pod that sends events to the given address.
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send events
 func EventSenderPod(imageName string, name string, sink string, event cloudevents.Event, options ...func(*corev1.Pod)) (*corev1.Pod, error) {
 	encodedEvent, err := json.Marshal(event)
 	if err != nil {
@@ -119,6 +125,7 @@ func EventSenderPod(imageName string, name string, sink string, event cloudevent
 }
 
 // WithMethod configures the method used to send the http request. Supported only by request-sender
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send requests
 func WithMethod(method string) func(*corev1.Pod) {
 	return func(pod *corev1.Pod) {
 		pod.Spec.Containers[0].Args = append(
@@ -130,6 +137,7 @@ func WithMethod(method string) func(*corev1.Pod) {
 }
 
 // EventSenderPod creates a Pod that sends http requests to the given address.
+// Deprecated: Now you should use recordevents.DeployEventSenderOrFail to send requests
 func RequestSenderPod(imageName string, name string, sink string, headers map[string]string, body string, options ...func(*corev1.Pod)) (*corev1.Pod, error) {
 	args := []string{
 		"-sink",

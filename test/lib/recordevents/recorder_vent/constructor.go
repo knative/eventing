@@ -18,7 +18,6 @@ package recorder_vent
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -48,7 +47,7 @@ const (
 func NewFromEnv(ctx context.Context) recordevents.EventLog {
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", err)
+		logging.FromContext(ctx).Fatal("Failed to process env var: ", err)
 	}
 
 	logging.FromContext(ctx).Infof("Recorder vent environment configuration: %+v", env)

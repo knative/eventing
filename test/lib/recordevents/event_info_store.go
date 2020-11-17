@@ -81,6 +81,10 @@ func NewEventInfoStore(client *testlib.Client, podName string, podNamespace stri
 	return store, nil
 }
 
+func (ei *EventInfoStore) getDebugInfo() string {
+	return fmt.Sprintf("Pod '%s' in namespace '%s'", ei.podName, ei.podNamespace)
+}
+
 func (ei *EventInfoStore) getEventInfo() []EventInfo {
 	ei.lock.Lock()
 	defer ei.lock.Unlock()
@@ -222,9 +226,10 @@ func (ei *EventInfoStore) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]Even
 		count := len(allMatch)
 		if count < min {
 			internalErr = fmt.Errorf(
-				"FAIL MATCHING: saw %d/%d matching events.\nRecent events: \n%s\nMatch errors: \n%s\n",
+				"FAIL MATCHING: saw %d/%d matching events.\n- EventInfoStore-\n%s\n- Recent events -\n%s\n- Match errors -\n%s\n",
 				count,
 				min,
+				ei.getDebugInfo(),
 				&sInfo,
 				formatErrors(matchErrs),
 			)

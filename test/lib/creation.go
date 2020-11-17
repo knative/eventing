@@ -43,6 +43,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
@@ -678,7 +679,7 @@ func (c *Client) CreateContainerSourceV1OrFail(containerSource *sourcesv1.Contai
 	c.Tracker.AddObj(containerSource)
 }
 
-// CreatePingSourceV1Alpha2OrFail will create an PingSource
+// CreatePingSourceV1Alpha2OrFail will create a PingSource
 func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.PingSource) {
 	c.T.Logf("Creating pingsource %+v", pingSource)
 	pingInterface := c.Eventing.SourcesV1alpha2().PingSources(c.Namespace)
@@ -695,10 +696,27 @@ func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.Ping
 	c.Tracker.AddObj(pingSource)
 }
 
-// CreatePingSourceV1Beta1OrFail will create an PingSource
+// CreatePingSourceV1Beta1OrFail will create a PingSource
 func (c *Client) CreatePingSourceV1Beta1OrFail(pingSource *sourcesv1beta1.PingSource) {
 	c.T.Logf("Creating pingsource %+v", pingSource)
 	pingInterface := c.Eventing.SourcesV1beta1().PingSources(c.Namespace)
+	err := c.RetryWebhookErrors(func(attempts int) (err error) {
+		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
+		if e != nil {
+			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
+		}
+		return e
+	})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
+	}
+	c.Tracker.AddObj(pingSource)
+}
+
+// CreatePingSourceV1Beta2OrFail will create a PingSource
+func (c *Client) CreatePingSourceV1Beta2OrFail(pingSource *sourcesv1beta2.PingSource) {
+	c.T.Logf("Creating pingsource %+v", pingSource)
+	pingInterface := c.Eventing.SourcesV1beta2().PingSources(c.Namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
 		if e != nil {
