@@ -25,65 +25,34 @@ import (
 )
 
 func TestParseFilterExpr(t *testing.T) {
-	program, err := ParseFilterExpr("/w3schools/i.test(xxx)")
-	require.NoError(t, err)
-
-	vm := goja.New()
-	vm.Set("xxx", "w3schools")
-	val, err := vm.RunProgram(program)
-	require.NoError(t, err)
-
-	b := val.ToBoolean()
-	require.True(t, b)
-}
-
-func TestParseFilterExprHacky(t *testing.T) {
-	program, err := ParseFilterExpr(`(function foo() { global.aaa = ""; console.log(aaa); })()`)
-	require.NoError(t, err)
-	require.NotNil(t, program)
-}
-
-//func TestAAA(t *testing.T) {
-//	program, err := parser.ParseFile(nil, "", "function test(event) { return event.id; }", 0)
-//
-//	require.NoError(t, err)
-//
-//	vm := goja.New()
-//	compiled, err := goja.CompileAST(program, false)
-//	require.NoError(t, err)
-//
-//	vm.RunProgram(compiled)
-//}
-//
-//func TestTimeout(t *testing.T) {
-//	program, err := parser.ParseFile(nil, "", "while(true) {}", 0)
-//	require.NoError(t, err)
-//
-//	compiled, err := goja.CompileAST(program, false)
-//	require.NoError(t, err)
-//
-//	_, err = runFilter(test.MinEvent(), compiled)
-//	require.IsType(t, &goja.InterruptedError{}, err, "error is an interrupted error")
-//}
-
-func TestParseFilterFailure(t *testing.T) {
-	program, err := ParseFilterExpr(`function helloWorld() {}`)
-	require.EqualError(t, err, "program body should be just an expression: function helloWorld() {}")
-	require.Nil(t, program)
+	exprs := map[string]bool{
+		`/w3schools/i.test(xxx)`:                    true,
+		`function test(event) { return event.id; }`: false,
+		// eval at runtime is not available, but it passes the ast check
+		`eval("for i < 999999999999999999999999999999999999999999999999999999999999999999; i++{}")`: true,
+		`new Function('x', 'y', 'return x+y')(1, 1)`:                                                false,
+		`(a == 2) && a = 2`: false,
+		`a = 2`:             false,
+	}
+	for e, r := range exprs {
+		_, err := ParseFilterExpr(e)
+		if r {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+		}
+	}
 }
 
 func TestEventKeys(t *testing.T) {
 	event := test.FullEvent()
-
-	program, err := ParseFilterExpr("Object.keys(event)")
-	require.NoError(t, err)
 
 	vm := goja.New()
 	obj, err := configureEventObject(vm, event)
 	require.NoError(t, err)
 
 	vm.Set("event", obj)
-	val, err := vm.RunProgram(program)
+	val, err := vm.RunString("Object.keys(event)")
 	require.NoError(t, err)
 
 	s := val.Export()
@@ -134,39 +103,3 @@ func TestDate(t *testing.T) {
 	s := val.Export()
 	require.Equal(t, int64(2020), s)
 }
-
-//func TestRunFilter(t *testing.T) {
-//	event := test.FullEvent()
-//
-//	tests := []struct {
-//		expression string
-//		result     bool
-//	}{{
-//		expression: "event.id === \"" + event.ID() + "\"",
-//		result:     true,
-//	}, {
-//		expression: "event.id !== \"" + event.ID() + "\"",
-//		result:     false,
-//	}, {
-//		expression: `event.datacontenttype.indexOf("json") != -1 && true`,
-//		result:     true,
-//	}, {
-//		expression: `event.time.getFullYear() == 2020`,
-//		result:     true,
-//	}, {
-//		expression: `event.exint === 42`,
-//		result:     true,
-//	}, {
-//		expression: fmt.Sprintf(`(event.type === "---%s") || (event.type === "%s" ? event.id !== "%s" : event.id === "%s")`, event.Type(), event.Type(), event.ID(), event.ID()),
-//		result:     false,
-//	}}
-//	for _, tc := range tests {
-//		t.Run(tc.expression, func(t *testing.T) {
-//			program, err := ParseFilterExpr(tc.expression)
-//			require.NoError(t, err)
-//			res, err := runFilter(event, program)
-//			require.NoError(t, err)
-//			require.Equal(t, tc.result, res)
-//		})
-//	}
-//}

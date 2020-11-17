@@ -17,6 +17,7 @@ limitations under the License.
 package jsengine
 
 import (
+	"fmt"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -34,13 +35,13 @@ const timeout = time.Second * 2
 func ParseFilterExpr(src string) (*goja.Program, error) {
 	fakeProgram, err := parser.ParseFile(nil, "", src, 0)
 	if err != nil {
-		return nil, errors.WithStack(errors.Wrap(err, "error while parsing filter expression"))
+		return nil, errors.WithStack(fmt.Errorf("error while parsing filter expression '%s': %w", src, err))
 	}
 
 	exprStmt, ok := fakeProgram.Body[0].(*ast.ExpressionStatement)
 	if !ok {
 		return nil, errors.WithStack(errors.New("program body should be just an expression: " + src))
-	} else if err := expressionStaticAnalysis(src, exprStmt.Expression); err != nil {
+	} else if err := staticAstCheck(src, exprStmt.Expression); err != nil {
 		return nil, err
 	}
 
@@ -54,6 +55,7 @@ func ParseFilterExpr(src string) (*goja.Program, error) {
 		return nil, errors.WithStack(errors.Wrap(err, "error while parsing the final script"))
 	}
 
+	// Generated ast should look like this:
 	//&ast.Program{
 	//	// Noop statement
 	//	Body: []ast.Statement{&ast.EmptyStatement{}},
@@ -76,33 +78,33 @@ func ParseFilterExpr(src string) (*goja.Program, error) {
 	return goja.CompileAST(program, false)
 }
 
-func expressionStaticAnalysis(originalSrc string, expressions ...ast.Expression) error {
+func staticAstCheck(originalSrc string, expressions ...ast.Expression) error {
 	for _, expression := range expressions {
 		switch e := expression.(type) {
 		case *ast.ArrayLiteral:
-			return expressionStaticAnalysis(originalSrc, e.Value...)
+			return staticAstCheck(originalSrc, e.Value...)
 		case *ast.AssignExpression:
 			return errors.WithStack(errors.New("found assignment statement, program body should be just an expression: " + originalSrc))
 		case *ast.BinaryExpression:
-			return expressionStaticAnalysis(originalSrc, e.Left, e.Right)
+			return staticAstCheck(originalSrc, e.Left, e.Right)
 		case *ast.BracketExpression:
-			return expressionStaticAnalysis(originalSrc, e.Left, e.Member)
+			return staticAstCheck(originalSrc, e.Left, e.Member)
 		case *ast.CallExpression:
-			return expressionStaticAnalysis(originalSrc, append(e.ArgumentList, e.Callee)...)
+			return staticAstCheck(originalSrc, append(e.ArgumentList, e.Callee)...)
 		case *ast.ConditionalExpression:
-			return expressionStaticAnalysis(originalSrc, e.Test, e.Alternate, e.Consequent)
+			return staticAstCheck(originalSrc, e.Test, e.Alternate, e.Consequent)
 		case *ast.DotExpression:
-			return expressionStaticAnalysis(originalSrc, e.Left)
+			return staticAstCheck(originalSrc, e.Left)
 		case *ast.FunctionLiteral:
-			return errors.WithStack(errors.New("found function literal, program body should be just an expression: " + originalSrc))
+			return errors.WithStack(errors.New("found function expression, program body should be just an expression: " + originalSrc))
 		case *ast.NewExpression:
-			return expressionStaticAnalysis(originalSrc, append(e.ArgumentList, e.Callee)...)
+			return errors.WithStack(errors.New("found object instantiation expression, program body should be just an expression: " + originalSrc))
 		case *ast.SequenceExpression:
-			return expressionStaticAnalysis(originalSrc, e.Sequence...)
+			return staticAstCheck(originalSrc, e.Sequence...)
 		case *ast.UnaryExpression:
-			return expressionStaticAnalysis(originalSrc, e.Operand)
+			return staticAstCheck(originalSrc, e.Operand)
 		case *ast.VariableExpression:
-			return expressionStaticAnalysis(originalSrc, e.Initializer)
+			return staticAstCheck(originalSrc, e.Initializer)
 		}
 	}
 	return nil
@@ -118,10 +120,6 @@ func runFilter(event cloudevents.Event, vm *goja.Runtime) (bool, error) {
 		return false, errors.New("Something weird is going on here")
 	}
 
-	timer := time.AfterFunc(timeout, func() {
-		vm.Interrupt("filter execution timeout, stop running Doom on this filter!")
-	})
-	defer timer.Stop()
 	val, err := testFn(goja.Undefined(), eventObj)
 	if err != nil {
 		return false, err

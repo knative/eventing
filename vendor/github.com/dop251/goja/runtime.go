@@ -367,9 +367,6 @@ func (r *Runtime) init() {
 
 	r.initErrors()
 
-	r.global.Eval = r.newNativeFunc(r.builtin_eval, nil, "eval", nil, 1)
-	r.addToGlobal("eval", r.global.Eval)
-
 	r.initMath()
 	r.initJSON()
 
@@ -386,6 +383,8 @@ func (r *Runtime) init() {
 		setterFunc: r.global.thrower,
 		accessor:   true,
 	}
+
+	r.object_freeze(FunctionCall{This: Undefined(), Arguments: []Value{r.globalObject}})
 }
 
 func (r *Runtime) typeErrorResult(throw bool, args ...interface{}) {

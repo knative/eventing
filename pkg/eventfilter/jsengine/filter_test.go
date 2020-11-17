@@ -34,14 +34,30 @@ func TestJsFilter(t *testing.T) {
 		expression string
 		want       eventfilter.FilterResult
 	}{{
-		expression: "event.id === \"" + event.ID() + "\"",
+		expression: fmt.Sprintf(`event.id === "%s"`, event.ID()),
 		want:       eventfilter.PassFilter,
 	}, {
-		expression: "event.id !== \"" + event.ID() + "\"",
+		expression: fmt.Sprintf(`event.id !== "%s"`, event.ID()),
 		want:       eventfilter.FailFilter,
 	}, {
 		// Syntax valid but something not defined should generate an error at runtime
 		expression: "event.id == something",
+		want:       eventfilter.FailFilter,
+	}, {
+		// Eval not available!
+		expression: `eval("true")`,
+		want:       eventfilter.FailFilter,
+	}, {
+		expression: `event.datacontenttype.indexOf("json") != -1 && true`,
+		want:       eventfilter.PassFilter,
+	}, {
+		expression: `event.time.getFullYear() == 2020`,
+		want:       eventfilter.PassFilter,
+	}, {
+		expression: `event.exint === 42`,
+		want:       eventfilter.PassFilter,
+	}, {
+		expression: fmt.Sprintf(`(event.type === "---%s") || (event.type === "%s" ? event.id !== "%s" : event.id === "%s")`, event.Type(), event.Type(), event.ID(), event.ID()),
 		want:       eventfilter.FailFilter,
 	}}
 	for _, tt := range tests {

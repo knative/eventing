@@ -107,7 +107,7 @@ github.com/davecgh/go-spew/spew
 ## explicit
 github.com/dlclark/regexp2
 github.com/dlclark/regexp2/syntax
-# github.com/dop251/goja v0.0.0-20201107160812-7545ac6de48a
+# github.com/dop251/goja v0.0.0-20201107160812-7545ac6de48a => github.com/slinkydeveloper/goja v0.0.0-20201117110846-2adc5134db9d
 ## explicit
 github.com/dop251/goja
 github.com/dop251/goja/ast
@@ -1118,6 +1118,7 @@ sigs.k8s.io/structured-merge-diff/v3/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit
 sigs.k8s.io/yaml
+# github.com/dop251/goja => github.com/slinkydeveloper/goja v0.0.0-20201117110846-2adc5134db9d
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 # k8s.io/api => k8s.io/api v0.18.8
 # k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8

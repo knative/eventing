@@ -26,12 +26,10 @@ import (
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
-type jsFilter struct {
-	engine *goja.Runtime
-}
+type jsFilter goja.Runtime
 
 func (j *jsFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	pass, err := runFilter(event, j.engine)
+	pass, err := runFilter(event, (*goja.Runtime)(j))
 	if err != nil {
 		logging.FromContext(ctx).Warn("Error while trying to run the js expression filter: ", err)
 		return eventfilter.FailFilter
@@ -52,7 +50,5 @@ func NewJsFilter(src string) (eventfilter.Filter, error) {
 	if _, err := runProgramWithSafeTimeout(timeout, engine, p); err != nil {
 		return nil, err
 	}
-	return &jsFilter{
-		engine: engine,
-	}, nil
+	return (*jsFilter)(engine), nil
 }

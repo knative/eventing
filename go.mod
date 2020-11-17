@@ -52,6 +52,7 @@ require (
 )
 
 replace (
+	github.com/dop251/goja => github.com/slinkydeveloper/goja v0.0.0-20201117110846-2adc5134db9d
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	k8s.io/api => k8s.io/api v0.18.8
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8
