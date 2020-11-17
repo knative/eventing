@@ -26,6 +26,19 @@ import (
 	"github.com/cloudevents/sdk-go/v2/types"
 )
 
+const (
+	// AcceptReplyHeaderKey is the key for the event reply header.
+	// https://docs.google.com/document/d/1ELQtKOMz6T5vTXbWp30E8r6oLYOXPjWacv4AVRi36-w
+	AcceptReplyHeaderKey = "K-Eventing-Accept-Reply"
+	// AcceptReplyResponse is the value to accept event reply.
+	AcceptReplyResponse = "response"
+)
+
+// SetAcceptReplyHeader sets the reply header to val.
+func SetAcceptReplyHeader(headers nethttp.Header, val string) {
+	headers.Set(AcceptReplyHeaderKey, val)
+}
+
 func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request,
 	additionalHeaders nethttp.Header, transformers ...binding.Transformer) error {
 	err := http.WriteRequest(ctx, message, req, transformers...)

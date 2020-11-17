@@ -178,7 +178,9 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		r.reporter.ReportEventCount(&args, nethttp.StatusBadRequest)
 		return
 	}
-	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{}, utils.PassThroughHeaders(request.Header))
+	additionalHeaders := utils.PassThroughHeaders(request.Header)
+	kncloudevents.SetAcceptReplyHeader(additionalHeaders, kncloudevents.AcceptReplyResponse)
+	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{}, additionalHeaders)
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
