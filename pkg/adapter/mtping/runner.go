@@ -33,13 +33,13 @@ import (
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
 type CronJobRunner interface {
 	Start(stopCh <-chan struct{})
 	Stop()
-	AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID
+	AddSchedule(source *v1beta2.PingSource) cron.EntryID
 	RemoveSchedule(id cron.EntryID)
 }
 
@@ -70,16 +70,8 @@ func NewCronJobsRunner(ceClient cloudevents.Client, kubeClient kubernetes.Interf
 	}
 }
 
-func (a *cronJobsRunner) AddSchedule(source *sourcesv1beta1.PingSource) cron.EntryID {
-	event := cloudevents.NewEvent()
-	event.SetType(sourcesv1beta1.PingSourceEventType)
-	event.SetSource(sourcesv1beta1.PingSourceSource(source.Namespace, source.Name))
-	event.SetData(cloudevents.ApplicationJSON, makeMessage(source.Spec.JsonData))
-	if source.Spec.CloudEventOverrides != nil && source.Spec.CloudEventOverrides.Extensions != nil {
-		for key, override := range source.Spec.CloudEventOverrides.Extensions {
-			event.SetExtension(key, override)
-		}
-	}
+func (a *cronJobsRunner) AddSchedule(source *v1beta2.PingSource) cron.EntryID {
+	event := makeEvent(source)
 
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, source.Status.SinkURI.String())
@@ -140,16 +132,43 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 	}
 }
 
-type message struct {
-	Body string `json:"body"`
-}
-
-func makeMessage(body string) interface{} {
-	// try to marshal the body into an interface.
-	var objmap map[string]*json.RawMessage
-	if err := json.Unmarshal([]byte(body), &objmap); err != nil {
-		// Default to a wrapped message.
-		return message{Body: body}
+func makeEvent(source *v1beta2.PingSource) cloudevents.Event {
+	event := cloudevents.NewEvent()
+	event.SetType(v1beta2.PingSourceEventType)
+	event.SetSource(v1beta2.PingSourceSource(source.Namespace, source.Name))
+	if source.Spec.CloudEventOverrides != nil && source.Spec.CloudEventOverrides.Extensions != nil {
+		for key, override := range source.Spec.CloudEventOverrides.Extensions {
+			event.SetExtension(key, override)
+		}
 	}
-	return objmap
+
+	// Set event data, at most one of data and dataBase64 exists.
+	// 1. If dataBase64 exists, then it's binary data, set event.DataEncoded to []byte(dataBase64)
+	// 2. If data exists, then it's not binary data
+	//  a. If contentType is not `application/json`, set event.DataEncoded to []byte(data)
+	//  b. If contentType is `application/json`, unmarshal it into an interface, event.DataEncoded will be json.Marshal(interface),
+	//    this is to be compatible with the existing v1beta1 PingSource -> CloudEvent conversion logic, to make sure
+	//    that `data` is populated in the cloudevent json format instead of `data_base64`, and not breaking subscribers
+	//    that does not leverage cloudevents sdk.
+	var data interface{}
+	if source.Spec.DataBase64 != "" {
+		data = []byte(source.Spec.DataBase64)
+	} else if source.Spec.Data != "" {
+		switch source.Spec.ContentType {
+		case cloudevents.ApplicationJSON:
+			// unmarshal the body into an interface, JSON validation is done in pingsource_validation
+			// ignoring the error returned by json.Unmarshal here.
+			var objmap map[string]*json.RawMessage
+			_ = json.Unmarshal([]byte(source.Spec.Data), &objmap)
+			data = objmap
+		default:
+			data = []byte(source.Spec.Data)
+		}
+	}
+
+	if data != nil {
+		_ = event.SetData(source.Spec.ContentType, data)
+	}
+
+	return event
 }

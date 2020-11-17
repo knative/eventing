@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,7 +36,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
@@ -54,8 +56,8 @@ import (
 	"knative.dev/pkg/resolver"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
-	rtv1alpha1 "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	rtv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
@@ -82,9 +84,10 @@ const (
 
 	pingSourceName              = "test-ping-source"
 	testSchedule                = "*/2 * * * *"
+	testContentType             = cloudevents.TextPlain
 	testData                    = "data"
 	sinkName                    = "testsink"
-	dependencyAnnotation        = `{"kind":"PingSource","name":"test-ping-source","apiVersion":"sources.knative.dev/v1beta1"}`
+	dependencyAnnotation        = `{"kind":"PingSource","name":"test-ping-source","apiVersion":"sources.knative.dev/v1beta2"}`
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
@@ -889,37 +892,38 @@ func makeFalseStatusSubscription() *messagingv1.Subscription {
 	return s
 }
 
-func makeFalseStatusPingSource() *sourcesv1beta1.PingSource {
-	return rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS, rtv1alpha1.WithPingSourceV1B1SinkNotFound)
+func makeFalseStatusPingSource() *v1beta2.PingSource {
+	return rtv1beta2.NewPingSource(pingSourceName, testNS, rtv1beta2.WithPingSourceSinkNotFound)
 }
 
-func makeUnknownStatusCronJobSource() *sourcesv1beta1.PingSource {
-	cjs := rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS)
+func makeUnknownStatusCronJobSource() *v1beta2.PingSource {
+	cjs := rtv1beta2.NewPingSource(pingSourceName, testNS)
 	cjs.Status.InitializeConditions()
 	return cjs
 }
 
-func makeGenerationNotEqualPingSource() *sourcesv1beta1.PingSource {
+func makeGenerationNotEqualPingSource() *v1beta2.PingSource {
 	c := makeFalseStatusPingSource()
 	c.Generation = currentGeneration
 	c.Status.ObservedGeneration = outdatedGeneration
 	return c
 }
 
-func makeReadyPingSource() *sourcesv1beta1.PingSource {
+func makeReadyPingSource() *v1beta2.PingSource {
 	u, _ := apis.ParseURL(sinkURI)
-	return rtv1alpha1.NewPingSourceV1Beta1(pingSourceName, testNS,
-		rtv1alpha1.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-			Schedule: testSchedule,
-			JsonData: testData,
+	return rtv1beta2.NewPingSource(pingSourceName, testNS,
+		rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+			Schedule:    testSchedule,
+			ContentType: testContentType,
+			Data:        testData,
 			SourceSpec: duckv1.SourceSpec{
 				Sink: brokerDestv1,
 			},
 		}),
-		rtv1alpha1.WithInitPingSourceV1B1Conditions,
-		rtv1alpha1.WithPingSourceV1B1Deployed,
-		rtv1alpha1.WithPingSourceV1B1CloudEventAttributes,
-		rtv1alpha1.WithPingSourceV1B1Sink(u),
+		rtv1beta2.WithInitPingSourceConditions,
+		rtv1beta2.WithPingSourceDeployed,
+		rtv1beta2.WithPingSourceCloudEventAttributes,
+		rtv1beta2.WithPingSourceSink(u),
 	)
 }
 func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {

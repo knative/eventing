@@ -22,21 +22,21 @@ import (
 
 	. "knative.dev/pkg/reconciler/testing"
 
-	// Fake injection informers
-
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta1/pingsource/fake"
+	// Fake injection informers
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource/fake"
+
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
 type testAdapter struct {
 	adapter.Adapter
 }
 
-func (testAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
+func (testAdapter) Update(context.Context, *v1beta2.PingSource) {
 }
 
-func (testAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
+func (testAdapter) Remove(context.Context, *v1beta2.PingSource) {
 }
 
 func TestNew(t *testing.T) {

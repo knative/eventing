@@ -36,7 +36,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	rttestingv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 )
 
 func TestPingSourceV1Beta1(t *testing.T) {
@@ -56,10 +56,10 @@ func TestPingSourceV1Beta1(t *testing.T) {
 	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
 	// create cron job source
 	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
-	source := eventingtesting.NewPingSourceV1Beta1(
+	source := rttestingv1beta1.NewPingSource(
 		sourceName,
 		client.Namespace,
-		eventingtesting.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
+		rttestingv1beta1.WithPingSourceSpec(sourcesv1beta1.PingSourceSpec{
 			JsonData: data,
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
@@ -99,10 +99,10 @@ func TestPingSourceV1Beta1EventTypes(t *testing.T) {
 	client.WaitForResourceReadyOrFail(sugarresources.DefaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create ping source
-	source := eventingtesting.NewPingSourceV1Beta1(
+	source := rttestingv1beta1.NewPingSource(
 		sourceName,
 		client.Namespace,
-		eventingtesting.WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
+		rttestingv1beta1.WithPingSourceSpec(sourcesv1beta1.PingSourceSpec{
 			JsonData: fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID()),
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{

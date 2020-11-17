@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/network"
@@ -33,9 +35,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta1/pingsource"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -50,6 +52,7 @@ import (
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	rtv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	rtv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
@@ -68,11 +71,13 @@ var (
 )
 
 const (
-	sourceName   = "test-ping-source"
-	sourceUID    = "1234"
-	testNS       = "testnamespace"
-	testSchedule = "*/2 * * * *"
-	testData     = "data"
+	sourceName      = "test-ping-source"
+	sourceUID       = "1234"
+	testNS          = "testnamespace"
+	testSchedule    = "*/2 * * * *"
+	testContentType = cloudevents.TextPlain
+	testData        = "data"
+	testDataBase64  = "ZGF0YQ==" // "data"
 
 	sinkName   = "testsink"
 	generation = 1
@@ -98,34 +103,36 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "missing sink",
 			Objects: []runtime.Object{
-				NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
+				rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
 							Sink: sinkDest,
 						},
 					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
+				Object: rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
 							Sink: sinkDest,
 						},
 					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
-					WithInitPingSourceV1B1Conditions,
-					WithPingSourceV1B1StatusObservedGeneration(generation),
-					WithPingSourceV1B1SinkNotFound,
+					rtv1beta2.WithInitPingSourceConditions,
+					rtv1beta2.WithPingSourceStatusObservedGeneration(generation),
+					rtv1beta2.WithPingSourceSinkNotFound,
 				),
 			}},
 			WantEvents: []string{
@@ -135,16 +142,17 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
-				NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
+				rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
 							Sink: sinkDest,
 						},
 					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 				),
 				rtv1beta1.NewChannel(sinkName, testNS,
 					rtv1beta1.WithInitChannelConditions,
@@ -154,22 +162,65 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSourceV1Beta1(sourceName, testNS,
-					WithPingSourceV1B1Spec(sourcesv1beta1.PingSourceSpec{
-						Schedule: testSchedule,
-						JsonData: testData,
+				Object: rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
 						SourceSpec: duckv1.SourceSpec{
 							Sink: sinkDest,
 						},
 					}),
-					WithPingSourceV1B1UID(sourceUID),
-					WithPingSourceV1B1ObjectMetaGeneration(generation),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
-					WithInitPingSourceV1B1Conditions,
-					WithPingSourceV1B1Deployed,
-					WithPingSourceV1B1Sink(sinkURI),
-					WithPingSourceV1B1CloudEventAttributes,
-					WithPingSourceV1B1StatusObservedGeneration(generation),
+					rtv1beta2.WithInitPingSourceConditions,
+					rtv1beta2.WithPingSourceDeployed,
+					rtv1beta2.WithPingSourceSink(sinkURI),
+					rtv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1beta2.WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+		}, {
+			Name: "valid with dataBase64",
+			Objects: []runtime.Object{
+				rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						DataBase64:  testDataBase64,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1beta1.NewChannel(sinkName, testNS,
+					rtv1beta1.WithInitChannelConditions,
+					rtv1beta1.WithChannelAddress(sinkDNS),
+				),
+				makeAvailableMTAdapter(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						DataBase64:  testDataBase64,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1beta2.WithInitPingSourceConditions,
+					rtv1beta2.WithPingSourceDeployed,
+					rtv1beta2.WithPingSourceSink(sinkURI),
+					rtv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1beta2.WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
 		},
@@ -180,14 +231,14 @@ func TestAllCases(t *testing.T) {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:    fakekubeclient.Get(ctx),
-			pingLister:       listers.GetPingSourceV1beta1Lister(),
+			pingLister:       listers.GetPingSourceV1beta2Lister(),
 			deploymentLister: listers.GetDeploymentLister(),
 			tracker:          tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
-			fakeeventingclient.Get(ctx), listers.GetPingSourceV1beta1Lister(),
+			fakeeventingclient.Get(ctx), listers.GetPingSourceV1beta2Lister(),
 			controller.GetEventRecorder(ctx), r)
 	},
 		true,

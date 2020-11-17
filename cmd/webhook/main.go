@@ -57,6 +57,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
@@ -95,6 +96,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1beta1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1beta1.PingSource{},
 	sourcesv1beta1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1beta1.SinkBinding{},
 	sourcesv1beta1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1beta1.ContainerSource{},
+	// v1beta2
+	sourcesv1beta2.SchemeGroupVersion.WithKind("PingSource"): &sourcesv1beta2.PingSource{},
 	// v1
 	sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1.ApiServerSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
@@ -245,6 +248,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		sourcesv1alpha1_  = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_  = sourcesv1alpha2.SchemeGroupVersion.Version
 		sourcesv1beta1_   = sourcesv1beta1.SchemeGroupVersion.Version
+		sourcesv1beta2_   = sourcesv1beta2.SchemeGroupVersion.Version
 		sourcesv1_        = sourcesv1.SchemeGroupVersion.Version
 	)
 
@@ -333,6 +337,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
 					sourcesv1beta1_:  &sourcesv1beta1.PingSource{},
+					sourcesv1beta2_:  &sourcesv1beta2.PingSource{},
 				},
 			},
 			sourcesv1.Kind("SinkBinding"): {

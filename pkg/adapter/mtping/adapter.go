@@ -32,7 +32,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources/v1beta1"
+	v1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
 const (
@@ -93,7 +93,7 @@ func GetNoShutDownAfterValue() int {
 
 // Implements MTAdapter
 
-func (a *mtpingAdapter) Update(ctx context.Context, source *v1beta1.PingSource) {
+func (a *mtpingAdapter) Update(ctx context.Context, source *v1beta2.PingSource) {
 	logging.FromContext(ctx).Info("Synchronizing schedule")
 
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
@@ -113,7 +113,7 @@ func (a *mtpingAdapter) Update(ctx context.Context, source *v1beta1.PingSource) 
 	a.entryidMu.Unlock()
 }
 
-func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta1.PingSource) {
+func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta2.PingSource) {
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 
 	a.entryidMu.RLock()
