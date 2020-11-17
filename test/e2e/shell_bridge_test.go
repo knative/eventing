@@ -21,6 +21,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -30,19 +31,20 @@ func TestShellScript(t *testing.T) {
 		label   string
 		script  string
 		wantErr bool
-		out     string
+		wants   []string
 	}{
 		{
 			"echo", "echo unit test", false,
-			"echo [OUT] unit test\n",
+			[]string{"echo [OUT] unit test\n"},
 		}, {
 			"echo-err", "echo unit test 1>&2", false,
-			"echo-err [ERR] unit test\n",
+			[]string{"echo-err [ERR] unit test\n"},
 		}, {
 			"exit", "exit 45", true,
-			"",
+			[]string{},
 		},
 	}
+	assert := assertions{t: t}
 	for _, tt := range tests {
 		t.Run(tt.label, func(t *testing.T) {
 			out := captureOutput(func() {
@@ -50,10 +52,7 @@ func TestShellScript(t *testing.T) {
 					t.Errorf("ShellScript() error = %v, wantErr %v", err, tt.wantErr)
 				}
 			})
-
-			if out != tt.out {
-				t.Errorf("actual = %v\n  want = %v\n", out, tt.out)
-			}
+			assert.textContains(out, tt.wants)
 		})
 	}
 }
@@ -86,4 +85,19 @@ func captureOutput(f func()) string {
 	f()
 	_ = writer.Close()
 	return <-out
+}
+
+type assertions struct {
+	t *testing.T
+}
+
+func (a assertions) textContains(haystack string, needles []string) {
+	for _, needle := range needles {
+		if !strings.Contains(haystack, needle) {
+			a.t.Errorf(
+				"expected %q is not in: %q",
+				needle, haystack,
+			)
+		}
+	}
 }
