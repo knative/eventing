@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script builds all the YAMLs that Knative serving publishes. It may be
+# This script builds all the YAMLs that Knative eventing publishes. It may be
 # varied between different branches, of what it does, but the following usage
 # must be observed:
 #
