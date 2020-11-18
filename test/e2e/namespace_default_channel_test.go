@@ -57,7 +57,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		t.Log("Updating defaulting ConfigMap")
 
-		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, defaultChannelCM, metav1.GetOptions{})
+		cm, err := c.Kube.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, defaultChannelCM, metav1.GetOptions{})
 		assert.Nil(t, err)
 
 		// Preserve existing namespace defaults.
@@ -82,7 +82,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		cm.Data[defaultChannelConfigKey] = string(b)
 
-		cm, err = c.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(ctx, cm, metav1.UpdateOptions{})
+		cm, err = c.Kube.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(ctx, cm, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
