@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -34,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
-	"knative.dev/pkg/system"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -57,7 +57,8 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		t.Log("Updating defaulting ConfigMap")
 
-		cm, err := c.Kube.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, defaultChannelCM, metav1.GetOptions{})
+		namespace := os.Getenv("TEST_EVENTING_NAMESPACE")
+		cm, err := c.Kube.Kube.CoreV1().ConfigMaps(namespace).Get(ctx, defaultChannelCM, metav1.GetOptions{})
 		assert.Nil(t, err)
 
 		// Preserve existing namespace defaults.
@@ -82,7 +83,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		cm.Data[defaultChannelConfigKey] = string(b)
 
-		cm, err = c.Kube.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(ctx, cm, metav1.UpdateOptions{})
+		cm, err = c.Kube.Kube.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
