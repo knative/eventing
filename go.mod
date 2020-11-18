@@ -37,14 +37,14 @@ require (
 	google.golang.org/grpc v1.33.1
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
-	k8s.io/api v0.18.8
-	k8s.io/apiextensions-apiserver v0.18.8
-	k8s.io/apimachinery v0.18.8
+	k8s.io/api v0.18.12
+	k8s.io/apiextensions-apiserver v0.18.12
+	k8s.io/apimachinery v0.18.12
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
 	knative.dev/hack v0.0.0-20201112185459-01a34c573bd8
-	knative.dev/pkg v0.0.0-20201117020252-ab1a398f669c
+	knative.dev/pkg v0.0.0-20201117221452-0fccc54273ed
 	sigs.k8s.io/yaml v1.2.0
 )
 
