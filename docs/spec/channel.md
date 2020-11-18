@@ -335,8 +335,8 @@ Channel at any given moment in time. This MAY be done via the host, path, query
 string, or any combination of these. This mapping is handled exclusively by the
 Channel implementation, exposed via the Channel's `status.address`.
 
-If a channel implementation receives a request that does not correspond to a
-known channel, then it MUST reply with a `404 Not Found`.
+If a Channel receives a request that does not correspond to a known channel,
+then it MUST respond with a `404 Not Found`.
 
 The Channel MUST respond with `202 Accepted` if the event queueing request is
 accepted by the server.
