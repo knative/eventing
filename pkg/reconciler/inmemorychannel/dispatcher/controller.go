@@ -24,12 +24,12 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/kncloudevents"
-
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/kmeta"
+
+	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/kncloudevents"
 
 	"knative.dev/pkg/logging"
 
@@ -61,6 +61,11 @@ type envConfig struct {
 	// TODO: change this environment variable to something like "PodGroupName".
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
+
+	// HTTP client conf used when dispatching events
+	MaxIdleConns int `envconfig:"MAX_IDLE_CONNS" required:"true"`
+	// MaxIdleConnsPerHost refers to the max idle connections per host, as in net/http/transport.
+	MaxIdleConnsPerHost int `envconfig:"MAX_IDLE_CONNS_PER_HOST" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code.
@@ -80,6 +85,10 @@ func NewController(
 	if err := envconfig.Process("", &env); err != nil {
 		logger.Fatalw("Failed to process env var", zap.Error(err))
 	}
+	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
+		MaxIdleConns:        env.MaxIdleConns,
+		MaxIdleConnsPerHost: env.MaxIdleConnsPerHost,
+	})
 
 	reporter := channel.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
@@ -95,7 +104,6 @@ func NewController(
 	inMemoryDispatcher := inmemorychannel.NewMessageDispatcher(args)
 
 	inmemorychannelInformer := inmemorychannelinformer.Get(ctx)
-	informer := inmemorychannelInformer.Informer()
 
 	r := &Reconciler{
 		multiChannelMessageHandler: sh,
@@ -105,18 +113,6 @@ func NewController(
 	impl := inmemorychannelreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
-
-	globalSyncAfterDispatcherConfigUpdate := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(key string, val interface{}) {
-		conf := val.(channel.EventDispatcherConfig)
-		kncloudevents.ConfigureConnectionArgs(&conf.ConnectionArgs)
-
-		// Nothing to filter, enqueue all imcs if configmap updates.
-		impl.FilteredGlobalResync(func(interface{}) bool { return true }, informer)
-	})
-	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
-	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), globalSyncAfterDispatcherConfigUpdate)
-	configStore.WatchConfigs(cmw)
-	r.eventDispatcherConfigStore = configStore
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 

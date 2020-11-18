@@ -24,14 +24,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"knative.dev/eventing/pkg/kncloudevents"
 
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/reconciler"
 
+	"knative.dev/eventing/pkg/kncloudevents"
+
 	corev1 "k8s.io/api/core/v1"
 	clientgotesting "k8s.io/client-go/testing"
+
 	"knative.dev/eventing/pkg/channel/fanout"
 
 	"k8s.io/utils/pointer"
@@ -316,7 +318,6 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			multiChannelMessageHandler: newFakeMultiChannelHandler(),
-			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,

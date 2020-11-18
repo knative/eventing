@@ -42,6 +42,7 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/pkg/logging"
 )
@@ -82,6 +83,8 @@ type Reconciler struct {
 	endpointsLister         corev1listers.EndpointsLister
 	serviceAccountLister    corev1listers.ServiceAccountLister
 	roleBindingLister       rbacv1listers.RoleBindingLister
+
+	eventDispatcherConfigStore *config.EventDispatcherConfigStore
 }
 
 // Check that our Reconciler implements Interface
@@ -193,6 +196,9 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherN
 			if scope == eventing.ScopeNamespace {
 				// Create dispatcher in imc's namespace
 				args := resources.DispatcherArgs{
+					EventDispatcherConfig: config.EventDispatcherConfig{
+						ConnectionArgs: r.eventDispatcherConfigStore.GetConfig().ConnectionArgs,
+					},
 					ServiceAccountName:  dispatcherName,
 					DispatcherName:      dispatcherName,
 					DispatcherNamespace: dispatcherNamespace,

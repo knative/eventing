@@ -19,11 +19,15 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
+
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/network"
 
@@ -57,6 +61,8 @@ const (
 	imcName               = "test-imc"
 	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
 	imageName             = "test-image"
+	maxIdleConns          = 2000
+	maxIdleConnsPerHost   = 200
 
 	imcGeneration = 7
 )
@@ -406,6 +412,7 @@ func TestInNamespace(t *testing.T) {
 			Name: "Works, creates new service account, role binding, dispatcher deployment and service and channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
+				makeEventDispatcherConfigMap(),
 				NewInMemoryChannel(imcName, testNS, WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, testNS)),
 				makeReadyEndpoints(),
@@ -439,6 +446,7 @@ func TestInNamespace(t *testing.T) {
 			Name: "Works, existing service account, role binding, dispatcher deployment and service, new channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
+				makeEventDispatcherConfigMap(),
 				NewInMemoryChannel(imcName, testNS, WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
 				makeServiceAccount(NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, NewInMemoryChannel(imcName, testNS)),
@@ -466,18 +474,22 @@ func TestInNamespace(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		eventDispatcherConfigStore := config.NewEventDispatcherConfigStore(logger)
+		eventDispatcherConfigStore.WatchConfigs(cmw)
+
 		r := &Reconciler{
 			kubeClientSet:         fakekubeclient.Get(ctx),
 			dispatcherImage:       imageName,
 			systemNamespace:       systemNS,
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO: FIx
-			inmemorychannelInformer: nil,
-			deploymentLister:        listers.GetDeploymentLister(),
-			serviceLister:           listers.GetServiceLister(),
-			endpointsLister:         listers.GetEndpointsLister(),
-			serviceAccountLister:    listers.GetServiceAccountLister(),
-			roleBindingLister:       listers.GetRoleBindingLister(),
+			inmemorychannelInformer:    nil,
+			deploymentLister:           listers.GetDeploymentLister(),
+			serviceLister:              listers.GetServiceLister(),
+			endpointsLister:            listers.GetEndpointsLister(),
+			serviceAccountLister:       listers.GetServiceAccountLister(),
+			roleBindingLister:          listers.GetRoleBindingLister(),
+			eventDispatcherConfigStore: eventDispatcherConfigStore,
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -543,6 +555,12 @@ func makeRoleBinding(ns, name, clusterRoleName string, imc *v1.InMemoryChannel) 
 
 func makeDispatcherDeployment(imc *v1.InMemoryChannel) *appsv1.Deployment {
 	return resources.MakeDispatcher(resources.DispatcherArgs{
+		EventDispatcherConfig: config.EventDispatcherConfig{
+			ConnectionArgs: kncloudevents.ConnectionArgs{
+				MaxIdleConns:        maxIdleConns,
+				MaxIdleConnsPerHost: maxIdleConnsPerHost,
+			},
+		},
 		DispatcherName:      dispatcherName,
 		DispatcherNamespace: testNS,
 		Image:               imageName,
@@ -614,4 +632,17 @@ func makeReadyEndpoints() *corev1.Endpoints {
 	e := makeEmptyEndpoints()
 	e.Subsets = []corev1.EndpointSubset{{Addresses: []corev1.EndpointAddress{{IP: "1.1.1.1"}}}}
 	return e
+}
+
+func makeEventDispatcherConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      config.EventDispatcherConfigMap,
+			Namespace: systemNS,
+		},
+		Data: map[string]string{
+			"MaxIdleConnections":        strconv.Itoa(maxIdleConns),
+			"MaxIdleConnectionsPerHost": strconv.Itoa(maxIdleConnsPerHost),
+		},
+	}
 }

@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package config
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"knative.dev/eventing/pkg/kncloudevents"
 	configmaptesting "knative.dev/pkg/configmap/testing"
 	logtesting "knative.dev/pkg/logging/testing"
+
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 func TestGetConfig(t *testing.T) {

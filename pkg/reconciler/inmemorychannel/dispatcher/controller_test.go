@@ -44,6 +44,8 @@ func TestNew(t *testing.T) {
 	os.Setenv("SCOPE", eventing.ScopeCluster)
 	os.Setenv("POD_NAME", "testpod")
 	os.Setenv("CONTAINER_NAME", "testcontainer")
+	os.Setenv("MAX_IDLE_CONNS", "2000")
+	os.Setenv("MAX_IDLE_CONNS_PER_HOST", "200")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
@@ -61,6 +63,8 @@ func TestNewInNamespace(t *testing.T) {
 	os.Setenv("SCOPE", eventing.ScopeNamespace)
 	os.Setenv("POD_NAME", "testpod")
 	os.Setenv("CONTAINER_NAME", "testcontainer")
+	os.Setenv("MAX_IDLE_CONNS", "2000")
+	os.Setenv("MAX_IDLE_CONNS_PER_HOST", "200")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
