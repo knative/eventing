@@ -94,7 +94,7 @@ ko resolve ${KO_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[
 ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
 
-all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING})
+all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
 
   # # Template for POST_INSTALL usage:
   # # Create vX.Y.Z post-install job yaml.
