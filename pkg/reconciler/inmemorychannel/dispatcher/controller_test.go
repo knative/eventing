@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 
@@ -70,4 +71,40 @@ func TestNewInNamespace(t *testing.T) {
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+func TestMaxIdleConnsEqualToZero(t *testing.T) {
+	ctx, cancel, _ := SetupFakeContextWithCancel(t)
+	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
+
+	os.Setenv("SCOPE", eventing.ScopeNamespace)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
+	os.Setenv("MAX_IDLE_CONNS", "0")
+	os.Setenv("MAX_IDLE_CONNS_PER_HOST", "200")
+
+	require.Panics(t, func() {
+		NewController(ctx, &configmap.InformedWatcher{})
+	})
+}
+
+func TestMaxIdleConnsPerHostEqualToZero(t *testing.T) {
+	ctx, cancel, _ := SetupFakeContextWithCancel(t)
+	defer cancel()
+	// Replace test logger because the shutdown of the dispatcher may happen
+	// after the test ends, causing a data race on the t logger
+	ctx = logging.WithLogger(ctx, zap.NewNop().Sugar())
+
+	os.Setenv("SCOPE", eventing.ScopeNamespace)
+	os.Setenv("POD_NAME", "testpod")
+	os.Setenv("CONTAINER_NAME", "testcontainer")
+	os.Setenv("MAX_IDLE_CONNS", "2000")
+	os.Setenv("MAX_IDLE_CONNS_PER_HOST", "0")
+
+	require.Panics(t, func() {
+		NewController(ctx, &configmap.InformedWatcher{})
+	})
 }

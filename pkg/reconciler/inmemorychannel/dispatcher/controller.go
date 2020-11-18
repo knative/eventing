@@ -79,11 +79,19 @@ func NewController(
 	// Setup trace publishing.
 	iw := cmw.(*configmap.InformedWatcher)
 	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
-		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
+		logger.Panicw("Error setting up trace publishing", zap.Error(err))
 	}
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		logger.Fatalw("Failed to process env var", zap.Error(err))
+		logger.Panicw("Failed to process env var", zap.Error(err))
+	}
+
+	// Setup connection arguments
+	if env.MaxIdleConns <= 0 {
+		logger.Panicf("MAX_IDLE_CONNS = %d. It must be greater than 0", env.MaxIdleConns)
+	}
+	if env.MaxIdleConnsPerHost <= 0 {
+		logger.Panicf("MAX_IDLE_CONNS_PER_HOST = %d. It must be greater than 0", env.MaxIdleConnsPerHost)
 	}
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        env.MaxIdleConns,
