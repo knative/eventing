@@ -1099,12 +1099,12 @@ k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29/go.mod h1:F+5wygcW0wmRTnM
 k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20200603063816-c1c6865ac451 h1:v8ud2Up6QK1lNOKFgiIVrZdMg7MpmSnvtrOieolJKoE=
 k8s.io/utils v0.0.0-20200603063816-c1c6865ac451/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
-knative.dev/hack v0.0.0-20201112185459-01a34c573bd8 h1:RNbZsAjhswBPtl4C5C5gEFX5/GfWIOZQxfYD9DhkHdY=
-knative.dev/hack v0.0.0-20201112185459-01a34c573bd8/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack v0.0.0-20201118155651-b31d3bb6bff9 h1:OgYL1cATsWTS6kztSOuQqhmYfcn6ZdpPAQQ6TKCx00I=
 knative.dev/hack v0.0.0-20201118155651-b31d3bb6bff9/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
-knative.dev/pkg v0.0.0-20201117221452-0fccc54273ed h1:4LNEFhvD2Ya4WgCD3SC1WGXz81bjEvQgbcpe5XACI3I=
-knative.dev/pkg v0.0.0-20201117221452-0fccc54273ed/go.mod h1:nxlh3CUvx6WBPr1WKD96AHxFZPD2UKRDo9RUp8ILTyQ=
+knative.dev/hack v0.0.0-20201119025252-d3cb354f49ff h1:+bdPPtgog4EAuibiiW1uMdWX2DVij0+elXSh+Yfey78=
+knative.dev/hack v0.0.0-20201119025252-d3cb354f49ff/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
+knative.dev/pkg v0.0.0-20201119021551-260026d54739 h1:23XBvGmbprZ86TY9HJQmO7ZKp/te3LzJdKeVX7o9TAw=
+knative.dev/pkg v0.0.0-20201119021551-260026d54739/go.mod h1:3Udj7GogdjFg0M05MJm+aJjHx1BK/tyQarl5RB2k0Xo=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
