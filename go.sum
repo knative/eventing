@@ -1101,6 +1101,8 @@ k8s.io/utils v0.0.0-20200603063816-c1c6865ac451 h1:v8ud2Up6QK1lNOKFgiIVrZdMg7Mpm
 k8s.io/utils v0.0.0-20200603063816-c1c6865ac451/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 knative.dev/hack v0.0.0-20201112185459-01a34c573bd8 h1:RNbZsAjhswBPtl4C5C5gEFX5/GfWIOZQxfYD9DhkHdY=
 knative.dev/hack v0.0.0-20201112185459-01a34c573bd8/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
+knative.dev/hack v0.0.0-20201118155651-b31d3bb6bff9 h1:OgYL1cATsWTS6kztSOuQqhmYfcn6ZdpPAQQ6TKCx00I=
+knative.dev/hack v0.0.0-20201118155651-b31d3bb6bff9/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/pkg v0.0.0-20201117221452-0fccc54273ed h1:4LNEFhvD2Ya4WgCD3SC1WGXz81bjEvQgbcpe5XACI3I=
 knative.dev/pkg v0.0.0-20201117221452-0fccc54273ed/go.mod h1:nxlh3CUvx6WBPr1WKD96AHxFZPD2UKRDo9RUp8ILTyQ=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
