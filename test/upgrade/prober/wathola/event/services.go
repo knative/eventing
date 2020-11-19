@@ -61,9 +61,11 @@ func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 func (s *stepStore) RegisterStep(step *Step) {
 	mutex.Lock()
 	if times, found := s.store[step.Number]; found {
-		s.errors.throw(
-			"event #%d received %d times, but should be received only once",
-			step.Number, times+1)
+		if !config.Instance.Receiver.ErrorCfg.IgnoreDuplicate {
+			s.errors.throw(
+				"event #%d received %d times, but should be received only once",
+				step.Number, times+1)
+		}
 	} else {
 		s.store[step.Number] = 0
 	}
