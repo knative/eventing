@@ -24,6 +24,7 @@ type StepsStore interface {
 // FinishedStore registers a finished event type
 type FinishedStore interface {
 	RegisterFinished(finished *Finished)
+	TotalRequest() int
 	State() State
 	DuplicatedThrown() []string
 	MissingThrown() []string

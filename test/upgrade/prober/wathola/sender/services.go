@@ -34,7 +34,10 @@ var log = config.Log
 var senderConfig = &config.Instance.Sender
 
 type sender struct {
+	// counter is the number of events successfully sent
 	counter int
+	// totalReq is the number of all the send event requests
+	totalReq int
 }
 
 func (s *sender) SendContinually() {
@@ -106,6 +109,8 @@ func (s *sender) sendStep() error {
 	url := senderConfig.Address
 	log.Infof("Sending step event #%v to %s", step.Number, url)
 	err := SendEvent(ce, url)
+	// Record every request regardless of the result
+	s.totalReq++
 	if err != nil {
 		return err
 	}
@@ -117,7 +122,7 @@ func (s *sender) sendFinished() {
 	if s.counter == 0 {
 		return
 	}
-	finished := event.Finished{Count: s.counter}
+	finished := event.Finished{Count: s.counter, TotalReq: s.totalReq}
 	url := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
 	log.Infof("Sending finished event (count: %v) to %s", finished.Count, url)

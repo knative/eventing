@@ -63,6 +63,7 @@ func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 	return &finishedStore{
 		received: 0,
 		count:    -1,
+		totalReq: 0,
 		steps:    steps,
 		errors:   errors,
 	}
@@ -95,6 +96,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	}
 	f.received++
 	f.count = finished.Count
+	f.totalReq = finished.TotalReq
 	log.Infof("finish event received, expecting %d event ware propagated", finished.Count)
 	d := config.Instance.Receiver.Teardown.Duration
 	log.Infof("waiting additional %v to be sure all events came", d)
@@ -109,6 +111,10 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 		log.Infof("properly received %d unique events", receivedEvents)
 		f.errors.state = Success
 	}
+}
+
+func (f *finishedStore) TotalRequest() int {
+	return f.totalReq
 }
 
 func (f *finishedStore) State() State {
@@ -190,6 +196,7 @@ type stepStore struct {
 type finishedStore struct {
 	received int
 	count    int
+	totalReq int
 	errors   *ErrorStore
 	steps    StepsStore
 }

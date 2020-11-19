@@ -25,7 +25,8 @@ type Thrown struct {
 
 // Report represents state as JSON
 type Report struct {
-	State  string `json:"state"`
-	Events int    `json:"events"`
-	Thrown Thrown `json:"thrown"`
+	State    string `json:"state"`
+	Events   int    `json:"events"`
+	TotalReq int    `json:"totalRequest`
+	Thrown   Thrown `json:"thrown"`
 }

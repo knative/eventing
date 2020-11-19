@@ -44,8 +44,9 @@ const (
 // Verify will verify prober state after finished has been send.
 func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	report := p.fetchReport(ctx)
-	p.log.Infof("Fetched receiver report. Events propagated: %v. "+
-		"State: %v", report.Events, report.State)
+	availRate := report.Events * 100.0 / report.TotalReq
+	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.  Total event send requests: %v, avail rate %v%%.",
+		report.Events, report.State, report.TotalReq, availRate)
 	if report.State == "active" {
 		panic(errors.New("report fetched too early, receiver is in active state"))
 	}
@@ -103,8 +104,9 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
-			State:  "failure",
-			Events: 0,
+			State:    "failure",
+			Events:   0,
+			TotalReq: 0,
 			Thrown: receiver.Thrown{
 				Unexpected: []string{"Report wasn't fetched"},
 				Missing:    []string{"Report wasn't fetched"},
