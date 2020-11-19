@@ -41,11 +41,14 @@ const (
 	jobWaitTimeout  = 5 * time.Minute
 )
 
-// Verify will verify prober state after finished has been send.
+// Verify will verify prober state after finished has been sent.
 func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	report := p.fetchReport(ctx)
-	availRate := report.Events * 100.0 / report.TotalReq
-	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.  Total event send requests: %v, avail rate %v%%.",
+	availRate := 0.0
+	if report.TotalReq != 0 {
+		availRate = float64(report.Events*100) / float64(report.TotalReq)
+	}
+	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.  Total event send requests: %v, avail rate %.3f%%.",
 		report.Events, report.State, report.TotalReq, availRate)
 	if report.State == "active" {
 		panic(errors.New("report fetched too early, receiver is in active state"))
