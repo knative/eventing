@@ -18,19 +18,20 @@ package resources
 
 import (
 	"encoding/json"
-	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"knative.dev/eventing/pkg/apis/eventing"
+
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/pkg/kmeta"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 )
 
 // BrokerChannelName creates a name for the Channel for a Broker for a given
 // Channel type.
 func BrokerChannelName(brokerName, channelType string) string {
-	return fmt.Sprintf("%s-kne-%s", brokerName, channelType)
+	return kmeta.ChildName(brokerName, "-kne-"+channelType)
 }
 
 // test

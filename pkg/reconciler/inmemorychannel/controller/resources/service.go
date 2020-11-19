@@ -1,8 +1,6 @@
 package resources
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -21,7 +19,7 @@ const (
 type K8sServiceOption func(*corev1.Service) error
 
 func CreateChannelServiceName(name string) string {
-	return fmt.Sprintf("%s-kn-channel", name)
+	return kmeta.ChildName(name, "-kn-channel")
 }
 
 // ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName
