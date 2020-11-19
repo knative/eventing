@@ -94,10 +94,10 @@ CloudEvents received by Sink MAY have
 ### Event reply header
 
 An event sender, including Source and Broker and Channel, SHOULD include
-the event reply header `K-Eventing-Event-Reply: response` in an event delivery
+the event reply header `K-Eventing-Accept-Reply: response` in an event delivery
 request if it supports response events. If no event reply header is present
 or the header is present but does not include the value `response`,
-the Sink SHOULD assume that response events are NOT supported.
+the Sink SHOULD assume that response events are not supported.
 
 ### Data plane contract for Sources
 
