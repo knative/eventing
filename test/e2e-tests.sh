@@ -32,6 +32,9 @@ source "$(dirname "$0")/e2e-common.sh"
 
 initialize $@ --skip-istio-addon
 
+echo "Running E2E Reconciler Tests"
+go_test_e2e -timeout=30m -parallel=12 ./test/rekt || fail_test
+
 echo "Running E2E tests for: Multi Tenant Channel Based Broker, Channel (v1beta1, v1), InMemoryChannel (v1beta1, v1) , ApiServerSource (v1beta1, v1), ContainerSource (v1alpha2, v1) and PingSource (v1beta1, v1beta2)"
 go_test_e2e -timeout=30m -parallel=12 ./test/e2e \
   -brokerclass=MTChannelBasedBroker \

@@ -26,6 +26,7 @@ jobs:
         - v1.19.1
 
         test-suite:
+        - ./test/rekt
         - ./test/e2e
         - ./test/conformance
 
