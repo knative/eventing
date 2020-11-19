@@ -65,14 +65,6 @@ export SYSTEM_NAMESPACE
 SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(cat /dev/urandom \
   | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
-latest_version() {
-  local semver=$(git describe --match "v[0-9]*" --abbrev=0)
-  local major_minor=$(echo "$semver" | cut -d. -f1-2)
-
-  # Get the latest patch release for the major minor
-  git tag -l "${major_minor}*" | sort -r --version-sort | head -n1
-}
-
 # Latest release. If user does not supply this as a flag, the latest
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(latest_version)
