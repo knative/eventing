@@ -51,11 +51,12 @@ var eventTypes = []string{"step", "finished"}
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Namespace     string
-	Interval      time.Duration
-	FinishedSleep time.Duration
-	Serving       ServingConfig
-	FailOnErrors  bool
+	Namespace       string
+	Interval        time.Duration
+	FinishedSleep   time.Duration
+	Serving         ServingConfig
+	FailOnErrors    bool
+	IgnoreDuplicate bool
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -84,10 +85,11 @@ type ServingConfig struct {
 // `e2e_upgrade_tests` prefix.
 func NewConfig(namespace string) *Config {
 	config := &Config{
-		Namespace:     "",
-		Interval:      Interval,
-		FinishedSleep: defaultFinishedSleep,
-		FailOnErrors:  true,
+		Namespace:       "",
+		Interval:        Interval,
+		FinishedSleep:   defaultFinishedSleep,
+		FailOnErrors:    true,
+		IgnoreDuplicate: true,
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,

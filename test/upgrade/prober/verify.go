@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/wavesoftware/go-ensure"
@@ -51,7 +52,11 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	}
 	errs := make([]error, 0)
 	for _, t := range report.Thrown {
-		errs = append(errs, errors.New(t))
+		if p.config.IgnoreDuplicate && strings.HasPrefix(t, "DUPLICATE:") {
+			p.log.Warn("Duplicate events: ", t)
+		} else {
+			errs = append(errs, errors.New(t))
+		}
 	}
 	return errs, report.Events
 }

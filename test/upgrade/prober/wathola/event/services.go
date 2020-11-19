@@ -26,6 +26,12 @@ import (
 var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
+const (
+	TagDuplicate = "DUPLICATE"
+	TagUnknown   = "UNKNOWN"
+	TagMissing   = "MISSING"
+)
+
 // ErrorStore contains errors that was thrown
 type ErrorStore struct {
 	state  State
@@ -61,7 +67,7 @@ func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 func (s *stepStore) RegisterStep(step *Step) {
 	mutex.Lock()
 	if times, found := s.store[step.Number]; found {
-		s.errors.throw(
+		s.errors.throw(TagDuplicate,
 			"event #%d received %d times, but should be received only once",
 			step.Number, times+1)
 	} else {
@@ -79,7 +85,7 @@ func (s *stepStore) Count() int {
 
 func (f *finishedStore) RegisterFinished(finished *Finished) {
 	if f.received > 0 {
-		f.errors.throw(
+		f.errors.throw(TagDuplicate,
 			"finish event should be received only once, received %d",
 			f.received+1)
 	}
@@ -91,7 +97,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
 	if receivedEvents != finished.Count {
-		f.errors.throw("expecting to have %v unique events received, "+
+		f.errors.throw(TagMissing, "expecting to have %v unique events received, "+
 			"but received %v unique events", finished.Count, receivedEvents)
 		f.reportViolations(finished)
 		f.errors.state = Failed
@@ -108,7 +114,7 @@ func (f *finishedStore) State() State {
 func (f *finishedStore) Thrown() []string {
 	msgs := make([]string, 0)
 	for _, t := range f.errors.thrown {
-		errMsg := fmt.Sprintf(t.format, t.args...)
+		errMsg := t.tag + ": " + fmt.Sprintf(t.format, t.args...)
 		msgs = append(msgs, errMsg)
 	}
 	return msgs
@@ -122,7 +128,13 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 			times = 0
 		}
 		if times != 1 {
-			f.errors.throw("event #%v should be received once, but was received %v times",
+			var tag string
+			if times == 0 {
+				tag = TagMissing
+			} else {
+				tag = TagDuplicate
+			}
+			f.errors.throw(tag, "event #%v should be received once, but was received %v times",
 				eventNo, times)
 		}
 	}
@@ -135,8 +147,12 @@ func (s *stepStore) reportProgress() {
 	}
 }
 
-func (e *ErrorStore) throw(format string, args ...interface{}) {
+func (e *ErrorStore) throw(tag string, format string, args ...interface{}) {
+	if tag == "" {
+		tag = TagUnknown
+	}
 	t := thrown{
+		tag:    tag,
 		format: format,
 		args:   args,
 	}
@@ -157,6 +173,7 @@ type finishedStore struct {
 }
 
 type thrown struct {
+	tag    string
 	format string
 	args   []interface{}
 }
