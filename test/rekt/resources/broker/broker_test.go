@@ -1,8 +1,25 @@
-package broker
+/*
+Copyright 2020 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package broker_test
 
 import (
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	rektr "knative.dev/eventing/test/rekt/resources"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
@@ -97,7 +114,7 @@ func ExampleWithBrokerClass() {
 		"name":      "foo",
 		"namespace": "bar",
 	}
-	WithBrokerClass("a-broker-class")(cfg)
+	broker.WithBrokerClass("a-broker-class")(cfg)
 
 	files, err := rektr.ParseLocalYAML(images, cfg)
 	if err != nil {
@@ -122,7 +139,7 @@ func ExampleWithDeadLetterSink() {
 		"name":      "foo",
 		"namespace": "bar",
 	}
-	WithDeadLetterSink(&v1.KReference{
+	broker.WithDeadLetterSink(&v1.KReference{
 		Kind:       "deadkind",
 		Name:       "deadname",
 		APIVersion: "deadapi",
@@ -158,7 +175,7 @@ func ExampleWithRetry() {
 		"namespace": "bar",
 	}
 	exp := eventingv1.BackoffPolicyExponential
-	WithRetry(42, &exp, ptr.String("2007-03-01T13:00:00Z/P1Y2M10DT2H30M"))(cfg)
+	broker.WithRetry(42, &exp, ptr.String("2007-03-01T13:00:00Z/P1Y2M10DT2H30M"))(cfg)
 
 	files, err := rektr.ParseLocalYAML(images, cfg)
 	if err != nil {
@@ -185,7 +202,7 @@ func ExampleWithRetry_onlyCount() {
 		"name":      "foo",
 		"namespace": "bar",
 	}
-	WithRetry(42, nil, nil)(cfg)
+	broker.WithRetry(42, nil, nil)(cfg)
 
 	files, err := rektr.ParseLocalYAML(images, cfg)
 	if err != nil {

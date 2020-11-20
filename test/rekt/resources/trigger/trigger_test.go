@@ -1,10 +1,28 @@
-package broker
+/*
+Copyright 2020 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package trigger_test
 
 import (
 	"fmt"
+
 	v1 "knative.dev/pkg/apis/duck/v1"
 
 	rektr "knative.dev/eventing/test/rekt/resources"
+	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -113,7 +131,7 @@ func ExampleWithSubscriber() {
 		"brokerName": "baz",
 	}
 
-	WithSubscriber(&v1.KReference{
+	trigger.WithSubscriber(&v1.KReference{
 		Kind:       "subkind",
 		Name:       "subname",
 		APIVersion: "subversion",
@@ -150,7 +168,7 @@ func ExampleWithFilter() {
 		"brokerName": "baz",
 	}
 
-	WithFilter(map[string]string{
+	trigger.WithFilter(map[string]string{
 		"x":    "y",
 		"type": "z",
 	})(cfg)

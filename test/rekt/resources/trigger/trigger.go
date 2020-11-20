@@ -14,19 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package broker
+package trigger
 
 import (
 	"context"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"testing"
+	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 type CfgFn func(map[string]interface{})
 
+// WithFilter adds the filter related config to a Trigger spec.
 func WithFilter(attributes map[string]string) CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["filter"]; !set {
@@ -44,6 +49,7 @@ func WithFilter(attributes map[string]string) CfgFn {
 	}
 }
 
+// WithSubscriber adds the subscriber related config to a Trigger spec.
 func WithSubscriber(ref *duckv1.KReference, uri string) CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["subscriber"]; !set {
@@ -67,9 +73,11 @@ func WithSubscriber(ref *duckv1.KReference, uri string) CfgFn {
 	}
 }
 
-func Install(name string, opts ...CfgFn) feature.StepFn {
+// Install will create a Trigger resource, augmented with the config fn options.
+func Install(name, brokerName string, opts ...CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name": name,
+		"name":       name,
+		"brokerName": brokerName,
 	}
 	for _, fn := range opts {
 		fn(cfg)
@@ -77,6 +85,17 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 	return func(ctx context.Context, t *testing.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+// IsReady tests to see if a Trigger becomes ready within the time given.
+func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
+	gvr := schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
+	return func(ctx context.Context, t *testing.T) {
+		env := environment.FromContext(ctx)
+		if err := k8s.WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
+			t.Error("trigger did not become ready, ", err)
 		}
 	}
 }

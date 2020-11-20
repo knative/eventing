@@ -18,8 +18,17 @@ package broker
 
 import (
 	"context"
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"fmt"
 	"testing"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/k8s"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -28,12 +37,14 @@ import (
 
 type CfgFn func(map[string]interface{})
 
+// WithBrokerClass adds the broker class config to a Broker spec.
 func WithBrokerClass(class string) CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["brokerClass"] = class
 	}
 }
 
+// WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
 func WithDeadLetterSink(ref *duckv1.KReference, uri string) CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["delivery"]; !set {
@@ -60,6 +71,7 @@ func WithDeadLetterSink(ref *duckv1.KReference, uri string) CfgFn {
 	}
 }
 
+// WithRetry adds the retry related config to a Broker spec.
 func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoffDelay *string) CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["delivery"]; !set {
@@ -77,6 +89,7 @@ func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoff
 	}
 }
 
+// Install will create a Broker resource, augmented with the config fn options.
 func Install(name string, opts ...CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
@@ -87,6 +100,39 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 	return func(ctx context.Context, t *testing.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+// IsReady tests to see if a Broker becomes ready within the time given.
+func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
+	gvr := schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
+	return func(ctx context.Context, t *testing.T) {
+		env := environment.FromContext(ctx)
+		if err := k8s.WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
+			t.Error("broker did not become ready, ", err)
+		}
+	}
+}
+
+// IsAddressable tests to see if a Broker becomes addressable within the  time
+// given.
+func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
+	return func(ctx context.Context, t *testing.T) {
+		env := environment.FromContext(ctx)
+		c := eventingclient.Get(ctx)
+		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			b, err := c.EventingV1().Brokers(env.Namespace()).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			if b.Status.Address.URL == nil {
+				return false, fmt.Errorf("broker has no status.address.url, %w", err)
+			}
+			return true, nil
+		})
+		if err != nil {
+			t.Error("broker has no status.address.url, ", err)
 		}
 	}
 }
