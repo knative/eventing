@@ -38,12 +38,12 @@ const (
 	timeout  = 1 * time.Minute
 )
 
-func BrokerGoesReady(name string) *feature.Feature {
+func BrokerGoesReady(name string, cfg ...broker.CfgFn) *feature.Feature {
 	gvr := schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
 
 	f := new(feature.Feature)
 
-	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name))
+	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name, cfg...))
 
 	f.Stable("broker").
 		Must("be ready",

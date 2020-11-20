@@ -27,6 +27,7 @@ import (
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/test/rekt/features/broker"
+	brokercfg "knative.dev/eventing/test/rekt/resources/broker"
 )
 
 // TestSmoke_Broker
@@ -44,7 +45,7 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.BrokerGoesReady(name))
+		env.Test(ctx, t, broker.BrokerGoesReady(name, brokercfg.WithBrokerClass("MTChannelBroker")))
 	}
 
 	env.Finish()
