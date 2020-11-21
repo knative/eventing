@@ -15,7 +15,12 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: storage-version-migration
+  # Adding a prefix to avoid naming conflict with previous version's post-install jobs,
+  # we cannot use `generateName` here as it's not supported by `kubectl apply -f`
+  #
+  # If `ttlSecondsAfterFinished` feature gate becomes generally available in the future,
+  # we can rely on that and keep using the same Job name.
+  name: v0.21-storage-version-migration
   namespace: knative-eventing
   labels:
     app: "storage-version-migration"
@@ -37,6 +42,4 @@ spec:
         - name: migrate
           image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
           args:
-            - "sinkbindings.sources.knative.dev"
-            - "apiserversources.sources.knative.dev"
-            - "containersources.sources.knative.dev"
+            - "pingsources.sources.knative.dev"
