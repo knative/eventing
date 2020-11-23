@@ -17,11 +17,13 @@ limitations under the License.
 package broker_test
 
 import (
+	"os"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	rektr "knative.dev/eventing/test/rekt/resources"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -43,12 +45,12 @@ func Example_min() {
 		},
 	}
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Broker
@@ -79,12 +81,12 @@ func Example_full() {
 		},
 	}
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Broker
@@ -116,12 +118,12 @@ func ExampleWithBrokerClass() {
 	}
 	broker.WithBrokerClass("a-broker-class")(cfg)
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Broker
@@ -145,12 +147,12 @@ func ExampleWithDeadLetterSink() {
 		APIVersion: "deadapi",
 	}, "/extra/path")(cfg)
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Broker
@@ -177,12 +179,12 @@ func ExampleWithRetry() {
 	exp := eventingv1.BackoffPolicyExponential
 	broker.WithRetry(42, &exp, ptr.String("2007-03-01T13:00:00Z/P1Y2M10DT2H30M"))(cfg)
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Broker
@@ -204,12 +206,12 @@ func ExampleWithRetry_onlyCount() {
 	}
 	broker.WithRetry(42, nil, nil)(cfg)
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Broker

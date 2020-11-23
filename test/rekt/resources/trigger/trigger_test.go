@@ -17,11 +17,12 @@ limitations under the License.
 package trigger_test
 
 import (
-	"fmt"
+	"os"
+
+	"knative.dev/reconciler-test/pkg/manifest"
 
 	v1 "knative.dev/pkg/apis/duck/v1"
 
-	rektr "knative.dev/eventing/test/rekt/resources"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
@@ -43,21 +44,12 @@ func Example_min() {
 		},
 	}
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	more := false
-	for _, file := range files {
-		if more {
-			fmt.Println("---")
-		}
-		more = true
-		yaml := rektr.RemoveBlanks(rektr.RemoveComments(string(file)))
-		fmt.Println(yaml)
-	}
-
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Trigger
@@ -96,12 +88,12 @@ func Example_full() {
 		},
 	}
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Trigger
@@ -137,12 +129,12 @@ func ExampleWithSubscriber() {
 		APIVersion: "subversion",
 	}, "/extra/path")(cfg)
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Trigger
@@ -173,12 +165,12 @@ func ExampleWithFilter() {
 		"type": "z",
 	})(cfg)
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: eventing.knative.dev/v1
 	// kind: Trigger

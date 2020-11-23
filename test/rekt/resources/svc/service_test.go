@@ -17,7 +17,9 @@ limitations under the License.
 package svc_test
 
 import (
-	rektr "knative.dev/eventing/test/rekt/resources"
+	"os"
+
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 func Example() {
@@ -29,12 +31,12 @@ func Example() {
 		"selectorValue": "baf",
 	}
 
-	files, err := rektr.ParseLocalYAML(images, cfg)
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	rektr.OutputYAML(files)
+	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: v1
 	// kind: Service

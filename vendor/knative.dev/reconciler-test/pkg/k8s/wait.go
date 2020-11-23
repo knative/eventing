@@ -71,7 +71,7 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		client := dynamicclient.Get(ctx)
 
-		us, err := client.Resource(gvr).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		us, err := client.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Println(namespace, name, "not found", err)
@@ -87,16 +87,42 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 		obj.ResourceVersion = gvr.Version
 		obj.APIVersion = gvr.GroupVersion().String()
 
+		// Ready type.
 		ready := obj.Status.GetCondition(apis.ConditionReady)
-		if ready != nil && !ready.IsTrue() {
-			msg := fmt.Sprintf("%s is not ready, %s: %s", name, ready.Reason, ready.Message)
-			if msg != lastMsg {
-				log.Println(msg)
-				lastMsg = msg
+		if ready != nil {
+			// Succeeded type.
+			ready = obj.Status.GetCondition(apis.ConditionSucceeded)
+		}
+		// Test Ready or Succeeded.
+		if ready != nil {
+			if !ready.IsTrue() {
+				msg := fmt.Sprintf("%s is not %s, %s: %s", name, ready.Type, ready.Reason, ready.Message)
+				if msg != lastMsg {
+					log.Println(msg)
+					lastMsg = msg
+				}
 			}
+
+			log.Printf("%s is %s, %s: %s\n", name, ready.Type, ready.Reason, ready.Message)
+			return ready.IsTrue(), nil
 		}
 
-		return ready.IsTrue(), nil
+		// Last resort, look at all conditions.
+		// As a side-effect of this test,
+		//   if a resource has no conditions, then it is ready.
+		allReady := true
+		for _, c := range obj.Status.Conditions {
+			if !c.IsTrue() {
+				msg := fmt.Sprintf("%s is not %s, %s: %s", name, c.Type, c.Reason, c.Message)
+				if msg != lastMsg {
+					log.Println(msg)
+					lastMsg = msg
+				}
+				allReady = false
+				break
+			}
+		}
+		return allReady, nil
 	})
 }
 

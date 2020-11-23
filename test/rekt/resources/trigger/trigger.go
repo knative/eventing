@@ -23,13 +23,16 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 type CfgFn func(map[string]interface{})
+
+func gvr() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
+}
 
 // WithFilter adds the filter related config to a Trigger spec.
 func WithFilter(attributes map[string]string) CfgFn {
@@ -91,11 +94,5 @@ func Install(name, brokerName string, opts ...CfgFn) feature.StepFn {
 
 // IsReady tests to see if a Trigger becomes ready within the time given.
 func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	gvr := schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
-	return func(ctx context.Context, t *testing.T) {
-		env := environment.FromContext(ctx)
-		if err := k8s.WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
-			t.Error("trigger did not become ready, ", err)
-		}
-	}
+	return k8s.IsReady(gvr(), name, interval, timeout)
 }

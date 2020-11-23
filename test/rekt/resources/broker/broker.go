@@ -18,16 +18,11 @@ package broker
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -36,6 +31,10 @@ import (
 )
 
 type CfgFn func(map[string]interface{})
+
+func gvr() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
+}
 
 // WithBrokerClass adds the broker class config to a Broker spec.
 func WithBrokerClass(class string) CfgFn {
@@ -106,33 +105,11 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 
 // IsReady tests to see if a Broker becomes ready within the time given.
 func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	gvr := schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
-	return func(ctx context.Context, t *testing.T) {
-		env := environment.FromContext(ctx)
-		if err := k8s.WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
-			t.Error("broker did not become ready, ", err)
-		}
-	}
+	return k8s.IsReady(gvr(), name, interval, timeout)
 }
 
 // IsAddressable tests to see if a Broker becomes addressable within the  time
 // given.
 func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
-		env := environment.FromContext(ctx)
-		c := eventingclient.Get(ctx)
-		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-			b, err := c.EventingV1().Brokers(env.Namespace()).Get(ctx, name, metav1.GetOptions{})
-			if err != nil {
-				return false, err
-			}
-			if b.Status.Address.URL == nil {
-				return false, fmt.Errorf("broker has no status.address.url, %w", err)
-			}
-			return true, nil
-		})
-		if err != nil {
-			t.Error("broker has no status.address.url, ", err)
-		}
-	}
+	return k8s.IsAddressable(gvr(), name, interval, timeout)
 }
