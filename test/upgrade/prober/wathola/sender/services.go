@@ -38,6 +38,8 @@ type sender struct {
 	counter int
 	// totalReq is the number of all the send event requests
 	totalReq int
+	// retries is an array for non-zero retries for each event
+	retries []int
 }
 
 func (s *sender) SendContinually() {
@@ -53,17 +55,27 @@ func (s *sender) SendContinually() {
 		close(shutdownCh)
 	}()
 
+	localRetry := 0
 	for {
 		select {
 		case <-shutdownCh:
+			// If there is ongoing event transition, we need to push to retries too.
+			if localRetry != 0 {
+				s.retries = append(s.retries, localRetry)
+			}
 			return
 		default:
 		}
 		err := s.sendStep()
 		if err != nil {
+			localRetry++
 			log.Warnf("Could not send step event, retry in %v", senderConfig.Cooldown)
 			time.Sleep(senderConfig.Cooldown)
 		} else {
+			if localRetry != 0 {
+				s.retries = append(s.retries, localRetry)
+				localRetry = 0
+			}
 			time.Sleep(senderConfig.Interval)
 		}
 	}
@@ -122,7 +134,7 @@ func (s *sender) sendFinished() {
 	if s.counter == 0 {
 		return
 	}
-	finished := event.Finished{Count: s.counter, TotalReq: s.totalReq}
+	finished := event.Finished{Count: s.counter, TotalReq: s.totalReq, Retries: s.retries}
 	url := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
 	log.Infof("Sending finished event (count: %v) to %s", finished.Count, url)

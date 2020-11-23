@@ -197,6 +197,7 @@ type finishedStore struct {
 	received int
 	count    int
 	totalReq int
+	retries  []int
 	errors   *ErrorStore
 	steps    StepsStore
 }

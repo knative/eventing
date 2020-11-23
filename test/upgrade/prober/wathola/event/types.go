@@ -33,6 +33,7 @@ type Step struct {
 type Finished struct {
 	Count    int
 	TotalReq int
+	Retries  []int
 }
 
 // Type returns a type of a event
