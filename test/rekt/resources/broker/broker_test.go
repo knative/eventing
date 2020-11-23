@@ -17,12 +17,13 @@ limitations under the License.
 package broker_test
 
 import (
+	"os"
+
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"os"
 )
 
 // The following examples validate the processing of the With* helper methods

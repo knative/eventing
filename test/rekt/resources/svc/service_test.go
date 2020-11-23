@@ -17,8 +17,9 @@ limitations under the License.
 package svc_test
 
 import (
-	"knative.dev/reconciler-test/pkg/manifest"
 	"os"
+
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 func Example() {

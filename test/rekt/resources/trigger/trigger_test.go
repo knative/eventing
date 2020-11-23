@@ -17,8 +17,9 @@ limitations under the License.
 package trigger_test
 
 import (
-	"knative.dev/reconciler-test/pkg/manifest"
 	"os"
+
+	"knative.dev/reconciler-test/pkg/manifest"
 
 	v1 "knative.dev/pkg/apis/duck/v1"
 
