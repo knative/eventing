@@ -17,4 +17,33 @@ kind: Broker
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
+  {{ if .brokerClass }}
+  labels:
+    eventing.knative.dev/broker.class: {{ .brokerClass }}
+  {{ end }}
 spec:
+  {{if .delivery }}
+  delivery:
+    {{ if .delivery.deadLetterSink }}
+    deadLetterSink:
+      {{ if .delivery.deadLetterSink.ref }}
+      ref:
+        kind: {{ .delivery.deadLetterSink.ref.kind }}
+        namespace: {{ .namespace }}
+        name: {{ .delivery.deadLetterSink.ref.name }}
+        apiVersion: {{ .delivery.deadLetterSink.ref.apiVersion }}
+      {{ end }}
+      {{ if .delivery.deadLetterSink.uri }}
+      uri: {{ .delivery.deadLetterSink.uri }}
+      {{ end }}
+    {{ end }}
+    {{ if .delivery.retry }}
+    retry: {{ .delivery.retry}}
+    {{ end }}
+    {{ if .delivery.backoffPolicy }}
+    backoffPolicy: {{ .delivery.backoffPolicy}}
+    {{ end }}
+    {{ if .delivery.backoffDelay }}
+    backoffDelay: "{{ .delivery.backoffDelay}}"
+    {{ end }}
+  {{ end }}
