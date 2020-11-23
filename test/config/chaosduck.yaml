@@ -77,6 +77,11 @@ spec:
         # and substituted here.
         image: ko://knative.dev/pkg/leaderelection/chaosduck
 
+        args: [
+          # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
+          "-disable=imc-dispatcher",
+        ]
+
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:
