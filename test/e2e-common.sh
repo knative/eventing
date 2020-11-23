@@ -319,8 +319,7 @@ function install_channel_crds() {
     -f "${EVENTING_IN_MEMORY_CHANNEL_NAME}" || return 1
   UNINSTALL_LIST+=( "${EVENTING_IN_MEMORY_CHANNEL_NAME}" )
 
-  # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
-  # scale_controlplane imc-controller imc-dispatcher
+  scale_controlplane imc-controller imc-dispatcher
 
   wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Failed to install the In-Memory Channel CRD"
 }
