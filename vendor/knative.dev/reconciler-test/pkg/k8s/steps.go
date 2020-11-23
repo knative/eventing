@@ -77,7 +77,7 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, interval, timeo
 			obj.ResourceVersion = gvr.Version
 			obj.APIVersion = gvr.GroupVersion().String()
 
-			if obj.Status.Address.URL == nil {
+			if obj.Status.Address == nil || obj.Status.Address.URL == nil {
 				msg := fmt.Sprintf("%s %s has no status.address.url, %s", gvr, name, err)
 				if msg != lastMsg {
 					log.Println(msg)
