@@ -58,7 +58,6 @@ import (
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
-	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
 
@@ -373,13 +372,13 @@ func main() {
 	}
 	// Set up a signal context with our webhook options
 	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
-		ServiceName: logconfig.WebhookName(),
+		ServiceName: webhook.NameFromEnv(),
 		Port:        webhook.PortFromEnv(8443),
 		// SecretName must match the name of the Secret created in the configuration.
 		SecretName: "eventing-webhook-certs",
 	})
 
-	sharedmain.WebhookMainWithContext(ctx, logconfig.WebhookName(),
+	sharedmain.WebhookMainWithContext(ctx, webhook.NameFromEnv(),
 		certificates.NewController,
 		NewConfigValidationController,
 		NewValidationAdmissionController,

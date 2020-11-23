@@ -34,6 +34,7 @@ const (
 	WebhookNameEnv = "WEBHOOK_NAME"
 )
 
+// DEPRECATED: use knative.dev/pkg/webhook.NameFromEnv()
 func WebhookName() string {
 	if webhook := os.Getenv(WebhookNameEnv); webhook != "" {
 		return webhook
