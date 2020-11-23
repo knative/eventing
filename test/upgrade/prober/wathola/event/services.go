@@ -111,6 +111,13 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 		log.Infof("properly received %d unique events", receivedEvents)
 		f.errors.state = Success
 	}
+	// check retry time
+	for _, retry := range finished.Retries {
+		if retry > config.Instance.Receiver.ErrorCfg.RetriesToReport {
+			f.errors.throw("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.RetriesToReport)
+			f.errors.state = Failed
+		}
+	}
 }
 
 func (f *finishedStore) TotalRequest() int {
@@ -197,7 +204,6 @@ type finishedStore struct {
 	received int
 	count    int
 	totalReq int
-	retries  []int
 	errors   *ErrorStore
 	steps    StepsStore
 }

@@ -61,6 +61,9 @@ func defaultValues() *Config {
 			Progress: ReceiverProgressConfig{
 				Duration: time.Second,
 			},
+			ErrorCfg: ReceiverErrorConfig{
+				RetriesToReport: 60,
+			},
 		},
 		Forwarder: ForwarderConfig{
 			Target: fmt.Sprintf("http://localhost:%v/", port),

@@ -31,10 +31,16 @@ type ReceiverProgressConfig struct {
 	Duration time.Duration
 }
 
+// ReceiverErrorConfig holds error reporting config of the receiver
+type ReceiverErrorConfig struct {
+	RetriesToReport int
+}
+
 // ReceiverConfig hold configuration for receiver
 type ReceiverConfig struct {
 	Teardown ReceiverTeardownConfig
 	Progress ReceiverProgressConfig
+	ErrorCfg ReceiverErrorConfig
 	Port     int
 }
 
