@@ -18,63 +18,147 @@ package manifest
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
 	"strings"
 	"text/template"
 )
 
-// ParseTemplates walks through all the template yaml file in the given directory
-// and produces instantiated yaml file in a temporary directory.
-// Return the name of the temporary directory
-func ParseTemplates(path string, images map[string]string, data map[string]interface{}) (string, error) {
-	dir, err := ioutil.TempDir("", "processed_yaml")
-	if err != nil {
-		panic(err)
-	}
+// ExecuteTemplates executes a set of templates found at path, filtering on
+// suffix. Executed into memory and returned.
+func ExecuteTemplates(path, suffix string, images map[string]string, data map[string]interface{}) (map[string]string, error) {
+	files := make(map[string]string, 1)
 
-	err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if info == nil || info.IsDir() {
 			return nil
 		}
-		if strings.HasSuffix(info.Name(), "yaml") {
+		if strings.HasSuffix(info.Name(), suffix) {
 			t, err := template.ParseFiles(path)
 			if err != nil {
+				log.Print("parse: ", err)
 				return err
 			}
-			tmpfile, err := ioutil.TempFile(dir, strings.Replace(info.Name(), ".yaml", "-*.yaml", 1))
-			if err != nil {
-				log.Fatal(err)
-			}
-			err = t.Execute(tmpfile, data)
+			buffer := &bytes.Buffer{}
+
+			// Execute the template and save the result to the buffer.
+			err = t.Execute(buffer, data)
 			if err != nil {
 				log.Print("execute: ", err)
 				return err
 			}
-			_ = tmpfile.Close()
 
 			// Set image.
-			read, err := ioutil.ReadFile(tmpfile.Name())
-			newContents := string(read)
+			yaml := buffer.String()
 			for key, image := range images {
-				newContents = strings.Replace(newContents, key, image, -1)
+				yaml = strings.Replace(yaml, key, image, -1)
 			}
 
-			err = ioutil.WriteFile(tmpfile.Name(), []byte(newContents), 0)
-			if err != nil {
-				log.Print("write file: ", err)
-				return err
-			}
+			files[path] = yaml
 		}
 		return nil
 	})
-	log.Print("new files in ", dir)
+
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
+// ParseTemplates walks through all the template yaml file in the given directory
+// and produces instantiated yaml file in a temporary directory.
+// Return the name of the temporary directory
+func ParseTemplates(path string, images map[string]string, cfg map[string]interface{}) (string, error) {
+	files, err := ExecuteTemplates(path, "yaml", images, cfg)
 	if err != nil {
 		return "", err
 	}
-	return dir, nil
+
+	tmpDir, err := ioutil.TempDir("", "processed_yaml")
+	if err != nil {
+		panic(err)
+	}
+
+	for file, contents := range files {
+		name := filepath.Base(filepath.Base(file))
+		name = strings.Replace(name, ".yaml", "-*.yaml", 1)
+
+		tmpFile, err := ioutil.TempFile(tmpDir, name)
+		if err != nil {
+			panic(err)
+		}
+		_, _ = tmpFile.WriteString(contents)
+	}
+
+	log.Print("new files in ", tmpDir)
+	return tmpDir, nil
+}
+
+// ExecuteLocalYAML will look in the callers filesystem and process the
+// templates found in files named "*.yaml" and return the f.
+func ExecuteLocalYAML(images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
+	pwd, _ := os.Getwd()
+	log.Println("PWD: ", pwd)
+	_, filename, _, _ := runtime.Caller(1)
+
+	return ExecuteTemplates(path.Dir(filename), "yaml", images, cfg)
+}
+
+func removeBlanks(in string) string {
+	in = strings.TrimSpace(in)
+	// find one or more tabs and spaces ending with a new line.
+	regex, err := regexp.Compile("[ |\t]+\n")
+	if err != nil {
+		return in
+	}
+	in = regex.ReplaceAllString(in, "")
+
+	// find all two more more newlines and replaces them with a single.
+	regex, err = regexp.Compile("\n{2,}")
+	if err != nil {
+		return in
+	}
+	return regex.ReplaceAllString(in, "\n")
+}
+
+func removeComments(in string) string {
+	// find strings starting with # and ending with \n and remove them.
+	regex, err := regexp.Compile("#.*\n")
+	if err != nil {
+		return in
+	}
+	return regex.ReplaceAllString(in, "")
+}
+
+// OutputYAML writes out each file contents  to out after removing comments and
+// blank lines. This also adds a YAML file separator "---" between each file.
+// Files is a map of "filename" to "file contents".
+func OutputYAML(out io.Writer, files map[string]string) {
+	names := make([]string, 0)
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	more := false
+	for _, name := range names {
+		file := files[name]
+
+		if more {
+			_, _ = out.Write([]byte("---\n"))
+		}
+		more = true
+		yaml := removeBlanks(removeComments(file))
+		_, _ = out.Write([]byte(yaml))
+		_, _ = out.Write([]byte("\n"))
+	}
 }
 
 // ExecuteTemplate instantiates the given template with data
