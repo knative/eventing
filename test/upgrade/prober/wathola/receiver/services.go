@@ -98,12 +98,13 @@ type reportHandler struct {
 func (r reportHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.RequestURI == "/report" {
 		s := r.receiver.finished.State()
-		errs := r.receiver.finished.Thrown()
 		events := r.receiver.step.Count()
 		sj := &Report{
-			State:  stateToString(s),
-			Events: events,
-			Thrown: errs,
+			State:         stateToString(s),
+			Events:        events,
+			Duplicated:    r.receiver.finished.DuplicatedThrown(),
+			Missing:       r.receiver.finished.MissingThrown(),
+			DefaultThrown: r.receiver.finished.DefaultThrown(),
 		}
 		b, err := json.Marshal(sj)
 		ensure.NoError(err)

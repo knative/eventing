@@ -77,7 +77,9 @@ func (f *fetcher) fetchReport() error {
 		return err
 	}
 	state := &receiver.Report{
-		Thrown: []string{},
+		DefaultThrown: []string{},
+		Duplicated:    []string{},
+		Missing:       []string{},
 	}
 	err = json.Unmarshal(body, state)
 	if err != nil {

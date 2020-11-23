@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/wavesoftware/go-ensure"
@@ -51,10 +50,16 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 		panic(errors.New("report fetched too early, receiver is in active state"))
 	}
 	errs := make([]error, 0)
-	for _, t := range report.Thrown {
-		if p.config.IgnoreDuplicate && strings.HasPrefix(t, "DUPLICATE:") {
+	for _, t := range report.Missing {
+		errs = append(errs, errors.New(t))
+	}
+	for _, t := range report.DefaultThrown {
+		errs = append(errs, errors.New(t))
+	}
+	for _, t := range report.Duplicated {
+		if p.config.OnDuplicate == Warn {
 			p.log.Warn("Duplicate events: ", t)
-		} else {
+		} else if p.config.OnDuplicate == Error {
 			errs = append(errs, errors.New(t))
 		}
 	}
@@ -98,9 +103,11 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
-			State:  "failure",
-			Events: 0,
-			Thrown: []string{"Report wasn't fetched"},
+			State:         "failure",
+			Events:        0,
+			DefaultThrown: []string{"Report wasn't fetched"},
+			Missing:       []string{"Report wasn't fetched"},
+			Duplicated:    []string{"Report wasn't fetched"},
 		},
 	}
 	err = json.Unmarshal(bytes, ex)

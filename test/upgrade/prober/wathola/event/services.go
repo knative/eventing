@@ -27,22 +27,26 @@ var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
 const (
-	TagDuplicate = "DUPLICATE"
-	TagUnknown   = "UNKNOWN"
-	TagMissing   = "MISSING"
+	TagDuplicated = "DUPLICATE"
+	TagDefault    = "DEFAULT"
+	TagMissing    = "MISSING"
 )
 
 // ErrorStore contains errors that was thrown
 type ErrorStore struct {
-	state  State
-	thrown []thrown
+	state            State
+	missingThrown    []thrown
+	duplicatedThrown []thrown
+	defaultThrown    []thrown
 }
 
 // NewErrorStore creates a new error store
 func NewErrorStore() *ErrorStore {
 	return &ErrorStore{
-		state:  Active,
-		thrown: make([]thrown, 0),
+		state:            Active,
+		missingThrown:    make([]thrown, 0),
+		duplicatedThrown: make([]thrown, 0),
+		defaultThrown:    make([]thrown, 0),
 	}
 }
 
@@ -67,7 +71,7 @@ func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 func (s *stepStore) RegisterStep(step *Step) {
 	mutex.Lock()
 	if times, found := s.store[step.Number]; found {
-		s.errors.throw(TagDuplicate,
+		s.errors.throw(TagDuplicated,
 			"event #%d received %d times, but should be received only once",
 			step.Number, times+1)
 	} else {
@@ -85,7 +89,7 @@ func (s *stepStore) Count() int {
 
 func (f *finishedStore) RegisterFinished(finished *Finished) {
 	if f.received > 0 {
-		f.errors.throw(TagDuplicate,
+		f.errors.throw(TagDuplicated,
 			"finish event should be received only once, received %d",
 			f.received+1)
 	}
@@ -97,7 +101,13 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
 	if receivedEvents != finished.Count {
-		f.errors.throw(TagMissing, "expecting to have %v unique events received, "+
+		var tag string
+		if receivedEvents < finished.Count {
+			tag = TagMissing
+		} else {
+			tag = TagDefault
+		}
+		f.errors.throw(tag, "expecting to have %v unique events received, "+
 			"but received %v unique events", finished.Count, receivedEvents)
 		f.reportViolations(finished)
 		f.errors.state = Failed
@@ -111,10 +121,28 @@ func (f *finishedStore) State() State {
 	return f.errors.state
 }
 
-func (f *finishedStore) Thrown() []string {
+func (f *finishedStore) DuplicatedThrown() []string {
+	return f.thrownHelper(TagDuplicated)
+}
+
+func (f *finishedStore) MissingThrown() []string {
+	return f.thrownHelper(TagMissing)
+}
+
+func (f *finishedStore) DefaultThrown() []string {
+	return f.thrownHelper(TagDefault)
+}
+
+func (f *finishedStore) thrownHelper(tag string) []string {
 	msgs := make([]string, 0)
-	for _, t := range f.errors.thrown {
-		errMsg := t.tag + ": " + fmt.Sprintf(t.format, t.args...)
+	thrownChannel := f.errors.defaultThrown
+	if tag == TagDuplicated {
+		thrownChannel = f.errors.duplicatedThrown
+	} else if tag == TagMissing {
+		thrownChannel = f.errors.missingThrown
+	}
+	for _, t := range thrownChannel {
+		errMsg := fmt.Sprintf(t.format, t.args...)
 		msgs = append(msgs, errMsg)
 	}
 	return msgs
@@ -132,7 +160,7 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 			if times == 0 {
 				tag = TagMissing
 			} else {
-				tag = TagDuplicate
+				tag = TagDuplicated
 			}
 			f.errors.throw(tag, "event #%v should be received once, but was received %v times",
 				eventNo, times)
@@ -148,15 +176,17 @@ func (s *stepStore) reportProgress() {
 }
 
 func (e *ErrorStore) throw(tag string, format string, args ...interface{}) {
-	if tag == "" {
-		tag = TagUnknown
-	}
 	t := thrown{
-		tag:    tag,
 		format: format,
 		args:   args,
 	}
-	e.thrown = append(e.thrown, t)
+	if tag == TagDuplicated {
+		e.duplicatedThrown = append(e.duplicatedThrown, t)
+	} else if tag == TagMissing {
+		e.missingThrown = append(e.missingThrown, t)
+	} else {
+		e.defaultThrown = append(e.defaultThrown, t)
+	}
 	log.Errorf(t.format, t.args...)
 }
 
@@ -173,7 +203,6 @@ type finishedStore struct {
 }
 
 type thrown struct {
-	tag    string
 	format string
 	args   []interface{}
 }

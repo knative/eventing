@@ -18,7 +18,9 @@ package receiver
 
 // Report represents state as JSON
 type Report struct {
-	State  string   `json:"state"`
-	Events int      `json:"events"`
-	Thrown []string `json:"thrown"`
+	State         string   `json:"state"`
+	Events        int      `json:"events"`
+	Duplicated    []string `json:"duplicated"`
+	Missing       []string `json:"missing"`
+	DefaultThrown []string `json:"defaultThrow"`
 }

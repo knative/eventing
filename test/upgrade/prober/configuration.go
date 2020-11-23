@@ -44,19 +44,26 @@ const (
 	defaultBrokerName          = "default"
 	defaultHealthEndpoint      = "/healthz"
 	defaultFinishedSleep       = 5 * time.Second
+
+	Silence DuplicateAction = "silence"
+	Warn    DuplicateAction = "warn"
+	Error   DuplicateAction = "error"
 )
+
+// DuplicateAction is the action to take in case of duplicated events
+type DuplicateAction string
 
 var eventTypes = []string{"step", "finished"}
 
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Namespace       string
-	Interval        time.Duration
-	FinishedSleep   time.Duration
-	Serving         ServingConfig
-	FailOnErrors    bool
-	IgnoreDuplicate bool
+	Namespace     string
+	Interval      time.Duration
+	FinishedSleep time.Duration
+	Serving       ServingConfig
+	FailOnErrors  bool
+	OnDuplicate   DuplicateAction
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -85,11 +92,11 @@ type ServingConfig struct {
 // `e2e_upgrade_tests` prefix.
 func NewConfig(namespace string) *Config {
 	config := &Config{
-		Namespace:       "",
-		Interval:        Interval,
-		FinishedSleep:   defaultFinishedSleep,
-		FailOnErrors:    true,
-		IgnoreDuplicate: true,
+		Namespace:     "",
+		Interval:      Interval,
+		FinishedSleep: defaultFinishedSleep,
+		FailOnErrors:  true,
+		OnDuplicate:   Warn,
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
