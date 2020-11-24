@@ -28,4 +28,7 @@ import (
 
 	// For chaos testing the leaderelection stuff.
 	_ "knative.dev/pkg/leaderelection/chaosduck"
+
+	// eventshub is a cloudevents sender/receiver utility for e2e testing.
+	_ "knative.dev/reconciler-test/cmd/eventshub"
 )
