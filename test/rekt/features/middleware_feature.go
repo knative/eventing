@@ -19,9 +19,9 @@ package features
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/test/rekt/resources/broker"
 	"testing"
 
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/eventshub"

@@ -18,11 +18,12 @@ package broker
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
-	"testing"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
