@@ -43,9 +43,9 @@ require (
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/hack v0.0.0-20201119025252-d3cb354f49ff
-	knative.dev/pkg v0.0.0-20201119021551-260026d54739
-	knative.dev/reconciler-test v0.0.0-20201119161052-83e399255464
+	knative.dev/hack v0.0.0-20201120192952-353db687ec5b
+	knative.dev/pkg v0.0.0-20201123172958-fea72c1c8e2f
+	knative.dev/reconciler-test v0.0.0-20201123224957-57547e427baf
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -58,4 +58,4 @@ replace (
 	k8s.io/code-generator => k8s.io/code-generator v0.18.8
 )
 
-replace knative.dev/hack v0.0.0-20201119025252-d3cb354f49ff => github.com/cardil/hack v0.0.0-20201124220028-d2e43fecc21c
+replace knative.dev/hack v0.0.0-20201120192952-353db687ec5b => github.com/cardil/hack v0.0.0-20201124220028-d2e43fecc21c

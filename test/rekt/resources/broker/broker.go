@@ -19,23 +19,97 @@ package broker
 import (
 	"context"
 	"testing"
+	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/k8s"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-// Output is the base output we can expect from a echo job.
-type Output struct {
-	Success bool   `json:"success"`
-	Message string `json:"msg"`
+type CfgFn func(map[string]interface{})
+
+func gvr() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
 }
 
-func Install(name string) feature.StepFn {
+// WithBrokerClass adds the broker class config to a Broker spec.
+func WithBrokerClass(class string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["brokerClass"] = class
+	}
+}
+
+// WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
+func WithDeadLetterSink(ref *duckv1.KReference, uri string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["delivery"]; !set {
+			cfg["delivery"] = map[string]interface{}{}
+		}
+		delivery := cfg["delivery"].(map[string]interface{})
+		if _, set := delivery["deadLetterSink"]; !set {
+			delivery["deadLetterSink"] = map[string]interface{}{}
+		}
+		dls := delivery["deadLetterSink"].(map[string]interface{})
+		if uri != "" {
+			dls["uri"] = uri
+		}
+		if ref != nil {
+			if _, set := dls["ref"]; !set {
+				dls["ref"] = map[string]interface{}{}
+			}
+			dref := dls["ref"].(map[string]interface{})
+			dref["apiVersion"] = ref.APIVersion
+			dref["kind"] = ref.Kind
+			// Skip namespace.
+			dref["name"] = ref.Name
+		}
+	}
+}
+
+// WithRetry adds the retry related config to a Broker spec.
+func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoffDelay *string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["delivery"]; !set {
+			cfg["delivery"] = map[string]interface{}{}
+		}
+		delivery := cfg["delivery"].(map[string]interface{})
+
+		delivery["retry"] = count
+		if backoffPolicy != nil {
+			delivery["backoffPolicy"] = backoffPolicy
+		}
+		if backoffDelay != nil {
+			delivery["backoffDelay"] = backoffDelay
+		}
+	}
+}
+
+// Install will create a Broker resource, augmented with the config fn options.
+func Install(name string, opts ...CfgFn) feature.StepFn {
+	cfg := map[string]interface{}{
+		"name": name,
+	}
+	for _, fn := range opts {
+		fn(cfg)
+	}
 	return func(ctx context.Context, t *testing.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, map[string]interface{}{
-			"name": name,
-		}); err != nil {
+		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}
+}
+
+// IsReady tests to see if a Broker becomes ready within the time given.
+func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
+	return k8s.IsReady(gvr(), name, interval, timeout)
+}
+
+// IsAddressable tests to see if a Broker becomes addressable within the  time
+// given.
+func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
+	return k8s.IsAddressable(gvr(), name, interval, timeout)
 }
