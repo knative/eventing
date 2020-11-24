@@ -29,7 +29,7 @@ func callShellFunction(funcName string) error {
 		ProjectLocation: loc,
 	})
 	fn := shell.Function{
-		Script:       shell.Script{
+		Script: shell.Script{
 			Label:      funcName,
 			ScriptPath: "test/e2e-common.sh",
 		},
