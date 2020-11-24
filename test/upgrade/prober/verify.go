@@ -50,13 +50,13 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 		panic(errors.New("report fetched too early, receiver is in active state"))
 	}
 	errs := make([]error, 0)
-	for _, t := range report.Missing {
+	for _, t := range report.Thrown.Missing {
 		errs = append(errs, errors.New(t))
 	}
-	for _, t := range report.DefaultThrown {
+	for _, t := range report.Thrown.Unexpected {
 		errs = append(errs, errors.New(t))
 	}
-	for _, t := range report.Duplicated {
+	for _, t := range report.Thrown.Duplicated {
 		if p.config.OnDuplicate == Warn {
 			p.log.Warn("Duplicate events: ", t)
 		} else if p.config.OnDuplicate == Error {
@@ -103,11 +103,13 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
-			State:         "failure",
-			Events:        0,
-			DefaultThrown: []string{"Report wasn't fetched"},
-			Missing:       []string{"Report wasn't fetched"},
-			Duplicated:    []string{"Report wasn't fetched"},
+			State:  "failure",
+			Events: 0,
+			Thrown: receiver.Thrown{
+				Unexpected: []string{"Report wasn't fetched"},
+				Missing:    []string{"Report wasn't fetched"},
+				Duplicated: []string{"Report wasn't fetched"},
+			},
 		},
 	}
 	err = json.Unmarshal(bytes, ex)

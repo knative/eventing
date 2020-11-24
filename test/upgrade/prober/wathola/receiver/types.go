@@ -16,11 +16,16 @@ limitations under the License.
 
 package receiver
 
+// Thrown holds different error types.
+type Thrown struct {
+	Duplicated []string `json:"duplicated"`
+	Missing    []string `json:"missing"`
+	Unexpected []string `json:"unexpected"`
+}
+
 // Report represents state as JSON
 type Report struct {
-	State         string   `json:"state"`
-	Events        int      `json:"events"`
-	Duplicated    []string `json:"duplicated"`
-	Missing       []string `json:"missing"`
-	DefaultThrown []string `json:"defaultThrow"`
+	State  string `json:"state"`
+	Events int    `json:"events"`
+	Thrown Thrown `json:"thrown"`
 }

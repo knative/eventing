@@ -27,7 +27,7 @@ type FinishedStore interface {
 	State() State
 	DuplicatedThrown() []string
 	MissingThrown() []string
-	DefaultThrown() []string
+	UnexpectedThrown() []string
 }
 
 // Typed says a type of an event

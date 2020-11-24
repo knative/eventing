@@ -39,7 +39,7 @@ func TestProperEventsPropagation(t *testing.T) {
 	// then
 	assert.Empty(t, errors.duplicatedThrown)
 	assert.Empty(t, errors.missingThrown)
-	assert.Empty(t, errors.defaultThrown)
+	assert.Empty(t, errors.unexpectedThrown)
 }
 
 func TestMissingAndDoubleEvent(t *testing.T) {
@@ -57,7 +57,7 @@ func TestMissingAndDoubleEvent(t *testing.T) {
 	// then
 	assert.NotEmpty(t, errors.duplicatedThrown)
 	assert.NotEmpty(t, errors.missingThrown)
-	assert.Empty(t, errors.defaultThrown)
+	assert.Empty(t, errors.unexpectedThrown)
 }
 
 func TestDoubleFinished(t *testing.T) {
@@ -75,7 +75,7 @@ func TestDoubleFinished(t *testing.T) {
 	// then
 	assert.NotEmpty(t, errors.duplicatedThrown)
 	assert.Empty(t, errors.missingThrown)
-	assert.Empty(t, errors.defaultThrown)
+	assert.Empty(t, errors.unexpectedThrown)
 }
 
 func TestMain(m *testing.M) {

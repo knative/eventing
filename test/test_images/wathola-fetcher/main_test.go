@@ -33,11 +33,13 @@ import (
 func TestFetcherMain(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		st := receiver.Report{
-			State:         "active",
-			Events:        1456,
-			DefaultThrown: []string{},
-			Missing:       []string{},
-			Duplicated:    []string{},
+			State:  "active",
+			Events: 1456,
+			Thrown: receiver.Thrown{
+				Unexpected: []string{},
+				Missing:    []string{},
+				Duplicated: []string{},
+			},
 		}
 		bytes, err := json.Marshal(st)
 		if err != nil {
