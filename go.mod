@@ -57,3 +57,5 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.18.8
 	k8s.io/code-generator => k8s.io/code-generator v0.18.8
 )
+
+replace knative.dev/hack v0.0.0-20201119025252-d3cb354f49ff => github.com/cardil/hack v0.0.0-20201124220028-d2e43fecc21c

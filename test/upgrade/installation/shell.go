@@ -16,8 +16,24 @@ limitations under the License.
 
 package installation
 
-import "knative.dev/eventing/test/e2e"
+import (
+	"knative.dev/hack/shell"
+)
 
 func callShellFunction(funcName string) error {
-	return e2e.ShellScript(funcName, funcName)
+	loc, err := shell.NewProjectLocation("../../..")
+	if err != nil {
+		return err
+	}
+	exec := shell.NewExecutor(shell.ExecutorConfig{
+		ProjectLocation: loc,
+	})
+	fn := shell.Function{
+		Script:       shell.Script{
+			Label:      funcName,
+			ScriptPath: "test/e2e-common.sh",
+		},
+		FunctionName: funcName,
+	}
+	return exec.RunFunction(fn)
 }
