@@ -21,7 +21,7 @@ import (
 )
 
 func callShellFunction(funcName string) error {
-	loc, err := shell.NewProjectLocation("../../..")
+	loc, err := shell.NewProjectLocation("../../../test")
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func callShellFunction(funcName string) error {
 	fn := shell.Function{
 		Script: shell.Script{
 			Label:      funcName,
-			ScriptPath: "test/e2e-common.sh",
+			ScriptPath: "e2e-common.sh",
 		},
 		FunctionName: funcName,
 	}
