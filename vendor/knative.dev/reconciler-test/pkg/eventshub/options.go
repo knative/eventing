@@ -45,6 +45,15 @@ func StartSender(sinkSvc string) EventsHubOption {
 	})
 }
 
+// StartSenderURL starts the sender in the eventshub sinking to a URL.
+// This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
+func StartSenderURL(sink string) EventsHubOption {
+	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+		envs["SINK"] = sink
+		return nil
+	})
+}
+
 // --- Receiver options
 
 // EchoEvent is an option to let the eventshub reply with the received event

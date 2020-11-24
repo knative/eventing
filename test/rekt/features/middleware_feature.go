@@ -19,6 +19,7 @@ package features
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"testing"
 
 	"knative.dev/eventing/test/rekt/resources/svc"
@@ -27,11 +28,9 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
-
-	"knative.dev/eventing/test/rekt/resources/broker"
 )
 
-// BrokerAsMiddleware tests to see if the Broker acts as middleware.
+// BrokerAsMiddleware tests to see if a Ready Broker acts as middleware.
 // LoadGenerator --> in [Broker] out --> Recorder
 func BrokerAsMiddleware(brokerName string) *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
@@ -42,7 +41,14 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 	f := new(feature.Feature)
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-	f.Setup("install source", eventshub.Install(source, eventshub.StartSender(sink), eventshub.InputEvent(event)))
+
+	f.Setup("install source", func(ctx context.Context, t *testing.T) {
+		u, err := broker.Address(ctx, brokerName, interval, timeout)
+		if err != nil || u == nil {
+			t.Error("failed to get the address of the broker", brokerName, err)
+		}
+		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
+	})
 
 	// Point the Trigger subscriber to the sink svc.
 	cfg := []trigger.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
@@ -50,11 +56,8 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 	// Install the trigger
 	f.Setup(fmt.Sprintf("install trigger %q", via), trigger.Install(via, brokerName, cfg...))
 
-	// Wait for broker to be Ready.
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName, interval, timeout))
-
 	f.Stable("broker as middleware").
-		Must("lossless event passing",
+		Must("deliver an event",
 			func(ctx context.Context, t *testing.T) {
 				eventshub.StoreFromContext(ctx, sink).AssertExact(1, eventshub.MatchEvent(HasId(event.ID())))
 			})

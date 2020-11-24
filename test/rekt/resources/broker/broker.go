@@ -18,6 +18,9 @@ package broker
 
 import (
 	"context"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
 	"testing"
 	"time"
 
@@ -112,4 +115,24 @@ func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
 // given.
 func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
 	return k8s.IsAddressable(gvr(), name, interval, timeout)
+}
+
+// Address returns a broker's address.
+func Address(ctx context.Context, name string, interval, timeout time.Duration) (*apis.URL, error) {
+	var addr *apis.URL
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		var err error
+		addr, err = k8s.Address(ctx, gvr(), name)
+		if err != nil || addr == nil {
+			if !apierrors.IsNotFound(err) {
+				// seems fatal.
+				return false, nil
+			}
+			// keep polling
+			return false, err
+		}
+		// success!
+		return true, nil
+	})
+	return addr, err
 }

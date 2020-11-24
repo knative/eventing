@@ -19,6 +19,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/network"
 	"log"
 	"testing"
 	"time"
@@ -50,19 +52,9 @@ func IsReady(gvr schema.GroupVersionResource, name string, interval, timeout tim
 // given.
 func IsAddressable(gvr schema.GroupVersionResource, name string, interval, timeout time.Duration) feature.StepFn {
 	return func(ctx context.Context, t *testing.T) {
-		// Special case Service.
-		if gvr.Group == "" && gvr.Version == "v1" && gvr.Resource == "services" {
-			log.Printf("[special] %s %s is addressable\n", gvr, name)
-			return
-		}
-
-		env := environment.FromContext(ctx)
 		lastMsg := ""
-		like := &duckv1.AddressableType{}
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-			client := dynamicclient.Get(ctx)
-
-			us, err := client.Resource(gvr).Namespace(env.Namespace()).Get(ctx, name, metav1.GetOptions{})
+			addr, err := Address(ctx, gvr, name)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					// keep polling
@@ -70,14 +62,7 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, interval, timeo
 				}
 				return false, err
 			}
-			obj := like.DeepCopy()
-			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(us.Object, obj); err != nil {
-				return false, fmt.Errorf("error from DefaultUnstructured.Dynamiconverter. %w", err)
-			}
-			obj.ResourceVersion = gvr.Version
-			obj.APIVersion = gvr.GroupVersion().String()
-
-			if obj.Status.Address == nil || obj.Status.Address.URL == nil {
+			if addr == nil {
 				msg := fmt.Sprintf("%s %s has no status.address.url, %s", gvr, name, err)
 				if msg != lastMsg {
 					log.Println(msg)
@@ -87,11 +72,43 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, interval, timeo
 			}
 
 			// Success!
-			log.Printf("%s %s is addressable: %s\n", gvr, name, obj.Status.Address.URL)
+			log.Printf("%s %s is addressable: %s\n", gvr, name, addr)
 			return true, nil
 		})
 		if err != nil {
 			t.Error(gvr, "did not become addressable,", err)
 		}
 	}
+}
+
+// Address attempts to resolve an Addressable address into a URL. If the
+// resource is found but not Addressable, Address will return (nil, nil).
+func Address(ctx context.Context, gvr schema.GroupVersionResource, name string) (*apis.URL, error) {
+	env := environment.FromContext(ctx)
+
+	// Special case Service.
+	if gvr.Group == "" && gvr.Version == "v1" && gvr.Resource == "services" {
+		u := "http://" + network.GetServiceHostname(name, env.Namespace())
+		return apis.ParseURL(u)
+	}
+
+	like := &duckv1.AddressableType{}
+	us, err := dynamicclient.Get(ctx).Resource(gvr).Namespace(env.Namespace()).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	obj := like.DeepCopy()
+	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(us.Object, obj); err != nil {
+		return nil, fmt.Errorf("error from DefaultUnstructured.Dynamiconverter. %w", err)
+	}
+	obj.ResourceVersion = gvr.Version
+	obj.APIVersion = gvr.GroupVersion().String()
+
+	if obj.Status.Address == nil || obj.Status.Address.URL == nil {
+		// Not Addressable (yet?).
+		return nil, nil
+	}
+
+	// Success!
+	return obj.Status.Address.URL, nil
 }
