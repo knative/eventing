@@ -45,7 +45,7 @@ require (
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
 	knative.dev/hack v0.0.0-20201120192952-353db687ec5b
 	knative.dev/pkg v0.0.0-20201120183152-6a0e731e251a
-	knative.dev/reconciler-test v0.0.0-20201123224957-57547e427baf
+	knative.dev/reconciler-test v0.0.0-20201124190335-83a44efcdfef
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -57,6 +57,3 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.18.8
 	k8s.io/code-generator => k8s.io/code-generator v0.18.8
 )
-
-// DO NOT SUBMIT
-replace knative.dev/reconciler-test => ../reconciler-test
