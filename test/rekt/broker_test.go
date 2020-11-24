@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/pkg/system"
 	"testing"
 
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -37,7 +38,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
-		knative.WithKnativeNamespace("knative-eventing"),
+		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
