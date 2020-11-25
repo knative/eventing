@@ -26,21 +26,27 @@ import (
 var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
+type thrownTypes struct {
+	missing    []thrown
+	duplicated []thrown
+	unexpected []thrown
+}
+
 // ErrorStore contains errors that was thrown
 type ErrorStore struct {
-	state            State
-	missingThrown    []thrown
-	duplicatedThrown []thrown
-	unexpectedThrown []thrown
+	state  State
+	thrown thrownTypes
 }
 
 // NewErrorStore creates a new error store
 func NewErrorStore() *ErrorStore {
 	return &ErrorStore{
-		state:            Active,
-		missingThrown:    make([]thrown, 0),
-		duplicatedThrown: make([]thrown, 0),
-		unexpectedThrown: make([]thrown, 0),
+		state: Active,
+		thrown: thrownTypes{
+			missing:    make([]thrown, 0),
+			duplicated: make([]thrown, 0),
+			unexpected: make([]thrown, 0),
+		},
 	}
 }
 
@@ -95,11 +101,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
 	if receivedEvents != finished.Count {
-		throwMethod := f.errors.throwMissing
-		if receivedEvents > finished.Count {
-			throwMethod = f.errors.throwUnexpected
-		}
-		throwMethod("expecting to have %v unique events received, "+
+		f.errors.throwUnexpected("expecting to have %v unique events received, "+
 			"but received %v unique events", finished.Count, receivedEvents)
 		f.reportViolations(finished)
 		f.errors.state = Failed
@@ -114,18 +116,18 @@ func (f *finishedStore) State() State {
 }
 
 func (f *finishedStore) DuplicatedThrown() []string {
-	return f.thrownHelper(f.errors.duplicatedThrown)
+	return f.asStrings(f.errors.thrown.duplicated)
 }
 
 func (f *finishedStore) MissingThrown() []string {
-	return f.thrownHelper(f.errors.missingThrown)
+	return f.asStrings(f.errors.thrown.missing)
 }
 
 func (f *finishedStore) UnexpectedThrown() []string {
-	return f.thrownHelper(f.errors.unexpectedThrown)
+	return f.asStrings(f.errors.thrown.unexpected)
 }
 
-func (f *finishedStore) thrownHelper(errThrown []thrown) []string {
+func (f *finishedStore) asStrings(errThrown []thrown) []string {
 	msgs := make([]string, 0)
 	for _, t := range errThrown {
 		errMsg := fmt.Sprintf(t.format, t.args...)
@@ -160,18 +162,18 @@ func (s *stepStore) reportProgress() {
 }
 
 func (e *ErrorStore) throwDuplicated(format string, args ...interface{}) {
-	e.duplicatedThrown = e.throwHelper(e.duplicatedThrown, format, args...)
+	e.thrown.duplicated = e.appendThrown(e.thrown.duplicated, format, args...)
 }
 
 func (e *ErrorStore) throwMissing(format string, args ...interface{}) {
-	e.missingThrown = e.throwHelper(e.missingThrown, format, args...)
+	e.thrown.missing = e.appendThrown(e.thrown.missing, format, args...)
 }
 
 func (e *ErrorStore) throwUnexpected(format string, args ...interface{}) {
-	e.unexpectedThrown = e.throwHelper(e.unexpectedThrown, format, args...)
+	e.thrown.unexpected = e.appendThrown(e.thrown.unexpected, format, args...)
 }
 
-func (e *ErrorStore) throwHelper(errThrown []thrown, format string, args ...interface{}) []thrown {
+func (e *ErrorStore) appendThrown(errThrown []thrown, format string, args ...interface{}) []thrown {
 	t := thrown{
 		format: format,
 		args:   args,
