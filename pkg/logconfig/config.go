@@ -16,11 +16,6 @@ limitations under the License.
 
 package logconfig
 
-import (
-	"fmt"
-	"os"
-)
-
 const (
 	// Named Loggers are used to override the default log level. config-logging.yaml will use the follow:
 	//
@@ -29,24 +24,4 @@ const (
 
 	// Controller is the name of the override key used inside of the logging config for Controller.
 	Controller = "controller"
-
-	// Webhook is the name of the override key used inside of the logging config for Webhook Controller.
-	WebhookNameEnv = "WEBHOOK_NAME"
 )
-
-// DEPRECATED: use knative.dev/pkg/webhook.NameFromEnv()
-func WebhookName() string {
-	if webhook := os.Getenv(WebhookNameEnv); webhook != "" {
-		return webhook
-	}
-
-	panic(fmt.Sprintf(`The environment variable %q is not set
-
-If this is a process running on Kubernetes, then it should be using the downward
-API to initialize this variable via:
-
-  env:
-  - name: WEBHOOK_NAME
-    value: webhook
-`, WebhookNameEnv))
-}
