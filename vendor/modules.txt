@@ -964,7 +964,7 @@ k8s.io/utils/trace
 # knative.dev/hack v0.0.0-20201120192952-353db687ec5b
 ## explicit
 knative.dev/hack
-# knative.dev/pkg v0.0.0-20201124204235-3154117dcfaf
+# knative.dev/pkg v0.0.0-20201125095035-9bf616d2f46a
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
