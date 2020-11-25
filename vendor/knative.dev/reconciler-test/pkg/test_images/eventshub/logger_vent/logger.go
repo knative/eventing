@@ -1,5 +1,3 @@
-// +build tools
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,19 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tools
+package logger_vent
 
-import (
-	_ "knative.dev/hack"
-	_ "knative.dev/pkg/configmap/hash-gen"
-	_ "knative.dev/pkg/hack"
+import "knative.dev/reconciler-test/pkg/test_images/eventshub"
 
-	// Needed for the storage version too.
-	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
+type Logger func(string, ...interface{})
 
-	// For chaos testing the leaderelection stuff.
-	_ "knative.dev/pkg/leaderelection/chaosduck"
+func (l Logger) Vent(observed eventshub.EventInfo) error {
+	l("Event: \n%s", observed.String())
 
-	// eventshub is a cloudevents sender/receiver utility for e2e testing.
-	_ "knative.dev/reconciler-test/cmd/eventshub"
-)
+	return nil
+}

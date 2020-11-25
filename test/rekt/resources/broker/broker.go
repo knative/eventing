@@ -21,6 +21,10 @@ import (
 	"testing"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -112,4 +116,28 @@ func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
 // given.
 func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
 	return k8s.IsAddressable(gvr(), name, interval, timeout)
+}
+
+// Address returns a broker's address.
+func Address(ctx context.Context, name string, interval, timeout time.Duration) (*apis.URL, error) {
+	var addr *apis.URL
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		var err error
+		addr, err = k8s.Address(ctx, gvr(), name)
+		if err == nil && addr == nil {
+			// keep polling
+			return false, nil
+		}
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				// keep polling
+				return false, nil
+			}
+			// seems fatal.
+			return false, err
+		}
+		// success!
+		return true, nil
+	})
+	return addr, err
 }

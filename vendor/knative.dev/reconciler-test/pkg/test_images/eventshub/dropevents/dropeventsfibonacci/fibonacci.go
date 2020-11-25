@@ -1,5 +1,3 @@
-// +build tools
-
 /*
 Copyright 2020 The Knative Authors
 
@@ -16,19 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tools
+package dropeventsfibonacci
 
-import (
-	_ "knative.dev/hack"
-	_ "knative.dev/pkg/configmap/hash-gen"
-	_ "knative.dev/pkg/hack"
+type Fibonacci struct {
+	Prev    uint64
+	Current uint64
+}
 
-	// Needed for the storage version too.
-	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
+func (f *Fibonacci) Skip(counter uint64) bool {
+	if f.Current == counter {
+		f.Next()
+		return true
+	}
+	return false
+}
 
-	// For chaos testing the leaderelection stuff.
-	_ "knative.dev/pkg/leaderelection/chaosduck"
-
-	// eventshub is a cloudevents sender/receiver utility for e2e testing.
-	_ "knative.dev/reconciler-test/cmd/eventshub"
-)
+func (f *Fibonacci) Next() {
+	f.Prev, f.Current = f.Current, f.Prev+f.Current
+}

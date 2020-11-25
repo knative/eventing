@@ -6,5 +6,5 @@ This is the staging location for the new
 To run the tests on an existing cluster:
 
 ```bash
-go test -count=1 -v -tags=e2e ./test/rekt/
+SYSTEM_NAMESPACE=knative-eventing go test -count=1 -v -tags=e2e ./test/rekt/...
 ```
