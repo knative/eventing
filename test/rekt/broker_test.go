@@ -26,9 +26,6 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	"knative.dev/eventing/test/rekt/features"
 )
 
@@ -43,19 +40,11 @@ func TestBrokerAsMiddleware(t *testing.T) {
 		k8s.WithEventListener,
 	)
 
-	names := []string{
-		"default",
-		"customname",
-		"name-with-dash",
-		"name1with2numbers3",
-		"name63-01234567890123456789012345678901234567890123456789012345",
-	}
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, features.BrokerGoesReady("default", "MTChannelBroker"))
 
-	for _, name := range names {
-		env.Prerequisite(ctx, t, features.BrokerGoesReady(name, "MTChannelBroker"))
-
-		env.Test(ctx, t, features.BrokerAsMiddleware(name))
-	}
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, features.BrokerAsMiddleware("default"))
 
 	env.Finish()
 }
