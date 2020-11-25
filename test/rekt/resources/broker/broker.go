@@ -124,12 +124,16 @@ func Address(ctx context.Context, name string, interval, timeout time.Duration) 
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		var err error
 		addr, err = k8s.Address(ctx, gvr(), name)
-		if err != nil || addr == nil {
-			if !apierrors.IsNotFound(err) {
-				// seems fatal.
+		if err == nil && addr == nil {
+			// keep polling
+			return false, nil
+		}
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				// keep polling
 				return false, nil
 			}
-			// keep polling
+			// seems fatal.
 			return false, err
 		}
 		// success!

@@ -18,7 +18,6 @@ package features
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -42,6 +41,14 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
+	// Point the Trigger subscriber to the sink svc.
+	cfg := []trigger.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
+
+	// Install the trigger
+	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
+
+	f.Setup("trigger goes ready", trigger.IsReady(via, interval, timeout))
+
 	f.Setup("install source", func(ctx context.Context, t *testing.T) {
 		u, err := broker.Address(ctx, brokerName, interval, timeout)
 		if err != nil || u == nil {
@@ -49,12 +56,6 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 		}
 		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
 	})
-
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []trigger.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
-
-	// Install the trigger
-	f.Setup(fmt.Sprintf("install trigger %q", via), trigger.Install(via, brokerName, cfg...))
 
 	f.Stable("broker as middleware").
 		Must("deliver an event",
