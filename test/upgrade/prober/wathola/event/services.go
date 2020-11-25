@@ -116,18 +116,18 @@ func (f *finishedStore) State() State {
 }
 
 func (f *finishedStore) DuplicatedThrown() []string {
-	return f.asStrings(f.errors.thrown.duplicated)
+	return asStrings(f.errors.thrown.duplicated)
 }
 
 func (f *finishedStore) MissingThrown() []string {
-	return f.asStrings(f.errors.thrown.missing)
+	return asStrings(f.errors.thrown.missing)
 }
 
 func (f *finishedStore) UnexpectedThrown() []string {
-	return f.asStrings(f.errors.thrown.unexpected)
+	return asStrings(f.errors.thrown.unexpected)
 }
 
-func (f *finishedStore) asStrings(errThrown []thrown) []string {
+func asStrings(errThrown []thrown) []string {
 	msgs := make([]string, 0)
 	for _, t := range errThrown {
 		errMsg := fmt.Sprintf(t.format, t.args...)
@@ -145,7 +145,7 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 		}
 		if times != 1 {
 			throwMethod := f.errors.throwMissing
-			if times != 0 {
+			if times > 1 {
 				throwMethod = f.errors.throwDuplicated
 			}
 			throwMethod("event #%v should be received once, but was received %v times",
