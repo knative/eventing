@@ -21,7 +21,7 @@
 export GO111MODULE=on
 
 # shellcheck disable=SC1090
-source "$(dirname "$0")/e2e-common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/e2e-common.sh"
 
 # Overrides
 
