@@ -14,6 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# -count argument when running go test
+readonly BENCH_RUN_COUNT=${BENCH_RUN_COUNT:-5}
+
+# -benchtime argument when running go test
+readonly BENCH_RUN_TIME=${BENCH_RUN_TIME:-5s}
+
 function microbenchmarks_run() {
   if [ "$1" != "" ]; then
     OUTPUT_FILE="$1"
@@ -21,11 +27,9 @@ function microbenchmarks_run() {
     OUTPUT_FILE="${ARTIFACTS:-$(mktemp -d)}/bench-result.txt"
   fi
 
-  echo "Output will be at $OUTPUT_FILE"
-
   # Run all microbenchmarks
   go clean
-  go test -bench=. -benchmem -run="^$" -v ./...   >> "$OUTPUT_FILE" || exit
+  go test -bench=. -benchtime=$BENCH_RUN_TIME -count=$BENCH_RUN_COUNT -benchmem -run="^$" -v ./...   >> "$OUTPUT_FILE" || exit
 }
 
 function microbenchmarks_run_and_compare() {
@@ -35,23 +39,37 @@ function microbenchmarks_run_and_compare() {
     exit 1
   fi
 
+  if [ "$2" == "" ]; then
+    OUTPUT_DIR=${ARTIFACTS:-$(mktemp -d)}
+  else
+    OUTPUT_DIR="$2"
+  fi
+
+  mkdir -p "$OUTPUT_DIR"
+
   # Benchstat is required to compare the bench results
   GO111MODULE=off go get golang.org/x/perf/cmd/benchstat
 
   # Revision to use to compare with actual
   REVISION="$1"
-  OUTPUT_DIR=${ARTIFACTS:-$(mktemp -d)}
 
-  echo "Outputs will be at $OUTPUT_DIR"
+  echo "--- Outputs will be at $OUTPUT_DIR"
 
   # Run this revision benchmarks
   microbenchmarks_run "$OUTPUT_DIR/new.txt"
+
+  echo "--- This revision results:"
+  cat "$OUTPUT_DIR/new.txt"
 
   # Run other revision benchmarks
   git checkout "$REVISION"
   microbenchmarks_run "$OUTPUT_DIR/old.txt"
 
+  echo "--- $REVISION results:"
+  cat "$OUTPUT_DIR/old.txt"
+
   # Print results in console
+  echo "--- Benchstat:"
   benchstat "$OUTPUT_DIR/old.txt" "$OUTPUT_DIR/new.txt"
 
   # Generate html results

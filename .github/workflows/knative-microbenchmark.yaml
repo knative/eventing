@@ -24,7 +24,7 @@ on:
 jobs:
 
   microbenchmark:
-    name: Run microbenchmarks and compare with master
+    name: Run and compare with master
     strategy:
       matrix:
         go-version: [1.15.x]
