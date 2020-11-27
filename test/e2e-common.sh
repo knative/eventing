@@ -16,9 +16,11 @@
 
 # This script includes common functions for testing setup and teardown.
 
+# shellcheck disable=SC1090
+
 export GO111MODULE=on
 
-source $(dirname $0)/../vendor/knative.dev/hack/e2e-tests.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../vendor/knative.dev/hack/e2e-tests.sh"
 
 # If gcloud is not available make it a no-op, not an error.
 which gcloud &>/dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
@@ -56,14 +58,14 @@ readonly REPLICAS=3
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
 
-TMP_DIR=$(mktemp -d -t ci-$(date +%Y-%m-%d-%H-%M-%S)-XXXXXXXXXX)
+TMP_DIR=$(mktemp -d -t "ci-$(date +%Y-%m-%d-%H-%M-%S)-XXXXXXXXXX")
 readonly TMP_DIR
 readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
 
 # This the namespace used to install and test Knative Eventing.
 export SYSTEM_NAMESPACE
-SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(cat /dev/urandom \
-  | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
+SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
+  /dev/urandom | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)}"
 
 # Latest release. If user does not supply this as a flag, the latest
 # tagged release on the current branch will be used.
@@ -109,14 +111,15 @@ function start_knative_eventing_monitoring() {
 # All generated YAMLs will be available and pointed by the corresponding
 # environment variables as set in /hack/generate-yamls.sh.
 function build_knative_from_source() {
-  local YAML_LIST="$(mktemp)"
+  local FULL_OUTPUT YAML_LIST LOG_OUTPUT ENV_OUTPUT
+  YAML_LIST="$(mktemp)"
 
   # Generate manifests, capture environment variables pointing to the YAML files.
-  local FULL_OUTPUT="$( \
-      source $(dirname $0)/../hack/generate-yamls.sh ${REPO_ROOT_DIR} ${YAML_LIST} ; \
+  FULL_OUTPUT="$( \
+      source "$(dirname "${BASH_SOURCE[0]}")/../hack/generate-yamls.sh" "${REPO_ROOT_DIR}" "${YAML_LIST}" ; \
       set | grep _YAML=/)"
-  local LOG_OUTPUT="$(echo "${FULL_OUTPUT}" | grep -v _YAML=/)"
-  local ENV_OUTPUT="$(echo "${FULL_OUTPUT}" | grep '^[_0-9A-Z]\+_YAML=/')"
+  LOG_OUTPUT="$(echo "${FULL_OUTPUT}" | grep -v _YAML=/)"
+  ENV_OUTPUT="$(echo "${FULL_OUTPUT}" | grep '^[_0-9A-Z]\+_YAML=/')"
   [[ -z "${LOG_OUTPUT}" || -z "${ENV_OUTPUT}" ]] && fail_test "Error generating manifests"
   # Only import the environment variables pointing to the YAML files.
   echo "${LOG_OUTPUT}"
@@ -198,7 +201,7 @@ function install_latest_release() {
 }
 
 function install_mt_broker() {
-  if [[ -z "${EVENTING_MT_CHANNEL_BROKER_YAML}" ]]; then
+  if [[ -z "${EVENTING_MT_CHANNEL_BROKER_YAML:-}" ]]; then
     build_knative_from_source
   else
     echo "use exist EVENTING_MT_CHANNEL_BROKER_YAML"
@@ -214,7 +217,7 @@ function install_mt_broker() {
 }
 
 function install_sugar() {
-  if [[ -z "${EVENTING_SUGAR_CONTROLLER_YAML}" ]]; then
+  if [[ -z "${EVENTING_SUGAR_CONTROLLER_YAML:-}" ]]; then
     build_knative_from_source
   else
     echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
@@ -290,7 +293,7 @@ function test_setup() {
   install_test_resources || return 1
 
   echo ">> Publish test images"
-  "$(dirname "$0")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
+  "$(dirname "${BASH_SOURCE[0]}")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
 }
 
 # Tear down resources used in the eventing tests.
@@ -308,7 +311,7 @@ function uninstall_test_resources() {
 
 function install_channel_crds() {
   echo "Installing In-Memory Channel CRD"
-  if [[ -z "${EVENTING_IN_MEMORY_CHANNEL_YAML}" ]]; then
+  if [[ -z "${EVENTING_IN_MEMORY_CHANNEL_YAML:-}" ]]; then
     build_knative_from_source
   else
     echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
