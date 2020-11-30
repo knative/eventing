@@ -25,7 +25,9 @@ type StepsStore interface {
 type FinishedStore interface {
 	RegisterFinished(finished *Finished)
 	State() State
-	Thrown() []string
+	DuplicatedThrown() []string
+	MissingThrown() []string
+	UnexpectedThrown() []string
 }
 
 // Typed says a type of an event

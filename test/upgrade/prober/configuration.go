@@ -44,7 +44,14 @@ const (
 	defaultBrokerName          = "default"
 	defaultHealthEndpoint      = "/healthz"
 	defaultFinishedSleep       = 5 * time.Second
+
+	Silence DuplicateAction = "silence"
+	Warn    DuplicateAction = "warn"
+	Error   DuplicateAction = "error"
 )
+
+// DuplicateAction is the action to take in case of duplicated events
+type DuplicateAction string
 
 var eventTypes = []string{"step", "finished"}
 
@@ -56,6 +63,7 @@ type Config struct {
 	FinishedSleep time.Duration
 	Serving       ServingConfig
 	FailOnErrors  bool
+	OnDuplicate   DuplicateAction
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -88,6 +96,7 @@ func NewConfig(namespace string) *Config {
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
+		OnDuplicate:   Warn,
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,

@@ -26,17 +26,27 @@ import (
 var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
+type thrownTypes struct {
+	missing    []thrown
+	duplicated []thrown
+	unexpected []thrown
+}
+
 // ErrorStore contains errors that was thrown
 type ErrorStore struct {
 	state  State
-	thrown []thrown
+	thrown thrownTypes
 }
 
 // NewErrorStore creates a new error store
 func NewErrorStore() *ErrorStore {
 	return &ErrorStore{
-		state:  Active,
-		thrown: make([]thrown, 0),
+		state: Active,
+		thrown: thrownTypes{
+			missing:    make([]thrown, 0),
+			duplicated: make([]thrown, 0),
+			unexpected: make([]thrown, 0),
+		},
 	}
 }
 
@@ -61,7 +71,7 @@ func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 func (s *stepStore) RegisterStep(step *Step) {
 	mutex.Lock()
 	if times, found := s.store[step.Number]; found {
-		s.errors.throw(
+		s.errors.throwDuplicated(
 			"event #%d received %d times, but should be received only once",
 			step.Number, times+1)
 	} else {
@@ -79,7 +89,7 @@ func (s *stepStore) Count() int {
 
 func (f *finishedStore) RegisterFinished(finished *Finished) {
 	if f.received > 0 {
-		f.errors.throw(
+		f.errors.throwDuplicated(
 			"finish event should be received only once, received %d",
 			f.received+1)
 	}
@@ -91,7 +101,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
 	if receivedEvents != finished.Count {
-		f.errors.throw("expecting to have %v unique events received, "+
+		f.errors.throwUnexpected("expecting to have %v unique events received, "+
 			"but received %v unique events", finished.Count, receivedEvents)
 		f.reportViolations(finished)
 		f.errors.state = Failed
@@ -105,9 +115,21 @@ func (f *finishedStore) State() State {
 	return f.errors.state
 }
 
-func (f *finishedStore) Thrown() []string {
+func (f *finishedStore) DuplicatedThrown() []string {
+	return asStrings(f.errors.thrown.duplicated)
+}
+
+func (f *finishedStore) MissingThrown() []string {
+	return asStrings(f.errors.thrown.missing)
+}
+
+func (f *finishedStore) UnexpectedThrown() []string {
+	return asStrings(f.errors.thrown.unexpected)
+}
+
+func asStrings(errThrown []thrown) []string {
 	msgs := make([]string, 0)
-	for _, t := range f.errors.thrown {
+	for _, t := range errThrown {
 		errMsg := fmt.Sprintf(t.format, t.args...)
 		msgs = append(msgs, errMsg)
 	}
@@ -122,7 +144,11 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 			times = 0
 		}
 		if times != 1 {
-			f.errors.throw("event #%v should be received once, but was received %v times",
+			throwMethod := f.errors.throwMissing
+			if times > 1 {
+				throwMethod = f.errors.throwDuplicated
+			}
+			throwMethod("event #%v should be received once, but was received %v times",
 				eventNo, times)
 		}
 	}
@@ -135,13 +161,25 @@ func (s *stepStore) reportProgress() {
 	}
 }
 
-func (e *ErrorStore) throw(format string, args ...interface{}) {
+func (e *ErrorStore) throwDuplicated(format string, args ...interface{}) {
+	e.thrown.duplicated = e.appendThrown(e.thrown.duplicated, format, args...)
+}
+
+func (e *ErrorStore) throwMissing(format string, args ...interface{}) {
+	e.thrown.missing = e.appendThrown(e.thrown.missing, format, args...)
+}
+
+func (e *ErrorStore) throwUnexpected(format string, args ...interface{}) {
+	e.thrown.unexpected = e.appendThrown(e.thrown.unexpected, format, args...)
+}
+
+func (e *ErrorStore) appendThrown(errThrown []thrown, format string, args ...interface{}) []thrown {
 	t := thrown{
 		format: format,
 		args:   args,
 	}
-	e.thrown = append(e.thrown, t)
 	log.Errorf(t.format, t.args...)
+	return append(errThrown, t)
 }
 
 type stepStore struct {
