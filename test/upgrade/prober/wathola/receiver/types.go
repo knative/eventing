@@ -27,6 +27,6 @@ type Thrown struct {
 type Report struct {
 	State    string `json:"state"`
 	Events   int    `json:"events"`
-	TotalReq int    `json:"totalRequest`
+	TotalReq int    `json:"totalRequest"`
 	Thrown   Thrown `json:"thrown"`
 }

@@ -114,7 +114,8 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	// check retry time
 	for _, retry := range finished.Retries {
 		if retry > config.Instance.Receiver.ErrorCfg.RetriesToReport {
-			f.errors.throw("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.RetriesToReport)
+			// TODO: decide how to do this properly
+			f.errors.throwUnexpected("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.RetriesToReport)
 			f.errors.state = Failed
 		}
 	}
