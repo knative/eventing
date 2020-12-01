@@ -129,7 +129,7 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deployBroker() {
-	p.client.CreateBrokerV1Beta1OrFail(p.config.BrokerName)
+	p.client.CreateBrokerV1Beta1OrFail(p.config.BrokerName, p.getBrokerOptions()...)
 }
 
 func (p *prober) fetchBrokerURL() (*apis.URL, error) {

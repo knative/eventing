@@ -32,6 +32,12 @@ var (
 	Interval = 200 * time.Millisecond
 )
 
+type OptionType string
+
+const (
+	Broker OptionType = "broker"
+)
+
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
@@ -42,6 +48,9 @@ type Prober interface {
 
 	// ReportErrors will reports found errors in proper way
 	ReportErrors(t *testing.T, errors []error)
+
+	// Register an option for deploy
+	RegisterOption(optionType OptionType, options ...interface{})
 
 	// deploy a prober to a cluster
 	deploy(ctx context.Context)
@@ -79,6 +88,7 @@ type prober struct {
 	log    *zap.SugaredLogger
 	client *testlib.Client
 	config *Config
+	opts   map[OptionType]interface{}
 }
 
 func (p *prober) servingClient() resources.ServingClient {
@@ -128,11 +138,30 @@ func (p *prober) remove() {
 	ensure.NoError(p.client.Tracker.Clean(true))
 }
 
+func (p *prober) RegisterOption(optionType OptionType, options ...interface{}) {
+	if _, ok := p.opts[optionType]; !ok {
+		p.opts[optionType] = make([]interface{}, 0)
+	}
+	p.opts[optionType] = append(p.opts[optionType].([]interface{}), options...)
+}
+
+func (p *prober) getBrokerOptions() []resources.BrokerV1Beta1Option {
+	if _, ok := p.opts[Broker]; !ok {
+		return nil
+	}
+	options := []resources.BrokerV1Beta1Option{}
+	for _, option := range p.opts[Broker].([]interface{}) {
+		options = append(options, option.(resources.BrokerV1Beta1Option))
+	}
+	return options
+}
+
 func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
 	return &prober{
 		log:    log,
 		client: client,
 		config: config,
+		opts:   make(map[OptionType]interface{}),
 	}
 }
 
