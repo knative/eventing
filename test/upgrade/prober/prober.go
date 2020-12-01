@@ -146,12 +146,11 @@ func (p *prober) RegisterOption(optionType OptionType, options ...interface{}) {
 }
 
 func (p *prober) getBrokerOptions() []resources.BrokerV1Beta1Option {
-	if _, ok := p.opts[Broker]; !ok {
-		return nil
-	}
 	options := []resources.BrokerV1Beta1Option{}
-	for _, option := range p.opts[Broker].([]interface{}) {
-		options = append(options, option.(resources.BrokerV1Beta1Option))
+	if _, ok := p.opts[Broker]; ok {
+		for _, option := range p.opts[Broker].([]interface{}) {
+			options = append(options, option.(resources.BrokerV1Beta1Option))
+		}
 	}
 	return options
 }
