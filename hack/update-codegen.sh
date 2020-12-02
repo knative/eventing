@@ -18,26 +18,20 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-export GO111MODULE=on
+source $(dirname $0)/../vendor/knative.dev/hack/codegen-library.sh
+
 # If we run with -mod=vendor here, then generate-groups.sh looks for vendor files in the wrong place.
 export GOFLAGS=-mod=
 
-if [ -z "${GOPATH:-}" ]; then
-  export GOPATH=$(go env GOPATH)
-fi
-
-source $(dirname $0)/../vendor/knative.dev/hack/library.sh
-
+echo "=== Update Codegen for $MODULE_NAME"
 
 # Compute _example hash for all configmaps.
-echo "Generating checksums for configmap _example keys"
+group "Generating checksums for configmap _example keys"
+
 ${REPO_ROOT_DIR}/hack/update-checksums.sh
 
-CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 $(dirname $0)/../vendor/k8s.io/code-generator 2>/dev/null || echo ../../../k8s.io/code-generator)}
+group "Kubernetes Codegen"
 
-KNATIVE_CODEGEN_PKG=${KNATIVE_CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 $(dirname $0)/../vendor/knative.dev/pkg 2>/dev/null || echo ../pkg)}
-
-chmod +x ${CODEGEN_PKG}/generate-groups.sh
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
@@ -60,12 +54,15 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
   "duck:v1alpha1 duck:v1beta1 duck:v1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
+group "Knative Codegen"
+
 # Knative Injection
-chmod +x ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh
 ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
   "eventing:v1beta1 eventing:v1 messaging:v1beta1 messaging:v1 flows:v1beta1 flows:v1 sources:v1alpha1 sources:v1alpha2 sources:v1beta1 sources:v1beta2 sources:v1 duck:v1alpha1 duck:v1beta1 duck:v1 configs:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+
+group "Update deps post-codegen"
 
 # Make sure our dependencies are up-to-date
 ${REPO_ROOT_DIR}/hack/update-deps.sh
