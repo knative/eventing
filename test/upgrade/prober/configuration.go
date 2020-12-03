@@ -107,7 +107,7 @@ func NewConfig(namespace string) *Config {
 		},
 		Wathola: Wathola{
 			ConfigMap: ConfigMap{
-				ConfigTemplate:   ("../" + defaultConfigFilename),
+				ConfigTemplate:   defaultConfigFilename,
 				ConfigMapName:    defaultConfigName,
 				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
 				ConfigFilename:   defaultConfigFilename,
