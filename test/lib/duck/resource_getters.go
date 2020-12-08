@@ -68,7 +68,7 @@ func GetGenericObject(
 		u, e = dynamicClient.Resource(gvr).Namespace(obj.Namespace).Get(context.Background(), obj.Name, metav1.GetOptions{})
 		if e != nil {
 			// TODO: Plumb some sort of logging here
-			fmt.Printf("Failed to get %s/%s: %v", obj.Namespace, obj.Name, e)
+			fmt.Printf("Failed to get %s/%s: %v\n", obj.Namespace, obj.Name, e)
 		}
 		return e
 	})
