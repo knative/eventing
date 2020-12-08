@@ -2,23 +2,24 @@
 
 ## Configuring your cluster to run a benchmark
 
-1. Create a namespace or use an existing namespace. Each namespace can be
-   configured with a single benchmark.
+1. Create a namespace `perf-eventing` if it does not exist. To use a different
+   namespace, please replace all the namespaces in
+   all bash commands and yaml configuration files with your choice.
 
-1. Install Knative eventing by following the steps in
-   https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31
+1. Install Knative eventing and components used in the performance test,
+   such as MT broker, by following the steps in https://github.com/knative/eventing/blob/master/DEVELOPMENT.md.
 
 1. Create a ConfigMap called `config-mako` in your chosen namespace containing
    the Mako config file.
 
 ```
-kubectl create configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
+kubectl create configmap -n perf-eventing config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
 ```
 
 1. Optionally edit the ConfigMap to set additional keys.
 
    ```
-   kubectl edit configmap -n <namespace> config-mako
+   kubectl edit configmap -n perf-eventing config-mako
    ```
 
 [`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
@@ -55,14 +56,18 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
    ko apply -f test/performance/benchmarks/broker-imc/200-broker-perf.yaml
    ```
 
+1. Wait until all the pods in namespace `perf-eventing` are completed.
+
 1. Retrieve results from mako-stub using the script in
-   [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh):
+   [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh)
+   where `pod_name` is the name of the aggregator pod:
 
    ```
-   bash "$GOPATH/src/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
+   bash "$GOPATH/src/knative.dev/eventing/vendor/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
    ```
 
-   This will download a CSV with all raw results.
+   This will download a CSV with all raw results. Alternatively you can remove the port argument
+   `-p` in `mako-stub` container to dump the output to container log directly.
 
 ## Available benchmarks
 
