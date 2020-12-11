@@ -131,11 +131,6 @@ var (
 			Key:      duck.BindingExcludeLabel,
 			Operator: metav1.LabelSelectorOpNotIn,
 			Values:   []string{"true"},
-		}, {
-			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
-			// See knative/pkg#1590 for details.
-			Key:      "control-plane",
-			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/exclude: "true"
@@ -145,11 +140,6 @@ var (
 			Key:      duck.BindingIncludeLabel,
 			Operator: metav1.LabelSelectorOpIn,
 			Values:   []string{"true"},
-		}, {
-			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
-			// See knative/pkg#1590 for details.
-			Key:      "control-plane",
-			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/include: "true"
@@ -338,31 +328,34 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	if err != nil {
 		return fmt.Errorf("error retrieving webhook: %w", err)
 	}
-	webhook := configuredWebhook.DeepCopy()
+	current := configuredWebhook.DeepCopy()
 
 	// Use the "Equivalent" match policy so that we don't need to enumerate versions for same-types.
 	// This is only supported by 1.15+ clusters.
 	matchPolicy := admissionregistrationv1.Equivalent
 
-	for i, wh := range webhook.Webhooks {
-		if wh.Name != webhook.Name {
+	for i, wh := range current.Webhooks {
+		if wh.Name != current.Name {
 			continue
 		}
-		webhook.Webhooks[i].MatchPolicy = &matchPolicy
-		webhook.Webhooks[i].Rules = rules
-		webhook.Webhooks[i].NamespaceSelector = &ac.selector
-		webhook.Webhooks[i].ObjectSelector = &ac.selector // 1.15+ only
-		webhook.Webhooks[i].ClientConfig.CABundle = caCert
-		if webhook.Webhooks[i].ClientConfig.Service == nil {
+		cur := &current.Webhooks[i]
+		selector := webhook.EnsureLabelSelectorExpressions(cur.NamespaceSelector, &ac.selector)
+
+		cur.MatchPolicy = &matchPolicy
+		cur.Rules = rules
+		cur.NamespaceSelector = selector
+		cur.ObjectSelector = selector // 1.15+ only
+		cur.ClientConfig.CABundle = caCert
+		if cur.ClientConfig.Service == nil {
 			return fmt.Errorf("missing service reference for webhook: %s", wh.Name)
 		}
-		webhook.Webhooks[i].ClientConfig.Service.Path = ptr.String(ac.Path())
+		cur.ClientConfig.Service.Path = ptr.String(ac.Path())
 	}
 
-	if ok := equality.Semantic.DeepEqual(configuredWebhook, webhook); !ok {
+	if ok := equality.Semantic.DeepEqual(configuredWebhook, current); !ok {
 		logging.FromContext(ctx).Info("Updating webhook")
 		mwhclient := ac.Client.AdmissionregistrationV1().MutatingWebhookConfigurations()
-		if _, err := mwhclient.Update(ctx, webhook, metav1.UpdateOptions{}); err != nil {
+		if _, err := mwhclient.Update(ctx, current, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {
