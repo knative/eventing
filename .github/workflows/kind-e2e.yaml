@@ -24,7 +24,6 @@ jobs:
         - v1.17.11
         - v1.18.8
         - v1.19.1
-        - v1.20.0
 
         test-suite:
         - ./test/rekt/...
@@ -44,9 +43,6 @@ jobs:
         - k8s-version: v1.19.1
           kind-version: v0.9.0
           kind-image-sha: sha256:98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600
-        - k8s-version: v1.20.0
-          kind-version: v0.9.0
-          kind-image-sha: sha256:b40ecf8bcb188f6a0d0f5d406089c48588b75edc112c6f635d26be5de1c89040
 
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
