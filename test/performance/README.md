@@ -3,11 +3,12 @@
 ## Configuring your cluster to run a benchmark
 
 1. Create a namespace `perf-eventing` if it does not exist. To use a different
-   namespace, please replace all the namespaces in
-   all bash commands and yaml configuration files with your choice.
+   namespace, please replace all the namespaces in all bash commands and yaml
+   configuration files with your choice.
 
-1. Install Knative eventing and components used in the performance test,
-   such as MT broker, by following the steps in https://github.com/knative/eventing/blob/master/DEVELOPMENT.md.
+1. Install Knative eventing and components used in the performance test, such as
+   MT broker, by following the steps in
+   https://github.com/knative/eventing/blob/master/DEVELOPMENT.md.
 
 1. Create a ConfigMap called `config-mako` in your chosen namespace containing
    the Mako config file.
@@ -66,8 +67,9 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
    bash "$GOPATH/src/knative.dev/eventing/vendor/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
    ```
 
-   This will download a CSV with all raw results. Alternatively you can remove the port argument
-   `-p` in `mako-stub` container to dump the output to container log directly.
+   This will download a CSV with all raw results. Alternatively you can remove
+   the port argument `-p` in `mako-stub` container to dump the output to
+   container log directly.
 
 ## Available benchmarks
 
