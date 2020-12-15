@@ -95,7 +95,6 @@ var (
 	dlcURI = apis.HTTP(dlcDNS)
 
 	dlc2DNS = "dlc2.mynamespace.svc." + network.GetClusterDomainName()
-	dlc2URI = apis.HTTP(dlc2DNS)
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
