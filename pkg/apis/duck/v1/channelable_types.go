@@ -45,7 +45,9 @@ type Channelable struct {
 type ChannelableSpec struct {
 	SubscribableSpec `json:",inline"`
 
-	// DeliverySpec contains options controlling the event delivery
+	// DeliverySpec contains the default delivery spec for each subscription
+	// to this Channelable. Each subscription delivery spec, if any, overrides this
+	// global delivery spec.
 	// +optional
 	Delivery *DeliverySpec `json:"delivery,omitempty"`
 }

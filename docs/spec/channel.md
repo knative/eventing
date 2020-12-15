@@ -196,6 +196,14 @@ Note: The array of subscribers MUST NOT be set directly on the generic Channel
 custom object, but rather appended to the backing channel by the subscription
 itself.
 
+#### Channelable and Subscription Delivery Spec
+
+Both Channelable and Subscription have a [`delivery`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/delivery_types.go)
+field that allows the user to define the dead letter sink and retries.
+The Channelable `spec.delivery` field is global across all the Subscriptions registered with that particular
+Channelable, while the Subscription `spec.delivery`, if configured, fully overrides Channeleable `spec.delivery` for
+that particular Subscription.
+
 #### Status Requirements
 
 ##### v1alpha1 Status
