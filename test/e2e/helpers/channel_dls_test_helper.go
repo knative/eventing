@@ -26,6 +26,10 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -92,6 +96,78 @@ func ChannelDeadLetterSinkTestHelper(
 			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
 		client.SendEventToAddressable(ctx, senderName, channelNames[0], &channel, event)
+
+		// check if the logging service receives the correct number of event messages
+		eventTracker.AssertAtLeast(len(subscriptionNames), recordevents.MatchEvent(
+			HasSource(eventSource),
+			HasData([]byte(body)),
+		))
+	})
+}
+
+// ChannelDeadLetterDefaultSinkTestHelper is the helper function for channel_deadlettersink_test, but setting the delivery from the channel spec
+func ChannelDeadLetterSinkDefaultTestHelper(
+	ctx context.Context,
+	t *testing.T,
+	channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
+	const (
+		senderName          = "e2e-channelchain-sender"
+		recordEventsPodName = "e2e-channel-dls-recordevents-pod"
+		channelName         = "e2e-channel-dls"
+	)
+	// subscriptionNames corresponds to Subscriptions
+	subscriptionNames := []string{"e2e-channel-dls-subs1"}
+
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := testlib.Setup(st, true, options...)
+		defer testlib.TearDown(client)
+
+		// create channel
+		client.CreateChannelV1WithDefaultOrFail(&messagingv1.Channel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      channelName,
+				Namespace: client.Namespace,
+			},
+			Spec: messagingv1.ChannelSpec{
+				ChannelTemplate: &messagingv1.ChannelTemplateSpec{
+					TypeMeta: channel,
+				},
+				ChannelableSpec: eventingduckv1.ChannelableSpec{
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: resources.KnativeRefForService(recordEventsPodName, client.Namespace),
+						},
+					},
+				},
+			},
+		})
+		client.WaitForResourcesReadyOrFail(&channel)
+
+		// create event logger pod and service as the subscriber
+		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
+		// create subscriptions that subscribe to a service that does not exist
+		client.CreateSubscriptionsV1OrFail(
+			subscriptionNames,
+			channelName,
+			&channel,
+			resources.WithSubscriberForSubscriptionV1("does-not-exist"),
+		)
+
+		// wait for all test resources to be ready, so that we can start sending events
+		client.WaitForAllTestResourcesReadyOrFail(ctx)
+
+		// send CloudEvent to the first channel
+		event := cloudevents.NewEvent()
+		event.SetID("test")
+		eventSource := fmt.Sprintf("http://%s.svc/", senderName)
+		event.SetSource(eventSource)
+		event.SetType(testlib.DefaultEventType)
+		body := fmt.Sprintf(`{"msg":"TestChannelDeadLetterSink %s"}`, uuid.New().String())
+		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
+			t.Fatal("Cannot set the payload of the event:", err.Error())
+		}
+		client.SendEventToAddressable(ctx, senderName, channelName, &channel, event)
 
 		// check if the logging service receives the correct number of event messages
 		eventTracker.AssertAtLeast(len(subscriptionNames), recordevents.MatchEvent(
