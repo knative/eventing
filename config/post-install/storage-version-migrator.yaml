@@ -38,3 +38,4 @@ spec:
           image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
           args:
             - "apiserversources.sources.knative.dev"
+            - "containersources.sources.knative.dev"

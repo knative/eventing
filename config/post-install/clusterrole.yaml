@@ -36,6 +36,7 @@ rules:
       - "sources.knative.dev"
     resources:
       - "apiserversources"
+      - "containersources"
     verbs:
       - "get"
       - "list"
