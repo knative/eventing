@@ -196,12 +196,12 @@ Note: The array of subscribers MUST NOT be set directly on the generic Channel
 custom object, but rather appended to the backing channel by the subscription
 itself.
 
-#### Channelable and Subscription Delivery Spec 
+#### Channelable and Subscription Delivery Spec
 
 Both Channelable and Subscription has a `Delivery` field of type `duck.DeliverySpec` (per `v1`).
 This field allows the user to define the dead letter sink and retries.
 The `ChannelableSpec.Delivery` field is global across all the Subscriptions registered to that particular
-Channelable, while the `SubscriptionSpec.Delivery`, if configured, fully overrides `ChannelableSpec.Delivery` for 
+Channelable, while the `SubscriptionSpec.Delivery`, if configured, fully overrides `ChannelableSpec.Delivery` for
 that particular Subscription.
 
 #### Status Requirements
