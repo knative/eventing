@@ -44,6 +44,14 @@ The attributes filter specifying a list of key-value pairs MUST be supported by
 Trigger. Events that pass the attributes filter MUST include context or
 extension attributes that match all key-value pairs exactly.
 
+### Delivery Spec
+
+Both BrokerSpec and TriggerSpec has a `Delivery` field of type `duck.DeliverySpec` (per `v1`).
+This field allows the user to define the dead letter sink and retries.
+The `BrokerSpec.Delivery` field is global across all the Triggers registered to that particular
+Broker, while the `TriggerSpec.Delivery`, if configured, fully overrides `BrokerSpec.Delivery` for
+that particular Trigger.
+
 ## Data Plane
 
 ### Ingress
