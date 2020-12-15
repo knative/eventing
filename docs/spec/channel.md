@@ -198,9 +198,9 @@ itself.
 
 #### Channelable and Subscription Delivery Spec
 
-Both Channelable and Subscription has a `Delivery` field of type `duck.DeliverySpec` (per `v1`).
+Both Channelable and Subscription have a `Delivery` field of type `duck.DeliverySpec` (per `v1`).
 This field allows the user to define the dead letter sink and retries.
-The `ChannelableSpec.Delivery` field is global across all the Subscriptions registered to that particular
+The `ChannelableSpec.Delivery` field is global across all the Subscriptions registered with that particular
 Channelable, while the `SubscriptionSpec.Delivery`, if configured, fully overrides `ChannelableSpec.Delivery` for
 that particular Subscription.
 
