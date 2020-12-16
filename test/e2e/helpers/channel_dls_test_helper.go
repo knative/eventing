@@ -25,6 +25,7 @@ import (
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -138,6 +139,7 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 						DeadLetterSink: &duckv1.Destination{
 							Ref: resources.KnativeRefForService(recordEventsPodName, client.Namespace),
 						},
+						Retry: pointer.Int32Ptr(10),
 					},
 				},
 			},
