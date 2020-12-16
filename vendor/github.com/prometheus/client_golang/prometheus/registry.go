@@ -886,10 +886,10 @@ func checkMetricConsistency(
 		h = hashAddByte(h, separatorByte)
 	}
 	if _, exists := metricHashes[h]; exists {
-		return fmt.Errorf(
+		panic(fmt.Errorf(
 			"collected metric %q { %s} was collected before with the same name and label values",
 			name, dtoMetric,
-		)
+		))
 	}
 	metricHashes[h] = struct{}{}
 	return nil

@@ -191,7 +191,7 @@ func (h *Handler) receive(ctx context.Context, headers http.Header, event *cloud
 
 func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudevents.Event, target string) (int, time.Duration) {
 
-	request, err := h.Sender.NewCloudEventRequestWithTarget(ctx, target)
+	request, err := h.Sender.NewCloudEventRequest(ctx)
 	if err != nil {
 		return http.StatusInternalServerError, noDuration
 	}

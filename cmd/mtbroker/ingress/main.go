@@ -17,11 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"net/http/httptest"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
@@ -71,7 +74,10 @@ type envConfig struct {
 
 func main() {
 	ctx := signals.NewContext()
+	run(ctx)
+}
 
+func run(ctx context.Context) {
 	// Report stats on Go memory usage every 30 seconds.
 	metrics.MemStatsOrDie(ctx)
 
@@ -124,12 +130,17 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
+	blackhole := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer blackhole.Close()
+
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
 	kncloudevents.ConfigureConnectionArgs(&connectionArgs)
-	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
+	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget(blackhole.URL)
 	if err != nil {
 		logger.Fatal("Unable to create message sender", zap.Error(err))
 	}
