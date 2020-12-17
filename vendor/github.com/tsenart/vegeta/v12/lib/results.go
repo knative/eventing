@@ -7,12 +7,15 @@ import (
 	"encoding/csv"
 	"encoding/gob"
 	"io"
+	"net/http"
+	"net/textproto"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mailru/easyjson/jlexer"
-	jwriter "github.com/mailru/easyjson/jwriter"
+	"github.com/mailru/easyjson/jwriter"
 )
 
 func init() {
@@ -30,6 +33,9 @@ type Result struct {
 	BytesIn   uint64        `json:"bytes_in"`
 	Error     string        `json:"error"`
 	Body      []byte        `json:"body"`
+	Method    string        `json:"method"`
+	URL       string        `json:"url"`
+	Headers   http.Header   `json:"headers"`
 }
 
 // End returns the time at which a Result ended.
@@ -45,7 +51,32 @@ func (r Result) Equal(other Result) bool {
 		r.BytesIn == other.BytesIn &&
 		r.BytesOut == other.BytesOut &&
 		r.Error == other.Error &&
-		bytes.Equal(r.Body, other.Body)
+		bytes.Equal(r.Body, other.Body) &&
+		r.Method == other.Method &&
+		r.URL == other.URL &&
+		headerEqual(r.Headers, other.Headers)
+}
+
+func headerEqual(h1, h2 http.Header) bool {
+	if len(h1) != len(h2) {
+		return false
+	}
+	if h1 == nil || h2 == nil {
+		return h1 == nil && h2 == nil
+	}
+	for key, values1 := range h1 {
+		values2 := h2[key]
+		if len(values1) != len(values2) {
+			return false
+		}
+		for i := range values1 {
+			if values1[i] != values2[i] {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 // Results is a slice of Result type elements.
@@ -150,8 +181,10 @@ func NewCSVEncoder(w io.Writer) Encoder {
 			base64.StdEncoding.EncodeToString(r.Body),
 			r.Attack,
 			strconv.FormatUint(r.Seq, 10),
+			r.Method,
+			r.URL,
+			base64.StdEncoding.EncodeToString(headerBytes(r.Headers)),
 		})
-
 		if err != nil {
 			return err
 		}
@@ -162,10 +195,19 @@ func NewCSVEncoder(w io.Writer) Encoder {
 	}
 }
 
+func headerBytes(h http.Header) []byte {
+	if h == nil {
+		return nil
+	}
+	var hdr bytes.Buffer
+	_ = h.Write(&hdr)
+	return append(hdr.Bytes(), '\r', '\n')
+}
+
 // NewCSVDecoder returns a Decoder that decodes CSV encoded Results.
-func NewCSVDecoder(rd io.Reader) Decoder {
-	dec := csv.NewReader(rd)
-	dec.FieldsPerRecord = 9
+func NewCSVDecoder(r io.Reader) Decoder {
+	dec := csv.NewReader(r)
+	dec.FieldsPerRecord = 12
 	dec.TrimLeadingSpace = true
 
 	return func(r *Result) error {
@@ -201,23 +243,42 @@ func NewCSVDecoder(rd io.Reader) Decoder {
 		}
 
 		r.Error = rec[5]
-		r.Body, err = base64.StdEncoding.DecodeString(rec[6])
+		if r.Body, err = base64.StdEncoding.DecodeString(rec[6]); err != nil {
+			return err
+		}
 
 		r.Attack = rec[7]
 		if r.Seq, err = strconv.ParseUint(rec[8], 10, 64); err != nil {
 			return err
 		}
 
+		r.Method = rec[9]
+		r.URL = rec[10]
+
+		if rec[11] != "" {
+			pr := textproto.NewReader(bufio.NewReader(
+				base64.NewDecoder(base64.StdEncoding, strings.NewReader(rec[11]))))
+			hdr, err := pr.ReadMIMEHeader()
+			if err != nil {
+				return err
+			}
+			r.Headers = http.Header(hdr)
+		}
+
 		return err
 	}
 }
+
+//go:generate easyjson -no_std_marshalers -output_filename results_easyjson.go results.go
+//easyjson:json
+type jsonResult Result
 
 // NewJSONEncoder returns an Encoder that dumps the given *Results as a JSON
 // object.
 func NewJSONEncoder(w io.Writer) Encoder {
 	var jw jwriter.Writer
 	return func(r *Result) error {
-		(*jsonResult)(r).encode(&jw)
+		(*jsonResult)(r).MarshalEasyJSON(&jw)
 		if jw.Error != nil {
 			return jw.Error
 		}
@@ -232,10 +293,10 @@ func NewJSONDecoder(r io.Reader) Decoder {
 	rd := bufio.NewReader(r)
 	return func(r *Result) (err error) {
 		var jl jlexer.Lexer
-		if jl.Data, err = rd.ReadSlice('\n'); err != nil {
+		if jl.Data, err = rd.ReadBytes('\n'); err != nil {
 			return err
 		}
-		(*jsonResult)(r).decode(&jl)
+		(*jsonResult)(r).UnmarshalEasyJSON(&jl)
 		return jl.Error()
 	}
 }
