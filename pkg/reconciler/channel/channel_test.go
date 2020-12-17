@@ -216,7 +216,7 @@ func TestReconcile(t *testing.T) {
 					},
 					"spec": map[string]interface{}{
 						"delivery": map[string]interface{}{
-							"retry": 10,
+							"retry": int64(10),
 						},
 					},
 				},

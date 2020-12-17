@@ -41,10 +41,10 @@ func NewChannel(c *v1.Channel) (*unstructured.Unstructured, error) {
 			Name:      c.Name,
 			Namespace: c.Namespace,
 		},
-		Spec: v1.ChannelTemplateSpecInternalSpec{
-			ChannelSpec:         c.Spec.ChannelableSpec,
-			PhysicalChannelSpec: c.Spec.ChannelTemplate.Spec,
-		},
+		Spec: v1.NewChannelTemplateSpecInternalSpec(
+			c.Spec.ChannelableSpec,
+			c.Spec.ChannelTemplate.Spec,
+		),
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {
