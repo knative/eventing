@@ -102,6 +102,12 @@ func WithBackingChannelReady(c *eventingv1.Channel) {
 	c.Status.MarkBackingChannelReady()
 }
 
+func WithChannelDelivery(d *eventingduckv1.DeliverySpec) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Spec.Delivery = d
+	}
+}
+
 func WithBackingChannelObjRef(objRef *duckv1.KReference) ChannelOption {
 	return func(c *eventingv1.Channel) {
 		c.Status.Channel = objRef

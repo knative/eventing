@@ -25,6 +25,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
+	. "knative.dev/pkg/reconciler/testing"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -35,14 +45,6 @@ import (
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
-	logtesting "knative.dev/pkg/logging/testing"
-	"knative.dev/pkg/network"
-	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -54,6 +56,10 @@ var (
 	testKey = fmt.Sprintf("%s/%s", testNS, channelName)
 
 	backingChannelHostname = network.GetServiceHostname("foo", "bar")
+
+	deliverySpec = &eventingduckv1.DeliverySpec{
+		Retry: pointer.Int32Ptr(10),
+	}
 )
 
 func init() {
@@ -174,6 +180,55 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+		}},
+	}, {
+		Name: "Backing channel created with delivery",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelDelivery(deliverySpec),
+				WithChannelAddress(backingChannelHostname)),
+		},
+		WantCreates: []runtime.Object{
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "messaging.knative.dev/v1",
+					"kind":       "InMemoryChannel",
+					"metadata": map[string]interface{}{
+						"creationTimestamp": nil,
+						"namespace":         testNS,
+						"name":              channelName,
+						"ownerReferences": []interface{}{
+							map[string]interface{}{
+								"apiVersion":         "messaging.knative.dev/v1",
+								"blockOwnerDeletion": true,
+								"controller":         true,
+								"kind":               "Channel",
+								"name":               channelName,
+								"uid":                "",
+							},
+						},
+					},
+					"spec": map[string]interface{}{
+						"delivery": map[string]interface{}{
+							"retry": int64(10),
+						},
+					},
+				},
+			},
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelNoAddress(),
+				WithChannelDelivery(deliverySpec),
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
 		}},
 	}, {
