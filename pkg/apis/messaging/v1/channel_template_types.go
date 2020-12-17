@@ -45,6 +45,8 @@ type ChannelTemplateSpecInternal struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec includes the Channel CR ChannelableSpec and the physical channel spec.
+	// In order to create a new ChannelTemplateSpecInternalSpec, you must use NewChannelTemplateSpecInternalSpec
 	Spec *ChannelTemplateSpecInternalSpec `json:"spec,omitempty"`
 }
 
@@ -60,6 +62,7 @@ type ChannelTemplateSpecInternalSpec struct {
 	PhysicalChannelSpec *runtime.RawExtension
 }
 
+// NewChannelTemplateSpecInternalSpec creates a new ChannelTemplateSpecInternalSpec, returning nil if channelableSpec is empty and physicalChannelSpec is nil.
 func NewChannelTemplateSpecInternalSpec(channelableSpec v1.ChannelableSpec, physicalChannelSpec *runtime.RawExtension) *ChannelTemplateSpecInternalSpec {
 	if physicalChannelSpec == nil && equality.Semantic.DeepEqual(channelableSpec, v1.ChannelableSpec{}) {
 		return nil
