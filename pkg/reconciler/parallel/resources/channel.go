@@ -54,7 +54,9 @@ func NewChannel(name string, p *v1.Parallel) (*unstructured.Unstructured, error)
 			Name:      name,
 			Namespace: p.Namespace,
 		},
-		Spec: p.Spec.ChannelTemplate.Spec,
+		Spec: messagingv1.ChannelTemplateSpecInternalSpec{
+			PhysicalChannelSpec: p.Spec.ChannelTemplate.Spec,
+		},
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {

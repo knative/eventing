@@ -19,6 +19,8 @@ package v1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -40,8 +42,15 @@ type ChannelTemplateSpecInternal struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the Spec to use for each channel created. Passed
+	Spec ChannelTemplateSpecInternalSpec `json:"spec,omitempty"`
+}
+
+type ChannelTemplateSpecInternalSpec struct {
+	// This includes the fields from the Channel Spec section
+	ChannelSpec v1.ChannelableSpec `json:",inline"`
+
+	// This includes the fields from the physical channel Spec. Passed
 	// in verbatim to the Channel CRD as Spec section.
 	// +optional
-	Spec *runtime.RawExtension `json:"spec,omitempty"`
+	PhysicalChannelSpec *runtime.RawExtension `json:",inline"`
 }

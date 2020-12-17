@@ -17,12 +17,12 @@ limitations under the License.
 package resources
 
 import (
-	"encoding/json"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"knative.dev/pkg/kmeta"
+	"sigs.k8s.io/yaml"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
@@ -41,14 +41,17 @@ func NewChannel(c *v1.Channel) (*unstructured.Unstructured, error) {
 			Name:      c.Name,
 			Namespace: c.Namespace,
 		},
-		Spec: c.Spec.ChannelTemplate.Spec,
+		Spec: v1.ChannelTemplateSpecInternalSpec{
+			ChannelSpec:         c.Spec.ChannelableSpec,
+			PhysicalChannelSpec: c.Spec.ChannelTemplate.Spec,
+		},
 	}
-	raw, err := json.Marshal(template)
+	raw, err := yaml.Marshal(template)
 	if err != nil {
 		return nil, err
 	}
 	u := &unstructured.Unstructured{}
-	err = json.Unmarshal(raw, u)
+	err = yaml.Unmarshal(raw, u)
 	if err != nil {
 		return nil, err
 	}
