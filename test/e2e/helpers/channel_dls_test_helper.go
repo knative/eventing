@@ -24,6 +24,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -117,10 +118,17 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 		recordEventsPodName = "e2e-channel-dls-recordevents-pod"
 		channelName         = "e2e-channel-dls"
 	)
+	channelGK := messagingv1.SchemeGroupVersion.WithKind("Channel").GroupKind()
 	// subscriptionNames corresponds to Subscriptions
 	subscriptionNames := []string{"e2e-channel-dls-subs1"}
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		thisChannelGk := channel.GroupVersionKind().GroupKind()
+		if equality.Semantic.DeepEqual(thisChannelGk, channelGK) {
+			st.Skip("It doesn't make sense to create a messaging.Channel with a backing messaging.Channel")
+			return
+		}
+
 		client := testlib.Setup(st, true, options...)
 		defer testlib.TearDown(client)
 
