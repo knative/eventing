@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.2.0
-	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.4
 	github.com/google/gofuzz v1.1.0

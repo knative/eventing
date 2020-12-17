@@ -22,8 +22,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ghodss/yaml"
 	"go.uber.org/zap"
+	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
