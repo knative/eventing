@@ -634,8 +634,7 @@ github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tsenart/go-tsz v0.0.0-20180814232043-cdeb9e1e981e/go.mod h1:SWZznP1z5Ki7hDT2ioqiFKEse8K9tU2OUvaRI0NeGQo=
-github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible h1:ErZrHhRveAoznVW80gbrxz+qxJNydpA2fcQxTPHkZbU=
-github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible/go.mod h1:Smz/ZWfhKRcyDDChZkG3CyTHdj87lHzio/HOCkbndXM=
+github.com/tsenart/vegeta/v12 v12.8.4 h1:UQ7tG7WkDorKj0wjx78Z4/vsMBP8RJQMGJqRVrkvngg=
 github.com/tsenart/vegeta/v12 v12.8.4/go.mod h1:ZiJtwLn/9M4fTPdMY7bdbIeyNeFVE8/AHbWFqCsUuho=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
@@ -1154,6 +1153,7 @@ knative.dev/pkg v0.0.0-20201217014702-b0c121fb667f h1:c4fPgRAIlW0uTC2Ec3+AfkA3ad
 knative.dev/pkg v0.0.0-20201217014702-b0c121fb667f/go.mod h1:VjrwVhfEZUnn6FruncHcBm854FldnRpekpyBbYtBvZM=
 knative.dev/reconciler-test v0.0.0-20201124190335-83a44efcdfef h1:8PttDFSsac32mq6Va+uPOyOR5CfX8JQT9g+MnHNyJ94=
 knative.dev/reconciler-test v0.0.0-20201124190335-83a44efcdfef/go.mod h1:YSs1y1rgnjs8w39/drLIOQbWvZUQwqApvd+EizO8UsA=
+pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=

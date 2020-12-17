@@ -25,7 +25,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
 	github.com/stretchr/testify v1.5.1
-	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
+	github.com/tsenart/vegeta/v12 v12.8.4
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.22.5
 	go.opentelemetry.io/otel v0.2.3
