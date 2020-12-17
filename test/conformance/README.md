@@ -13,7 +13,7 @@ Run test with e2e tag and optionally select conformance test
 
 ```shell
 ko apply -Rf test/config/
-export SYSTEM_NAMESPACE=knative-eventing 
+export SYSTEM_NAMESPACE=knative-eventing
 
 go test -v -tags=e2e -count=1 ./test/conformance/...
 
