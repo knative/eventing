@@ -21,7 +21,6 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/high-availability: "true"
 spec:
-  replicas: 1
   selector:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
