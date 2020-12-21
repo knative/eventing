@@ -52,19 +52,8 @@ The `TriggerStatus` represents the current state of the `Trigger`.
 
 ##### Conditions
 
-- **Ready.** True when the trigger is provisioned and configuration is ready to
-  deliver events to the subscriber.
-- **BrokerReady.** True when the broker exists and is ready.
-- **SubscriptionReady.** True when the subscriber is subscribed to the broker.
-- **DependencyReady.** True when the sources the trigger depends on are ready.
-- **SubscriberResolved.** True when the subscriber is resolved, i.e. the trigger
-  can get its address.
-
-#### Events
-
-- TriggerReconciled
-- TriggerReconcileFailed
-- TriggerUpdateStatusFailed
+- **Ready.** True when the trigger is provisioned and ready to deliver events to
+  the subscriber.
 
 ---
 
@@ -108,16 +97,7 @@ The `BrokerStatus` represents the current state of the `Broker`.
 
 ##### Conditions
 
-- **Ready.** True when the Broker is provisioned and ready to accept events.
-- **IngressReady.** True when broker ingress is ready.
-- **TriggerChannelReady.** True when the trigger channel is ready.
-- **FilterReady.** True when the filter is ready.
-- **Addressable.** True when the broker has a resolved address in its status.
-
-#### Events
-
-- BrokerReconciled
-- BrokerUpdateStatusFailed
+- **Ready.** True when the broker is provisioned and ready to accept events.
 
 ---
 
@@ -165,16 +145,6 @@ The `ChannelStatus` represents the current state of the `Channel`.
 ##### Conditions
 
 - **Ready.** True when the channel is ready to accept events.
-- **BackingChannelReady.** True when the backing Channel CRD is ready.
-- **Addressable.** True when the `Channel` meets the `Addressable` contract and
-  has a non-empty hostname.
-
-#### Events
-
-- ChannelReconcileError
-- ChannelReconciled
-- ChannelReadinessChanged
-- ChannelUpdateStatusFailed
 
 ### Life Cycle
 
@@ -235,12 +205,8 @@ The `SubscriptionStatus` represents the current state of the `Subscription`.
 
 ##### Conditions
 
-- **Ready.** True when all subconditions below have been set to true.
-- **ReferencesResolved.** True when all the specified references (`channel`,
-  `subscriber`, and `reply` ) have been successfully resolved.
-- **AddedToChannel.** True when the controller has successfully added a
-  subscription to the `spec.channel` resource.
-- **ChannelReady.** True when the channel has marked the subscriber as ready.
+- **Ready.** True when the subscription is ready to deliver events to the
+  subscriber.
 
 #### Events
 
