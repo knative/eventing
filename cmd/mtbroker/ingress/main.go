@@ -28,7 +28,7 @@ import (
 	"go.uber.org/zap"
 
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"

@@ -970,7 +970,7 @@ k8s.io/utils/trace
 ## explicit
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/pkg v0.0.0-20201217014702-b0c121fb667f
+# knative.dev/pkg v0.0.0-20201222215804-e2d6b4f84573
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1028,6 +1028,7 @@ knative.dev/pkg/codegen/cmd/injection-gen/args
 knative.dev/pkg/codegen/cmd/injection-gen/generators
 knative.dev/pkg/configmap
 knative.dev/pkg/configmap/hash-gen
+knative.dev/pkg/configmap/informer
 knative.dev/pkg/configmap/testing
 knative.dev/pkg/controller
 knative.dev/pkg/hack

@@ -25,7 +25,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap/informer"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection client
