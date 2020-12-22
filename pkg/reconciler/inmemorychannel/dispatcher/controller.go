@@ -37,6 +37,7 @@ import (
 
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
+	configmapinformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
@@ -72,7 +73,7 @@ func NewController(
 	logger := logging.FromContext(ctx)
 
 	// Setup trace publishing.
-	iw := cmw.(*configmap.InformedWatcher)
+	iw := cmw.(*configmapinformer.InformedWatcher)
 	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
 		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
