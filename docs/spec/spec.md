@@ -62,10 +62,10 @@ The `TriggerStatus` represents the current state of the `Trigger`.
 ### group: eventing.knative.dev/v1
 
 _A `Broker` collects a pool of events that are consumable using triggers.
-Brokers provide a well-known endpoint for event delivery that senders can use
-with minimal knowledge of the event routing strategy. Subscribers use triggers
-to request delivery of events from a broker's pool to a specific URL or
-`Addressable` endpoint._
+Brokers provide a discoverable endpoint (`status.address`) for event delivery
+that senders can use with minimal knowledge of the event routing strategy.
+Subscribers use triggers to request delivery of events from a broker's pool to a
+specific URL or `Addressable` endpoint._
 
 ### Object Schema
 
@@ -79,21 +79,21 @@ resource.
 
 The `BrokerSpec` defines the desired state for the `Broker`.
 
-| Field Name | Field Type                                                              | Requirement | Description                                                                                                  | Constraints |
-| ---------- | ----------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ | ----------- |
-| `config`   | [`duckv1.KReference`](#duckv1.kreference)                               | Optional    | Reference to the configuration options for this broker. For example, this could be a pointer to a ConfigMap. |             |
-| `delivery` | [`eventingduckv1beta1.DeliverySpec`](#eventingduckv1beta1.deliveryspec) | Optional    | The delivery specification for events within the broker mesh. This includes things like retries, DLQ, etc.   |             |
+| Field Name | Field Type                                                    | Requirement | Description                                                                                                  | Constraints |
+| ---------- | ------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ | ----------- |
+| `config`   | [`duckv1.KReference`](#duckv1.kreference)                     | Optional    | Reference to the configuration options for this broker. For example, this could be a pointer to a ConfigMap. |             |
+| `delivery` | [`eventingduckv1.DeliverySpec`](#eventingduckv1.deliveryspec) | Optional    | The delivery specification for events within the broker. This includes things like retries, DLQ, etc.        |             |
 
 #### Status
 
 The `BrokerStatus` represents the current state of the `Broker`.
 
-| Field Name           | Field Type                                  | Requirement | Description                                                                                                                        | Constraints |
-| -------------------- | ------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `observedGeneration` | `int`                                       | Optional    | The 'Generation' of the `Broker` that was last processed by the controller.                                                        |             |
-| `conditions`         | [`[]apis.Condition`](#apis.condition)       | Optional    | Broker conditions. The latest available observations of the resource's current state.                                              |             |
-| `annotations`        | `map[string]string`                         | Optional    | Fields to save additional state as well as convey more information to the user.                                                    |             |
-| `address`            | [`duckv1.Addressable`](#duckv1.addressable) | Required    | Exposed endpoint (as an URI) for getting events delivered into the broker mesh. The broker is [`Addressable`](duckv1.addressable). |             |
+| Field Name           | Field Type                                  | Requirement | Description                                                                                                               | Constraints |
+| -------------------- | ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `observedGeneration` | `int`                                       | Optional    | The 'Generation' of the `Broker` that was last processed by the controller.                                               |             |
+| `conditions`         | [`[]apis.Condition`](#apis.condition)       | Optional    | Broker conditions. The latest available observations of the resource's current state.                                     |             |
+| `annotations`        | `map[string]string`                         | Optional    | Fields to save additional state as well as convey more information to the user.                                           |             |
+| `address`            | [`duckv1.Addressable`](#duckv1.addressable) | Required    | The exposed endpoint URI for getting events delivered into the broker. The broker is [`Addressable`](duckv1.addressable). |             |
 
 ##### Conditions
 
@@ -248,21 +248,21 @@ that the CRD resource will have the URL, but operator code can work with the
 
 `KReference` contains enough information to refer to another object.
 
-| Field Name   | Field Type | Requirement | Description                                                                                                              | Default Value                      | Constraints |
-| ------------ | ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ----------- |
-| `kind`       | `string`   | Required    | [Kind of the referent.](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds) |                                    |             |
-| `namespace`  | `string`   | Optional    | [Namespace of the referent.](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)              | defaulted to the object holding it |             |
-| `name`       | `string`   | Required    | [Name of the referent.](https://kubernetes.io/docs/concepts/oFURLverview/working-with-objects/names/#names)              |                                    |             |
-| `apiVersion` | `string`   | Required    | API version of the referent.                                                                                             |                                    |             |
+| Field Name   | Field Type | Requirement | Description                                                                                                              | Default Value                        | Constraints |
+| ------------ | ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ | ----------- |
+| `kind`       | `string`   | Required    | [Kind of the referent.](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds) |                                      |             |
+| `namespace`  | `string`   | Optional    | [Namespace of the referent.](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)              | defaulted to the object embedding it |             |
+| `name`       | `string`   | Required    | [Name of the referent.](https://kubernetes.io/docs/concepts/oFURLverview/working-with-objects/names/#names)              |                                      |             |
+| `apiVersion` | `string`   | Required    | API version of the referent.                                                                                             |                                      |             |
 
 ### duckv1.Destination
 
 `Destination` represents a target of an invocation over HTTP.
 
-| Field Name        | Field Type                                | Description                                                                                          | Constraints                                                |
-| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `ref`<sup>1</sup> | [`duckv1.KReference`](#duckv1.kreference) | Reference to an [`duckv1.Addressable`](#duckv1.addressable).                                         | Must adhere to [`duckv1.Addressable`](duckv1.addressable). |
-| `uri`<sup>1</sup> | [`apis.URL`](#apis.url)                   | Either an absolute URL (if ref is not specified). Resolved using the base URI from ref if specified. | Must be an URL.                                            |
+| Field Name        | Field Type                                | Description                                                                                                                                                                        | Constraints                                                |
+| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `ref`<sup>1</sup> | [`duckv1.KReference`](#duckv1.kreference) | Reference to an [`duckv1.Addressable`](#duckv1.addressable).                                                                                                                       | Must adhere to [`duckv1.Addressable`](duckv1.addressable). |
+| `uri`<sup>1</sup> | [`apis.URL`](#apis.url)                   | Either an absolute URL (non-empty scheme and non-empty host) pointing to the target or a relative URI. The relative URIs will be resolved using the base URI retrieved from `ref`. | Must be an URL.                                            |
 
 1: One or both (ref, uri), Required. If only uri is specified, it must be an
 absolute URL. If both are specified, uri will be resolved using the base URI
@@ -272,12 +272,12 @@ retrieved from ref.
 
 `DeliverySpec` contains the delivery options for event senders.
 
-| Field Name       | Field Type                                  | Requirement | Description                                                                                                                                      | Constraints |
-| ---------------- | ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| `deadLetterSink` | [`duckv1.Destination`](#duckv1.Destination) | Optional    | The sink receiving event that could not be sent to a `Destination`.                                                                              |             |
-| `retry`          | `int`                                       | Optional    | The minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.                          |             |
-| `backoffPolicy`  | `string`                                    | Optional    | The retry backoff policy (`linear` or `exponential`).                                                                                            |             |
-| `backoffDelay`   | `string`                                    | Optional    | For linear policy, backoff delay is backoffDelay\*<numberOfRetries>. For exponential policy, backoff delay is backoffDelay\*2^<numberOfRetries>. |             |
+| Field Name       | Field Type                                  | Requirement | Description                                                                                                                                                       | Constraints |
+| ---------------- | ------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `deadLetterSink` | [`duckv1.Destination`](#duckv1.Destination) | Optional    | The sink receiving event that could not be sent to a `Destination`.                                                                                               |             |
+| `retry`          | `int`                                       | Optional    | The minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink (when specified) or discarded (otherwise). |             |
+| `backoffPolicy`  | `string`                                    | Optional    | The retry backoff policy (`linear` or `exponential`).                                                                                                             |             |
+| `backoffDelay`   | `string`                                    | Optional    | For linear policy, backoff delay is backoffDelay\*<numberOfRetries>. For exponential policy, backoff delay is backoffDelay\*2^<numberOfRetries>.                  |             |
 
 ### SubscriberStatus
 
