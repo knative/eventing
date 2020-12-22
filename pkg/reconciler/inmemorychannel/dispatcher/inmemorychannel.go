@@ -39,6 +39,7 @@ import (
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	messagingv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
+	reconcilerv1 "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/kncloudevents"
 )
 
@@ -50,7 +51,28 @@ type Reconciler struct {
 	messagingClientSet         messagingv1.MessagingV1Interface
 }
 
+// Check the interfaces Reconciler should implement
+var (
+	_ reconcilerv1.Interface         = (*Reconciler)(nil)
+	_ reconcilerv1.ReadOnlyInterface = (*Reconciler)(nil)
+)
+
+// ReconcileKind implements inmemorychannel.Interface.
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
+	if err := r.reconcile(ctx, imc); err != nil {
+		return err
+	}
+
+	// Then patch the subscribers to reflect that they are now ready to go
+	return r.patchSubscriberStatus(ctx, imc)
+}
+
+// ObserveKind implements inmemorychannel.ReadOnlyInterface.
+func (r *Reconciler) ObserveKind(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
+	return r.reconcile(ctx, imc)
+}
+
+func (r *Reconciler) reconcile(ctx context.Context, imc *v1.InMemoryChannel) reconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("InMemoryChannel", imc))
 
 	if !imc.Status.IsReady() {
@@ -58,7 +80,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return nil
 	}
 
-	config, err := r.newConfigForInMemoryChannel(imc)
+	config, err := newConfigForInMemoryChannel(imc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error creating config for in memory channels", zap.Error(err))
 		return err
@@ -90,8 +112,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		}
 	}
 
-	// Then patch the subscribers to reflect that they are now ready to go
-	return r.patchSubscriberStatus(ctx, imc)
+	return nil
 }
 
 func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemoryChannel) error {
@@ -128,7 +149,7 @@ func (r *Reconciler) patchSubscriberStatus(ctx context.Context, imc *v1.InMemory
 }
 
 // newConfigForInMemoryChannel creates a new Config for a single inmemory channel.
-func (r *Reconciler) newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
+func newConfigForInMemoryChannel(imc *v1.InMemoryChannel) (*multichannelfanout.ChannelConfig, error) {
 	subs := make([]fanout.Subscription, len(imc.Spec.Subscribers))
 
 	for i, sub := range imc.Spec.Subscribers {
