@@ -12,6 +12,7 @@ approvers:
 - lberk
 - pierDipi
 - aliok
+- zhongduo
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -27,6 +28,7 @@ reviewers:
 - lberk
 - pierDipi
 - aliok
+- zhongduo
 
 # Add reviewers below
 - liu-cong
@@ -34,5 +36,4 @@ reviewers:
 - aslom
 - nlopezgi
 - tommyreddad
-- zhongduo
 - tayarani
