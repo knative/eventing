@@ -64,6 +64,7 @@ type Config struct {
 	Serving       ServingConfig
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
+	BrokerOpts    []resources.BrokerV1Beta1Option
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -97,6 +98,7 @@ func NewConfig(namespace string) *Config {
 		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
 		OnDuplicate:   Warn,
+		BrokerOpts:    make([]resources.BrokerV1Beta1Option, 0),
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
@@ -129,7 +131,7 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deployBroker() {
-	p.client.CreateBrokerV1Beta1OrFail(p.config.BrokerName)
+	p.client.CreateBrokerV1Beta1OrFail(p.config.BrokerName, p.config.BrokerOpts...)
 }
 
 func (p *prober) fetchBrokerURL() (*apis.URL, error) {
