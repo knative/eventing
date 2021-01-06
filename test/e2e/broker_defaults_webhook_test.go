@@ -38,21 +38,19 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 )
 
 func TestBrokerNamespaceDefaulting(t *testing.T) {
-	const (
-		brokerClass = "MTChannelBasedBroker"
-	)
 	ctx := context.Background()
 
 	c := testlib.Setup(t, true)
 	defer testlib.TearDown(c)
 
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := reconciler.RetryTestErrors(func(attempt int) error {
 
-		t.Log("Updating defaulting ConfigMap")
+		t.Log("Updating defaulting ConfigMap attempt:", attempt)
 
 		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, config.DefaultsConfigName, metav1.GetOptions{})
 		assert.Nil(t, err)
@@ -61,6 +59,10 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 		defaults := make(map[string]map[string]interface{})
 		err = yaml.Unmarshal([]byte(cm.Data[config.BrokerDefaultsKey]), defaults)
 		assert.Nil(t, err)
+
+		if _, ok := defaults["namespaceDefaults"]; !ok {
+			defaults["namespaceDefaults"] = make(map[string]interface{})
+		}
 
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{
 			"brokerClass": brokerClass,
@@ -108,7 +110,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 	}
 
 	err = retry.OnError(backoff, func(err error) bool { return err != nil }, func() error {
-		n++
+
 		name := fmt.Sprintf("%s-%d", namePrefix, n)
 		lastName = name
 
@@ -137,7 +139,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 			return fmt.Errorf("webhook hasn't seen the update: %+v", broker)
 		}
 
-		assert.Equal(t, broker.Annotations[eventingv1.BrokerClassAnnotationKey], brokerClass)
+		assert.Equal(t, brokerClass, broker.Annotations[eventingv1.BrokerClassAnnotationKey])
 
 		if err != nil || !webhookObservedBrokerUpdateFromDeliverySpec(broker.Spec.Delivery) {
 			return fmt.Errorf("webhook hasn't seen the update: %+v", broker.Spec.Delivery)
