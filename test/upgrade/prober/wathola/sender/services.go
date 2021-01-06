@@ -134,11 +134,7 @@ func (s *sender) sendFinished() {
 	if s.eventsSent == 0 {
 		return
 	}
-	periods := make([]time.Duration, 0, len(s.unavailablePeriods))
-	for _, retry := range s.unavailablePeriods {
-		periods = append(periods, time.Duration(retry)*senderConfig.Cooldown)
-	}
-	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: periods}
+	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: s.unavailablePeriods}
 	url := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
 	log.Infof("Sending finished event (count: %v) to %s", finished.EventsSent, url)
