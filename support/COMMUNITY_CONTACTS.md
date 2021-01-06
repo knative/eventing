@@ -85,8 +85,6 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 - [lberk](https://github.com/lberk)
 - [pierDipi](https://github.com/pierDipi)
 - [aliok](https://github.com/aliok)
-- [zhongduo](https://github.com/zhongduo)
-- [devguyio](https://github.com/devguyio)
 - [aslom](https://github.com/aslom)
 - [tayarani](https://github.com/tayarani)
 - [zhongduo](https://github.com/zhongduo)
