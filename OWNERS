@@ -13,6 +13,7 @@ approvers:
 - pierDipi
 - aliok
 - zhongduo
+- devguyio
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -29,6 +30,7 @@ reviewers:
 - pierDipi
 - aliok
 - zhongduo
+- devguyio
 
 # Add reviewers below
 - liu-cong
