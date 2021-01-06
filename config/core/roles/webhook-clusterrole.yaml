@@ -33,7 +33,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - "secrets"
       - "namespaces"
     verbs:
       - "get"
