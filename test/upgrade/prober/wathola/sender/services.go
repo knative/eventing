@@ -38,8 +38,8 @@ type sender struct {
 	eventsSent int
 	// totalRequests is the number of all the send event requests
 	totalRequests int
-	// retries is an array for non-zero retries for each event
-	retries []int
+	// unavailablePeriods is an array for non-zero retries for each event
+	unavailablePeriods []time.Duration
 }
 
 func (s *sender) SendContinually() {
@@ -55,26 +55,26 @@ func (s *sender) SendContinually() {
 		close(shutdownCh)
 	}()
 
-	localRetry := 0
+	retry := 0
 	for {
 		select {
 		case <-shutdownCh:
 			// If there is ongoing event transition, we need to push to retries too.
-			if localRetry != 0 {
-				s.retries = append(s.retries, localRetry)
+			if retry != 0 {
+				s.unavailablePeriods = append(s.unavailablePeriods, time.Duration(retry)*senderConfig.Cooldown)
 			}
 			return
 		default:
 		}
 		err := s.sendStep()
 		if err != nil {
-			localRetry++
+			retry++
 			log.Warnf("Could not send step event, retry in %v", senderConfig.Cooldown)
 			time.Sleep(senderConfig.Cooldown)
 		} else {
-			if localRetry != 0 {
-				s.retries = append(s.retries, localRetry)
-				localRetry = 0
+			if retry != 0 {
+				s.unavailablePeriods = append(s.unavailablePeriods, time.Duration(retry)*senderConfig.Cooldown)
+				retry = 0
 			}
 			time.Sleep(senderConfig.Interval)
 		}
@@ -134,8 +134,8 @@ func (s *sender) sendFinished() {
 	if s.eventsSent == 0 {
 		return
 	}
-	periods := make([]time.Duration, 0, len(s.retries))
-	for _, retry := range s.retries {
+	periods := make([]time.Duration, 0, len(s.unavailablePeriods))
+	for _, retry := range s.unavailablePeriods {
 		periods = append(periods, time.Duration(retry)*senderConfig.Cooldown)
 	}
 	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: periods}
