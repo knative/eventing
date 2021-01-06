@@ -62,7 +62,7 @@ func defaultValues() *Config {
 				Duration: time.Second,
 			},
 			ErrorCfg: ReceiverErrorConfig{
-				UnavailablePeriodToReport: 60,
+				UnavailablePeriodToReport: 60 * time.Second,
 			},
 		},
 		Forwarder: ForwarderConfig{

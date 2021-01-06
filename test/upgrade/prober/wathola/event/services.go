@@ -111,13 +111,14 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 		log.Infof("properly received %d unique events", receivedEvents)
 		f.errors.state = Success
 	}
-	// check retry time
-	for _, retry := range finished.UnavailablePeriods {
-		if retry > config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport {
+	// check down time
+	for _, unavailablePeriod := range finished.UnavailablePeriods {
+		if unavailablePeriod > config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport {
 			// TODO: decide how to do this properly
-			f.errors.throwUnexpected("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport)
+			f.errors.throwUnexpected("actual unavailable period %v is over down time limit of %v", unavailablePeriod, config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport)
 			f.errors.state = Failed
 		}
+		log.Infof("detecting unavailable time %v", unavailablePeriod)
 	}
 }
 

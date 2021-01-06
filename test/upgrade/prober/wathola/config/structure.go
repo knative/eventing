@@ -33,7 +33,7 @@ type ReceiverProgressConfig struct {
 
 // ReceiverErrorConfig holds error reporting config of the receiver
 type ReceiverErrorConfig struct {
-	UnavailablePeriodToReport int
+	UnavailablePeriodToReport time.Duration
 }
 
 // ReceiverConfig hold configuration for receiver
