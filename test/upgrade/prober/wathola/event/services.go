@@ -61,11 +61,11 @@ func NewStepsStore(errors *ErrorStore) StepsStore {
 // NewFinishedStore creates FinishedStore
 func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 	return &finishedStore{
-		received: 0,
-		count:    -1,
-		totalReq: 0,
-		steps:    steps,
-		errors:   errors,
+		received:      0,
+		eventsSent:    -1,
+		totalRequests: 0,
+		steps:         steps,
+		errors:        errors,
 	}
 }
 
@@ -95,8 +95,8 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 			f.received+1)
 	}
 	f.received++
-	f.count = finished.EventsSent
-	f.totalReq = finished.TotalRequests
+	f.eventsSent = finished.EventsSent
+	f.totalRequests = finished.TotalRequests
 	log.Infof("finish event received, expecting %d event ware propagated", finished.EventsSent)
 	d := config.Instance.Receiver.Teardown.Duration
 	log.Infof("waiting additional %v to be sure all events came", d)
@@ -113,16 +113,16 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	}
 	// check retry time
 	for _, retry := range finished.UnavailablePeriods {
-		if retry > config.Instance.Receiver.ErrorCfg.RetriesToReport {
+		if retry > config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport {
 			// TODO: decide how to do this properly
-			f.errors.throwUnexpected("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.RetriesToReport)
+			f.errors.throwUnexpected("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport)
 			f.errors.state = Failed
 		}
 	}
 }
 
-func (f *finishedStore) TotalRequest() int {
-	return f.totalReq
+func (f *finishedStore) TotalRequests() int {
+	return f.totalRequests
 }
 
 func (f *finishedStore) State() State {
@@ -202,11 +202,11 @@ type stepStore struct {
 }
 
 type finishedStore struct {
-	received int
-	count    int
-	totalReq int
-	errors   *ErrorStore
-	steps    StepsStore
+	received      int
+	eventsSent    int
+	totalRequests int
+	errors        *ErrorStore
+	steps         StepsStore
 }
 
 type thrown struct {
