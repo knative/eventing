@@ -13,6 +13,7 @@ community contact's duty (subject to change) is as followed:
   for unanswered questions.
 - You should already be added to @eventing-help usergroup by the previous
   contact person, and will be tagged into user questions in other channels.
+- Answer relevant [Stack Overflow Questions](https://stackoverflow.com/questions/tagged/knative-eventing?tab=Newest)
 
 ## Weekly check list
 
