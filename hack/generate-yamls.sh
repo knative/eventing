@@ -53,7 +53,6 @@ readonly EVENTING_CRDS_YAML=${YAML_OUTPUT_DIR}/"eventing-crds.yaml"
 readonly EVENTING_SUGAR_CONTROLLER_YAML=${YAML_OUTPUT_DIR}/"eventing-sugar-controller.yaml"
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
 readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
-readonly EVENTING_POST_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-post-install-jobs.yaml"
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
 declare -A RELEASES
 RELEASES=(
@@ -94,14 +93,17 @@ ko resolve ${KO_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[
 # Create in memory channel yaml
 ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
-
 all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
 
-  # # Template for POST_INSTALL usage:
-  # # Create vX.Y.Z post-install job yaml.
-  # ko resolve ${KO_FLAGS} -f config/post-install/vX.Y.Z/ | "${LABEL_YAML_CMD[@]}" > "${POST_INSTALL_YAML}"
-  # # If used, add  ${EVENTING_POST_INSTALL_YAML} to all_yamls,
-  # all_yamls+=(${EVENTING_POST_INSTALL_YAML})
+if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
+
+  readonly EVENTING_POST_INSTALL_YAML=${YAML_OUTPUT_DIR}/"eventing-post-install.yaml"
+
+  echo "Resolving post install manifests"
+
+  ko resolve ${KO_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+  all_yamls+=(${EVENTING_POST_INSTALL_YAML})
+fi
 
 # Assemble the release
 for yaml in "${!RELEASES[@]}"; do
@@ -115,7 +117,6 @@ for yaml in "${!RELEASES[@]}"; do
 done
 
 echo "All manifests generated"
-
 
 for yaml in "${!all_yamls[@]}"; do
   echo "${all_yamls[${yaml}]}" >> ${YAML_LIST_FILE}
