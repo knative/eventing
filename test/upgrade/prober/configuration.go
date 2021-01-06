@@ -77,6 +77,8 @@ type Wathola struct {
 
 // ConfigMap represents options of wathola config toml file.
 type ConfigMap struct {
+	// ConfigTemplate is a template file that will be compiled to the configmap
+	ConfigTemplate   string
 	ConfigMapName    string
 	ConfigMountPoint string
 	ConfigFilename   string
@@ -105,6 +107,7 @@ func NewConfig(namespace string) *Config {
 		},
 		Wathola: Wathola{
 			ConfigMap: ConfigMap{
+				ConfigTemplate:   defaultConfigFilename,
 				ConfigMapName:    defaultConfigName,
 				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
 				ConfigFilename:   defaultConfigFilename,
@@ -162,7 +165,7 @@ func (p *prober) deployConfigMap() {
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
 	brokerURL, err := p.fetchBrokerURL()
 	ensure.NoError(err)
-	configData := p.compileTemplate(p.config.ConfigFilename, brokerURL)
+	configData := p.compileTemplate(p.config.ConfigTemplate, brokerURL)
 	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
