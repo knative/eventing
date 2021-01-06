@@ -88,11 +88,11 @@ your timeslot with others by sending PRs.
 | 2021-03-22 | [devguyio](https://github.com/devguyio)               |
 | 2021-03-29 | [n3wscott](https://github.com/n3wscott)               |
 | 2021-04-05 | [vaikas](https://github.com/vaikas)                   |
-| 2021-04-12 | [grantr](https://github.com/vaikas)                   |
-| 2021-04-19 | [lionelvillard](https://github.com/grantr)            |
-| 2021-04-26 | [slinkydeveloper](https://github.com/lionelvillard)   |
-| 2021-05-03 | [Harwayne](https://github.com/slinkydeveloper)        |
-| 2021-05-10 | [matzew](https://github.com/Harwayne)                 |
+| 2021-04-12 | [grantr](https://github.com/grantr)                   |
+| 2021-04-19 | [lionelvillard](https://github.com/lionelvillard)     |
+| 2021-04-26 | [slinkydeveloper](https://github.com/slinkydeveloper) |
+| 2021-05-03 | [Harwayne](https://github.com/Harwayne)               |
+| 2021-05-10 | [matzew](https://github.com/matzew)                   |
 | 2021-05-17 | [lberk](https://github.com/lberk)                     |
 | 2021-05-24 | [pierDipi](https://github.com/pierDipi)               |
 | 2021-05-31 | [aliok](https://github.com/aliok)                     |
