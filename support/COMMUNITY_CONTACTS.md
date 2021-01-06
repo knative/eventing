@@ -59,10 +59,14 @@ do not have time to contribute in the rotation, feel free to send a PR
 to remove yourself and add yourself to the NON_ROSTER file. Similarly
 you can trade your timeslot with others by sending PRs.
 
+## Volunteeres
+Those who aren't reviewers or approvers and are interested in
+volunteering are welcome to add themselves to the `support/VOLUNTEERS`
+file.
+
+## Generating a New Schedule
 The schedule can be regenerated randomly for a new cycle with the
-command (run from the eventing base directory).  Those who aren't
-reviewers or approvers and are interested in volunteering are welcome
-to add themselves to the `support/VOLUNTEERS` file.
+command (run from the eventing base directory).
 
 ```sh
 VOLUNTEERS=$(grep -hs "" support/VOLUNTEERS)
