@@ -67,7 +67,8 @@ to add themselves to the `support/VOLUNTEERS` file.
 ```sh
 VOLUNTEERS=$(grep -hs "" support/VOLUNTEERS)
 OWNERS=$(grep "^- " OWNERS | cut -f2 -d" ")
-echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v -f support/NON_ROSTER | sort | uniq | sort -R
+NON_ROSTER=$(grep -v -e '^$' support/NON_ROSTER)
+echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | uniq | sort -R
 ```
 
 - [grantr](https://github.com/grantr)
