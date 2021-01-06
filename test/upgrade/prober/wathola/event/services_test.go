@@ -34,7 +34,7 @@ func TestProperEventsPropagation(t *testing.T) {
 	stepsStore.RegisterStep(&Step{Number: 1})
 	stepsStore.RegisterStep(&Step{Number: 3})
 	stepsStore.RegisterStep(&Step{Number: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 3})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 3})
 
 	// then
 	assert.Empty(t, errors.thrown.duplicated)
@@ -52,7 +52,7 @@ func TestMissingAndDoubleEvent(t *testing.T) {
 	stepsStore.RegisterStep(&Step{Number: 1})
 	stepsStore.RegisterStep(&Step{Number: 2})
 	stepsStore.RegisterStep(&Step{Number: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 3})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 3})
 
 	// then
 	assert.NotEmpty(t, errors.thrown.duplicated)
@@ -69,8 +69,8 @@ func TestDoubleFinished(t *testing.T) {
 	// when
 	stepsStore.RegisterStep(&Step{Number: 1})
 	stepsStore.RegisterStep(&Step{Number: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 2})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 2})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 2})
 
 	// then
 	assert.NotEmpty(t, errors.thrown.duplicated)

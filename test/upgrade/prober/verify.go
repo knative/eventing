@@ -45,11 +45,11 @@ const (
 func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	report := p.fetchReport(ctx)
 	availRate := 0.0
-	if report.TotalReq != 0 {
-		availRate = float64(report.Events*100) / float64(report.TotalReq)
+	if report.TotalRequests != 0 {
+		availRate = float64(report.EventsSent*100) / float64(report.TotalRequests)
 	}
 	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.  Total event send requests: %v, avail rate %.3f%%.",
-		report.Events, report.State, report.TotalReq, availRate)
+		report.EventsSent, report.State, report.TotalRequests, availRate)
 	if report.State == "active" {
 		panic(errors.New("report fetched too early, receiver is in active state"))
 	}
@@ -67,7 +67,7 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 			errs = append(errs, errors.New(t))
 		}
 	}
-	return errs, report.Events
+	return errs, report.EventsSent
 }
 
 // Finish terminates sender which sends finished event.
@@ -107,9 +107,9 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
-			State:    "failure",
-			Events:   0,
-			TotalReq: 0,
+			State:         "failure",
+			EventsSent:    0,
+			TotalRequests: 0,
 			Thrown: receiver.Thrown{
 				Unexpected: []string{"Report wasn't fetched"},
 				Missing:    []string{"Report wasn't fetched"},

@@ -31,9 +31,9 @@ type Step struct {
 
 // Finished is step call after verification finishes
 type Finished struct {
-	Count    int
-	TotalReq int
-	Retries  []int
+	EventsSent         int
+	TotalRequests      int
+	UnavailablePeriods []int
 }
 
 // Type returns a type of a event

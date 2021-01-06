@@ -95,16 +95,16 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 			f.received+1)
 	}
 	f.received++
-	f.count = finished.Count
-	f.totalReq = finished.TotalReq
-	log.Infof("finish event received, expecting %d event ware propagated", finished.Count)
+	f.count = finished.EventsSent
+	f.totalReq = finished.TotalRequests
+	log.Infof("finish event received, expecting %d event ware propagated", finished.EventsSent)
 	d := config.Instance.Receiver.Teardown.Duration
 	log.Infof("waiting additional %v to be sure all events came", d)
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
-	if receivedEvents != finished.Count {
+	if receivedEvents != finished.EventsSent {
 		f.errors.throwUnexpected("expecting to have %v unique events received, "+
-			"but received %v unique events", finished.Count, receivedEvents)
+			"but received %v unique events", finished.EventsSent, receivedEvents)
 		f.reportViolations(finished)
 		f.errors.state = Failed
 	} else {
@@ -112,7 +112,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 		f.errors.state = Success
 	}
 	// check retry time
-	for _, retry := range finished.Retries {
+	for _, retry := range finished.UnavailablePeriods {
 		if retry > config.Instance.Receiver.ErrorCfg.RetriesToReport {
 			// TODO: decide how to do this properly
 			f.errors.throwUnexpected("actual retry %v is over event retry limit of %v", retry, config.Instance.Receiver.ErrorCfg.RetriesToReport)
@@ -152,7 +152,7 @@ func asStrings(errThrown []thrown) []string {
 
 func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
-	for eventNo := 1; eventNo <= finished.Count; eventNo++ {
+	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
 		times, ok := steps.store[eventNo]
 		if !ok {
 			times = 0

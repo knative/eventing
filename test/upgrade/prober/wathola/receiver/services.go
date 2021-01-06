@@ -101,9 +101,9 @@ func (r reportHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		events := r.receiver.step.Count()
 		totalReq := r.receiver.finished.TotalRequest()
 		sj := &Report{
-			State:    stateToString(s),
-			Events:   events,
-			TotalReq: totalReq,
+			State:         stateToString(s),
+			EventsSent:    events,
+			TotalRequests: totalReq,
 			Thrown: Thrown{
 				Duplicated: r.receiver.finished.DuplicatedThrown(),
 				Missing:    r.receiver.finished.MissingThrown(),
