@@ -60,10 +60,14 @@ to remove yourself and add yourself to the NON_ROSTER file. Similarly
 you can trade your timeslot with others by sending PRs.
 
 The schedule can be regenerated randomly for a new cycle with the
-command (run from the eventing base directory)
+command (run from the eventing base directory).  Those who aren't
+reviewers or approvers and are interested in volunteering are welcome
+to add themselves to the `support/VOLUNTEERS` file.
 
 ```sh
-grep "^- " OWNERS | cut -f2 -d" " | grep -v -f support/NON_ROSTER | sort | uniq | sort -R
+VOLUNTEERS=$(grep -hs "" support/VOLUNTEERS)
+OWNERS=$(grep "^- " OWNERS | cut -f2 -d" ")
+echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v -f support/NON_ROSTER | sort | uniq | sort -R
 ```
 
 - [grantr](https://github.com/grantr)
@@ -83,6 +87,7 @@ grep "^- " OWNERS | cut -f2 -d" " | grep -v -f support/NON_ROSTER | sort | uniq 
 - [zhongduo](https://github.com/zhongduo)
 - [tommyreddad](https://github.com/tommyreddad)
 - [nlopezgi](https://github.com/nlopezgi)
+- [devguyio](https://github.com/devguyio)
 
 # Schedule
 
