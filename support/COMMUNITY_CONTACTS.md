@@ -52,11 +52,19 @@ only expected to participate during their local office hour.
 
 # Roster
 
-We seed this rotation with all approvers from all the Eventing workgroups,
-excluding productivity. If you are no longer active in Knative, or if you are
-contributing on personal capacity and do not have time to contribute in the
-rotation, feel free to send a PR to remove yourself. Similarly you can trade
-your timeslot with others by sending PRs.
+We seed this rotation with all approvers and reviewers from all the
+Eventing workgroups, excluding productivity. If you are no longer
+active in Knative, or if you are contributing on personal capacity and
+do not have time to contribute in the rotation, feel free to send a PR
+to remove yourself and add yourself to the NON_ROSTER file. Similarly
+you can trade your timeslot with others by sending PRs.
+
+The schedule can be regenerated randomly for a new cycle with the
+command (run from the eventing base directory)
+
+```sh
+grep "^- " OWNERS | cut -f2 -d" " | grep -v -f support/NON_ROSTER | sort | uniq | sort -R
+```
 
 - [grantr](https://github.com/grantr)
 - [Harwayne](https://github.com/Harwayne)
@@ -70,6 +78,11 @@ your timeslot with others by sending PRs.
 - [aliok](https://github.com/aliok)
 - [zhongduo](https://github.com/zhongduo)
 - [devguyio](https://github.com/devguyio)
+- [aslom](https://github.com/aslom)
+- [tayarani](https://github.com/tayarani)
+- [zhongduo](https://github.com/zhongduo)
+- [tommyreddad](https://github.com/tommyreddad)
+- [nlopezgi](https://github.com/nlopezgi)
 
 # Schedule
 
