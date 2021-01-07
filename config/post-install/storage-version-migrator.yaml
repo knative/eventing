@@ -37,5 +37,6 @@ spec:
         - name: migrate
           image: ko://knative.dev/eventing/vendor/knative.dev/pkg/apiextensions/storageversion/cmd/migrate
           args:
+            - "sinkbindings.sources.knative.dev"
             - "apiserversources.sources.knative.dev"
             - "containersources.sources.knative.dev"
