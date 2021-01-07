@@ -404,7 +404,7 @@ spec:
     - <<: *version
       name: v1beta1
       served: true
-      storage: true
+      storage: false
       # the schema of v1beta1 is exactly the same as v1alpha2 schema
       schema:
         openAPIV3Schema:
@@ -412,7 +412,7 @@ spec:
     - <<: *version
       name: v1
       served: true
-      storage: false
+      storage: true
       # the schema of v1 is exactly the same as v1beta1 schema
       schema:
         openAPIV3Schema:
