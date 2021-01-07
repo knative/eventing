@@ -50,7 +50,7 @@ func (a *resourceDelegate) Add(obj interface{}) error {
 		if err != nil {
 			a.logger.Error(err)
 		}
-		a.logger.Infof("event sent for resource %v", string(eventExt))
+		a.logger.Infof("event sent for resource %s", string(eventExt))
 	}
 	return nil
 }
@@ -69,7 +69,7 @@ func (a *resourceDelegate) Update(obj interface{}) error {
 		if err != nil {
 			a.logger.Error(err)
 		}
-		a.logger.Infof("event sent for resource %v", string(eventExt))
+		a.logger.Infof("event sent for resource %s", string(eventExt))
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func (a *resourceDelegate) Delete(obj interface{}) error {
 		if err != nil {
 			a.logger.Error(err)
 		}
-		a.logger.Infof("event sent for resource %v", string(eventExt))
+		a.logger.Infof("event sent for resource %s", string(eventExt))
 	}
 	return nil
 }
