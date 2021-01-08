@@ -23,11 +23,12 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/util/wait"
 	nethttp "net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
