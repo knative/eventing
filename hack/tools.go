@@ -25,7 +25,11 @@ import (
 
 	// Needed for the storage version too.
 	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
+	_ "knative.dev/pkg/test/mako/stub-sidecar"
 
 	// For chaos testing the leaderelection stuff.
 	_ "knative.dev/pkg/leaderelection/chaosduck"
+
+	// eventshub is a cloudevents sender/receiver utility for e2e testing.
+	_ "knative.dev/reconciler-test/cmd/eventshub"
 )

@@ -92,14 +92,14 @@ not yet support private registries. See
 https://github.com/knative/eventing/issues/1862 for status of this issue.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e
+SYSTEM_NAMESPACE=knative-eventing go test -v -tags=e2e -count=1 ./test/e2e
 ```
 
 By default, tests run against images with the `latest` tag. To override this
 behavior you can specify a different tag through `-tag`:
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -tag e2e
+SYSTEM_NAMESPACE=knative-eventing go test -v -tags=e2e -count=1 ./test/e2e -tag e2e
 ```
 
 #### One test case
@@ -108,7 +108,7 @@ To run one e2e test case, e.g. `TestSingleBinaryEventForChannel`, use
 [the `-run` flag with `go test`](https://golang.org/cmd/go/#hdr-Testing_flags):
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEventForChannel$
+SYSTEM_NAMESPACE=knative-eventing go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEventForChannel$
 ```
 
 ## Environment requirements

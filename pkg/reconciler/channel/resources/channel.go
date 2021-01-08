@@ -19,10 +19,10 @@ package resources
 import (
 	"encoding/json"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"knative.dev/pkg/kmeta"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
@@ -41,7 +41,10 @@ func NewChannel(c *v1.Channel) (*unstructured.Unstructured, error) {
 			Name:      c.Name,
 			Namespace: c.Namespace,
 		},
-		Spec: c.Spec.ChannelTemplate.Spec,
+		Spec: v1.NewChannelTemplateSpecInternalSpec(
+			c.Spec.ChannelableSpec,
+			c.Spec.ChannelTemplate.Spec,
+		),
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {

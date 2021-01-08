@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -268,7 +269,7 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 			},
 		},
-	}, {name: "full: v1beta1 annotation contains valid json data",
+	}, {name: "full: v1beta1 annotation does not exist",
 		in: &v1beta2.PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
@@ -299,12 +300,99 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 			},
 		},
-	}, {name: "full: v1beta1 annotation contains invalid json data",
+	}, {name: "full: v1beta1 spec annotation is inconsistent with v1beta2 spec",
 		in: &v1beta2.PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
 				Namespace:  "ping-ns",
 				Generation: 17,
+				Annotations: map[string]string{
+					V1B1SpecAnnotationKey: toJSON(PingSourceSpec{
+						SourceSpec: duckv1.SourceSpec{
+							Sink:                sink,
+							CloudEventOverrides: &ceOverrides,
+						},
+						Schedule: "1 2 3 4 5",
+						Timezone: "Knative/GoLand",
+						JsonData: `{"foo":"bar"}`,
+					}),
+				},
+			},
+			Spec: v1beta2.PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule:    "1 2 3 4 5",
+				Timezone:    "Knative/Land",
+				ContentType: cloudevents.ApplicationJSON,
+				Data:        `{"foo":"bar"}`,
+			},
+			Status: v1beta2.PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+	}, {name: "full: v1beta1 spec annotation is consistent with v1beta2 spec",
+		in: &v1beta2.PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+				Annotations: map[string]string{
+					V1B1SpecAnnotationKey: toJSON(PingSourceSpec{
+						SourceSpec: duckv1.SourceSpec{
+							Sink:                sink,
+							CloudEventOverrides: &ceOverrides,
+						},
+						Schedule: "1 2 3 4 5",
+						Timezone: "Knative/Land",
+						JsonData: `{"foo":"bar"}`,
+					}),
+				},
+			},
+			Spec: v1beta2.PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule:    "1 2 3 4 5",
+				Timezone:    "Knative/Land",
+				ContentType: cloudevents.ApplicationJSON,
+				Data:        `{"foo":"bar"}`,
+			},
+			Status: v1beta2.PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+	}, {name: "full: v1beta1 spec annotation is invalid",
+		in: &v1beta2.PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+				Annotations: map[string]string{
+					V1B1SpecAnnotationKey: "$$ invalid json $$",
+				},
 			},
 			Spec: v1beta2.PingSourceSpec{
 				SourceSpec: duckv1.SourceSpec{
@@ -358,31 +446,8 @@ func diffIgnoringAnnotations(want metav1.Object, got metav1.Object) string {
 	return cmp.Diff(want, got)
 }
 
-func TestPingSourceConversionFromHigherVersionNotDowngradable(t *testing.T) {
-	tests := []struct {
-		name string
-		in   apis.Convertible
-	}{{name: "v1beta1 spec annotation is invalid json",
-		in: &v1beta2.PingSource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "ping-name",
-				Namespace:  "ping-ns",
-				Generation: 17,
-				Annotations: map[string]string{
-					V1B1SpecAnnotationKey: "$$ invalid json $$",
-				},
-			},
-			Spec:   v1beta2.PingSourceSpec{},
-			Status: v1beta2.PingSourceStatus{},
-		},
-	}}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			out := &PingSource{}
-			if err := out.ConvertFrom(context.Background(), test.in); err == nil {
-				t.Errorf("ConvertFrom() = %#v, wanted error", out)
-			}
-		})
-	}
+// marshal an interface to JSON string, ignoring error
+func toJSON(obj interface{}) string {
+	marshalled, _ := json.Marshal(obj)
+	return string(marshalled)
 }

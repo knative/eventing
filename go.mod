@@ -7,7 +7,7 @@ require (
 	github.com/cloudevents/sdk-go/v2 v2.2.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.3
-	github.com/google/go-cmp v0.5.2
+	github.com/google/go-cmp v0.5.4
 	github.com/google/gofuzz v1.1.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
 	github.com/google/uuid v1.1.2
@@ -25,35 +25,34 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
 	github.com/stretchr/testify v1.5.1
-	github.com/tsenart/vegeta v12.7.1-0.20190725001342-b5f4fca92137+incompatible
+	github.com/tsenart/vegeta/v12 v12.8.4
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.22.5
 	go.opentelemetry.io/otel v0.2.3
 	go.uber.org/atomic v1.7.0
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/tools v0.0.0-20201022035929-9cf592e881e9 // indirect
-	google.golang.org/grpc v1.33.1
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	google.golang.org/grpc v1.34.0
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 	k8s.io/api v0.18.12
 	k8s.io/apiextensions-apiserver v0.18.12
 	k8s.io/apimachinery v0.18.12
-	k8s.io/apiserver v0.18.8
+	k8s.io/apiserver v0.18.12
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	knative.dev/hack v0.0.0-20201120192952-353db687ec5b
-	knative.dev/pkg v0.0.0-20201125095035-9bf616d2f46a
-	knative.dev/reconciler-test v0.0.0-20201124190335-83a44efcdfef
+	knative.dev/hack v0.0.0-20201214230143-4ed1ecb8db24
+	knative.dev/pkg v0.0.0-20210107022335-51c72e24c179
+	knative.dev/reconciler-test v0.0.0-20210108100436-db4d65735605
 	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-	k8s.io/api => k8s.io/api v0.18.8
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
-	k8s.io/client-go => k8s.io/client-go v0.18.8
-	k8s.io/code-generator => k8s.io/code-generator v0.18.8
+	k8s.io/api => k8s.io/api v0.18.12
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.12
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.12
+	k8s.io/client-go => k8s.io/client-go v0.18.12
+	k8s.io/code-generator => k8s.io/code-generator v0.18.12
 )

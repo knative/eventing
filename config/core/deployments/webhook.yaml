@@ -20,7 +20,6 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 spec:
-  replicas: 1
   selector:
     matchLabels: &labels
       app: eventing-webhook
@@ -41,7 +40,7 @@ spec:
             weight: 100
 
       serviceAccountName: eventing-webhook
-
+      enableServiceLinks: false
       containers:
       - name: eventing-webhook
         terminationMessagePolicy: FallbackToLogsOnError

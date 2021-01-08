@@ -20,15 +20,14 @@
 
 export GO111MODULE=on
 
-source "$(dirname "$0")/e2e-common.sh"
-
-readonly PROBER_READY_FILE="/tmp/prober-ready"
-readonly PROBER_PIPE_FILE="/tmp/prober-signal"
+# shellcheck disable=SC1090
+source "$(dirname "${BASH_SOURCE[0]}")/e2e-common.sh"
 
 # Overrides
 
 function knative_setup {
-  install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
+  # Nothing to do at setup
+  true
 }
 
 function install_test_resources {
@@ -41,41 +40,14 @@ function uninstall_test_resources {
   true
 }
 
-initialize $@ --skip-istio-addon
+initialize "$@" --skip-istio-addon
 
-TIMEOUT=${TIMEOUT:-30m}
+TIMEOUT=${TIMEOUT:-60m}
 
-header "Running preupgrade tests"
-
-go_test_e2e -tags=preupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
-
-header "Starting prober test"
-rm -fv ${PROBER_READY_FILE}
-go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade --pipefile="${PROBER_PIPE_FILE}" --readyfile="${PROBER_READY_FILE}" &
-PROBER_PID=$!
-echo "Prober PID is ${PROBER_PID}"
-
-wait_for_file ${PROBER_READY_FILE} || fail_test
-
-header "Performing upgrade to HEAD"
-install_head || fail_test 'Installing HEAD version of eventing failed'
-install_channel_crds || fail_test 'Installing HEAD channel CRDs failed'
-install_mt_broker || fail_test 'Installing HEAD Broker failed'
-install_sugar || fail_test 'Installing HEAD Sugar failed'
-
-header "Running postupgrade tests"
-go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
-
-header "Performing downgrade to latest release"
-install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
-
-header "Running postdowngrade tests"
-go_test_e2e -tags=postdowngrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
-
-# The prober is blocking on ${PROBER_PIPE_FILE} to know when it should exit.
-echo "done" > ${PROBER_PIPE_FILE}
-
-header "Waiting for prober test"
-wait ${PROBER_PID} || fail_test "Prober failed"
+go_test_e2e \
+  -tags=upgrade \
+  -timeout="${TIMEOUT}" \
+  ./test/upgrade \
+  || fail_test
 
 success

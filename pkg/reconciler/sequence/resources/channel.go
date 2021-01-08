@@ -24,6 +24,7 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
@@ -49,7 +50,7 @@ func NewChannel(name string, p *v1.Sequence) (*unstructured.Unstructured, error)
 			Name:      name,
 			Namespace: p.Namespace,
 		},
-		Spec: p.Spec.ChannelTemplate.Spec,
+		Spec: messagingv1.NewChannelTemplateSpecInternalSpec(duckv1.ChannelableSpec{}, p.Spec.ChannelTemplate.Spec),
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {

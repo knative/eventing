@@ -23,12 +23,14 @@
 
 # Prefer sockpuppet over markdown presubmit checks, as it will correct
 # markdown issues with less human involvement.
-export DISABLE_MD_LINTING=1
 
+# shellcheck disable=SC1090
+
+export DISABLE_MD_LINTING=1
 export GO111MODULE=on
 
-source $(dirname $0)/../vendor/knative.dev/hack/presubmit-tests.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../vendor/knative.dev/hack/presubmit-tests.sh"
 
 # We use the default build, unit and integration test runners.
 
-main $@
+main "$@"

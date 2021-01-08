@@ -22,11 +22,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
+
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/pkg/apis"
 )
 
 // InMemoryChannelOption enables further configuration of a v1.InMemoryChannel.
@@ -168,6 +169,12 @@ func WithInMemoryChannelReadySubscriberAndGeneration(uid string, observedGenerat
 			ObservedGeneration: observedGeneration,
 			Ready:              corev1.ConditionTrue,
 		})
+	}
+}
+
+func WithInMemoryChannelDelivery(d *duckv1.DeliverySpec) InMemoryChannelOption {
+	return func(c *v1.InMemoryChannel) {
+		c.Spec.Delivery = d
 	}
 }
 

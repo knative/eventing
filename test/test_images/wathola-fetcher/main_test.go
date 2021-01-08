@@ -35,7 +35,11 @@ func TestFetcherMain(t *testing.T) {
 		st := receiver.Report{
 			State:  "active",
 			Events: 1456,
-			Thrown: []string{},
+			Thrown: receiver.Thrown{
+				Unexpected: []string{},
+				Missing:    []string{},
+				Duplicated: []string{},
+			},
 		}
 		bytes, err := json.Marshal(st)
 		if err != nil {

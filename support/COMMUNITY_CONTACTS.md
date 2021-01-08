@@ -13,6 +13,8 @@ community contact's duty (subject to change) is as followed:
   for unanswered questions.
 - You should already be added to @eventing-help usergroup by the previous
   contact person, and will be tagged into user questions in other channels.
+- Answer relevant
+  [Stack Overflow Questions](https://stackoverflow.com/questions/tagged/knative-eventing?tab=Newest)
 
 ## Weekly check list
 
@@ -51,41 +53,72 @@ only expected to participate during their local office hour.
 
 # Roster
 
-We seed this rotation with all approvers from all the Eventing workgroups,
-excluding productivity. If you are no longer active in Knative, or if you are
-contributing on personal capacity and do not have time to contribute in the
-rotation, feel free to send a PR to remove yourself. Similarly you can trade
-your timeslot with others by sending PRs.
+We seed this rotation with all approvers and reviewers from all the Eventing
+workgroups, excluding productivity. If you are no longer active in Knative, or
+if you are contributing on personal capacity and do not have time to contribute
+in the rotation, feel free to send a PR to remove yourself and add yourself to
+the NON_ROSTER file. Similarly you can trade your timeslot with others by
+sending PRs.
+
+## Volunteeres
+
+Those who aren't reviewers or approvers and are interested in volunteering are
+welcome to add themselves to the `support/VOLUNTEERS` file.
+
+## Generating a New Schedule
+
+The schedule can be regenerated randomly for a new cycle with the command (run
+from the eventing base directory).
+
+```sh
+VOLUNTEERS=$(grep -hs "" support/VOLUNTEERS)
+OWNERS=$(grep "^- " OWNERS | cut -f2 -d" ")
+NON_ROSTER=$(grep -v -e '^$' support/NON_ROSTER)
+echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | uniq | sort -R
+```
 
 - [grantr](https://github.com/grantr)
 - [Harwayne](https://github.com/Harwayne)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
 - [n3wscott](https://github.com/n3wscott)
-- [nachocano](https://github.com/nachocano)
 - [slinkydeveloper](https://github.com/slinkydeveloper)
 - [vaikas](https://github.com/vaikas)
 - [lberk](https://github.com/lberk)
 - [pierDipi](https://github.com/pierDipi)
 - [aliok](https://github.com/aliok)
+- [aslom](https://github.com/aslom)
+- [tayarani](https://github.com/tayarani)
+- [zhongduo](https://github.com/zhongduo)
+- [tommyreddad](https://github.com/tommyreddad)
+- [nlopezgi](https://github.com/nlopezgi)
+- [devguyio](https://github.com/devguyio)
 
 # Schedule
 
 | Week       | Contact                                               |
 | ---------- | ----------------------------------------------------- |
-| 2020-08-17 | [n3wscott](https://github.com/n3wscott)               |
-| 2020-08-24 | [vaikas](https://github.com/vaikas)                   |
-| 2020-08-31 | [grantr](https://github.com/grantr)                   |
-| 2020-09-07 | [lionelvillard](https://github.com/lionelvillard)     |
-| 2020-09-14 | [slinkydeveloper](https://github.com/slinkydeveloper) |
-| 2020-09-21 | [Harwayne](https://github.com/Harwayne)               |
-| 2020-09-28 | [evankanderson](https://github.com/evankanderson)     |
-| 2020-10-05 | [nachocano](https://github.com/nachocano)             |
-| 2020-10-12 | [matzew](https://github.com/matzew)                   |
-| 2020-11-16 | [lberk](https://github.com/lberk)                     |
-| 2020-11-23 | [pierDipi](https://github.com/pierDipi)               |
-| 2020-11-30 | [grantr](https://github.com/grantr)                   |
-| 2020-12-07 | [n3wscott](https://github.com/n3wscott)               |
-| 2020-12-14 | [vaikas](https://github.com/vaikas)                   |
-| 2020-12-21 | [aliok](https://github.com/aliok)                     |
-| 2020-12-28 | [aliok](https://github.com/aliok)                     |
+| 2021-01-04 | [n3wscott](https://github.com/n3wscott)               |
+| 2021-01-11 | [vaikas](https://github.com/vaikas)                   |
+| 2021-01-18 | [grantr](https://github.com/grantr)                   |
+| 2021-01-25 | [lionelvillard](https://github.com/lionelvillard)     |
+| 2021-02-01 | [zhongduo](https://github.com/zhongduo)               |
+| 2021-02-08 | [Harwayne](https://github.com/Harwayne)               |
+| 2021-02-15 | [matzew](https://github.com/matzew)                   |
+| 2021-02-22 | [lberk](https://github.com/lberk)                     |
+| 2021-03-01 | [pierDipi](https://github.com/pierDipi)               |
+| 2021-03-08 | [aliok](https://github.com/aliok)                     |
+| 2021-03-15 | [slinkydeveloper](https://github.com/slinkydeveloper) |
+| 2021-03-22 | [devguyio](https://github.com/devguyio)               |
+| 2021-03-29 | [n3wscott](https://github.com/n3wscott)               |
+| 2021-04-05 | [vaikas](https://github.com/vaikas)                   |
+| 2021-04-12 | [grantr](https://github.com/grantr)                   |
+| 2021-04-19 | [lionelvillard](https://github.com/lionelvillard)     |
+| 2021-04-26 | [slinkydeveloper](https://github.com/slinkydeveloper) |
+| 2021-05-03 | [Harwayne](https://github.com/Harwayne)               |
+| 2021-05-10 | [matzew](https://github.com/matzew)                   |
+| 2021-05-17 | [lberk](https://github.com/lberk)                     |
+| 2021-05-24 | [pierDipi](https://github.com/pierDipi)               |
+| 2021-05-31 | [aliok](https://github.com/aliok)                     |
+| 2021-06-07 | [zhongduo](https://github.com/zhongduo)               |
+| 2021-06-14 | [devguyio](https://github.com/devguyio)               |

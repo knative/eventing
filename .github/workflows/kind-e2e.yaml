@@ -26,7 +26,7 @@ jobs:
         - v1.19.1
 
         test-suite:
-        - ./test/rekt
+        - ./test/rekt/...
         - ./test/e2e
         - ./test/conformance
 
@@ -74,7 +74,11 @@ jobs:
     - name: Install Dependencies
       working-directory: ./
       run: |
-        GO111MODULE=on go get github.com/google/ko/cmd/ko@master
+        echo '::group:: install ko'
+        curl -L https://github.com/google/ko/releases/download/v0.6.0/ko_0.6.0_Linux_x86_64.tar.gz | tar xzf - ko
+        chmod +x ./ko
+        sudo mv ko /usr/local/bin
+        echo '::endgroup::'
 
     - name: Check out code onto GOPATH
       uses: actions/checkout@v2
@@ -168,6 +172,9 @@ jobs:
 
     - name: Run e2e Tests
       run: |
+        export GO111MODULE=on
+        export GOFLAGS=-mod=vendor
+        export SYSTEM_NAMESPACE=knative-eventing
         # Run the tests tagged as e2e on the KinD cluster.
         go test -race -count=1 -parallel=12 -timeout=30m -tags=e2e \
            ${{ matrix.test-suite }} ${{ matrix.extra-test-flags }}

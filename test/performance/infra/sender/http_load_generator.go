@@ -28,7 +28,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
-	vegeta "github.com/tsenart/vegeta/lib"
+	vegeta "github.com/tsenart/vegeta/v12/lib"
 
 	"knative.dev/eventing/test/performance/infra/common"
 )

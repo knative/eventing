@@ -66,6 +66,7 @@ const (
 	channelName    = "origin"
 	serviceName    = "service"
 	dlcName        = "dlc"
+	dlc2Name       = "dlc2"
 
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
@@ -92,6 +93,8 @@ var (
 
 	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
 	dlcURI = apis.HTTP(dlcDNS)
+
+	dlc2DNS = "dlc2.mynamespace.svc." + network.GetClusterDomainName()
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -1042,6 +1045,171 @@ func TestAllCases(t *testing.T) {
 					WithInMemoryChannelReadySubscriber("b-"+subscriptionUID),
 				),
 				NewService(serviceName, testNS),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlcName,
+								Namespace:  testNS,
+							},
+						},
+						Retry:         pointer.Int32Ptr(10),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("PT1S"),
+					}),
+					WithSubscriptionDeadLetterSinkURI(dlcURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						UID:           "a-" + subscriptionUID,
+						SubscriberURI: serviceURIWithPath,
+						Delivery: &eventingduck.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
+							},
+							Retry:         pointer.Int32Ptr(10),
+							BackoffPolicy: &linear,
+							BackoffDelay:  pointer.StringPtr("PT1S"),
+						},
+					},
+				}),
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+		},
+		{
+			Name: "v1 imc - delivery defaulting - full delivery spec",
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					WithInMemoryChannelDelivery(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlcName,
+								Namespace:  testNS,
+							},
+						},
+						Retry:         pointer.Int32Ptr(10),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("PT1S"),
+					}),
+				),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionDeadLetterSinkURI(dlcURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						UID:           "a-" + subscriptionUID,
+						SubscriberURI: serviceURIWithPath,
+						Delivery: &eventingduck.DeliverySpec{
+							DeadLetterSink: &duckv1.Destination{
+								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
+							},
+							Retry:         pointer.Int32Ptr(10),
+							BackoffPolicy: &linear,
+							BackoffDelay:  pointer.StringPtr("PT1S"),
+						},
+					},
+				}),
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+		},
+		{
+			Name: "v1 imc - don't default delivery - full delivery spec",
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlcName,
+								Namespace:  testNS,
+							},
+						},
+						Retry:         pointer.Int32Ptr(10),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("PT1S"),
+					}),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewUnstructured(subscriberGVK, dlc2Name, testNS,
+					WithUnstructuredAddressable(dlc2DNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					WithInMemoryChannelDelivery(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlc2Name,
+								Namespace:  testNS,
+							},
+						},
+						Retry:         pointer.Int32Ptr(20),
+						BackoffPolicy: &linear,
+						BackoffDelay:  pointer.StringPtr("PT10S"),
+					}),
+				),
 			},
 			Key:     testNS + "/" + "a-" + subscriptionName,
 			WantErr: false,

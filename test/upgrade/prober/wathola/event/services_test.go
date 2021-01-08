@@ -37,7 +37,9 @@ func TestProperEventsPropagation(t *testing.T) {
 	finishedStore.RegisterFinished(&Finished{Count: 3})
 
 	// then
-	assert.Empty(t, errors.thrown)
+	assert.Empty(t, errors.thrown.duplicated)
+	assert.Empty(t, errors.thrown.missing)
+	assert.Empty(t, errors.thrown.unexpected)
 }
 
 func TestMissingAndDoubleEvent(t *testing.T) {
@@ -53,7 +55,9 @@ func TestMissingAndDoubleEvent(t *testing.T) {
 	finishedStore.RegisterFinished(&Finished{Count: 3})
 
 	// then
-	assert.NotEmpty(t, errors.thrown)
+	assert.NotEmpty(t, errors.thrown.duplicated)
+	assert.NotEmpty(t, errors.thrown.missing)
+	assert.NotEmpty(t, errors.thrown.unexpected)
 }
 
 func TestDoubleFinished(t *testing.T) {
@@ -69,7 +73,9 @@ func TestDoubleFinished(t *testing.T) {
 	finishedStore.RegisterFinished(&Finished{Count: 2})
 
 	// then
-	assert.NotEmpty(t, errors.thrown)
+	assert.NotEmpty(t, errors.thrown.duplicated)
+	assert.Empty(t, errors.thrown.missing)
+	assert.Empty(t, errors.thrown.unexpected)
 }
 
 func TestMain(m *testing.M) {

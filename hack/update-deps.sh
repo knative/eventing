@@ -21,7 +21,3 @@ set -o pipefail
 source $(dirname "$0")/../vendor/knative.dev/hack/library.sh
 
 go_update_deps "$@"
-
-# Patch k8s leader-election fixing graceful release
-# More information: https://github.com/kubernetes/kubernetes/pull/91942
-git apply ${REPO_ROOT_DIR}/hack/k8s-client-go.patch

@@ -21,7 +21,6 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/high-availability: "true"
 spec:
-  replicas: 1
   selector:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
@@ -30,6 +29,14 @@ spec:
     metadata:
       labels: *labels
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels: *labels
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       serviceAccountName: imc-dispatcher
       containers:
       - name: dispatcher

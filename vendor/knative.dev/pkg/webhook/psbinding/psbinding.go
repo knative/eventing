@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/markbates/inflect"
 	"go.uber.org/zap"
@@ -117,10 +116,7 @@ type Reconciler struct {
 
 	selector metav1.LabelSelector
 
-	// lock protects access to exact and inexact
-	lock    sync.RWMutex
-	exact   exactMatcher
-	inexact inexactMatcher
+	index index
 }
 
 var _ controller.Reconciler = (*Reconciler)(nil)
@@ -135,11 +131,6 @@ var (
 			Key:      duck.BindingExcludeLabel,
 			Operator: metav1.LabelSelectorOpNotIn,
 			Values:   []string{"true"},
-		}, {
-			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
-			// See knative/pkg#1590 for details.
-			Key:      "control-plane",
-			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/exclude: "true"
@@ -149,11 +140,6 @@ var (
 			Key:      duck.BindingIncludeLabel,
 			Operator: metav1.LabelSelectorOpIn,
 			Values:   []string{"true"},
-		}, {
-			// "control-plane" is added to support Azure's AKS, otherwise the controllers fight.
-			// See knative/pkg#1590 for details.
-			Key:      "control-plane",
-			Operator: metav1.LabelSelectorOpDoesNotExist,
 		}},
 		// TODO(mattmoor): Consider also having a GVR-based one, e.g.
 		//    foobindings.blah.knative.dev/include: "true"
@@ -197,56 +183,47 @@ func (ac *Reconciler) Admit(ctx context.Context, request *admissionv1.AdmissionR
 		return webhook.MakeErrorStatus("unable to decode object: %v", err)
 	}
 
-	// Look up the Bindable for this resource.
-	fb := func() Bindable {
-		ac.lock.RLock()
-		defer ac.lock.RUnlock()
-
-		// Always try to find an exact match first.
-		if sb, ok := ac.exact.Get(exactKey{
-			Group:     request.Kind.Group,
-			Kind:      request.Kind.Kind,
-			Namespace: request.Namespace,
-			Name:      orig.Name,
-		}); ok {
-			return sb
-		}
-
-		// Next look for inexact matches.
-		if sb, ok := ac.inexact.Get(inexactKey{
-			Group:     request.Kind.Group,
-			Kind:      request.Kind.Kind,
-			Namespace: request.Namespace,
-		}, labels.Set(orig.Labels)); ok {
-			return sb
-		}
-		return nil
-	}()
-	if fb == nil {
+	// Look up the Bindables for this resource.
+	fbs := ac.index.lookUp(exactKey{
+		Group:     request.Kind.Group,
+		Kind:      request.Kind.Kind,
+		Namespace: request.Namespace,
+		Name:      orig.Name},
+		labels.Set(orig.Labels))
+	if len(fbs) == 0 {
 		// This doesn't apply!
 		return &admissionv1.AdmissionResponse{Allowed: true}
 	}
 
-	// Callback into the user's code to setup the context with additional
-	// information needed to perform the mutation.
-	if ac.WithContext != nil {
-		var err error
-		ctx, err = ac.WithContext(ctx, fb)
-		if err != nil {
-			return webhook.MakeErrorStatus("unable to setup binding context: %v", err)
+	// Copy the subject state.
+	mutated := orig.DeepCopy()
+
+	// Apply the Bindables to the copy of the subject state. If conflicts occur, for example because multiple Bindables
+	// make incompatible changes, the reconciler will attempt to correct the state later.
+	for _, fb := range fbs {
+		var bindingContext context.Context
+		// Callback into the user's code to setup the context with additional
+		// information needed to perform the mutation.
+		if ac.WithContext != nil {
+			var err error
+			bindingContext, err = ac.WithContext(ctx, fb)
+			if err != nil {
+				return webhook.MakeErrorStatus("unable to setup binding context: %v", err)
+			}
+		} else {
+			bindingContext = ctx
+		}
+
+		// Mutate the copy of the subject state according to the deletion state of the Bindable.
+		if fb.GetDeletionTimestamp() != nil {
+			fb.Undo(bindingContext, mutated)
+		} else {
+			fb.Do(bindingContext, mutated)
 		}
 	}
 
-	// Mutate a copy according to the deletion state of the Bindable.
-	delta := orig.DeepCopy()
-	if fb.GetDeletionTimestamp() != nil {
-		fb.Undo(ctx, delta)
-	} else {
-		fb.Do(ctx, delta)
-	}
-
 	// Synthesize a patch from the changes and return it in our AdmissionResponse
-	patchBytes, err := duck.CreateBytePatch(orig, delta)
+	patchBytes, err := duck.CreateBytePatch(orig, mutated)
 	if err != nil {
 		return webhook.MakeErrorStatus("unable to create patch with binding: %v", err)
 	}
@@ -270,8 +247,8 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	if err != nil {
 		return err
 	}
-	exact := make(exactMatcher, len(fbs))
-	inexact := make(inexactMatcher, len(fbs))
+
+	ib := newIndexBuilder()
 	for _, fb := range fbs {
 		ref := fb.GetSubject()
 		gv, err := schema.ParseGroupVersion(ref.APIVersion)
@@ -290,32 +267,27 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 		gks[gk] = set
 
 		if ref.Name != "" {
-			exact.Add(exactKey{
+			ib.associate(exactKey{
 				Group:     gk.Group,
 				Kind:      gk.Kind,
 				Namespace: ref.Namespace,
-				Name:      ref.Name,
-			}, fb)
+				Name:      ref.Name},
+				fb)
 		} else {
 			selector, err := metav1.LabelSelectorAsSelector(ref.Selector)
 			if err != nil {
 				return err
 			}
-			inexact.Add(inexactKey{
+			ib.associateSelection(inexactKey{
 				Group:     gk.Group,
 				Kind:      gk.Kind,
-				Namespace: ref.Namespace,
-			}, selector, fb)
+				Namespace: ref.Namespace},
+				selector, fb)
 		}
 	}
 
-	// Update our indices
-	func() {
-		ac.lock.Lock()
-		defer ac.lock.Unlock()
-		ac.exact = exact
-		ac.inexact = inexact
-	}()
+	// Update the index.
+	ib.build(&ac.index)
 
 	// After we've updated our indices, bail out unless we are the leader.
 	// Only the leader should be mutating the webhook.
@@ -356,31 +328,34 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	if err != nil {
 		return fmt.Errorf("error retrieving webhook: %w", err)
 	}
-	webhook := configuredWebhook.DeepCopy()
+	current := configuredWebhook.DeepCopy()
 
 	// Use the "Equivalent" match policy so that we don't need to enumerate versions for same-types.
 	// This is only supported by 1.15+ clusters.
 	matchPolicy := admissionregistrationv1.Equivalent
 
-	for i, wh := range webhook.Webhooks {
-		if wh.Name != webhook.Name {
+	for i, wh := range current.Webhooks {
+		if wh.Name != current.Name {
 			continue
 		}
-		webhook.Webhooks[i].MatchPolicy = &matchPolicy
-		webhook.Webhooks[i].Rules = rules
-		webhook.Webhooks[i].NamespaceSelector = &ac.selector
-		webhook.Webhooks[i].ObjectSelector = &ac.selector // 1.15+ only
-		webhook.Webhooks[i].ClientConfig.CABundle = caCert
-		if webhook.Webhooks[i].ClientConfig.Service == nil {
+		cur := &current.Webhooks[i]
+		selector := webhook.EnsureLabelSelectorExpressions(cur.NamespaceSelector, &ac.selector)
+
+		cur.MatchPolicy = &matchPolicy
+		cur.Rules = rules
+		cur.NamespaceSelector = selector
+		cur.ObjectSelector = selector // 1.15+ only
+		cur.ClientConfig.CABundle = caCert
+		if cur.ClientConfig.Service == nil {
 			return fmt.Errorf("missing service reference for webhook: %s", wh.Name)
 		}
-		webhook.Webhooks[i].ClientConfig.Service.Path = ptr.String(ac.Path())
+		cur.ClientConfig.Service.Path = ptr.String(ac.Path())
 	}
 
-	if ok := equality.Semantic.DeepEqual(configuredWebhook, webhook); !ok {
+	if ok := equality.Semantic.DeepEqual(configuredWebhook, current); !ok {
 		logging.FromContext(ctx).Info("Updating webhook")
 		mwhclient := ac.Client.AdmissionregistrationV1().MutatingWebhookConfigurations()
-		if _, err := mwhclient.Update(ctx, webhook, metav1.UpdateOptions{}); err != nil {
+		if _, err := mwhclient.Update(ctx, current, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("failed to update webhook: %w", err)
 		}
 	} else {

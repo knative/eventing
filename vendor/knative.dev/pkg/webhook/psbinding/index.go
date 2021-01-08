@@ -7,7 +7,7 @@ You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-Unless requ ired by applicable law or agreed to in writing, software
+Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
@@ -16,7 +16,11 @@ limitations under the License.
 
 package psbinding
 
-import "k8s.io/apimachinery/pkg/labels"
+import (
+	"sync"
+
+	"k8s.io/apimachinery/pkg/labels"
+)
 
 // exactKey is the type for keys that match exactly.
 type exactKey struct {
@@ -28,17 +32,16 @@ type exactKey struct {
 
 // exactMatcher is our reverse index from subjects to the Bindings that apply to
 // them.
-type exactMatcher map[exactKey]Bindable
+type exactMatcher map[exactKey][]Bindable
 
-// Add writes a key into the reverse index.
-func (em exactMatcher) Add(key exactKey, b Bindable) {
-	em[key] = b
+// add associates a Binding with a key in the reverse index.
+func (em exactMatcher) add(key exactKey, b Bindable) {
+	em[key] = append(em[key], b)
 }
 
-// Get fetches the key from the reverse index, if present.
-func (em exactMatcher) Get(key exactKey) (bindable Bindable, present bool) {
-	b, ok := em[key]
-	return b, ok
+// get fetches the key from the reverse index, if present.
+func (em exactMatcher) get(key exactKey) []Bindable {
+	return em[key]
 }
 
 // inexactKey is the type for keys that match inexactly (via selector)
@@ -58,8 +61,8 @@ type pair struct {
 // them.
 type inexactMatcher map[inexactKey][]pair
 
-// Add writes a key into the reverse index.
-func (im inexactMatcher) Add(key inexactKey, selector labels.Selector, b Bindable) {
+// add writes a key into the reverse index.
+func (im inexactMatcher) add(key inexactKey, selector labels.Selector, b Bindable) {
 	pl := im[key]
 	pl = append(pl, pair{
 		selector: selector,
@@ -68,14 +71,78 @@ func (im inexactMatcher) Add(key inexactKey, selector labels.Selector, b Bindabl
 	im[key] = pl
 }
 
-// Get fetches the key from the reverse index, if present.
-func (im inexactMatcher) Get(key inexactKey, ls labels.Set) (bindable Bindable, present bool) {
-	// Iterate over the list of pairs matched for this GK + namespace and return the first
-	// Bindable that matches our selector.
+// get fetches the key from the reverse index, if present.
+func (im inexactMatcher) get(key inexactKey, ls labels.Set) []Bindable {
+	found := []Bindable{}
+	// Iterate over the list of pairs matched for this GK + namespace and collect the
+	// Bindables that matches our selector.
 	for _, p := range im[key] {
 		if p.selector.Matches(ls) {
-			return p.sb, true
+			found = append(found, p.sb)
 		}
 	}
-	return nil, false
+	return found
+}
+
+// index is a collection of Bindables indexed by their subject resources.
+type index struct {
+	// lock protects access to exact and inexact
+	lock    sync.RWMutex
+	exact   exactMatcher
+	inexact inexactMatcher
+}
+
+// indexBuilder allows an index to be built atomically
+type indexBuilder struct {
+	exact   exactMatcher
+	inexact inexactMatcher
+}
+
+// newIndexBuilder constructs a new IndexBuilder.
+func newIndexBuilder() *indexBuilder {
+	return &indexBuilder{
+		exact:   make(exactMatcher),
+		inexact: make(inexactMatcher),
+	}
+}
+
+// associate associates a resource with a given exact key with a given Bindable.
+func (ib *indexBuilder) associate(key exactKey, fb Bindable) *indexBuilder {
+	ib.exact.add(key, fb)
+	return ib
+}
+
+// associateSelection associates resources with the given inexact key and labels matching the given selector with a given Bindable.
+func (ib *indexBuilder) associateSelection(inexactKey inexactKey, selector labels.Selector, fb Bindable) *indexBuilder {
+	ib.inexact.add(inexactKey, selector, fb)
+	return ib
+}
+
+// build sets the given index to the built value.
+func (ib *indexBuilder) build(index *index) {
+	index.setIndex(ib.exact, ib.inexact)
+}
+
+// setIndex replaces the index atomically with the given matchers.
+func (idx *index) setIndex(exact exactMatcher, inexact inexactMatcher) {
+	idx.lock.Lock()
+	defer idx.lock.Unlock()
+	idx.exact = exact
+	idx.inexact = inexact
+}
+
+// lookUp returns the Bindables associated with a resource with the given group, kind, namespace, name, and labels.
+func (idx *index) lookUp(key exactKey, labels labels.Set) []Bindable {
+	idx.lock.RLock()
+	defer idx.lock.RUnlock()
+
+	exactMatches := idx.exact.get(key)
+
+	inexactMatches := idx.inexact.get(inexactKey{
+		Group:     key.Group,
+		Kind:      key.Kind,
+		Namespace: key.Namespace,
+	}, labels)
+
+	return append(exactMatches, inexactMatches...)
 }
