@@ -176,5 +176,5 @@ func webhookObservedBrokerUpdate(br *eventingv1.Broker) bool {
 }
 
 func webhookObservedBrokerUpdateFromDeliverySpec(d *eventingduck.DeliverySpec) bool {
-	return d.BackoffDelay != nil && d.Retry != nil && d.BackoffPolicy != nil
+	return d != nil && d.BackoffDelay != nil && d.Retry != nil && d.BackoffPolicy != nil
 }
