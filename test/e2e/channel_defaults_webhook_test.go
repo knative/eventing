@@ -181,5 +181,5 @@ func webhookObservedUpdate(ch *messagingv1.Channel) bool {
 }
 
 func webhookObservedUpdateFromDeliverySpec(d *eventingduck.DeliverySpec) bool {
-	return d.BackoffDelay != nil && d.Retry != nil && d.BackoffPolicy != nil
+	return d != nil && d.BackoffDelay != nil && d.Retry != nil && d.BackoffPolicy != nil
 }
