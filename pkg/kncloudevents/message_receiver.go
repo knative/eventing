@@ -37,11 +37,22 @@ type HTTPMessageReceiver struct {
 
 	server   *http.Server
 	listener net.Listener
+
+	checker http.HandlerFunc
 }
 
 func NewHTTPMessageReceiver(port int) *HTTPMessageReceiver {
 	return &HTTPMessageReceiver{
 		port: port,
+	}
+}
+
+// NewHTTPMessageReceiverWithChecker takes a handler func,
+// which runs as an additional health check in Drainer.
+func NewHTTPMessageReceiverWithChecker(port int, checker http.HandlerFunc) *HTTPMessageReceiver {
+	return &HTTPMessageReceiver{
+		port:    port,
+		checker: checker,
 	}
 }
 
@@ -53,7 +64,8 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 	}
 
 	drainer := &handlers.Drainer{
-		Inner: CreateHandler(handler),
+		Inner:       CreateHandler(handler),
+		HealthCheck: recv.checker,
 	}
 	recv.server = &http.Server{
 		Addr:    recv.listener.Addr().String(),
