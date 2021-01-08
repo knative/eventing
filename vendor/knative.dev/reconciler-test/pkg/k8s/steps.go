@@ -19,11 +19,12 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/network"
 	"log"
 	"testing"
 	"time"
+
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/network"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
