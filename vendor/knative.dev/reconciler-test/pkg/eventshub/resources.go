@@ -33,6 +33,16 @@ func init() {
 	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
 }
 
+// Install starts a new eventshub with the provided name
+// Note: this function expects that the Environment is configured with the
+// following options, otherwise it will panic:
+//
+//   ctx, env := global.Environment(
+//     knative.WithKnativeNamespace("knative-namespace"),
+//     knative.WithLoggingConfig,
+//     knative.WithTracingConfig,
+//     k8s.WithEventListener,
+//   )
 func Install(name string, options ...EventsHubOption) feature.StepFn {
 	return func(ctx context.Context, t *testing.T) {
 		// Compute the user provided envs

@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -34,60 +33,57 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
-	"knative.dev/pkg/system"
 
+	"knative.dev/eventing/pkg/apis/config"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/pkg/reconciler"
+	"knative.dev/pkg/system"
 )
 
-func TestChannelNamespaceDefaulting(t *testing.T) {
-
+func TestBrokerNamespaceDefaulting(t *testing.T) {
 	ctx := context.Background()
-
-	const (
-		defaultChannelCM        = "default-ch-webhook"
-		defaultChannelConfigKey = "default-ch-config"
-	)
 
 	c := testlib.Setup(t, true)
 	defer testlib.TearDown(c)
 
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := reconciler.RetryTestErrors(func(attempt int) error {
 
-		t.Log("Updating defaulting ConfigMap")
+		t.Log("Updating defaulting ConfigMap attempt:", attempt)
 
-		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, defaultChannelCM, metav1.GetOptions{})
+		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, config.DefaultsConfigName, metav1.GetOptions{})
 		assert.Nil(t, err)
 
 		// Preserve existing namespace defaults.
 		defaults := make(map[string]map[string]interface{})
-		err = yaml.Unmarshal([]byte(cm.Data[defaultChannelConfigKey]), defaults)
+		err = yaml.Unmarshal([]byte(cm.Data[config.BrokerDefaultsKey]), defaults)
 		assert.Nil(t, err)
 
+		if _, ok := defaults["namespaceDefaults"]; !ok {
+			defaults["namespaceDefaults"] = make(map[string]interface{})
+		}
+
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1",
-			"kind":       "InMemoryChannel",
-			"spec": map[string]interface{}{
-				"delivery": map[string]interface{}{
-					"retry":         5,
-					"backoffPolicy": "exponential",
-					"backoffDelay":  "PT0.5S",
-				},
+			"brokerClass": brokerClass,
+			"delivery": map[string]interface{}{
+				"retry":         5,
+				"backoffPolicy": "exponential",
+				"backoffDelay":  "PT0.5S",
 			},
 		}
 
 		b, err := yaml.Marshal(defaults)
 		assert.Nil(t, err)
 
-		cm.Data[defaultChannelConfigKey] = string(b)
+		cm.Data[config.BrokerDefaultsKey] = string(b)
 
 		cm, err = c.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(ctx, cm, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
 
-		b, err = yaml.Marshal(cm.Data[defaultChannelConfigKey])
+		b, err = yaml.Marshal(cm.Data[config.BrokerDefaultsKey])
 		if err != nil {
 			t.Log("error", err)
 		} else {
@@ -98,7 +94,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	// Create a Channel and check whether it has the DeliverySpec set as we specified above.
+	// Create a Broker and check whether it has the DeliverySpec set as we specified above.
 	// Since the webhook receives the updates at some undetermined time after the update to reduce flakiness retry after
 	// a delay and check whether it has the shape we want it to have.
 
@@ -114,14 +110,14 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 	}
 
 	err = retry.OnError(backoff, func(err error) bool { return err != nil }, func() error {
-		n++
+
 		name := fmt.Sprintf("%s-%d", namePrefix, n)
 		lastName = name
 
 		obj := &unstructured.Unstructured{
 			Object: map[string]interface{}{
-				"apiVersion": "messaging.knative.dev/v1",
-				"kind":       "Channel",
+				"apiVersion": "eventing.knative.dev/v1",
+				"kind":       "Broker",
 				"metadata": map[string]interface{}{
 					"name":      name,
 					"namespace": c.Namespace,
@@ -130,56 +126,55 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 		}
 
 		createdObj, err := c.Dynamic.
-			Resource(schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "channels"}).
+			Resource(schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}).
 			Namespace(c.Namespace).
 			Create(ctx, obj, metav1.CreateOptions{})
 		assert.Nil(t, err)
 
-		channel := &messagingv1.Channel{}
-		err = runtime.DefaultUnstructuredConverter.FromUnstructured(createdObj.Object, channel)
+		broker := &eventingv1.Broker{}
+		err = runtime.DefaultUnstructuredConverter.FromUnstructured(createdObj.Object, broker)
 		assert.Nil(t, err)
 
-		if !webhookObservedUpdate(channel) {
-			return fmt.Errorf("webhook hasn't seen the update: %+v", channel)
+		if !webhookObservedBrokerUpdate(broker) {
+			return fmt.Errorf("webhook hasn't seen the update: %+v", broker)
 		}
 
-		delivery := struct {
-			Delivery eventingduck.DeliverySpec `json:"delivery"`
-		}{}
-		err = json.Unmarshal(channel.Spec.ChannelTemplate.Spec.Raw, &delivery)
-		if err != nil || !webhookObservedUpdateFromDeliverySpec(&delivery.Delivery) {
-			return fmt.Errorf("webhook hasn't seen the update: %+v %+v", delivery, string(channel.Spec.ChannelTemplate.Spec.Raw))
+		assert.Equal(t, brokerClass, broker.Annotations[eventingv1.BrokerClassAnnotationKey])
+
+		if err != nil || !webhookObservedBrokerUpdateFromDeliverySpec(broker.Spec.Delivery) {
+			return fmt.Errorf("webhook hasn't seen the update: %+v", broker.Spec.Delivery)
 		}
 
-		assert.Equal(t, "PT0.5S", *delivery.Delivery.BackoffDelay)
-		assert.Equal(t, int32(5), *delivery.Delivery.Retry)
-		assert.Equal(t, eventingduck.BackoffPolicyExponential, *delivery.Delivery.BackoffPolicy)
+		assert.Equal(t, "PT0.5S", *broker.Spec.Delivery.BackoffDelay)
+		assert.Equal(t, int32(5), *broker.Spec.Delivery.Retry)
+		assert.Equal(t, eventingduck.BackoffPolicyExponential, *broker.Spec.Delivery.BackoffPolicy)
 
 		return nil
 	})
 	assert.Nil(t, err)
 
 	err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-		imc, err := c.Eventing.MessagingV1().InMemoryChannels(c.Namespace).Get(ctx, lastName, metav1.GetOptions{})
+		foundBroker, err := c.Eventing.EventingV1().Brokers(c.Namespace).Get(ctx, lastName, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
 		assert.Nil(t, err)
 
-		assert.Equal(t, "PT0.5S", *imc.Spec.Delivery.BackoffDelay)
-		assert.Equal(t, int32(5), *imc.Spec.Delivery.Retry)
-		assert.Equal(t, eventingduck.BackoffPolicyExponential, *imc.Spec.Delivery.BackoffPolicy)
+		assert.Equal(t, brokerClass, foundBroker.Annotations[eventingv1.BrokerClassAnnotationKey])
+		assert.Equal(t, "PT0.5S", *foundBroker.Spec.Delivery.BackoffDelay)
+		assert.Equal(t, int32(5), *foundBroker.Spec.Delivery.Retry)
+		assert.Equal(t, eventingduck.BackoffPolicyExponential, *foundBroker.Spec.Delivery.BackoffPolicy)
 
 		return true, nil
 	})
 	assert.Nil(t, err)
 }
 
-func webhookObservedUpdate(ch *messagingv1.Channel) bool {
-	return ch.Spec.ChannelTemplate != nil &&
-		ch.Spec.ChannelTemplate.Spec != nil
+func webhookObservedBrokerUpdate(br *eventingv1.Broker) bool {
+	_, ok := br.Annotations[eventingv1.BrokerClassAnnotationKey]
+	return ok
 }
 
-func webhookObservedUpdateFromDeliverySpec(d *eventingduck.DeliverySpec) bool {
+func webhookObservedBrokerUpdateFromDeliverySpec(d *eventingduck.DeliverySpec) bool {
 	return d != nil && d.BackoffDelay != nil && d.Retry != nil && d.BackoffPolicy != nil
 }

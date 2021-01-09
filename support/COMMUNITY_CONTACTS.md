@@ -53,21 +53,22 @@ only expected to participate during their local office hour.
 
 # Roster
 
-We seed this rotation with all approvers and reviewers from all the
-Eventing workgroups, excluding productivity. If you are no longer
-active in Knative, or if you are contributing on personal capacity and
-do not have time to contribute in the rotation, feel free to send a PR
-to remove yourself and add yourself to the NON_ROSTER file. Similarly
-you can trade your timeslot with others by sending PRs.
+We seed this rotation with all approvers and reviewers from all the Eventing
+workgroups, excluding productivity. If you are no longer active in Knative, or
+if you are contributing on personal capacity and do not have time to contribute
+in the rotation, feel free to send a PR to remove yourself and add yourself to
+the NON_ROSTER file. Similarly you can trade your timeslot with others by
+sending PRs.
 
 ## Volunteeres
-Those who aren't reviewers or approvers and are interested in
-volunteering are welcome to add themselves to the `support/VOLUNTEERS`
-file.
+
+Those who aren't reviewers or approvers and are interested in volunteering are
+welcome to add themselves to the `support/VOLUNTEERS` file.
 
 ## Generating a New Schedule
-The schedule can be regenerated randomly for a new cycle with the
-command (run from the eventing base directory).
+
+The schedule can be regenerated randomly for a new cycle with the command (run
+from the eventing base directory).
 
 ```sh
 VOLUNTEERS=$(grep -hs "" support/VOLUNTEERS)
