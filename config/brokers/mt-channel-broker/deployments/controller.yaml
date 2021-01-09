@@ -42,6 +42,7 @@ spec:
 
       serviceAccountName: eventing-controller
 
+      enableServiceLinks: false
       containers:
       - name: mt-broker-controller
         terminationMessagePolicy: FallbackToLogsOnError

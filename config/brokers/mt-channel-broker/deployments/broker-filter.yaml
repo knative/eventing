@@ -30,6 +30,7 @@ spec:
         eventing.knative.dev/release: devel
     spec:
       serviceAccountName: mt-broker-filter
+      enableServiceLinks: false
       containers:
       - name: filter
         terminationMessagePolicy: FallbackToLogsOnError

@@ -30,6 +30,7 @@ spec:
         eventing.knative.dev/release: devel
     spec:
       serviceAccountName: mt-broker-ingress
+      enableServiceLinks: false
       containers:
       - name: ingress
         terminationMessagePolicy: FallbackToLogsOnError

@@ -33,6 +33,7 @@ spec:
         sources.knative.dev/role: adapter
         eventing.knative.dev/release: devel
     spec:
+      enableServiceLinks: false
       containers:
         - name: dispatcher
           image: ko://knative.dev/eventing/cmd/mtping
