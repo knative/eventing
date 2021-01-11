@@ -130,6 +130,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 			Namespace(c.Namespace).
 			Create(ctx, obj, metav1.CreateOptions{})
 		assert.Nil(t, err)
+		n = n + 1
 
 		broker := &eventingv1.Broker{}
 		err = runtime.DefaultUnstructuredConverter.FromUnstructured(createdObj.Object, broker)
