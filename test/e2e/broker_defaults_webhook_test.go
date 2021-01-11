@@ -65,6 +65,10 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 		}
 
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{
+			"apiVersion":  "v1",
+			"kind":        "ConfigMap",
+			"name":        "config-br-default-channel",
+			"namespace":   "knative-eventing",
 			"brokerClass": brokerClass,
 			"delivery": map[string]interface{}{
 				"retry":         5,
