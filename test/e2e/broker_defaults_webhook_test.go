@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -133,12 +134,12 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 			Resource(schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}).
 			Namespace(c.Namespace).
 			Create(ctx, obj, metav1.CreateOptions{})
-		assert.Nil(t, err)
+		require.Nil(t, err)
 		n = n + 1
 
 		broker := &eventingv1.Broker{}
 		err = runtime.DefaultUnstructuredConverter.FromUnstructured(createdObj.Object, broker)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		if !webhookObservedBrokerUpdate(broker) {
 			return fmt.Errorf("webhook hasn't seen the update: %+v", broker)
@@ -163,7 +164,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		assert.Equal(t, brokerClass, foundBroker.Annotations[eventingv1.BrokerClassAnnotationKey])
 		assert.Equal(t, "PT0.5S", *foundBroker.Spec.Delivery.BackoffDelay)
