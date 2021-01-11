@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
 )
 
@@ -68,6 +69,7 @@ func TestNewDispatcher(t *testing.T) {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: saName,
+					EnableServiceLinks: ptr.Bool(false),
 					Containers: []corev1.Container{
 						{
 							Name:  "dispatcher",

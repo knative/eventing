@@ -25,6 +25,7 @@ import (
 
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
 )
 
@@ -66,6 +67,7 @@ func MakeDispatcher(args DispatcherArgs) *v1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
+					EnableServiceLinks: ptr.Bool(false),
 					Containers: []corev1.Container{
 						{
 							Name:  "dispatcher",

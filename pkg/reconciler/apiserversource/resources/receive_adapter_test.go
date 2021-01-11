@@ -30,6 +30,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/source"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/ptr"
 
 	_ "knative.dev/pkg/metrics/testing"
 	_ "knative.dev/pkg/system/testing"
@@ -108,6 +109,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: "source-svc-acct",
+					EnableServiceLinks: ptr.Bool(false),
 					Containers: []corev1.Container{
 						{
 							Name:  "receive-adapter",
