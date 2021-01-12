@@ -57,7 +57,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 
 		// Preserve existing namespace defaults.
 		defaults := make(map[string]map[string]interface{})
-		err = yaml.Unmarshal([]byte(cm.Data[config.BrokerDefaultsKey]), defaults)
+		err = yaml.Unmarshal([]byte(cm.Data[config.BrokerDefaultsKey]), &defaults)
 		assert.Nil(t, err)
 
 		if _, ok := defaults["namespaceDefaults"]; !ok {

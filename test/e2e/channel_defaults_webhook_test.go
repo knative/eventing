@@ -62,7 +62,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		// Preserve existing namespace defaults.
 		defaults := make(map[string]map[string]interface{})
-		err = yaml.Unmarshal([]byte(cm.Data[defaultChannelConfigKey]), defaults)
+		err = yaml.Unmarshal([]byte(cm.Data[defaultChannelConfigKey]), &defaults)
 		assert.Nil(t, err)
 
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{
