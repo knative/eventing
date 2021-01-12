@@ -19,6 +19,7 @@ package pingsource
 import (
 	"context"
 
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
@@ -36,8 +37,20 @@ import (
 	"knative.dev/eventing/pkg/adapter/v2"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	"knative.dev/eventing/pkg/reconciler"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
+
+const (
+	dispatcherConfigFilename = "pingsource-mt-adapter.yaml"
+)
+
+// envConfig will be used to extract the required environment variables using
+// github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
+// NewController will panic.
+type envConfig struct {
+	Image string `envconfig:"PING_RA_IMAGE" required:"true"`
+}
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -46,6 +59,16 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
+
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		logger.Panicf("unable to process PingSource's required environment variables: %v", err)
+	}
+
+	template, err := reconciler.ReadDeploymentFromKoData(dispatcherConfigFilename)
+	if err != nil {
+		logger.Panicf("unable to read required configuration file %s: %v", dispatcherConfigFilename, err)
+	}
 
 	// Retrieve leader election config
 	leaderElectionConfig, err := sharedmain.GetLeaderElectionConfig(ctx)
@@ -65,12 +88,14 @@ func NewController(
 	pingSourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:    kubeclient.Get(ctx),
-		pingLister:       pingSourceInformer.Lister(),
-		deploymentLister: deploymentInformer.Lister(),
-		leConfig:         leConfig,
-		loggingContext:   ctx,
-		configs:          reconcilersource.WatchConfigurations(ctx, component, cmw),
+		kubeClientSet:       kubeclient.Get(ctx),
+		pingLister:          pingSourceInformer.Lister(),
+		deploymentLister:    deploymentInformer.Lister(),
+		raReconciler:        reconciler.NewDeploymentReconciler(ctx, template),
+		receiveAdapterImage: env.Image,
+		leConfig:            leConfig,
+		loggingContext:      ctx,
+		configs:             reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
@@ -84,6 +109,7 @@ func NewController(
 	// we can reconcile PingSources that depends on it
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
+	// Track the pingsource mt adapter
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), mtadapterName),
 		Handler: controller.HandleAll(

@@ -19,26 +19,26 @@ package pingsource
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
+
+	"knative.dev/pkg/controller"
+
+	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/reconciler"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
 	"knative.dev/eventing/pkg/adapter/v2"
 
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
@@ -50,9 +50,6 @@ import (
 )
 
 const (
-	// Name of the corev1.Events emitted from the reconciliation process
-	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
-
 	component     = "pingsource"
 	mtcomponent   = "pingsource-mt-adapter"
 	mtadapterName = "pingsource-mt-adapter"
@@ -70,6 +67,11 @@ type Reconciler struct {
 	// listers index properties about resources
 	pingLister       listers.PingSourceLister
 	deploymentLister appsv1listers.DeploymentLister
+
+	receiveAdapterImage string
+
+	// Subreconcilers
+	raReconciler reconciler.DeploymentReconciler
 
 	// tracking mt adapter deployment changes
 	tracker tracker.Interface
@@ -113,12 +115,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta2.PingSour
 	source.Status.MarkSink(sinkURI)
 
 	// Make sure the global mt receive adapter is running
-	d, err := r.reconcileReceiveAdapter(ctx, source)
-	if err != nil {
-		logging.FromContext(ctx).Errorw("Unable to reconcile the receive adapter", zap.Error(err))
-		return err
+	d, event := r.reconcileReceiveAdapter(ctx, source)
+	if d == nil {
+		logging.FromContext(ctx).Errorw("Unable to reconcile the receive adapter", zap.Error(errors.Unwrap(event)))
+		return event
 	}
 	source.Status.PropagateDeploymentAvailability(d)
+
+	if revent, isEvent := event.(*pkgreconciler.ReconcilerEvent); isEvent {
+		controller.GetEventRecorder(ctx).Eventf(source, revent.EventType, revent.Reason, revent.Format, revent.Args...)
+	}
 
 	// Tell tracker to reconcile this PingSource whenever the deployment changes
 	err = r.tracker.TrackReference(tracker.Reference{
@@ -141,61 +147,38 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta2.PingSour
 	return nil
 }
 
-func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta2.PingSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta2.PingSource) (*appsv1.Deployment, pkgreconciler.Event) {
+	owner, err := r.deploymentLister.Deployments(system.Namespace()).Get("eventing-controller")
+	if err != nil {
+		logging.FromContext(ctx).Errorw("error while getting the controller deployment", zap.Error(err))
+		return nil, err
+	}
+
 	loggingConfig, err := logging.ConfigToJSON(r.configs.LoggingConfig())
 	if err != nil {
-		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Error(err))
 	}
 
 	metricsConfig, err := metrics.OptionsToJSON(r.configs.MetricsConfig())
 	if err != nil {
-		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Error(err))
 	}
 
-	args := resources.Args{
-		LoggingConfig:   loggingConfig,
-		MetricsConfig:   metricsConfig,
-		LeConfig:        r.leConfig,
-		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
-		SinkTimeout:     adapter.GetSinkTimeout(logging.FromContext(ctx)),
-	}
-	expected := resources.MakeReceiveAdapterEnvVar(args)
+	return r.raReconciler.ReconcileDeployment(ctx, reconciler.DeploymentAsOwnerRefable(owner), func(deployment *appsv1.Deployment) {
+		oldPodSpec := &deployment.Spec.Template.Spec
+		container := findContainer(oldPodSpec, containerName)
 
-	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))
-			return nil, err
-		}
-		return nil, fmt.Errorf("error getting mt adapter deployment %v", err)
-	} else if update, c := needsUpdating(ctx, &d.Spec, expected); update {
-		c.Env = expected
-
-		if zero(d.Spec.Replicas) {
-			d.Spec.Replicas = pointer.Int32Ptr(1)
+		args := resources.Args{
+			LoggingConfig:   loggingConfig,
+			MetricsConfig:   metricsConfig,
+			LeConfig:        r.leConfig,
+			NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
+			SinkTimeout:     adapter.GetSinkTimeout(logging.FromContext(ctx)),
 		}
 
-		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(ctx, d, metav1.UpdateOptions{}); err != nil {
-			return d, err
-		}
-		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "pingsource adapter deployment updated")
-		return d, nil
-	} else {
-		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
-	}
-	return d, nil
-}
-
-func needsUpdating(ctx context.Context, oldDeploymentSpec *appsv1.DeploymentSpec, newEnvVars []corev1.EnvVar) (bool, *corev1.Container) {
-	// We just care about the environment of the dispatcher container
-	oldPodSpec := &oldDeploymentSpec.Template.Spec
-	container := findContainer(oldPodSpec, containerName)
-	if container == nil {
-		logging.FromContext(ctx).Errorf("invalid %s deployment: missing the %s container", mtadapterName, containerName)
-		return false, nil
-	}
-
-	return zero(oldDeploymentSpec.Replicas) || !equality.Semantic.DeepEqual(container.Env, newEnvVars), container
+		container.Env = resources.MakeReceiveAdapterEnvVar(args)
+		container.Image = r.receiveAdapterImage
+	})
 }
 
 func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
@@ -205,8 +188,4 @@ func findContainer(podSpec *corev1.PodSpec, name string) *corev1.Container {
 		}
 	}
 	return nil
-}
-
-func zero(i *int32) bool {
-	return i != nil && *i == 0
 }

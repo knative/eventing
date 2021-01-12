@@ -41,9 +41,11 @@ data:
         "levelEncoder": "",
         "timeEncoder": "iso8601",
         "durationEncoder": "",
-        "callerEncoder": ""
+        "callerEncoder": ko://knative.dev/eventing/cmd/mtping
       }
     }
+  boo: |
+    kind: ko://knative.dev/eventing/cmd/mtping
 
   # Log level overrides
   # For all components changes are be picked up immediately.
