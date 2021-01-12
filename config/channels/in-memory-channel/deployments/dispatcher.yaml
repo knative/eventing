@@ -38,6 +38,7 @@ spec:
               topologyKey: kubernetes.io/hostname
             weight: 100
       serviceAccountName: imc-dispatcher
+      enableServiceLinks: false
       containers:
       - name: dispatcher
         image: ko://knative.dev/eventing/cmd/in_memory/channel_dispatcher
