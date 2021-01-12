@@ -23,7 +23,8 @@ jobs:
         k8s-version:
         - v1.17.11
         - v1.18.8
-        - v1.19.1
+        - v1.19.4
+        - v1.20.0
 
         test-suite:
         - ./test/rekt/...
@@ -40,9 +41,12 @@ jobs:
         - k8s-version: v1.18.8
           kind-version: v0.9.0
           kind-image-sha: sha256:f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb
-        - k8s-version: v1.19.1
+        - k8s-version: v1.19.4
           kind-version: v0.9.0
-          kind-image-sha: sha256:98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600
+          kind-image-sha: sha256:796d09e217d93bed01ecf8502633e48fd806fe42f9d02fdd468b81cd4e3bd40b
+        - k8s-version: v1.20.0
+          kind-version: v0.9.0
+          kind-image-sha: sha256:b40ecf8bcb188f6a0d0f5d406089c48588b75edc112c6f635d26be5de1c89040
 
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
@@ -178,7 +182,7 @@ jobs:
         export GOFLAGS=-mod=vendor
         export SYSTEM_NAMESPACE=knative-eventing
         # Run the tests tagged as e2e on the KinD cluster.
-        go test -race -count=1 -parallel=12 -timeout=30m -tags=e2e \
+        go test -race -count=1 -parallel=12 -timeout=50m -tags=e2e \
            ${{ matrix.test-suite }} ${{ matrix.extra-test-flags }}
 
     - name: Collect system diagnostics
