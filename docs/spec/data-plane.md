@@ -91,13 +91,24 @@ delivered.
 CloudEvents received by Sink MAY have
 [Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 
-### Event reply header
+### HTTP Attributes
 
-An event sender, including Source and Broker and Channel, SHOULD include
-the event reply header `K-Eventing-Accept-Reply: response` in an event delivery
-request if it supports response events. If no event reply header is present
-or the header is present but does not include the value `response`,
-the Sink SHOULD assume that response events are not supported.
+An event sender, including Source and Broker and Channel, MUST include
+all the non-default HTTP attributes with header key `K-Eventing-Http-Attr` in
+every event delivery to specify
+what HTTP features it can support. Without a certain attribute, the receiver
+MUST assume the corresponding HTTP feature is not supported. A list of HTTP
+attributes can be found below:
+
+| Attributes         | HTTP Feature Description                                                  |
+| ------------------ | ------------------------------------------------------------------------- |
+| `callable`         | If the event sender supports event reply in HTTP response.                |
+
+An example is that a broker supporting event reply MUST send events with
+an additional header `K-Eventing-Http-Attr: ["callable"]` so that the sink connected
+to the broker knows event replies will be accepted. While a source
+may send events without the header, in which case the sink connected directly
+to the source will assume that any event reply will be dropped.
 
 ### Data plane contract for Sources
 
