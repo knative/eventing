@@ -62,7 +62,7 @@ func defaultValues() *Config {
 				Duration: time.Second,
 			},
 			ErrorCfg: ReceiverErrorConfig{
-				UnavailablePeriodToReport: 60 * time.Second,
+				UnavailablePeriodToReport: 5 * time.Second,
 			},
 		},
 		Forwarder: ForwarderConfig{
@@ -72,7 +72,7 @@ func defaultValues() *Config {
 		Sender: SenderConfig{
 			Address:  fmt.Sprintf("http://localhost:%v/", forwarderPort),
 			Interval: 10 * time.Millisecond,
-			Cooldown: 10 * time.Millisecond,
+			Cooldown: 100 * time.Millisecond,
 		},
 		Readiness: ReadinessConfig{
 			Enabled: true,
