@@ -93,21 +93,20 @@ CloudEvents received by Sink MAY have
 
 ### HTTP Attributes
 
-An event sender, including Source and Broker and Channel, MUST include
+An event sender, including Source and Broker and Channel, SHOULD include
 all the non-default HTTP attributes with header key `K-Eventing-Http-Attr` in
-every event delivery to specify
-what HTTP features it can support. Without a certain attribute, the receiver
-MUST assume the corresponding HTTP feature is not supported. A list of HTTP
-attributes can be found below:
+every event delivery to specify what HTTP features it can support. Without a
+certain attribute, the receiver SHOULD assume the corresponding HTTP feature
+is not supported. A list of HTTP attributes can be found below:
 
 | Attributes         | HTTP Feature Description                                                  |
 | ------------------ | ------------------------------------------------------------------------- |
 | `callable`         | If the event sender supports event reply in HTTP response.                |
 
-An example is that a broker supporting event reply MUST send events with
+An example is that a Broker supporting event reply sends events with
 an additional header `K-Eventing-Http-Attr: ["callable"]` so that the sink connected
-to the broker knows event replies will be accepted. While a source
-may send events without the header, in which case the sink connected directly
+to the Broker knows event replies will be accepted. While a source
+sends events without the header, in which case the sink connected directly
 to the source will assume that any event reply will be dropped.
 
 ### Data plane contract for Sources
