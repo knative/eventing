@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"encoding/json"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
@@ -44,6 +45,12 @@ func (a *resourceDelegate) Add(obj interface{}) error {
 
 	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
 		a.logger.Errorw("failed to send event", zap.Error(result))
+	} else {
+		eventExt, err := json.Marshal(event.Extensions())
+		if err != nil {
+			a.logger.Error(err)
+		}
+		a.logger.Infof("event sent for resource %s", string(eventExt))
 	}
 	return nil
 }
@@ -57,6 +64,12 @@ func (a *resourceDelegate) Update(obj interface{}) error {
 
 	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
 		a.logger.Error("failed to send event", zap.Error(result))
+	} else {
+		eventExt, err := json.Marshal(event.Extensions())
+		if err != nil {
+			a.logger.Error(err)
+		}
+		a.logger.Infof("event sent for resource %s", string(eventExt))
 	}
 	return nil
 }
@@ -70,6 +83,12 @@ func (a *resourceDelegate) Delete(obj interface{}) error {
 
 	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
 		a.logger.Error("failed to send event", zap.Error(result))
+	} else {
+		eventExt, err := json.Marshal(event.Extensions())
+		if err != nil {
+			a.logger.Error(err)
+		}
+		a.logger.Infof("event sent for resource %s", string(eventExt))
 	}
 	return nil
 }
