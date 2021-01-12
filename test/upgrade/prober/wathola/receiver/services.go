@@ -108,6 +108,7 @@ func (r reportHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				Duplicated: r.receiver.finished.DuplicatedThrown(),
 				Missing:    r.receiver.finished.MissingThrown(),
 				Unexpected: r.receiver.finished.UnexpectedThrown(),
+				Unavail:    r.receiver.finished.UnavailThrown(),
 			},
 		}
 		b, err := json.Marshal(sj)

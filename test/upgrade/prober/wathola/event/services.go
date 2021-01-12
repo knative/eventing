@@ -30,6 +30,7 @@ type thrownTypes struct {
 	missing    []thrown
 	duplicated []thrown
 	unexpected []thrown
+	unavail    []thrown
 }
 
 // ErrorStore contains errors that was thrown
@@ -46,6 +47,7 @@ func NewErrorStore() *ErrorStore {
 			missing:    make([]thrown, 0),
 			duplicated: make([]thrown, 0),
 			unexpected: make([]thrown, 0),
+			unavail:    make([]thrown, 0),
 		},
 	}
 }
@@ -114,8 +116,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	// check down time
 	for _, unavailablePeriod := range finished.UnavailablePeriods {
 		if unavailablePeriod > config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport {
-			// TODO: decide how to do this properly
-			f.errors.throwUnexpected("actual unavailable period %v is over down time limit of %v", unavailablePeriod, config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport)
+			f.errors.throwUnavail("actual unavailable period %v is over down time limit of %v", unavailablePeriod, config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport)
 			f.errors.state = Failed
 		}
 		log.Infof("detecting unavailable time %v", unavailablePeriod)
@@ -140,6 +141,10 @@ func (f *finishedStore) MissingThrown() []string {
 
 func (f *finishedStore) UnexpectedThrown() []string {
 	return asStrings(f.errors.thrown.unexpected)
+}
+
+func (f *finishedStore) UnavailThrown() []string {
+	return asStrings(f.errors.thrown.unavail)
 }
 
 func asStrings(errThrown []thrown) []string {
@@ -186,6 +191,10 @@ func (e *ErrorStore) throwMissing(format string, args ...interface{}) {
 
 func (e *ErrorStore) throwUnexpected(format string, args ...interface{}) {
 	e.thrown.unexpected = e.appendThrown(e.thrown.unexpected, format, args...)
+}
+
+func (e *ErrorStore) throwUnavail(format string, args ...interface{}) {
+	e.thrown.unavail = e.appendThrown(e.thrown.unavail, format, args...)
 }
 
 func (e *ErrorStore) appendThrown(errThrown []thrown, format string, args ...interface{}) []thrown {

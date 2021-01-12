@@ -21,6 +21,7 @@ type Thrown struct {
 	Duplicated []string `json:"duplicated"`
 	Missing    []string `json:"missing"`
 	Unexpected []string `json:"unexpected"`
+	Unavail    []string `jsong:"unavail"`
 }
 
 // Report represents state as JSON

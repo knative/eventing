@@ -81,6 +81,7 @@ func (f *fetcher) fetchReport() error {
 			Unexpected: []string{},
 			Duplicated: []string{},
 			Missing:    []string{},
+			Unavail:    []string{},
 		},
 	}
 	err = json.Unmarshal(body, state)

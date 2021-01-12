@@ -60,6 +60,9 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	for _, t := range report.Thrown.Unexpected {
 		errs = append(errs, errors.New(t))
 	}
+	for _, t := range report.Thrown.Unavail {
+		errs = append(errs, errors.New(t))
+	}
 	for _, t := range report.Thrown.Duplicated {
 		if p.config.OnDuplicate == Warn {
 			p.log.Warn("Duplicate events: ", t)
@@ -114,6 +117,7 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 				Unexpected: []string{"Report wasn't fetched"},
 				Missing:    []string{"Report wasn't fetched"},
 				Duplicated: []string{"Report wasn't fetched"},
+				Unavail:    []string{"Report wasn't fetched"},
 			},
 		},
 	}
