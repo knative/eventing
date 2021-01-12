@@ -42,7 +42,7 @@ spec:
             weight: 100
 
       serviceAccountName: eventing-controller
-
+      enableServiceLinks: false
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError

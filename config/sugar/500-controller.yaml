@@ -28,6 +28,7 @@ spec:
       labels: *labels
     spec:
       serviceAccountName: eventing-controller
+      enableServiceLinks: false
       containers:
       - name: controller
         image: ko://knative.dev/eventing/cmd/sugar_controller

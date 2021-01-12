@@ -39,10 +39,17 @@ type HTTPMessageReceiver struct {
 	listener net.Listener
 }
 
-func NewHTTPMessageReceiver(port int) *HTTPMessageReceiver {
-	return &HTTPMessageReceiver{
+// HTTPMessageReceiverOption enables further configuration of a HTTPMessageReceiver.
+type HTTPMessageReceiverOption func(*HTTPMessageReceiver)
+
+func NewHTTPMessageReceiver(port int, o ...HTTPMessageReceiverOption) *HTTPMessageReceiver {
+	h := &HTTPMessageReceiver{
 		port: port,
 	}
+	for _, opt := range o {
+		opt(h)
+	}
+	return h
 }
 
 // Blocking

@@ -65,6 +65,10 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 		}
 
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{
+			"apiVersion":  "v1",
+			"kind":        "ConfigMap",
+			"name":        "config-br-default-channel",
+			"namespace":   "knative-eventing",
 			"brokerClass": brokerClass,
 			"delivery": map[string]interface{}{
 				"retry":         5,
@@ -130,6 +134,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 			Namespace(c.Namespace).
 			Create(ctx, obj, metav1.CreateOptions{})
 		assert.Nil(t, err)
+		n = n + 1
 
 		broker := &eventingv1.Broker{}
 		err = runtime.DefaultUnstructuredConverter.FromUnstructured(createdObj.Object, broker)

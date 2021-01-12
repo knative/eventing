@@ -30,6 +30,7 @@ spec:
       labels: *labels
     spec:
       serviceAccountName: imc-controller
+      enableServiceLinks: false
       containers:
       - name: controller
         image: ko://knative.dev/eventing/cmd/in_memory/channel_controller
