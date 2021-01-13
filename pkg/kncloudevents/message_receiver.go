@@ -37,6 +37,8 @@ type HTTPMessageReceiver struct {
 
 	server   *http.Server
 	listener net.Listener
+
+	checker http.HandlerFunc
 }
 
 // HTTPMessageReceiverOption enables further configuration of a HTTPMessageReceiver.
@@ -52,6 +54,16 @@ func NewHTTPMessageReceiver(port int, o ...HTTPMessageReceiverOption) *HTTPMessa
 	return h
 }
 
+// WithChecker takes a handler func which will run as an additional health check in Drainer.
+// kncloudevents HTTPMessageReceiver uses Drainer to perform health check.
+// By default, Drainer directly writes StatusOK to kubelet probe if the Pod is not draining.
+// Users can configure customized liveness and readiness check logic by defining checker here.
+func WithChecker(checker http.HandlerFunc) HTTPMessageReceiverOption {
+	return func(h *HTTPMessageReceiver) {
+		h.checker = checker
+	}
+}
+
 // Blocking
 func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
@@ -60,7 +72,8 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 	}
 
 	drainer := &handlers.Drainer{
-		Inner: CreateHandler(handler),
+		Inner:       CreateHandler(handler),
+		HealthCheck: recv.checker,
 	}
 	recv.server = &http.Server{
 		Addr:    recv.listener.Addr().String(),
