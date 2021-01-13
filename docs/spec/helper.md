@@ -1,7 +1,9 @@
 # Implementation Helper
 
 This document supplements the official [spec](spec.md) with useful
-implementation details.
+implementation details for components implemented in this repo. Note
+that the implementations for other components in other repos (Kafka, RabbitMQ,
+GCP, etc.) may vary
 
 - [Trigger](#kind-trigger)
 - [Broker](#kind-broker)
