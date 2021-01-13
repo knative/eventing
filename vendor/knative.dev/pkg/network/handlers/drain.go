@@ -47,8 +47,7 @@ var newTimer = func(d time.Duration) timer {
 }
 
 // Drainer wraps an inner http.Handler to support responding to kubelet
-// probes and KProbes with a "200 OK" until the handler is told to Drain,
-// or Drainer will optionally run the HealthCheck if it is defined.
+// probes and KProbes with a "200 OK" until the handler is told to Drain.
 // When the Drainer is told to Drain, it will immediately start to fail
 // probes with a "500 shutting down", and the call will block until no
 // requests have been received for QuietPeriod (defaults to
@@ -56,10 +55,6 @@ var newTimer = func(d time.Duration) timer {
 type Drainer struct {
 	// Mutex guards the initialization and resets of the timer
 	sync.RWMutex
-
-	// HealthCheck is an optional health check that is performed until the drain signal is received.
-	// When unspecified, a "200 OK" is returned, otherwise this function is invoked.
-	HealthCheck http.HandlerFunc
 
 	// Inner is the http.Handler to which we delegate actual requests.
 	Inner http.Handler
@@ -83,8 +78,6 @@ func (d *Drainer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if network.IsKubeletProbe(r) { // Respond to probes regardless of path.
 		if d.draining() {
 			http.Error(w, "shutting down", http.StatusServiceUnavailable)
-		} else if d.HealthCheck != nil {
-			d.HealthCheck(w, r)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
