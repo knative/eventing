@@ -91,23 +91,20 @@ delivered.
 CloudEvents received by Sink MAY have
 [Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 
-### HTTP Attributes
+### Event reply contract
 
-An event sender, including Source and Broker and Channel, SHOULD include
-all the non-default HTTP attributes with header key `K-Eventing-Http-Attr` in
-every event delivery to specify what HTTP features it can support. Without a
-certain attribute, the receiver SHOULD assume the corresponding HTTP feature
-is not supported. A list of HTTP attributes can be found below:
+An event sender supporting event replies SHOULD include a `Prefer: ["callable"]` header
+in delivery requests to indicate to the sink that event reply is supported. An event
+sender MAY ignore an event reply in the delivery response if the `Prefer: ["callable"]`
+header was not included in the delivery request.
 
-| Attributes         | HTTP Feature Description                                                  |
-| ------------------ | ------------------------------------------------------------------------- |
-| `callable`         | If the event sender supports event reply in HTTP response.                |
-
-An example is that a Broker supporting event reply sends events with
-an additional header `K-Eventing-Http-Attr: ["callable"]` so that the sink connected
-to the Broker knows event replies will be accepted. While a source
-sends events without the header, in which case the sink connected directly
-to the source will assume that any event reply will be dropped.
+An example is that a Broker supporting event reply sends events with an additional header
+`Prefer: ["callable"]` so that the sink connected to the Broker knows event replies will
+be accepted. While a source sends events without the header, in which case the sink may
+assume that any event reply will be dropped without error or retry attempt. If a sink
+wishes to ensure the reply events will be delivered, it can check for the existence of
+the `Prefer: ["callable"]` header in the delivery request and respond with an error code
+if the header is not present.
 
 ### Data plane contract for Sources
 
