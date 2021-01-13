@@ -45,7 +45,6 @@ import (
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
-	eventDispatcherConfigStore *channel.EventDispatcherConfigStore
 	multiChannelMessageHandler multichannelfanout.MultiChannelMessageHandler
 	reporter                   channel.StatsReporter
 	messagingClientSet         messagingv1.MessagingV1Interface

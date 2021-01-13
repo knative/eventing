@@ -71,6 +71,10 @@ spec:
                 fieldPath: metadata.name
           - name: CONTAINER_NAME
             value: dispatcher
+          - name: MAX_IDLE_CONNS
+            value: "1000"
+          - name: MAX_IDLE_CONNS_PER_HOST
+            value: "1000"
         ports:
           - containerPort: 8080
             name: http

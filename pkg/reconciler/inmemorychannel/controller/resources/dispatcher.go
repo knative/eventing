@@ -17,6 +17,8 @@ limitations under the License.
 package resources
 
 import (
+	"strconv"
+
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -27,6 +29,8 @@ import (
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 )
 
 var (
@@ -37,6 +41,7 @@ var (
 )
 
 type DispatcherArgs struct {
+	config.EventDispatcherConfig
 	ServiceAccountName  string
 	DispatcherName      string
 	DispatcherNamespace string
@@ -72,7 +77,7 @@ func MakeDispatcher(args DispatcherArgs) *v1.Deployment {
 						{
 							Name:  "dispatcher",
 							Image: args.Image,
-							Env:   makeEnv(),
+							Env:   makeEnv(args.EventDispatcherConfig),
 
 							// Set low resource requests and limits.
 							// This should be configurable.
@@ -103,7 +108,7 @@ func MakeDispatcher(args DispatcherArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv() []corev1.EnvVar {
+func makeEnv(dispatcherConfig config.EventDispatcherConfig) []corev1.EnvVar {
 	return []corev1.EnvVar{{
 		Name:  system.NamespaceEnvKey,
 		Value: system.Namespace(),
@@ -123,5 +128,11 @@ func makeEnv() []corev1.EnvVar {
 				FieldPath: "metadata.namespace",
 			},
 		},
+	}, {
+		Name:  "MAX_IDLE_CONNS",
+		Value: strconv.Itoa(dispatcherConfig.MaxIdleConns),
+	}, {
+		Name:  "MAX_IDLE_CONNS_PER_HOST",
+		Value: strconv.Itoa(dispatcherConfig.MaxIdleConnsPerHost),
 	}}
 }

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 
@@ -81,8 +82,17 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
 		ctx = controller.WithEventRecorder(ctx, eventRecorder)
 
+		// Check the config maps in objects and add them to the fake cm watcher
+		var cms []*corev1.ConfigMap
+		for _, obj := range r.Objects {
+			if cm, ok := obj.(*corev1.ConfigMap); ok {
+				cms = append(cms, cm)
+			}
+		}
+		configMapWatcher := configmap.NewStaticWatcher(cms...)
+
 		// Set up our Controller from the fakes.
-		c := ctor(ctx, &ls, configmap.NewStaticWatcher())
+		c := ctor(ctx, &ls, configMapWatcher)
 
 		// If the reconcilers is leader aware, then promote it.
 		if la, ok := c.(reconciler.LeaderAware); ok {

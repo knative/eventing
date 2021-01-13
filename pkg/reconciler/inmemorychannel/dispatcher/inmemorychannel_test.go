@@ -21,37 +21,30 @@ import (
 	"net/http"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"knative.dev/eventing/pkg/kncloudevents"
-
 	"github.com/google/go-cmp/cmp"
-	"knative.dev/pkg/ptr"
-	"knative.dev/pkg/reconciler"
-
+	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
-	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/channel/fanout"
-
-	"k8s.io/utils/pointer"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
-	"knative.dev/eventing/pkg/channel"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/configmap"
-
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/ptr"
+	"knative.dev/pkg/reconciler"
 	. "knative.dev/pkg/reconciler/testing"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/channel/fanout"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
+	"knative.dev/eventing/pkg/kncloudevents"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
@@ -316,7 +309,6 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			multiChannelMessageHandler: newFakeMultiChannelHandler(),
-			eventDispatcherConfigStore: channel.NewEventDispatcherConfigStore(logger),
 			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,

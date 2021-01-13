@@ -31,6 +31,9 @@ import (
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 )
 
 const (
@@ -42,6 +45,12 @@ func TestNewDispatcher(t *testing.T) {
 	os.Setenv(system.NamespaceEnvKey, "knative-testing")
 
 	args := DispatcherArgs{
+		EventDispatcherConfig: config.EventDispatcherConfig{
+			ConnectionArgs: kncloudevents.ConnectionArgs{
+				MaxIdleConns:        2000,
+				MaxIdleConnsPerHost: 200,
+			},
+		},
 		ServiceAccountName:  saName,
 		DispatcherName:      serviceName,
 		DispatcherNamespace: testNS,
@@ -93,6 +102,12 @@ func TestNewDispatcher(t *testing.T) {
 										FieldPath: "metadata.namespace",
 									},
 								},
+							}, {
+								Name:  "MAX_IDLE_CONNS",
+								Value: "2000",
+							}, {
+								Name:  "MAX_IDLE_CONNS_PER_HOST",
+								Value: "200",
 							}},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{

@@ -20,11 +20,15 @@ import (
 	"os"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
+
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints/fake"
@@ -37,7 +41,13 @@ func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
 	os.Setenv("DISPATCHER_IMAGE", "animage")
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	cmw := configmap.NewStaticWatcher(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      config.EventDispatcherConfigMap,
+			Namespace: "knative-eventing",
+		},
+	})
+	c := NewController(ctx, cmw)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
