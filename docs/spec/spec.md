@@ -277,7 +277,7 @@ retrieved from ref.
 | `deadLetterSink` | [`duckv1.Destination`](#duckv1.Destination) | Optional    | The sink receiving event that could not be sent to a `Destination`.                                                                                               |             |
 | `retry`          | `int`                                       | Optional    | The minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink (when specified) or discarded (otherwise). |             |
 | `backoffPolicy`  | `string`                                    | Optional    | The retry backoff policy (`linear` or `exponential`).                                                                                                             |             |
-| `backoffDelay`   | `string`                                    | Optional    | For linear policy, backoff delay is backoffDelay\*\<numberOfRetries>. For exponential policy, backoff delay is backoffDelay\*2^\<numberOfRetries>.                  |             |
+| `backoffDelay`   | `string`                                    | Optional    | For linear policy, backoff delay is backoffDelay\*\<numberOfRetries>. For exponential policy, backoff delay is backoffDelay\*2^\<numberOfRetries>.                |             |
 
 ### SubscriberStatus
 
