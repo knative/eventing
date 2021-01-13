@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/system"
+	"sigs.k8s.io/yaml"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -62,7 +62,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		// Preserve existing namespace defaults.
 		defaults := make(map[string]map[string]interface{})
-		err = yaml.Unmarshal([]byte(cm.Data[defaultChannelConfigKey]), defaults)
+		err = yaml.Unmarshal([]byte(cm.Data[defaultChannelConfigKey]), &defaults)
 		assert.Nil(t, err)
 
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{

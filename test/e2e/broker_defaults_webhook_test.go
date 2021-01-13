@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
 	"knative.dev/eventing/pkg/apis/config"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
@@ -57,7 +57,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 
 		// Preserve existing namespace defaults.
 		defaults := make(map[string]map[string]interface{})
-		err = yaml.Unmarshal([]byte(cm.Data[config.BrokerDefaultsKey]), defaults)
+		err = yaml.Unmarshal([]byte(cm.Data[config.BrokerDefaultsKey]), &defaults)
 		assert.Nil(t, err)
 
 		if _, ok := defaults["namespaceDefaults"]; !ok {
