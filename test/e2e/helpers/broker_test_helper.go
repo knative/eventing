@@ -33,7 +33,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -51,10 +51,10 @@ func (tc eventTestCase) String() string {
 	eventSource := tc.Source
 	extensions := tc.Extensions
 	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
-	if eventType == v1beta1.TriggerAnyFilter {
+	if eventType == v1.TriggerAnyFilter {
 		eventType = "testany"
 	}
-	if eventSource == v1beta1.TriggerAnyFilter {
+	if eventSource == v1.TriggerAnyFilter {
 		eventSource = "testany"
 	} else {
 		u, _ := url.Parse(eventSource)
@@ -70,20 +70,20 @@ func (tc eventTestCase) String() string {
 // ToEventMatcher converts the test case to the event matcher
 func (tc eventTestCase) ToEventMatcher() cetest.EventMatcher {
 	var matchers []cetest.EventMatcher
-	if tc.Type == v1beta1.TriggerAnyFilter {
+	if tc.Type == v1.TriggerAnyFilter {
 		matchers = append(matchers, cetest.ContainsAttributes(spec.Type))
 	} else {
 		matchers = append(matchers, cetest.HasType(tc.Type))
 	}
 
-	if tc.Source == v1beta1.TriggerAnyFilter {
+	if tc.Source == v1.TriggerAnyFilter {
 		matchers = append(matchers, cetest.ContainsAttributes(spec.Source))
 	} else {
 		matchers = append(matchers, cetest.HasSource(tc.Source))
 	}
 
 	for k, v := range tc.Extensions {
-		if v == v1beta1.TriggerAnyFilter {
+		if v == v1.TriggerAnyFilter {
 			matchers = append(matchers, cetest.ContainsExtensions(k))
 		} else {
 			matchers = append(matchers, cetest.HasExtension(k, v))
@@ -130,7 +130,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) Brok
 // Finally, it verifies that only the appropriate events are routed to the subscribers.
 func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator BrokerCreator, shouldLabelNamespace bool) {
 	const (
-		any          = v1beta1.TriggerAnyFilter
+		any          = v1.TriggerAnyFilter
 		eventType1   = "type1"
 		eventType2   = "type2"
 		eventSource1 = "http://source1.com"
@@ -363,7 +363,7 @@ func extensionsToString(extensions map[string]interface{}) string {
 		sb.WriteString(sortedExtensionName)
 		sb.WriteString("-")
 		vStr := fmt.Sprintf("%v", extensions[sortedExtensionName])
-		if vStr == v1beta1.TriggerAnyFilter {
+		if vStr == v1.TriggerAnyFilter {
 			vStr = "testany"
 		}
 		sb.WriteString(vStr)

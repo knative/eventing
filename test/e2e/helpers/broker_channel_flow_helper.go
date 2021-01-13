@@ -24,7 +24,7 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -62,7 +62,7 @@ func BrokerChannelFlowWithTransformation(
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
 
-		any                    = v1beta1.TriggerAnyFilter
+		any                    = v1.TriggerAnyFilter
 		eventType              = "type1"
 		transformedEventType   = "type2"
 		eventSource            = "http://source1.com"
