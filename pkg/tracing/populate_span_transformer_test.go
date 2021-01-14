@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kncloudevents
+package tracing
 
 import (
 	"context"
@@ -46,7 +46,13 @@ func TestPopulateSpan(t *testing.T) {
 	wantEvent.SetType("hello.world")
 	wantEvent.SetSource("example.com")
 
+	destination := "some-url"
+
 	expectedAttributes := map[string]interface{}{
+		"messaging.system":        "knative",
+		"messaging.protocol":      "HTTP",
+		"messaging.message_id":    "aaa",
+		"messaging.destination":   "some-url",
 		"cloudevents.id":          "aaa",
 		"cloudevents.type":        "hello.world",
 		"cloudevents.source":      "example.com",
@@ -63,7 +69,7 @@ func TestPopulateSpan(t *testing.T) {
 				spanData := <-mockExp
 				require.Equal(t, expectedAttributes, spanData.Attributes)
 			},
-			Transformers: binding.Transformers{PopulateSpan(testSpanBinary)},
+			Transformers: binding.Transformers{PopulateSpan(testSpanBinary, destination)},
 		},
 		{
 			Name:       "Populate span for event messages",
@@ -74,7 +80,7 @@ func TestPopulateSpan(t *testing.T) {
 				spanData := <-mockExp
 				require.Equal(t, expectedAttributes, spanData.Attributes)
 			},
-			Transformers: binding.Transformers{PopulateSpan(testSpanEvent)},
+			Transformers: binding.Transformers{PopulateSpan(testSpanEvent, destination)},
 		},
 	})
 }

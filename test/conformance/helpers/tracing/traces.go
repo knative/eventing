@@ -28,6 +28,17 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 )
 
+// hostSuffix is an optional suffix that might appear at the end of hostnames.
+// We supplement matches with this to allow matches for:
+//    foo.bar
+// to match all of:
+//    foo.bar
+//    foo.bar.svc
+//    foo.bar.svc.cluster.local
+// It's hardly perfect, but requires the suffix to start with the delimiter '.'
+// and then match anything prior to the path starting, e.g. '/'
+const HostSuffix = "[.][^/]+"
+
 // PrettyPrintTrace pretty prints a Trace.
 func PrettyPrintTrace(trace []model.SpanModel) string {
 	b, _ := json.Marshal(trace)
@@ -61,23 +72,13 @@ func WithLocalEndpointServiceName(s string) SpanMatcherOption {
 }
 
 func WithHTTPHostAndPath(host, path string) SpanMatcherOption {
-	// hostSuffix is an optional suffix that might appear at the end of hostnames.
-	// We supplement matches with this to allow matches for:
-	//    foo.bar
-	// to match all of:
-	//    foo.bar
-	//    foo.bar.svc
-	//    foo.bar.svc.cluster.local
-	// It's hardly perfect, but requires the suffix to start with the delimiter '.'
-	// and then match anything prior to the path starting, e.g. '/'
-	hostSuffix := "[.][^/]+"
 
 	return func(m *SpanMatcher) {
 		if m.Kind != nil {
 			if *m.Kind == model.Client {
-				m.Tags["http.url"] = regexp.MustCompile("^http://" + regexp.QuoteMeta(host) + hostSuffix + regexp.QuoteMeta(path) + "$")
+				m.Tags["http.url"] = regexp.MustCompile("^http://" + regexp.QuoteMeta(host) + HostSuffix + regexp.QuoteMeta(path) + "$")
 			} else if *m.Kind == model.Server {
-				m.Tags["http.host"] = regexp.MustCompile("^" + regexp.QuoteMeta(host) + hostSuffix + "$")
+				m.Tags["http.host"] = regexp.MustCompile("^" + regexp.QuoteMeta(host) + HostSuffix + "$")
 				m.Tags["http.path"] = regexp.MustCompile("^" + regexp.QuoteMeta(path) + "$")
 			}
 		}
@@ -225,7 +226,7 @@ func (tt TestSpanTree) MatchesSubtree(t *testing.T, actual *SpanTree) (matches [
 }
 
 // matchesSubtrees checks for a match of each TestSpanTree with a
-// subtree of a distrinct actual SpanTree.
+// subtree of a distinct actual SpanTree.
 func matchesSubtrees(t *testing.T, ts []TestSpanTree, as []SpanTree) error {
 	if t != nil {
 		t.Helper()

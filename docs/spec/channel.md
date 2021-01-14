@@ -327,13 +327,6 @@ discretion (e.g. expose a gRPC endpoint to accept events).
 If a Channel receives an event queueing request and is unable to parse a valid
 CloudEvent, then it MUST reject the request.
 
-The Channel MUST recognize and pass through all tracing information from sender
-to subscribers using [W3C Tracecontext](https://w3c.github.io/trace-context/),
-although internally it MAY use another mechanism(s) to propagate the tracing
-information. The Channel SHOULD sample and write traces to the location
-specified in
-[`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
-
 ##### HTTP
 
 Channels MUST reject all HTTP event queueing requests with a method other than
@@ -388,7 +381,7 @@ not limited to:
 - the time in-between retries
 - the backoff rate
 
-#### Metrics
+#### Observability
 
 Channels SHOULD expose a variety of metrics, including, but not limited to:
 
@@ -400,6 +393,23 @@ Channels SHOULD expose a variety of metrics, including, but not limited to:
 
 Metrics SHOULD be enabled by default, with a configuration parameter included to
 disable them if desired.
+
+The Channel MUST recognize and pass through all tracing information from sender
+to subscribers using [W3C Tracecontext](https://w3c.github.io/trace-context/),
+although internally it MAY use another mechanism(s) to propagate the tracing
+information. The Channel SHOULD sample and write traces to the location
+specified in
+[`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
+
+Spans emitted by the Channel SHOULD follow the
+[OpenTelemetry Semantic Conventions for Messaging Systems](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/messaging.md)
+whenever possible. In particular, spans emitted by the Channel SHOULD set the
+following attributes:
+
+- messaging.system: "knative"
+- messaging.destination: url to which the event is being routed
+- messaging.protocol: the name of the underlying transport protocol
+- messaging.message_id: the event ID
 
 ## Changelog
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kncloudevents
+package tracing
 
 import (
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -23,16 +23,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func PopulateSpan(span *trace.Span) binding.TransformerFunc {
+func PopulateSpan(span *trace.Span, destination string) binding.TransformerFunc {
 	return func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error {
-		_, specVersion := reader.GetAttribute(spec.SpecVersion)
-		if specVersion != nil {
-			specVersionParsed, err := types.Format(specVersion)
-			if err != nil {
-				return err
-			}
-			span.AddAttributes(trace.StringAttribute("cloudevents.specversion", specVersionParsed))
-		}
+
+		span.AddAttributes(MessagingProtocolHTTP)
+		span.AddAttributes(MessagingSystemAttribute)
+		span.AddAttributes(trace.StringAttribute(MessagingDestinationAttributeName, destination))
 
 		_, id := reader.GetAttribute(spec.ID)
 		if id != nil {
@@ -40,7 +36,17 @@ func PopulateSpan(span *trace.Span) binding.TransformerFunc {
 			if err != nil {
 				return err
 			}
+			span.AddAttributes(trace.StringAttribute(MessagingMessageIDAttributeName, idParsed))
 			span.AddAttributes(trace.StringAttribute("cloudevents.id", idParsed))
+		}
+
+		_, specVersion := reader.GetAttribute(spec.SpecVersion)
+		if specVersion != nil {
+			specVersionParsed, err := types.Format(specVersion)
+			if err != nil {
+				return err
+			}
+			span.AddAttributes(trace.StringAttribute("cloudevents.specversion", specVersionParsed))
 		}
 
 		_, ty := reader.GetAttribute(spec.Type)
