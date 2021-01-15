@@ -83,7 +83,7 @@ func (c *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMe
 	var gvr schema.GroupVersionResource
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		var e error
-		gvr, e = duck.CreateGenericChannelObject(c.Dynamic, metaResource, nil, nil)
+		gvr, e = duck.CreateGenericChannelObject(c.Dynamic, metaResource)
 		if e != nil {
 			c.T.Logf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, e)
 		}
