@@ -123,7 +123,24 @@ func WithPhysicalChannelSpec(physicalChannelSpec *runtime.RawExtension) Physical
 	}
 }
 
-// NewPhysicalChannel returns a new physical channel, starting from the provided meta and ducks, as unstructured.Unstructured.
+// NewPhysicalChannel returns a new physical channel as unstructured.Unstructured, starting from the provided meta and ducks.
+// When developing components that needs to spawn underlying (physical) channels (e.g. the Channel type, brokers backed by channels, parallel, sequence)
+// you should use this function to create the underlying channels.
+// Any physical channel CRD is composed by TypeMeta, ObjectMeta and a Spec, which includes
+// a ChannelableSpec and optionally additional fields (e.g. like KafkaChannel includes partitionCount).
+// You can set the ChannelableSpec using WithChannelableSpec and you can set all the additional fields using WithPhysicalChannelSpec
+// This function returns the channel with the provided TypeMeta and ObjectMeta and with the additional provided options.
+//
+// For example, providing the TypeMeta of an InMemoryChannel and a ChannelableSpec with delivery configured, the return value will look like:
+//
+// apiVersion: messaging.knative.dev/v1
+// kind: InMemoryChannel
+// metadata:
+//   name: "hello"
+//   namespace: "world"
+// spec:
+//   delivery:
+//     retry: 3
 func NewPhysicalChannel(typeMeta metav1.TypeMeta, objMeta metav1.ObjectMeta, opts ...PhysicalChannelOption) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := channelTemplateSpecInternal{
