@@ -29,6 +29,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"knative.dev/pkg/kmeta"
+
+	"knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis/duck"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/network"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/system"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -38,15 +47,9 @@ import (
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
+	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/network"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/system"
 )
 
 type Reconciler struct {
@@ -87,7 +90,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 
 	logging.FromContext(ctx).Infow("Reconciling the trigger channel")
-	c, err := resources.NewChannel("trigger", b, &chanMan.template, TriggerChannelLabels(b.Name))
+	c, err := ducklib.NewPhysicalChannel(
+		chanMan.template.TypeMeta,
+		metav1.ObjectMeta{
+			Name:      resources.BrokerChannelName(b.Name, "trigger"),
+			Namespace: b.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(b),
+			},
+			Labels:      TriggerChannelLabels(b.Name),
+			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
+		},
+		ducklib.WithPhysicalChannelSpec(chanMan.template.Spec),
+	)
 	if err != nil {
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to create Trigger Channel object: %s/%s", chanMan.ref.Namespace, chanMan.ref.Name), zap.Error(err))
 		return err
@@ -236,7 +251,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 				logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
+			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewPhysicalChannel", newChannel))
 			channelable := &duckv1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {

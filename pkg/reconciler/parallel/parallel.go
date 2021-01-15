@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/logging"
@@ -41,6 +42,7 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
+	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 )
 
@@ -132,7 +134,17 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	c, err := r.trackAndFetchChannel(ctx, p, channelObjRef)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newChannel, err := resources.NewChannel(channelObjRef.Name, p)
+			newChannel, err := ducklib.NewPhysicalChannel(
+				p.Spec.ChannelTemplate.TypeMeta,
+				metav1.ObjectMeta{
+					Name:      channelObjRef.Name,
+					Namespace: p.Namespace,
+					OwnerReferences: []metav1.OwnerReference{
+						*kmeta.NewControllerRef(p),
+					},
+				},
+				ducklib.WithPhysicalChannelSpec(p.Spec.ChannelTemplate.Spec),
+			)
 			logger.Errorf("Creating Channel Object: %+v", newChannel)
 			if err != nil {
 				logger.Errorw("Failed to create Channel resource object", zap.Any("channel", channelObjRef), zap.Error(err))

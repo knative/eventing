@@ -30,18 +30,3 @@ type ChannelTemplateSpec struct {
 	// +optional
 	Spec *runtime.RawExtension `json:"spec,omitempty"`
 }
-
-// ChannelTemplateSpecInternal is an internal only version that includes ObjectMeta so that
-// we can easily create new Channels off of it.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type ChannelTemplateSpecInternal struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// Spec defines the Spec to use for each channel created. Passed
-	// in verbatim to the Channel CRD as Spec section.
-	// +optional
-	Spec *runtime.RawExtension `json:"spec,omitempty"`
-}
