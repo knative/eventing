@@ -94,17 +94,17 @@ CloudEvents received by Sink MAY have
 ### Event reply contract
 
 An event sender supporting event replies SHOULD include a `Prefer: reply` header
-in delivery requests to indicate to the sink that event reply is supported. An event
-sender MAY ignore an event reply in the delivery response if the `Prefer: reply`
-header was not included in the delivery request.
+in delivery requests to indicate to the sink that event reply is supported. An
+event sender MAY ignore an event reply in the delivery response if the
+`Prefer: reply` header was not included in the delivery request.
 
-An example is that a Broker supporting event reply sends events with an additional header
-`Prefer: reply` so that the sink connected to the Broker knows event replies will
-be accepted. While a source sends events without the header, in which case the sink may
-assume that any event reply will be dropped without error or retry attempt. If a sink
-wishes to ensure the reply events will be delivered, it can check for the existence of
-the `Prefer: reply` header in the delivery request and respond with an error code
-if the header is not present.
+An example is that a Broker supporting event reply sends events with an
+additional header `Prefer: reply` so that the sink connected to the Broker knows
+event replies will be accepted. While a source sends events without the header,
+in which case the sink may assume that any event reply will be dropped without
+error or retry attempt. If a sink wishes to ensure the reply events will be
+delivered, it can check for the existence of the `Prefer: reply` header in the
+delivery request and respond with an error code if the header is not present.
 
 ### Data plane contract for Sources
 
