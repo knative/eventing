@@ -23,11 +23,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -36,12 +34,10 @@ import (
 func CreateGenericChannelObject(
 	dynamicClient dynamic.Interface,
 	obj *resources.MetaResource,
-	channelableSpec *duckv1.ChannelableSpec,
-	physicalChannelSpec *runtime.RawExtension,
 ) ( /*plural*/ schema.GroupVersionResource, error) {
 	// get the resource's gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(obj.GroupVersionKind())
-	newChannel, err := duck.NewPhysicalChannel(obj.ObjectMeta, obj.TypeMeta, nil, channelableSpec, physicalChannelSpec)
+	newChannel, err := duck.NewPhysicalChannel(obj.TypeMeta, obj.ObjectMeta)
 	if err != nil {
 		return gvr, err
 	}
