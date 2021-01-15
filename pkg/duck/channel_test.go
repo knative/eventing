@@ -23,11 +23,35 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
+
+// I need this just because i need some additional stuff to add in the spec for testing the physical channel spec
+type MyCoolChannel struct {
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Spec defines the desired state of the Channel.
+	Spec MyCoolChannelSpec `json:"spec,omitempty"`
+
+	// Status represents the current state of the Channel. This data may be out of
+	// date.
+	// +optional
+	Status messagingv1.InMemoryChannelStatus `json:"status,omitempty"`
+}
+
+type MyCoolChannelSpec struct {
+	// Channel conforms to Duck type Channelable.
+	eventingduckv1.ChannelableSpec `json:",inline"`
+
+	MyCoolParameter string `json:"myCoolParameter,omitempty"`
+}
 
 func TestNewPhysicalChannel(t *testing.T) {
 	imcTypeMeta := metav1.TypeMeta{
@@ -38,13 +62,17 @@ func TestNewPhysicalChannel(t *testing.T) {
 	channelableSpec := eventingduckv1.ChannelableSpec{
 		Delivery: &eventingduckv1.DeliverySpec{Retry: pointer.Int32Ptr(3)},
 	}
+	physicalChannelSpec := runtime.RawExtension{
+		Raw: []byte("{\"myCoolParameter\":\"i'm cool\"}"),
+	}
 
 	tests := []struct {
-		name    string
-		objMeta metav1.ObjectMeta
-		opts    []PhysicalChannelOption
-		want    *messagingv1.InMemoryChannel
-		wantErr bool
+		name     string
+		objMeta  metav1.ObjectMeta
+		opts     []PhysicalChannelOption
+		assertFn func(t *testing.T, expected interface{}, got *unstructured.Unstructured)
+		want     interface{}
+		wantErr  bool
 	}{
 		{
 			name: "no options, simple object meta",
@@ -52,6 +80,7 @@ func TestNewPhysicalChannel(t *testing.T) {
 				Name:      "hello",
 				Namespace: "world",
 			},
+			assertFn: assertIMCEquality,
 			want: &messagingv1.InMemoryChannel{
 				TypeMeta: imcTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
@@ -67,6 +96,7 @@ func TestNewPhysicalChannel(t *testing.T) {
 				Namespace: "world",
 				Labels:    labels,
 			},
+			assertFn: assertIMCEquality,
 			want: &messagingv1.InMemoryChannel{
 				TypeMeta: imcTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
@@ -84,15 +114,18 @@ func TestNewPhysicalChannel(t *testing.T) {
 			},
 			opts: []PhysicalChannelOption{
 				WithChannelableSpec(channelableSpec),
+				WithPhysicalChannelSpec(&physicalChannelSpec),
 			},
-			want: &messagingv1.InMemoryChannel{
+			assertFn: assertMyCoolChannelEquality,
+			want: &MyCoolChannel{
 				TypeMeta: imcTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "hello",
 					Namespace: "world",
 				},
-				Spec: messagingv1.InMemoryChannelSpec{
+				Spec: MyCoolChannelSpec{
 					ChannelableSpec: channelableSpec,
+					MyCoolParameter: "i'm cool",
 				},
 			},
 		},
@@ -106,15 +139,28 @@ func TestNewPhysicalChannel(t *testing.T) {
 			}
 
 			if tt.want != nil {
-				// Marshal to json and then unmarshal to IMC
-				b, err := got.MarshalJSON()
-				require.NoError(t, err)
-
-				imc := messagingv1.InMemoryChannel{}
-				require.NoError(t, json.Unmarshal(b, &imc))
-
-				require.True(t, equality.Semantic.DeepEqual(&imc, tt.want))
+				tt.assertFn(t, tt.want, got)
 			}
 		})
 	}
+}
+
+func assertIMCEquality(t *testing.T, expected interface{}, got *unstructured.Unstructured) {
+	// Marshal to json and then unmarshal to IMC
+	b, err := got.MarshalJSON()
+	require.NoError(t, err)
+
+	imc := messagingv1.InMemoryChannel{}
+	require.NoError(t, json.Unmarshal(b, &imc))
+	require.True(t, equality.Semantic.DeepEqual(&imc, expected))
+}
+
+func assertMyCoolChannelEquality(t *testing.T, expected interface{}, got *unstructured.Unstructured) {
+	// Marshal to json and then unmarshal to MyCoolChannel
+	b, err := got.MarshalJSON()
+	require.NoError(t, err)
+
+	imc := MyCoolChannel{}
+	require.NoError(t, json.Unmarshal(b, &imc))
+	require.True(t, equality.Semantic.DeepEqual(&imc, expected))
 }
