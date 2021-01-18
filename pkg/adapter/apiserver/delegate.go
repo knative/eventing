@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The Knative Authors
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +15,6 @@ package apiserver
 
 import (
 	"context"
-	"encoding/json"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
@@ -46,11 +42,8 @@ func (a *resourceDelegate) Add(obj interface{}) error {
 	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
 		a.logger.Errorw("failed to send event", zap.Error(result))
 	} else {
-		eventExt, err := json.Marshal(event.Extensions())
-		if err != nil {
-			a.logger.Error(err)
-		}
-		a.logger.Infof("event sent for resource %s", string(eventExt))
+		eventSub := event.Subject()
+		a.logger.Debugf("event sent for resource %s", eventSub)
 	}
 	return nil
 }
@@ -65,11 +58,8 @@ func (a *resourceDelegate) Update(obj interface{}) error {
 	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
 		a.logger.Error("failed to send event", zap.Error(result))
 	} else {
-		eventExt, err := json.Marshal(event.Extensions())
-		if err != nil {
-			a.logger.Error(err)
-		}
-		a.logger.Infof("event sent for resource %s", string(eventExt))
+		eventSub := event.Subject()
+		a.logger.Debugf("event sent for resource %s", eventSub)
 	}
 	return nil
 }
@@ -84,11 +74,8 @@ func (a *resourceDelegate) Delete(obj interface{}) error {
 	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
 		a.logger.Error("failed to send event", zap.Error(result))
 	} else {
-		eventExt, err := json.Marshal(event.Extensions())
-		if err != nil {
-			a.logger.Error(err)
-		}
-		a.logger.Infof("event sent for resource %s", string(eventExt))
+		eventSub := event.Subject()
+		a.logger.Debugf("event sent for resource %s", eventSub)
 	}
 	return nil
 }
