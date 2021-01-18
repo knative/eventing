@@ -179,7 +179,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		return
 	}
 	additionalHeaders := utils.PassThroughHeaders(request.Header)
-	kncloudevents.SetAcceptReplyHeader(additionalHeaders, kncloudevents.AcceptReplyResponse)
+	kncloudevents.SetAcceptReplyHeader(additionalHeaders)
 	err = r.receiverFunc(request.Context(), channel, message, []binding.Transformer{}, additionalHeaders)
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {

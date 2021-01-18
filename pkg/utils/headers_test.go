@@ -27,15 +27,14 @@ func TestPassThroughHeaders(t *testing.T) {
 		additionalHeaders            http.Header
 		expectedPassedThroughHeaders int
 	}{
-		"pass through of matched patterns": {
+		"pass through of two values": {
 			additionalHeaders: map[string][]string{
 				"not":                       {"passed", "through"},
 				"nor":                       {"this-one"},
 				"x-requEst-id":              {"1234"},
 				"knatIve-will-pass-through": {"true", "always"},
-				"K-Eventing-Accept-Reply":   {"true"},
 			},
-			expectedPassedThroughHeaders: 3,
+			expectedPassedThroughHeaders: 2,
 		},
 		"nothing passes through": {
 			additionalHeaders: map[string][]string{

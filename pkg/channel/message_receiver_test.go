@@ -115,7 +115,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				expectedHeaders.Add("x-requEst-id", "1234")
 				expectedHeaders.Add("knatIve-will-pass-through", "true")
 				expectedHeaders.Add("knatIve-will-pass-through", "always")
-				expectedHeaders.Add("k-eventing-accept-reply", "response")
+				expectedHeaders.Add("Prefer", "reply")
 				if diff := cmp.Diff(expectedHeaders, additionalHeaders); diff != "" {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
 				}

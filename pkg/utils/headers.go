@@ -38,8 +38,6 @@ var (
 	forwardPrefixes = []string{
 		// knative
 		"knative-",
-		// knative eventing, this prefix is reserved for all knative-eventing specific header flags.
-		"k-eventing-",
 	}
 )
 

@@ -28,15 +28,27 @@ import (
 
 const (
 	// AcceptReplyHeaderKey is the key for the event reply header.
-	// https://docs.google.com/document/d/1ELQtKOMz6T5vTXbWp30E8r6oLYOXPjWacv4AVRi36-w
-	AcceptReplyHeaderKey = "K-Eventing-Accept-Reply"
-	// AcceptReplyResponse is the value to accept event reply.
-	AcceptReplyResponse = "response"
+	// https://github.com/knative/eventing/blob/master/docs/spec/data-plane.md#event-reply-contract
+	AcceptReplyHeaderKey = "Prefer"
+	// AcceptReply is the value to accept event reply.
+	AcceptReply = "reply"
 )
 
-// SetAcceptReplyHeader sets the reply header to val.
-func SetAcceptReplyHeader(headers nethttp.Header, val string) {
-	headers.Set(AcceptReplyHeaderKey, val)
+// SetAcceptReplyHeader sets Prefer: reply.
+func SetAcceptReplyHeader(headers nethttp.Header) {
+	if _, ok := headers[AcceptReplyHeaderKey]; !ok {
+		headers.Set(AcceptReplyHeaderKey, AcceptReply)
+		return
+	}
+	existed := false
+	for _, f := range headers[AcceptReplyHeaderKey] {
+		if f == AcceptReply {
+			existed = true
+		}
+	}
+	if !existed {
+		headers[AcceptReplyHeaderKey] = append(headers[AcceptReplyHeaderKey], AcceptReply)
+	}
 }
 
 func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request,

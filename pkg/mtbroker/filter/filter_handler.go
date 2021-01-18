@@ -228,7 +228,7 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
-	kncloudevents.SetAcceptReplyHeader(additionalHeaders, kncloudevents.AcceptReplyResponse)
+	kncloudevents.SetAcceptReplyHeader(additionalHeaders)
 	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write request: %w", err)
