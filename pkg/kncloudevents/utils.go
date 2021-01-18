@@ -44,10 +44,11 @@ func SetAcceptReplyHeader(headers nethttp.Header) {
 	for _, f := range headers[AcceptReplyHeaderKey] {
 		if f == AcceptReply {
 			existed = true
+			break
 		}
 	}
 	if !existed {
-		headers[AcceptReplyHeaderKey] = append(headers[AcceptReplyHeaderKey], AcceptReply)
+		headers.Add(AcceptReplyHeaderKey, AcceptReply)
 	}
 }
 
