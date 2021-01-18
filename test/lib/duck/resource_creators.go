@@ -20,18 +20,14 @@ package duck
 
 import (
 	"context"
-	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
+	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/test/lib/resources"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // CreateGenericChannelObject create a generic channel object with the dynamic client and channel's meta data.
@@ -41,7 +37,7 @@ func CreateGenericChannelObject(
 ) ( /*plural*/ schema.GroupVersionResource, error) {
 	// get the resource's gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(obj.GroupVersionKind())
-	newChannel, err := newChannel(obj)
+	newChannel, err := duck.NewPhysicalChannel(obj.TypeMeta, obj.ObjectMeta)
 	if err != nil {
 		return gvr, err
 	}
@@ -49,32 +45,4 @@ func CreateGenericChannelObject(
 	channelResourceInterface := dynamicClient.Resource(gvr).Namespace(obj.Namespace)
 	_, err = channelResourceInterface.Create(context.Background(), newChannel, metav1.CreateOptions{})
 	return gvr, err
-}
-
-// newChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec for a given meta resource.
-func newChannel(obj *resources.MetaResource) (*unstructured.Unstructured, error) {
-	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := messagingv1beta1.ChannelTemplateSpecInternal{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       obj.Kind,
-			APIVersion: obj.APIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      obj.Name,
-			Namespace: obj.Namespace,
-		},
-		Spec: messagingv1beta1.ChannelTemplateSpec{
-			TypeMeta: obj.TypeMeta,
-		}.Spec,
-	}
-	raw, err := json.Marshal(template)
-	if err != nil {
-		return nil, err
-	}
-	u := &unstructured.Unstructured{}
-	err = json.Unmarshal(raw, u)
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
 }

@@ -25,18 +25,21 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/pkg/kmeta"
+
+	duckapis "knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/logging"
+	pkgreconciler "knative.dev/pkg/reconciler"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
+	ducklib "knative.dev/eventing/pkg/duck"
 	eventingduck "knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/channel/resources"
-	duckapis "knative.dev/pkg/apis/duck"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/logging"
-	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 type Reconciler struct {
@@ -134,7 +137,18 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newBackingChannel, err := resources.NewChannel(c)
+			newBackingChannel, err := ducklib.NewPhysicalChannel(
+				c.Spec.ChannelTemplate.TypeMeta,
+				metav1.ObjectMeta{
+					Name:      c.Name,
+					Namespace: c.Namespace,
+					OwnerReferences: []metav1.OwnerReference{
+						*kmeta.NewControllerRef(c),
+					},
+				},
+				ducklib.WithChannelableSpec(c.Spec.ChannelableSpec),
+				ducklib.WithPhysicalChannelSpec(c.Spec.ChannelTemplate.Spec),
+			)
 			if err != nil {
 				logger.Errorw("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
 				return nil, err
