@@ -46,8 +46,8 @@ extension attributes that match all key-value pairs exactly.
 
 ### Delivery Spec
 
-Both BrokerSpec and TriggerSpec have a `Delivery` field of type `duck.DeliverySpec` (per `v1`).
-This field allows the user to define the dead letter sink and retries.
+Both BrokerSpec and TriggerSpec have a `Delivery` field of type [`duck.DeliverySpec`](./spec.md#eventingduckv1deliveryspec).
+This field, among the other features, allows the user to define the dead letter sink and retries.
 The `BrokerSpec.Delivery` field is global across all the Triggers registered with that particular
 Broker, while the `TriggerSpec.Delivery`, if configured, fully overrides `BrokerSpec.Delivery` for
 that particular Trigger.
