@@ -292,6 +292,9 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 	// After we've updated our indices, bail out unless we are the leader.
 	// Only the leader should be mutating the webhook.
 	if !ac.IsLeaderFor(sentinel) {
+		// We don't use controller.NewSkipKey here because we did do
+		// some amount of processing and the timing information may be
+		// useful.
 		return nil
 	}
 

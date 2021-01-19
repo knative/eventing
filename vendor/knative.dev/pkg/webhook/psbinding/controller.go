@@ -87,7 +87,7 @@ func NewAdmissionController(
 
 	// Construct the reconciler for the mutating webhook configuration.
 	wh := NewReconciler(name, path, options.SecretName, client, mwhInformer.Lister(), secretInformer.Lister(), withContext, reconcilerOptions...)
-	c := controller.NewImpl(wh, logging.FromContext(ctx), name)
+	c := controller.NewImpl(wh, logging.FromContext(ctx).Named(name), name)
 
 	// Enqueue a sentinel when we become leader.
 	wh.PromoteFunc = func(bkt pkgreconciler.Bucket, enq func(pkgreconciler.Bucket, types.NamespacedName)) error {
