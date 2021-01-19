@@ -19,6 +19,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"io"
 	nethttp "net/http"
 	"net/url"
 	"time"
@@ -29,7 +30,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
-
+	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
@@ -67,6 +68,7 @@ type MessageDispatcherImpl struct {
 type DispatchExecutionInfo struct {
 	Time         time.Duration
 	ResponseCode int
+	ResponseBody []byte
 }
 
 // NewMessageDispatcherFromConfig creates a new Message dispatcher based on config.
@@ -118,8 +120,9 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 
 		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfig)
 		if err != nil {
-			// DeadLetter is configured, send the message to it
+			// If DeadLetter is configured, then enhance original message with execution info and send the original message to DeadLetter
 			if deadLetter != nil {
+				message = d.setDispatchErrorExtensionOnMessage(ctx, dispatchExecutionInfo, message)
 				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig)
 				if deadLetterErr != nil {
 					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
@@ -153,8 +156,9 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 
 	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig)
 	if err != nil {
-		// DeadLetter is configured, send the message to it
+		// If DeadLetter is configured, then enhance original message with execution info of reply/responsemessage error and send to DeadLetter
 		if deadLetter != nil {
+			message = d.setDispatchErrorExtensionOnMessage(ctx, dispatchExecutionInfo, message)
 			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
@@ -205,6 +209,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	if err != nil {
 		execInfo.Time = dispatchTime
 		execInfo.ResponseCode = nethttp.StatusInternalServerError
+		execInfo.ResponseBody = []byte(fmt.Sprintf("sender.sendWithRetries() failed: err=%s", err.Error()))
 		return ctx, nil, nil, &execInfo, err
 	}
 
@@ -214,6 +219,15 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	execInfo.Time = dispatchTime
 
 	if isFailure(response.StatusCode) {
+		// Read response body into execInfo for failures
+		body := make([]byte, attributes.MaxDispatchErrorExtensionDataBytes)
+		readLen, err := response.Body.Read(body)
+		if err != nil && err != io.EOF {
+			d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
+			execInfo.ResponseBody = []byte(fmt.Sprintf("failed to read response.Body: err=%s", err.Error()))
+		} else {
+			execInfo.ResponseBody = body[:readLen]
+		}
 		_ = response.Body.Close()
 		// Reject non-successful responses.
 		return ctx, nil, nil, &execInfo, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", response.StatusCode)
@@ -240,6 +254,32 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 		Host:   u.Host,
 		Path:   "/",
 	}
+}
+
+// Set The DispatchErrorExtension On Specified Message
+func (d *MessageDispatcherImpl) setDispatchErrorExtensionOnMessage(ctx context.Context, dispatchExecutionInfo *DispatchExecutionInfo, message cloudevents.Message) cloudevents.Message {
+
+	// Validate The Arguments
+	if ctx == nil {
+		d.logger.Warn("unable to set DispatcherError extension attribute on dead-letter message: (nil context)")
+		return message
+	} else if dispatchExecutionInfo == nil {
+		d.logger.Warn("unable to set DispatcherError extension attribute on dead-letter message: (nil DispatchExecutionInfo)")
+		return message
+	} else if message == nil {
+		d.logger.Warn("unable to set DispatcherError extension attribute on dead-letter message: (nil message)")
+		return message
+	}
+
+	// Create A New DispatchErrorExtension
+	dispatchErrorExtension := attributes.NewDispatchErrorExtension(dispatchExecutionInfo.ResponseCode, dispatchExecutionInfo.ResponseBody)
+
+	// Set The DispatchErrorExtension On The Message & Return
+	message, err := attributes.SetDispatchErrorExtension(ctx, dispatchErrorExtension, message)
+	if err != nil {
+		d.logger.Error("failed to set DispatcherError Extension Attribute on dead-letter message", zap.Error(err))
+	}
+	return message
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
