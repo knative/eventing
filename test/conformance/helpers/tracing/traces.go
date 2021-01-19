@@ -169,12 +169,12 @@ func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 		return nil, fmt.Errorf("could not create span tree for %v: %v", PrettyPrintTrace(trace), err)
 	}
 
+	if len(parents) != 0 {
+		return nil, fmt.Errorf("left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
+	}
 	tree := SpanTree{
 		Root:     true,
 		Children: children,
-	}
-	if len(parents) != 0 {
-		return nil, fmt.Errorf("left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
 	}
 	return &tree, nil
 }
