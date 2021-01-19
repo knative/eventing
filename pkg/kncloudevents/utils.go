@@ -34,10 +34,12 @@ const (
 	AcceptReply = "reply"
 )
 
+var acceptReplyHeaders = []string{AcceptReply}
+
 // SetAcceptReplyHeader sets Prefer: reply.
 func SetAcceptReplyHeader(headers nethttp.Header) {
 	if _, ok := headers[AcceptReplyHeaderKey]; !ok {
-		headers.Set(AcceptReplyHeaderKey, AcceptReply)
+		headers[AcceptReplyHeaderKey] = acceptReplyHeaders
 		return
 	}
 	existed := false
@@ -48,7 +50,7 @@ func SetAcceptReplyHeader(headers nethttp.Header) {
 		}
 	}
 	if !existed {
-		headers.Add(AcceptReplyHeaderKey, AcceptReply)
+		headers[AcceptReplyHeaderKey] = append(headers[AcceptReplyHeaderKey], AcceptReply)
 	}
 }
 
