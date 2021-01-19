@@ -36,6 +36,18 @@ func TestSetAcceptReplyHeader(t *testing.T) {
 			additionalHeaders: map[string][]string{"Prefer": {"reply", "other"}},
 			expectedHeaders:   map[string][]string{"Prefer": {"reply", "other"}},
 		},
+		"Reply exists with comma": {
+			additionalHeaders: map[string][]string{"Prefer": {"reply, other"}},
+			expectedHeaders:   map[string][]string{"Prefer": {"reply, other"}},
+		},
+		"Reply exists with equal": {
+			additionalHeaders: map[string][]string{"Prefer": {"reply=, other"}},
+			expectedHeaders:   map[string][]string{"Prefer": {"reply=, other"}},
+		},
+		"Reply exists with semicolon": {
+			additionalHeaders: map[string][]string{"Prefer": {"reply; other"}},
+			expectedHeaders:   map[string][]string{"Prefer": {"reply; other"}},
+		},
 		"Prefer header without reply": {
 			additionalHeaders: map[string][]string{"Prefer": {"other"}},
 			expectedHeaders:   map[string][]string{"Prefer": {"other", "reply"}},

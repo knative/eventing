@@ -19,6 +19,7 @@ package kncloudevents
 import (
 	"context"
 	nethttp "net/http"
+	"strings"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/spec"
@@ -36,22 +37,59 @@ const (
 
 var acceptReplyHeaders = []string{AcceptReply}
 
+// hasToken reports whether token appears with v, ASCII
+// case-insensitive, with user defined boundaries.
+// token must be all lowercase.
+// v may contain mixed cased.
+// The function is modified from the standard http header parsing: https://golang.org/src/net/http/header.go
+func hasToken(v, token string, isTokenBoundary func(byte) bool) bool {
+	if len(token) > len(v) || token == "" {
+		return false
+	}
+	if v == token {
+		return true
+	}
+	for sp := 0; sp <= len(v)-len(token); sp++ {
+		// Check that first character is good.
+		// The token is ASCII, so checking only a single byte
+		// is sufficient. We skip this potential starting
+		// position if both the first byte and its potential
+		// ASCII uppercase equivalent (b|0x20) don't match.
+		// False positives ('^' => '~') are caught by EqualFold.
+		if b := v[sp]; b != token[0] && b|0x20 != token[0] {
+			continue
+		}
+		// Check that start pos is on a valid token boundary.
+		if sp > 0 && !isTokenBoundary(v[sp-1]) {
+			continue
+		}
+		// Check that end pos is on a valid token boundary.
+		if endPos := sp + len(token); endPos != len(v) && !isTokenBoundary(v[endPos]) {
+			continue
+		}
+		if strings.EqualFold(v[sp:sp+len(token)], token) {
+			return true
+		}
+	}
+	return false
+}
+
 // SetAcceptReplyHeader sets Prefer: reply.
 func SetAcceptReplyHeader(headers nethttp.Header) {
 	if _, ok := headers[AcceptReplyHeaderKey]; !ok {
 		headers[AcceptReplyHeaderKey] = acceptReplyHeaders
 		return
 	}
-	existed := false
 	for _, f := range headers[AcceptReplyHeaderKey] {
-		if f == AcceptReply {
-			existed = true
-			break
+		existed := hasToken(f, AcceptReply, func(b byte) bool {
+			return b == ' ' || b == ',' || b == '\t' || b == ';' || b == '='
+		})
+		// If token already existed, simply return
+		if existed {
+			return
 		}
 	}
-	if !existed {
-		headers[AcceptReplyHeaderKey] = append(headers[AcceptReplyHeaderKey], AcceptReply)
-	}
+	headers[AcceptReplyHeaderKey] = append(headers[AcceptReplyHeaderKey], AcceptReply)
 }
 
 func WriteHTTPRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request,
