@@ -119,8 +119,7 @@ func (r *BaseReconciler) Reconcile(ctx context.Context, key string) error {
 		Namespace: namespace,
 		Name:      name,
 	}) {
-		logging.FromContext(ctx).Debugf("Skipping key %q, not the leader.", key)
-		return nil
+		return controller.NewSkipKey(key)
 	}
 
 	// Get the resource with this namespace/name.

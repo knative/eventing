@@ -142,6 +142,7 @@ func NewController(
 		Recorder: record.NewBroadcaster().NewRecorder(
 			scheme.Scheme, corev1.EventSource{Component: controllerAgentName}),
 	}
+	logger = logger.Named("GithubBindings")
 	impl := controller.NewImpl(c, logger, "GithubBindings")
 
 	logger.Info("Setting up event handlers")
