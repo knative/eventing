@@ -111,11 +111,11 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	var responseMessage cloudevents.Message
 	var responseAdditionalHeaders nethttp.Header
 	var dispatchExecutionInfo *DispatchExecutionInfo
-	kncloudevents.SetAcceptReplyHeader(additionalHeaders)
 	if destination != nil {
 		var err error
 		// Try to send to destination
 		messagesToFinish = append(messagesToFinish, message)
+
 		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfig)
 		if err != nil {
 			// DeadLetter is configured, send the message to it
