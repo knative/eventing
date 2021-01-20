@@ -160,17 +160,21 @@ func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 		}
 	}
 
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("no root spans found in the trace: Original: %v", PrettyPrintTrace(trace))
+	}
+
 	children, err := getChildren(parents, roots)
 	if err != nil {
 		return nil, fmt.Errorf("could not create span tree for %v: %v", PrettyPrintTrace(trace), err)
 	}
 
+	if len(parents) != 0 {
+		return nil, fmt.Errorf("left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
+	}
 	tree := SpanTree{
 		Root:     true,
 		Children: children,
-	}
-	if len(parents) != 0 {
-		return nil, fmt.Errorf("left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
 	}
 	return &tree, nil
 }
