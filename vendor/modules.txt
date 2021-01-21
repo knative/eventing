@@ -962,11 +962,11 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20210114150620-4422dcadb3c8
+# knative.dev/hack v0.0.0-20210120165453-8d623a0af457
 ## explicit
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/pkg v0.0.0-20210119162123-1bbf0a6436c3
+# knative.dev/pkg v0.0.0-20210120200253-8cd47b5af35d
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
