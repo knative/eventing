@@ -19,10 +19,12 @@ package attributes
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	cebindingtest "github.com/cloudevents/sdk-go/v2/binding/test"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,42 +44,102 @@ func TestNewDispatchErrorExtension(t *testing.T) {
 	assert.Equal(t, data, dispatchErrorExtension.Data)
 }
 
-// Test The SetDispatchErrorExtension() Functionality
-func TestSetDispatchErrorExtension(t *testing.T) {
+// Test TheDispatchErrorExtension's AddExtensionTransformer() Logic
+func TestAddExtensionTransformer(t *testing.T) {
 
 	// Test Data
-	sampleExtensionKey := "sampleextensionkey"
-	ctx := context.TODO()
-	code := 99
-	data := []byte("TestData")
-	dispatchErrorExtension := NewDispatchErrorExtension(code, data)
+	code := 500
 
-	// Create An Event / Message
-	origEvent := cloudevents.NewEvent()
-	origEvent.SetSource("example/uri")
-	origEvent.SetType("example.type")
-	origEvent.SetExtension(sampleExtensionKey, "SampleExtensionValue")
-	_ = origEvent.SetData(cloudevents.ApplicationJSON, map[string]string{"hello": "world"})
-	origMessage := binding.ToMessage(&origEvent)
+	// Define The TestCase
+	type TestCase struct {
+		name                   string
+		dispatchErrorExtension DispatchErrorExtension
+	}
 
-	// Perform The Test
-	resultMessage, err := SetDispatchErrorExtension(ctx, dispatchErrorExtension, origMessage)
+	// Create The TestCases
+	testCases := []TestCase{
+		{
+			name:                   "Nil Data",
+			dispatchErrorExtension: NewDispatchErrorExtension(code, nil),
+		},
+		{
+			name:                   "Empty Data",
+			dispatchErrorExtension: NewDispatchErrorExtension(code, randomByteArray(t, 0)),
+		},
+		{
+			name:                   "Data Length Less Than Max",
+			dispatchErrorExtension: NewDispatchErrorExtension(code, randomByteArray(t, MaxDispatchErrorExtensionDataBytes-1)),
+		},
+		{
+			name:                   "Data Length Exactly Max",
+			dispatchErrorExtension: NewDispatchErrorExtension(code, randomByteArray(t, MaxDispatchErrorExtensionDataBytes)),
+		},
+		{
+			name:                   "Data Length Exceeded Max",
+			dispatchErrorExtension: NewDispatchErrorExtension(code, randomByteArray(t, MaxDispatchErrorExtensionDataBytes+1)),
+		},
+	}
 
-	// Validate The Results
+	// Execute The Individual Test Cases
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+
+			// Get The DispatchErrorExtension To Test
+			testDispatchErrorExtension := testCase.dispatchErrorExtension
+
+			// Copy The DispatchErrorExtension To Ensure Immutability
+			origDispatchErrorExtension := NewDispatchErrorExtension(testDispatchErrorExtension.Code, testDispatchErrorExtension.Data)
+
+			// Perform The Test
+			testTransformer, err := testDispatchErrorExtension.AddExtensionTransformer()
+
+			// Validate The Results
+			assert.Nil(t, err)
+			assert.NotNil(t, testTransformer)
+			assert.Equal(t, origDispatchErrorExtension, testDispatchErrorExtension)
+
+			// Get The Expected (Possibly Truncated) DispatchErrorExtension
+			expectedDispatchErrorExtension := testDispatchErrorExtension
+			if len(testDispatchErrorExtension.Data) > MaxDispatchErrorExtensionDataBytes {
+				expectedDispatchErrorExtension = NewDispatchErrorExtension(testDispatchErrorExtension.Code, testDispatchErrorExtension.Data[:MaxDispatchErrorExtensionDataBytes])
+			}
+			expectedDispatchErrorExtensionJsonBytes, err := json.Marshal(expectedDispatchErrorExtension)
+			assert.Nil(t, err)
+
+			// Create The Transformer Input/Want Events
+			inputEvent := cetest.MinEvent()
+			inputMessage := binding.ToMessage(&inputEvent)
+			wantEvent := inputEvent.Clone()
+			wantEvent.SetExtension(DispatchErrorExtensionKey, expectedDispatchErrorExtensionJsonBytes)
+
+			// Define The Transformer Tests
+			transformerTests := []cebindingtest.TransformerTestArgs{
+				{
+					Name:         "Add Extension To Event",
+					InputEvent:   inputEvent,
+					WantEvent:    wantEvent,
+					Transformers: binding.Transformers{testTransformer},
+				},
+				{
+					Name:         "Add Extension To Message",
+					InputMessage: inputMessage,
+					WantEvent:    wantEvent,
+					Transformers: binding.Transformers{testTransformer},
+				},
+			}
+
+			// Run The Transformer Tests
+			cebindingtest.RunTransformerTests(t, context.Background(), transformerTests)
+		})
+	}
+}
+
+// Utility Function To Generate A Specific Sized Byte Array
+func randomByteArray(t *testing.T, length int) []byte {
+	bytes := make([]byte, length)
+	readLen, err := rand.Read(bytes)
 	assert.Nil(t, err)
-	assert.NotNil(t, resultMessage)
-	resultEvent, err := binding.ToEvent(ctx, resultMessage)
-	assert.Nil(t, err)
-	assert.NotNil(t, resultEvent)
-	assert.Equal(t, origEvent.Source(), resultEvent.Source())
-	assert.Equal(t, origEvent.Type(), resultEvent.Type())
-	assert.Equal(t, origEvent.Data(), resultEvent.Data())
-	assert.Equal(t, origEvent.Extensions()[sampleExtensionKey], resultEvent.Extensions()[sampleExtensionKey])
-	resultDispatchErrorExtensionBytes, ok := resultEvent.Extensions()[DispatchErrorExtensionKey].([]byte)
-	assert.True(t, ok)
-	resultDispatchErrorExtension := &DispatchErrorExtension{}
-	err = json.Unmarshal(resultDispatchErrorExtensionBytes, resultDispatchErrorExtension)
-	assert.Nil(t, err)
-	assert.Equal(t, dispatchErrorExtension.Code, resultDispatchErrorExtension.Code)
-	assert.Equal(t, dispatchErrorExtension.Data, resultDispatchErrorExtension.Data)
+	assert.Equal(t, length, readLen)
+	assert.Len(t, bytes, length)
+	return bytes
 }

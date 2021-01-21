@@ -120,10 +120,10 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 
 		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfig)
 		if err != nil {
-			// If DeadLetter is configured, then enhance original message with execution info and send the original message to DeadLetter
+			// If DeadLetter is configured, then send original message with dispatch error extension
 			if deadLetter != nil {
-				message = d.setDispatchErrorExtensionOnMessage(ctx, dispatchExecutionInfo, message)
-				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig)
+				transformer := d.dispatchErrorExtensionTransformer(dispatchExecutionInfo)
+				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig, transformer)
 				if deadLetterErr != nil {
 					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
@@ -156,10 +156,10 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 
 	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig)
 	if err != nil {
-		// If DeadLetter is configured, then enhance original message with execution info of reply/responsemessage error and send to DeadLetter
+		// If DeadLetter is configured, then send original message with dispatch error extension
 		if deadLetter != nil {
-			message = d.setDispatchErrorExtensionOnMessage(ctx, dispatchExecutionInfo, message)
-			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig)
+			transformer := d.dispatchErrorExtensionTransformer(dispatchExecutionInfo)
+			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig, transformer)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
@@ -179,7 +179,13 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	return dispatchExecutionInfo, nil
 }
 
-func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header, configs *kncloudevents.RetryConfig) (context.Context, cloudevents.Message, nethttp.Header, *DispatchExecutionInfo, error) {
+func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
+	url *url.URL,
+	message cloudevents.Message,
+	additionalHeaders nethttp.Header,
+	configs *kncloudevents.RetryConfig,
+	transformers ...binding.Transformer) (context.Context, cloudevents.Message, nethttp.Header, *DispatchExecutionInfo, error) {
+
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	execInfo := DispatchExecutionInfo{
@@ -195,10 +201,15 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	}
 
 	if span.IsRecordingEvents() {
-		err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, tracing.PopulateSpan(span, url.String()))
-	} else {
-		err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
+		tracingTransformer := tracing.PopulateSpan(span, url.String())
+		if transformers == nil {
+			transformers = []binding.Transformer{tracingTransformer}
+		} else {
+			transformers = append(transformers, tracingTransformer)
+		}
 	}
+
+	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, transformers...)
 	if err != nil {
 		return ctx, nil, nil, &execInfo, err
 	}
@@ -256,30 +267,19 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 	}
 }
 
-// Set The DispatchErrorExtension On Specified Message
-func (d *MessageDispatcherImpl) setDispatchErrorExtensionOnMessage(ctx context.Context, dispatchExecutionInfo *DispatchExecutionInfo, message cloudevents.Message) cloudevents.Message {
-
-	// Validate The Arguments
-	if ctx == nil {
-		d.logger.Warn("unable to set DispatcherError extension attribute on dead-letter message: (nil context)")
-		return message
-	} else if dispatchExecutionInfo == nil {
-		d.logger.Warn("unable to set DispatcherError extension attribute on dead-letter message: (nil DispatchExecutionInfo)")
-		return message
-	} else if message == nil {
-		d.logger.Warn("unable to set DispatcherError extension attribute on dead-letter message: (nil message)")
-		return message
+// Create a DispatchErrorExtension AddExtension Transformer from the specified DispatchExecutionInfo
+func (d *MessageDispatcherImpl) dispatchErrorExtensionTransformer(dispatchExecutionInfo *DispatchExecutionInfo) binding.TransformerFunc {
+	noOpTransformer := func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error { return nil }
+	if dispatchExecutionInfo != nil {
+		dispatchErrorExtension := attributes.NewDispatchErrorExtension(dispatchExecutionInfo.ResponseCode, dispatchExecutionInfo.ResponseBody)
+		addExtensionTransformer, err := dispatchErrorExtension.AddExtensionTransformer()
+		if err != nil {
+			d.logger.Error("failed to create DispatchErrorExtension attribute AddExtension Transformer", zap.Error(err))
+			return noOpTransformer
+		}
+		return addExtensionTransformer
 	}
-
-	// Create A New DispatchErrorExtension
-	dispatchErrorExtension := attributes.NewDispatchErrorExtension(dispatchExecutionInfo.ResponseCode, dispatchExecutionInfo.ResponseBody)
-
-	// Set The DispatchErrorExtension On The Message & Return
-	message, err := attributes.SetDispatchErrorExtension(ctx, dispatchErrorExtension, message)
-	if err != nil {
-		d.logger.Error("failed to set DispatcherError Extension Attribute on dead-letter message", zap.Error(err))
-	}
-	return message
+	return noOpTransformer
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.

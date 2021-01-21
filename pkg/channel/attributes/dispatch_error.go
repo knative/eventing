@@ -17,11 +17,10 @@ limitations under the License.
 package attributes
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 )
 
 const (
@@ -37,42 +36,26 @@ type DispatchErrorExtension struct {
 
 // DispatchErrorExtension Constructor
 func NewDispatchErrorExtension(code int, data []byte) DispatchErrorExtension {
-
-	// Truncate Data To Max Size If Too Large
-	if len(data) > MaxDispatchErrorExtensionDataBytes {
-		data = data[:MaxDispatchErrorExtensionDataBytes]
-	}
-
-	// Create & Return New DispatchErrorExtension Struct
-	return DispatchErrorExtension{
-		Code: code,
-		Data: data,
-	}
+	return DispatchErrorExtension{Code: code, Data: data}
 }
 
-// Set the DispatchErrorExtension as an Extension Attribute on the specified Message
-func SetDispatchErrorExtension(ctx context.Context, dispatchErrorExtension DispatchErrorExtension, message binding.Message) (binding.Message, error) {
+// Returns An AddExtension Transformer For The DispatchErrorExtension Attribute
+func (d *DispatchErrorExtension) AddExtensionTransformer() (binding.TransformerFunc, error) {
 
-	// Return Invalid Message Arguments
-	if ctx == nil || message == nil {
-		return message, errors.New("invalid arguments")
+	// The DispatchErrorExtension To Add As An Extension
+	dispatchErrorExtension := *d
+
+	// Trim Data Field To Max Length If Necessary (Immutable Copy)
+	if len(d.Data) > MaxDispatchErrorExtensionDataBytes {
+		dispatchErrorExtension = NewDispatchErrorExtension(d.Code, d.Data[:MaxDispatchErrorExtensionDataBytes])
 	}
 
-	// Marshall Specified DispatchErrorExtension Into JSON Bytes
-	dispatchErrorExtensionJsonBytes, err := json.Marshal(dispatchErrorExtension)
+	// Marshal The DispatchErrorExtension Into JSON Bytes
+	jsonBytes, err := json.Marshal(dispatchErrorExtension)
 	if err != nil {
-		return message, err
+		return nil, err
 	}
 
-	// Convert The Specified Binding Message To An Event
-	event, err := binding.ToEvent(ctx, message)
-	if err != nil {
-		return message, err
-	}
-
-	// Set The DispatchErrorExtension On The Event
-	event.SetExtension(DispatchErrorExtensionKey, dispatchErrorExtensionJsonBytes)
-
-	// Convert The Event Back To A Binding Message & Return Success
-	return binding.ToMessage(event), nil
+	// Create & Return A CloudEvent AddExtension Transformer
+	return transformer.AddExtension(DispatchErrorExtensionKey, jsonBytes), nil
 }
