@@ -63,7 +63,12 @@ readonly RELEASES
 KO_YAML_FLAGS="-P"
 KO_FLAGS="${KO_FLAGS:-}"
 [[ "${KO_DOCKER_REPO}" != gcr.io/* ]] && KO_YAML_FLAGS=""
-readonly KO_YAML_FLAGS="${KO_YAML_FLAGS} ${KO_FLAGS} --platform=all"
+
+if [[ "${KO_FLAGS}" != *"--platform"* ]]; then
+  KO_YAML_FLAGS="${KO_YAML_FLAGS} --platform=all"
+fi
+
+readonly KO_YAML_FLAGS="${KO_YAML_FLAGS} ${KO_FLAGS}"
 
 if [[ -n "${TAG:-}" ]]; then
   LABEL_YAML_CMD=(sed -e "s|eventing.knative.dev/release: devel|eventing.knative.dev/release: \"${TAG}\"|")
@@ -79,19 +84,19 @@ cd "${YAML_REPO_ROOT}"
 # Build the components
 echo "Building Knative Eventing"
 # Create eventing core yaml
-ko resolve ${KO_FLAGS} -R -f config/core/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CORE_YAML}"
+ko resolve ${KO_YAML_FLAGS} -R -f config/core/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CORE_YAML}"
 
 # Create eventing crds yaml
-ko resolve ${KO_FLAGS} -f config/core/resources/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CRDS_YAML}"
+ko resolve ${KO_YAML_FLAGS} -f config/core/resources/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CRDS_YAML}"
 
 # Create sugar controller yaml
-ko resolve ${KO_FLAGS} -f config/sugar/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_SUGAR_CONTROLLER_YAML}"
+ko resolve ${KO_YAML_FLAGS} -f config/sugar/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_SUGAR_CONTROLLER_YAML}"
 
 # Create mt channel broker yaml
-ko resolve ${KO_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_MT_CHANNEL_BROKER_YAML}"
+ko resolve ${KO_YAML_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_MT_CHANNEL_BROKER_YAML}"
 
 # Create in memory channel yaml
-ko resolve ${KO_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
+ko resolve ${KO_YAML_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
 all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
 
@@ -101,7 +106,7 @@ if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
 
   echo "Resolving post install manifests"
 
-  ko resolve ${KO_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
+  ko resolve ${KO_YAML_FLAGS} -f config/post-install/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_POST_INSTALL_YAML}"
   all_yamls+=(${EVENTING_POST_INSTALL_YAML})
 fi
 
