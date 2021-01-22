@@ -120,10 +120,10 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 
 		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfig)
 		if err != nil {
-			// If DeadLetter is configured, then send original message with dispatch error extension
+			// If DeadLetter is configured, then send original message with knative error extensions
 			if deadLetter != nil {
-				transformer := d.dispatchErrorExtensionTransformer(dispatchExecutionInfo)
-				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig, transformer)
+				transformers := d.dispatchExecutionInfoTransformers(dispatchExecutionInfo)
+				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig, transformers...)
 				if deadLetterErr != nil {
 					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
 				}
@@ -156,10 +156,10 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 
 	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig)
 	if err != nil {
-		// If DeadLetter is configured, then send original message with dispatch error extension
+		// If DeadLetter is configured, then send original message with knative error extensions
 		if deadLetter != nil {
-			transformer := d.dispatchErrorExtensionTransformer(dispatchExecutionInfo)
-			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig, transformer)
+			transformers := d.dispatchExecutionInfoTransformers(dispatchExecutionInfo)
+			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig, transformers...)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
 			}
@@ -231,7 +231,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 
 	if isFailure(response.StatusCode) {
 		// Read response body into execInfo for failures
-		body := make([]byte, attributes.MaxDispatchErrorExtensionDataBytes)
+		body := make([]byte, attributes.KnativeErrorDataExtensionMaxLength)
 		readLen, err := response.Body.Read(body)
 		if err != nil && err != io.EOF {
 			d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
@@ -267,19 +267,15 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 	}
 }
 
-// Create a DispatchErrorExtension AddExtension Transformer from the specified DispatchExecutionInfo
-func (d *MessageDispatcherImpl) dispatchErrorExtensionTransformer(dispatchExecutionInfo *DispatchExecutionInfo) binding.TransformerFunc {
-	noOpTransformer := func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error { return nil }
+// dispatchExecutionTransformer returns CloudEvents Transformers for the specified DispatchExecutionInfo
+func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(dispatchExecutionInfo *DispatchExecutionInfo) []binding.Transformer {
+	transformers := make([]binding.Transformer, 0, 2)
 	if dispatchExecutionInfo != nil {
-		dispatchErrorExtension := attributes.NewDispatchErrorExtension(dispatchExecutionInfo.ResponseCode, dispatchExecutionInfo.ResponseBody)
-		addExtensionTransformer, err := dispatchErrorExtension.AddExtensionTransformer()
-		if err != nil {
-			d.logger.Error("failed to create DispatchErrorExtension attribute AddExtension Transformer", zap.Error(err))
-			return noOpTransformer
-		}
-		return addExtensionTransformer
+		codeTransformer := attributes.KnativeErrorCodeTransformer(d.logger, dispatchExecutionInfo.ResponseCode, true)
+		dataTransformer := attributes.KnativeErrorDataTransformer(d.logger, string(dispatchExecutionInfo.ResponseBody), true)
+		transformers = append(transformers, codeTransformer, dataTransformer)
 	}
-	return noOpTransformer
+	return transformers
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
