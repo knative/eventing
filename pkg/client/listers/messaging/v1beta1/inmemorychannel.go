@@ -26,8 +26,10 @@ import (
 )
 
 // InMemoryChannelLister helps list InMemoryChannels.
+// All objects returned here must be treated as read-only.
 type InMemoryChannelLister interface {
 	// List lists all InMemoryChannels in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.InMemoryChannel, err error)
 	// InMemoryChannels returns an object that can list and get InMemoryChannels.
 	InMemoryChannels(namespace string) InMemoryChannelNamespaceLister
@@ -58,10 +60,13 @@ func (s *inMemoryChannelLister) InMemoryChannels(namespace string) InMemoryChann
 }
 
 // InMemoryChannelNamespaceLister helps list and get InMemoryChannels.
+// All objects returned here must be treated as read-only.
 type InMemoryChannelNamespaceLister interface {
 	// List lists all InMemoryChannels in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.InMemoryChannel, err error)
 	// Get retrieves the InMemoryChannel from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.InMemoryChannel, error)
 	InMemoryChannelNamespaceListerExpansion
 }

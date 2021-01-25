@@ -26,8 +26,10 @@ import (
 )
 
 // ChannelLister helps list Channels.
+// All objects returned here must be treated as read-only.
 type ChannelLister interface {
 	// List lists all Channels in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Channel, err error)
 	// Channels returns an object that can list and get Channels.
 	Channels(namespace string) ChannelNamespaceLister
@@ -58,10 +60,13 @@ func (s *channelLister) Channels(namespace string) ChannelNamespaceLister {
 }
 
 // ChannelNamespaceLister helps list and get Channels.
+// All objects returned here must be treated as read-only.
 type ChannelNamespaceLister interface {
 	// List lists all Channels in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Channel, err error)
 	// Get retrieves the Channel from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Channel, error)
 	ChannelNamespaceListerExpansion
 }

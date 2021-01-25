@@ -26,8 +26,10 @@ import (
 )
 
 // BrokerLister helps list Brokers.
+// All objects returned here must be treated as read-only.
 type BrokerLister interface {
 	// List lists all Brokers in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Broker, err error)
 	// Brokers returns an object that can list and get Brokers.
 	Brokers(namespace string) BrokerNamespaceLister
@@ -58,10 +60,13 @@ func (s *brokerLister) Brokers(namespace string) BrokerNamespaceLister {
 }
 
 // BrokerNamespaceLister helps list and get Brokers.
+// All objects returned here must be treated as read-only.
 type BrokerNamespaceLister interface {
 	// List lists all Brokers in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Broker, err error)
 	// Get retrieves the Broker from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Broker, error)
 	BrokerNamespaceListerExpansion
 }

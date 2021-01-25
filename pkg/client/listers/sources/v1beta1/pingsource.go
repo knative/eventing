@@ -26,8 +26,10 @@ import (
 )
 
 // PingSourceLister helps list PingSources.
+// All objects returned here must be treated as read-only.
 type PingSourceLister interface {
 	// List lists all PingSources in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.PingSource, err error)
 	// PingSources returns an object that can list and get PingSources.
 	PingSources(namespace string) PingSourceNamespaceLister
@@ -58,10 +60,13 @@ func (s *pingSourceLister) PingSources(namespace string) PingSourceNamespaceList
 }
 
 // PingSourceNamespaceLister helps list and get PingSources.
+// All objects returned here must be treated as read-only.
 type PingSourceNamespaceLister interface {
 	// List lists all PingSources in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.PingSource, err error)
 	// Get retrieves the PingSource from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.PingSource, error)
 	PingSourceNamespaceListerExpansion
 }

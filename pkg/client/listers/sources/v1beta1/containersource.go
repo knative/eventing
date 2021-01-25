@@ -26,8 +26,10 @@ import (
 )
 
 // ContainerSourceLister helps list ContainerSources.
+// All objects returned here must be treated as read-only.
 type ContainerSourceLister interface {
 	// List lists all ContainerSources in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.ContainerSource, err error)
 	// ContainerSources returns an object that can list and get ContainerSources.
 	ContainerSources(namespace string) ContainerSourceNamespaceLister
@@ -58,10 +60,13 @@ func (s *containerSourceLister) ContainerSources(namespace string) ContainerSour
 }
 
 // ContainerSourceNamespaceLister helps list and get ContainerSources.
+// All objects returned here must be treated as read-only.
 type ContainerSourceNamespaceLister interface {
 	// List lists all ContainerSources in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.ContainerSource, err error)
 	// Get retrieves the ContainerSource from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.ContainerSource, error)
 	ContainerSourceNamespaceListerExpansion
 }
