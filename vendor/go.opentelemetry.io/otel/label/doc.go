@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace
-
-import (
-	"context"
-)
-
-type NoopTracer struct{}
-
-var _ Tracer = NoopTracer{}
-
-// WithSpan wraps around execution of func with noop span.
-func (t NoopTracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...StartOption) error {
-	return body(ctx)
-}
-
-// Start starts a noop span.
-func (NoopTracer) Start(ctx context.Context, name string, opts ...StartOption) (context.Context, Span) {
-	span := NoopSpan{}
-	return ContextWithSpan(ctx, span), span
-}
+// Package label provides key and value labels.
+//
+// This package is currently in a pre-GA phase. Backwards incompatible changes
+// may be introduced in subsequent minor version releases as we work to track
+// the evolving OpenTelemetry specification and user feedback.
+package label // import "go.opentelemetry.io/otel/label"

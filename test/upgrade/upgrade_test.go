@@ -19,12 +19,9 @@ limitations under the License.
 package upgrade
 
 import (
-	"os"
 	"testing"
 
 	"go.uber.org/zap"
-	"knative.dev/eventing/test"
-	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/installation"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
@@ -70,10 +67,5 @@ func newUpgradeConfig(t *testing.T) pkgupgrade.Configuration {
 }
 
 func TestMain(m *testing.M) {
-	test.InitializeEventingFlags()
-	channelTestRunner = testlib.ComponentsTestRunner{
-		ComponentFeatureMap: testlib.ChannelFeatureMap,
-		ComponentsToTest:    test.EventingFlags.Channels,
-	}
-	os.Exit(m.Run())
+	RunMainTest(m)
 }

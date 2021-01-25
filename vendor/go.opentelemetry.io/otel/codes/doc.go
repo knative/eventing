@@ -1,4 +1,4 @@
-// Copyright 2019, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides basic types used in OpenTelemetry - keys,
-// values, numbers and span contexts.
-package core // import "go.opentelemetry.io/otel/api/core"
+/*
+Package codes defines the canonical error codes used by OpenTelemetry.
+
+This package is currently in a pre-GA phase. Backwards incompatible changes
+may be introduced in subsequent minor version releases as we work to track
+the evolving OpenTelemetry specification and user feedback.
+
+It conforms to [the OpenTelemetry
+specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/api.md#statuscanonicalcode).
+*/
+package codes // import "go.opentelemetry.io/otel/codes"
