@@ -34,14 +34,14 @@ require (
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	google.golang.org/grpc v1.34.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
-	k8s.io/api v0.18.12
-	k8s.io/apiextensions-apiserver v0.18.12
-	k8s.io/apimachinery v0.18.12
+	k8s.io/api v0.19.7
+	k8s.io/apiextensions-apiserver v0.19.7
+	k8s.io/apimachinery v0.19.7
 	k8s.io/apiserver v0.18.12
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
 	knative.dev/hack v0.0.0-20210120165453-8d623a0af457
-	knative.dev/pkg v0.0.0-20210120200253-8cd47b5af35d
+	knative.dev/pkg v0.0.0-20210124203454-7101e9d4f6c6
 	knative.dev/reconciler-test v0.0.0-20210115075620-6fe6ef693370
 	sigs.k8s.io/yaml v1.2.0
 )
