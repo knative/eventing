@@ -26,8 +26,10 @@ import (
 )
 
 // EventTypeLister helps list EventTypes.
+// All objects returned here must be treated as read-only.
 type EventTypeLister interface {
 	// List lists all EventTypes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.EventType, err error)
 	// EventTypes returns an object that can list and get EventTypes.
 	EventTypes(namespace string) EventTypeNamespaceLister
@@ -58,10 +60,13 @@ func (s *eventTypeLister) EventTypes(namespace string) EventTypeNamespaceLister 
 }
 
 // EventTypeNamespaceLister helps list and get EventTypes.
+// All objects returned here must be treated as read-only.
 type EventTypeNamespaceLister interface {
 	// List lists all EventTypes in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.EventType, err error)
 	// Get retrieves the EventType from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.EventType, error)
 	EventTypeNamespaceListerExpansion
 }

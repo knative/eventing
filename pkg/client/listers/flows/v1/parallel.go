@@ -26,8 +26,10 @@ import (
 )
 
 // ParallelLister helps list Parallels.
+// All objects returned here must be treated as read-only.
 type ParallelLister interface {
 	// List lists all Parallels in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Parallel, err error)
 	// Parallels returns an object that can list and get Parallels.
 	Parallels(namespace string) ParallelNamespaceLister
@@ -58,10 +60,13 @@ func (s *parallelLister) Parallels(namespace string) ParallelNamespaceLister {
 }
 
 // ParallelNamespaceLister helps list and get Parallels.
+// All objects returned here must be treated as read-only.
 type ParallelNamespaceLister interface {
 	// List lists all Parallels in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Parallel, err error)
 	// Get retrieves the Parallel from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Parallel, error)
 	ParallelNamespaceListerExpansion
 }
