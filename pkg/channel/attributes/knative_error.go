@@ -18,7 +18,7 @@ package attributes
 
 import (
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"go.uber.org/zap"
+	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 )
 
 const (
@@ -27,48 +27,12 @@ const (
 	KnativeErrorDataExtensionMaxLength = 1024
 )
 
-// KnativeErrorCodeTransformer returns a CloudEvent TransformerFunc which sets the specified error code extension.
-func KnativeErrorCodeTransformer(logger *zap.Logger, code int, ignoreErrors bool) binding.TransformerFunc {
-	return func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error {
-		err := writer.SetExtension(KnativeErrorCodeExtensionKey, code)
-		if err != nil {
-			if logger != nil {
-				logger.Error("Failed to set knative error code extension",
-					zap.String("ExtensionKey", KnativeErrorCodeExtensionKey),
-					zap.Int("ExtensionValue", code),
-					zap.Bool("IgnoreErrors", ignoreErrors),
-					zap.Error(err))
-			}
-			if !ignoreErrors {
-				return err
-			}
-		}
-		return nil
+// KnativeErrorTransformers returns Transformers which add the specified error code and data extensions.
+func KnativeErrorTransformers(code int, data string) binding.Transformers {
+	codeTransformer := transformer.AddExtension(KnativeErrorCodeExtensionKey, code)
+	if len(data) > KnativeErrorDataExtensionMaxLength {
+		data = data[:KnativeErrorDataExtensionMaxLength] // Truncate data to max length
 	}
-}
-
-// KnativeErrorDataTransformer returns a CloudEvent TransformerFunc which sets the specified error data extension.
-func KnativeErrorDataTransformer(logger *zap.Logger, data string, ignoreErrors bool) binding.TransformerFunc {
-	return func(reader binding.MessageMetadataReader, writer binding.MessageMetadataWriter) error {
-		dataLength := len(data)
-		if dataLength > 0 {
-			if dataLength > KnativeErrorDataExtensionMaxLength {
-				data = data[:KnativeErrorDataExtensionMaxLength] // Truncate data to max length
-			}
-			err := writer.SetExtension(KnativeErrorDataExtensionKey, data)
-			if err != nil {
-				if logger != nil {
-					logger.Error("Failed to set knative error extension",
-						zap.String("ExtensionKey", KnativeErrorDataExtensionKey),
-						zap.String("ExtensionValue", data),
-						zap.Bool("IgnoreErrors", ignoreErrors),
-						zap.Error(err))
-				}
-				if !ignoreErrors {
-					return err
-				}
-			}
-		}
-		return nil
-	}
+	dataTransformer := transformer.AddExtension(KnativeErrorDataExtensionKey, data)
+	return binding.Transformers{codeTransformer, dataTransformer}
 }

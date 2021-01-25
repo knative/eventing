@@ -25,75 +25,38 @@ import (
 	cebindingtest "github.com/cloudevents/sdk-go/v2/binding/test"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/assert"
-	logtesting "knative.dev/pkg/logging/testing"
 )
 
-// Test the KnativeErrorCodeTransformer() functionality
-func TestKnativeErrorCodeTransformer(t *testing.T) {
-
-	// Test Data
-	code := 500
-
-	// Create a test Logger
-	logger := logtesting.TestLogger(t).Desugar()
-
-	// Get the KnativeErrorCodeTransformer to test
-	knativeErrorCodeTransformer := KnativeErrorCodeTransformer(logger, code, true)
-
-	// Create the Transformer Input/Want Events
-	inputEvent := cetest.MinEvent()
-	inputMessage := binding.ToMessage(&inputEvent)
-	wantEvent := inputEvent.Clone()
-	wantEvent.SetExtension(KnativeErrorCodeExtensionKey, code)
-
-	// Define Transformer tests using the KnativeErrorCodeTransformer
-	transformerTests := []cebindingtest.TransformerTestArgs{
-		{
-			Name:         "Add Extension To Event",
-			InputEvent:   inputEvent,
-			WantEvent:    wantEvent,
-			Transformers: binding.Transformers{knativeErrorCodeTransformer},
-		},
-		{
-			Name:         "Add Extension To Message",
-			InputMessage: inputMessage,
-			WantEvent:    wantEvent,
-			Transformers: binding.Transformers{knativeErrorCodeTransformer},
-		},
-	}
-
-	// Run the Transformer tests
-	cebindingtest.RunTransformerTests(t, context.Background(), transformerTests)
-}
-
-// Test the KnativeErrorDataTransformer() functionality
-func TestKnativeErrorDataTransformer(t *testing.T) {
+// Test the KnativeErrorTransformers() functionality
+func TestKnativeErrorTransformers(t *testing.T) {
 
 	// Define the test cases
 	testCases := []struct {
 		name string
+		code int
 		data string
 	}{
 		{
 			name: "Data Empty",
+			code: 500,
 			data: "",
 		},
 		{
 			name: "Data Less Than Max Length",
+			code: 500,
 			data: randomString(t, KnativeErrorDataExtensionMaxLength-1),
 		},
 		{
 			name: "Data Exactly Max Length",
+			code: 500,
 			data: randomString(t, KnativeErrorDataExtensionMaxLength),
 		},
 		{
 			name: "Data More Than Max Length",
+			code: 500,
 			data: randomString(t, KnativeErrorDataExtensionMaxLength+1),
 		},
 	}
-
-	// Create a test Logger
-	logger := logtesting.TestLogger(t).Desugar()
 
 	// Loop over the test cases
 	for _, testCase := range testCases {
@@ -101,31 +64,30 @@ func TestKnativeErrorDataTransformer(t *testing.T) {
 		// Perform an individual test case
 		t.Run(testCase.name, func(t *testing.T) {
 
-			// Get the KnativeErrorDataTransformer for the current testCase
-			knativeErrorDataTransformer := KnativeErrorDataTransformer(logger, testCase.data, true)
+			// Get the KnativeErrorTransformers for the current testCase
+			knativeErrorDataTransformer := KnativeErrorTransformers(testCase.code, testCase.data)
 
 			// Create the Transformer Input/Want Events
 			inputEvent := cetest.MinEvent()
 			inputMessage := binding.ToMessage(&inputEvent)
 			wantEvent := inputEvent.Clone()
-			if len(testCase.data) > 0 {
-				data := testCase.data
-				if len(data) > KnativeErrorDataExtensionMaxLength {
-					data = data[:KnativeErrorDataExtensionMaxLength]
-				}
-				wantEvent.SetExtension(KnativeErrorDataExtensionKey, data)
+			wantEvent.SetExtension(KnativeErrorCodeExtensionKey, testCase.code)
+			data := testCase.data
+			if len(data) > KnativeErrorDataExtensionMaxLength {
+				data = data[:KnativeErrorDataExtensionMaxLength]
 			}
+			wantEvent.SetExtension(KnativeErrorDataExtensionKey, data)
 
 			// Define Transformer tests using the KnativeErrorTransformer
 			transformerTests := []cebindingtest.TransformerTestArgs{
 				{
-					Name:         "Add Extension To Event",
+					Name:         "Add Extensions To Event",
 					InputEvent:   inputEvent,
 					WantEvent:    wantEvent,
 					Transformers: binding.Transformers{knativeErrorDataTransformer},
 				},
 				{
-					Name:         "Add Extension To Message",
+					Name:         "Add Extensions To Message",
 					InputMessage: inputMessage,
 					WantEvent:    wantEvent,
 					Transformers: binding.Transformers{knativeErrorDataTransformer},

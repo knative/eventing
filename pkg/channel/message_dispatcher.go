@@ -267,15 +267,9 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 	}
 }
 
-// dispatchExecutionTransformer returns CloudEvents Transformers for the specified DispatchExecutionInfo
-func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(dispatchExecutionInfo *DispatchExecutionInfo) []binding.Transformer {
-	transformers := make([]binding.Transformer, 0, 2)
-	if dispatchExecutionInfo != nil {
-		codeTransformer := attributes.KnativeErrorCodeTransformer(d.logger, dispatchExecutionInfo.ResponseCode, true)
-		dataTransformer := attributes.KnativeErrorDataTransformer(d.logger, string(dispatchExecutionInfo.ResponseBody), true)
-		transformers = append(transformers, codeTransformer, dataTransformer)
-	}
-	return transformers
+// dispatchExecutionTransformer returns Transformers based on the specified DispatchExecutionInfo
+func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
+	return attributes.KnativeErrorTransformers(dispatchExecutionInfo.ResponseCode, string(dispatchExecutionInfo.ResponseBody))
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
