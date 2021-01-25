@@ -24,7 +24,8 @@ import (
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/openzipkin/zipkin-go/model"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/test/zipkin"
 
@@ -104,9 +105,9 @@ func tracingTest(
 func getTraceIDHeader(t *testing.T, evInfos []recordevents.EventInfo) string {
 	for i := range evInfos {
 		if nil != evInfos[i].HTTPHeaders {
-			sc := trace.RemoteSpanContextFromContext(trace.DefaultHTTPPropagator().Extract(context.TODO(), http.Header(evInfos[i].HTTPHeaders)))
+			sc := trace.RemoteSpanContextFromContext(propagation.TraceContext{}.Extract(context.TODO(), http.Header(evInfos[i].HTTPHeaders)))
 			if sc.HasTraceID() {
-				return sc.TraceIDString()
+				return sc.TraceID.String()
 			}
 		}
 	}
