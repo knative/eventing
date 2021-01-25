@@ -48,8 +48,8 @@ func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key 
 
 type EventTypesAnnotationJsonValue struct {
 	Type        string `json:"type"`
-	Schema      string `json:"schema",omitempty`
-	Description string `json:"description",omitempty`
+	Schema      string `json:"schema,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 func ValidateAnnotations(client *testlib.Client, object metav1.TypeMeta, annotationsKey string) {
