@@ -23,11 +23,11 @@ require (
 	github.com/rickb777/date v1.13.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/tsenart/vegeta/v12 v12.8.4
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.22.5
-	go.opentelemetry.io/otel v0.2.3
+	go.opentelemetry.io/otel v0.16.0
 	go.uber.org/atomic v1.7.0
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
