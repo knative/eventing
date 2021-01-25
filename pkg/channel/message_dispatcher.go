@@ -201,12 +201,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	}
 
 	if span.IsRecordingEvents() {
-		tracingTransformer := tracing.PopulateSpan(span, url.String())
-		if transformers == nil {
-			transformers = []binding.Transformer{tracingTransformer}
-		} else {
-			transformers = append(transformers, tracingTransformer)
-		}
+		transformers = append(transformers, tracing.PopulateSpan(span, url.String()))
 	}
 
 	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, transformers...)
@@ -220,7 +215,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 	if err != nil {
 		execInfo.Time = dispatchTime
 		execInfo.ResponseCode = nethttp.StatusInternalServerError
-		execInfo.ResponseBody = []byte(fmt.Sprintf("sender.sendWithRetries() failed: err=%s", err.Error()))
+		execInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
 		return ctx, nil, nil, &execInfo, err
 	}
 
@@ -235,7 +230,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context,
 		readLen, err := response.Body.Read(body)
 		if err != nil && err != io.EOF {
 			d.logger.Error("failed to read response body into DispatchExecutionInfo", zap.Error(err))
-			execInfo.ResponseBody = []byte(fmt.Sprintf("failed to read response.Body: err=%s", err.Error()))
+			execInfo.ResponseBody = []byte(fmt.Sprintf("dispatch error: %s", err.Error()))
 		} else {
 			execInfo.ResponseBody = body[:readLen]
 		}
