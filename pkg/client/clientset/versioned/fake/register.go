@@ -40,7 +40,7 @@ import (
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
-var parameterCodec = runtime.NewParameterCodec(scheme)
+
 var localSchemeBuilder = runtime.SchemeBuilder{
 	configsv1alpha1.AddToScheme,
 	eventingv1beta1.AddToScheme,

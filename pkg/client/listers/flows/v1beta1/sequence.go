@@ -26,8 +26,10 @@ import (
 )
 
 // SequenceLister helps list Sequences.
+// All objects returned here must be treated as read-only.
 type SequenceLister interface {
 	// List lists all Sequences in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Sequence, err error)
 	// Sequences returns an object that can list and get Sequences.
 	Sequences(namespace string) SequenceNamespaceLister
@@ -58,10 +60,13 @@ func (s *sequenceLister) Sequences(namespace string) SequenceNamespaceLister {
 }
 
 // SequenceNamespaceLister helps list and get Sequences.
+// All objects returned here must be treated as read-only.
 type SequenceNamespaceLister interface {
 	// List lists all Sequences in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Sequence, err error)
 	// Get retrieves the Sequence from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Sequence, error)
 	SequenceNamespaceListerExpansion
 }

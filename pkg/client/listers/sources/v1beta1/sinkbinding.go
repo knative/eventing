@@ -26,8 +26,10 @@ import (
 )
 
 // SinkBindingLister helps list SinkBindings.
+// All objects returned here must be treated as read-only.
 type SinkBindingLister interface {
 	// List lists all SinkBindings in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.SinkBinding, err error)
 	// SinkBindings returns an object that can list and get SinkBindings.
 	SinkBindings(namespace string) SinkBindingNamespaceLister
@@ -58,10 +60,13 @@ func (s *sinkBindingLister) SinkBindings(namespace string) SinkBindingNamespaceL
 }
 
 // SinkBindingNamespaceLister helps list and get SinkBindings.
+// All objects returned here must be treated as read-only.
 type SinkBindingNamespaceLister interface {
 	// List lists all SinkBindings in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.SinkBinding, err error)
 	// Get retrieves the SinkBinding from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.SinkBinding, error)
 	SinkBindingNamespaceListerExpansion
 }

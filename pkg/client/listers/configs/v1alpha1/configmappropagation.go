@@ -26,8 +26,10 @@ import (
 )
 
 // ConfigMapPropagationLister helps list ConfigMapPropagations.
+// All objects returned here must be treated as read-only.
 type ConfigMapPropagationLister interface {
 	// List lists all ConfigMapPropagations in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ConfigMapPropagation, err error)
 	// ConfigMapPropagations returns an object that can list and get ConfigMapPropagations.
 	ConfigMapPropagations(namespace string) ConfigMapPropagationNamespaceLister
@@ -58,10 +60,13 @@ func (s *configMapPropagationLister) ConfigMapPropagations(namespace string) Con
 }
 
 // ConfigMapPropagationNamespaceLister helps list and get ConfigMapPropagations.
+// All objects returned here must be treated as read-only.
 type ConfigMapPropagationNamespaceLister interface {
 	// List lists all ConfigMapPropagations in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ConfigMapPropagation, err error)
 	// Get retrieves the ConfigMapPropagation from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.ConfigMapPropagation, error)
 	ConfigMapPropagationNamespaceListerExpansion
 }
