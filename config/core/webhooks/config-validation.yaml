@@ -25,7 +25,7 @@ webhooks:
       name: eventing-webhook
       namespace: knative-eventing
   sideEffects: None
-  failurePolicy: Fail
+  failurePolicy: Ignore
   name: config.webhook.eventing.knative.dev
   namespaceSelector:
     matchExpressions:
