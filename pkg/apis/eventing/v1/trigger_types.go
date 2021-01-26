@@ -87,7 +87,7 @@ type TriggerSpec struct {
 	// is required.
 	Subscriber duckv1.Destination `json:"subscriber"`
 
-	// Delivery configuration
+	// Delivery contains the delivery spec for this specific trigger.
 	// +optional
 	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
