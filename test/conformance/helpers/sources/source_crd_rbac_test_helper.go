@@ -76,7 +76,8 @@ func ValidateRBAC(st *testing.T, client *testlib.Client, object metav1.TypeMeta)
 
 	if !clusterRoleMeetsSpecs(client, labelSelector, sourcePluralName) {
 		//CRD Spec says new sources MUST include a ClusterRole as part of installing themselves into a cluster - so can't enforce it. Nothing to do here
-		//client.T.Fatalf("can't find cluster role for CRD %q", object)
+		//client.T.Fatalf("can't find source observer cluster role for CRD %q", object)
+		client.T.Logf("can't find source observer cluster role for CRD %q", object)
 	}
 }
 
