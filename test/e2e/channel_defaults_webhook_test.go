@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -58,12 +59,12 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 		t.Log("Updating defaulting ConfigMap")
 
 		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, defaultChannelCM, metav1.GetOptions{})
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		// Preserve existing namespace defaults.
 		defaults := make(map[string]map[string]interface{})
 		err = yaml.Unmarshal([]byte(cm.Data[defaultChannelConfigKey]), &defaults)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		defaults["namespaceDefaults"][c.Namespace] = map[string]interface{}{
 			"apiVersion": "messaging.knative.dev/v1",
@@ -78,7 +79,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 		}
 
 		b, err := yaml.Marshal(defaults)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		cm.Data[defaultChannelConfigKey] = string(b)
 
@@ -96,7 +97,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		return nil
 	})
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	// Create a Channel and check whether it has the DeliverySpec set as we specified above.
 	// Since the webhook receives the updates at some undetermined time after the update to reduce flakiness retry after
@@ -133,11 +134,11 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 			Resource(schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "channels"}).
 			Namespace(c.Namespace).
 			Create(ctx, obj, metav1.CreateOptions{})
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		channel := &messagingv1.Channel{}
 		err = runtime.DefaultUnstructuredConverter.FromUnstructured(createdObj.Object, channel)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		if !webhookObservedUpdate(channel) {
 			return fmt.Errorf("webhook hasn't seen the update: %+v", channel)
@@ -157,14 +158,14 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		return nil
 	})
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
 		imc, err := c.Eventing.MessagingV1().InMemoryChannels(c.Namespace).Get(ctx, lastName, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		assert.Equal(t, "PT0.5S", *imc.Spec.Delivery.BackoffDelay)
 		assert.Equal(t, int32(5), *imc.Spec.Delivery.Retry)
@@ -172,7 +173,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		return true, nil
 	})
-	assert.Nil(t, err)
+	require.Nil(t, err)
 }
 
 func webhookObservedUpdate(ch *messagingv1.Channel) bool {
