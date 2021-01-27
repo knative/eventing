@@ -74,7 +74,7 @@ type BrokerSpec struct {
 	// +optional
 	Config *duckv1.KReference `json:"config,omitempty"`
 
-	// Delivery contains the default delivery spec for each trigger
+	// Delivery contains the delivery spec for each trigger
 	// to this Broker. Each trigger delivery spec, if any, overrides this
 	// global delivery spec.
 	// +optional

@@ -50,7 +50,11 @@ Both BrokerSpec and TriggerSpec have a `Delivery` field of type [`duck.DeliveryS
 This field, among the other features, allows the user to define the dead letter sink and retries.
 The `BrokerSpec.Delivery` field is global across all the Triggers registered with that particular
 Broker, while the `TriggerSpec.Delivery`, if configured, fully overrides `BrokerSpec.Delivery` for
-that particular Trigger.
+that particular Trigger, hence:
+
+* When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec MUST be used.
+* When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` MUST be used.
+* When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` MUST be used.
 
 ## Data Plane
 
