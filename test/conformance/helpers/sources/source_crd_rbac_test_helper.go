@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/pkg/apis/duck"
+
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 var clusterRoleName = "eventing-sources-source-observer"
@@ -33,6 +35,14 @@ var clusterRoleLabel = map[string]string{
 	duck.SourceDuckVersionLabel: "true",
 }
 
+/*
+	The test checks for the following in this order:
+	1. Find cluster roles that match these criteria -
+		a. Has name "eventing-sources-source-observer",
+		b. Has label duck.knative.dev/source: "true",
+		c. Has the eventing source in Resources for a Policy Rule, and
+		d. Has all the expected verbs (get, list, watch)
+*/
 func SourceCRDRBACTestHelperWithComponentsTestRunner(
 	t *testing.T,
 	sourceTestRunner testlib.ComponentsTestRunner,
@@ -74,10 +84,9 @@ func ValidateRBAC(st *testing.T, client *testlib.Client, object metav1.TypeMeta)
 
 	sourcePluralName := getSourcePluralName(client, object)
 
+	//Spec: New sources MUST include a ClusterRole as part of installing themselves into a cluster.
 	if !clusterRoleMeetsSpecs(client, labelSelector, sourcePluralName) {
-		//CRD Spec says new sources MUST include a ClusterRole as part of installing themselves into a cluster - so can't enforce it. Nothing to do here
-		//client.T.Fatalf("can't find source observer cluster role for CRD %q", object)
-		client.T.Logf("can't find source observer cluster role for CRD %q", object)
+		client.T.Fatalf("can't find source observer cluster role for CRD %q", object)
 	}
 }
 
@@ -105,7 +114,9 @@ func clusterRoleMeetsSpecs(client *testlib.Client, labelSelector *metav1.LabelSe
 
 	for _, cr := range crs.Items {
 		for _, pr := range cr.Rules {
-			if contains(pr.Resources, crdSourceName) { //Cluster Role has the eventing source listed in Resources for a Policy Rule
+			if contains(pr.Resources, crdSourceName) && //Cluster Role has the eventing source listed in Resources for a Policy Rule
+				((contains(pr.Verbs, "get") && contains(pr.Verbs, "list") && contains(pr.Verbs, "watch")) ||
+					contains(pr.Verbs, rbacv1.VerbAll)) { //Cluster Role has all the expected Verbs
 				return true
 			}
 		}
