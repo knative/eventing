@@ -119,7 +119,7 @@ func (ei *Store) isMyEvent(event *corev1.Event) bool {
 // The error array contains the eventual match errors, while the last return error contains
 // an eventual communication error while trying to get the events from the eventshub pod
 func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, eventshub.SearchedInfo, []error, error) {
-	f := AllOf(matchers...)
+	f := allOf(matchers...)
 	const maxLastEvents = 5
 	allMatch := []eventshub.EventInfo{}
 	ei.lock.Lock()
@@ -154,7 +154,7 @@ func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, even
 // This method fails the test if the assert is not fulfilled.
 func (ei *Store) AssertAtLeast(min int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
 	ei.tb.Helper()
-	events, err := ei.waitAtLeastNMatch(AllOf(matchers...), min)
+	events, err := ei.waitAtLeastNMatch(allOf(matchers...), min)
 	if err != nil {
 		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
