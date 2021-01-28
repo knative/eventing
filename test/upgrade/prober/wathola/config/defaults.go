@@ -61,7 +61,7 @@ func defaultValues() *Config {
 			Progress: ReceiverProgressConfig{
 				Duration: time.Second,
 			},
-			ErrorCfg: ReceiverErrorConfig{
+			Errors: ReceiverErrorConfig{
 				UnavailablePeriodToReport: 5 * time.Second,
 			},
 		},

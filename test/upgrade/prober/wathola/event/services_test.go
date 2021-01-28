@@ -101,7 +101,7 @@ func TestUnavail(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.Instance.Receiver.Teardown.Duration = 20 * time.Millisecond
-	config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport = 1 * time.Second
+	config.Instance.Receiver.Errors.UnavailablePeriodToReport = 1 * time.Second
 	exitcode := m.Run()
 	os.Exit(exitcode)
 }

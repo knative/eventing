@@ -115,8 +115,8 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	}
 	// check down time
 	for _, unavailablePeriod := range finished.UnavailablePeriods {
-		if unavailablePeriod > config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport {
-			f.errors.throwUnavail("actual unavailable period %v is over down time limit of %v", unavailablePeriod, config.Instance.Receiver.ErrorCfg.UnavailablePeriodToReport)
+		if unavailablePeriod > config.Instance.Receiver.Errors.UnavailablePeriodToReport {
+			f.errors.throwUnavail("actual unavailable period %v is over down time limit of %v", unavailablePeriod, config.Instance.Receiver.Errors.UnavailablePeriodToReport)
 			f.errors.state = Failed
 		}
 		log.Infof("detecting unavailable time %v", unavailablePeriod)

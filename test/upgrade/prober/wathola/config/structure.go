@@ -40,7 +40,7 @@ type ReceiverErrorConfig struct {
 type ReceiverConfig struct {
 	Teardown ReceiverTeardownConfig
 	Progress ReceiverProgressConfig
-	ErrorCfg ReceiverErrorConfig
+	Errors   ReceiverErrorConfig
 	Port     int
 }
 
