@@ -36,18 +36,6 @@ func Any() EventInfoMatcher {
 	}
 }
 
-// AllOf combines matchers together
-func AllOf(matchers ...EventInfoMatcher) EventInfoMatcher {
-	return func(have eventshub.EventInfo) error {
-		for _, m := range matchers {
-			if err := m(have); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
 // Matcher that fails if there is an error in the EventInfo
 func NoError() EventInfoMatcher {
 	return func(ei eventshub.EventInfo) error {
@@ -112,4 +100,16 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 			return nil
 		},
 	)
+}
+
+// We don't need to expose this, since all the signatures already executes this
+func allOf(matchers ...EventInfoMatcher) EventInfoMatcher {
+	return func(have eventshub.EventInfo) error {
+		for _, m := range matchers {
+			if err := m(have); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }
