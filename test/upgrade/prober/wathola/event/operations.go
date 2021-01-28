@@ -29,7 +29,7 @@ type FinishedStore interface {
 	DuplicatedThrown() []string
 	MissingThrown() []string
 	UnexpectedThrown() []string
-	UnavailThrown() []string
+	UnavailableThrown() []string
 }
 
 // Typed says a type of an event

@@ -48,8 +48,10 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	if report.TotalRequests != 0 {
 		availRate = float64(report.EventsSent*100) / float64(report.TotalRequests)
 	}
-	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.  Total event send requests: %v, avail rate %.3f%%.",
-		report.EventsSent, report.State, report.TotalRequests, availRate)
+	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.",
+		report.EventsSent, report.State)
+	p.log.Infof("Availability: %.3f%%, Requests sent: %d.",
+		availRate, report.TotalRequests)
 	if report.State == "active" {
 		panic(errors.New("report fetched too early, receiver is in active state"))
 	}
@@ -60,7 +62,7 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	for _, t := range report.Thrown.Unexpected {
 		errs = append(errs, errors.New(t))
 	}
-	for _, t := range report.Thrown.Unavail {
+	for _, t := range report.Thrown.Unavailable {
 		errs = append(errs, errors.New(t))
 	}
 	for _, t := range report.Thrown.Duplicated {
@@ -114,10 +116,10 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 			EventsSent:    0,
 			TotalRequests: 0,
 			Thrown: receiver.Thrown{
-				Unexpected: []string{"Report wasn't fetched"},
-				Missing:    []string{"Report wasn't fetched"},
-				Duplicated: []string{"Report wasn't fetched"},
-				Unavail:    []string{"Report wasn't fetched"},
+				Unexpected:  []string{"Report wasn't fetched"},
+				Missing:     []string{"Report wasn't fetched"},
+				Duplicated:  []string{"Report wasn't fetched"},
+				Unavailable: []string{"Report wasn't fetched"},
 			},
 		},
 	}

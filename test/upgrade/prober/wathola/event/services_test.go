@@ -40,7 +40,7 @@ func TestProperEventsPropagation(t *testing.T) {
 	assert.Empty(t, errors.thrown.duplicated)
 	assert.Empty(t, errors.thrown.missing)
 	assert.Empty(t, errors.thrown.unexpected)
-	assert.Empty(t, errors.thrown.unavail)
+	assert.Empty(t, errors.thrown.unavailable)
 }
 
 func TestMissingAndDoubleEvent(t *testing.T) {
@@ -59,7 +59,7 @@ func TestMissingAndDoubleEvent(t *testing.T) {
 	assert.NotEmpty(t, errors.thrown.duplicated)
 	assert.NotEmpty(t, errors.thrown.missing)
 	assert.NotEmpty(t, errors.thrown.unexpected)
-	assert.Empty(t, errors.thrown.unavail)
+	assert.Empty(t, errors.thrown.unavailable)
 }
 
 func TestDoubleFinished(t *testing.T) {
@@ -78,7 +78,7 @@ func TestDoubleFinished(t *testing.T) {
 	assert.NotEmpty(t, errors.thrown.duplicated)
 	assert.Empty(t, errors.thrown.missing)
 	assert.Empty(t, errors.thrown.unexpected)
-	assert.Empty(t, errors.thrown.unavail)
+	assert.Empty(t, errors.thrown.unavailable)
 }
 
 func TestUnavail(t *testing.T) {
@@ -96,7 +96,7 @@ func TestUnavail(t *testing.T) {
 	assert.Empty(t, errors.thrown.duplicated)
 	assert.Empty(t, errors.thrown.missing)
 	assert.Empty(t, errors.thrown.unexpected)
-	assert.NotEmpty(t, errors.thrown.unavail)
+	assert.NotEmpty(t, errors.thrown.unavailable)
 }
 
 func TestMain(m *testing.M) {

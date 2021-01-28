@@ -27,10 +27,10 @@ var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
 type thrownTypes struct {
-	missing    []thrown
-	duplicated []thrown
-	unexpected []thrown
-	unavail    []thrown
+	missing     []thrown
+	duplicated  []thrown
+	unexpected  []thrown
+	unavailable []thrown
 }
 
 // ErrorStore contains errors that was thrown
@@ -44,10 +44,10 @@ func NewErrorStore() *ErrorStore {
 	return &ErrorStore{
 		state: Active,
 		thrown: thrownTypes{
-			missing:    make([]thrown, 0),
-			duplicated: make([]thrown, 0),
-			unexpected: make([]thrown, 0),
-			unavail:    make([]thrown, 0),
+			missing:     make([]thrown, 0),
+			duplicated:  make([]thrown, 0),
+			unexpected:  make([]thrown, 0),
+			unavailable: make([]thrown, 0),
 		},
 	}
 }
@@ -143,8 +143,8 @@ func (f *finishedStore) UnexpectedThrown() []string {
 	return asStrings(f.errors.thrown.unexpected)
 }
 
-func (f *finishedStore) UnavailThrown() []string {
-	return asStrings(f.errors.thrown.unavail)
+func (f *finishedStore) UnavailableThrown() []string {
+	return asStrings(f.errors.thrown.unavailable)
 }
 
 func asStrings(errThrown []thrown) []string {
@@ -194,7 +194,7 @@ func (e *ErrorStore) throwUnexpected(format string, args ...interface{}) {
 }
 
 func (e *ErrorStore) throwUnavail(format string, args ...interface{}) {
-	e.thrown.unavail = e.appendThrown(e.thrown.unavail, format, args...)
+	e.thrown.unavailable = e.appendThrown(e.thrown.unavailable, format, args...)
 }
 
 func (e *ErrorStore) appendThrown(errThrown []thrown, format string, args ...interface{}) []thrown {
