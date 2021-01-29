@@ -23,8 +23,10 @@ import (
 
 	"go.uber.org/zap"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	customresourcedefinition "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	crdreconciler "knative.dev/pkg/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -66,15 +68,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDe
 		return err
 	}
 
-	if !crd.DeletionTimestamp.IsZero() {
-		// We are intentionally not setting up a finalizer on the CRD.
-		// This might leave unnecessary dynamic controllers running.
-		// This is a best effort to try to clean them up.
-		// Note that without a finalizer there is no guarantee we will be called.
-		r.deleteController(ctx, gvr)
-		return nil
-	}
-
 	r.reconcileController(ctx, crd, gvr, gvk)
 
 	return nil
@@ -106,20 +99,80 @@ func (r *Reconciler) resolveGroupVersions(crd *v1.CustomResourceDefinition) (*sc
 	return gvr, gvk, nil
 }
 
-func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVersionResource) {
+func (r *Reconciler) resolveGroupVersionsBeta(crd *v1beta1.CustomResourceDefinition) (*schema.GroupVersionResource, *schema.GroupVersionKind, error) {
+	var gvr *schema.GroupVersionResource
+	var gvk *schema.GroupVersionKind
+	for _, v := range crd.Spec.Versions {
+		if !v.Served {
+			continue
+		}
+		gvr = &schema.GroupVersionResource{
+			Group:    crd.Spec.Group,
+			Version:  v.Name,
+			Resource: crd.Spec.Names.Plural,
+		}
+
+		gvk = &schema.GroupVersionKind{
+			Group:   crd.Spec.Group,
+			Version: v.Name,
+			Kind:    crd.Spec.Names.Kind,
+		}
+
+	}
+	if gvr == nil || gvk == nil {
+		return nil, nil, fmt.Errorf("unable to find GVR or GVK for %s", crd.Name)
+	}
+	return gvr, gvk, nil
+}
+
+func (r *Reconciler) deleteFunc(obj interface{}) {
+	var ctx context.Context
+	customresourcedefinitionInformer := customresourcedefinition.Get(ctx)
+
+	lister := customresourcedefinitionInformer.Lister()
+
+	logging.FromContext(context.TODO()).Info("In delete function for CRD")
+	if obj == nil {
+		return
+	}
+
+	var gvr *schema.GroupVersionResource
+	var err error
+	crdv1, ok := obj.(*v1.CustomResourceDefinition)
+	if !ok {
+		crdv1beta1, ok := obj.(*v1beta1.CustomResourceDefinition)
+		if !ok {
+			return
+		}
+		gvr, _, err = r.resolveGroupVersionsBeta(crdv1beta1)
+		if err != nil {
+			logging.FromContext(r.ogctx).Errorw("Error in delete function", zap.String("GVR", gvr.String()), zap.Error(err))
+			return
+		}
+	} else {
+		gvr, _, err = r.resolveGroupVersions(crdv1)
+		if err != nil {
+			logging.FromContext(r.ogctx).Errorw("Error in delete function", zap.String("GVR", gvr.String()), zap.Error(err))
+			return
+		}
+	}
+
+	logging.FromContext(context.TODO()).Info("Object not nil")
 	r.lock.RLock()
 	_, found := r.controllers[*gvr]
 	r.lock.RUnlock()
 	if found {
+		logging.FromContext(context.TODO()).Info("Object found")
 		r.lock.Lock()
+		defer r.lock.Unlock()
 		// Now that we grabbed the write lock, check that nobody deleted it already.
 		rc, found := r.controllers[*gvr]
 		if found {
-			logging.FromContext(ctx).Infow("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
+			logging.FromContext(context.TODO()).Info("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
 			rc.cancel()
 			delete(r.controllers, *gvr)
+			logging.FromContext(context.TODO()).Info("Deleted Source Duck", zap.String("GVR", gvr.String()))
 		}
-		r.lock.Unlock()
 	}
 }
 

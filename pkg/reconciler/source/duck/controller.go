@@ -66,13 +66,16 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 		}
 		impl := controller.NewImpl(r, logger, ReconcilerName)
 
-		logger.Info("Setting up event handlers")
+		logger.Info("Setting up Source event handlers")
 		sourceInformer.AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 		eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 			FilterFunc: controller.FilterControllerGVK(gvk),
-			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-		})
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc:    impl.Enqueue,
+				UpdateFunc: controller.PassNew(impl.Enqueue),
+				DeleteFunc: r.deleteFunc,
+			}})
 
 		return impl
 	}

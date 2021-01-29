@@ -55,11 +55,14 @@ func NewController(
 		}
 	})
 
-	logger.Info("Setting up event handlers")
+	logger.Info("Setting up CRD event handlers")
 	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckLabelKey, sources.SourceDuckLabelValue, false),
-		Handler:    controller.HandleAll(impl.Enqueue),
-	})
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.Enqueue,
+			UpdateFunc: controller.PassNew(impl.Enqueue),
+			DeleteFunc: r.deleteFunc,
+		}})
 
 	return impl
 }

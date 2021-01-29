@@ -265,3 +265,10 @@ func asMap(eventTypes []v1beta1.EventType, keyFunc func(*v1beta1.EventType) stri
 func keyFromEventType(eventType *v1beta1.EventType) string {
 	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
 }
+
+func (r *Reconciler) deleteFunc(obj interface{}) {
+	logging.FromContext(context.TODO()).Info("In delete function for Source")
+	if obj == nil {
+		return
+	}
+}
