@@ -40,14 +40,14 @@ type ReceiverConfig struct {
 
 // SenderConfig hold configuration for sender
 type SenderConfig struct {
-	Address  string
+	Address  interface{}
 	Interval time.Duration
 	Cooldown time.Duration
 }
 
 // ForwarderConfig holds configuration for forwarder
 type ForwarderConfig struct {
-	Target string
+	Target interface{}
 	Port   int
 }
 

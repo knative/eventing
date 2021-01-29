@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Knative Authors
+ * Copyright 2020-2021 The Knative Authors
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,9 +15,12 @@
 
 package sender
 
+import "C"
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/wavesoftware/go-ensure"
@@ -30,8 +33,15 @@ import (
 	"time"
 )
 
-var log = config.Log
-var senderConfig = &config.Instance.Sender
+var (
+	// ErrEndpointTypeNotSupported is raised if configured endpoint isn't
+	// supported by any of the event senders that are registered.
+	ErrEndpointTypeNotSupported = errors.New("given endpoint isn't " +
+			"supported by any registered event sender")
+	log          = config.Log
+	senderConfig = &config.Instance.Sender
+	eventSenders = make([]EventSender, 0, 1)
+)
 
 type sender struct {
 	counter int
@@ -85,15 +95,47 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 	return e
 }
 
+// Register will register a EventSender to be used.
+func Register(es EventSender) {
+	eventSenders = append(eventSenders, es)
+}
+
 // SendEvent will send cloud event to given url
-func SendEvent(e cloudevents.Event, url string) error {
+func SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+	senders := make([]EventSender, len(eventSenders), len(eventSenders)+1)
+	senders = append(senders, eventSenders...)
+	if len(senders) == 0 {
+		senders = append(senders, httpSender{})
+	}
+	for _, eventSender := range senders {
+		if eventSender.Supports(endpoint) {
+			return eventSender.SendEvent(ce, endpoint)
+		}
+	}
+	return fmt.Errorf("%w: endpoint is %#v", ErrEndpointTypeNotSupported, endpoint)
+}
+
+type httpSender struct{}
+
+func (h httpSender) Supports(endpoint interface{}) bool {
+	switch url := endpoint.(type) {
+	default:
+		return false
+	case string:
+		return strings.HasPrefix(url, "http://") ||
+				strings.HasPrefix(url, "https://")
+	}
+}
+
+func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+	url := endpoint.(string)
 	c, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		return err
 	}
 	ctx := cloudevents.ContextWithTarget(context.Background(), url)
 
-	result := c.Send(ctx, e)
+	result := c.Send(ctx, ce)
 	if cloudevents.IsACK(result) {
 		return nil
 	}
@@ -103,9 +145,9 @@ func SendEvent(e cloudevents.Event, url string) error {
 func (s *sender) sendStep() error {
 	step := event.Step{Number: s.counter + 1}
 	ce := NewCloudEvent(step, event.StepType)
-	url := senderConfig.Address
-	log.Infof("Sending step event #%v to %s", step.Number, url)
-	err := SendEvent(ce, url)
+	endpoint := senderConfig.Address
+	log.Infof("Sending step event #%v to %v", step.Number, endpoint)
+	err := SendEvent(ce, endpoint)
 	if err != nil {
 		return err
 	}
@@ -118,8 +160,8 @@ func (s *sender) sendFinished() {
 		return
 	}
 	finished := event.Finished{Count: s.counter}
-	url := senderConfig.Address
+	endpoint := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
-	log.Infof("Sending finished event (count: %v) to %s", finished.Count, url)
-	ensure.NoError(SendEvent(ce, url))
+	log.Infof("Sending finished event (count: %v) to %v", finished.Count, endpoint)
+	ensure.NoError(SendEvent(ce, endpoint))
 }
