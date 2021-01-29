@@ -36,7 +36,7 @@ func TestReceiverReceive(t *testing.T) {
 	// given
 	e1 := sender.NewCloudEvent(event.Step{Number: 42}, event.StepType)
 	e2 := sender.NewCloudEvent(event.Step{Number: 43}, event.StepType)
-	f := sender.NewCloudEvent(event.Finished{Count: 2}, event.FinishedType)
+	f := sender.NewCloudEvent(event.Finished{EventsSent: 2}, event.FinishedType)
 
 	instance := New()
 	port := freeport.GetPort()

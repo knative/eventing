@@ -33,8 +33,8 @@ import (
 func TestFetcherMain(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		st := receiver.Report{
-			State:  "active",
-			Events: 1456,
+			State:      "active",
+			EventsSent: 1456,
 			Thrown: receiver.Thrown{
 				Unexpected: []string{},
 				Missing:    []string{},
@@ -76,6 +76,6 @@ func TestFetcherMain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, 1456, exec.Report.Events)
+	assert.Equal(t, 1456, exec.Report.EventsSent)
 	assert.Equal(t, "active", exec.Report.State)
 }

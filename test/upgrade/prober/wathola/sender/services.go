@@ -34,7 +34,12 @@ var log = config.Log
 var senderConfig = &config.Instance.Sender
 
 type sender struct {
-	counter int
+	// eventsSent is the number of events successfully sent
+	eventsSent int
+	// totalRequests is the number of all the send event requests
+	totalRequests int
+	// unavailablePeriods is an array for non-zero retries for each event
+	unavailablePeriods []time.Duration
 }
 
 func (s *sender) SendContinually() {
@@ -50,17 +55,31 @@ func (s *sender) SendContinually() {
 		close(shutdownCh)
 	}()
 
+	var start time.Time
+	retry := 0
 	for {
 		select {
 		case <-shutdownCh:
+			// If there is ongoing event transition, we need to push to retries too.
+			if retry != 0 {
+				s.unavailablePeriods = append(s.unavailablePeriods, time.Since(start))
+			}
 			return
 		default:
 		}
 		err := s.sendStep()
 		if err != nil {
-			log.Warnf("Could not send step event, retry in %v", senderConfig.Cooldown)
-			time.Sleep(senderConfig.Cooldown)
+			if retry == 0 {
+				start = time.Now()
+				log.Warnf("Could not send step event %v, retrying", s.eventsSent)
+			}
+			retry++
 		} else {
+			if retry != 0 {
+				s.unavailablePeriods = append(s.unavailablePeriods, time.Since(start))
+				log.Warnf("Event sent after %v retries", retry)
+				retry = 0
+			}
 			time.Sleep(senderConfig.Interval)
 		}
 	}
@@ -101,25 +120,27 @@ func SendEvent(e cloudevents.Event, url string) error {
 }
 
 func (s *sender) sendStep() error {
-	step := event.Step{Number: s.counter + 1}
+	step := event.Step{Number: s.eventsSent + 1}
 	ce := NewCloudEvent(step, event.StepType)
 	url := senderConfig.Address
 	log.Infof("Sending step event #%v to %s", step.Number, url)
 	err := SendEvent(ce, url)
+	// Record every request regardless of the result
+	s.totalRequests++
 	if err != nil {
 		return err
 	}
-	s.counter++
+	s.eventsSent++
 	return nil
 }
 
 func (s *sender) sendFinished() {
-	if s.counter == 0 {
+	if s.eventsSent == 0 {
 		return
 	}
-	finished := event.Finished{Count: s.counter}
+	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: s.unavailablePeriods}
 	url := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
-	log.Infof("Sending finished event (count: %v) to %s", finished.Count, url)
+	log.Infof("Sending finished event (count: %v) to %s", finished.EventsSent, url)
 	ensure.NoError(SendEvent(ce, url))
 }

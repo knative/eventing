@@ -31,10 +31,16 @@ type ReceiverProgressConfig struct {
 	Duration time.Duration
 }
 
+// ReceiverErrorConfig holds error reporting config of the receiver
+type ReceiverErrorConfig struct {
+	UnavailablePeriodToReport time.Duration
+}
+
 // ReceiverConfig hold configuration for receiver
 type ReceiverConfig struct {
 	Teardown ReceiverTeardownConfig
 	Progress ReceiverProgressConfig
+	Errors   ReceiverErrorConfig
 	Port     int
 }
 
@@ -42,7 +48,6 @@ type ReceiverConfig struct {
 type SenderConfig struct {
 	Address  string
 	Interval time.Duration
-	Cooldown time.Duration
 }
 
 // ForwarderConfig holds configuration for forwarder

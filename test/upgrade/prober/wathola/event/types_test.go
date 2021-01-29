@@ -28,7 +28,7 @@ func TestStepType(t *testing.T) {
 }
 
 func TestFinishedType(t *testing.T) {
-	f1 := Finished{Count: 441}
+	f1 := Finished{EventsSent: 441}
 
 	assert.Equal(t, FinishedType, f1.Type())
 }

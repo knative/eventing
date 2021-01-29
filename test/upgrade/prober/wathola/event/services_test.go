@@ -34,12 +34,13 @@ func TestProperEventsPropagation(t *testing.T) {
 	stepsStore.RegisterStep(&Step{Number: 1})
 	stepsStore.RegisterStep(&Step{Number: 3})
 	stepsStore.RegisterStep(&Step{Number: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 3})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 3})
 
 	// then
 	assert.Empty(t, errors.thrown.duplicated)
 	assert.Empty(t, errors.thrown.missing)
 	assert.Empty(t, errors.thrown.unexpected)
+	assert.Empty(t, errors.thrown.unavailable)
 }
 
 func TestMissingAndDoubleEvent(t *testing.T) {
@@ -52,12 +53,13 @@ func TestMissingAndDoubleEvent(t *testing.T) {
 	stepsStore.RegisterStep(&Step{Number: 1})
 	stepsStore.RegisterStep(&Step{Number: 2})
 	stepsStore.RegisterStep(&Step{Number: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 3})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 3})
 
 	// then
 	assert.NotEmpty(t, errors.thrown.duplicated)
 	assert.NotEmpty(t, errors.thrown.missing)
 	assert.NotEmpty(t, errors.thrown.unexpected)
+	assert.Empty(t, errors.thrown.unavailable)
 }
 
 func TestDoubleFinished(t *testing.T) {
@@ -69,17 +71,37 @@ func TestDoubleFinished(t *testing.T) {
 	// when
 	stepsStore.RegisterStep(&Step{Number: 1})
 	stepsStore.RegisterStep(&Step{Number: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 2})
-	finishedStore.RegisterFinished(&Finished{Count: 2})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 2})
+	finishedStore.RegisterFinished(&Finished{EventsSent: 2})
 
 	// then
 	assert.NotEmpty(t, errors.thrown.duplicated)
 	assert.Empty(t, errors.thrown.missing)
 	assert.Empty(t, errors.thrown.unexpected)
+	assert.Empty(t, errors.thrown.unavailable)
+}
+
+func TestUnavail(t *testing.T) {
+	// given
+	errors := NewErrorStore()
+	stepsStore := NewStepsStore(errors)
+	finishedStore := NewFinishedStore(stepsStore, errors)
+
+	// when
+	finishedStore.RegisterFinished(&Finished{
+		UnavailablePeriods: []time.Duration{10 * time.Second},
+	})
+
+	// then
+	assert.Empty(t, errors.thrown.duplicated)
+	assert.Empty(t, errors.thrown.missing)
+	assert.Empty(t, errors.thrown.unexpected)
+	assert.NotEmpty(t, errors.thrown.unavailable)
 }
 
 func TestMain(m *testing.M) {
 	config.Instance.Receiver.Teardown.Duration = 20 * time.Millisecond
+	config.Instance.Receiver.Errors.UnavailablePeriodToReport = 1 * time.Second
 	exitcode := m.Run()
 	os.Exit(exitcode)
 }
