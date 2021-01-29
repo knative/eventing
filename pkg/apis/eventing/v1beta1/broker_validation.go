@@ -36,7 +36,13 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField(BrokerClassAnnotationKey))
 	}
 
-	return errs.Also(b.Spec.Validate(withNS).ViaField("spec"))
+	errs = errs.Also(b.Spec.Validate(withNS).ViaField("spec"))
+
+	if apis.IsInUpdate(ctx) {
+		original := apis.GetBaseline(ctx).(*Broker)
+		errs = errs.Also(b.CheckImmutableFields(ctx, original))
+	}
+	return errs
 }
 
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
