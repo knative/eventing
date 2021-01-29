@@ -18,14 +18,16 @@ package receiver
 
 // Thrown holds different error types.
 type Thrown struct {
-	Duplicated []string `json:"duplicated"`
-	Missing    []string `json:"missing"`
-	Unexpected []string `json:"unexpected"`
+	Duplicated  []string `json:"duplicated"`
+	Missing     []string `json:"missing"`
+	Unexpected  []string `json:"unexpected"`
+	Unavailable []string `jsong:"unavailable"`
 }
 
 // Report represents state as JSON
 type Report struct {
-	State  string `json:"state"`
-	Events int    `json:"events"`
-	Thrown Thrown `json:"thrown"`
+	State         string `json:"state"`
+	EventsSent    int    `json:"eventsSent"`
+	TotalRequests int    `json:"totalRequests"`
+	Thrown        Thrown `json:"thrown"`
 }

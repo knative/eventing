@@ -15,7 +15,11 @@
 
 package event
 
-import "knative.dev/eventing/test/upgrade/prober/wathola/config"
+import (
+	"time"
+
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+)
 
 const (
 	// StepType is a string type representation of step event
@@ -31,7 +35,9 @@ type Step struct {
 
 // Finished is step call after verification finishes
 type Finished struct {
-	Count int
+	EventsSent         int
+	TotalRequests      int
+	UnavailablePeriods []time.Duration
 }
 
 // Type returns a type of a event

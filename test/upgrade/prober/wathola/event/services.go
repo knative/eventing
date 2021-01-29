@@ -27,9 +27,10 @@ var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
 
 type thrownTypes struct {
-	missing    []thrown
-	duplicated []thrown
-	unexpected []thrown
+	missing     []thrown
+	duplicated  []thrown
+	unexpected  []thrown
+	unavailable []thrown
 }
 
 // ErrorStore contains errors that was thrown
@@ -43,9 +44,10 @@ func NewErrorStore() *ErrorStore {
 	return &ErrorStore{
 		state: Active,
 		thrown: thrownTypes{
-			missing:    make([]thrown, 0),
-			duplicated: make([]thrown, 0),
-			unexpected: make([]thrown, 0),
+			missing:     make([]thrown, 0),
+			duplicated:  make([]thrown, 0),
+			unexpected:  make([]thrown, 0),
+			unavailable: make([]thrown, 0),
 		},
 	}
 }
@@ -61,10 +63,11 @@ func NewStepsStore(errors *ErrorStore) StepsStore {
 // NewFinishedStore creates FinishedStore
 func NewFinishedStore(steps StepsStore, errors *ErrorStore) FinishedStore {
 	return &finishedStore{
-		received: 0,
-		count:    -1,
-		steps:    steps,
-		errors:   errors,
+		received:      0,
+		eventsSent:    -1,
+		totalRequests: 0,
+		steps:         steps,
+		errors:        errors,
 	}
 }
 
@@ -94,21 +97,34 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 			f.received+1)
 	}
 	f.received++
-	f.count = finished.Count
-	log.Infof("finish event received, expecting %d event ware propagated", finished.Count)
+	f.eventsSent = finished.EventsSent
+	f.totalRequests = finished.TotalRequests
+	log.Infof("finish event received, expecting %d event ware propagated", finished.EventsSent)
 	d := config.Instance.Receiver.Teardown.Duration
 	log.Infof("waiting additional %v to be sure all events came", d)
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
-	if receivedEvents != finished.Count {
+	if receivedEvents != finished.EventsSent {
 		f.errors.throwUnexpected("expecting to have %v unique events received, "+
-			"but received %v unique events", finished.Count, receivedEvents)
+			"but received %v unique events", finished.EventsSent, receivedEvents)
 		f.reportViolations(finished)
 		f.errors.state = Failed
 	} else {
 		log.Infof("properly received %d unique events", receivedEvents)
 		f.errors.state = Success
 	}
+	// check down time
+	for _, unavailablePeriod := range finished.UnavailablePeriods {
+		if unavailablePeriod > config.Instance.Receiver.Errors.UnavailablePeriodToReport {
+			f.errors.throwUnavail("actual unavailable period %v is over down time limit of %v", unavailablePeriod, config.Instance.Receiver.Errors.UnavailablePeriodToReport)
+			f.errors.state = Failed
+		}
+		log.Infof("detecting unavailable time %v", unavailablePeriod)
+	}
+}
+
+func (f *finishedStore) TotalRequests() int {
+	return f.totalRequests
 }
 
 func (f *finishedStore) State() State {
@@ -127,6 +143,10 @@ func (f *finishedStore) UnexpectedThrown() []string {
 	return asStrings(f.errors.thrown.unexpected)
 }
 
+func (f *finishedStore) UnavailableThrown() []string {
+	return asStrings(f.errors.thrown.unavailable)
+}
+
 func asStrings(errThrown []thrown) []string {
 	msgs := make([]string, 0)
 	for _, t := range errThrown {
@@ -138,7 +158,7 @@ func asStrings(errThrown []thrown) []string {
 
 func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
-	for eventNo := 1; eventNo <= finished.Count; eventNo++ {
+	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
 		times, ok := steps.store[eventNo]
 		if !ok {
 			times = 0
@@ -173,6 +193,10 @@ func (e *ErrorStore) throwUnexpected(format string, args ...interface{}) {
 	e.thrown.unexpected = e.appendThrown(e.thrown.unexpected, format, args...)
 }
 
+func (e *ErrorStore) throwUnavail(format string, args ...interface{}) {
+	e.thrown.unavailable = e.appendThrown(e.thrown.unavailable, format, args...)
+}
+
 func (e *ErrorStore) appendThrown(errThrown []thrown, format string, args ...interface{}) []thrown {
 	t := thrown{
 		format: format,
@@ -188,10 +212,11 @@ type stepStore struct {
 }
 
 type finishedStore struct {
-	received int
-	count    int
-	errors   *ErrorStore
-	steps    StepsStore
+	received      int
+	eventsSent    int
+	totalRequests int
+	errors        *ErrorStore
+	steps         StepsStore
 }
 
 type thrown struct {

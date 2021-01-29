@@ -99,13 +99,16 @@ func (r reportHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.RequestURI == "/report" {
 		s := r.receiver.finished.State()
 		events := r.receiver.step.Count()
+		totalReq := r.receiver.finished.TotalRequests()
 		sj := &Report{
-			State:  stateToString(s),
-			Events: events,
+			State:         stateToString(s),
+			EventsSent:    events,
+			TotalRequests: totalReq,
 			Thrown: Thrown{
-				Duplicated: r.receiver.finished.DuplicatedThrown(),
-				Missing:    r.receiver.finished.MissingThrown(),
-				Unexpected: r.receiver.finished.UnexpectedThrown(),
+				Duplicated:  r.receiver.finished.DuplicatedThrown(),
+				Missing:     r.receiver.finished.MissingThrown(),
+				Unexpected:  r.receiver.finished.UnexpectedThrown(),
+				Unavailable: r.receiver.finished.UnavailableThrown(),
 			},
 		}
 		b, err := json.Marshal(sj)
