@@ -127,7 +127,8 @@ jobs:
         if: steps.golangci_configuration.outputs.files_exists == 'true'
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.32
+          version: v1.35
+          args: --timeout=10m
 
       - name: misspell
         shell: bash
