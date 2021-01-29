@@ -15,7 +15,6 @@
 
 package sender
 
-import "C"
 import (
 	"context"
 	"errors"
