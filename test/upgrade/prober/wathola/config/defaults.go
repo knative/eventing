@@ -72,7 +72,6 @@ func defaultValues() *Config {
 		Sender: SenderConfig{
 			Address:  fmt.Sprintf("http://localhost:%v/", forwarderPort),
 			Interval: 10 * time.Millisecond,
-			Cooldown: 100 * time.Millisecond,
 		},
 		Readiness: ReadinessConfig{
 			Enabled: true,

@@ -48,7 +48,6 @@ type ReceiverConfig struct {
 type SenderConfig struct {
 	Address  string
 	Interval time.Duration
-	Cooldown time.Duration
 }
 
 // ForwarderConfig holds configuration for forwarder

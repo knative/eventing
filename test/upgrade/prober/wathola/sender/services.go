@@ -55,25 +55,29 @@ func (s *sender) SendContinually() {
 		close(shutdownCh)
 	}()
 
+	var start time.Time
 	retry := 0
 	for {
 		select {
 		case <-shutdownCh:
 			// If there is ongoing event transition, we need to push to retries too.
 			if retry != 0 {
-				s.unavailablePeriods = append(s.unavailablePeriods, time.Duration(retry)*senderConfig.Cooldown)
+				s.unavailablePeriods = append(s.unavailablePeriods, time.Since(start))
 			}
 			return
 		default:
 		}
 		err := s.sendStep()
 		if err != nil {
+			if retry == 0 {
+				start = time.Now()
+				log.Warnf("Could not send step event %v, retrying", s.eventsSent)
+			}
 			retry++
-			log.Warnf("Could not send step event, retry in %v", senderConfig.Cooldown)
-			time.Sleep(senderConfig.Cooldown)
 		} else {
 			if retry != 0 {
-				s.unavailablePeriods = append(s.unavailablePeriods, time.Duration(retry)*senderConfig.Cooldown)
+				s.unavailablePeriods = append(s.unavailablePeriods, time.Since(start))
+				log.Warnf("Event sent after %v retries", retry)
 				retry = 0
 			}
 			time.Sleep(senderConfig.Interval)
