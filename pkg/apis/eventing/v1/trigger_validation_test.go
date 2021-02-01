@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -60,6 +61,7 @@ var (
 )
 
 func TestTriggerValidation(t *testing.T) {
+	invalidString := "invalid time"
 	tests := []struct {
 		name string
 		t    *Trigger
@@ -258,7 +260,22 @@ func TestTriggerValidation(t *testing.T) {
 				Message: `The provided injection annotation is only used for default broker, but non-default broker specified here: "test-broker"`,
 			},
 		},
-	}
+		{
+			name: "invalid delivery, invalid delay string",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+				},
+				Spec: TriggerSpec{
+					Broker:     "test_broker",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+					Delivery: &eventingduckv1.DeliverySpec{
+						BackoffDelay: &invalidString,
+					},
+				}},
+			want: apis.ErrInvalidValue(invalidString, "spec.delivery.backoffDelay"),
+		}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -271,6 +288,7 @@ func TestTriggerValidation(t *testing.T) {
 }
 
 func TestTriggerSpecValidation(t *testing.T) {
+	invalidString := "invalid time"
 	tests := []struct {
 		name string
 		ts   *TriggerSpec
@@ -385,6 +403,17 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{},
+	}, {
+		name: "invalid delivery, invalid delay string",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validEmptyFilter,
+			Subscriber: validSubscriber,
+			Delivery: &eventingduckv1.DeliverySpec{
+				BackoffDelay: &invalidString,
+			},
+		},
+		want: apis.ErrInvalidValue(invalidString, "delivery.backoffDelay"),
 	}}
 
 	for _, test := range tests {

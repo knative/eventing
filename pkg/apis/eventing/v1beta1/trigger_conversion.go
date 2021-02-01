@@ -20,8 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 )
@@ -42,10 +41,8 @@ func (source *Trigger) ConvertTo(ctx context.Context, to apis.Convertible) error
 			}
 		}
 		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1.DeliverySpec{}
-			if err := source.Spec.Delivery.ConvertTo(ctx, sink.Spec.Delivery); err != nil {
-				return err
-			}
+			sink.Spec.Delivery = &eventingduckv1.DeliverySpec{}
+			source.Spec.Delivery.DeepCopyInto(sink.Spec.Delivery)
 		}
 		sink.Status.Status = source.Status.Status
 		sink.Status.SubscriberURI = source.Status.SubscriberURI
@@ -72,10 +69,8 @@ func (sink *Trigger) ConvertFrom(ctx context.Context, from apis.Convertible) err
 			}
 		}
 		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1beta1.DeliverySpec{}
-			if err := sink.Spec.Delivery.ConvertFrom(ctx, source.Spec.Delivery); err != nil {
-				return err
-			}
+			sink.Spec.Delivery = &eventingduckv1.DeliverySpec{}
+			source.Spec.Delivery.DeepCopyInto(sink.Spec.Delivery)
 		}
 		sink.Status.Status = source.Status.Status
 		sink.Status.SubscriberURI = source.Status.SubscriberURI
