@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -119,17 +119,17 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	msp := metrics.NewMemStatsAll()
 	msp.Start(ctx, 30*time.Second)
 	if err := view.Register(msp.DefaultViews()...); err != nil {
-		logger.Fatal("Error exporting go memstats view: %v", zap.Error(err))
+		logger.Fatalw("Error exporting go memstats view: %v", zap.Error(err))
 	}
 
 	var crStatusEventClient *crstatusevent.CRStatusEventClient
 
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
 	if metricsConfig, err := env.GetMetricsConfig(); err != nil {
-		logger.Error("failed to process metrics options", zap.Error(err))
+		logger.Errorw("Failed to process metrics options", zap.Error(err))
 	} else if metricsConfig != nil {
 		if err := metrics.UpdateExporter(ctx, *metricsConfig, logger); err != nil {
-			logger.Error("failed to create the metrics exporter", zap.Error(err))
+			logger.Errorw("Failed to create the metrics exporter", zap.Error(err))
 		}
 		// Check if metrics config contains profiling flag
 		if metricsConfig.ConfigMap != nil {
@@ -140,7 +140,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 					server := profiling.NewServer(profiling.NewHandler(logger, true))
 					// Don't forward ErrServerClosed as that indicates we're already shutting down.
 					if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-						logger.Error("profiling server failed", zap.Error(err))
+						logger.Errorw("Profiling server failed", zap.Error(err))
 					}
 				}()
 			}
@@ -150,18 +150,18 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
-		logger.Error("error building statsreporter", zap.Error(err))
+		logger.Errorw("Error building statsreporter", zap.Error(err))
 	}
 
 	if err := env.SetupTracing(logger); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.
-		logger.Error("Error setting up trace publishing", zap.Error(err))
+		logger.Errorw("Error setting up trace publishing", zap.Error(err))
 	}
 
 	eventsClient, err := NewCloudEventsClientCRStatus(env, reporter, crStatusEventClient)
 	if err != nil {
-		logger.Fatal("Error building cloud event client", zap.Error(err))
+		logger.Fatalw("Error building cloud event client", zap.Error(err))
 	}
 
 	// Configuring the adapter
@@ -170,7 +170,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	// Build the leader elector
 	leConfig, err := env.GetLeaderElectionConfig()
 	if err != nil {
-		logger.Error("Error loading the leader election configuration", zap.Error(err))
+		logger.Errorw("Error loading the leader election configuration", zap.Error(err))
 	}
 
 	if !isHADisabledFlag(ctx) && IsHAEnabled(ctx) {
@@ -196,7 +196,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	// Finally start the adapter (blocking)
 	if err := adapter.Start(ctx); err != nil {
-		logging.FromContext(ctx).Errorw("Start returned an error", zap.Error(err))
+		logger.Fatalw("Start returned an error", zap.Error(err))
 	}
 }
 
