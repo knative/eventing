@@ -23,7 +23,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 const (
@@ -92,7 +92,7 @@ type TriggerSpec struct {
 
 	// Delivery contains the delivery spec for this specific trigger.
 	// +optional
-	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
+	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 type TriggerFilter struct {
