@@ -66,8 +66,9 @@ spec:
                         holding it if left out.'
                     type: string
               delivery:
-                description: 'Delivery is the delivery specification for Events within
-                    the Broker mesh. This includes things like retries, DLQ, etc.'
+                description: 'Delivery contains the delivery spec for each trigger
+                        to this Broker. Each trigger delivery spec, if any, overrides this
+                        global delivery spec.'
                 type: object
                 properties:
                   backoffDelay:

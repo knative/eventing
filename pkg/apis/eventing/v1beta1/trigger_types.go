@@ -22,6 +22,8 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 const (
@@ -87,6 +89,10 @@ type TriggerSpec struct {
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
 	Subscriber duckv1.Destination `json:"subscriber"`
+
+	// Delivery contains the delivery spec for this specific trigger.
+	// +optional
+	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 type TriggerFilter struct {
