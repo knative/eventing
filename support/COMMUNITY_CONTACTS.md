@@ -21,7 +21,7 @@ community contact's duty (subject to change) is as followed:
 ### Monday
 
 - Check 'Eventing Triage' Peribolos group
-  https://github.com/knative/community/blob/509d00841920181611a8457da3f655ef014ff9bf/peribolos/knative.yaml#L669
+  https://github.com/knative/community/blob/master/peribolos/knative.yaml
   and send a PR to add yourself if you aren't already in there.
 - Check the [Eventing test grid](https://testgrid.k8s.io/knative-eventing) for
   flakiness to pick a test and focus on fixing it during your week. Once you
