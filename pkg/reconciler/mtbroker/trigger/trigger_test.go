@@ -41,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -151,22 +152,26 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "bad workqueue key",
 			// Make sure Reconcile handles bad keys.
-			Key: "too/many/parts",
+			Key:     "too/many/parts",
+			Objects: []runtime.Object{internalDeliveryConfigMap()},
 		}, {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
-			Key: "foo/not-found",
+			Key:     "foo/not-found",
+			Objects: []runtime.Object{internalDeliveryConfigMap()},
 		}, {
-			Name: "Trigger not found",
-			Key:  testKey,
+			Name:    "Trigger not found",
+			Key:     testKey,
+			Objects: []runtime.Object{internalDeliveryConfigMap()},
 		}, {
 			Name:    "Trigger is being deleted",
 			Key:     testKey,
-			Objects: []runtime.Object{NewTrigger(triggerName, testNS, brokerName, WithTriggerDeleted)},
+			Objects: []runtime.Object{NewTrigger(triggerName, testNS, brokerName, WithTriggerDeleted), internalDeliveryConfigMap()},
 		}, {
 			Name: "Broker does not exist",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithInitTriggerConditions,
 					WithTriggerSubscriberURI(subscriberURI)),
@@ -181,6 +186,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Not my broker class - no status updates",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				NewBroker(brokerName, testNS,
 					WithBrokerClass("not-my-broker"),
 					WithBrokerConfig(config()),
@@ -193,6 +199,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Broker not reconciled yet",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config())),
@@ -205,6 +212,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Broker not ready yet",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
@@ -219,6 +227,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Creates subscription",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
@@ -249,6 +258,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Subscription Create fails",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				ReadyBroker(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -282,6 +292,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger subscription create fails, update status fails",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				internalDeliveryConfigMap(),
 				ReadyBroker(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -313,6 +324,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger subscription not owned by Trigger",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI)),
@@ -335,6 +347,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger subscription update works",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI)),
@@ -367,6 +380,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger has subscriber ref exists",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeSubscriberAddressableAsUnstructured(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -393,6 +407,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger has subscriber ref exists and URI",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeSubscriberAddressableAsUnstructured(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -420,6 +435,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger has subscriber ref exists kubernetes Service",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeSubscriberKubernetesServiceAsUnstructured(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -447,6 +463,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger has subscriber ref doesn't exist",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
@@ -470,6 +487,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeFalseStatusSubscription(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -494,6 +512,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Subscription ready, trigger marked ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeReadySubscription(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -518,6 +537,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Dependency doesn't exist",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeReadySubscription(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -547,6 +567,7 @@ func TestReconcile(t *testing.T) {
 			Name: "The status of Dependency is False",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeReadySubscription(),
 				makeFalseStatusPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -574,6 +595,7 @@ func TestReconcile(t *testing.T) {
 			Name: "The status of Dependency is Unknown",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeReadySubscription(),
 				makeUnknownStatusCronJobSource(),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -602,6 +624,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Dependency generation not equal",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeReadySubscription(),
 				makeGenerationNotEqualPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -629,6 +652,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Dependency ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				internalDeliveryConfigMap(),
 				makeReadySubscription(),
 				makeReadyPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -673,6 +697,10 @@ func TestReconcile(t *testing.T) {
 			sourceTracker:   duck.NewListableTracker(ctx, source.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:     resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
+
+		r.internalDeliveryConfigStore = mtbroker.NewInternalDeliveryConfigStore(logger)
+		r.internalDeliveryConfigStore.WatchConfigs(cmw)
+
 		return trigger.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
 			controller.GetEventRecorder(ctx),
@@ -696,6 +724,10 @@ func config() *duckv1.KReference {
 func imcConfigMap() *corev1.ConfigMap {
 	return NewConfigMap(configMapName, testNS,
 		WithConfigMapData(map[string]string{"channelTemplateSpec": imcSpec}))
+}
+
+func internalDeliveryConfigMap() *corev1.ConfigMap {
+	return NewConfigMap(mtbroker.InternalDeliveryConfigMapName, testNS)
 }
 
 func createChannel(namespace string, ready bool) *unstructured.Unstructured {

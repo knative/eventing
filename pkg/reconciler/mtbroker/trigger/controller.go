@@ -31,6 +31,8 @@ import (
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/mtbroker"
+
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 	"knative.dev/pkg/configmap"
@@ -68,6 +70,8 @@ func NewController(
 
 	r.sourceTracker = duck.NewListableTracker(ctx, source.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	r.internalDeliveryConfigStore = mtbroker.NewInternalDeliveryConfigStore(logger)
+	r.internalDeliveryConfigStore.WatchConfigs(cmw)
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

@@ -29,15 +29,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
-	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
-	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
@@ -46,6 +37,17 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/mtbroker"
+	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
+	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
@@ -66,6 +68,9 @@ type Reconciler struct {
 	brokerLister       eventinglisters.BrokerLister
 	triggerLister      eventinglisters.TriggerLister
 	configmapLister    corev1listers.ConfigMapLister
+
+	// Internal Delivery store
+	internalDeliveryConfigStore *mtbroker.InternalDeliveryConfigStore
 
 	// Dynamic tracker to track Sources. In particular, it tracks the dependency between Triggers and Sources.
 	sourceTracker duck.ListableTracker
@@ -163,7 +168,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		Name:       b.Name,
 		Namespace:  b.Namespace,
 	}
-	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, uri, b.Spec.Delivery)
+	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, uri, r.internalDeliveryConfigStore.Load())
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.

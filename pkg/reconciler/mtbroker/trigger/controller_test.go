@@ -19,13 +19,18 @@ package mttrigger
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/pkg/system"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription/fake"
+	"knative.dev/eventing/pkg/reconciler/mtbroker"
+
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 )
@@ -33,7 +38,14 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	cmw := configmap.NewStaticWatcher(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      mtbroker.InternalDeliveryConfigMapName,
+			Namespace: system.Namespace(),
+		},
+	})
+
+	c := NewController(ctx, cmw)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
