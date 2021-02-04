@@ -68,7 +68,6 @@ func (a *resourceDelegate) Delete(obj interface{}) error {
 
 // sendCloudEvent sends a cloudevent everytime k8s api event is created, updated or deleted.
 func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents.Event) {
-	event = event.Clone()
 	event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
 	defer a.logger.Debug("Finished sending cloudevent id: ", event.ID())
 	source := event.Context.GetSource()
