@@ -17,8 +17,11 @@ limitations under the License.
 package events
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +30,14 @@ import (
 	sources "knative.dev/eventing/pkg/apis/sources"
 )
 
-func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
+const (
+	resourceGroup = "apiserversources.sources.knative.dev"
+)
+
+// MakeAddEvent returns a cloudevent when a k8s api event is created.
+func MakeAddEvent(source string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
 	if obj == nil {
-		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
+		return nil, cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
 
@@ -46,9 +54,10 @@ func MakeAddEvent(source string, obj interface{}, ref bool) (cloudevents.Event, 
 	return makeEvent(source, eventType, object, data)
 }
 
-func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
+// MakeUpdateEvent returns a cloudevent when a k8s api event is updated.
+func MakeUpdateEvent(source string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
 	if obj == nil {
-		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
+		return nil, cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
 
@@ -65,9 +74,10 @@ func MakeUpdateEvent(source string, obj interface{}, ref bool) (cloudevents.Even
 	return makeEvent(source, eventType, object, data)
 }
 
-func MakeDeleteEvent(source string, obj interface{}, ref bool) (cloudevents.Event, error) {
+// MakeDeleteEvent returns a cloudevent when a k8s api event is deleted.
+func MakeDeleteEvent(source string, obj interface{}, ref bool) (context.Context, cloudevents.Event, error) {
 	if obj == nil {
-		return cloudevents.Event{}, fmt.Errorf("resource can not be nil")
+		return nil, cloudevents.Event{}, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
 	var data interface{}
@@ -93,7 +103,7 @@ func getRef(object *unstructured.Unstructured) corev1.ObjectReference {
 	}
 }
 
-func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (cloudevents.Event, error) {
+func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (context.Context, cloudevents.Event, error) {
 	resourceName := obj.GetName()
 	kind := obj.GetKind()
 	namespace := obj.GetNamespace()
@@ -113,9 +123,18 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 	event.SetExtension("name", resourceName)
 	event.SetExtension("namespace", namespace)
 	if err := event.SetData(cloudevents.ApplicationJSON, data); err != nil {
-		return event, err
+		return nil, event, err
 	}
-	return event, nil
+
+	ctx := context.Background()
+	metricTag := &kncloudevents.MetricTag{
+		Namespace:     namespace,
+		Name:          resourceName,
+		ResourceGroup: resourceGroup,
+	}
+	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+
+	return ctx, event, nil
 }
 
 // Creates a URI of the form found in object metadata selfLinks
