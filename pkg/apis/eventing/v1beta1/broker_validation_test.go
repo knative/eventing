@@ -196,6 +196,88 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+func TestValidateUpdate(t *testing.T) {
+	tests := []struct {
+		name string
+		b    Broker
+		bNew Broker
+		want *apis.FieldError
+	}{{
+		name: "valid config change",
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Namespace:  "namespace",
+					Name:       "name",
+					Kind:       "kind",
+					APIVersion: "apiversion",
+				},
+			},
+		},
+		bNew: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Namespace:  "namespace",
+					Name:       "name2",
+					Kind:       "kind",
+					APIVersion: "apiversion",
+				},
+			},
+		},
+	}, {
+		name: "invalid config change, broker.class",
+		b: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "MTChannelBasedBroker"},
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Namespace:  "namespace",
+					Name:       "name",
+					Kind:       "kind",
+					APIVersion: "apiversion",
+				},
+			},
+		},
+		bNew: Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{"eventing.knative.dev/broker.class": "SomeOtherBrokerClass"},
+			},
+			Spec: BrokerSpec{
+				Config: &duckv1.KReference{
+					Namespace:  "namespace",
+					Name:       "name",
+					Kind:       "kind",
+					APIVersion: "apiversion",
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"annotations"},
+			Details: `{string}:
+	-: "MTChannelBasedBroker"
+	+: "SomeOtherBrokerClass"
+`,
+		},
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := apis.WithinUpdate(context.Background(), &test.b)
+			got := test.bNew.Validate(ctx)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Error("Broker.Validate (-want, +got) =", diff)
+			}
+		})
+	}
+}
+
 func TestValidSpec(t *testing.T) {
 	bop := eventingduckv1beta1.BackoffPolicyExponential
 	tests := []struct {
