@@ -57,8 +57,8 @@ fully overrides `BrokerSpec.Delivery` for that particular Trigger, hence:
   no delivery spec SHOULD be used.
 - When `BrokerSpec.Delivery` is configured, but not the specific
   `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used.
-- When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be
-  used.
+- When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD
+  be used.
 
 ## Data Plane
 
