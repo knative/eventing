@@ -34,8 +34,9 @@ subscriber.
 While a Trigger is Ready, it SHOULD indicate its subscriber's URI via the
 `status.subscriberUri` field.
 
-Triggers MUST be assigned to exactly one Broker. Triggers SHOULD be assigned a
-default Broker upon creation if no Broker is specified by the user.
+Triggers MUST be assigned to exactly one Broker. The assigned Broker of a
+trigger SHOULD be immutable. Triggers SHOULD be assigned a default Broker
+upon creation if no Broker is specified by the user.
 
 A Trigger MAY be created before its assigned Broker exists. A Trigger SHOULD
 progress to Ready when its assigned Broker exists and is Ready.
