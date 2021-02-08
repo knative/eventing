@@ -77,7 +77,7 @@ type PingSourceSpec struct {
 	// +optional
 	Data string `json:"data,omitempty"`
 
-	// DataBase64 is base64 encoded binary data used as the body of the event posted to the sink. Default is empty.
+	// DataBase64 is the base64-encoded string of the actual event's body posted to the sink. Default is empty.
 	// Mutually exclusive with Data.
 	// +optional
 	DataBase64 string `json:"dataBase64,omitempty"`

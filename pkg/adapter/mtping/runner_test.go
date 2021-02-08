@@ -17,7 +17,9 @@ limitations under the License.
 package mtping
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"reflect"
 	"testing"
 	"time"
@@ -46,11 +48,16 @@ const (
 	sampleJSONDataBase64           = "eyJtc2ciOiJzb21lIGRhdGEifQ==" // {"msg":"some data"}
 )
 
+func decodeBase64(base64Str string) []byte {
+	decoded, _ := base64.StdEncoding.DecodeString(base64Str)
+	return decoded
+}
+
 func TestAddRunRemoveSchedules(t *testing.T) {
 	testCases := map[string]struct {
 		src             *v1beta2.PingSource
 		wantContentType string
-		wantData        string
+		wantData        []byte
 	}{
 		"TestAddRunRemoveSchedule": {
 			src: &v1beta2.PingSource{
@@ -72,7 +79,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        sampleData,
+			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
 			src: &v1beta2.PingSource{
@@ -96,7 +103,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        sampleData,
+			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
 		}, "TestAddRunRemoveScheduleWithDataBase64": {
 			src: &v1beta2.PingSource{
@@ -118,7 +125,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        sampleDataBase64,
+			wantData:        decodeBase64(sampleDataBase64),
 			wantContentType: cloudevents.TextPlain,
 		}, "TestAddRunRemoveScheduleWithJsonData": {
 			src: &v1beta2.PingSource{
@@ -140,7 +147,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        sampleJSONData,
+			wantData:        []byte(sampleJSONData),
 			wantContentType: cloudevents.ApplicationJSON,
 		}, "TestAddRunRemoveScheduleWithJsonDataBase64": {
 			src: &v1beta2.PingSource{
@@ -162,7 +169,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        sampleJSONDataBase64,
+			wantData:        decodeBase64(sampleJSONDataBase64),
 			wantContentType: cloudevents.ApplicationJSON,
 		}, "TestAddRunRemoveScheduleWithXmlData": {
 			src: &v1beta2.PingSource{
@@ -184,7 +191,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 					},
 				},
 			},
-			wantData:        sampleXmlData,
+			wantData:        []byte(sampleXmlData),
 			wantContentType: cloudevents.ApplicationXML,
 		},
 	}
@@ -286,10 +293,10 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner.Stop() // cron job because of delay is still running.
 
-	validateSent(t, ce, "some delayed data", cloudevents.TextPlain, nil)
+	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, nil)
 }
 
-func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string, wantContentType string, extensions map[string]string) {
+func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData []byte, wantContentType string, extensions map[string]string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Error("Expected 1 event to be sent, got", got)
 	}
@@ -300,7 +307,7 @@ func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantDa
 		t.Errorf("Expected event with contentType=%q to be sent, got %q", wantContentType, gotContentType)
 	}
 
-	if got := event.Data(); string(got) != wantData {
+	if got := event.Data(); !bytes.Equal(wantData, got) {
 		t.Errorf("Expected %q event to be sent, got %q", wantData, got)
 	}
 
