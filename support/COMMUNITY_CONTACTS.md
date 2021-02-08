@@ -78,7 +78,7 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 ```
 
 - [grantr](https://github.com/grantr)
-- [Harwayne](https://github.com/Harwayne)
+- [antoineco](https://github.com/antoineco)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
 - [n3wscott](https://github.com/n3wscott)
@@ -103,7 +103,7 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 | 2021-01-18 | [grantr](https://github.com/grantr)                   |
 | 2021-01-25 | [lionelvillard](https://github.com/lionelvillard)     |
 | 2021-02-01 | [zhongduo](https://github.com/zhongduo)               |
-| 2021-02-08 | [Harwayne](https://github.com/Harwayne)               |
+| 2021-02-08 | [antoineco](https://github.com/antoineco)             |
 | 2021-02-15 | [matzew](https://github.com/matzew)                   |
 | 2021-02-22 | [lberk](https://github.com/lberk)                     |
 | 2021-03-01 | [pierDipi](https://github.com/pierDipi)               |
@@ -115,7 +115,7 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 | 2021-04-12 | [grantr](https://github.com/grantr)                   |
 | 2021-04-19 | [lionelvillard](https://github.com/lionelvillard)     |
 | 2021-04-26 | [slinkydeveloper](https://github.com/slinkydeveloper) |
-| 2021-05-03 | [Harwayne](https://github.com/Harwayne)               |
+| 2021-05-03 | [antoineco](https://github.com/antoineco)             |
 | 2021-05-10 | [matzew](https://github.com/matzew)                   |
 | 2021-05-17 | [lberk](https://github.com/lberk)                     |
 | 2021-05-24 | [pierDipi](https://github.com/pierDipi)               |
