@@ -123,13 +123,13 @@ func TestReconcile(t *testing.T) {
 		ctor:    NewControllerFactory("my"),
 		objects: []*corev1.Secret{wellFormedCaSecret, wellFormedControlPlaneSecret},
 		asserts: map[types.NamespacedName]func(*corev1.Secret){
-			types.NamespacedName{
+			{
 				Namespace: namespace,
 				Name:      wellFormedCaSecret.Name,
 			}: func(secret *corev1.Secret) {
 				require.Equal(t, wellFormedCaSecret, secret)
 			},
-			types.NamespacedName{
+			{
 				Namespace: namespace,
 				Name:      wellFormedControlPlaneSecret.Name,
 			}: func(secret *corev1.Secret) {
@@ -142,13 +142,13 @@ func TestReconcile(t *testing.T) {
 		ctor:    NewControllerFactory("my"),
 		objects: []*corev1.Secret{wellFormedCaSecret, wellFormedDataPlaneSecret},
 		asserts: map[types.NamespacedName]func(*corev1.Secret){
-			types.NamespacedName{
+			{
 				Namespace: namespace,
 				Name:      wellFormedCaSecret.Name,
 			}: func(secret *corev1.Secret) {
 				require.Equal(t, wellFormedCaSecret, secret)
 			},
-			types.NamespacedName{
+			{
 				Namespace: namespace,
 				Name:      wellFormedDataPlaneSecret.Name,
 			}: func(secret *corev1.Secret) {
@@ -169,13 +169,13 @@ func TestReconcile(t *testing.T) {
 			},
 		}},
 		asserts: map[types.NamespacedName]func(*corev1.Secret){
-			types.NamespacedName{
+			{
 				Namespace: namespace,
 				Name:      wellFormedCaSecret.Name,
 			}: func(secret *corev1.Secret) {
 				require.Equal(t, wellFormedCaSecret, secret)
 			},
-			types.NamespacedName{
+			{
 				Namespace: namespace,
 				Name:      "control-plane-ctrl",
 			}: func(secret *corev1.Secret) {
