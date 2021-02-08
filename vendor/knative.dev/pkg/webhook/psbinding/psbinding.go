@@ -24,7 +24,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/markbates/inflect"
+	"github.com/gobuffalo/flect"
 	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -300,7 +300,7 @@ func (ac *Reconciler) reconcileMutatingWebhook(ctx context.Context, caCert []byt
 
 	rules := make([]admissionregistrationv1.RuleWithOperations, 0, len(gks))
 	for gk, versions := range gks {
-		plural := strings.ToLower(inflect.Pluralize(gk.Kind))
+		plural := strings.ToLower(flect.Pluralize(gk.Kind))
 
 		rules = append(rules, admissionregistrationv1.RuleWithOperations{
 			Operations: []admissionregistrationv1.OperationType{
