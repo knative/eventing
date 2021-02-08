@@ -1008,6 +1008,8 @@ knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints
 knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/namespace
 knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake
+knative.dev/pkg/client/injection/kube/informers/core/v1/secret
+knative.dev/pkg/client/injection/kube/informers/core/v1/secret/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/service
 knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake
 knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount
@@ -1017,6 +1019,7 @@ knative.dev/pkg/client/injection/kube/informers/factory/fake
 knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding
 knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake
 knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace
+knative.dev/pkg/client/injection/kube/reconciler/core/v1/secret
 knative.dev/pkg/codegen/cmd/injection-gen
 knative.dev/pkg/codegen/cmd/injection-gen/args
 knative.dev/pkg/codegen/cmd/injection-gen/generators
