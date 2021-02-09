@@ -18,6 +18,7 @@ package helpers
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +72,7 @@ func BrokerV1Beta1ControlPlaneTest(
 	})
 
 	t.Run("Ready Trigger V1Beta1 (no Broker) set Broker and includes status.subscriber Uri", func(t *testing.T) {
-		triggerV1Beta1ReadyAfterBrokerIncludesSubURI(t, triggerNoBroker, brokerName, client)
+		triggerV1Beta1CanNotUpdateBroker(t, triggerNoBroker, brokerName, client)
 	})
 
 	t.Run("Ready Trigger V1Beta1 includes status.subscriber Uri", func(t *testing.T) {
@@ -120,7 +121,7 @@ func triggerV1Beta1ReadyBrokerReadyHelper(triggerName, brokerName string, client
 	client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
 }
 
-func triggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
+func triggerV1Beta1CanNotUpdateBroker(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
 		if err != nil {
@@ -130,28 +131,12 @@ func triggerV1Beta1ReadyAfterBrokerIncludesSubURI(t *testing.T, triggerName, bro
 		_, e := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Update(context.Background(), tr, metav1.UpdateOptions{})
 		return e
 	})
-	if err != nil {
-		t.Fatalf("Error: Could not update trigger %s: %v", triggerName, err)
+	if err == nil {
+		t.Fatalf("Error: Was able to update the trigger.Spec.Broker %s", triggerName)
 	}
 
-	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
-
-	var tr *eventingv1beta1.Trigger
-	triggers := client.Eventing.EventingV1beta1().Triggers(client.Namespace)
-	err = client.RetryWebhookErrors(func(attempts int) (err error) {
-		var e error
-		client.T.Logf("Getting v1beta1 trigger %s", triggerName)
-		tr, e = triggers.Get(context.Background(), triggerName, metav1.GetOptions{})
-		if e != nil {
-			client.T.Logf("Failed to get trigger %q: %v", triggerName, e)
-		}
-		return err
-	})
-	if err != nil {
-		t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
-	}
-	if tr.Status.SubscriberURI == nil {
-		t.Fatalf("Error: trigger.Status.SubscriberURI is nil but Broker Addressable & Ready")
+	if !strings.Contains(err.Error(), "Immutable fields changed (-old +new): broker, spec") {
+		t.Fatalf("Unexpected failure to update trigger, expected Immutable fields changed  (-old +new): broker, spec But got: %v", err)
 	}
 }
 
