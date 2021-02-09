@@ -19,7 +19,7 @@ Once you meet these requirements, you can
 > :information_source: If you intend to use event sinks based on Knative
 > Services as described in some of our examples, consider installing
 > [Knative Serving](http://github.com/knative/serving). A few
-> [contrib](http://github.com/knative/eventing-contrib) projects also have a
+> [Knative Sandbox](https://github.com/knative-sandbox/?q=eventing&type=&language=) projects also have a
 > dependency on Serving.
 
 Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
