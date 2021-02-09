@@ -3,7 +3,6 @@
 approvers:
 - toc
 - grantr
-- Harwayne
 - vaikas
 - n3wscott
 - matzew
@@ -19,7 +18,6 @@ approvers:
 # copy the approvers to the reviewers list too.
 reviewers:
 - grantr
-- Harwayne
 - vaikas
 - n3wscott
 - matzew
