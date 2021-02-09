@@ -18,7 +18,6 @@ package mtping
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"time"
@@ -146,30 +145,11 @@ func makeEvent(source *v1beta2.PingSource) (cloudevents.Event, error) {
 		}
 	}
 
-	// Set event data, at most one of data and dataBase64 exists.
-	// 1. If dataBase64 exists, then it's binary data, set event.DataEncoded to []byte(dataBase64)
-	// 2. If data exists, then it's not binary data
-	//  a. If contentType is not `application/json`, set event.DataEncoded to []byte(data)
-	//  b. If contentType is `application/json`, unmarshal it into an interface, event.DataEncoded will be json.Marshal(interface),
-	//    this is to be compatible with the existing v1beta1 PingSource -> CloudEvent conversion logic, to make sure
-	//    that `data` is populated in the cloudevent json format instead of `data_base64`, and not breaking subscribers
-	//    that do not leverage cloudevents sdk.
 	var data interface{}
 	if source.Spec.DataBase64 != "" {
 		data = []byte(source.Spec.DataBase64)
 	} else if source.Spec.Data != "" {
-		switch source.Spec.ContentType {
-		case cloudevents.ApplicationJSON:
-			// unmarshal the body into an interface, JSON validation is done in pingsource_validation
-			// ignoring the error returned by json.Unmarshal here.
-			var objmap map[string]*json.RawMessage
-			if err := json.Unmarshal([]byte(source.Spec.Data), &objmap); err != nil {
-				return event, fmt.Errorf("error unmarshalling source.Spec.Data: %v, err: %v", source.Spec.Data, err)
-			}
-			data = objmap
-		default:
-			data = []byte(source.Spec.Data)
-		}
+		data = []byte(source.Spec.Data)
 	}
 
 	if data != nil {
