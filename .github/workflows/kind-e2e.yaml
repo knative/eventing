@@ -23,7 +23,7 @@ jobs:
         k8s-version:
         - v1.18.8
         - v1.19.4
-        - v1.20.0
+        - v1.20.2
 
         test-suite:
         - ./test/rekt/...
@@ -40,7 +40,7 @@ jobs:
         - k8s-version: v1.19.4
           kind-version: v0.9.0
           kind-image-sha: sha256:796d09e217d93bed01ecf8502633e48fd806fe42f9d02fdd468b81cd4e3bd40b
-        - k8s-version: v1.20.0
+        - k8s-version: v1.20.2
           kind-version: v0.9.0
           kind-image-sha: sha256:b40ecf8bcb188f6a0d0f5d406089c48588b75edc112c6f635d26be5de1c89040
 
