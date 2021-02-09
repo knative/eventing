@@ -18,6 +18,7 @@ package mtping
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"time"
@@ -147,7 +148,7 @@ func makeEvent(source *v1beta2.PingSource) (cloudevents.Event, error) {
 
 	var data interface{}
 	if source.Spec.DataBase64 != "" {
-		data = []byte(source.Spec.DataBase64)
+		data, _ = base64.StdEncoding.DecodeString(source.Spec.DataBase64)
 	} else if source.Spec.Data != "" {
 		data = []byte(source.Spec.Data)
 	}
