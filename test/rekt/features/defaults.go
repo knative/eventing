@@ -19,6 +19,6 @@ package features
 import "time"
 
 const (
-	interval = 3 * time.Second
-	timeout  = 1 * time.Minute
+	Interval = 3 * time.Second
+	Timeout  = 1 * time.Minute
 )

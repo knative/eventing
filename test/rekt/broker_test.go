@@ -26,7 +26,7 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	"knative.dev/eventing/test/rekt/features"
+	"knative.dev/eventing/test/rekt/features/broker"
 )
 
 // TestBrokerAsMiddleware
@@ -41,10 +41,27 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, features.BrokerGoesReady("default", "MTChannelBroker"))
+	env.Prerequisite(ctx, t, broker.BrokerGoesReady("default", "MTChannelBroker"))
 
 	// Test that a Broker can act as middleware.
-	env.Test(ctx, t, features.BrokerAsMiddleware("default"))
+	env.Test(ctx, t, broker.SourceToSink("default"))
+
+	env.Finish()
+}
+
+func TestBrokerIngressConformance(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+	)
+
+	for _, f := range broker.BrokerIngressConformanceFeatures("MTChannelBroker") {
+		env.Test(ctx, t, f)
+	}
 
 	env.Finish()
 }
