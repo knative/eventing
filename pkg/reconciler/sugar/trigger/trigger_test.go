@@ -20,17 +20,27 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgotesting "k8s.io/client-go/testing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
+	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
+	fakesource "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 
 	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
@@ -40,6 +50,7 @@ import (
 const (
 	testNS      = "test-namespace"
 	triggerName = "test-trigger"
+	sourceName  = "test-source"
 	brokerName  = "default"
 )
 
@@ -239,4 +250,112 @@ func TestDisabledByDefault(t *testing.T) {
 			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
 			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
 	}, false, logger))
+}
+
+func TestFilterDependency(t *testing.T) {
+	// Events
+	missingDependencyEvent := Eventf(corev1.EventTypeWarning, "InternalError", "getting dependency: pingsources.sources.knative.dev %q not found", sourceName)
+
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "foo/not-found",
+	}, {
+		Name: "Trigger is not labeled",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName),
+		},
+		Key:                     testNS + "/" + triggerName,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+	}, {
+		Name: "Trigger is labeled with dependency only.",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName,
+				WithAnnotation(eventingv1.DependencyAnnotation, `{"kind":"PingSource", "name":"`+sourceName+`","apiVersion":"sources.knative.dev/v1beta2"}`)),
+			makePingSource(testNS, sourceName),
+		},
+		Key: testNS + "/" + triggerName,
+	}, {
+		Name: "Trigger is labeled with dependency and filter set to false.",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName,
+				WithAnnotation(eventingv1.DependencyAnnotation, `{"kind":"PingSource", "name":"`+sourceName+`","apiVersion":"sources.knative.dev/v1beta2"}`),
+				WithAnnotation(eventingv1.FilterAnnotation, "false")),
+			makePingSource(testNS, sourceName),
+		},
+		Key: testNS + "/" + triggerName,
+	}, {
+		Name: "Trigger is labeled with non-existent dependency and filter set to true.",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName,
+				WithAnnotation(eventingv1.DependencyAnnotation, `{"kind":"PingSource", "name":"`+sourceName+`","apiVersion":"sources.knative.dev/v1beta2"}`),
+				WithAnnotation(eventingv1.FilterAnnotation, "true")),
+		},
+		Key:     testNS + "/" + triggerName,
+		WantErr: true,
+		WantEvents: []string{
+			missingDependencyEvent,
+		},
+	}, {
+		Name: "Trigger is labeled with dependency and filter set to true",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName,
+				WithAnnotation(eventingv1.DependencyAnnotation, `{"kind":"PingSource", "name":"`+sourceName+`","apiVersion":"sources.knative.dev/v1beta2"}`),
+				WithAnnotation(eventingv1.FilterAnnotation, "true")),
+			makePingSource(testNS, sourceName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Verb:      "patch",
+					Resource:  schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1beta2", Resource: "pingsources"},
+				},
+				Name:      sourceName,
+				PatchType: "application/merge-patch+json",
+				Patch:     []byte(`{"spec":{"ceOverrides":{"extensions":{"` + sourceIdExtension + `":"sources.knative.dev/` + testNS + `/` + sourceName + `"}}}}`),
+			},
+			{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Verb:      "patch",
+					Resource:  schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1beta1", Resource: "triggers"},
+				},
+				Name:      triggerName,
+				PatchType: "application/merge-patch+json",
+				Patch:     []byte(`{"spec":{"filter":{"attributes":{"` + sourceIdExtension + `":"sources.knative.dev/` + testNS + `/` + sourceName + `"}}}}`),
+			},
+		},
+		Key: testNS + "/" + triggerName,
+	}}
+
+	logger := logtesting.TestLogger(t)
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = source.WithDuck(ctx)
+		r := &Reconciler{
+			eventingClientSet: fakeeventingclient.Get(ctx),
+			brokerLister:      listers.GetBrokerLister(),
+			dynamicClientSet:  fakedynamicclient.Get(ctx),
+			sourceTracker:     duck.NewListableTracker(ctx, fakesource.Get, func(types.NamespacedName) {}, 0),
+			isEnabled:         sugar.OffByDefault,
+		}
+		return trigger.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
+			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
+	}, false, logger))
+}
+
+func makePingSource(ns, name string) *sourcesv1beta2.PingSource {
+	return &sourcesv1beta2.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: sourcesv1beta2.PingSourceSpec{},
+	}
 }

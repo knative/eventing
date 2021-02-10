@@ -23,8 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 
+	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -33,6 +35,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
+	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/sugar"
 )
 
@@ -48,6 +51,7 @@ func NewController(
 
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
+		dynamicClientSet:  dynamicclient.Get(ctx),
 		brokerLister:      brokerInformer.Lister(),
 		isEnabled:         sugar.LabelFilterFnOrDie(ctx),
 	}
@@ -80,6 +84,9 @@ func NewController(
 	}
 	// Resync on deleting of brokers.
 	brokerInformer.Informer().AddEventHandler(HandleOnlyDelete(grCb))
+
+	// Setup source dependency tracker
+	r.sourceTracker = duck.NewListableTracker(ctx, source.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }

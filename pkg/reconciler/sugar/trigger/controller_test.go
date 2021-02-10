@@ -27,7 +27,7 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake"
-
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 )
 

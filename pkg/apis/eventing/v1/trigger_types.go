@@ -34,6 +34,10 @@ const (
 	// InjectionAnnotation is the annotation key used to enable knative eventing
 	// injection for a namespace to automatically create a broker.
 	InjectionAnnotation = "eventing.knative.dev/injection"
+
+	// FilterAnnotation is the annotation key used to indicate whether or not the trigger only receives events produced
+	// by the dependent source.
+	FilterAnnotation = "eventing.knative.dev/filter"
 )
 
 // +genclient
