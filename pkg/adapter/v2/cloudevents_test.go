@@ -258,5 +258,7 @@ func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
 		t.Errorf("Reporter is not a mockReporter")
 	} else if mockReporter.eventCount != want {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
+	} else if mockReporter.retryEventCount != want {
+		t.Errorf("Expected %d for metric, got %d", want, mockReporter.retryEventCount)
 	}
 }
