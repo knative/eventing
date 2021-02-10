@@ -244,6 +244,53 @@ func TestTriggerValidation(t *testing.T) {
 	}
 }
 
+func TestTriggerUpdateValidation(t *testing.T) {
+	tests := []struct {
+		name string
+		t    *Trigger
+		tNew *Trigger
+		want *apis.FieldError
+	}{{
+		name: "invalid update, broker changed",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+			},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		tNew: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+			},
+			Spec: TriggerSpec{
+				Broker:     "anotherBroker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec", "broker"},
+			Details: `{string}:
+	-: "test_broker"
+	+: "anotherBroker"
+`,
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := apis.WithinUpdate(context.Background(), test.t)
+			got := test.tNew.Validate(ctx)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Error("Trigger.Validate (-want, +got) =", diff)
+			}
+		})
+	}
+}
+
 func TestTriggerSpecValidation(t *testing.T) {
 	invalidString := "invalid time"
 
