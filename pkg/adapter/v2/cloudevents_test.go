@@ -32,7 +32,8 @@ import (
 )
 
 type mockReporter struct {
-	eventCount int
+	eventCount      int
+	retryEventCount int
 }
 
 var (
@@ -40,7 +41,12 @@ var (
 )
 
 func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount += 1
+	r.eventCount++
+	return nil
+}
+
+func (r *mockReporter) ReportRetryEventCount(args *source.ReportArgs, responseCode int) error {
+	r.retryEventCount++
 	return nil
 }
 
@@ -228,5 +234,7 @@ func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
 		t.Errorf("Reporter is not a mockReporter")
 	} else if mockReporter.eventCount != want {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
+	} else if mockReporter.retryEventCount != want {
+		t.Errorf("Expected %d for metric, got %d", want, mockReporter.retryEventCount)
 	}
 }

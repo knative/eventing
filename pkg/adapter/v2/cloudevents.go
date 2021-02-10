@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+				http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package adapter
 
 import (
@@ -39,6 +40,8 @@ import (
 func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (cloudevents.Client, error) {
 	return newCloudEventsClientCRStatus(nil, target, ceOverrides, reporter, nil)
 }
+
+// NewCloudEventsClientCRStatus returns a client CR status
 func NewCloudEventsClientCRStatus(env EnvConfigAccessor, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (cloudevents.Client, error) {
 	return newCloudEventsClientCRStatus(env, "", nil, reporter, crStatusEventClient)
 }
@@ -117,14 +120,14 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 	res := c.ceClient.Send(ctx, out)
-	return c.reportCount(ctx, out, res)
+	return c.reportMetrics(ctx, out, res)
 }
 
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(&out)
 	resp, res := c.ceClient.Request(ctx, out)
-	return resp, c.reportCount(ctx, out, res)
+	return resp, c.reportMetrics(ctx, out, res)
 }
 
 // StartReceiver implements client.StartReceiver
@@ -140,7 +143,7 @@ func (c *client) applyOverrides(event *cloudevents.Event) {
 	}
 }
 
-func (c *client) reportCount(ctx context.Context, event cloudevents.Event, result protocol.Result) error {
+func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, result protocol.Result) error {
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
@@ -178,6 +181,22 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, resul
 				result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
 			}
 		}
+
+		if len(rres.Attempts) > 0 {
+			for _, retryResult := range rres.Attempts {
+				var res *http.Result
+				if !cloudevents.ResultAs(retryResult, &res) {
+					return c.reportError(reportArgs, result)
+				}
+				if rErr := c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode); rErr != nil {
+					// metrics is not important enough to return an error if it is setup wrong.
+					// So combine reporter error with ce error if not nil.
+					if retryResult != nil {
+						retryResult = fmt.Errorf("%w\nmetrics reporter error: %s", retryResult, rErr)
+					}
+				}
+			}
+		}
 	}
 	return result
 }
@@ -203,8 +222,7 @@ func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Resu
 	return result
 }
 
-// Metric context
-
+// MetricTag context
 type MetricTag struct {
 	Name          string
 	Namespace     string
