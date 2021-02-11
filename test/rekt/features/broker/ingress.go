@@ -18,19 +18,20 @@ package broker
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	eventshub2 "knative.dev/reconciler-test/pkg/test_images/eventshub"
 
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+
+	. "github.com/cloudevents/sdk-go/v2/test"
+	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 func BrokerIngressConformanceFeatures(brokerClass string) []*feature.Feature {
@@ -71,21 +72,14 @@ func brokerIngressConformanceFeature(brokerClass string, version string, enc clo
 	})
 
 	f.Stable("ingress supports v"+version).
-		Must("accept the event", eventshub.OnStore(sourceName).Match(
-			eventshub.MatchKind(eventshub2.EventResponse),
-			func(info eventshub2.EventInfo) error {
-				if info.StatusCode != 202 {
-					return fmt.Errorf("event status code don't match. Expected: '%d', Actual: '%d'", 200, info.StatusCode)
-				}
-				return nil
-			},
+		Must("accept the event", OnStore(sourceName).Match(
+			MatchKind(EventResponse),
+			MatchStatusCode(202),
 		).AtLeast(1)).
 		Must("deliver the event",
-			eventshub.OnStore(sinkName).Match(
-				eventshub.MatchEvent(cetest.AllOf(
-					cetest.HasId(event.ID()),
-					cetest.HasSpecVersion(event.SpecVersion()),
-				)),
+			OnStore(sinkName).MatchEvent(
+				HasId(event.ID()),
+				HasSpecVersion(event.SpecVersion()),
 			).AtLeast(1))
 
 	return f
@@ -124,17 +118,12 @@ func brokerIngressConformanceBadEvent(brokerClass string) *feature.Feature {
 	})
 
 	f.Stable("ingress").
-		Must("respond with 400 on bad event", eventshub.OnStore(sourceName).Match(
-			eventshub.MatchKind(eventshub2.EventResponse),
-			func(info eventshub2.EventInfo) error {
-				if info.StatusCode != 400 {
-					return fmt.Errorf("event status code don't match. Expected: '%d', Actual: '%d'", 400, info.StatusCode)
-				}
-				return nil
-			},
+		Must("respond with 400 on bad event", OnStore(sourceName).Match(
+			MatchKind(EventResponse),
+			MatchStatusCode(400),
 		).AtLeast(1)).
 		Must("must not propagate bad event",
-			eventshub.OnStore(sinkName).MatchEvent(cetest.HasId(eventID)).Not())
+			OnStore(sinkName).MatchEvent(HasId(eventID)).Not())
 
 	return f
 }

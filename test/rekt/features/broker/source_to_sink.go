@@ -20,11 +20,13 @@ import (
 	"context"
 	"testing"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/feature"
+
+	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/feature"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -60,7 +62,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 
 	f.Stable("broker as middleware").
 		Must("deliver an event",
-			eventshub.OnStore(sink).Match(eventshub.MatchEvent(HasId(event.ID()))).Exact(1))
+			OnStore(sink).MatchEvent(HasId(event.ID())).Exact(1))
 
 	return f
 }
