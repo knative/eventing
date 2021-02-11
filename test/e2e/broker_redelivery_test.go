@@ -61,6 +61,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 }
 
 func TestBrokerRedelivery(t *testing.T) {
+	t.Skip("Waiting for https://github.com/knative/eventing/issues/4873")
 
 	channelTestRunner.RunTests(t, testlib.FeatureRedelivery, func(t *testing.T, component metav1.TypeMeta) {
 
