@@ -27,6 +27,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
+	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 // BrokerAsMiddleware tests to see if a Ready Broker acts as middleware.
@@ -60,7 +61,7 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 	f.Stable("broker as middleware").
 		Must("deliver an event",
 			func(ctx context.Context, t *testing.T) {
-				eventshub.StoreFromContext(ctx, sink).AssertExact(1, eventshub.MatchEvent(HasId(event.ID())))
+				eventshub.StoreFromContext(ctx, sink).AssertExact(1, MatchEvent(HasId(event.ID())))
 			})
 
 	return f

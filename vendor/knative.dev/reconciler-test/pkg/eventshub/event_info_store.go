@@ -40,6 +40,9 @@ const (
 	retryTimeout  = 4 * time.Minute
 )
 
+// EventInfoMatcher returns an error if the input event info doesn't match the criteria
+type EventInfoMatcher func(eventshub.EventInfo) error
+
 // Stateful store of events published by eventshub pod it is pointed at.
 // Implements k8s.EventHandler
 type Store struct {
@@ -242,4 +245,16 @@ func formatErrors(errs []error) string {
 		sb.WriteRune('\n')
 	}
 	return sb.String()
+}
+
+// We don't need to expose this, since all the signatures already executes this
+func allOf(matchers ...EventInfoMatcher) EventInfoMatcher {
+	return func(have eventshub.EventInfo) error {
+		for _, m := range matchers {
+			if err := m(have); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }
