@@ -19,14 +19,17 @@ package eventshub
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/network"
 
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/k8s"
 )
 
 // EventsHubOption is used to define an env for the eventshub image
@@ -41,6 +44,22 @@ var StartReceiver EventsHubOption = envAdditive("EVENT_GENERATORS", "receiver")
 func StartSender(sinkSvc string) EventsHubOption {
 	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
 		envs["SINK"] = "http://" + network.GetServiceHostname(sinkSvc, environment.FromContext(ctx).Namespace())
+		return nil
+	})
+}
+
+// StartSenderToResource starts the sender in the eventshub pointing to the provided resource
+// This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
+func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsHubOption {
+	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+		u, err := k8s.Address(ctx, gvr, name)
+		if err != nil {
+			return err
+		}
+		if u == nil {
+			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
+		}
+		envs["SINK"] = u.String()
 		return nil
 	})
 }
