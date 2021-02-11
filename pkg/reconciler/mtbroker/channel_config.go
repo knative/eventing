@@ -23,9 +23,9 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/logging"
 
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
