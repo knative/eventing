@@ -24,6 +24,8 @@ events.
 While a Broker is Ready, it SHOULD be a valid Addressable and its
 `status.address.url` field SHOULD indicate the address of its ingress.
 
+The class of a Broker object SHOULD be immutable.
+
 ### Trigger
 
 Triggers SHOULD include a Ready condition in their status.
