@@ -70,7 +70,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		},
 		"unknown channel error": {
 			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.Transformer, _ nethttp.Header) error {
-				return &UnknownChannelError{c: c}
+				return &UnknownChannelError{Channel: c}
 			},
 			expected: nethttp.StatusNotFound,
 		},
