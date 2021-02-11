@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package eventshub
+package assert
 
 import (
 	"fmt"
@@ -23,21 +23,19 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 
+	pkgeventshub "knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
-// Does the provided EventInfo match some criteria
-type EventInfoMatcher func(eventshub.EventInfo) error
-
 // Matcher that never fails
-func Any() EventInfoMatcher {
+func Any() pkgeventshub.EventInfoMatcher {
 	return func(ei eventshub.EventInfo) error {
 		return nil
 	}
 }
 
 // Matcher that fails if there is an error in the EventInfo
-func NoError() EventInfoMatcher {
+func NoError() pkgeventshub.EventInfoMatcher {
 	return func(ei eventshub.EventInfo) error {
 		if ei.Error != "" {
 			return fmt.Errorf("not expecting an error in event info: %s", ei.Error)
@@ -49,7 +47,7 @@ func NoError() EventInfoMatcher {
 // Convert a matcher that checks valid messages to a function
 // that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
-func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatcher {
+func MatchEvent(evf ...cetest.EventMatcher) pkgeventshub.EventInfoMatcher {
 	return func(ei eventshub.EventInfo) error {
 		if ei.Event == nil {
 			return fmt.Errorf("Saw nil event")
@@ -62,7 +60,7 @@ func MatchEvent(evf ...cetest.EventMatcher) EventInfoMatcher {
 // Convert a matcher that checks valid messages to a function
 // that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
-func HasAdditionalHeader(key, value string) EventInfoMatcher {
+func HasAdditionalHeader(key, value string) pkgeventshub.EventInfoMatcher {
 	key = strings.ToLower(key)
 	return func(ei eventshub.EventInfo) error {
 		for k, v := range ei.HTTPHeaders {
@@ -74,11 +72,30 @@ func HasAdditionalHeader(key, value string) EventInfoMatcher {
 	}
 }
 
+// Reexport kinds here to simplify the usage
+const (
+	EventReceived = eventshub.EventReceived
+	EventRejected = eventshub.EventRejected
+
+	EventSent     = eventshub.EventSent
+	EventResponse = eventshub.EventResponse
+)
+
 // MatchKind matches the kind of EventInfo
-func MatchKind(kind eventshub.EventKind) EventInfoMatcher {
+func MatchKind(kind eventshub.EventKind) pkgeventshub.EventInfoMatcher {
 	return func(info eventshub.EventInfo) error {
 		if kind != info.Kind {
 			return fmt.Errorf("event kind don't match. Expected: '%s', Actual: '%s'", kind, info.Kind)
+		}
+		return nil
+	}
+}
+
+// MatchStatusCode matches the status code of EventInfo
+func MatchStatusCode(statusCode int) pkgeventshub.EventInfoMatcher {
+	return func(info eventshub.EventInfo) error {
+		if info.StatusCode != statusCode {
+			return fmt.Errorf("event status code don't match. Expected: '%d', Actual: '%d'", statusCode, info.StatusCode)
 		}
 		return nil
 	}
@@ -100,16 +117,4 @@ func MatchHeartBeatsImageMessage(expectedMsg string) cetest.EventMatcher {
 			return nil
 		},
 	)
-}
-
-// We don't need to expose this, since all the signatures already executes this
-func allOf(matchers ...EventInfoMatcher) EventInfoMatcher {
-	return func(have eventshub.EventInfo) error {
-		for _, m := range matchers {
-			if err := m(have); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 }
