@@ -184,7 +184,7 @@ func (e *EnvConfig) SetupTracing(logger *zap.SugaredLogger) error {
 	if err != nil {
 		logger.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
-	return tracing.SetupStaticPublishing(logger, e.Component, config)
+	return tracing.SetupStaticPublishing(logger, "", config)
 }
 
 func (e *EnvConfig) GetCloudEventOverrides() (*duckv1.CloudEventOverrides, error) {
