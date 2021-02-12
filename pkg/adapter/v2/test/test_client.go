@@ -17,6 +17,8 @@ package test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,7 +35,13 @@ type TestCloudEventsClient struct {
 	delay time.Duration
 }
 
+type EventData struct {
+	ID string `json:"id"`
+	Type string `json:"type"`
+}
+
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
+var eventData EventData
 
 func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) protocol.Result {
 	if c.delay > 0 {
@@ -41,9 +49,21 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	// TODO: improve later.
+	bytes, _ := json.Marshal(out)
+	if err := json.Unmarshal(bytes, &eventData); err != nil {
+		fmt.Print(err)
+	}
 	c.sent = append(c.sent, out)
+	if eventData.Type == "unit.type" {
+		return http.NewResult(200, "%w", protocol.ResultACK)
+	} else if eventData.Type == "unit.retries" {
+		var attempts []protocol.Result
+		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultNACK))
+		resp := http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
+		return resp
+	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
+	// TODO: improve later.
 }
 
 func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {

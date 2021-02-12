@@ -120,14 +120,16 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(&out)
 	res := c.ceClient.Send(ctx, out)
-	return c.reportMetrics(ctx, out, res)
+	c.reportMetrics(ctx, out, res)
+	return res
 }
 
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(&out)
 	resp, res := c.ceClient.Request(ctx, out)
-	return resp, c.reportMetrics(ctx, out, res)
+	c.reportMetrics(ctx, out, res)
+	return resp, res
 }
 
 // StartReceiver implements client.StartReceiver
@@ -143,7 +145,7 @@ func (c *client) applyOverrides(event *cloudevents.Event) {
 	}
 }
 
-func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, result protocol.Result) error {
+func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, result protocol.Result) {
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
@@ -162,7 +164,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		var res *http.Result
 
 		if !cloudevents.ResultAs(result, &res) {
-			return c.reportError(reportArgs, result)
+			c.reportError(reportArgs, result)
 		}
 
 		_ = c.reporter.ReportEventCount(reportArgs, res.StatusCode)
@@ -171,11 +173,11 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 
 		var res *http.Result
 		if !cloudevents.ResultAs(result, &res) {
-			return c.reportError(reportArgs, result)
+			c.reportError(reportArgs, result)
 		}
 
 		if rErr := c.reporter.ReportEventCount(reportArgs, res.StatusCode); rErr != nil {
-			// metrics is not important enough to return an error if it is setup wrong.
+			// Metric is not important enough to return an error if it is setup wrong.
 			// So combine reporter error with ce error if not nil.
 			if result != nil {
 				result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
@@ -186,10 +188,10 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 			for _, retryResult := range rres.Attempts {
 				var res *http.Result
 				if !cloudevents.ResultAs(retryResult, &res) {
-					return c.reportError(reportArgs, result)
+					c.reportError(reportArgs, result)
 				}
 				if rErr := c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode); rErr != nil {
-					// metrics is not important enough to return an error if it is setup wrong.
+					// Metric is not important enough to return an error if it is setup wrong.
 					// So combine reporter error with ce error if not nil.
 					if retryResult != nil {
 						retryResult = fmt.Errorf("%w\nmetrics reporter error: %s", retryResult, rErr)
@@ -198,10 +200,9 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 			}
 		}
 	}
-	return result
 }
 
-func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Result) error {
+func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Result) {
 	var uErr *url.Error
 	if errors.As(result, &uErr) {
 		reportArgs.Timeout = uErr.Timeout()
@@ -218,8 +219,6 @@ func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Resu
 			result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
 		}
 	}
-
-	return result
 }
 
 // MetricTag context
