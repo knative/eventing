@@ -41,7 +41,7 @@ type TestCloudEventsClient struct {
 }
 
 type EventData struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
 	Type string `json:"type"`
 }
 
