@@ -51,7 +51,7 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	defer c.lock.Unlock()
 	bytes, _ := json.Marshal(out)
 	if err := json.Unmarshal(bytes, &eventData); err != nil {
-		fmt.Print(err)
+		fmt.Printf("json unmarshal error: %s", err)
 	}
 	c.sent = append(c.sent, out)
 	if eventData.Type == "unit.type" {
