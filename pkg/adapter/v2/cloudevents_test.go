@@ -87,6 +87,15 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				Attempts: nil,
 			},
 		},
+		"send with retries": {
+			event: func() *cloudevents.Event {
+				event := cloudevents.NewEvent()
+				event.SetID("abc-123")
+				event.SetSource("unit/test")
+				event.SetType("unit.retries")
+				return &event
+			}(),
+		},
 		"send with ceOverrides": {
 			event: demoEvent(),
 			ceOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{

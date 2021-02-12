@@ -17,6 +17,8 @@ package test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -38,7 +40,13 @@ type TestCloudEventsClient struct {
 	}
 }
 
+type EventData struct {
+	ID string `json:"id"`
+	Type string `json:"type"`
+}
+
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
+var eventData EventData
 
 // Send_AppendResult will enqueue a response for the following Send call.
 // For testing.
@@ -61,7 +69,10 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	// TODO: improve later.
+	bytes, _ := json.Marshal(out)
+	if err := json.Unmarshal(bytes, &eventData); err != nil {
+		fmt.Print(err)
+	}
 	c.sent = append(c.sent, out)
 	if len(c.resultSend) != 0 {
 		resp := c.resultSend[0]
@@ -69,6 +80,7 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 		return resp
 	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
+	// TODO: improve later.
 }
 
 func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
