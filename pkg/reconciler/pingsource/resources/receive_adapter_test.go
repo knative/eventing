@@ -29,6 +29,7 @@ func TestMakePingAdapter(t *testing.T) {
 	args := Args{
 		MetricsConfig:   "metrics",
 		LoggingConfig:   "logging",
+		TracingConfig:   "tracing",
 		NoShutdownAfter: 40,
 		SinkTimeout:     48,
 	}
