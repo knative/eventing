@@ -78,6 +78,12 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 		resp := c.resultSend[0]
 		c.resultSend = c.resultSend[1:]
 		return resp
+	if eventData.Type == "unit.type" {
+		return http.NewResult(200, "%w", protocol.ResultACK)
+	} else if eventData.Type == "unit.retries" {
+		var attempts []protocol.Result
+		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
+		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
 	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
 	// TODO: improve later.
@@ -89,8 +95,18 @@ func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	// TODO: improve later.
+	bytes, _ := json.Marshal(out)
+	if err := json.Unmarshal(bytes, &eventData); err != nil {
+		fmt.Printf("json unmarshal error: %s", err)
+	}
 	c.sent = append(c.sent, out)
+	if eventData.Type == "unit.type" {
+		return nil, http.NewResult(200, "%w", protocol.ResultACK)
+	} else if eventData.Type == "unit.retries" {
+		var attempts []protocol.Result
+		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
+		return nil, http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
+	}
 	return nil, http.NewResult(200, "%w", protocol.ResultACK)
 }
 
