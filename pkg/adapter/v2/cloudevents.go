@@ -177,25 +177,19 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		}
 
 		if rErr := c.reporter.ReportEventCount(reportArgs, res.StatusCode); rErr != nil {
-			// Metric is not important enough to return an error if it is setup wrong.
-			// So combine reporter error with ce error if not nil.
-			if result != nil {
-				result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
-			}
+			fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
 		}
 
 		if len(rres.Attempts) > 0 {
+			fmt.Print("coming here")
 			for _, retryResult := range rres.Attempts {
 				var res *http.Result
 				if !cloudevents.ResultAs(retryResult, &res) {
 					c.reportError(reportArgs, result)
 				}
+				fmt.Print("\n now reporting retry event count...\n")
 				if rErr := c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode); rErr != nil {
-					// Metric is not important enough to return an error if it is setup wrong.
-					// So combine reporter error with ce error if not nil.
-					if retryResult != nil {
-						retryResult = fmt.Errorf("%w\nmetrics reporter error: %s", retryResult, rErr)
-					}
+					fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
 				}
 			}
 		}
@@ -213,11 +207,7 @@ func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Resu
 	}
 
 	if rErr := c.reporter.ReportEventCount(reportArgs, 0); rErr != nil {
-		// metrics is not important enough to return an error if it is setup wrong.
-		// So combine reporter error with ce error if not nil.
-		if result != nil {
-			result = fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
-		}
+		fmt.Errorf("%w\nmetrics reporter error: %s", result, rErr)
 	}
 }
 

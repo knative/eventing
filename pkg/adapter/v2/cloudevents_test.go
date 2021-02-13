@@ -155,11 +155,12 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 
 			if tc.event != nil {
 				err := got.Send(context.TODO(), *tc.event)
-				if !cloudevents.IsACK(err) {
+				if !cloudevents.IsACK(err) && tc.event.Type() != "unit.retries" {
+					//handle err
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1)
+				validateMetric(t, got.reporter, 1, tc.event.Type())
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -179,6 +180,15 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 				event.SetID("abc-123")
 				event.SetSource("unit/test")
 				event.SetType("unit.type")
+				return &event
+			}(),
+		},
+		"send with retries": {
+			event: func() *cloudevents.Event {
+				event := cloudevents.NewEvent()
+				event.SetID("abc-123")
+				event.SetSource("unit/test")
+				event.SetType("unit.retries")
 				return &event
 			}(),
 		},
@@ -210,11 +220,12 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 
 			if tc.event != nil {
 				_, err := got.Request(context.TODO(), *tc.event)
-				if !cloudevents.IsACK(err) {
+				if !cloudevents.IsACK(err) && tc.event.Type() != "unit.retries" {
+					//handle err
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1)
+				validateMetric(t, got.reporter, 1, tc.event.Type())
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -238,12 +249,12 @@ func validateNotSent(t *testing.T, ce *test.TestCloudEventsClient) {
 	}
 }
 
-func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
+func validateMetric(t *testing.T, reporter source.StatsReporter, want int, eventType string) {
 	if mockReporter, ok := reporter.(*mockReporter); !ok {
 		t.Errorf("Reporter is not a mockReporter")
 	} else if mockReporter.eventCount != want {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
-	} else if mockReporter.retryEventCount != want {
+	} else if mockReporter.retryEventCount != want && eventType == "unit.retries"{
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.retryEventCount)
 	}
 }
