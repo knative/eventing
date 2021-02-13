@@ -47,6 +47,9 @@ func TestMakePingAdapter(t *testing.T) {
 		Name:  "K_LOGGING_CONFIG",
 		Value: "logging",
 	}, {
+		Name:  "K_TRACING_CONFIG",
+		Value: "tracing",
+	}, {
 		Name:  "K_LEADER_ELECTION_CONFIG",
 		Value: "",
 	}, {
