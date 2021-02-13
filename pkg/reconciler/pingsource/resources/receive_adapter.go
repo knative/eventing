@@ -28,6 +28,7 @@ import (
 type Args struct {
 	MetricsConfig   string
 	LoggingConfig   string
+	TracingConfig   string
 	LeConfig        string
 	NoShutdownAfter int
 	SinkTimeout     int
@@ -48,6 +49,9 @@ func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
 	}, {
 		Name:  adapter.EnvConfigLoggingConfig,
 		Value: args.LoggingConfig,
+	}, {
+		Name:  adapter.EnvConfigTracingConfig,
+		Value: args.TracingConfig,
 	}, {
 		Name:  adapter.EnvConfigLeaderElectionConfig,
 		Value: args.LeConfig,

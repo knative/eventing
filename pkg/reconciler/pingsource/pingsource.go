@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"knative.dev/pkg/tracing/config"
+
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -152,9 +154,15 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}
 
+	tracingConfig, err := config.TracingConfigToJSON(r.configs.TracingConfig())
+	if err != nil {
+		logging.FromContext(ctx).Errorw("error while converting tracing config to JSON", zap.Any("receiveAdapter", err))
+	}
+
 	args := resources.Args{
 		LoggingConfig:   loggingConfig,
 		MetricsConfig:   metricsConfig,
+		TracingConfig:   tracingConfig,
 		LeConfig:        r.leConfig,
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 		SinkTimeout:     adapter.GetSinkTimeout(logging.FromContext(ctx)),
