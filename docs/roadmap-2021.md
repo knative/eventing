@@ -195,15 +195,35 @@ being out of the WG scope or some other reason
 
 ### Kafka Code Share Improvements
 
-[Description TBD]
+KafkaChannel code refactorings to increase code sharing between the two implementations
 
 **Theme:** Kafka Code Share Improvements
 
-**GitHub Issue:** TBD
+**GitHub Issue:** https://github.com/knative-sandbox/eventing-kafka/issues/386
 
 **Owner:** Matthias
 
 ## Next 6 Months (Midterm)
+
+### KafkaChannel Unification
+
+Desired exit goal: One backing implemetation for the `KafkaChannel` API.
+
+**Theme:** Kafka Code Share Improvements
+
+**GitHub Issue:** https://github.com/knative-sandbox/eventing-kafka/issues/386
+
+**Owner:** Matthias
+
+### V1 for KafkaChannel
+
+Promote the `KafkaChannel` to V1
+
+**Theme:** Kafka Code Share Improvements
+
+**GitHub Issue:** https://github.com/knative-sandbox/eventing-kafka/issues/386
+
+**Owner:** Matthias
 
 ### Various QoS guarantees for Kakfa
 
