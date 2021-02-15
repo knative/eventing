@@ -27,6 +27,9 @@ import (
 	"knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
+// EventInfo is a re-export of eventshub.EventInfo for convenience
+type EventInfo = eventshub.EventInfo
+
 // Matcher that never fails
 func Any() pkgeventshub.EventInfoMatcher {
 	return func(ei eventshub.EventInfo) error {
