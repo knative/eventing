@@ -29,6 +29,7 @@ func TestMakePingAdapter(t *testing.T) {
 	args := Args{
 		MetricsConfig:   "metrics",
 		LoggingConfig:   "logging",
+		TracingConfig:   "tracing",
 		NoShutdownAfter: 40,
 		SinkTimeout:     48,
 	}
@@ -46,6 +47,9 @@ func TestMakePingAdapter(t *testing.T) {
 	}, {
 		Name:  "K_LOGGING_CONFIG",
 		Value: "logging",
+	}, {
+		Name:  "K_TRACING_CONFIG",
+		Value: "tracing",
 	}, {
 		Name:  "K_LEADER_ELECTION_CONFIG",
 		Value: "",

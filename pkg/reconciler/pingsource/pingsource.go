@@ -39,6 +39,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracing/config"
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
@@ -152,9 +153,15 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
 	}
 
+	tracingConfig, err := config.TracingConfigToJSON(r.configs.TracingConfig())
+	if err != nil {
+		logging.FromContext(ctx).Errorw("error while converting tracing config to JSON", zap.Any("receiveAdapter", err))
+	}
+
 	args := resources.Args{
 		LoggingConfig:   loggingConfig,
 		MetricsConfig:   metricsConfig,
+		TracingConfig:   tracingConfig,
 		LeConfig:        r.leConfig,
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 		SinkTimeout:     adapter.GetSinkTimeout(logging.FromContext(ctx)),
