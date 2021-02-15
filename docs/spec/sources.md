@@ -1,5 +1,7 @@
 # Sources
 
+## Introduction
+
 A **Source** is any Kubernetes object that generates or imports an event and
 relays that event to another endpoint on the cluster via
 [CloudEvents](https://cloudevents.io). Sourcing events is critical to developing
@@ -49,6 +51,12 @@ The goal of requiring CRD labels and running resource shapes is to enable
 discovery and understanding of potential sources that could be leveraged in the
 cluster. This structure also aids in understanding sources that exist and are
 running in the cluster.
+
+## Conformance
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
+"SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
+interpreted as described in RFC2119.
 
 ## Source CRDs
 
@@ -330,11 +338,16 @@ type SourceStatus struct {
     // Source.
     // +optional
     SinkURI *apis.URL `json:"sinkUri,omitempty"`
+
+    // CloudEventAttributes are the specific attributes that the Source uses
+    // as part of its CloudEvents.
+    // +optional
+    CloudEventAttributes []CloudEventAttributes `json:"ceAttributes,omitempty"`
 }
 ```
 
-For a full definition of `Status` and `SinkURI`, please see
-[Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
+For a full definition of `Status`, `SinkURI`, `CloudEventAttributes` and please
+see [Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
 [URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
 ### EventType Registry
@@ -361,6 +374,42 @@ Every Source SHOULD support sending events via _Binary Content Mode_ or
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents. Sources
 SHOULD send events to its
 [Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination).
+
+### CloudEvent `knsource` extension
+
+Sources SHOULD produce CloudEvents with the `knsource` CloudEvent extension
+identifying the originating [Source Custom Object](#source-custom-objects). It
+is highly-recommended producing the `knsource` CloudEvent extension.
+
+The `knsource` value SHOULD be of the form `<plural>.<group>/<name>`, where:
+
+- `plural` is the [Source CRD](#source-crds)
+  [plural](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition)
+- `group` is the [Source CRD](#source-crds)
+  [API group](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition)
+- `name` is the [Source Custom Object](#source-custom-objects) name
+
+Examples:
+
+- `pingsources.eventing.knative.dev/hello`
+- `rabbitmq.sources.knative.dev/rabbitmq-source`
+
+It is allowed to specify an alternative value in
+[`spec.ceOverrides.extensions`](#duckspec), in which case the `knsource` value
+can be of any shape.
+
+When produced, the `knsource` CloudEvent extension MUST appear in
+[status.ceAttributes](#duckstatus).
+
+The `knsource` CloudEvent extension already exist in the CloudEvent being
+forwarded by a Source, its value SHOULD be overridden as described above.
+
+The `knsource` CloudEvent extension allows event consumers to filter based on
+the [Source Custom Object](#source-custom-objects) producing events. For
+instance triggers can be configured to receive events coming from a single
+[Source Custom Object](#source-custom-objects).
+
+### Further reading
 
 For more details of the Knative Event delivery, take a look at its
 [specification](../delivery/README.md).
