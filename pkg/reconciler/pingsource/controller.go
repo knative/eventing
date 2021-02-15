@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"go.uber.org/zap"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
@@ -69,8 +70,7 @@ func NewController(
 		pingLister:       pingSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		leConfig:         leConfig,
-		loggingContext:   ctx,
-		configs:          reconcilersource.WatchConfigurations(ctx, component, cmw),
+		configAcc:        reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
@@ -81,7 +81,7 @@ func NewController(
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that the pingsource-mt-adapter Deployment has changed so that
-	// we can reconcile PingSources that depends on it
+	// we can reconcile PingSources that depend on it
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

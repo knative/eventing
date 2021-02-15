@@ -1,7 +1,7 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
-Licensed under the Apache License, Veroute.on 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -22,23 +22,14 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/system"
-
-	"knative.dev/eventing/pkg/adapter/mtping"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
-	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -47,8 +38,18 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
+
+	"knative.dev/eventing/pkg/adapter/mtping"
+	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	rtv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
@@ -230,6 +231,7 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
+			configAcc:        &reconcilersource.EmptyVarsGenerator{},
 			kubeClientSet:    fakekubeclient.Get(ctx),
 			pingLister:       listers.GetPingSourceV1beta2Lister(),
 			deploymentLister: listers.GetDeploymentLister(),
@@ -248,14 +250,11 @@ func TestAllCases(t *testing.T) {
 
 func MakeMTAdapter() *appsv1.Deployment {
 	args := resources.Args{
+		ConfigEnvVars:   (&reconcilersource.EmptyVarsGenerator{}).ToEnvVars(),
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 		SinkTimeout:     adapter.GetSinkTimeout(nil),
 	}
 	return &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployments",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
 			Name:      mtadapterName,

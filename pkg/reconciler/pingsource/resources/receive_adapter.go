@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,9 +26,7 @@ import (
 )
 
 type Args struct {
-	MetricsConfig   string
-	LoggingConfig   string
-	TracingConfig   string
+	ConfigEnvVars   []corev1.EnvVar
 	LeConfig        string
 	NoShutdownAfter int
 	SinkTimeout     int
@@ -36,22 +34,13 @@ type Args struct {
 
 // MakeReceiveAdapterEnvVar generates the environment variables for the pingsources
 func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
-	return []corev1.EnvVar{{
+	envs := []corev1.EnvVar{{
 		Name: system.NamespaceEnvKey,
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
 			},
 		},
-	}, {
-		Name:  adapter.EnvConfigMetricsConfig,
-		Value: args.MetricsConfig,
-	}, {
-		Name:  adapter.EnvConfigLoggingConfig,
-		Value: args.LoggingConfig,
-	}, {
-		Name:  adapter.EnvConfigTracingConfig,
-		Value: args.TracingConfig,
 	}, {
 		Name:  adapter.EnvConfigLeaderElectionConfig,
 		Value: args.LeConfig,
@@ -63,4 +52,5 @@ func MakeReceiveAdapterEnvVar(args Args) []corev1.EnvVar {
 		Value: strconv.Itoa(args.SinkTimeout),
 	}}
 
+	return append(envs, args.ConfigEnvVars...)
 }
