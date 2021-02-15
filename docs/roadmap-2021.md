@@ -164,6 +164,14 @@ Let's promote PingSource to v1
 
 **Owner:** Lionel Villard
 
+### v1 for Kafka Sources
+
+Let's promote KafkaSource to v1
+
+**GitHub Issue:** https://github.com/knative-sandbox/eventing-kafka/issues/389
+
+**Owner:** Matthis Wessendorf
+
 ## Next 6 Months (Midterm)
 
 ### Multi-Tenant RedisStream Source
