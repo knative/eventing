@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"knative.dev/pkg/tracing/config"
-
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +39,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracing/config"
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
