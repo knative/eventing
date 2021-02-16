@@ -255,7 +255,7 @@ kubectl sniff <POD_NAME> -n knative-eventing
 
 ## Debugging Knative controllers and friends locally with Intellij Idea
 
-[Telepresence](https://www.telepresence.io/) can be leveraged to do debugging Knative controllers, webhooks and similar components.
+[Telepresence](https://www.telepresence.io/) can be leveraged to debug Knative controllers, webhooks and similar components.
 
 Telepresence allows you to use your local process, IDE, debugger, etc. but Kubernetes service calls get redirected to the process on your local. Similarly the calls on the local process goes to actual services that are running in Kubernetes.
 
