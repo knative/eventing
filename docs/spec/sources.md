@@ -381,18 +381,18 @@ Sources SHOULD produce CloudEvents with the `knsource` CloudEvent extension
 identifying the originating [Source Custom Object](#source-custom-objects). It
 is highly-recommended to produce the `knsource` CloudEvent extension.
 
-The `knsource` value SHOULD be of the form `<plural>.<group>/<name>`, where:
+The `knsource` value SHOULD be of the form `<name>.<plural>.<group>`, where:
 
+- `name` is the [Source Custom Object](#source-custom-objects) name
 - `plural` is the [Source CRD](#source-crds)
   [plural](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition)
 - `group` is the [Source CRD](#source-crds)
   [API group](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition)
-- `name` is the [Source Custom Object](#source-custom-objects) name
 
 Examples:
 
-- `pingsources.sources.knative.dev/hello`
-- `rabbitmq.sources.knative.dev/rabbitmq-source`
+- `hello.pingsources.sources.knative.dev`
+- `rabbitmq-source.rabbitmq.sources.knative.dev`
 
 It is allowed to specify an alternative value in
 [`spec.ceOverrides.extensions`](#duckspec), in which case the `knsource` value
