@@ -94,7 +94,11 @@ func (a *cronJobsRunner) AddSchedule(source *v1beta2.PingSource) cron.EntryID {
 	}
 
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
-	id, _ := a.cron.AddFunc(source.Spec.Schedule, a.cronTick(ctx, event))
+	id, _ := a.cron.AddFunc(source.Spec.Schedule, a.cronTick(ctx, source, event))
+
+	a.Logger.Infow(" Updating pingsource", "namespace", source.Namespace, "name", source.Name, "schedule", source.Spec.Schedule,
+		"tenantNamespace", source.Namespace) // Used to route message to tenant
+
 	return id
 }
 
@@ -115,13 +119,15 @@ func (a *cronJobsRunner) Stop() {
 	}
 }
 
-func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
+func (a *cronJobsRunner) cronTick(ctx context.Context, pingSource *v1beta2.PingSource, event cloudevents.Event) func() {
 	return func() {
 		event := event.Clone()
 		event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
 		defer a.Logger.Debug("Finished sending cloudevent id: ", event.ID())
 		target := cecontext.TargetFrom(ctx).String()
 		source := event.Context.GetSource()
+		namespace := pingSource.Namespace
+		pingsourcename := pingSource.Name
 
 		// Provide a delay so not all ping fired instantaneously distribute load on resources.
 		time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) //nolint:gosec // Cryptographic randomness not necessary here.
@@ -130,10 +136,13 @@ func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) 
 
 		if result := a.Client.Send(ctx, event); !cloudevents.IsACK(result) {
 			// Exhausted number of retries. Event is lost.
-			a.Logger.Error("failed to send cloudevent result: ", zap.Any("result", result),
-				zap.String("source", source), zap.String("target", target), zap.String("id", event.ID()))
+			a.Logger.Errorw("failed to send cloudevent", "id", event.ID(), "namespace", namespace,
+				"name", pingsourcename, "source", source, "target", target, "error", result,
+				"tenantNamespace", namespace) // Used to route message to tenant
 		}
+
 	}
+
 }
 
 func makeEvent(source *v1beta2.PingSource) (cloudevents.Event, error) {

@@ -126,5 +126,10 @@ func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta2.PingSource) 
 		a.entryidMu.Lock()
 		delete(a.entryids, key)
 		a.entryidMu.Unlock()
+
+		logger := logging.FromContext(ctx)
+		logger.Infow("Removing pingsource", "namespace", source.Namespace, "name", source.Name,
+			"tenantNamespace", source.Namespace) // Used to route message to tenant
+
 	}
 }
