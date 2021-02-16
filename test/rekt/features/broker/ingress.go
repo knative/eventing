@@ -57,8 +57,7 @@ func brokerIngressConformanceFeature(brokerClass string, version string, enc clo
 	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiver))
 	f.Setup("install broker", broker.Install(brokerName, broker.WithBrokerClass(brokerClass)))
 	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(svc.AsRef(sinkName), "")))
-
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName, features.Interval, features.Timeout))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName, features.Interval, features.Timeout))
 
 	f.Setup("install source", eventshub.Install(
 		sourceName,
@@ -94,8 +93,7 @@ func brokerIngressConformanceBadEvent(brokerClass string) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sinkName, eventshub.StartReceiver))
 	f.Setup("install broker", broker.Install(brokerName, broker.WithBrokerClass(brokerClass)))
 	f.Setup("install trigger", trigger.Install(triggerName, brokerName, trigger.WithSubscriber(svc.AsRef(sinkName), "")))
-
-	f.Requirement("broker is addressable", broker.IsAddressable(brokerName, features.Interval, features.Timeout))
+	f.Setup("broker is addressable", broker.IsAddressable(brokerName, features.Interval, features.Timeout))
 
 	f.Setup("install source", eventshub.Install(sourceName,
 		eventshub.StartSenderToResource(broker.Gvr(), brokerName),
