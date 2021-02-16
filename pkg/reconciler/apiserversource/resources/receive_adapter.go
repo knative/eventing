@@ -20,20 +20,22 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"knative.dev/eventing/pkg/adapter/v2"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"knative.dev/eventing/pkg/adapter/apiserver"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/adapter/apiserver"
+	"knative.dev/eventing/pkg/adapter/v2"
+	sources "knative.dev/eventing/pkg/apis/sources"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 
 // ReceiveAdapterArgs are the arguments needed to create a ApiServer Receive Adapter.
@@ -153,12 +155,23 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 
 	envs = append(envs, args.Configs.ToEnvVars()...)
 
-	if args.Source.Spec.CloudEventOverrides != nil {
-		ceJson, err := json.Marshal(args.Source.Spec.CloudEventOverrides)
-		if err != nil {
-			return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", args.Source.Spec.CloudEventOverrides, err)
-		}
-		envs = append(envs, corev1.EnvVar{Name: adapter.EnvConfigCEOverrides, Value: string(ceJson)})
+	ceOverrides := args.Source.Spec.CloudEventOverrides.DeepCopy()
+	if ceOverrides == nil {
+		ceOverrides = &duckv1.CloudEventOverrides{}
 	}
+
+	if ceOverrides.Extensions == nil {
+		ceOverrides.Extensions = map[string]string{}
+	}
+	if _, ok := ceOverrides.Extensions[adapter.KnSourceExtension]; !ok {
+		ceOverrides.Extensions[adapter.KnSourceExtension] = adapter.KnSourceExtensionValue("apiserversources", sources.GroupName, args.Source.Name)
+	}
+
+	ceJson, err := json.Marshal(ceOverrides)
+	if err != nil {
+		return nil, fmt.Errorf("Failure to marshal cloud event overrides %v: %v", ceOverrides, err)
+	}
+	envs = append(envs, corev1.EnvVar{Name: adapter.EnvConfigCEOverrides, Value: string(ceJson)})
+
 	return envs, nil
 }

@@ -34,6 +34,7 @@ import (
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	sources "knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
@@ -140,6 +141,8 @@ func makeEvent(source *v1beta2.PingSource) (cloudevents.Event, error) {
 	event := cloudevents.NewEvent()
 	event.SetType(v1beta2.PingSourceEventType)
 	event.SetSource(v1beta2.PingSourceSource(source.Namespace, source.Name))
+	event.SetExtension(kncloudevents.KnSourceExtension, kncloudevents.KnSourceExtensionValue("pingsources", sources.GroupName, source.Name))
+
 	if source.Spec.CloudEventOverrides != nil && source.Spec.CloudEventOverrides.Extensions != nil {
 		for key, override := range source.Spec.CloudEventOverrides.Extensions {
 			event.SetExtension(key, override)

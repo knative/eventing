@@ -58,6 +58,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 		src             *v1beta2.PingSource
 		wantContentType string
 		wantData        []byte
+		wantExtensions  map[string]string
 	}{
 		"TestAddRunRemoveSchedule": {
 			src: &v1beta2.PingSource{
@@ -81,6 +82,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
+			wantExtensions:  map[string]string{"knsource": "pingsources.sources.knative.dev/test-name"},
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -105,6 +107,32 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
+			wantExtensions:  map[string]string{"1": "one", "2": "two", "knsource": "pingsources.sources.knative.dev/test-name"},
+		}, "TestAddRunRemoveScheduleWithExtensionOverrideKNsource": {
+			src: &v1beta2.PingSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-name",
+					Namespace: "test-ns",
+				},
+				Spec: v1beta2.PingSourceSpec{
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{
+							Extensions: map[string]string{"1": "one", "2": "two", "knsource": "myvalue"},
+						},
+					},
+					Schedule:    "* * * * ?",
+					ContentType: cloudevents.TextPlain,
+					Data:        sampleData,
+				},
+				Status: v1beta2.PingSourceStatus{
+					SourceStatus: duckv1.SourceStatus{
+						SinkURI: &apis.URL{Path: "a sink"},
+					},
+				},
+			},
+			wantData:        []byte(sampleData),
+			wantContentType: cloudevents.TextPlain,
+			wantExtensions:  map[string]string{"1": "one", "2": "two", "knsource": "myvalue"},
 		}, "TestAddRunRemoveScheduleWithDataBase64": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -127,6 +155,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        decodeBase64(sampleDataBase64),
 			wantContentType: cloudevents.TextPlain,
+			wantExtensions:  map[string]string{"knsource": "pingsources.sources.knative.dev/test-name"},
 		}, "TestAddRunRemoveScheduleWithJsonData": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -149,6 +178,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleJSONData),
 			wantContentType: cloudevents.ApplicationJSON,
+			wantExtensions:  map[string]string{"knsource": "pingsources.sources.knative.dev/test-name"},
 		}, "TestAddRunRemoveScheduleWithJsonDataBase64": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -171,6 +201,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        decodeBase64(sampleJSONDataBase64),
 			wantContentType: cloudevents.ApplicationJSON,
+			wantExtensions:  map[string]string{"knsource": "pingsources.sources.knative.dev/test-name"},
 		}, "TestAddRunRemoveScheduleWithXmlData": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -193,6 +224,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleXmlData),
 			wantContentType: cloudevents.ApplicationXML,
+			wantExtensions:  map[string]string{"knsource": "pingsources.sources.knative.dev/test-name"},
 		},
 	}
 	for n, tc := range testCases {
@@ -211,7 +243,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 
 			entry.Job.Run()
 
-			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.src.Spec.CloudEventOverrides.Extensions)
+			validateSent(t, ce, tc.wantData, tc.wantContentType, tc.wantExtensions)
 
 			runner.RemoveSchedule(entryId)
 
@@ -293,7 +325,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner.Stop() // cron job because of delay is still running.
 
-	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, nil)
+	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, map[string]string{"knsource": "pingsources.sources.knative.dev/test-name"})
 }
 
 func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData []byte, wantContentType string, extensions map[string]string) {

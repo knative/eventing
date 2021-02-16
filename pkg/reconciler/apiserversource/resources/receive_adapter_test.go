@@ -150,6 +150,9 @@ func TestMakeReceiveAdapters(t *testing.T) {
 								}, {
 									Name:  source.EnvTracingCfg,
 									Value: "",
+								}, {
+									Name:  "K_CE_OVERRIDES",
+									Value: `{"extensions":{"knsource":"apiserversources.sources.knative.dev/source-name"}}`,
 								},
 							},
 						},
@@ -159,12 +162,22 @@ func TestMakeReceiveAdapters(t *testing.T) {
 		},
 	}
 
+	l := len(want.Spec.Template.Spec.Containers[0].Env)
+
 	ceSrc := src.DeepCopy()
 	ceSrc.Spec.CloudEventOverrides = &duckv1.CloudEventOverrides{Extensions: map[string]string{"1": "one"}}
 	ceWant := want.DeepCopy()
-	ceWant.Spec.Template.Spec.Containers[0].Env = append(ceWant.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+	ceWant.Spec.Template.Spec.Containers[0].Env = append(ceWant.Spec.Template.Spec.Containers[0].Env[:l-1], corev1.EnvVar{
 		Name:  "K_CE_OVERRIDES",
-		Value: `{"extensions":{"1":"one"}}`,
+		Value: `{"extensions":{"1":"one","knsource":"apiserversources.sources.knative.dev/source-name"}}`,
+	})
+
+	ceSrc2 := src.DeepCopy()
+	ceSrc2.Spec.CloudEventOverrides = &duckv1.CloudEventOverrides{Extensions: map[string]string{"1": "one", "knsource": "myknsource"}}
+	ceWant2 := want.DeepCopy()
+	ceWant2.Spec.Template.Spec.Containers[0].Env = append(ceWant2.Spec.Template.Spec.Containers[0].Env[:l-1], corev1.EnvVar{
+		Name:  "K_CE_OVERRIDES",
+		Value: `{"extensions":{"1":"one","knsource":"myknsource"}}`,
 	})
 
 	testCases := map[string]struct {
@@ -172,12 +185,15 @@ func TestMakeReceiveAdapters(t *testing.T) {
 		src  *v1.ApiServerSource
 	}{
 		"TestMakeReceiveAdapter": {
-
 			want: want,
 			src:  src,
 		}, "TestMakeReceiveAdapterWithExtensionOverride": {
 			src:  ceSrc,
 			want: ceWant,
+		},
+		"TestMakeReceiveAdapterWithExtensionOverrideKNSource": {
+			src:  ceSrc2,
+			want: ceWant2,
 		},
 	}
 	for n, tc := range testCases {
