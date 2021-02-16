@@ -346,7 +346,7 @@ type SourceStatus struct {
 }
 ```
 
-For a full definition of `Status`, `SinkURI`, `CloudEventAttributes` and please
+For a full definition of `Status`, `SinkURI` and `CloudEventAttributes`, please
 see [Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
 [URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
@@ -379,7 +379,7 @@ SHOULD send events to its
 
 Sources SHOULD produce CloudEvents with the `knsource` CloudEvent extension
 identifying the originating [Source Custom Object](#source-custom-objects). It
-is highly-recommended producing the `knsource` CloudEvent extension.
+is highly-recommended to produce the `knsource` CloudEvent extension.
 
 The `knsource` value SHOULD be of the form `<plural>.<group>/<name>`, where:
 
@@ -398,15 +398,12 @@ It is allowed to specify an alternative value in
 [`spec.ceOverrides.extensions`](#duckspec), in which case the `knsource` value
 can be of any shape.
 
-When produced, the `knsource` CloudEvent extension MUST appear in
-[status.ceAttributes](#duckstatus).
-
-The `knsource` CloudEvent extension already exist in the CloudEvent being
+When the `knsource` CloudEvent extension already exists in the CloudEvent being
 forwarded by a Source, its value SHOULD be overridden as described above.
 
-The `knsource` CloudEvent extension allows event consumers to filter based on
-the [Source Custom Object](#source-custom-objects) producing events. For
-instance triggers can be configured to receive events coming from a single
+One use case addressed by the `knsource` CloudEvent extension is event filtering
+based on [Source Custom Object](#source-custom-objects). For instance triggers
+can be configured to receive events coming from a single
 [Source Custom Object](#source-custom-objects).
 
 ### Further reading
