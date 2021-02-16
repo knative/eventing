@@ -17,9 +17,6 @@ limitations under the License.
 package broker
 
 import (
-	"context"
-	"testing"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -63,13 +60,11 @@ func brokerIngressConformanceFeature(brokerClass string, version string, enc clo
 
 	f.Requirement("broker is addressable", broker.IsAddressable(brokerName, features.Interval, features.Timeout))
 
-	f.Setup("install source", func(ctx context.Context, t *testing.T) {
-		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
-		eventshub.Install(sourceName, eventshub.StartSenderURL(u.String()), eventshub.InputEventWithEncoding(event, enc))(ctx, t)
-	})
+	f.Setup("install source", eventshub.Install(
+		sourceName,
+		eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+		eventshub.InputEventWithEncoding(event, enc),
+	))
 
 	f.Stable("ingress supports v"+version).
 		Must("accept the event", OnStore(sourceName).Match(
@@ -102,20 +97,14 @@ func brokerIngressConformanceBadEvent(brokerClass string) *feature.Feature {
 
 	f.Requirement("broker is addressable", broker.IsAddressable(brokerName, features.Interval, features.Timeout))
 
-	f.Setup("install source", func(ctx context.Context, t *testing.T) {
-		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
-		eventshub.Install(sourceName,
-			eventshub.StartSenderURL(u.String()),
-			eventshub.InputHeader("ce-specversion", "9000.1"),
-			eventshub.InputHeader("ce-type", "sometype"),
-			eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
-			eventshub.InputHeader("ce-id", eventID),
-			eventshub.InputBody(";la}{kjsdf;oai2095{}{}8234092349807asdfashdf"),
-		)(ctx, t)
-	})
+	f.Setup("install source", eventshub.Install(sourceName,
+		eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+		eventshub.InputHeader("ce-specversion", "9000.1"),
+		eventshub.InputHeader("ce-type", "sometype"),
+		eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
+		eventshub.InputHeader("ce-id", eventID),
+		eventshub.InputBody(";la}{kjsdf;oai2095{}{}8234092349807asdfashdf"),
+	))
 
 	f.Stable("ingress").
 		Must("respond with 400 on bad event", OnStore(sourceName).Match(

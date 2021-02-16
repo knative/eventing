@@ -36,7 +36,7 @@ import (
 
 type CfgFn func(map[string]interface{})
 
-func gvr() schema.GroupVersionResource {
+func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
 }
 
@@ -109,13 +109,13 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 
 // IsReady tests to see if a Broker becomes ready within the time given.
 func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsReady(gvr(), name, interval, timeout)
+	return k8s.IsReady(Gvr(), name, interval, timeout)
 }
 
 // IsAddressable tests to see if a Broker becomes addressable within the  time
 // given.
 func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsAddressable(gvr(), name, interval, timeout)
+	return k8s.IsAddressable(Gvr(), name, interval, timeout)
 }
 
 // Address returns a broker's address.
@@ -123,7 +123,7 @@ func Address(ctx context.Context, name string, interval, timeout time.Duration) 
 	var addr *apis.URL
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		var err error
-		addr, err = k8s.Address(ctx, gvr(), name)
+		addr, err = k8s.Address(ctx, Gvr(), name)
 		if err == nil && addr == nil {
 			// keep polling
 			return false, nil
