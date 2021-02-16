@@ -18,8 +18,8 @@ package adapter
 import "testing"
 
 func TestKnSourceExtensionValue(t *testing.T) {
-	want := "plurals.mygroup/hello"
-	got := KnSourceExtensionValue("plurals", "mygroup", "hello")
+	want := "hello.myplural.mygroup"
+	got := KnSourceExtensionValue("myplural", "mygroup", "hello")
 
 	if got != want {
 		t.Errorf("unexpected value. Wanted  %q, got %q", want, got)

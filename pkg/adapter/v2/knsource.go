@@ -22,5 +22,5 @@ const (
 
 // KnSourceExtensionValue gets the value for the CloudEvent knsource extension referencing the originating CR
 func KnSourceExtensionValue(plural, group, name string) string {
-	return plural + "." + group + "/" + name
+	return name + "." + plural + "." + group
 }

@@ -152,7 +152,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 									Value: "",
 								}, {
 									Name:  "K_CE_OVERRIDES",
-									Value: `{"extensions":{"knsource":"apiserversources.sources.knative.dev/source-name"}}`,
+									Value: `{"extensions":{"knsource":"source-name.apiserversources.sources.knative.dev"}}`,
 								},
 							},
 						},
@@ -169,7 +169,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 	ceWant := want.DeepCopy()
 	ceWant.Spec.Template.Spec.Containers[0].Env = append(ceWant.Spec.Template.Spec.Containers[0].Env[:l-1], corev1.EnvVar{
 		Name:  "K_CE_OVERRIDES",
-		Value: `{"extensions":{"1":"one","knsource":"apiserversources.sources.knative.dev/source-name"}}`,
+		Value: `{"extensions":{"1":"one","knsource":"source-name.apiserversources.sources.knative.dev"}}`,
 	})
 
 	ceSrc2 := src.DeepCopy()
