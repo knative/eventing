@@ -391,7 +391,7 @@ The `knsource` value SHOULD be of the form `<plural>.<group>/<name>`, where:
 
 Examples:
 
-- `pingsources.eventing.knative.dev/hello`
+- `pingsources.sources.knative.dev/hello`
 - `rabbitmq.sources.knative.dev/rabbitmq-source`
 
 It is allowed to specify an alternative value in
