@@ -276,11 +276,9 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 
 	event, err := binding.ToEvent(ctx, response)
 	if err != nil {
-		// Like in the above case, we could just use StatusInternalServerError, but to distinguish
-		// between the failure cases, we use a different code here.
-		writer.WriteHeader(http.StatusBadGateway)
-		// Malformed event, reply with err
-		return http.StatusBadGateway, err
+		writer.WriteHeader(http.StatusInternalServerError)
+		// Let's make sure the error is retried
+		return http.StatusInternalServerError, err
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
