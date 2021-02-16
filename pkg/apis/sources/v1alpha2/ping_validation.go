@@ -18,11 +18,13 @@ package v1alpha2
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/robfig/cron/v3"
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/sources/config"
 )
 
 func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
@@ -35,6 +37,14 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if _, err := cron.ParseStandard(cs.Schedule); err != nil {
 		fe := apis.ErrInvalidValue(cs.Schedule, "schedule")
+		errs = errs.Also(fe)
+	}
+
+	pingConfig := config.FromContextOrDefaults(ctx)
+	pingDefaults := pingConfig.PingDefaults.GetPingConfig()
+
+	if bsize := len(cs.JsonData); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
+		fe := apis.ErrInvalidValue(fmt.Sprintf("the jsonData length of %d bytes exceeds limit set at %d.", bsize, pingDefaults.DataMaxSize), "jsonData")
 		errs = errs.Also(fe)
 	}
 

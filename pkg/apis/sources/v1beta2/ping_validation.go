@@ -20,12 +20,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
 	"github.com/robfig/cron/v3"
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/sources/config"
 )
 
 func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
@@ -50,6 +53,9 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
+	pingConfig := config.FromContextOrDefaults(ctx)
+	pingDefaults := pingConfig.PingDefaults.GetPingConfig()
+
 	if fe := cs.Sink.Validate(ctx); fe != nil {
 		errs = errs.Also(fe.ViaField("sink"))
 	}
@@ -57,6 +63,10 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.Data != "" && cs.DataBase64 != "" {
 		errs = errs.Also(apis.ErrMultipleOneOf("data", "dataBase64"))
 	} else if cs.DataBase64 != "" {
+		if bsize := len(cs.DataBase64); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
+			fe := apis.ErrInvalidValue(fmt.Sprintf("the dataBase64 length of %d bytes exceeds limit set at %d.", bsize, pingDefaults.DataMaxSize), "dataBase64")
+			errs = errs.Also(fe)
+		}
 		decoded, err := base64.StdEncoding.DecodeString(cs.DataBase64)
 		// invalid base64 string
 		if err != nil {
@@ -69,13 +79,18 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 				}
 			}
 		}
-	} else if cs.Data != "" && cs.ContentType == cloudevents.ApplicationJSON {
-		// validate if data is valid JSON
-		if err := validateJSON(cs.Data); err != nil {
-			errs = errs.Also(apis.ErrInvalidValue(err, "data"))
+	} else if cs.Data != "" {
+		if bsize := len(cs.Data); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
+			fe := apis.ErrInvalidValue(fmt.Sprintf("the data length of %d bytes exceeds limit set at %d.", bsize, pingDefaults.DataMaxSize), "data")
+			errs = errs.Also(fe)
+		}
+		if cs.ContentType == cloudevents.ApplicationJSON {
+			// validate if data is valid JSON
+			if err := validateJSON(cs.Data); err != nil {
+				errs = errs.Also(apis.ErrInvalidValue(err, "data"))
+			}
 		}
 	}
-
 	return errs
 }
 
