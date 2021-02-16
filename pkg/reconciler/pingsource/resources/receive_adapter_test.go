@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,15 +21,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 )
 
 func TestMakePingAdapter(t *testing.T) {
 	args := Args{
-		MetricsConfig:   "metrics",
-		LoggingConfig:   "logging",
-		TracingConfig:   "tracing",
+		ConfigEnvVars:   (&reconcilersource.EmptyVarsGenerator{}).ToEnvVars(),
 		NoShutdownAfter: 40,
 		SinkTimeout:     48,
 	}
@@ -42,15 +41,6 @@ func TestMakePingAdapter(t *testing.T) {
 			},
 		},
 	}, {
-		Name:  "K_METRICS_CONFIG",
-		Value: "metrics",
-	}, {
-		Name:  "K_LOGGING_CONFIG",
-		Value: "logging",
-	}, {
-		Name:  "K_TRACING_CONFIG",
-		Value: "tracing",
-	}, {
 		Name:  "K_LEADER_ELECTION_CONFIG",
 		Value: "",
 	}, {
@@ -59,6 +49,15 @@ func TestMakePingAdapter(t *testing.T) {
 	}, {
 		Name:  "K_SINK_TIMEOUT",
 		Value: "48",
+	}, {
+		Name:  "K_LOGGING_CONFIG",
+		Value: "",
+	}, {
+		Name:  "K_METRICS_CONFIG",
+		Value: "",
+	}, {
+		Name:  "K_TRACING_CONFIG",
+		Value: "",
 	}}
 
 	got := MakeReceiveAdapterEnvVar(args)
