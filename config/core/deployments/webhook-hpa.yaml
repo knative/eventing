@@ -38,7 +38,7 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: eventing-webhook-pdb
+  name: eventing-webhook
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
