@@ -39,5 +39,5 @@ data:
     # to actually change the configuration.
 
     # Max number of bytes allowed to be sent for message excluding any
-    # base64 decoding.  Default is no limit set for data
+    # base64 decoding. Default is no limit set for data
     dataMaxSize: -1
