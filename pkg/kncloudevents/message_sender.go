@@ -129,7 +129,7 @@ func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) 
 
 	retryConfig := NoRetries()
 
-	retryConfig.CheckRetry = checkRetry
+	retryConfig.CheckRetry = RetryIfGreaterThan300
 
 	if spec.Retry != nil {
 		retryConfig.RetryMax = int(*spec.Retry)
@@ -160,6 +160,55 @@ func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) 
 	return retryConfig, nil
 }
 
-func checkRetry(_ context.Context, resp *nethttp.Response, err error) (bool, error) {
-	return !(resp != nil && resp.StatusCode < 300), err
+// Simple default implementation
+func RetryIfGreaterThan300(_ context.Context, response *nethttp.Response, err error) (bool, error) {
+	return !(response != nil && (response.StatusCode < 300)), err
+}
+
+// Alternative function to determine whether to retry based on response
+//
+// Note - Returning true indicates a retry should occur.  Returning an error will result in that
+//        error being returned instead of any errors from the Request.
+//
+// A retry is triggered for:
+// * nil responses
+// * emitted errors
+// * status codes that are 5XX, 404, 409, 429 as well if the statuscode is -1.
+func SelectiveRetry(_ context.Context, response *nethttp.Response, err error) (bool, error) {
+
+	// Retry Any Nil HTTP Response
+	if response == nil {
+		return true, nil
+	}
+
+	// Retry Any Errors
+	if err != nil {
+		return true, nil
+	}
+
+	// Extract The StatusCode From The Response & Add To Logger
+	statusCode := response.StatusCode
+
+	// Note - Normally we would NOT want to retry 4xx responses, BUT there are a few
+	//        known areas of knative-eventing that return codes in this range which
+	//        require retries.  Reasons for particular codes are as follows:
+	//
+	// 404  Although we would ideally not want to retry a permanent "Not Found"
+	//      response, a 404 can be returned when a pod is in the process of becoming
+	//      ready, so a retry can be a useful thing in this situation.
+	// 409  Returned by the E2E tests, so we must retry when "Conflict" is received, or the
+	//      tests will fail (see knative.dev/eventing/test/lib/recordevents/receiver/receiver.go)
+	// 429  Since retry typically involves a delay (usually an exponential backoff),
+	//      retrying after receiving a "Too Many Requests" response is useful.
+
+	if statusCode >= 500 || statusCode == 404 || statusCode == 429 || statusCode == 409 {
+		return true, nil
+	} else if statusCode >= 300 && statusCode <= 399 {
+		return false, nil
+	} else if statusCode == -1 {
+		return true, nil
+	}
+
+	// Do Not Retry 1XX, 2XX, 3XX & Most 4XX StatusCode Responses
+	return false, nil
 }
