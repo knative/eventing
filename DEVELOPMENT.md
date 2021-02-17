@@ -298,6 +298,6 @@ You will see that the execution will pause in your breakpoints.
 
 * Clean up is easy. Just kill your local controller process and then hit `Ctrl+C` on the terminal windows that you ran Telepresence initially. Telepresence will delete the proxy. It will also revert the deployment on the cluster back to its original state.
 
-**Notes**: 
+**Notes**:
 - Networking works fine, but volumes (i.e. being able to access Kubernetes volumes from local controller) are not tested
 - This method can also be used in production, but proceed with caution.
