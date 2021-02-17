@@ -347,8 +347,9 @@ type SourceStatus struct {
 ```
 
 For a full definition of `Status`, `SinkURI` and `CloudEventAttributes`, please
-see [Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
-[URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
+see
+[Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#SourceStatus),
+and [URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
 ### EventType Registry
 
@@ -378,8 +379,7 @@ SHOULD send events to its
 ### CloudEvent `knsource` extension
 
 Sources SHOULD produce CloudEvents with the `knsource` CloudEvent extension
-identifying the originating [Source Custom Object](#source-custom-objects). It
-is highly-recommended to produce the `knsource` CloudEvent extension.
+identifying the originating [Source Custom Object](#source-custom-objects).
 
 The `knsource` value SHOULD be of the form `<name>.<plural>.<group>`, where:
 
@@ -392,7 +392,7 @@ The `knsource` value SHOULD be of the form `<name>.<plural>.<group>`, where:
 Examples:
 
 - `hello.pingsources.sources.knative.dev`
-- `rabbitmq-source.rabbitmq.sources.knative.dev`
+- `rabbitmq-source.rabbitmqsources.sources.knative.dev`
 
 It is allowed to specify an alternative value in
 [`spec.ceOverrides.extensions`](#duckspec), in which case the `knsource` value
