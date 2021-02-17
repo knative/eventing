@@ -170,6 +170,10 @@ func RetryIfGreaterThan300(_ context.Context, response *nethttp.Response, err er
 // Note - Returning true indicates a retry should occur.  Returning an error will result in that
 //        error being returned instead of any errors from the Request.
 //
+// A retry is triggered for:
+// * nil responses
+// * emitted errors
+// * status codes that are 5XX, 404, 409, 429 as well if the statuscode is -1.
 func SelectiveRetry(_ context.Context, response *nethttp.Response, err error) (bool, error) {
 
 	// Retry Any Nil HTTP Response
@@ -205,6 +209,6 @@ func SelectiveRetry(_ context.Context, response *nethttp.Response, err error) (b
 		return true, nil
 	}
 
-	// Do Not Retry 1XX, 2XX, & Most 4XX StatusCode Responses
+	// Do Not Retry 1XX, 2XX, 3XX & Most 4XX StatusCode Responses
 	return false, nil
 }
