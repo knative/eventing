@@ -63,7 +63,7 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.Data != "" && cs.DataBase64 != "" {
 		errs = errs.Also(apis.ErrMultipleOneOf("data", "dataBase64"))
 	} else if cs.DataBase64 != "" {
-		if bsize := len(cs.DataBase64); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
+		if bsize := int64(len(cs.DataBase64)); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
 			fe := apis.ErrInvalidValue(fmt.Sprintf("the dataBase64 length of %d bytes exceeds limit set at %d.", bsize, pingDefaults.DataMaxSize), "dataBase64")
 			errs = errs.Also(fe)
 		}
@@ -80,7 +80,7 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 			}
 		}
 	} else if cs.Data != "" {
-		if bsize := len(cs.Data); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
+		if bsize := int64(len(cs.Data)); pingDefaults.DataMaxSize > -1 && bsize > pingDefaults.DataMaxSize {
 			fe := apis.ErrInvalidValue(fmt.Sprintf("the data length of %d bytes exceeds limit set at %d.", bsize, pingDefaults.DataMaxSize), "data")
 			errs = errs.Also(fe)
 		}

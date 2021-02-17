@@ -19,8 +19,6 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
-  annotations:
-    knative.dev/example-checksum: "01b3f6e0"
 data:
   _example: |
     ################################
@@ -39,5 +37,5 @@ data:
     # to actually change the configuration.
 
     # Max number of bytes allowed to be sent for message excluding any
-    # base64 decoding. Default is no limit set for data
-    dataMaxSize: -1
+    # base64 decoding.  Default is no limit set for data
+    dataMaxSize: 4096

@@ -17,46 +17,37 @@ limitations under the License.
 package config
 
 import (
-	"encoding/json"
 	"fmt"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/yaml"
 )
 
 const (
 	// PingDefaultsConfigName is the name of config map for the default
 	// configs that pings should use.
-	PingDefaultsConfigName = "config-ping-webhook"
+	PingDefaultsConfigName = "config-ping-defaults"
 
-	// PingDefaulterKey is the key in the ConfigMap to get the name of the default
-	// Ping CRD.
-	PingDefaulterKey = "ping-config"
+	DataMaxSizeKey = "dataMaxSize"
 
-	PingDataMaxSize = -1
+	DefaultDataMaxSize = -1
 )
 
 // NewPingDefaultsConfigFromMap creates a Defaults from the supplied Map
 func NewPingDefaultsConfigFromMap(data map[string]string) (*PingDefaults, error) {
-	nc := &PingDefaults{DataMaxSize: PingDataMaxSize}
+	nc := &PingDefaults{DataMaxSize: DefaultDataMaxSize}
 
-	// Parse out the Broker Configuration Cluster default section
-	value, present := data[PingDefaulterKey]
+	// Parse out the MaxSizeKey
+	value, present := data[DataMaxSizeKey]
 	if !present || value == "" {
-		return nil, fmt.Errorf("ConfigMap is missing (or empty) key: %q : %v", PingDefaulterKey, data)
+		return nc, nil
 	}
-	if err := parseEntry(value, nc); err != nil {
+	int64Value, err := strconv.ParseInt(value, 0, 64)
+	if err != nil {
 		return nil, fmt.Errorf("Failed to parse the entry: %s", err)
 	}
+	nc.DataMaxSize = int64Value
 	return nc, nil
-}
-
-func parseEntry(entry string, out interface{}) error {
-	j, err := yaml.YAMLToJSON([]byte(entry))
-	if err != nil {
-		return fmt.Errorf("ConfigMap's value could not be converted to JSON: %s : %v", err, entry)
-	}
-	return json.Unmarshal(j, &out)
 }
 
 // NewPingDefaultsConfigFromConfigMap creates a PingDefaults from the supplied configMap
@@ -66,12 +57,12 @@ func NewPingDefaultsConfigFromConfigMap(config *corev1.ConfigMap) (*PingDefaults
 
 // PingDefaults includes the default values to be populated by the webhook.
 type PingDefaults struct {
-	DataMaxSize int `json:"dataMaxSize"`
+	DataMaxSize int64 `json:"dataMaxSize"`
 }
 
 func (d *PingDefaults) GetPingConfig() *PingDefaults {
 	if d.DataMaxSize < 0 {
-		d.DataMaxSize = PingDataMaxSize
+		d.DataMaxSize = DefaultDataMaxSize
 	}
 	return d
 
