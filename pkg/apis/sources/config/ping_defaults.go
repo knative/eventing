@@ -30,12 +30,12 @@ const (
 
 	DataMaxSizeKey = "dataMaxSize"
 
-	PingDataMaxSize = -1
+	DefaultDataMaxSize = -1
 )
 
 // NewPingDefaultsConfigFromMap creates a Defaults from the supplied Map
 func NewPingDefaultsConfigFromMap(data map[string]string) (*PingDefaults, error) {
-	nc := &PingDefaults{DataMaxSize: PingDataMaxSize}
+	nc := &PingDefaults{DataMaxSize: DefaultDataMaxSize}
 
 	// Parse out the MaxSizeKey
 	value, present := data[DataMaxSizeKey]
@@ -62,7 +62,7 @@ type PingDefaults struct {
 
 func (d *PingDefaults) GetPingConfig() *PingDefaults {
 	if d.DataMaxSize < 0 {
-		d.DataMaxSize = PingDataMaxSize
+		d.DataMaxSize = DefaultDataMaxSize
 	}
 	return d
 

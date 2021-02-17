@@ -44,7 +44,7 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 	}{{
 		name:        "default config",
 		wantErr:     false,
-		wantDefault: PingDataMaxSize,
+		wantDefault: DefaultDataMaxSize,
 		config: &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: system.Namespace(),
@@ -55,7 +55,7 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 	}, {
 		name:        "example text",
 		wantErr:     false,
-		wantDefault: PingDataMaxSize,
+		wantDefault: DefaultDataMaxSize,
 		config: &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: system.Namespace(),
@@ -91,7 +91,7 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 	}, {
 		name:        "dangling key/value pair",
 		wantErr:     true,
-		wantDefault: PingDataMaxSize,
+		wantDefault: DefaultDataMaxSize,
 		config: &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: system.Namespace(),
