@@ -255,24 +255,34 @@ kubectl sniff <POD_NAME> -n knative-eventing
 
 ## Debugging Knative controllers and friends locally with Intellij Idea
 
-[Telepresence](https://www.telepresence.io/) can be leveraged to debug Knative controllers, webhooks and similar components.
+[Telepresence](https://www.telepresence.io/) can be leveraged to debug Knative
+controllers, webhooks and similar components.
 
-Telepresence allows you to use your local process, IDE, debugger, etc. but Kubernetes service calls get redirected to the process on your local. Similarly the calls on the local process goes to actual services that are running in Kubernetes.
+Telepresence allows you to use your local process, IDE, debugger, etc. but
+Kubernetes service calls get redirected to the process on your local. Similarly
+the calls on the local process goes to actual services that are running in
+Kubernetes.
 
-* Install Telepresence
+- Install Telepresence
 
-* Deploy Knative Eventing on your Kubernetes cluster.
+- Deploy Knative Eventing on your Kubernetes cluster.
 
-* Install [EnvFile plugin](https://plugins.jetbrains.com/plugin/7861-envfile) to your Intellij
+- Install [EnvFile plugin](https://plugins.jetbrains.com/plugin/7861-envfile) to
+  your Intellij
 
-* Run following command to swap the controller with the controller that we will start later.
+- Run following command to swap the controller with the controller that we will
+  start later.
+
 ```
 telepresence --namespace knative-eventing --swap-deployment eventing-controller --env-json eventing-controller-local-env.json
 ```
-This will replace the `eventing-controller` deployment on the cluster with a proxy.
 
-It will also create a `eventing-controller-local-env.json` file which we will use later on.
-Content of this `envfile` looks like this:
+This will replace the `eventing-controller` deployment on the cluster with a
+proxy.
+
+It will also create a `eventing-controller-local-env.json` file which we will
+use later on. Content of this `envfile` looks like this:
+
 ```
 {
     "CONFIG_LOGGING_NAME": "config-logging",
@@ -285,19 +295,24 @@ Content of this `envfile` looks like this:
 
 We need to pass these environment variables when we are starting our controller.
 
-* Create a run configuration in Intellij for `cmd/controller/main.go`:
+- Create a run configuration in Intellij for `cmd/controller/main.go`:
 
 ![Imgur](http://i.imgur.com/M6F3XA2.png)
 
-* Use the `envfile`:
+- Use the `envfile`:
 
 ![Imgur](http://i.imgur.com/cdXkKNo.png)
 
-Now, use the run configuration and start the local controller in debug mode.
-You will see that the execution will pause in your breakpoints.
+Now, use the run configuration and start the local controller in debug mode. You
+will see that the execution will pause in your breakpoints.
 
-* Clean up is easy. Just kill your local controller process and then hit `Ctrl+C` on the terminal windows that you ran Telepresence initially. Telepresence will delete the proxy. It will also revert the deployment on the cluster back to its original state.
+- Clean up is easy. Just kill your local controller process and then hit
+  `Ctrl+C` on the terminal windows that you ran Telepresence initially.
+  Telepresence will delete the proxy. It will also revert the deployment on the
+  cluster back to its original state.
 
 **Notes**:
-- Networking works fine, but volumes (i.e. being able to access Kubernetes volumes from local controller) are not tested
+
+- Networking works fine, but volumes (i.e. being able to access Kubernetes
+  volumes from local controller) are not tested
 - This method can also be used in production, but proceed with caution.
