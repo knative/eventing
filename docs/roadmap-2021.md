@@ -221,7 +221,7 @@ Promote the `KafkaChannel` to V1
 Today only at-least-once and ordered is supported by the Kafka-backed channel
 implementation. At-most-once and unordered should also be supported.
 
-**GitHub Issue:** TDB
+**GitHub Issue:** TBD
 
 **Owner:** Lionel Villard
 
