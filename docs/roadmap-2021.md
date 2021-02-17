@@ -4,15 +4,17 @@
 
 ### Event Discovery
 
-[Description TBD]
+Event discovery have been a needed feature with many attempts to implement it. There's a need that users can discover various existing eventing components. One attempt to solve it was via the event registry and EventType CRD #929. The new Discovery API offers a more promising approach.
 
-**GitHub Issue:** TBD
+We need a more unified story for discovery in eventing that potentially leverages the Discovery API and aligns the event registry and EventType features accordingly.
 
-**Owner:** Grant Rodgers
+**GitHub Issue:** https://github.com/knative/eventing/issues/4892
+
+**Owner:** Matthis Wessendorf
 
 ### Spec Solidification
 
-[Description TBD]
+Review and update documented specification to reflect the existing implementation (v1 API).
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4595
 
@@ -45,7 +47,7 @@ internals
 
 ### Autotrigger Sugar Controller
 
-[Description TBD]
+Simplify operations for developers using Knative by allowing addressable resources to have autotrigger sugar labels. AutoTrigger creates triggers based on annotations on a resource, and then assigns owner references between the Trigger and Addressable, allowing cleanup and a lot less operational complexity with the developer thinking about fewer resources
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4547
 
@@ -53,7 +55,8 @@ internals
 
 ### Remove v1beta1 API [eventing, flows, messaging]
 
-[Description TBD]
+Removal of v1beta1 APIs as per [our deprecation policy](
+https://knative.dev/community/contributing/mechanics/release-versioning-principles/). We guarantee 9 months of support for v1beta1 APIs. This makes the release 18/05/2021 the earliest release where we can remove v1beta1 API, and we want to target that release.
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4836
 
@@ -63,7 +66,7 @@ internals
 
 ### Protocol negotiation contract
 
-[Description TBD]
+Defined a standard that senders and receivers could use to communicate or negotiate protocol versions and features for a request, or a connection session to advance our capabilities, without leaving existing containers behind.
 
 **Theme:** Multiple protocol and protocol option support
 
@@ -82,14 +85,6 @@ internals
 **Owner:** Grant Rodgers
 
 ## Icebox (Wishlist)
-
-### Broker Performance Tests
-
-[Description TBD]
-
-**GitHub Issue:** TBD
-
-**Owner:** TBD
 
 ### Cross Namespace Eventing
 
@@ -128,7 +123,9 @@ being out of the WG scope or some other reason_
 
 ### Multi-Tenant Kafka Source
 
-[Description TBD]
+Introduce a multi-tenant KafkaSource with a Multi-tenant receive adapter that handles more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster.
+
+The goal of multi-tenant receive adapters is to minimize the cost of running sources that are barely (i.e. no or few processed events) used at a particular point in time.  
 
 **Theme:** Multi-Tenant environment support
 
@@ -138,23 +135,15 @@ being out of the WG scope or some other reason_
 
 ### GitHub Vanity domain support
 
-[Description TBD]
+The MT githubsource controller generates webhook of the form `http://githubsource-adapter.knative-sources.<domain>/<ns>/<name>` where `ns` and `name` corresponds the githubsource CR.
+
+Instead it should generate webhook of the form `http://<name>.<ns>.<domain>.`
 
 **Theme:** Multi-Tenant environment support
 
 **GitHub Issue:** https://github.com/knative-sandbox/eventing-github/issues/65
 
 **Owner:** Lionel Villard
-
-### Find Maintainers for source repos
-
-[Description TBD]
-
-**Theme:** No repo left behind
-
-**GitHub Issue:** We should create one if we think this is valuable
-
-**Owner:** Ville Aikas
 
 ### v1 for Core Sources
 
@@ -185,12 +174,6 @@ Let's promote KafkaSource to v1
 **Owner:** Lionel Villard
 
 ## Icebox
-
-### Removal of v1alpha1 Sources
-
-[Description TBD]
-
-**GitHub Issue:** TBD
 
 ## Won’t Do
 
@@ -246,9 +229,9 @@ implementation. At-most-once and unordered should also be supported.
 
 ### HTTP/2
 
-[Description TBD]
+Support HTTP/2 in eventing components supports transparently with possibly little/zero configuration in the full event flow
 
-**GitHub Issue:** TDB
+**GitHub Issue:** https://github.com/knative/eventing/issues/3312
 
 **Owner:** Francesco Guardiani
 
