@@ -19,8 +19,6 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
-  annotations:
-    knative.dev/example-checksum: "01b3f6e0"
 data:
   _example: |
     ################################
