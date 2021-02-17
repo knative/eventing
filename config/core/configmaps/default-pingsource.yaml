@@ -23,5 +23,5 @@ metadata:
     knative.dev/example-checksum: "6eaeecba"
 data:
   ping-config: |
-    # dataMaxSize: 10  # Max number of bytes allowed to be sent for message excluding any base64 decoding.
-                       # Default is no limit set for data
+     dataMaxSize: -1  # Max number of bytes allowed to be sent for message excluding any base64 decoding.
+                      # -1 For no limit
