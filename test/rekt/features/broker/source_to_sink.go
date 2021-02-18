@@ -14,25 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package features
+package broker
 
 import (
 	"context"
 	"testing"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/feature"
+
+	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/feature"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
-// BrokerAsMiddleware tests to see if a Ready Broker acts as middleware.
+// SourceToSink tests to see if a Ready Broker acts as middleware.
 // LoadGenerator --> in [Broker] out --> Recorder
-func BrokerAsMiddleware(brokerName string) *feature.Feature {
+func SourceToSink(brokerName string) *feature.Feature {
 	source := feature.MakeRandomK8sName("source")
 	sink := feature.MakeRandomK8sName("sink")
 	via := feature.MakeRandomK8sName("via")
@@ -48,10 +50,10 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via, interval, timeout))
+	f.Setup("trigger goes ready", trigger.IsReady(via, features.Interval, features.Timeout))
 
 	f.Setup("install source", func(ctx context.Context, t *testing.T) {
-		u, err := broker.Address(ctx, brokerName, interval, timeout)
+		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
 		if err != nil || u == nil {
 			t.Error("failed to get the address of the broker", brokerName, err)
 		}
@@ -60,9 +62,7 @@ func BrokerAsMiddleware(brokerName string) *feature.Feature {
 
 	f.Stable("broker as middleware").
 		Must("deliver an event",
-			func(ctx context.Context, t *testing.T) {
-				eventshub.StoreFromContext(ctx, sink).AssertExact(1, MatchEvent(HasId(event.ID())))
-			})
+			OnStore(sink).MatchEvent(HasId(event.ID())).Exact(1))
 
 	return f
 }
