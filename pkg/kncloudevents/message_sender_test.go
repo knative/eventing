@@ -336,7 +336,7 @@ func TestRetryIfGreaterThan300(t *testing.T) {
 		{
 			name:     "Http StatusCode -1",
 			response: &http.Response{StatusCode: -1},
-			result:   false,
+			result:   true,
 		},
 		{
 			name:     "Http StatusCode 100",
