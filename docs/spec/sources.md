@@ -392,17 +392,18 @@ The `knsource` value SHOULD be of the form `<name>.<plural>.<group>`, where:
 Examples:
 
 - `hello.pingsources.sources.knative.dev`
-- `rabbitmq-source.rabbitmqsources.sources.knative.dev`
+- `myqueue.rabbitmqsources.sources.knative.dev`
 
 It is allowed to specify an alternative value in
 [`spec.ceOverrides.extensions`](#duckspec), in which case the `knsource` value
 can be of any shape.
 
 When the `knsource` CloudEvent extension already exists in the CloudEvent being
-forwarded by a Source, its value SHOULD be overridden as described above.
+forwarded by a Source, its value SHOULD be overridden when the value described
+above is set.
 
 One use case addressed by the `knsource` CloudEvent extension is event filtering
-based on [Source Custom Object](#source-custom-objects). For instance triggers
+based on [Source Custom Object](#source-custom-objects). For instance, triggers
 can be configured to receive events coming from a single
 [Source Custom Object](#source-custom-objects).
 
