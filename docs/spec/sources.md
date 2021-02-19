@@ -404,8 +404,9 @@ above is set.
 
 One use case addressed by the `knsource` CloudEvent extension is event filtering
 based on [Source Custom Object](#source-custom-objects). For instance, triggers
-can be configured to receive events coming from a single
-[Source Custom Object](#source-custom-objects).
+can be configured to receive events coming from a specific
+[Source Custom Object](#source-custom-objects) by filtering events on this
+context attribute.
 
 ### Further reading
 
