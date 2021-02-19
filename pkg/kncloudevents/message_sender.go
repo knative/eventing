@@ -162,7 +162,7 @@ func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) 
 
 // Simple default implementation
 func RetryIfGreaterThan300(_ context.Context, response *nethttp.Response, err error) (bool, error) {
-	return !(response != nil && (response.StatusCode < 300)), err
+	return !(response != nil && (response.StatusCode < 300 && response.StatusCode != -1)), err
 }
 
 // Alternative function to determine whether to retry based on response
