@@ -133,8 +133,8 @@ func (a *mtpingAdapter) RemoveAll(ctx context.Context) {
 	a.entryidMu.Lock()
 	defer a.entryidMu.Unlock()
 
-	for key, id := range a.entryids {
+	for _, id := range a.entryids {
 		a.runner.RemoveSchedule(id)
-		delete(a.entryids, key)
 	}
+	a.entryids = make(map[string]cron.EntryID)
 }
