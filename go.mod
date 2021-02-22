@@ -45,3 +45,4 @@ require (
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+
