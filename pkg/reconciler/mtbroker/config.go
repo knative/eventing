@@ -52,7 +52,7 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 
 		if temp == "" {
 			logging.FromContext(ctx).Infow("ConfigMap's value was the empty string, ignoring it.", zap.Any("configMap", configMap))
-			return nil, errors.New("not found")
+			return nil, errors.New("empty value for config")
 		}
 
 		j, err := yaml.YAMLToJSON([]byte(temp))

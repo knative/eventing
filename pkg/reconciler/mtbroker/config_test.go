@@ -34,18 +34,17 @@ func TestOurConfig(t *testing.T) {
 	exampleSpec := runtime.RawExtension{Raw: []byte(`"customValue: foo\n"`)}
 
 	for _, tt := range []struct {
-		name string
-		fail bool
-		want *Config
-		data *corev1.ConfigMap
+		name    string
+		wantErr string
+		want    *Config
+		data    *corev1.ConfigMap
 	}{{
-		name: "Actual config, no defaults.",
-		fail: true,
-		want: nil,
-		data: actual,
+		name:    "Actual config, no defaults.",
+		wantErr: "not found",
+		want:    nil,
+		data:    actual,
 	}, {
 		name: "Example config",
-		fail: false,
 		want: &Config{
 			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{
@@ -55,6 +54,24 @@ func TestOurConfig(t *testing.T) {
 				Spec: &exampleSpec,
 			}},
 		data: example,
+	}, {
+		name:    "Empty string for config",
+		wantErr: "empty value for config",
+		want:    nil,
+		data: &corev1.ConfigMap{
+			Data: map[string]string{
+				"channelTemplateSpec": "",
+			},
+		},
+	}, {
+		name:    "Invalid json config for value",
+		wantErr: `ConfigMap's value could not be unmarshaled. json: cannot unmarshal string into Go value of type v1.ChannelTemplateSpec, "asdf"`,
+		want:    nil,
+		data: &corev1.ConfigMap{
+			Data: map[string]string{
+				"channelTemplateSpec": "asdf",
+			},
+		},
 	}, {
 		name: "With values",
 		want: &Config{
@@ -76,8 +93,16 @@ func TestOurConfig(t *testing.T) {
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
 			testConfig, err := NewConfigFromConfigMapFunc(logtesting.TestContextWithLogger(t))(tt.data)
-			if tt.fail != (err != nil) {
-				t.Fatal("Unexpected error value:", err)
+			if tt.wantErr != "" && err != nil {
+				if tt.wantErr != err.Error() {
+					t.Fatalf("Unexpected error value, want: %q got %q", tt.wantErr, err)
+				}
+			}
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("Unexpected error value, want no error got %q", err)
+			}
+			if tt.wantErr != "" && err == nil {
+				t.Fatalf("Did not get wanted error, wanted %q", tt.wantErr)
 			}
 
 			t.Log(actual)
