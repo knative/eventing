@@ -44,13 +44,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestGetBrokerTriggersNotBroker(t *testing.T) {
-	if len(getBrokerTriggers(nil, nil, testingv1.NewTrigger("notbroker", testNS, brokerName))) != 0 {
-		t.Fatal("Returned something with no broker in sight")
-	}
-}
-
-func TestGetBrokerTriggers(t *testing.T) {
+func TestGetTriggersForBroker(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   []runtime.Object
@@ -74,7 +68,7 @@ func TestGetBrokerTriggers(t *testing.T) {
 			ls := testingv1.NewListers(tt.in)
 			logger := logtesting.TestLogger(t)
 			triggerLister := ls.GetTriggerLister()
-			triggers := getBrokerTriggers(logger, triggerLister, ReadyBroker())
+			triggers := getTriggersForBroker(logger, triggerLister, ReadyBroker())
 			var found []string
 			for _, want := range tt.out {
 				for _, got := range triggers {
