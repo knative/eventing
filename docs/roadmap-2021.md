@@ -111,16 +111,6 @@ being out of the WG scope or some other reason_
 
 ## Next 3 Months (Short-term)
 
-### Introduce and define Multi-tenant Sources
-
-[Description TBD]
-
-**Theme:** Multi-Tenant environment support
-
-**GitHub Issue:** TBD
-
-**Owner:** Scott Nichols
-
 ### Multi-Tenant Kafka Source
 
 Introduce a multi-tenant KafkaSource implementation capable of handling more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster.
