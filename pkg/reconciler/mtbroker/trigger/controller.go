@@ -107,10 +107,7 @@ func getBrokerTriggers(logger *zap.SugaredLogger, triggerLister v1.TriggerLister
 			logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
 			return r
 		}
-
-		for _, trigger := range triggers {
-			r = append(r, trigger)
-		}
+		r = append(r, triggers...)
 	}
 	return r
 }
