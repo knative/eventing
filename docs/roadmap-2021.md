@@ -96,9 +96,9 @@ Defined a standard that senders and receivers could use to communicate or negoti
 
 ### Streaming Processing
 
-[Description TBD]
+The goal of this proposal is to build an efficient event mesh that allows stateless and stateful even processing. We want to empower end users to describe event flows, made by streams and processors.
 
-**GitHub Issue:** TBD
+**GitHub Issue:** https://github.com/knative/eventing/issues/4901
 
 **Owner:** Lionel Villard
 
@@ -123,7 +123,7 @@ being out of the WG scope or some other reason_
 
 ### Multi-Tenant Kafka Source
 
-Introduce a multi-tenant KafkaSource with a Multi-tenant receive adapter that handles more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster.
+Introduce a multi-tenant KafkaSource implementation capable of handling more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster.
 
 The goal of multi-tenant receive adapters is to minimize the cost of running sources that are barely (i.e. no or few processed events) used at a particular point in time.  
 
@@ -165,11 +165,11 @@ Let's promote KafkaSource to v1
 
 ### Multi-Tenant RedisStream Source
 
-[Description TBD]
+Introduce a multi-tenant KafkaRedis implementation capable of handling more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster
 
 **Theme:** Multi-Tenant environment support
 
-**GitHub Issue:** TBD
+**GitHub Issue:** https://github.com/knative-sandbox/eventing-redis/issues/95
 
 **Owner:** Lionel Villard
 
@@ -221,7 +221,7 @@ Promote the `KafkaChannel` to V1
 Today only at-least-once and ordered is supported by the Kafka-backed channel
 implementation. At-most-once and unordered should also be supported.
 
-**GitHub Issue:** TBD
+**GitHub Issue:** https://github.com/knative-sandbox/eventing-kafka/issues/413
 
 **Owner:** Lionel Villard
 
