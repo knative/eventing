@@ -19,6 +19,8 @@ package mttrigger
 import (
 	"context"
 
+	v1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -53,12 +55,13 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 
+	triggerLister := triggerInformer.Lister()
 	r := &Reconciler{
 		eventingClientSet:  eventingclient.Get(ctx),
 		dynamicClientSet:   dynamicclient.Get(ctx),
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
-		triggerLister:      triggerInformer.Lister(),
+		triggerLister:      triggerLister,
 		configmapLister:    configmapInformer.Lister(),
 	}
 	impl := triggerreconciler.NewImpl(ctx, r)
@@ -76,19 +79,8 @@ func NewController(
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: brokerFilter,
 		Handler: controller.HandleAll(func(obj interface{}) {
-
-			if broker, ok := obj.(*eventingv1.Broker); ok {
-
-				selector := labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: broker.Name})
-				triggers, err := triggerInformer.Lister().Triggers(broker.Namespace).List(selector)
-				if err != nil {
-					logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
-					return
-				}
-
-				for _, trigger := range triggers {
-					impl.Enqueue(trigger)
-				}
+			for _, t := range getBrokerTriggers(logger, triggerLister, obj) {
+				impl.Enqueue(t)
 			}
 		}),
 	})
@@ -100,4 +92,25 @@ func NewController(
 	})
 
 	return impl
+}
+
+// getBrokerTriggers makes sure the object passed in is a Broker, and gets all
+// the Triggers belonging to it. As there is no way to return failures in the
+// Informers EventHandler, errors are logged, and an empty array is returned in case
+// of failures.
+func getBrokerTriggers(logger *zap.SugaredLogger, triggerLister v1.TriggerLister, obj interface{}) []*eventingv1.Trigger {
+	r := make([]*eventingv1.Trigger, 0)
+	if broker, ok := obj.(*eventingv1.Broker); ok {
+		selector := labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: broker.Name})
+		triggers, err := triggerLister.Triggers(broker.Namespace).List(selector)
+		if err != nil {
+			logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
+			return r
+		}
+
+		for _, trigger := range triggers {
+			r = append(r, trigger)
+		}
+	}
+	return r
 }
