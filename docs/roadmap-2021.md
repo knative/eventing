@@ -4,9 +4,14 @@
 
 ### Event Discovery
 
-Event discovery have been a needed feature with many attempts to implement it. There's a need that users can discover various existing eventing components. One attempt to solve it was via the event registry and EventType CRD #929. The new Discovery API offers a more promising approach.
+Event discovery have been a needed feature with many attempts to implement it.
+There's a need that users can discover various existing eventing components. One
+attempt to solve it was via the event registry and EventType CRD #929. The new
+Discovery API offers a more promising approach.
 
-We need a more unified story for discovery in eventing that potentially leverages the Discovery API and aligns the event registry and EventType features accordingly.
+We need a more unified story for discovery in eventing that potentially
+leverages the Discovery API and aligns the event registry and EventType features
+accordingly.
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4892
 
@@ -14,7 +19,8 @@ We need a more unified story for discovery in eventing that potentially leverage
 
 ### Spec Solidification
 
-Review and update documented specification to reflect the existing implementation (v1 API).
+Review and update documented specification to reflect the existing
+implementation (v1 API).
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4595
 
@@ -47,7 +53,11 @@ internals
 
 ### Autotrigger Sugar Controller
 
-Simplify operations for developers using Knative by allowing addressable resources to have autotrigger sugar labels. AutoTrigger creates triggers based on annotations on a resource, and then assigns owner references between the Trigger and Addressable, allowing cleanup and a lot less operational complexity with the developer thinking about fewer resources
+Simplify operations for developers using Knative by allowing addressable
+resources to have autotrigger sugar labels. AutoTrigger creates triggers based
+on annotations on a resource, and then assigns owner references between the
+Trigger and Addressable, allowing cleanup and a lot less operational complexity
+with the developer thinking about fewer resources
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4547
 
@@ -55,8 +65,11 @@ Simplify operations for developers using Knative by allowing addressable resourc
 
 ### Remove v1beta1 API [eventing, flows, messaging]
 
-Removal of v1beta1 APIs as per [our deprecation policy](
-https://knative.dev/community/contributing/mechanics/release-versioning-principles/). We guarantee 9 months of support for v1beta1 APIs. This makes the release 18/05/2021 the earliest release where we can remove v1beta1 API, and we want to target that release.
+Removal of v1beta1 APIs as per
+[our deprecation policy](https://knative.dev/community/contributing/mechanics/release-versioning-principles/).
+We guarantee 9 months of support for v1beta1 APIs. This makes the release
+18/05/2021 the earliest release where we can remove v1beta1 API, and we want to
+target that release.
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4836
 
@@ -66,7 +79,9 @@ https://knative.dev/community/contributing/mechanics/release-versioning-principl
 
 ### Protocol negotiation contract
 
-Defined a standard that senders and receivers could use to communicate or negotiate protocol versions and features for a request, or a connection session to advance our capabilities, without leaving existing containers behind.
+Defined a standard that senders and receivers could use to communicate or
+negotiate protocol versions and features for a request, or a connection session
+to advance our capabilities, without leaving existing containers behind.
 
 **Theme:** Multiple protocol and protocol option support
 
@@ -96,7 +111,9 @@ Defined a standard that senders and receivers could use to communicate or negoti
 
 ### Streaming Processing
 
-The goal of this proposal is to build an efficient event mesh that allows stateless and stateful even processing. We want to empower end users to describe event flows, made by streams and processors.
+The goal of this proposal is to build an efficient event mesh that allows
+stateless and stateful even processing. We want to empower end users to describe
+event flows, made by streams and processors.
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/4901
 
@@ -104,8 +121,8 @@ The goal of this proposal is to build an efficient event mesh that allows statel
 
 ## Won’t Do
 
-_These are the issues the working group decided to not work on whether for
-being out of the WG scope or some other reason_
+_These are the issues the working group decided to not work on whether for being
+out of the WG scope or some other reason_
 
 # Eventing Sources
 
@@ -113,9 +130,13 @@ being out of the WG scope or some other reason_
 
 ### Multi-Tenant Kafka Source
 
-Introduce a multi-tenant KafkaSource implementation capable of handling more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster.
+Introduce a multi-tenant KafkaSource implementation capable of handling more
+than one source instance at a time, typically all source instances in a
+namespace or all source instances in a cluster.
 
-The goal of multi-tenant receive adapters is to minimize the cost of running sources that are barely (i.e. no or few processed events) used at a particular point in time.  
+The goal of multi-tenant receive adapters is to minimize the cost of running
+sources that are barely (i.e. no or few processed events) used at a particular
+point in time.
 
 **Theme:** Multi-Tenant environment support
 
@@ -125,7 +146,9 @@ The goal of multi-tenant receive adapters is to minimize the cost of running sou
 
 ### GitHub Vanity domain support
 
-The MT githubsource controller generates webhook of the form `http://githubsource-adapter.knative-sources.<domain>/<ns>/<name>` where `ns` and `name` corresponds the githubsource CR.
+The MT githubsource controller generates webhook of the form
+`http://githubsource-adapter.knative-sources.<domain>/<ns>/<name>` where `ns`
+and `name` corresponds the githubsource CR.
 
 Instead it should generate webhook of the form `http://<name>.<ns>.<domain>.`
 
@@ -155,7 +178,9 @@ Let's promote KafkaSource to v1
 
 ### Multi-Tenant RedisStream Source
 
-Introduce a multi-tenant KafkaRedis implementation capable of handling more than one source instance at a time, typically all source instances in a namespace or all source instances in a cluster
+Introduce a multi-tenant KafkaRedis implementation capable of handling more than
+one source instance at a time, typically all source instances in a namespace or
+all source instances in a cluster
 
 **Theme:** Multi-Tenant environment support
 
@@ -167,8 +192,8 @@ Introduce a multi-tenant KafkaRedis implementation capable of handling more than
 
 ## Won’t Do
 
-_These are the issues the working group decided to not work on whether for
-being out of the WG scope or some other reason_
+_These are the issues the working group decided to not work on whether for being
+out of the WG scope or some other reason_
 
 # Event Delivery
 
@@ -176,7 +201,8 @@ being out of the WG scope or some other reason_
 
 ### Kafka Code Share Improvements
 
-KafkaChannel code refactorings to increase code sharing between the two implementations
+KafkaChannel code refactorings to increase code sharing between the two
+implementations
 
 **Theme:** Kafka Code Share Improvements
 
@@ -219,7 +245,8 @@ implementation. At-most-once and unordered should also be supported.
 
 ### HTTP/2
 
-Support HTTP/2 in eventing components supports transparently with possibly little/zero configuration in the full event flow
+Support HTTP/2 in eventing components supports transparently with possibly
+little/zero configuration in the full event flow
 
 **GitHub Issue:** https://github.com/knative/eventing/issues/3312
 
@@ -227,4 +254,5 @@ Support HTTP/2 in eventing components supports transparently with possibly littl
 
 ## Won’t Do
 
-_These are the issues the working group decided to not work on whether for being out of the WG scope or some other reason_
+_These are the issues the working group decided to not work on whether for being
+out of the WG scope or some other reason_
