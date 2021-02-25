@@ -19,7 +19,11 @@ package mttrigger
 import (
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
+	testingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/configmap"
+	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -37,5 +41,45 @@ func TestNew(t *testing.T) {
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func TestGetTriggersForBroker(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   []runtime.Object
+		out  []string
+	}{{
+		name: "Empty",
+	}, {
+		name: "single matching",
+		in:   []runtime.Object{testingv1.NewTrigger("match", testNS, brokerName)},
+		out:  []string{"match"},
+	}, {
+		name: "two, only one matching",
+		in:   []runtime.Object{testingv1.NewTrigger("match", testNS, brokerName), testingv1.NewTrigger("nomatch", testNS, "anotherbroker")},
+		out:  []string{"match"},
+	}, {
+		name: "two, both one matching",
+		in:   []runtime.Object{testingv1.NewTrigger("match", testNS, brokerName), testingv1.NewTrigger("match2", testNS, brokerName)},
+		out:  []string{"match", "match2"},
+	}} {
+		t.Run(tt.name, func(t *testing.T) {
+			ls := testingv1.NewListers(tt.in)
+			logger := logtesting.TestLogger(t)
+			triggerLister := ls.GetTriggerLister()
+			triggers := getTriggersForBroker(logger, triggerLister, ReadyBroker())
+			var found []string
+			for _, want := range tt.out {
+				for _, got := range triggers {
+					if got.Name == want {
+						found = append(found, got.Name)
+					}
+				}
+			}
+			if len(found) != len(tt.out) {
+				t.Fatalf("Did not find all the triggers, wanted %+v found %+v", tt.out, found)
+			}
+		})
 	}
 }

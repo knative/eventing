@@ -30,6 +30,7 @@ import (
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
+	v1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
@@ -53,12 +54,13 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
 
+	triggerLister := triggerInformer.Lister()
 	r := &Reconciler{
 		eventingClientSet:  eventingclient.Get(ctx),
 		dynamicClientSet:   dynamicclient.Get(ctx),
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
-		triggerLister:      triggerInformer.Lister(),
+		triggerLister:      triggerLister,
 		configmapLister:    configmapInformer.Lister(),
 	}
 	impl := triggerreconciler.NewImpl(ctx, r)
@@ -76,18 +78,9 @@ func NewController(
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: brokerFilter,
 		Handler: controller.HandleAll(func(obj interface{}) {
-
 			if broker, ok := obj.(*eventingv1.Broker); ok {
-
-				selector := labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: broker.Name})
-				triggers, err := triggerInformer.Lister().Triggers(broker.Namespace).List(selector)
-				if err != nil {
-					logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
-					return
-				}
-
-				for _, trigger := range triggers {
-					impl.Enqueue(trigger)
+				for _, t := range getTriggersForBroker(logger, triggerLister, broker) {
+					impl.Enqueue(t)
 				}
 			}
 		}),
@@ -100,4 +93,19 @@ func NewController(
 	})
 
 	return impl
+}
+
+// getTriggersForBroker makes sure the object passed in is a Broker, and gets all
+// the Triggers belonging to it. As there is no way to return failures in the
+// Informers EventHandler, errors are logged, and an empty array is returned in case
+// of failures.
+func getTriggersForBroker(logger *zap.SugaredLogger, triggerLister v1.TriggerLister, broker *eventingv1.Broker) []*eventingv1.Trigger {
+	r := make([]*eventingv1.Trigger, 0)
+	selector := labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: broker.Name})
+	triggers, err := triggerLister.Triggers(broker.Namespace).List(selector)
+	if err != nil {
+		logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
+		return r
+	}
+	return append(r, triggers...)
 }
