@@ -19,6 +19,8 @@ package mtping
 import (
 	"context"
 
+	"knative.dev/pkg/reconciler"
+
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 
@@ -37,6 +39,9 @@ type MTAdapter interface {
 
 	// Remove is called when the source has been deleted.
 	Remove(ctx context.Context, source *v1beta2.PingSource)
+
+	// RemoveAll is called when the adapter stopped leading
+	RemoveAll(ctx context.Context)
 }
 
 // NewController initializes the controller. This is called by the shared adapter Main
@@ -49,26 +54,12 @@ func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Imp
 
 	r := &Reconciler{mtadapter}
 
-	// TODO: need pkg#1683
-	// lister := pingsourceinformer.Get(ctx).Lister()
-	//opts := func(impl *controller.Impl) controller.Options {
-	//	return controller.Options{
-	//		DemoteFunc: func(b reconciler.Bucket) {
-	//			all, _ := lister.List(labels.Everything())
-	//			// TODO: demote with error
-	//			//if err != nil {
-	//			//	return err
-	//			//}
-	//			for _, elt := range all {
-	//				mtadapter.Remove(ctx, elt)
-	//			}
-	//		},
-	//	}
-	//}
-
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
 			SkipStatusUpdates: true,
+			DemoteFunc: func(b reconciler.Bucket) {
+				mtadapter.RemoveAll(ctx)
+			},
 		}
 	})
 
