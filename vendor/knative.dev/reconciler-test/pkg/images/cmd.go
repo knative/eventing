@@ -17,6 +17,7 @@ limitations under the License.
 package images
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -27,7 +28,9 @@ func cmd(cmdLine string) *exec.Cmd {
 	cmdSplit := strings.Split(cmdLine, " ")
 	cmd := cmdSplit[0]
 	args := cmdSplit[1:]
-	return exec.Command(cmd, args...)
+	c := exec.Command(cmd, args...)
+	c.Stderr = os.Stdout // Pipe the stderr in stdout
+	return c
 }
 
 func runCmd(cmdLine string) (string, error) {

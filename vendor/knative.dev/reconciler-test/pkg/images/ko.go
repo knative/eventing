@@ -18,12 +18,16 @@ package images
 
 import (
 	"fmt"
+	"os"
 )
 
 // Use ko to publish the image.
 func KoPublish(path string) (string, error) {
-	fmt.Println(fmt.Sprintf("ko publish -B %s", path))
-	out, err := runCmd(fmt.Sprintf("ko publish -B %s", path))
+	platform := os.Getenv("PLATFORM")
+	if len(platform) > 0 {
+		platform = " --platform=" + platform
+	}
+	out, err := runCmd(fmt.Sprintf("ko publish%s -B %s", platform, path))
 	if err != nil {
 		return "", err
 	}
