@@ -39,6 +39,9 @@ func (testAdapter) Update(context.Context, *v1beta2.PingSource) {
 func (testAdapter) Remove(context.Context, *v1beta2.PingSource) {
 }
 
+func (testAdapter) RemoveAll(context.Context) {
+}
+
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 

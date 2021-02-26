@@ -128,3 +128,13 @@ func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta2.PingSource) 
 		a.entryidMu.Unlock()
 	}
 }
+
+func (a *mtpingAdapter) RemoveAll(ctx context.Context) {
+	a.entryidMu.Lock()
+	defer a.entryidMu.Unlock()
+
+	for _, id := range a.entryids {
+		a.runner.RemoveSchedule(id)
+	}
+	a.entryids = make(map[string]cron.EntryID)
+}
