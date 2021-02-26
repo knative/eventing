@@ -32,7 +32,8 @@ import (
 )
 
 type mockReporter struct {
-	eventCount int
+	eventCount      int
+	retryEventCount int
 }
 
 var (
@@ -40,7 +41,12 @@ var (
 )
 
 func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount += 1
+	r.eventCount++
+	return nil
+}
+
+func (r *mockReporter) ReportRetryEventCount(args *source.ReportArgs, responseCode int) error {
+	r.retryEventCount++
 	return nil
 }
 
