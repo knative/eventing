@@ -35,6 +35,12 @@ var (
 		stats.UnitDimensionless,
 	)
 
+	// retryEventCountM is a counter which records the number of events sent by the source in retries.
+	retryEventCountM = stats.Int64(
+		"retry_event_count",
+		"Number of retry events sent",
+		stats.UnitDimensionless,
+	)
 	// Create the tag keys that will be used to add tags to our measurements.
 	// Tag keys must conform to the restrictions described in
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
@@ -51,6 +57,7 @@ var (
 	responseTimeout        = tag.MustNewKey(metricskey.LabelResponseTimeout)
 )
 
+// ReportArgs defines the arguments for reporting metrics.
 type ReportArgs struct {
 	Namespace     string
 	EventType     string
@@ -69,6 +76,7 @@ func init() {
 type StatsReporter interface {
 	// ReportEventCount captures the event count. It records one per call.
 	ReportEventCount(args *ReportArgs, responseCode int) error
+	ReportRetryEventCount(args *ReportArgs, responseCode int) error
 }
 
 var _ StatsReporter = (*reporter)(nil)
@@ -95,6 +103,15 @@ func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 		return err
 	}
 	metrics.Record(ctx, eventCountM.M(1))
+	return nil
+}
+
+func (r *reporter) ReportRetryEventCount(args *ReportArgs, responseCode int) error {
+	ctx, err := r.generateTag(args, responseCode)
+	if err != nil {
+		return err
+	}
+	metrics.Record(ctx, retryEventCountM.M(1))
 	return nil
 }
 
@@ -129,6 +146,12 @@ func register() {
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
+			Aggregation: view.Count(),
+			TagKeys:     tagKeys,
+		},
+		&view.View{
+			Description: retryEventCountM.Description(),
+			Measure:     retryEventCountM,
 			Aggregation: view.Count(),
 			TagKeys:     tagKeys,
 		},

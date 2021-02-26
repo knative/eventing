@@ -150,6 +150,9 @@ func (mr *MagicEnvironment) Test(ctx context.Context, t *testing.T, f *feature.F
 					continue
 				}
 				t.Run(s.TestName(), func(t *testing.T) {
+					ctx, cancelFn := context.WithCancel(ctx)
+					t.Cleanup(cancelFn)
+
 					wg.Add(1)
 					defer wg.Done()
 
