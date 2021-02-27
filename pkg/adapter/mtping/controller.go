@@ -57,10 +57,11 @@ func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Imp
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
 			SkipStatusUpdates: true,
-			DemoteFunc: func(b reconciler.Bucket) {
-				mtadapter.RemoveAll(ctx)
-			},
 		}
+	})
+
+	pingsourcereconciler.SetDemoteFn(impl.Reconciler, func(b reconciler.Bucket) {
+		mtadapter.RemoveAll(ctx)
 	})
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
