@@ -425,6 +425,7 @@ spec:
       - sources
     kind: ContainerSource
     plural: containersources
+    singular: containersource
   scope: Namespaced
   conversion:
     strategy: Webhook
