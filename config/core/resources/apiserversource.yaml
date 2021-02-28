@@ -558,6 +558,7 @@ spec:
      - sources
     kind: ApiServerSource
     plural: apiserversources
+    singular: apiserversource
   scope: Namespaced
   conversion:
     strategy: Webhook

@@ -472,6 +472,7 @@ spec:
     - sources
     kind: PingSource
     plural: pingsources
+    singular: pingsource
   scope: Namespaced
   conversion:
     strategy: Webhook
