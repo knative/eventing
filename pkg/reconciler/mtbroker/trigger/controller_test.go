@@ -17,7 +17,12 @@ limitations under the License.
 package mttrigger
 
 import (
+	"fmt"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/labels"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	v1lister "knative.dev/eventing/pkg/client/listers/eventing/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -81,5 +86,36 @@ func TestGetTriggersForBroker(t *testing.T) {
 				t.Fatalf("Did not find all the triggers, wanted %+v found %+v", tt.out, found)
 			}
 		})
+	}
+}
+
+type TriggerListerFailer struct{}
+
+func (failer *TriggerListerFailer) List(selector labels.Selector) (ret []*v1.Trigger, err error) {
+	return nil, nil
+}
+
+func (failer *TriggerListerFailer) Triggers(namespace string) v1lister.TriggerNamespaceLister {
+	return &TriggerNamespaceListerFailer{}
+}
+
+type TriggerNamespaceListerFailer struct{}
+
+// List lists all Triggers in the indexer.
+// Objects returned here must be treated as read-only.
+func (failer *TriggerNamespaceListerFailer) List(selector labels.Selector) (ret []*v1.Trigger, err error) {
+	return nil, fmt.Errorf("Inducing test failure for List")
+}
+
+// Triggers returns an object that can list and get Triggers.
+func (failer *TriggerNamespaceListerFailer) Get(name string) (*v1.Trigger, error) {
+	return nil, nil
+}
+
+func TestListFailure(t *testing.T) {
+	logger := logtesting.TestLogger(t)
+	triggerListerFailer := &TriggerListerFailer{}
+	if len(getTriggersForBroker(logger, triggerListerFailer, ReadyBroker())) != 0 {
+		t.Fatalf("Got back triggers when not expecting any")
 	}
 }

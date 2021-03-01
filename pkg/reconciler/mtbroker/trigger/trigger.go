@@ -168,7 +168,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Creating subscription")
+		logging.FromContext(ctx).Infow("Creating subscription", zap.Error(err))
 		sub, err = r.eventingClientSet.MessagingV1().Subscriptions(t.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
 			return nil, err
