@@ -145,26 +145,17 @@ jobs:
         # Build and Publish our containers to the docker daemon (including test assets)
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
-        ko apply -P \
-           -f config/ \
-           `# Install the MT Broker` \
-           -f config/core/configmaps/default-broker.yaml \
-           -f config/brokers/mt-channel-broker \
-           `# Install the sugar controller` \
-           -f config/sugar/500-controller.yaml \
-           `# Install the in-memory channel` \
-           -f config/channels/in-memory-channel
-
-        # Change the cluster domain to the correct one.
-        ko apply -Pf test/config/
+           
+        source ./test/e2e-common.sh
+        knative_setup
 
         # Be KinD to these tests.
         kubectl scale -n${SYSTEM_NAMESPACE} deployment/chaosduck --replicas=0
 
-    - name: Upload Test Images
+    - name: Test Setup
       run: |
-        # Build and Publish our test images to the docker daemon.
-        ./test/upload-test-images.sh
+        source ./test/e2e-common.sh
+        test_setup
 
     - name: Wait for things to be up
       run: |
