@@ -2,7 +2,6 @@ package assert
 
 import (
 	"context"
-	"testing"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 
@@ -38,7 +37,7 @@ func (m MatchAssertionBuilder) MatchEvent(matchers ...cetest.EventMatcher) Match
 // AtLeast builds the assertion feature.StepFn
 // OnStore(store).Match(matchers).AtLeast(min) is equivalent to StoreFromContext(ctx, store).AssertAtLeast(min, matchers)
 func (m MatchAssertionBuilder) AtLeast(min int) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		eventshub.StoreFromContext(ctx, m.storeName).AssertAtLeast(min, m.matchers...)
 	}
 }
@@ -46,7 +45,7 @@ func (m MatchAssertionBuilder) AtLeast(min int) feature.StepFn {
 // InRange builds the assertion feature.StepFn
 // OnStore(store).Match(matchers).InRange(min, max) is equivalent to StoreFromContext(ctx, store).AssertInRange(min, max, matchers)
 func (m MatchAssertionBuilder) InRange(min int, max int) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		eventshub.StoreFromContext(ctx, m.storeName).AssertInRange(min, max, m.matchers...)
 	}
 }
@@ -54,7 +53,7 @@ func (m MatchAssertionBuilder) InRange(min int, max int) feature.StepFn {
 // Exact builds the assertion feature.StepFn
 // OnStore(store).Match(matchers).Exact(n) is equivalent to StoreFromContext(ctx, store).AssertExact(n, matchers)
 func (m MatchAssertionBuilder) Exact(n int) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		eventshub.StoreFromContext(ctx, m.storeName).AssertExact(n, m.matchers...)
 	}
 }
@@ -62,7 +61,7 @@ func (m MatchAssertionBuilder) Exact(n int) feature.StepFn {
 // Not builds the assertion feature.StepFn
 // OnStore(store).Match(matchers).Not() is equivalent to StoreFromContext(ctx, store).AssertNot(matchers)
 func (m MatchAssertionBuilder) Not() feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		eventshub.StoreFromContext(ctx, m.storeName).AssertNot(m.matchers...)
 	}
 }

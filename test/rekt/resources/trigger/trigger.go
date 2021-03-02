@@ -18,7 +18,6 @@ package trigger
 
 import (
 	"context"
-	"testing"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -85,7 +84,7 @@ func Install(name, brokerName string, opts ...CfgFn) feature.StepFn {
 	for _, fn := range opts {
 		fn(cfg)
 	}
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}

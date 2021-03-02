@@ -18,7 +18,6 @@ package broker
 
 import (
 	"context"
-	"testing"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -100,7 +99,7 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 	for _, fn := range opts {
 		fn(cfg)
 	}
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}

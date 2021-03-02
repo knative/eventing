@@ -18,7 +18,6 @@ package svc
 
 import (
 	"context"
-	"testing"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -34,7 +33,7 @@ func Install(name, selectorKey, selectorValue string) feature.StepFn {
 		"selectorValue": selectorValue,
 	}
 
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}
