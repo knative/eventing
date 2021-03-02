@@ -167,6 +167,14 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
+		"GetTrigger fails": {
+			triggers: []*eventingv1beta1.Trigger{
+				makeTriggerWithDifferentUID(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          false,
+			expectedEventCount:        false,
+			expectedEventDispatchTime: false,
+		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1beta1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
@@ -564,6 +572,12 @@ func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1beta
 			extensionName: e,
 		},
 	}
+}
+
+func makeTriggerWithDifferentUID(filter *eventingv1beta1.TriggerFilter) *eventingv1beta1.Trigger {
+	t := makeTrigger(filter)
+	t.ObjectMeta.UID = "wrongone"
+	return t
 }
 
 func makeTrigger(filter *eventingv1beta1.TriggerFilter) *eventingv1beta1.Trigger {
