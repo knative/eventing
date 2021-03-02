@@ -76,67 +76,27 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	if err != nil {
 		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
+	if dtsv != "v1" && dtsv != "v1beta1" {
+		st.Fatalf("Unexpected duck type version, wanted [v1, v1beta] got: %s", dtsv)
+	}
 
-	if dtsv == "" || dtsv == "v1alpha1" {
-		// treat missing annotation value as v1alpha1, as written in the spec
-		channelable, err := getChannelAsV1Alpha1Channelable(channelName, client, channel)
-		if err != nil {
-			st.Fatalf("Unable to get channel %q to v1alpha1 duck type: %q", channel, err)
-		}
+	channelable, err := getChannelAsV1Channelable(channelName, client, channel)
+	if err != nil {
+		st.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
+	}
 
-		// SPEC:  Each subscription to a channel is added to the channel status.subscribableStatus.subscribers automatically.
-		if channelable.Status.SubscribableStatus == nil || channelable.Status.SubscribableStatus.Subscribers == nil {
-			st.Fatalf("%q does not have status.subscribers", channel)
-		}
-		ss := findSubscriberStatusV1Beta1(channelable.Status.SubscribableStatus.Subscribers, subscription)
-		if ss == nil {
-			st.Fatalf("No subscription status found for channel %q and subscription %v", channel, subscription)
-		}
+	// SPEC: Each subscription to a channel is added to the channel status.subscribers automatically.
+	if channelable.Status.Subscribers == nil {
+		st.Fatalf("%q does not have status.subscribers", channel)
+	}
+	ss := findSubscriberStatusV1(channelable.Status.Subscribers, subscription)
+	if ss == nil {
+		st.Fatalf("No subscription status found for channel %q and subscription %v", channel, subscription)
+	}
 
-		// SPEC: The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.
-		if ss.Ready != corev1.ConditionTrue {
-			st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
-		}
-	} else if dtsv == "v1beta1" {
-		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
-		if err != nil {
-			st.Fatalf("Unable to get channel %q to v1beta1 duck type: %q", channel, err)
-		}
-
-		// SPEC: Each subscription to a channel is added to the channel status.subscribers automatically.
-		if channelable.Status.Subscribers == nil {
-			st.Fatalf("%q does not have status.subscribers", channel)
-		}
-		ss := findSubscriberStatusV1Beta1(channelable.Status.Subscribers, subscription)
-		if ss == nil {
-			st.Fatalf("No subscription status found for channel %q and subscription %v", channel, subscription)
-		}
-
-		// SPEC: The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.
-		if ss.Ready != corev1.ConditionTrue {
-			st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
-		}
-	} else if dtsv == "v1" {
-		channelable, err := getChannelAsV1Channelable(channelName, client, channel)
-		if err != nil {
-			st.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
-		}
-
-		// SPEC: Each subscription to a channel is added to the channel status.subscribers automatically.
-		if channelable.Status.Subscribers == nil {
-			st.Fatalf("%q does not have status.subscribers", channel)
-		}
-		ss := findSubscriberStatusV1(channelable.Status.Subscribers, subscription)
-		if ss == nil {
-			st.Fatalf("No subscription status found for channel %q and subscription %v", channel, subscription)
-		}
-
-		// SPEC: The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.
-		if ss.Ready != corev1.ConditionTrue {
-			st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
-		}
-	} else {
-		st.Fatalf("Channel doesn't support v1alpha1, v1beta1 or v1 Channel duck types: %v", channel)
+	// SPEC: The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.
+	if ss.Ready != corev1.ConditionTrue {
+		st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
 	}
 }
 
