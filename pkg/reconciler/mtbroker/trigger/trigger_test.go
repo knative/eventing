@@ -364,6 +364,81 @@ func TestReconcile(t *testing.T) {
 				makeFilterSubscription(),
 			},
 		}, {
+			Name: "Trigger subscription update (delete) fails",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+				makeDifferentReadySubscription()}...),
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("delete", "subscriptions"),
+			},
+			WantErr: true,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for delete subscriptions")),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriptionDeleteFailed", `Delete Trigger's subscription failed: inducing failure for delete subscriptions`),
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for delete subscriptions"),
+			},
+		}, {
+			Name: "Trigger subscription create after delete fails",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+				makeDifferentReadySubscription()}...),
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "subscriptions"),
+			},
+			WantErr: true,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", `Create Trigger's subscription failed: inducing failure for create subscriptions`),
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create subscriptions"),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
+			WantCreates: []runtime.Object{
+				makeFilterSubscription(),
+			},
+		}, {
 			Name: "Trigger has subscriber ref exists",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
