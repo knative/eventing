@@ -18,17 +18,19 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/cloudevents/sdk-go/v2/protocol"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"knative.dev/eventing/pkg/adapter/v2/test"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
-
-	"knative.dev/eventing/pkg/adapter/v2/test"
 )
 
 type mockReporter struct {
@@ -51,33 +53,50 @@ func (r *mockReporter) ReportRetryEventCount(args *source.ReportArgs, responseCo
 }
 
 func TestNewCloudEventsClient_send(t *testing.T) {
+	demoEvent := func() *cloudevents.Event {
+		event := cloudevents.NewEvent()
+		event.SetID("abc-123")
+		event.SetSource("unit/test")
+		event.SetType("unit.type")
+		return &event
+	}
+
 	testCases := map[string]struct {
 		ceOverrides *duckv1.CloudEventOverrides
 		event       *cloudevents.Event
 		timeout     int
+		result      protocol.Result
+		wantErr     bool
 	}{
 		"timeout": {timeout: 13},
 		"none":    {},
 		"send": {
-			event: func() *cloudevents.Event {
-				event := cloudevents.NewEvent()
-				event.SetID("abc-123")
-				event.SetSource("unit/test")
-				event.SetType("unit.type")
-				return &event
-			}(),
+			event: demoEvent(),
+		},
+		"send fails": {
+			event:   demoEvent(),
+			result:  http.NewResult(400, "%w", protocol.ResultNACK),
+			wantErr: true,
+		},
+		"send after retries": {
+			event: demoEvent(),
+			result: &http.RetriesResult{
+				Result:   http.NewResult(200, "%w", protocol.ResultACK),
+				Retries:  10,
+				Duration: time.Microsecond * 42,
+				Attempts: nil,
+			},
 		},
 		"send with ceOverrides": {
-			event: func() *cloudevents.Event {
-				event := cloudevents.NewEvent()
-				event.SetID("abc-123")
-				event.SetSource("unit/test")
-				event.SetType("unit.type")
-				return &event
-			}(),
+			event: demoEvent(),
 			ceOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{
 				"foo": "bar",
 			}},
+		},
+		"not a http result": {
+			event:   demoEvent(),
+			result:  errors.New("totally not an http result"),
+			wantErr: true,
 		},
 	}
 	for n, tc := range testCases {
@@ -142,11 +161,16 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				t.Errorf("expected NewCloudEventsClient to return a *client, but did not")
 			}
 			innerClient := &test.TestCloudEventsClient{}
+			if tc.result != nil {
+				innerClient.Send_AppendResult(tc.result)
+			}
 			got.ceClient = innerClient
 
 			if tc.event != nil {
 				err := got.Send(context.TODO(), *tc.event)
-				if !cloudevents.IsACK(err) {
+				if !tc.wantErr && cloudevents.IsUndelivered(err) {
+					t.Fatal(err)
+				} else if tc.wantErr && cloudevents.IsACK(err) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
