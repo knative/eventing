@@ -26,6 +26,14 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
+	"knative.dev/eventing/pkg/duck"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
@@ -34,17 +42,6 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
-
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
-	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
-	"knative.dev/eventing/pkg/duck"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -67,8 +64,6 @@ func init() {
 	// TODO(nlopezgi): figure out what is the right list to have here.
 	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
 	_ = messagingv1.AddToScheme(scheme.Scheme)
-	_ = v1.AddToScheme(scheme.Scheme)
-	_ = v1alpha1.AddToScheme(scheme.Scheme)
 	_ = eventingduckv1.AddToScheme(scheme.Scheme)
 }
 
@@ -296,11 +291,11 @@ func TestReconcile(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = channelablecombined.WithDuck(ctx)
+		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
-			channelableTracker: duck.NewListableTracker(ctx, channelablecombined.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),
