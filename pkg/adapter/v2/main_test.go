@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/leaderelection"
-	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/reconciler"
 	_ "knative.dev/pkg/system/testing"
@@ -170,12 +169,6 @@ func TestMain_MetricsConfig(t *testing.T) {
 func TestStartInformers(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	StartInformers(ctx, nil)
-	cancel()
-}
-
-func TestSetupInformers(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	SetupInformers(ctx, logging.FromContext(ctx))
 	cancel()
 }
 
