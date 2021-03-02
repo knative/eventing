@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"go.opencensus.io/stats/view"
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/source"
@@ -31,10 +32,22 @@ import (
 
 type myAdapterBindings struct{}
 
-func TestMainMessageAdapter(t *testing.T) {
+func TestMainMessageAdapterWithContext(t *testing.T) {
+	m := &metrics.ExporterOptions{
+		Domain:         "example.com",
+		Component:      "foo",
+		PrometheusPort: 9021,
+		PrometheusHost: "prom.example.com",
+		ConfigMap: map[string]string{
+			"profiling.enable": "true",
+			"foo":              "bar",
+		},
+	}
+	metricsJson, _ := metrics.OptionsToJSON(m)
+
 	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
-	os.Setenv("K_METRICS_CONFIG", "metrics")
+	os.Setenv("K_METRICS_CONFIG", metricsJson)
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("MODE", "mymode")
 
