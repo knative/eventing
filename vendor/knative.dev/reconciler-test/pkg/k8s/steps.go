@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"testing"
 	"time"
 
 	"knative.dev/pkg/apis"
@@ -34,6 +33,7 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -41,7 +41,7 @@ import (
 // IsReady returns a reusable feature.StepFn to assert if a resource is ready
 // within the time given.
 func IsReady(gvr schema.GroupVersionResource, name string, interval, timeout time.Duration) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)
 		if err := WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
 			t.Error(gvr, "did not become ready,", err)
@@ -52,7 +52,7 @@ func IsReady(gvr schema.GroupVersionResource, name string, interval, timeout tim
 // IsAddressable tests to see if a resource becomes Addressable within the time
 // given.
 func IsAddressable(gvr schema.GroupVersionResource, name string, interval, timeout time.Duration) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		lastMsg := ""
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			addr, err := Address(ctx, gvr, name)

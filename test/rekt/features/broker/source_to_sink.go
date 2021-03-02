@@ -18,7 +18,6 @@ package broker
 
 import (
 	"context"
-	"testing"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -52,7 +51,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 
 	f.Setup("trigger goes ready", trigger.IsReady(via, features.Interval, features.Timeout))
 
-	f.Setup("install source", func(ctx context.Context, t *testing.T) {
+	f.Setup("install source", func(ctx context.Context, t feature.T) {
 		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
 		if err != nil || u == nil {
 			t.Error("failed to get the address of the broker", brokerName, err)

@@ -54,8 +54,9 @@ func composeStep(x *Step, y *Step) *Step {
 		S:    x.S,
 		L:    x.L,
 		T:    x.T,
-		Fn: func(ctx context.Context, t *testing.T) {
-			t.Helper()
+		Fn: func(ctx context.Context, t T) {
+			// TODO this is just a workaround until we find a proper solution for https://github.com/knative-sandbox/reconciler-test/issues/106
+			t.(*testing.T).Helper()
 			x.Fn(ctx, t)
 			y.Fn(ctx, t)
 		},
@@ -68,9 +69,10 @@ func parallelizeStep(x Step) Step {
 		S:    x.S,
 		L:    x.L,
 		T:    x.T,
-		Fn: func(ctx context.Context, t *testing.T) {
-			t.Parallel()
-			t.Helper()
+		Fn: func(ctx context.Context, t T) {
+			// TODO this is just a workaround until we find a proper solution for https://github.com/knative-sandbox/reconciler-test/issues/106
+			t.(*testing.T).Parallel()
+			t.(*testing.T).Helper()
 			x.Fn(ctx, t)
 		},
 	}
