@@ -64,7 +64,9 @@ func (mr *MagicEnvironment) References() []corev1.ObjectReference {
 }
 
 func (mr *MagicEnvironment) Finish() {
-	mr.DeleteNamespaceIfNeeded()
+	if err := mr.DeleteNamespaceIfNeeded(); err != nil {
+		panic(err)
+	}
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
@@ -136,7 +138,6 @@ func (mr *MagicEnvironment) Test(ctx context.Context, t *testing.T, f *feature.F
 	steps := feature.CollapseSteps(f.Steps)
 
 	for _, timing := range feature.Timings() {
-		// do it the slow way first.
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 
@@ -176,6 +177,23 @@ func (mr *MagicEnvironment) Test(ctx context.Context, t *testing.T, f *feature.F
 
 		wg.Wait()
 	}
+}
+
+// TestSet implements Environment.TestSet
+func (mr *MagicEnvironment) TestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet) {
+	t.Helper() // Helper marks the calling function as a test helper function
+	wg := &sync.WaitGroup{}
+
+	for _, f := range fs.Features {
+		wg.Add(1)
+		t.Run(fs.Name, func(t *testing.T) {
+			// FeatureSets should be run in parellel.
+			mr.Test(ctx, t, &f)
+			wg.Done()
+		})
+	}
+
+	wg.Wait()
 }
 
 type envKey struct{}
