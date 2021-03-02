@@ -44,11 +44,15 @@ type Environment interface {
 	// Test will execute the feature test using the given Context and T.
 	Test(ctx context.Context, t *testing.T, f *feature.Feature)
 
+	// TestSet will execute the feature set using the given Context and T.
+	TestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet)
+
 	// Namespace returns the namespace of this environment.
 	Namespace() string
 
 	// RequirementLevel returns the requirement level for this environment.
 	RequirementLevel() feature.Levels
+
 	// FeatureState returns the requirement level for this environment.
 	FeatureState() feature.States
 
@@ -57,6 +61,7 @@ type Environment interface {
 	// The map will be in the form `key`: `image` and `key` and the intention
 	// usage is to use this key to string substitute for image in test yaml.
 	Images() map[string]string
+
 	// TemplateConfig returns the base template config to use when processing
 	// yaml templates.
 	TemplateConfig(base map[string]interface{}) map[string]interface{}
