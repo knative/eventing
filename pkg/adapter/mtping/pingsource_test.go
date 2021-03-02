@@ -18,14 +18,12 @@ package mtping
 
 import (
 	"context"
+
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
@@ -41,14 +39,13 @@ import (
 )
 
 const (
-	testNS               = "test-namespace"
-	pingSourceName       = "test-pingsource"
-	testSchedule         = "*/2 * * * *"
-	testContentType      = cloudevents.TextPlain
-	testData             = "data"
-	testDataBase64       = "ZGF0YQ=="
-	sinkName             = "mysink"
-	defaultFinalizerName = "pingsources.sources.knative.dev"
+	testNS          = "test-namespace"
+	pingSourceName  = "test-pingsource"
+	testSchedule    = "*/2 * * * *"
+	testContentType = cloudevents.TextPlain
+	testData        = "data"
+	testDataBase64  = "ZGF0YQ=="
+	sinkName        = "mysink"
 )
 
 var (
@@ -91,12 +88,6 @@ func TestAllCases(t *testing.T) {
 					rttestingv1beta2.WithPingSourceCloudEventAttributes,
 				),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, pingSourceName, defaultFinalizerName),
-			},
 			WantErr: false,
 		}, {
 			Name: "valid schedule without contentType, data and dataBase64",
@@ -115,12 +106,6 @@ func TestAllCases(t *testing.T) {
 					rttestingv1beta2.WithPingSourceSink(sinkURI),
 					rttestingv1beta2.WithPingSourceCloudEventAttributes,
 				),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, pingSourceName, defaultFinalizerName),
 			},
 			WantErr: false,
 		}, {
@@ -143,12 +128,6 @@ func TestAllCases(t *testing.T) {
 					rttestingv1beta2.WithPingSourceCloudEventAttributes,
 				),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, pingSourceName, defaultFinalizerName),
-			},
 			WantErr: false,
 		}, {
 			Name: "valid schedule, with finalizer",
@@ -168,7 +147,6 @@ func TestAllCases(t *testing.T) {
 					rttestingv1beta2.WithPingSourceDeployed,
 					rttestingv1beta2.WithPingSourceSink(sinkURI),
 					rttestingv1beta2.WithPingSourceCloudEventAttributes,
-					rttestingv1beta2.WithPingSourceFinalizers(defaultFinalizerName),
 				),
 			},
 			WantErr: false,
@@ -190,20 +168,13 @@ func TestAllCases(t *testing.T) {
 					rttestingv1beta2.WithPingSourceDeployed,
 					rttestingv1beta2.WithPingSourceSink(sinkURI),
 					rttestingv1beta2.WithPingSourceCloudEventAttributes,
-					rttestingv1beta2.WithPingSourceFinalizers(defaultFinalizerName),
 					rttestingv1beta2.WithPingSourceDeleted,
 				),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, pingSourceName, ""),
 			},
 			WantErr: false,
 		}, {
 			Name: "valid schedule, deleted without finalizer",
-			Key:  pingsourceKey,
+			Key:  "a/a",
 			Objects: []runtime.Object{
 				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
 					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
@@ -237,20 +208,13 @@ func TestAllCases(t *testing.T) {
 
 }
 
-func patchFinalizers(namespace, name string, finalizers string) clientgotesting.PatchActionImpl {
-	fstr := ""
-	if finalizers != "" {
-		fstr = `"` + finalizers + `"`
-	}
-	return clientgotesting.PatchActionImpl{
-		ActionImpl: clientgotesting.ActionImpl{
-			Namespace:   namespace,
-			Verb:        "patch",
-			Resource:    schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1beta1", Resource: "pingsources"},
-			Subresource: "",
-		},
-		Name:      name,
-		PatchType: "application/merge-patch+json",
-		Patch:     []byte(`{"metadata":{"finalizers":[` + fstr + `],"resourceVersion":""}}`),
+func TestReconciler_deleteFunc(t *testing.T) {
+	pingsourceKey := testNS + "/" + pingSourceName
+	adapter := &testAdapter{}
+	p := rttestingv1beta2.NewPingSource(pingSourceName, testNS)
+	r := &Reconciler{mtadapter: adapter}
+	r.deleteFunc(p)
+	if _, ok := removePingsource[pingsourceKey]; !ok {
+		t.Errorf("Got error when call deleteFunc")
 	}
 }

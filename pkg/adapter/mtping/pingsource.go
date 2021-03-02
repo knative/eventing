@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	"knative.dev/pkg/reconciler"
-
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/reconciler"
 )
 
 // TODO: code generation
@@ -36,9 +36,6 @@ type Reconciler struct {
 // Check that our Reconciler implements ReconcileKind.
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
-// Check that our Reconciler implements FinalizeKind.
-var _ pingsourcereconciler.Finalizer = (*Reconciler)(nil)
-
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta2.PingSource) reconciler.Event {
 	if !source.Status.IsReady() {
 		return fmt.Errorf("warning: PingSource is not ready")
@@ -50,9 +47,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta2.PingSour
 	return nil
 }
 
-func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1beta2.PingSource) reconciler.Event {
-	// Update the adapter state
-	r.mtadapter.Remove(ctx, source)
-
-	return nil
+func (r *Reconciler) deleteFunc(obj interface{}) {
+	if obj == nil {
+		return
+	}
+	acc, err := kmeta.DeletionHandlingAccessor(obj)
+	if err != nil {
+		return
+	}
+	pingSource, ok := acc.(*v1beta2.PingSource)
+	if !ok || pingSource == nil {
+		return
+	}
+	r.mtadapter.Remove(pingSource)
 }
