@@ -43,25 +43,22 @@ func TestNewConfigWatcher_defaults(t *testing.T) {
 		expectLoggingContains string
 		expectMetricsContains string
 		expectTracingContains string
-	}{
-		{
-			name:                  "With pre-filled sample data",
-			cmw:                   configMapWatcherWithSampleData(),
-			expectLoggingContains: `"zap-logger-config":"{\"level\": \"fatal\"}"`,
-			expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
-			expectTracingContains: `"zipkin-endpoint":"zipkin.test"`,
-		},
-		{
-			name: "With empty data",
-			cmw:  configMapWatcherWithEmptyData(),
-			// logging defaults to Knative's defaults
-			expectLoggingContains: ``,
-			// metrics defaults to empty ConfigMap
-			expectMetricsContains: `"ConfigMap":{}`,
-			// tracing defaults to None backend
-			expectTracingContains: `"backend":"none"`,
-		},
-	}
+	}{{
+		name:                  "With pre-filled sample data",
+		cmw:                   configMapWatcherWithSampleData(),
+		expectLoggingContains: `"zap-logger-config":"{\"level\": \"fatal\"}"`,
+		expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
+		expectTracingContains: `"zipkin-endpoint":"zipkin.test"`,
+	}, {
+		name: "With empty data",
+		cmw:  configMapWatcherWithEmptyData(),
+		// logging defaults to Knative's defaults
+		expectLoggingContains: ``,
+		// metrics defaults to empty ConfigMap
+		expectMetricsContains: `"ConfigMap":{}`,
+		// tracing defaults to None backend
+		expectTracingContains: `"backend":"none"`,
+	}}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -94,19 +91,28 @@ func TestNewConfigWatcher_withOptions(t *testing.T) {
 		name                  string
 		cmw                   configmap.Watcher
 		expectMetricsContains string
-	}{
-		{
-			name:                  "With pre-filled sample data",
-			cmw:                   configMapWatcherWithSampleData(),
-			expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
-		},
-		{
-			name: "With empty data",
-			cmw:  configMapWatcherWithEmptyData(),
-			// metrics defaults to empty ConfigMap
-			expectMetricsContains: `"ConfigMap":{}`,
-		},
-	}
+	}{{
+		name:                  "With pre-filled sample data",
+		cmw:                   configMapWatcherWithSampleData(),
+		expectMetricsContains: `"ConfigMap":{"metrics.backend":"test"}`,
+	}, {
+		name: "With empty data",
+		cmw:  configMapWatcherWithEmptyData(),
+		// metrics defaults to empty ConfigMap
+		expectMetricsContains: `"ConfigMap":{}`,
+	}, {
+		name: "With bad logging config",
+		cmw: func() configmap.Watcher {
+			return configmap.NewStaticWatcher(
+				newTestConfigMap(logging.ConfigMapName(), map[string]string{
+					"zap-logger-config": `this is not json`,
+				}),
+				newTestConfigMap(metrics.ConfigMapName(), nil),
+				newTestConfigMap(tracingconfig.ConfigName, nil),
+			)
+		}(),
+		expectMetricsContains: `"ConfigMap":{}`,
+	}}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -128,6 +134,27 @@ func TestNewConfigWatcher_withOptions(t *testing.T) {
 			assert.Contains(t, envs[0].Value, tc.expectMetricsContains)
 		})
 	}
+}
+
+func TestEmptyVarsGenerator(t *testing.T) {
+	g := &EmptyVarsGenerator{}
+	envs := g.ToEnvVars()
+	const expectEnvs = 3
+	require.Lenf(t, envs, expectEnvs, "there should be %d env var(s)", expectEnvs)
+}
+
+func TestNilSafeMethods(t *testing.T) {
+	var cw *ConfigWatcher
+	assert.Nil(t, cw.LoggingConfig(), "logging config should be disabled")
+	assert.Nil(t, cw.TracingConfig(), "tracing config should be disabled")
+	assert.Nil(t, cw.MetricsConfig(), "metrics config should be disabled")
+
+	assert.NotPanics(t, func() {
+		cw.updateFromLoggingConfigMap(nil)
+		cw.updateFromMetricsConfigMap(nil)
+		cw.updateFromTracingConfigMap(nil)
+	}, "can update nil cfg")
+
 }
 
 // configMapWatcherWithSampleData constructs a Watcher for static sample data.
