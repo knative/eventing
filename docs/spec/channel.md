@@ -382,4 +382,4 @@ following attributes:
   promoted from `v1alpha1`to `v1beta1`. Add requirement for labeling Custom
   Objects to indicate which duck type they support as well as document
   differences.
-- `0.22.x release`: Drop support for v1alpha1 channelable.  
+- `0.22.x release`: Drop support for v1alpha1 channelable.
