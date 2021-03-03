@@ -130,7 +130,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1.Subscrip
 }
 
 func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, channel *eventingduckv1.Channelable, sub *v1.Subscription) pkgreconciler.Event {
-	ss, err := r.getSubStatus(ctx, sub, channel)
+	ss, err := r.getSubStatus(sub, channel)
 	if err != nil {
 		logging.FromContext(ctx).Warnw("Failed to get subscription status.", zap.Error(err))
 		sub.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
@@ -278,7 +278,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, deadLetterSink *
 	return nil
 }
 
-func (r *Reconciler) getSubStatus(ctx context.Context, subscription *v1.Subscription, channel *eventingduckv1.Channelable) (eventingduckv1.SubscriberStatus, error) {
+func (r *Reconciler) getSubStatus(subscription *v1.Subscription, channel *eventingduckv1.Channelable) (eventingduckv1.SubscriberStatus, error) {
 	for _, sub := range channel.Status.Subscribers {
 		if sub.UID == subscription.GetUID() &&
 			sub.ObservedGeneration == subscription.GetGeneration() {

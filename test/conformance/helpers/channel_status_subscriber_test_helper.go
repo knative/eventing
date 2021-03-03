@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -98,15 +97,6 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	if ss.Ready != corev1.ConditionTrue {
 		st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
 	}
-}
-
-func findSubscriberStatusV1Beta1(statusArr []duckv1beta1.SubscriberStatus, subscription *eventingv1beta1.Subscription) *duckv1beta1.SubscriberStatus {
-	for _, v := range statusArr {
-		if v.UID == subscription.UID {
-			return &v
-		}
-	}
-	return nil
 }
 
 func findSubscriberStatusV1(statusArr []duckv1.SubscriberStatus, subscription *eventingv1beta1.Subscription) *duckv1.SubscriberStatus {
