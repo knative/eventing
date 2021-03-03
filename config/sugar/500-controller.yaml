@@ -30,7 +30,7 @@ spec:
       serviceAccountName: eventing-controller
       enableServiceLinks: false
       containers:
-      - name: controller
+      - name: sugar-controller
         image: ko://knative.dev/eventing/cmd/sugar_controller
         env:
           - name: CONFIG_LOGGING_NAME
