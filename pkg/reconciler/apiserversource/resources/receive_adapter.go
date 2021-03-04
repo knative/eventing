@@ -163,8 +163,8 @@ func makeEnv(args *ReceiveAdapterArgs) ([]corev1.EnvVar, error) {
 	if ceOverrides.Extensions == nil {
 		ceOverrides.Extensions = map[string]string{}
 	}
-	if _, ok := ceOverrides.Extensions[adapter.KnSourceExtension]; !ok {
-		ceOverrides.Extensions[adapter.KnSourceExtension] = adapter.KnSourceExtensionValue("apiserversources", sources.GroupName, args.Source.Name)
+	if _, ok := ceOverrides.Extensions[adapter.SubscriptionExtension]; !ok {
+		ceOverrides.Extensions[adapter.SubscriptionExtension] = adapter.SubscriptionExtensionValue(args.Source.Name, args.Source.Namespace, "apiserversources", sources.GroupName)
 	}
 
 	ceJson, err := json.Marshal(ceOverrides)

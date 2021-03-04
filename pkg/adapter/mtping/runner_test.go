@@ -82,7 +82,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
-			wantExtensions:  map[string]string{"knsource": "test-name.pingsources.sources.knative.dev"},
+			wantExtensions:  map[string]string{"subscription": "test-name.test-ns.pingsources.sources.knative.dev"},
 		}, "TestAddRunRemoveScheduleWithExtensionOverride": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -107,8 +107,8 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
-			wantExtensions:  map[string]string{"1": "one", "2": "two", "knsource": "test-name.pingsources.sources.knative.dev"},
-		}, "TestAddRunRemoveScheduleWithExtensionOverrideKNsource": {
+			wantExtensions:  map[string]string{"1": "one", "2": "two", "subscription": "test-name.test-ns.pingsources.sources.knative.dev"},
+		}, "TestAddRunRemoveScheduleWithExtensionOverridesubscription": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-name",
@@ -117,7 +117,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 				Spec: v1beta2.PingSourceSpec{
 					SourceSpec: duckv1.SourceSpec{
 						CloudEventOverrides: &duckv1.CloudEventOverrides{
-							Extensions: map[string]string{"1": "one", "2": "two", "knsource": "myvalue"},
+							Extensions: map[string]string{"1": "one", "2": "two", "subscription": "myvalue"},
 						},
 					},
 					Schedule:    "* * * * ?",
@@ -132,7 +132,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleData),
 			wantContentType: cloudevents.TextPlain,
-			wantExtensions:  map[string]string{"1": "one", "2": "two", "knsource": "myvalue"},
+			wantExtensions:  map[string]string{"1": "one", "2": "two", "subscription": "myvalue"},
 		}, "TestAddRunRemoveScheduleWithDataBase64": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -155,7 +155,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        decodeBase64(sampleDataBase64),
 			wantContentType: cloudevents.TextPlain,
-			wantExtensions:  map[string]string{"knsource": "test-name.pingsources.sources.knative.dev"},
+			wantExtensions:  map[string]string{"subscription": "test-name.test-ns.pingsources.sources.knative.dev"},
 		}, "TestAddRunRemoveScheduleWithJsonData": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -178,7 +178,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleJSONData),
 			wantContentType: cloudevents.ApplicationJSON,
-			wantExtensions:  map[string]string{"knsource": "test-name.pingsources.sources.knative.dev"},
+			wantExtensions:  map[string]string{"subscription": "test-name.test-ns.pingsources.sources.knative.dev"},
 		}, "TestAddRunRemoveScheduleWithJsonDataBase64": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -201,7 +201,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        decodeBase64(sampleJSONDataBase64),
 			wantContentType: cloudevents.ApplicationJSON,
-			wantExtensions:  map[string]string{"knsource": "test-name.pingsources.sources.knative.dev"},
+			wantExtensions:  map[string]string{"subscription": "test-name.test-ns.pingsources.sources.knative.dev"},
 		}, "TestAddRunRemoveScheduleWithXmlData": {
 			src: &v1beta2.PingSource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -224,7 +224,7 @@ func TestAddRunRemoveSchedules(t *testing.T) {
 			},
 			wantData:        []byte(sampleXmlData),
 			wantContentType: cloudevents.ApplicationXML,
-			wantExtensions:  map[string]string{"knsource": "test-name.pingsources.sources.knative.dev"},
+			wantExtensions:  map[string]string{"subscription": "test-name.test-ns.pingsources.sources.knative.dev"},
 		},
 	}
 	for n, tc := range testCases {
@@ -325,7 +325,7 @@ func TestStartStopCronDelayWait(t *testing.T) {
 
 	runner.Stop() // cron job because of delay is still running.
 
-	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, map[string]string{"knsource": "test-name.pingsources.sources.knative.dev"})
+	validateSent(t, ce, []byte("some delayed data"), cloudevents.TextPlain, map[string]string{"subscription": "test-name.test-ns.pingsources.sources.knative.dev"})
 }
 
 func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData []byte, wantContentType string, extensions map[string]string) {

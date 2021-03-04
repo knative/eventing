@@ -16,13 +16,12 @@ limitations under the License.
 
 package adapter
 
-import "testing"
+const (
+	// SubscriptionExtension is the CloudEvent subscription extension referencing the originating event producer
+	SubscriptionExtension = "subscription"
+)
 
-func TestKnSourceExtensionValue(t *testing.T) {
-	want := "hello.myplural.mygroup"
-	got := KnSourceExtensionValue("myplural", "mygroup", "hello")
-
-	if got != want {
-		t.Errorf("unexpected value. Wanted  %q, got %q", want, got)
-	}
+// SubscriptionExtensionValue gets the value for the CloudEvent Subscription extension
+func SubscriptionExtensionValue(name, namespace, resource, group string) string {
+	return name + "." + namespace + "." + resource + "." + group
 }

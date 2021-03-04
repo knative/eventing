@@ -16,12 +16,13 @@ limitations under the License.
 
 package adapter
 
-const (
-	// KnSourceExtension is the CloudEvent knsource extension referencing the originating CR
-	KnSourceExtension = "knsource"
-)
+import "testing"
 
-// KnSourceExtensionValue gets the value for the CloudEvent knsource extension referencing the originating CR
-func KnSourceExtensionValue(plural, group, name string) string {
-	return name + "." + plural + "." + group
+func TestSubscriptionExtensionValue(t *testing.T) {
+	want := "hello.ns.resource.mygroup"
+	got := SubscriptionExtensionValue("hello", "ns", "resource", "mygroup")
+
+	if got != want {
+		t.Errorf("unexpected value. Wanted  %q, got %q", want, got)
+	}
 }
