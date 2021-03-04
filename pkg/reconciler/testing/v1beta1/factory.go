@@ -36,6 +36,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakeapiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
@@ -62,6 +63,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
+		ctx, extClient := fakeapiextensionsclient.With(ctx, ls.GetAPIExtensionObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
 
@@ -93,6 +95,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 			kubeClient.PrependReactor("*", "*", reactor)
 			client.PrependReactor("*", "*", reactor)
 			dynamicClient.PrependReactor("*", "*", reactor)
+			extClient.PrependReactor("*", "*", reactor)
 		}
 
 		// Validate all Create operations through the eventing client.
