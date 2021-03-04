@@ -76,11 +76,12 @@ const (
 	triggerChannelKind       = "InMemoryChannel"
 	triggerChannelName       = "test-broker-kne-trigger"
 
-	subscriberURI     = "http://example.com/subscriber/"
-	subscriberKind    = "Service"
-	subscriberName    = "subscriber-name"
-	subscriberGroup   = "serving.knative.dev"
-	subscriberVersion = "v1"
+	subscriberURI           = "http://example.com/subscriber/"
+	subscriberKind          = "Service"
+	subscriberName          = "subscriber-name"
+	subscriberNameNamespace = "subscriber-namespace"
+	subscriberGroup         = "serving.knative.dev"
+	subscriberVersion       = "v1"
 
 	pingSourceName              = "test-ping-source"
 	testSchedule                = "*/2 * * * *"
@@ -233,7 +234,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberURI(subscriberURI)),
 			},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -258,7 +259,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberResolvedSucceeded()),
 			},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "subscriptions"),
@@ -303,7 +304,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-trigger": inducing failure for update triggers`),
@@ -361,7 +362,7 @@ func TestReconcile(t *testing.T) {
 				Name: subscriptionName,
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 		}, {
 			Name: "Trigger subscription update (delete) fails",
@@ -436,13 +437,13 @@ func TestReconcile(t *testing.T) {
 				Name: subscriptionName,
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 		}, {
 			Name: "Trigger has subscriber ref exists",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeSubscriberAddressableAsUnstructured(),
+				makeSubscriberAddressableAsUnstructured(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
@@ -462,13 +463,13 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 		}, {
 			Name: "Trigger has subscriber ref exists and URI",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeSubscriberAddressableAsUnstructured(),
+				makeSubscriberAddressableAsUnstructured(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
@@ -489,7 +490,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 		}, {
 			Name: "Trigger has subscriber ref exists kubernetes Service",
@@ -516,7 +517,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				makeFilterSubscription(),
+				makeFilterSubscription(testNS),
 			},
 		}, {
 			Name: "Trigger has subscriber ref doesn't exist",
@@ -569,7 +570,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Subscription ready, trigger marked ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
+				makeReadySubscription(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -593,7 +594,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Dependency doesn't exist",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
+				makeReadySubscription(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -622,7 +623,7 @@ func TestReconcile(t *testing.T) {
 			Name: "The status of Dependency is False",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
+				makeReadySubscription(testNS),
 				makeFalseStatusPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -649,7 +650,7 @@ func TestReconcile(t *testing.T) {
 			Name: "The status of Dependency is Unknown",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
+				makeReadySubscription(testNS),
 				makeUnknownStatusCronJobSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -677,7 +678,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Dependency generation not equal",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
+				makeReadySubscription(testNS),
 				makeGenerationNotEqualPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -704,7 +705,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Dependency ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
-				makeReadySubscription(),
+				makeReadySubscription(testNS),
 				makeReadyPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -727,6 +728,62 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDependencyReady(),
 				),
 			}},
+		},
+		{
+			Name: "Subscriber Not Specific Namespace",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeSubscriberAddressableAsUnstructured(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, "", subscriberURIReference),
+					WithInitTriggerConditions,
+				)}...),
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDependencyReady(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeFilterSubscription(testNS),
+			},
+		},
+		{
+			Name: "Subscriber Specific Namespace",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeSubscriberAddressableAsUnstructured(subscriberNameNamespace),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, subscriberNameNamespace, subscriberURIReference),
+					WithInitTriggerConditions,
+				)}...),
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, subscriberNameNamespace, subscriberURIReference),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDependencyReady(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeFilterSubscription(subscriberNameNamespace),
+			},
 		},
 	}
 
@@ -854,11 +911,11 @@ func makeServiceURI() *apis.URL {
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
-func makeFilterSubscription() *messagingv1.Subscription {
-	return resources.NewSubscription(makeTrigger(), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
+func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscription {
+	return resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
 }
 
-func makeTrigger() *eventingv1.Trigger {
+func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
 	return &eventingv1.Trigger{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1",
@@ -877,7 +934,7 @@ func makeTrigger() *eventingv1.Trigger {
 			Subscriber: duckv1.Destination{
 				Ref: &duckv1.KReference{
 					Name:       subscriberName,
-					Namespace:  testNS,
+					Namespace:  subscriberNamespace,
 					Kind:       subscriberKind,
 					APIVersion: subscriberAPIVersion,
 				},
@@ -925,31 +982,31 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 
 // Just so we can test subscription updates
 func makeDifferentReadySubscription() *messagingv1.Subscription {
-	s := makeFilterSubscription()
+	s := makeFilterSubscription(testNS)
 	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
 	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 
 func makeFilterSubscriptionNotOwnedByTrigger() *messagingv1.Subscription {
-	sub := makeFilterSubscription()
+	sub := makeFilterSubscription(testNS)
 	sub.OwnerReferences = []metav1.OwnerReference{}
 	return sub
 }
 
-func makeReadySubscription() *messagingv1.Subscription {
-	s := makeFilterSubscription()
+func makeReadySubscription(subscriberNamespace string) *messagingv1.Subscription {
+	s := makeFilterSubscription(subscriberNamespace)
 	s.Status = *eventingv1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 
-func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {
+func makeSubscriberAddressableAsUnstructured(subscriberNamespace string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": subscriberAPIVersion,
 			"kind":       subscriberKind,
 			"metadata": map[string]interface{}{
-				"namespace": testNS,
+				"namespace": subscriberNamespace,
 				"name":      subscriberName,
 			},
 			"status": map[string]interface{}{
@@ -962,7 +1019,7 @@ func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {
 }
 
 func makeFalseStatusSubscription() *messagingv1.Subscription {
-	s := makeFilterSubscription()
+	s := makeFilterSubscription(testNS)
 	s.Status.MarkReferencesNotResolved("testInducedError", "test induced error")
 	return s
 }
