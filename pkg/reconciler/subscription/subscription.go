@@ -506,7 +506,7 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 		if delivery == nil {
 			delivery = &eventingduckv1.DeliverySpec{}
 		}
-		delivery.BackoffPolicy = (*eventingduckv1.BackoffPolicyType)(sub.Spec.Delivery.BackoffPolicy)
+		delivery.BackoffPolicy = sub.Spec.Delivery.BackoffPolicy
 		delivery.Retry = sub.Spec.Delivery.Retry
 		delivery.BackoffDelay = sub.Spec.Delivery.BackoffDelay
 	}
