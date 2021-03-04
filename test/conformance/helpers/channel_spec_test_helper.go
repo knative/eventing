@@ -28,7 +28,6 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/util/retry"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/pkg/apis"
@@ -61,7 +60,9 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 		if err != nil {
 			st.Fatalf("Unable to check Channel duck type support version for %s: %s", channel, err)
 		}
-
+		if dtsv != "v1" && dtsv != "v1beta1" {
+			st.Fatalf("Unexpected duck type version, wanted [v1, v1beta] got: %s", dtsv)
+		}
 		channelName := names.SimpleNameGenerator.GenerateName("channel-spec-subscribers-")
 		client.T.Logf("Creating channel %+v-%s", channel, channelName)
 		client.CreateChannelOrFail(channelName, &channel)
@@ -72,43 +73,20 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 
 		var ch interface{}
 
-		if dtsv == "" || dtsv == "v1alpha1" {
-			// treat missing annotation value as v1alpha1, as written in the spec
-			channelable, err := getChannelAsV1Alpha1Channelable(channelName, client, channel)
-			if err != nil {
-				st.Fatalf("Unable to get channel %s to v1alpha1 duck type: %s", channel, err)
-			}
-
-			// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribable.subscribers
-			channelable.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
-				Subscribers: []eventingduckv1alpha1.SubscriberSpec{
-					{
-						UID:      "1234",
-						ReplyURI: sampleUrl,
-					},
-				},
-			}
-
-			ch = channelable
-
-		} else if dtsv == "v1beta1" || dtsv == "v1" {
-			channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
-			if err != nil {
-				st.Fatalf("Unable to get channel %s to v1beta1 duck type: %s", channel, err)
-			}
-
-			// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribers
-			channelable.Spec.Subscribers = []eventingduckv1beta1.SubscriberSpec{
-				{
-					UID:      "1234",
-					ReplyURI: sampleUrl,
-				},
-			}
-
-			ch = channelable
-		} else {
-			st.Fatalf("Channel doesn't support v1alpha1 nor v1beta1 Channel duck types: %s", channel)
+		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
+		if err != nil {
+			st.Fatalf("Unable to get channel %s to v1beta1 duck type: %s", channel, err)
 		}
+
+		// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribers
+		channelable.Spec.Subscribers = []eventingduckv1beta1.SubscriberSpec{
+			{
+				UID:      "1234",
+				ReplyURI: sampleUrl,
+			},
+		}
+
+		ch = channelable
 
 		raw, err := json.Marshal(ch)
 		if err != nil {

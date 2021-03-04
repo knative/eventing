@@ -33,7 +33,7 @@ import (
 
 	reconciler "knative.dev/pkg/reconciler"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	testlib "knative.dev/eventing/test/lib"
@@ -119,7 +119,7 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
 	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
-	objs, err := duck.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduck.SubscribableType{})
+	objs, err := duck.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduckv1.Subscribable{})
 	if err != nil {
 		t.Fatal("Failed to list the underlying channels:", err)
 	}
@@ -130,7 +130,7 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 	// So, filter out the broker channel from the list before checking that there's only one.
 	filteredObjs := make([]runtime.Object, 0)
 	for _, o := range objs {
-		if o.(*eventingduck.SubscribableType).Name != "default-kne-trigger" {
+		if o.(*eventingduckv1.Subscribable).Name != "default-kne-trigger" {
 			filteredObjs = append(filteredObjs, o)
 		}
 	}

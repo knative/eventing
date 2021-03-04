@@ -33,8 +33,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -85,48 +83,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 	}
 
 	c.Status.Channel = &backingChannelObjRef
-	bCS := r.getChannelableStatus(ctx, &backingChannel.Status, backingChannel.Annotations)
-	c.Status.PropagateStatuses(bCS)
+	c.Status.PropagateStatuses(&backingChannel.Status)
 
 	return nil
 }
 
-func (r *Reconciler) getChannelableStatus(ctx context.Context, bc *duckv1alpha1.ChannelableCombinedStatus, cAnnotations map[string]string) *eventingduckv1.ChannelableStatus {
-
-	channelableStatus := &eventingduckv1.ChannelableStatus{}
-	if bc.AddressStatus.Address != nil {
-		channelableStatus.AddressStatus.Address = &duckv1.Addressable{}
-		bc.AddressStatus.Address.ConvertTo(ctx, channelableStatus.AddressStatus.Address)
-	}
-	channelableStatus.Status = bc.Status
-	if cAnnotations != nil &&
-		cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1" || cAnnotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
-		subs := make([]eventingduckv1.SubscriberStatus, len(bc.SubscribableStatus.Subscribers))
-		for i, sub := range bc.SubscribableStatus.Subscribers {
-			sub.ConvertTo(ctx, &subs[i])
-		}
-		if len(bc.SubscribableStatus.Subscribers) > 0 {
-			channelableStatus.SubscribableStatus.Subscribers = subs
-		}
-	} else { //we assume v1alpha1 if no tag according to the spec
-		if bc.SubscribableTypeStatus.SubscribableStatus != nil &&
-			len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
-			channelableStatus.SubscribableStatus.Subscribers = make([]eventingduckv1.SubscriberStatus, len(bc.SubscribableTypeStatus.SubscribableStatus.Subscribers))
-			for i, ss := range bc.SubscribableTypeStatus.SubscribableStatus.Subscribers {
-				channelableStatus.SubscribableStatus.Subscribers[i] = eventingduckv1.SubscriberStatus{
-					UID:                ss.UID,
-					ObservedGeneration: ss.ObservedGeneration,
-					Ready:              ss.Ready,
-					Message:            ss.Message,
-				}
-			}
-		}
-	}
-	return channelableStatus
-}
-
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1.Channel, backingChannelObjRef duckv1.KReference) (*duckv1alpha1.ChannelableCombined, error) {
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1.Channel, backingChannelObjRef duckv1.KReference) (*eventingduckv1.Channelable, error) {
 	logger := logging.FromContext(ctx)
 	lister, err := r.channelableTracker.ListerForKReference(backingChannelObjRef)
 	if err != nil {
@@ -160,7 +123,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 				return nil, err
 			}
 			logger.Debug("Created backing Channel", zap.Any("backingChannel", newBackingChannel))
-			channelable := &duckv1alpha1.ChannelableCombined{}
+			channelable := &eventingduckv1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logger.Errorw("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannelObjRef), zap.Any("createdChannel", created), zap.Error(err))
@@ -173,7 +136,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		return nil, err
 	}
 	logger.Debugw("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
-	channelable, ok := backingChannel.(*duckv1alpha1.ChannelableCombined)
+	channelable, ok := backingChannel.(*eventingduckv1.Channelable)
 	if !ok {
 		return nil, fmt.Errorf("Failed to convert to Channelable Object %+v", backingChannel)
 	}

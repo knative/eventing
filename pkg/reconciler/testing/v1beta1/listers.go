@@ -32,7 +32,6 @@ import (
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
@@ -67,7 +66,6 @@ var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
 	sourceAddToScheme,
-	eventingduckv1alpha1.AddToScheme,
 }
 
 type Listers struct {

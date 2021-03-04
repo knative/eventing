@@ -152,7 +152,6 @@ Each instantiated Channel (ie, Custom Object) SHOULD have an annotation
 indicating which version of the `Channelable` duck type it conforms to. We
 currently have these versions:
 
-1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
 1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
 1. [v1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/channelable_types.go)
 
@@ -172,11 +171,6 @@ which version they support. To ensure backwards compatibility with old channels,
 if no annotation is given, we assume it's `v1alpha1`.
 
 #### Spec Requirements
-
-##### v1alpha1 Spec
-
-Each channel CRD MUST contain an array of subscribers:
-[`spec.subscribable.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/subscribable_types.go)
 
 ##### v1beta1 Spec
 
@@ -207,21 +201,6 @@ registered with that particular Channelable, while the Subscription
 that particular Subscription.
 
 #### Status Requirements
-
-##### v1alpha1 Status
-
-Each channel CRD MUST have a `status` subresource which contains
-
-- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1alpha1/addressable_types.go)
-- [`subscribableStatus.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/subscribable_types.go)
-  (as an array)
-
-Each channel CRD SHOULD have the following fields in `Status`
-
-- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
-  MUST be populated if present
-- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
-  (as an array) SHOULD indicate status transitions and error reasons if present
 
 ##### v1beta1 Status
 
@@ -255,12 +234,6 @@ Each channel CRD SHOULD have the following fields in `Status`
 
 #### Channel Status
 
-##### v1alpha1
-
-When the channel instance is ready to receive events `status.address.hostname`
-and `status.address.url` MUST be populated and `status.addressable` MUST be set
-to `True`.
-
 ##### v1beta1
 
 When the channel instance is ready to receive events `status.address.url` MUST
@@ -272,13 +245,6 @@ When the channel instance is ready to receive events `status.address.url` MUST
 be populated and `status.addressable` MUST be set to `True`.
 
 #### Channel Subscriber Status
-
-##### v1alpha1
-
-Each subscription to a channel is added to the channel
-`status.subscribableStatus.subscribers` automatically. The `ready` field of the
-subscriber identified by its `uid` MUST be set to `True` when the subscription
-is ready to be processed.
 
 ##### v1beta1
 
@@ -362,10 +328,8 @@ _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents, although
 dispatching events using _Binary Content Mode_ is RECOMMENDED.
 
 Channels MUST send events to all subscribers which are marked with a status of
-`ready: "True"` in the channel's `status.subscribableStatus.subscribers`
-(v1alpha1) or `status.subscribers` (v1beta1). The events must be sent to the
-`subscriberURI` field of `spec.subscribable.subscribers` (v1alpha1) or
-`spec.subscribers` (v1beta1). Each channel implementation will have its own
+`ready: "True"` in the channel's `status.subscribers` (v1beta1 / v1). The events must be sent to the
+`subscriberURI` field of `spec.subscribers` (v1beta1 / v1). Each channel implementation will have its own
 quality of service guarantees (e.g. at least once, at most once, etc) which
 SHOULD be documented.
 
@@ -418,3 +382,4 @@ following attributes:
   promoted from `v1alpha1`to `v1beta1`. Add requirement for labeling Custom
   Objects to indicate which duck type they support as well as document
   differences.
+- `0.22.x release`: Drop support for v1alpha1 channelable.
