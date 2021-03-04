@@ -19,14 +19,18 @@ package duck
 import (
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
+	apix1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
@@ -84,6 +88,34 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
+		}, {
+			Name: "valid source, no status",
+			Objects: []runtime.Object{
+				func() runtime.Object {
+					s := makeSource([]duckv1.CloudEventAttributes{{
+						Type:   "my-type-1",
+						Source: "http://my-source-1",
+					}})
+					// Blank out the status.
+					s.Status = duckv1.SourceStatus{}
+					return s
+				}(),
+			},
+			Key: testNS + "/" + sourceName,
+		}, {
+			Name: "valid source, not targeting a broker",
+			Objects: []runtime.Object{
+				func() runtime.Object {
+					s := makeSource([]duckv1.CloudEventAttributes{{
+						Type:   "my-type-1",
+						Source: "http://my-source-1",
+					}})
+					// change the target.
+					s.Spec.Sink.Ref.Kind = "TotesNotABroker"
+					return s
+				}(),
+			},
+			Key: testNS + "/" + sourceName,
 		}, {
 			Name: "valid source with broker sink, create event types",
 			Objects: []runtime.Object{
@@ -145,7 +177,63 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeEventType("my-type-2", "http://my-source-1"),
 			},
-			// TODO add tests that read the CRD registry annotation.
+		}, {
+			Name: "invalid source status, missing type",
+			Objects: []runtime.Object{
+				makeSource([]duckv1.CloudEventAttributes{{
+					Type:   "my-type-1",
+					Source: "http://my-source-1",
+				}, {
+					Type:   "", // Not valid.
+					Source: "http://my-source-1",
+				}}),
+				makeEventType("my-type-1", "http://my-source-1"),
+			},
+			Key: testNS + "/" + sourceName,
+		}, {
+			Name: "valid source with broker sink, create missing event types, read additional data from CRD",
+			Objects: []runtime.Object{
+				makeSource([]duckv1.CloudEventAttributes{{
+					Type:   "my-type-1",
+					Source: "http://my-source-1",
+				}}),
+				makeSourceCRD([]eventTypeEntry{{
+					Type:        "my-type-1",
+					Schema:      "/some-schema-from-crd",
+					Description: "This came from the annotation in a crd for the source.",
+				}}),
+			},
+			Key: testNS + "/" + sourceName,
+			WantCreates: []runtime.Object{
+				func() runtime.Object {
+					et := makeEventType("my-type-1", "http://my-source-1")
+					et.Name = "503970c89cfac20894e691ad086206b4"
+					et.Spec.Schema, _ = apis.ParseURL("/some-schema-from-crd")
+					et.Spec.Description = "This came from the annotation in a crd for the source."
+					return et
+				}(),
+			},
+		}, {
+			Name: "valid source with broker sink, create missing event types, CRD has bad data",
+			Objects: []runtime.Object{
+				makeSource([]duckv1.CloudEventAttributes{{
+					Type:   "my-type-1",
+					Source: "http://my-source-1",
+				}}),
+				func() runtime.Object {
+					s := makeSourceCRD([]eventTypeEntry{{
+						Type:        "my-type-1",
+						Schema:      "/some-schema-from-crd",
+						Description: "This came from the annotation in a crd for the source.",
+					}})
+					s.Annotations[eventing.EventTypesAnnotationKey] = "something that is not valid json"
+					return s
+				}(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantCreates: []runtime.Object{
+				makeEventType("my-type-1", "http://my-source-1"),
+			},
 		}}
 
 	logger := logtesting.TestLogger(t)
@@ -177,10 +265,60 @@ func makeSource(attributes []duckv1.CloudEventAttributes) *duckv1.Source {
 			UID:       sourceUID,
 		},
 		Spec: duckv1.SourceSpec{
-			Sink: brokerDest,
+			Sink: *brokerDest.DeepCopy(),
 		},
 		Status: duckv1.SourceStatus{
 			CloudEventAttributes: attributes,
+		},
+	}
+}
+
+func makeSourceCRD(eventTypes []eventTypeEntry) *apix1.CustomResourceDefinition {
+	eventJson, _ := json.Marshal(eventTypes)
+
+	return &apix1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group),
+			Annotations: map[string]string{
+				eventing.EventTypesAnnotationKey: string(eventJson),
+			},
+		},
+		Spec: apix1.CustomResourceDefinitionSpec{
+			Group: gvr.Group,
+			Names: apix1.CustomResourceDefinitionNames{
+				Plural:   gvr.Resource,
+				Singular: strings.ToLower(gvk.Kind),
+				Kind:     gvk.Kind,
+			},
+			Scope: "Namespaced",
+			Versions: []apix1.CustomResourceDefinitionVersion{{
+				Name:    gvk.Version,
+				Served:  true,
+				Storage: true,
+				Subresources: &apix1.CustomResourceSubresources{
+					Status: &apix1.CustomResourceSubresourceStatus{},
+				},
+			}},
+		},
+		Status: apix1.CustomResourceDefinitionStatus{
+			Conditions: []apix1.CustomResourceDefinitionCondition{{
+				Type:    "NamesAccepted",
+				Status:  "True",
+				Reason:  "NoConflicts",
+				Message: "NoConflicts",
+			}, {
+				Type:    "Established",
+				Status:  "True",
+				Reason:  "InitialNamesAccepted",
+				Message: "InitialNamesAccepted",
+			}},
+			AcceptedNames: apix1.CustomResourceDefinitionNames{
+				Plural:   gvr.Resource,
+				Singular: strings.ToLower(gvk.Kind),
+				Kind:     gvk.Kind,
+				ListKind: gvk.Kind + "List",
+			},
+			StoredVersions: []string{gvk.Version},
 		},
 	}
 }
