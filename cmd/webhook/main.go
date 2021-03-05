@@ -41,7 +41,6 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 
 	defaultconfig "knative.dev/eventing/pkg/apis/config"
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
@@ -110,9 +109,6 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// v1
 	flowsv1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1.Parallel{},
 	flowsv1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1.Sequence{},
-
-	// For group configs.knative.dev
-	configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation"): &configsv1alpha1.ConfigMapPropagation{},
 }
 
 var callbacks = map[schema.GroupVersionKind]validation.Callback{}
