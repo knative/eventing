@@ -19,9 +19,6 @@ package testing
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	"knative.dev/pkg/kmeta"
 )
 
 // ConfigMapOption enables further configuration of a ConfigMap.
@@ -44,15 +41,6 @@ func NewConfigMap(name, namespace string, o ...ConfigMapOption) *v1.ConfigMap {
 func WithConfigMapLabels(labels metav1.LabelSelector) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
 		cm.ObjectMeta.Labels = labels.MatchLabels
-	}
-}
-
-func WithConfigMapOwnerReference(ConfigMapPropagation *v1alpha1.ConfigMapPropagation) ConfigMapOption {
-	return func(cm *v1.ConfigMap) {
-		if cm.ObjectMeta.OwnerReferences == nil {
-			cm.ObjectMeta.OwnerReferences = []metav1.OwnerReference{}
-		}
-		cm.ObjectMeta.OwnerReferences = append(cm.ObjectMeta.OwnerReferences, *kmeta.NewControllerRef(ConfigMapPropagation))
 	}
 }
 

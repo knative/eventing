@@ -31,7 +31,6 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
@@ -40,7 +39,6 @@ import (
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
-	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1beta1"
 	messaginglistersv1beta1 "knative.dev/eventing/pkg/client/listers/messaging/v1beta1"
@@ -224,8 +222,4 @@ func (l *Listers) GetConfigMapLister() corev1listers.ConfigMapLister {
 
 func (l *Listers) GetCustomResourceDefinitionLister() apiextensionsv1listers.CustomResourceDefinitionLister {
 	return apiextensionsv1listers.NewCustomResourceDefinitionLister(l.indexerFor(&apiextensionsv1.CustomResourceDefinition{}))
-}
-
-func (l *Listers) GetConfigMapPropagationLister() configslisters.ConfigMapPropagationLister {
-	return configslisters.NewConfigMapPropagationLister(l.indexerFor(&configsv1alpha1.ConfigMapPropagation{}))
 }
