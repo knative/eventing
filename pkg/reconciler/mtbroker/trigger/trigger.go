@@ -115,9 +115,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		t.Status.MarkBrokerFailed("MissingBrokerChannel", "Failed to get broker %q annotations: %s", t.Spec.Broker, err)
 		return fmt.Errorf("failed to find Broker's Trigger channel: %s", err)
 	}
-	if t.Spec.Subscriber.Ref != nil {
-		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
-		// We will use the Namespace of Trigger as the Namespace of dest.Ref
+	if t.Spec.Subscriber.Ref != nil && t.Spec.Subscriber.Ref.Namespace == "" {
+		// To call URIFromDestinationV1(ctx context.Context, dest v1.Destination, parent interface{}), dest.Ref must have a Namespace
+		// If Subscriber.Ref.Namespace is nil, We will use the Namespace of Trigger as the Namespace of dest.Ref
 		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
 	}
 
