@@ -328,10 +328,10 @@ _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents, although
 dispatching events using _Binary Content Mode_ is RECOMMENDED.
 
 Channels MUST send events to all subscribers which are marked with a status of
-`ready: "True"` in the channel's `status.subscribers` (v1beta1 / v1). The events must be sent to the
-`subscriberURI` field of `spec.subscribers` (v1beta1 / v1). Each channel implementation will have its own
-quality of service guarantees (e.g. at least once, at most once, etc) which
-SHOULD be documented.
+`ready: "True"` in the channel's `status.subscribers` (v1beta1 / v1). The events
+must be sent to the `subscriberURI` field of `spec.subscribers` (v1beta1 / v1).
+Each channel implementation will have its own quality of service guarantees
+(e.g. at least once, at most once, etc) which SHOULD be documented.
 
 ##### Retries
 
