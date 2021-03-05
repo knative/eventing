@@ -40,10 +40,9 @@ import (
 	"knative.dev/eventing/pkg/mtbroker/filter"
 	"knative.dev/eventing/pkg/reconciler/names"
 
-	"knative.dev/pkg/injection/sharedmain"
-
-	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
+	"knative.dev/pkg/injection/sharedmain"
 )
 
 const (
@@ -85,10 +84,10 @@ func main() {
 
 	logger.Info("Starting the Broker Filter")
 
-	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
+	eventingClient := eventingclientset.NewForConfigOrDie(cfg)
 	eventingFactory := eventinginformers.NewSharedInformerFactory(eventingClient,
 		controller.GetResyncPeriod(ctx))
-	triggerInformer := eventingFactory.Eventing().V1beta1().Triggers()
+	triggerInformer := eventingFactory.Eventing().V1().Triggers()
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
