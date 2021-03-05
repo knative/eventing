@@ -19,12 +19,15 @@ package feature
 import (
 	"context"
 	"fmt"
+
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 // Feature is a list of steps and feature name.
 type Feature struct {
 	Name  string
 	Steps []Step
+	State state.Store
 }
 
 // FeatureSet is a list of features and feature set name.

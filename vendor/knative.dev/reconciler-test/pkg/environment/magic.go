@@ -23,7 +23,9 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
@@ -132,8 +134,18 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 	})
 }
 
+// Test implements Environment.Test.
+// In the MagicEnvironment implementation, the Store that is inside of the
+// Feature will be assigned to the context. If no Store is set on Feature,
+// Test will create a new store.KVStore and set it on the feature and then
+// apply it to the Context.
 func (mr *MagicEnvironment) Test(ctx context.Context, t *testing.T, f *feature.Feature) {
 	t.Helper() // Helper marks the calling function as a test helper function.
+
+	if f.State == nil {
+		f.State = &state.KVStore{}
+	}
+	ctx = state.ContextWith(ctx, f.State)
 
 	steps := feature.CollapseSteps(f.Steps)
 
