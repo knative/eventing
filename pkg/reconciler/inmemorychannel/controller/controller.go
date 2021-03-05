@@ -61,15 +61,13 @@ func NewController(
 	roleBindingInformer := rolebinding.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:           kubeclient.Get(ctx),
-		systemNamespace:         system.Namespace(),
-		inmemorychannelLister:   inmemorychannelInformer.Lister(),
-		inmemorychannelInformer: inmemorychannelInformer.Informer(),
-		deploymentLister:        deploymentInformer.Lister(),
-		serviceLister:           serviceInformer.Lister(),
-		endpointsLister:         endpointsInformer.Lister(),
-		serviceAccountLister:    serviceAccountInformer.Lister(),
-		roleBindingLister:       roleBindingInformer.Lister(),
+		kubeClientSet:        kubeclient.Get(ctx),
+		systemNamespace:      system.Namespace(),
+		deploymentLister:     deploymentInformer.Lister(),
+		serviceLister:        serviceInformer.Lister(),
+		endpointsLister:      endpointsInformer.Lister(),
+		serviceAccountLister: serviceAccountInformer.Lister(),
+		roleBindingLister:    roleBindingInformer.Lister(),
 	}
 
 	env := &envConfig{}
