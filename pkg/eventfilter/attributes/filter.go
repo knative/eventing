@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
@@ -65,7 +65,7 @@ func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Even
 			return eventfilter.FailFilter
 		}
 		// If the attribute is not set to any and is different than the one from the event, return false.
-		if v != eventingv1beta1.TriggerAnyFilter && v != value {
+		if v != eventingv1.TriggerAnyFilter && v != value {
 			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
 			return eventfilter.FailFilter
 		}
