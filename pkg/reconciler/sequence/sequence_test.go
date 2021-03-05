@@ -29,7 +29,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
-	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 
@@ -40,7 +39,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -68,8 +66,7 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
-	_ = duckv1beta1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
 	_ = duckv1.AddToScheme(scheme.Scheme)
 }
 
