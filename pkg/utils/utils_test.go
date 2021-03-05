@@ -107,7 +107,7 @@ func TestObjectRef(t *testing.T) {
 			},
 			gvk: schema.GroupVersionKind{
 				Group:   "eventing.knative.dev",
-				Version: "v1beta1",
+				Version: "v1",
 				Kind:    "Broker",
 			},
 		},
