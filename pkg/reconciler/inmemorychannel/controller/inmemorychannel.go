@@ -34,14 +34,12 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/pkg/logging"
@@ -74,15 +72,13 @@ func newRoleBindingWarn(err error) pkgreconciler.Event {
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
 
-	systemNamespace         string
-	dispatcherImage         string
-	inmemorychannelLister   listers.InMemoryChannelLister
-	inmemorychannelInformer cache.SharedIndexInformer
-	deploymentLister        appsv1listers.DeploymentLister
-	serviceLister           corev1listers.ServiceLister
-	endpointsLister         corev1listers.EndpointsLister
-	serviceAccountLister    corev1listers.ServiceAccountLister
-	roleBindingLister       rbacv1listers.RoleBindingLister
+	systemNamespace      string
+	dispatcherImage      string
+	deploymentLister     appsv1listers.DeploymentLister
+	serviceLister        corev1listers.ServiceLister
+	endpointsLister      corev1listers.EndpointsLister
+	serviceAccountLister corev1listers.ServiceAccountLister
+	roleBindingLister    rbacv1listers.RoleBindingLister
 
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
 }

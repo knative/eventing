@@ -387,14 +387,11 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			kubeClientSet:         fakekubeclient.Get(ctx),
-			systemNamespace:       testNS,
-			inmemorychannelLister: listers.GetInMemoryChannelLister(),
-			// TODO: FIx
-			inmemorychannelInformer: nil,
-			deploymentLister:        listers.GetDeploymentLister(),
-			serviceLister:           listers.GetServiceLister(),
-			endpointsLister:         listers.GetEndpointsLister(),
+			kubeClientSet:    fakekubeclient.Get(ctx),
+			systemNamespace:  testNS,
+			deploymentLister: listers.GetDeploymentLister(),
+			serviceLister:    listers.GetServiceLister(),
+			endpointsLister:  listers.GetEndpointsLister(),
 		}
 		return inmemorychannel.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
@@ -478,12 +475,9 @@ func TestInNamespace(t *testing.T) {
 		eventDispatcherConfigStore.WatchConfigs(cmw)
 
 		r := &Reconciler{
-			kubeClientSet:         fakekubeclient.Get(ctx),
-			dispatcherImage:       imageName,
-			systemNamespace:       systemNS,
-			inmemorychannelLister: listers.GetInMemoryChannelLister(),
-			// TODO: FIx
-			inmemorychannelInformer:    nil,
+			kubeClientSet:              fakekubeclient.Get(ctx),
+			dispatcherImage:            imageName,
+			systemNamespace:            systemNS,
 			deploymentLister:           listers.GetDeploymentLister(),
 			serviceLister:              listers.GetServiceLister(),
 			endpointsLister:            listers.GetEndpointsLister(),
