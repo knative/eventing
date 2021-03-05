@@ -32,8 +32,8 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -313,7 +313,7 @@ func (h *Handler) reportArrivalTime(event *event.Event, reportArgs *ReportArgs) 
 	}
 }
 
-func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigger, error) {
+func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, error) {
 	t, err := h.triggerLister.Triggers(ref.Namespace).Get(ref.Name)
 	if err != nil {
 		return nil, err
@@ -324,7 +324,7 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1beta1.Trigg
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
+func filterEvent(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
 	if filter == nil {
 		return eventfilter.NoFilter
 	}
@@ -337,8 +337,8 @@ func filterEvent(ctx context.Context, filter *eventingv1beta1.TriggerFilter, eve
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
 // returns the any value filter.
-func triggerFilterAttribute(filter *eventingv1beta1.TriggerFilter, attributeName string) string {
-	attributeValue := eventingv1beta1.TriggerAnyFilter
+func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName string) string {
+	attributeValue := eventingv1.TriggerAnyFilter
 	if filter != nil {
 		attrs := map[string]string(filter.Attributes)
 		if v, ok := attrs[attributeName]; ok {
