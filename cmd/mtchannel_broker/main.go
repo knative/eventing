@@ -22,8 +22,8 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	"knative.dev/eventing/pkg/reconciler/mtbroker"
-	mttrigger "knative.dev/eventing/pkg/reconciler/mtbroker/trigger"
+	"knative.dev/eventing/pkg/reconciler/broker"
+	mttrigger "knative.dev/eventing/pkg/reconciler/broker/trigger"
 )
 
 const (
@@ -34,7 +34,7 @@ func main() {
 	sharedmain.Main(
 		component,
 
-		mtbroker.NewController,
+		broker.NewController,
 
 		mttrigger.NewController,
 	)

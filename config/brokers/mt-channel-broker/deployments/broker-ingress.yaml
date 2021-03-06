@@ -34,7 +34,7 @@ spec:
       containers:
       - name: ingress
         terminationMessagePolicy: FallbackToLogsOnError
-        image: ko://knative.dev/eventing/cmd/mtbroker/ingress
+        image: ko://knative.dev/eventing/cmd/broker/ingress
         readinessProbe: &probe
           failureThreshold: 3
           httpGet:

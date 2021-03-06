@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"go.opencensus.io/resource"
-	broker "knative.dev/eventing/pkg/mtbroker"
+	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 	_ "knative.dev/pkg/metrics/testing"

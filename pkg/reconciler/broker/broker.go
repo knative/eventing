@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mtbroker
+package broker
 
 import (
 	"context"
@@ -48,7 +48,7 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
 	ducklib "knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 )
 
