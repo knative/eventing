@@ -27,7 +27,7 @@ import (
 
 	"k8s.io/client-go/kubernetes/scheme"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -37,7 +37,7 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = eventingv1beta1.AddToScheme(scheme.Scheme)
+	_ = eventingv1.AddToScheme(scheme.Scheme)
 	_ = duckv1.AddToScheme(scheme.Scheme)
 }
 

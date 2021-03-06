@@ -28,7 +28,6 @@ import (
 	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
@@ -61,8 +60,6 @@ var (
 
 func init() {
 	// Add types to scheme
-	// TODO(nlopezgi): figure out what is the right list to have here.
-	_ = messagingv1beta1.AddToScheme(scheme.Scheme)
 	_ = messagingv1.AddToScheme(scheme.Scheme)
 	_ = eventingduckv1.AddToScheme(scheme.Scheme)
 }

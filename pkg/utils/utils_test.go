@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 func TestGenerateFixedName(t *testing.T) {
@@ -68,7 +68,7 @@ func TestGenerateFixedName(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			owner := &v1beta1.Broker{
+			owner := &v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: types.UID(tc.uid),
 				},
@@ -99,7 +99,7 @@ func TestObjectRef(t *testing.T) {
 			},
 		},
 		"Broker": {
-			obj: &v1beta1.Broker{
+			obj: &v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "broker-ns",
 					Name:      "my-broker",
@@ -107,7 +107,7 @@ func TestObjectRef(t *testing.T) {
 			},
 			gvk: schema.GroupVersionKind{
 				Group:   "eventing.knative.dev",
-				Version: "v1beta1",
+				Version: "v1",
 				Kind:    "Broker",
 			},
 		},
