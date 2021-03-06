@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package filter
+package ingress
 
 import (
 	"context"
@@ -26,38 +26,25 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	broker "knative.dev/eventing/pkg/mtbroker"
+	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
 
-const (
-	// anyValue is the default value if the trigger filter attributes are empty.
-	anyValue = "any"
-)
-
 var (
 	// eventCountM is a counter which records the number of events received
-	// by a Trigger.
+	// by the Broker.
 	eventCountM = stats.Int64(
 		"event_count",
-		"Number of events received by a Trigger",
+		"Number of events received by a Broker",
 		stats.UnitDimensionless,
 	)
 
 	// dispatchTimeInMsecM records the time spent dispatching an event to
-	// a Trigger subscriber, in milliseconds.
+	// a Channel, in milliseconds.
 	dispatchTimeInMsecM = stats.Float64(
 		"event_dispatch_latencies",
-		"The time spent dispatching an event to a Trigger subscriber",
-		stats.UnitMilliseconds,
-	)
-
-	// processingTimeInMsecM records the time spent between arrival at the Broker
-	// and the delivery to the Trigger subscriber.
-	processingTimeInMsecM = stats.Float64(
-		"event_processing_latencies",
-		"The time spent processing an event before it is dispatched to a Trigger subscriber",
+		"The time spent dispatching an event to a Channel",
 		stats.UnitMilliseconds,
 	)
 
@@ -66,39 +53,37 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	triggerFilterTypeKey = tag.MustNewKey(metricskey.LabelFilterType)
+	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
 	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
 	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
-	ns         string
-	trigger    string
-	broker     string
-	filterType string
+	ns        string
+	broker    string
+	eventType string
 }
 
 func init() {
 	register()
 }
 
-// StatsReporter defines the interface for sending filter metrics.
+// StatsReporter defines the interface for sending ingress metrics.
 type StatsReporter interface {
 	ReportEventCount(args *ReportArgs, responseCode int) error
 	ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error
-	ReportEventProcessingTime(args *ReportArgs, d time.Duration) error
 }
 
 var _ StatsReporter = (*reporter)(nil)
 var emptyContext = context.Background()
 
-// reporter holds cached metric objects to report filter metrics.
+// Reporter holds cached metric objects to report ingress metrics.
 type reporter struct {
 	container  string
 	uniqueName string
 }
 
-// NewStatsReporter creates a reporter that collects and reports filter metrics.
+// NewStatsReporter creates a reporter that collects and reports ingress metrics.
 func NewStatsReporter(container, uniqueName string) StatsReporter {
 	return &reporter{
 		container:  container,
@@ -107,25 +92,26 @@ func NewStatsReporter(container, uniqueName string) StatsReporter {
 }
 
 func register() {
+	tagKeys := []tag.Key{
+		eventTypeKey,
+		responseCodeKey,
+		responseCodeClassKey,
+		broker.ContainerTagKey,
+		broker.UniqueTagKey}
+
 	// Create view to see our measurements.
 	err := metrics.RegisterResourceView(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			TagKeys:     tagKeys,
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
-		},
-		&view.View{
-			Description: processingTimeInMsecM.Description(),
-			Measure:     processingTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{triggerFilterTypeKey, broker.UniqueTagKey, broker.ContainerTagKey},
+			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000
+			TagKeys:     tagKeys,
 		},
 	)
 	if err != nil {
@@ -135,9 +121,7 @@ func register() {
 
 // ReportEventCount captures the event count.
 func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
-	ctx, err := r.generateTag(args,
-		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
+	ctx, err := r.generateTag(args, responseCode)
 	if err != nil {
 		return err
 	}
@@ -147,9 +131,7 @@ func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 
 // ReportEventDispatchTime captures dispatch times.
 func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
-	ctx, err := r.generateTag(args,
-		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
+	ctx, err := r.generateTag(args, responseCode)
 	if err != nil {
 		return err
 	}
@@ -158,41 +140,19 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 	return nil
 }
 
-// ReportEventProcessingTime captures event processing times.
-func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) error {
-	ctx, err := r.generateTag(args)
-	if err != nil {
-		return err
-	}
-
-	// convert time.Duration in nanoseconds to milliseconds.
-	metrics.Record(ctx, processingTimeInMsecM.M(float64(d/time.Millisecond)))
-	return nil
-}
-
-func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
+func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	ctx := metricskey.WithResource(emptyContext, resource.Resource{
-		Type: metricskey.ResourceTypeKnativeTrigger,
+		Type: metricskey.ResourceTypeKnativeBroker,
 		Labels: map[string]string{
 			metricskey.LabelNamespaceName: args.ns,
 			metricskey.LabelBrokerName:    args.broker,
-			metricskey.LabelTriggerName:   args.trigger,
 		},
 	})
-	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
+	return tag.New(
 		ctx,
-		append(tags,
-			tag.Insert(broker.ContainerTagKey, r.container),
-			tag.Insert(broker.UniqueTagKey, r.uniqueName),
-			tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)),
-		)...)
-	return ctx, err
-}
-
-func valueOrAny(v string) string {
-	if v != "" {
-		return v
-	}
-	return anyValue
+		tag.Insert(broker.ContainerTagKey, r.container),
+		tag.Insert(broker.UniqueTagKey, r.uniqueName),
+		tag.Insert(eventTypeKey, args.eventType),
+		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 }

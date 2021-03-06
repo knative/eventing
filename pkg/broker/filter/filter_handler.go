@@ -33,11 +33,11 @@ import (
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	broker "knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
-	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"

@@ -20,9 +20,6 @@ import (
 	"fmt"
 	"log"
 
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
@@ -31,7 +28,6 @@ import (
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -40,33 +36,26 @@ import (
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
-	cmdbroker "knative.dev/eventing/cmd/mtbroker"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
-	"knative.dev/eventing/pkg/kncloudevents"
-	broker "knative.dev/eventing/pkg/mtbroker"
-	"knative.dev/eventing/pkg/mtbroker/ingress"
+	broker "knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/eventing/pkg/reconciler/names"
+
+	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
+	"knative.dev/pkg/injection/sharedmain"
 )
 
-// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
-//  Issue: https://github.com/knative/eventing/issues/1777
 const (
-	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
-	// Purposely set them to be equal, as the ingress only connects to its channel.
-	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
-	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
-	defaultMaxIdleConnections        = 1000
-	defaultMaxIdleConnectionsPerHost = 1000
-	defaultMetricsPort               = 9092
-	component                        = "mt_broker_ingress"
+	defaultMetricsPort = 9092
+	component          = "mt_broker_filter"
 )
 
 type envConfig struct {
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
 	// TODO: change this environment variable to something like "PodGroupName".
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
-	Port          int    `envconfig:"INGRESS_PORT" default:"8080"`
-	MaxTTL        int    `envconfig:"MAX_TTL" default:"255"`
+	Port          int    `envconfig:"FILTER_PORT" default:"8080"`
 }
 
 func main() {
@@ -82,17 +71,10 @@ func main() {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
 
-	if env.MaxTTL <= 0 {
-		log.Fatalf("Invalid MaxTTL value, must be >=0, was: %d", env.MaxTTL)
-	}
+	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
+	kubeClient := kubeclient.Get(ctx)
 
-	log.Printf("Using TTL of %d", env.MaxTTL)
-	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
-	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
-	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
-
-	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
-	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
+	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
@@ -100,12 +82,15 @@ func main() {
 	logger := sl.Desugar()
 	defer flush(sl)
 
-	logger.Info("Starting the Broker Ingress")
+	logger.Info("Starting the Broker Filter")
 
-	brokerLister := brokerinformer.Get(ctx).Lister()
+	eventingClient := eventingclientset.NewForConfigOrDie(cfg)
+	eventingFactory := eventinginformers.NewSharedInformerFactory(eventingClient,
+		controller.GetResyncPeriod(ctx))
+	triggerInformer := eventingFactory.Eventing().V1().Triggers()
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
 	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
 		Component:      component,
@@ -119,30 +104,18 @@ func main() {
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
-	bin := fmt.Sprintf("%s.%s", names.BrokerIngressName, system.Namespace())
+	bin := fmt.Sprintf("%s.%s", names.BrokerFilterName, system.Namespace())
 	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin, tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	connectionArgs := kncloudevents.ConnectionArgs{
-		MaxIdleConns:        defaultMaxIdleConnections,
-		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
-	kncloudevents.ConfigureConnectionArgs(&connectionArgs)
-	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
+	reporter := filter.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
+
+	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
+	// the messages to the triggers' subscribers) in this binary.
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port)
 	if err != nil {
-		logger.Fatal("Unable to create message sender", zap.Error(err))
-	}
-
-	reporter := ingress.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
-
-	h := &ingress.Handler{
-		Receiver:     kncloudevents.NewHTTPMessageReceiver(env.Port),
-		Sender:       sender,
-		Defaulter:    broker.TTLDefaulter(logger, int32(env.MaxTTL)),
-		Reporter:     reporter,
-		Logger:       logger,
-		BrokerLister: brokerLister,
+		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
 
 	// configMapWatcher does not block, so start it first.
@@ -151,14 +124,17 @@ func main() {
 	}
 
 	// Start all of the informers and wait for them to sync.
-	logger.Info("Starting informers.")
-	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-		logger.Fatal("Failed to start informers", zap.Error(err))
-	}
+	logger.Info("Starting informer.")
+
+	go eventingFactory.Start(ctx.Done())
+	eventingFactory.WaitForCacheSync(ctx.Done())
 
 	// Start blocks forever.
-	if err = h.Start(ctx); err != nil {
-		logger.Error("ingress.Start() returned an error", zap.Error(err))
+	logger.Info("Filter starting...")
+
+	err = handler.Start(ctx)
+	if err != nil {
+		logger.Fatal("handler.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
 }

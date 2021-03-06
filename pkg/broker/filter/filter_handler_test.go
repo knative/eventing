@@ -41,7 +41,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	broker "knative.dev/eventing/pkg/mtbroker"
+	broker "knative.dev/eventing/pkg/broker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 

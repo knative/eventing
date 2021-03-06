@@ -36,7 +36,7 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"

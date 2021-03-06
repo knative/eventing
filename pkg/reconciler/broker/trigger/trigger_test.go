@@ -41,7 +41,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
