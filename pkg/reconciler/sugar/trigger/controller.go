@@ -30,9 +30,9 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/trigger"
-	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
+	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/reconciler/sugar"
 )
 

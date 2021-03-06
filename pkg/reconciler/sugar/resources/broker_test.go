@@ -22,7 +22,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 func TestMakeBroker(t *testing.T) {
@@ -33,7 +33,7 @@ func TestMakeBroker(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *v1beta1.Broker
+		want *v1.Broker
 	}{
 		{
 			name: "ok",
@@ -41,7 +41,7 @@ func TestMakeBroker(t *testing.T) {
 				namespace: "default",
 				name:      "df-broker",
 			},
-			want: &v1beta1.Broker{
+			want: &v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:   "default",
 					Name:        "df-broker",
