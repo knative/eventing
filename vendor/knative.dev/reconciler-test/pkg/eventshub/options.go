@@ -96,6 +96,11 @@ func ReplyWithAppendedData(appendData string) EventsHubOption {
 	)
 }
 
+// ResponseWaitTime defines how much the receiver has to wait before replying.
+func ResponseWaitTime(delay time.Duration) EventsHubOption {
+	return envDuration("RESPONSE_WAIT_TIME", delay)
+}
+
 // --- Sender options
 
 // InitialSenderDelay defines how much the sender has to wait, when started, before start sending events.
