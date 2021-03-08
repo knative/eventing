@@ -146,6 +146,7 @@ jobs:
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
            
+        export KO_FLAGS="--platform=linux/amd64"
         source ./test/e2e-common.sh
         knative_setup
 
