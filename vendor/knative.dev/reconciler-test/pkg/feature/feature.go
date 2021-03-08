@@ -19,6 +19,8 @@ package feature
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
 
 	"knative.dev/reconciler-test/pkg/state"
 )
@@ -28,6 +30,27 @@ type Feature struct {
 	Name  string
 	Steps []Step
 	State state.Store
+}
+
+// NewFeatureNamed creates a new feature with the provided name
+func NewFeatureNamed(name string) *Feature {
+	f := new(Feature)
+	f.Name = name
+	return f
+}
+
+// NewFeature creates a new feature with name taken from the caller name
+func NewFeature() *Feature {
+	f := new(Feature)
+
+	pc, _, _, _ := runtime.Caller(1)
+	caller := runtime.FuncForPC(pc)
+	if caller != nil {
+		splitted := strings.Split(caller.Name(), ".")
+		f.Name = splitted[len(splitted)-1]
+	}
+
+	return f
 }
 
 // FeatureSet is a list of features and feature set name.

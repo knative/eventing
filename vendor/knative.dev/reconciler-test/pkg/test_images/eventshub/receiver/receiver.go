@@ -41,16 +41,20 @@ type Receiver struct {
 	// EventLogs is the list of EventLogger implementors to vent observed events.
 	EventLogs *eventshub.EventLogs
 
-	ctx       context.Context
-	seq       uint64
-	dropSeq   uint64
-	replyFunc func(context.Context, http.ResponseWriter, eventshub.EventInfo)
-	counter   *dropevents.CounterHandler
+	ctx              context.Context
+	seq              uint64
+	dropSeq          uint64
+	replyFunc        func(context.Context, http.ResponseWriter, eventshub.EventInfo)
+	counter          *dropevents.CounterHandler
+	responseWaitTime time.Duration
 }
 
 type envConfig struct {
 	// ReceiverName is used to identify this instance of the receiver.
 	ReceiverName string `envconfig:"POD_NAME" default:"receiver-default" required:"true"`
+
+	// ResponseWaitTime is the seconds to wait for the eventshub to write any response
+	ResponseWaitTime int `envconfig:"RESPONSE_WAIT_TIME" default:"0" required:"false"`
 
 	// Reply is used to define if the observer should reply back
 	Reply bool `envconfig:"REPLY" default:"false" required:"false"`
@@ -105,12 +109,18 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 		}
 	}
 
+	var responseWaitTime time.Duration
+	if env.ResponseWaitTime != 0 {
+		responseWaitTime = time.Duration(env.ResponseWaitTime) * time.Second
+	}
+
 	return &Receiver{
-		Name:      env.ReceiverName,
-		EventLogs: eventLogs,
-		ctx:       ctx,
-		replyFunc: replyFunc,
-		counter:   counter,
+		Name:             env.ReceiverName,
+		EventLogs:        eventLogs,
+		ctx:              ctx,
+		replyFunc:        replyFunc,
+		counter:          counter,
+		responseWaitTime: responseWaitTime,
 	}
 }
 
@@ -186,6 +196,11 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 
 	if err := o.EventLogs.Vent(eventInfo); err != nil {
 		logging.FromContext(o.ctx).Fatalw("Error while venting the recorded event", zap.Error(err))
+	}
+
+	if o.responseWaitTime != 0 {
+		logging.FromContext(o.ctx).Debugf("Waiting for %v before replying", o.responseWaitTime.String())
+		time.Sleep(o.responseWaitTime)
 	}
 
 	if shouldSkip {
