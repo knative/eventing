@@ -145,7 +145,13 @@ func TestAllCases(t *testing.T) {
 		},
 		Spec: &runtime.RawExtension{Raw: []byte("{}")},
 	}
-
+	differentIMC := &messagingv1.ChannelTemplateSpec{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "messaging.knative.dev/v1",
+			Kind:       "OtherKindOfChannel",
+		},
+		Spec: &runtime.RawExtension{Raw: []byte("{}")},
+	}
 	table := TableTest{{
 		Name: "bad workqueue key",
 		// Make sure Reconcile handles bad keys.
@@ -260,6 +266,115 @@ func TestAllCases(t *testing.T) {
 					WithSequenceChannelTemplateSpec(imc),
 					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
 		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: 0"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionFalse,
+							Reason:  "NotAddressable",
+							Message: "Channel is not addressable",
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "singlestep-subscriptiondeletefails",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(differentIMC),
+				WithSequenceReply(createReplyChannel(replyChannelName)),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})))},
+		WantErr: true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("delete", "subscriptions"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile subscription resource for step: 0 : inducing failure for delete subscriptions"),
+		},
+		WantCreates: []runtime.Object{createChannel(sequenceName, 0)},
+		WantDeletes: []clientgotesting.DeleteActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Name: resources.SequenceChannelName(sequenceName, 0),
+		}},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: 0"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionFalse,
+							Reason:  "NotAddressable",
+							Message: "Channel is not addressable",
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "singlestep-subscriptioncreateafterdeletefails",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(differentIMC),
+				WithSequenceReply(createReplyChannel(replyChannelName)),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}})))},
+		WantErr: true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "subscriptions"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile subscription resource for step: 0 : inducing failure for create subscriptions"),
+		},
+		WantCreates: []runtime.Object{
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantDeletes: []clientgotesting.DeleteActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+			},
+			Name: resources.SequenceChannelName(sequenceName, 0),
+		}},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewSequence(sequenceName, testNS,
 				WithInitSequenceConditions,
