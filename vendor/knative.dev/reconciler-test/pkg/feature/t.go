@@ -18,13 +18,17 @@ package feature
 
 // T is an interface similar to testing.T passed to StepFn to perform logging and assertions
 type T interface {
+	Name() string
+
 	Error(args ...interface{})
 	Errorf(format string, args ...interface{})
+
 	Fail()
+	FailNow()
+	Failed() bool
 
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
-	FailNow()
 
 	Log(args ...interface{})
 	Logf(format string, args ...interface{})
@@ -32,4 +36,5 @@ type T interface {
 	Skip(args ...interface{})
 	Skipf(format string, args ...interface{})
 	SkipNow()
+	Skipped() bool
 }

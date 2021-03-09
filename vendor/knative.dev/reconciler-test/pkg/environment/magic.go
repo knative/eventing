@@ -22,18 +22,22 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/milestone"
 	"knative.dev/reconciler-test/pkg/state"
 )
 
 func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
-
 	fmt.Printf("level %s, state %s\n\n", l, s)
 
 	return &MagicGlobalEnvironment{
 		c:                ctx,
+		instanceID:       uuid.New().String(),
 		RequirementLevel: *l,
 		FeatureState:     *s,
 	}
@@ -41,6 +45,9 @@ func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
 
 type MagicGlobalEnvironment struct {
 	c context.Context
+	// instanceID represents this instance of the GlobalEnvironment. It is used
+	// to link runs together from a single global environment.
+	instanceID string
 
 	RequirementLevel feature.Levels
 	FeatureState     feature.States
@@ -55,7 +62,13 @@ type MagicEnvironment struct {
 	namespace        string
 	namespaceCreated bool
 	refs             []corev1.ObjectReference
+	// milestones sends milestone events, if configured.
+	milestones milestone.Emitter
 }
+
+const (
+	NamespaceDeleteErrorReason = "NamespaceDeleteError"
+)
 
 func (mr *MagicEnvironment) Reference(ref ...corev1.ObjectReference) {
 	mr.refs = append(mr.refs, ref...)
@@ -67,8 +80,10 @@ func (mr *MagicEnvironment) References() []corev1.ObjectReference {
 
 func (mr *MagicEnvironment) Finish() {
 	if err := mr.DeleteNamespaceIfNeeded(); err != nil {
+		mr.milestones.Exception(NamespaceDeleteErrorReason, "failed to delete namespace %q, %v", mr.namespace, err)
 		panic(err)
 	}
+	mr.milestones.Finished()
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
@@ -95,9 +110,29 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		}
 	}
 
+	// It is possible to have milestones set in the options, check for nil in
+	// env first before attempting to pull one from the os environment.
+	if env.milestones == nil {
+		milestones, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
+		if err != nil {
+			// This is just an FYI error, don't block the test run.
+			logging.FromContext(mr.c).Error("failed to create the milestone event sender", zap.Error(err))
+		}
+		if milestones != nil {
+			env.milestones = milestones
+		}
+	}
+
 	if err := env.CreateNamespaceIfNeeded(); err != nil {
 		panic(err)
 	}
+
+	env.milestones.Environment(map[string]string{
+		// TODO: we could add more detail here, don't send secrets.
+		"requirementLevel": env.RequirementLevel().String(),
+		"featureState":     env.FeatureState().String(),
+		"namespace":        env.Namespace(),
+	})
 
 	return ctx, env
 }
@@ -139,69 +174,198 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 // Feature will be assigned to the context. If no Store is set on Feature,
 // Test will create a new store.KVStore and set it on the feature and then
 // apply it to the Context.
-func (mr *MagicEnvironment) Test(ctx context.Context, t *testing.T, f *feature.Feature) {
-	t.Helper() // Helper marks the calling function as a test helper function.
+func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
+	originalT.Helper() // Helper marks the calling function as a test helper function.
+
+	mr.milestones.TestStarted(f.Name, originalT)
+	originalT.Cleanup(func() {
+		mr.milestones.TestFinished(f.Name, originalT)
+	})
 
 	if f.State == nil {
 		f.State = &state.KVStore{}
 	}
 	ctx = state.ContextWith(ctx, f.State)
 
-	steps := feature.CollapseSteps(f.Steps)
+	steps := categorizeSteps(f.Steps)
 
-	for _, timing := range feature.Timings() {
+	skipAssertions := false
+	skipRequirements := false
+	skipReason := ""
+
+	for _, s := range steps[feature.Setup] {
+		s := s
+
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 
-		t.Run(timing.String(), func(t *testing.T) {
-			t.Helper()      // Helper marks the calling function as a test helper function.
-			defer wg.Done() // Outer wait.
+		var internalT feature.T
+		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
+			internalT = st
+			st.Helper()
+			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
 
-			for _, s := range steps {
-				// Skip if step phase is not running.
-				if s.T != timing {
-					continue
-				}
-				t.Run(s.TestName(), func(t *testing.T) {
-					ctx, cancelFn := context.WithCancel(ctx)
-					t.Cleanup(cancelFn)
+			mr.milestones.StepStarted(f.Name, &s, internalT)
+			originalT.Cleanup(func() {
+				mr.milestones.StepFinished(f.Name, &s, internalT)
+			})
 
-					wg.Add(1)
-					defer wg.Done()
-
-					if mr.s&s.S == 0 {
-						t.Skipf("%s features not enabled for testing", s.S)
-					}
-					if mr.l&s.L == 0 {
-						t.Skipf("%s requirement not enabled for testing", s.L)
-					}
-
-					s := s
-
-					t.Helper() // Helper marks the calling function as a test helper function.
-
-					// Perform step.
-					s.Fn(ctx, t)
-
-				})
+			if mr.s&s.S == 0 {
+				st.Skipf("%s features not enabled for testing", s.S)
 			}
+			if mr.l&s.L == 0 {
+				st.Skipf("%s requirement not enabled for testing", s.L)
+			}
+
+			// Perform step.
+			s.Fn(ctx, st)
 		})
 
+		// Wait for the test to execute before spawning the next one
 		wg.Wait()
+
+		// Failed setup fails everything, so just run the teardown
+		if internalT.Failed() {
+			skipAssertions = true
+			skipRequirements = true // No need to test other requirements
+		}
+	}
+
+	for _, s := range steps[feature.Requirement] {
+		s := s
+
+		if skipRequirements {
+			break
+		}
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+
+		var internalT feature.T
+		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
+			internalT = createRequirementT(st)
+			st.Helper()
+			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
+
+			mr.milestones.StepStarted(f.Name, &s, internalT)
+			originalT.Cleanup(func() {
+				mr.milestones.StepFinished(f.Name, &s, internalT)
+			})
+
+			if mr.s&s.S == 0 {
+				st.Skipf("%s features not enabled for testing", s.S)
+			}
+			if mr.l&s.L == 0 {
+				st.Skipf("%s requirement not enabled for testing", s.L)
+			}
+
+			// Perform step.
+			s.Fn(ctx, internalT)
+		})
+
+		// Wait for the test to execute before spawning the next one
+		wg.Wait()
+
+		if internalT.Failed() {
+			skipAssertions = true
+			skipRequirements = true // No need to test other requirements
+			skipReason = fmt.Sprintf("requirement %q failed", s.Name)
+		}
+	}
+
+	for _, s := range steps[feature.Assert] {
+		s := s
+
+		if skipAssertions {
+			break
+		}
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+
+		var internalT feature.T
+		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
+			internalT = st
+			st.Helper()
+			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
+
+			mr.milestones.StepStarted(f.Name, &s, internalT)
+			originalT.Cleanup(func() {
+				mr.milestones.StepFinished(f.Name, &s, internalT)
+			})
+
+			// TODO here we should run all the asserts and not filter them
+			//  and then we record which one failed and which not, computing the actual compliance
+			if mr.s&s.S == 0 {
+				st.Skipf("%s features not enabled for testing", s.S)
+			}
+			if mr.l&s.L == 0 {
+				st.Skipf("%s requirement not enabled for testing", s.L)
+			}
+
+			// Perform step.
+			s.Fn(ctx, st)
+		})
+
+		// Wait for the test to execute before spawning the next one
+		wg.Wait()
+
+		// TODO record compliance level and fail parent test accordingly
+	}
+
+	for _, s := range steps[feature.Teardown] {
+		s := s
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+
+		var internalT feature.T
+		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
+			internalT = st
+			st.Helper()
+			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
+
+			mr.milestones.StepStarted(f.Name, &s, internalT)
+			originalT.Cleanup(func() {
+				mr.milestones.StepFinished(f.Name, &s, internalT)
+			})
+
+			if mr.s&s.S == 0 {
+				st.Skipf("%s features not enabled for testing", s.S)
+			}
+			if mr.l&s.L == 0 {
+				st.Skipf("%s requirement not enabled for testing", s.L)
+			}
+
+			// Perform step.
+			s.Fn(ctx, st)
+		})
+
+		// Wait for the test to execute before spawning the next one
+		wg.Wait()
+	}
+
+	if skipReason != "" {
+		originalT.Skipf("Skipping feature '%s' assertions because %s", f.Name, skipReason)
 	}
 }
 
 // TestSet implements Environment.TestSet
 func (mr *MagicEnvironment) TestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet) {
 	t.Helper() // Helper marks the calling function as a test helper function
-	wg := &sync.WaitGroup{}
 
+	mr.milestones.TestSetStarted(fs.Name, t)
+	t.Cleanup(func() {
+		mr.milestones.TestSetFinished(fs.Name, t)
+	})
+
+	wg := &sync.WaitGroup{}
 	for _, f := range fs.Features {
 		wg.Add(1)
 		t.Run(fs.Name, func(t *testing.T) {
-			// FeatureSets should be run in parellel.
+			t.Cleanup(wg.Done)
+			// FeatureSets should be run in parallel.
 			mr.Test(ctx, t, &f)
-			wg.Done()
 		})
 	}
 

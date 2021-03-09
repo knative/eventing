@@ -105,6 +105,12 @@ func (f *Feature) Requirement(name string, fn StepFn) {
 	})
 }
 
+// Assert is a shortcut for Stable(name).Must(name, fn),
+// useful for developing integration tests that doesn't require assertion levels.
+func (f *Feature) Assert(name string, fn StepFn) {
+	f.Stable(name).Must(name, fn)
+}
+
 // Assert adds a step function to the feature set at the Assert timing phase.
 func (a *Asserter) Assert(l Levels, name string, fn StepFn) {
 	a.f.AddStep(Step{
