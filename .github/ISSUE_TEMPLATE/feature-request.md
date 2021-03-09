@@ -10,7 +10,7 @@ assignees: ''
 **Problem**
 A short explanation of the problem, including relevant restrictions.
 
-**[Persona:](https://github.com/knative/eventing/blob/master/docs/personas.md)**
+**[Persona:](https://github.com/knative/eventing/blob/main/docs/personas.md)**
 Which persona is this feature for?
 
 **Exit Criteria**

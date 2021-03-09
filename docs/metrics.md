@@ -42,7 +42,7 @@ These are exported by core sources.
 ## Prometheus Collection
 
 Accessing metrics requires Prometheus and Grafana installed. Follow the
-[instructions to install Prometheus and Grafana](https://github.com/knative/docs/blob/master/docs/serving/installing-logging-metrics-traces.md)
+[instructions to install Prometheus and Grafana](https://github.com/knative/docs/blob/main/docs/serving/installing-logging-metrics-traces.md)
 in namespace `knative-monitoring`.
 
 > _All commands assume root of repo._
@@ -116,7 +116,7 @@ And then restart Prometheus.
 ### Prometheus
 
 Follow the
-[instructions to open Prometheus UI](https://github.com/knative/docs/blob/master/docs/serving/accessing-metrics.md#prometheus),
+[instructions to open Prometheus UI](https://github.com/knative/docs/blob/main/docs/serving/accessing-metrics.md#prometheus),
 then you will access the metrics at
 [http://localhost:9090](http://localhost:9090).
 
@@ -130,7 +130,7 @@ kubectl patch configmap grafana-dashboard-definition-knative --patch "$(cat conf
 ```
 
 Follow the
-[instructions to open Grafana dashboard](https://github.com/knative/docs/blob/master/docs/serving/accessing-metrics.md#grafana),
+[instructions to open Grafana dashboard](https://github.com/knative/docs/blob/main/docs/serving/accessing-metrics.md#grafana),
 then you will access the metrics at
 [http://localhost:3000](http://localhost:3000).
 

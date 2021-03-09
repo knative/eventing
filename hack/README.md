@@ -15,7 +15,7 @@ Knative Eventing.
 
 _Note: only Knative leads can create versioned releases._
 
-See https://github.com/knative/test-infra/blob/master/ci for more information on
+See https://github.com/knative/test-infra/blob/main/ci for more information on
 creating releases.
 
 ### Creating a major version release

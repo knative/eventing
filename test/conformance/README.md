@@ -2,14 +2,14 @@
 
 Conformance tests verifies knative eventing implementation for expected behavior
 described in
-[specification](https://github.com/knative/eventing/tree/master/docs/spec).
+[specification](https://github.com/knative/eventing/tree/main/docs/spec).
 
 ## Running performance tests
 
 Run test with e2e tag and optionally select conformance test
 
 > NOTE: Make sure you have built the
-> [test images](https://github.com/knative/eventing/tree/master/test#building-the-test-images)!
+> [test images](https://github.com/knative/eventing/tree/main/test#building-the-test-images)!
 
 ```shell
 ko apply -Rf test/config/

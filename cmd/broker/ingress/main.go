@@ -54,7 +54,7 @@ const (
 	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
 	// Purposely set them to be equal, as the ingress only connects to its channel.
 	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
-	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+	// based on what serving is doing. See https://github.com/knative/serving/blob/main/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 1000
 	defaultMetricsPort               = 9092

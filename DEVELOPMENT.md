@@ -125,21 +125,21 @@ kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=e
 ## Install Channels
 
 Install the
-[In-Memory-Channel](https://github.com/knative/eventing/tree/master/config/channels/in-memory-channel)
+[In-Memory-Channel](https://github.com/knative/eventing/tree/main/config/channels/in-memory-channel)
 since this is the
-[default channel](https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md).
+[default channel](https://github.com/knative/docs/blob/main/docs/eventing/channels/default-channels.md).
 
 ```shell
 ko apply -f config/channels/in-memory-channel/
 ```
 
 Depending on your needs you might want to install other
-[channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
+[channel implementations](https://github.com/knative/docs/blob/main/docs/eventing/channels/channels-crds.md).
 
 ## Install Broker
 
 Install the
-[MT Channel Broker](https://github.com/knative/eventing/tree/master/config/brokers/mt-channel-broker)
+[MT Channel Broker](https://github.com/knative/eventing/tree/main/config/brokers/mt-channel-broker)
 or any of the other Brokers available inside the `config/brokers/` directory.
 
 ```shell
@@ -147,7 +147,7 @@ ko apply -f config/brokers/mt-channel-broker/
 ```
 
 Depending on your needs you might want to install other
-[Broker implementations](https://github.com/knative/eventing/tree/master/docs/broker).
+[Broker implementations](https://github.com/knative/eventing/tree/main/docs/broker).
 
 ## (Optional) Install Sugar controller
 
