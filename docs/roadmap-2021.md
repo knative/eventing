@@ -2,6 +2,13 @@
 
 ## Next 3 Months (Short-term)
 
+### Knative Eventing 1.0
+Releasing Knative Eventing v1.0.
+
+**GitHub Issue** https://github.com/knative/eventing/issues/5039
+
+**Owner:** Scott Nichols
+
 ### Event Discovery
 
 Event discovery have been a needed feature with many attempts to implement it.
