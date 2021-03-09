@@ -28,7 +28,7 @@ Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 
 You must install these tools:
 
-1. [`go`](https://golang.org/doc/install): The language `Knative Serving` is
+1. [`go`](https://golang.org/doc/install): The language `Knative Eventing` is
    built-in (1.14 or later)
 1. [`git`](https://help.github.com/articles/set-up-git/): For source control
 1. [`ko`](https://github.com/google/ko): For development.
