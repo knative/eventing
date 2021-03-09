@@ -18,9 +18,18 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
 spec:
-  schedule: "*/1 * * * *"
-  contentType: "application/json"
-  data: '{"message": "Hello world!"}'
+  {{ if .schedule }}
+  schedule: '{{ .schedule }}'
+  {{ end }}
+  {{ if .contentType }}
+  contentType: '{{ .contentType }}'
+  {{ end }}
+  {{ if .data }}
+  data: '{{ .data }}'
+  {{ end }}
+  {{ if .dataBase64 }}
+  dataBase64: '{{ .dataBase64 }}'
+  {{ end }}
   {{if .sink }}
   sink:
     {{ if .sink.ref }}
