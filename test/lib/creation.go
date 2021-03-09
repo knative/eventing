@@ -914,7 +914,7 @@ const (
 )
 
 // CreateRBACResourcesForBrokers creates required RBAC resources for creating Brokers,
-// see https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md - Manual Setup.
+// see https://github.com/knative/docs/blob/main/docs/eventing/broker-trigger.md - Manual Setup.
 func (c *Client) CreateRBACResourcesForBrokers() {
 	c.CreateServiceAccountOrFail(saIngressName)
 	c.CreateServiceAccountOrFail(saFilterName)

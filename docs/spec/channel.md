@@ -152,8 +152,8 @@ Each instantiated Channel (ie, Custom Object) SHOULD have an annotation
 indicating which version of the `Channelable` duck type it conforms to. We
 currently have these versions:
 
-1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
-1. [v1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/channelable_types.go)
+1. [v1beta1](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1beta1/channelable_types.go)
+1. [v1](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1/channelable_types.go)
 
 So, for example to indicate that the Channel supports v1beta1 duck type, you
 should annotate it like so (only showing the annotations):
@@ -175,7 +175,7 @@ if no annotation is given, we assume it's `v1alpha1`.
 ##### v1beta1 Spec
 
 Each channel CRD MUST contain an array of subscribers:
-[`spec.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/subscribable_types.go)
+[`spec.subscribers`](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1beta1/subscribable_types.go)
 
 Note: The array of subscribers MUST NOT be set directly on the generic Channel
 custom object, but rather appended to the backing channel by the subscription
@@ -184,7 +184,7 @@ itself.
 ##### v1 Spec
 
 Each channel CRD MUST contain an array of subscribers:
-[`spec.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/subscribable_types.go)
+[`spec.subscribers`](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1/subscribable_types.go)
 
 Note: The array of subscribers MUST NOT be set directly on the generic Channel
 custom object, but rather appended to the backing channel by the subscription
@@ -193,7 +193,7 @@ itself.
 #### Channelable and Subscription Delivery Spec
 
 Both Channelable and Subscription have a
-[`delivery`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/delivery_types.go)
+[`delivery`](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1/delivery_types.go)
 field that allows the user to define the dead letter sink and retries. The
 Channelable `spec.delivery` field is global across all the Subscriptions
 registered with that particular Channelable, while the Subscription
@@ -206,30 +206,30 @@ that particular Subscription.
 
 Each channel CRD MUST have a `status` subresource which contains
 
-- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1/addressable_types.go)
-- [`subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/subscribable_types.go)
+- [`address`](https://github.com/knative/pkg/blob/main/apis/duck/v1/addressable_types.go)
+- [`subscribers`](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1beta1/subscribable_types.go)
   (as an array)
 
 Each channel CRD SHOULD have the following fields in `Status`
 
-- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+- [`observedGeneration`](https://github.com/knative/pkg/blob/main/apis/duck/v1/status_types.go)
   MUST be populated if present
-- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+- [`conditions`](https://github.com/knative/pkg/blob/main/apis/duck/v1/status_types.go)
   (as an array) SHOULD indicate status transitions and error reasons if present
 
 ##### v1 Status
 
 Each channel CRD MUST have a `status` subresource which contains
 
-- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1/addressable_types.go)
-- [`subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1/subscribable_types.go)
+- [`address`](https://github.com/knative/pkg/blob/main/apis/duck/v1/addressable_types.go)
+- [`subscribers`](https://github.com/knative/eventing/blob/main/pkg/apis/duck/v1/subscribable_types.go)
   (as an array)
 
 Each channel CRD SHOULD have the following fields in `Status`
 
-- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+- [`observedGeneration`](https://github.com/knative/pkg/blob/main/apis/duck/v1/status_types.go)
   MUST be populated if present
-- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1/status_types.go)
+- [`conditions`](https://github.com/knative/pkg/blob/main/apis/duck/v1/status_types.go)
   (as an array) SHOULD indicate status transitions and error reasons if present
 
 #### Channel Status
@@ -363,7 +363,7 @@ to subscribers using [W3C Tracecontext](https://w3c.github.io/trace-context/),
 although internally it MAY use another mechanism(s) to propagate the tracing
 information. The Channel SHOULD sample and write traces to the location
 specified in
-[`config-tracing`](https://github.com/knative/eventing/blob/master/config/config-tracing.yaml).
+[`config-tracing`](https://github.com/knative/eventing/blob/main/config/config-tracing.yaml).
 
 Spans emitted by the Channel SHOULD follow the
 [OpenTelemetry Semantic Conventions for Messaging Systems](https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/messaging.md)
