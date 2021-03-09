@@ -293,6 +293,7 @@ function test_setup() {
   # Clean up kail so it doesn't interfere with job shutting down
   add_trap "kill $kail_pid || true" EXIT
 
+  export KO_FLAGS="--platform=linux/amd64"
   install_test_resources || return 1
 
   echo ">> Publish test images"
