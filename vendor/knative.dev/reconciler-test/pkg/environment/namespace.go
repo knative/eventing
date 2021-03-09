@@ -34,9 +34,9 @@ const (
 )
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
-func (me *MagicEnvironment) CreateNamespaceIfNeeded() error {
-	c := kubeclient.Get(me.c)
-	nsSpec, err := c.CoreV1().Namespaces().Get(context.Background(), me.namespace, metav1.GetOptions{})
+func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
+	c := kubeclient.Get(mr.c)
+	nsSpec, err := c.CoreV1().Namespaces().Get(context.Background(), mr.namespace, metav1.GetOptions{})
 
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -45,45 +45,47 @@ func (me *MagicEnvironment) CreateNamespaceIfNeeded() error {
 
 		// Namespace was not found, try to create it.
 
-		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: me.namespace}}
+		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: mr.namespace}}
 		nsSpec, err = c.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
 
 		if err != nil {
-			return fmt.Errorf("failed to create Namespace: %s; %v", me.namespace, err)
+			return fmt.Errorf("failed to create Namespace: %s; %v", mr.namespace, err)
 		}
-		me.namespaceCreated = true
+		mr.namespaceCreated = true
+		mr.milestones.NamespaceCreated(mr.namespace)
 
 		// https://github.com/kubernetes/kubernetes/issues/66689
 		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
 		if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-			sas := c.CoreV1().ServiceAccounts(me.namespace)
+			sas := c.CoreV1().ServiceAccounts(mr.namespace)
 			if _, err := sas.Get(context.Background(), "default", metav1.GetOptions{}); err == nil {
 				return true, nil
 			}
 			return false, nil
 		}); err != nil {
-			return fmt.Errorf("the default ServiceAccount was not created for the Namespace: %s", me.namespace)
+			return fmt.Errorf("the default ServiceAccount was not created for the Namespace: %s", mr.namespace)
 		}
 	}
 	return nil
 }
 
-func (me *MagicEnvironment) DeleteNamespaceIfNeeded() error {
-	if me.namespaceCreated {
-		c := kubeclient.Get(me.c)
+func (mr *MagicEnvironment) DeleteNamespaceIfNeeded() error {
+	if mr.namespaceCreated {
+		c := kubeclient.Get(mr.c)
 
-		_, err := c.CoreV1().Namespaces().Get(context.Background(), me.namespace, metav1.GetOptions{})
+		_, err := c.CoreV1().Namespaces().Get(context.Background(), mr.namespace, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
-			me.namespaceCreated = false
+			mr.namespaceCreated = false
 			return nil
 		} else if err != nil {
 			return err
 		}
 
-		if err := c.CoreV1().Namespaces().Delete(context.Background(), me.namespace, metav1.DeleteOptions{}); err != nil {
+		if err := c.CoreV1().Namespaces().Delete(context.Background(), mr.namespace, metav1.DeleteOptions{}); err != nil {
 			return err
 		}
-		me.namespaceCreated = false
+		mr.namespaceCreated = false
+		mr.milestones.NamespaceDeleted(mr.namespace)
 	}
 
 	return nil
