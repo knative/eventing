@@ -24,6 +24,7 @@ import (
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/features/pingsource"
 )
 
 // TestSmoke_Broker
@@ -31,6 +32,7 @@ func TestSmoke_Broker(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
 
 	names := []string{
 		"default",
@@ -43,8 +45,6 @@ func TestSmoke_Broker(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, broker.BrokerGoesReady(name, "MTChannelBroker"))
 	}
-
-	env.Finish()
 }
 
 // TestSmoke_Trigger
@@ -52,6 +52,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
 
 	names := []string{
 		"default",
@@ -67,6 +68,23 @@ func TestSmoke_Trigger(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))
 	}
+}
 
-	env.Finish()
+// TestSmoke_PingSource
+func TestSmoke_PingSource(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, pingsource.PingSourceGoesReady(name))
+	}
 }
