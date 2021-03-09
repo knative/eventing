@@ -18,6 +18,8 @@ package mtping
 
 import (
 	"context"
+	"fmt"
+
 	"testing"
 
 	. "knative.dev/pkg/reconciler/testing"
@@ -29,6 +31,8 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
+var removePingsource map[string]bool
+
 type testAdapter struct {
 	adapter.Adapter
 }
@@ -36,7 +40,11 @@ type testAdapter struct {
 func (testAdapter) Update(context.Context, *v1beta2.PingSource) {
 }
 
-func (testAdapter) Remove(context.Context, *v1beta2.PingSource) {
+func (testAdapter) Remove(p *v1beta2.PingSource) {
+	if removePingsource == nil {
+		removePingsource = make(map[string]bool)
+	}
+	removePingsource[fmt.Sprintf("%s/%s", p.Namespace, p.Name)] = true
 }
 
 func (testAdapter) RemoveAll(context.Context) {

@@ -113,7 +113,7 @@ func (a *mtpingAdapter) Update(ctx context.Context, source *v1beta2.PingSource) 
 	a.entryidMu.Unlock()
 }
 
-func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta2.PingSource) {
+func (a *mtpingAdapter) Remove(source *v1beta2.PingSource) {
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 
 	a.entryidMu.RLock()

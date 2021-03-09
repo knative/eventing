@@ -81,7 +81,7 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 		t.Error(`Expected cron entries to contain "test-ns/test-name"`)
 	}
 
-	adapter.Remove(ctx, &v1beta2.PingSource{
+	adapter.Remove(&v1beta2.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-name",
 			Namespace: "test-ns",
