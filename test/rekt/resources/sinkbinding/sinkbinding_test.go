@@ -31,16 +31,16 @@ func Example_min() {
 		"name":      "foo",
 		"namespace": "bar",
 		"sink": map[string]interface{}{
-			"ref": map[string]interface{}{
-				"kind":       "AKind",
-				"apiVersion": "something.valid/v1",
-				"name":       "thesink",
+			"Ref": map[string]interface{}{
+				"Kind":       "AKind",
+				"APIVersion": "something.valid/v1",
+				"Name":       "thesink",
 			},
 		},
 		"subject": map[string]interface{}{
-			"kind":       "BKind",
-			"apiVersion": "interesting/v1",
-			"name":       "thesubject",
+			"Kind":       "BKind",
+			"APIVersion": "interesting/v1",
+			"Name":       "thesubject",
 		},
 	}
 
