@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/test/rekt/features/sinkbinding"
 	"testing"
 
 	_ "knative.dev/pkg/system/testing"
@@ -86,5 +87,24 @@ func TestSmoke_PingSource(t *testing.T) {
 
 	for _, name := range names {
 		env.Test(ctx, t, pingsource.PingSourceGoesReady(name))
+	}
+}
+
+// TestSmoke_SinkBinding
+func TestSmoke_SinkBinding(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, sinkbinding.GoesReady(name))
 	}
 }

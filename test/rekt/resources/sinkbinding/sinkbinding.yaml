@@ -26,29 +26,29 @@ spec:
     {{ if .ceOverrides.extensions }}
     extensions:
       {{ range $key, $value := .ceOverrides.extensions }}
-        {{ $key }}: {{ $value }}
+      {{ $key }}: {{ $value }}
       {{ end}}
     {{ end }}
   {{ end }}
   sink:
-    {{ if .sink.ref }}
+    {{ if .sink.Ref }}
     ref:
-      apiVersion: {{ .sink.ref.apiVersion }}
-      kind: {{ .sink.ref.kind }}
+      apiVersion: {{ .sink.Ref.APIVersion }}
+      kind: {{ .sink.Ref.Kind }}
       namespace: {{ .namespace }}
-      name: {{ .sink.ref.name }}
+      name: {{ .sink.Ref.Name }}
     {{ end }}
-    {{ if .sink.uri }}
-    uri: {{ .sink.uri }}
+    {{ if .sink.URI }}
+    uri: {{ .sink.URI }}
     {{ end }}
   subject:
-    kind: {{ .subject.kind }}
-    apiVersion: {{ .subject.apiVersion }}
+    kind: {{ .subject.Kind }}
+    apiVersion: {{ .subject.APIVersion }}
     namespace: {{ .namespace }}
-    {{ if .subject.name }}
-    name: {{ .subject.name }}
+    {{ if .subject.Name }}
+    name: {{ .subject.Name }}
     {{ end }}
-    {{ if .subject.selector }}
-    selector: {{ .subject.selector }}
+    {{ if .subject.Selector }}
+    selector: {{ .subject.Selector }}
     {{ end }}
 

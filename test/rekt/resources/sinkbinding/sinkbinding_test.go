@@ -75,14 +75,24 @@ func Example_full() {
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
-		"sink": map[string]interface{}{
-			"ref": map[string]string{
-				"kind":       "sinkkind",
-				"namespace":  "sinknamespace",
-				"name":       "sinkname",
-				"apiVersion": "sinkversion",
+		"ceOverrides": map[string]interface{}{
+			"extensions": map[string]string{
+				"ext1": "val1",
+				"ext2": "val2",
 			},
-			"uri": "uri/parts",
+		},
+		"sink": map[string]interface{}{
+			"Ref": map[string]string{
+				"Kind":       "AKind",
+				"Name":       "thesink",
+				"APIVersion": "something.valid/v1",
+			},
+			"URI": "uri/parts",
+		},
+		"subject": map[string]interface{}{
+			"Kind":       "BKind",
+			"APIVersion": "interesting/v1",
+			"Name":       "thesubject",
 		},
 	}
 
@@ -93,20 +103,26 @@ func Example_full() {
 
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
-	// kind: PingSource
+	// apiVersion: sources.knative.dev/v1
+	// kind: SinkBinding
 	// metadata:
 	//   name: foo
 	//   namespace: bar
 	// spec:
-	//   schedule: "*/1 * * * *"
-	//   contentType: "application/json"
-	//   data: '{"message": "Hello world!"}'
+	//   ceOverrides:
+	//     extensions:
+	//       ext1: val1
+	//       ext2: val2
 	//   sink:
 	//     ref:
-	//       kind: sinkkind
+	//       apiVersion: something.valid/v1
+	//       kind: AKind
 	//       namespace: bar
-	//       name: sinkname
-	//       apiVersion: sinkversion
+	//       name: thesink
 	//     uri: uri/parts
+	//   subject:
+	//     kind: BKind
+	//     apiVersion: interesting/v1
+	//     namespace: bar
+	//     name: thesubject
 }
