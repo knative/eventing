@@ -31,7 +31,7 @@ You must install these tools:
 1. [`go`](https://golang.org/doc/install): The language `Knative Eventing` is
    developed with (version 1.15 or higher)
 1. [`git`](https://help.github.com/articles/set-up-git/): For source control
-1. [`ko`](https://github.com/google/ko): For building and deploying container 
+1. [`ko`](https://github.com/google/ko): For building and deploying container
    images to Kubernetes in a single command.
 1. [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/): For
    managing development environments.
