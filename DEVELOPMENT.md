@@ -26,7 +26,20 @@ Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 
 ### Requirements
 
-You must have [`ko`](https://github.com/google/ko) installed.
+You must install these tools:
+
+1. [`go`](https://golang.org/doc/install): The language `Knative Eventing` is
+   developed with (version 1.15 or higher)
+1. [`git`](https://help.github.com/articles/set-up-git/): For source control
+1. [`ko`](https://github.com/google/ko): For building and deploying container
+   images to Kubernetes in a single command.
+1. [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/): For
+   managing development environments.
+1. [`bash`](https://www.gnu.org/software/bash/) v4 or higher. On macOS the
+   default bash is too old, you can use [Homebrew](https://brew.sh) to install a
+   later version. For running some automations, such as dependencies updates and
+   code generators.
+
 
 ### Create a cluster and a repo
 
