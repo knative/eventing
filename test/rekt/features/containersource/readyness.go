@@ -18,6 +18,7 @@ package containersource
 
 import (
 	"fmt"
+
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/svc"

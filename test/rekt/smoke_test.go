@@ -19,13 +19,13 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/eventing/test/rekt/features/containersource"
 	"strconv"
 	"testing"
 
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/features/containersource"
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 )
