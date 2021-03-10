@@ -37,10 +37,43 @@ func Gvr() schema.GroupVersionResource {
 // Install will create a SinkBinding resource, augmented with the config fn options.
 func Install(name string, sink *duckv1.Destination, subject *tracker.Reference, opts ...CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":    name,
-		"sink":    sink,
-		"subject": subject,
+		"name": name,
 	}
+
+	// TODO: move this to a common sources resource.
+	{
+		s := map[string]interface{}{}
+		if sink.URI != nil {
+			s["uri"] = sink.URI
+		}
+		if sink.Ref != nil {
+			if _, set := s["ref"]; !set {
+				s["ref"] = map[string]interface{}{}
+			}
+			sref := s["ref"].(map[string]interface{})
+			sref["apiVersion"] = sink.Ref.APIVersion
+			sref["kind"] = sink.Ref.Kind
+			// skip namespace
+			sref["name"] = sink.Ref.Name
+		}
+		cfg["sink"] = s
+	}
+
+	{
+		s := map[string]interface{}{}
+		if subject != nil {
+			s["apiVersion"] = subject.APIVersion
+			s["kind"] = subject.Kind
+			// skip namespace
+			s["name"] = subject.Name
+			if subject.Selector != nil {
+				// TODO: we are just supporting match labels at the moment.
+				s["selectorMatchLabels"] = subject.Selector.MatchLabels
+			}
+		}
+		cfg["subject"] = s
+	}
+
 	for _, fn := range opts {
 		fn(cfg)
 	}

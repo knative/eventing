@@ -31,24 +31,28 @@ spec:
     {{ end }}
   {{ end }}
   sink:
-    {{ if .sink.Ref }}
+    {{ if .sink.ref }}
     ref:
-      apiVersion: {{ .sink.Ref.APIVersion }}
-      kind: {{ .sink.Ref.Kind }}
+      apiVersion: {{ .sink.ref.apiVersion }}
+      kind: {{ .sink.ref.kind }}
       namespace: {{ .namespace }}
-      name: {{ .sink.Ref.Name }}
+      name: {{ .sink.ref.name }}
     {{ end }}
-    {{ if .sink.URI }}
-    uri: {{ .sink.URI }}
+    {{ if .sink.uri }}
+    uri: {{ .sink.uri }}
     {{ end }}
   subject:
-    kind: {{ .subject.Kind }}
-    apiVersion: {{ .subject.APIVersion }}
+    kind: {{ .subject.kind }}
+    apiVersion: {{ .subject.apiVersion }}
     namespace: {{ .namespace }}
-    {{ if .subject.Name }}
-    name: {{ .subject.Name }}
+    {{ if .subject.name }}
+    name: {{ .subject.name }}
     {{ end }}
-    {{ if .subject.Selector }}
-    selector: {{ .subject.Selector }}
+    {{ if .subject.selectorMatchLabels }}
+    selector:
+      matchLabels:
+        {{ range $key, $value := .subject.selectorMatchLabels }}
+        {{ $key }}: {{ $value }}
+        {{ end }}
     {{ end }}
 

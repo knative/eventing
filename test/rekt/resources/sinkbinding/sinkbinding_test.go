@@ -31,16 +31,16 @@ func Example_min() {
 		"name":      "foo",
 		"namespace": "bar",
 		"sink": map[string]interface{}{
-			"Ref": map[string]interface{}{
-				"Kind":       "AKind",
-				"APIVersion": "something.valid/v1",
-				"Name":       "thesink",
+			"ref": map[string]interface{}{
+				"kind":       "AKind",
+				"apiVersion": "something.valid/v1",
+				"name":       "thesink",
 			},
 		},
 		"subject": map[string]interface{}{
-			"Kind":       "BKind",
-			"APIVersion": "interesting/v1",
-			"Name":       "thesubject",
+			"kind":       "BKind",
+			"apiVersion": "interesting/v1",
+			"name":       "thesubject",
 		},
 	}
 
@@ -82,17 +82,21 @@ func Example_full() {
 			},
 		},
 		"sink": map[string]interface{}{
-			"Ref": map[string]string{
-				"Kind":       "AKind",
-				"Name":       "thesink",
-				"APIVersion": "something.valid/v1",
+			"ref": map[string]string{
+				"kind":       "AKind",
+				"name":       "thesink",
+				"apiVersion": "something.valid/v1",
 			},
-			"URI": "uri/parts",
+			"uri": "uri/parts",
 		},
 		"subject": map[string]interface{}{
-			"Kind":       "BKind",
-			"APIVersion": "interesting/v1",
-			"Name":       "thesubject",
+			"kind":       "BKind",
+			"apiVersion": "interesting/v1",
+			"name":       "thesubject",
+			"selectorMatchLabels": map[string]string{
+				"match1": "this",
+				"match2": "that",
+			},
 		},
 	}
 
@@ -125,4 +129,8 @@ func Example_full() {
 	//     apiVersion: interesting/v1
 	//     namespace: bar
 	//     name: thesubject
+	//     selector:
+	//       matchLabels:
+	//         match1: this
+	//         match2: that
 }
