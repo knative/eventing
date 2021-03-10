@@ -48,3 +48,9 @@ func AsRef(name string) *duckv1.KReference {
 		APIVersion: "v1",
 	}
 }
+
+func AsDestinationRef(name string) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: AsRef(name),
+	}
+}

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pingsource_test
+package containersource_test
 
 import (
 	"os"
@@ -28,34 +28,8 @@ import (
 func Example_min() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{
-		"name":       "foo",
-		"namespace":  "bar",
-		"brokerName": "baz",
-	}
-
-	files, err := manifest.ExecuteLocalYAML(images, cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	manifest.OutputYAML(os.Stdout, files)
-	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
-	// kind: PingSource
-	// metadata:
-	//   name: foo
-	//   namespace: bar
-	// spec:
-}
-
-func Example_full() {
-	images := map[string]string{}
-	cfg := map[string]interface{}{
-		"name":        "foo",
-		"namespace":   "bar",
-		"schedule":    "*/1 * * * *",
-		"contentType": "application/json",
-		"data":        `{"message": "Hello world!"}`,
+		"name":      "foo",
+		"namespace": "bar",
 		"sink": map[string]interface{}{
 			"ref": map[string]string{
 				"kind":       "sinkkind",
@@ -63,8 +37,8 @@ func Example_full() {
 				"name":       "sinkname",
 				"apiVersion": "sinkversion",
 			},
-			"uri": "uri/parts",
 		},
+		"image": "this-image",
 	}
 
 	files, err := manifest.ExecuteLocalYAML(images, cfg)
@@ -74,32 +48,30 @@ func Example_full() {
 
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
-	// kind: PingSource
+	// apiVersion: sources.knative.dev/v1
+	// kind: ContainerSource
 	// metadata:
 	//   name: foo
 	//   namespace: bar
 	// spec:
-	//   schedule: '*/1 * * * *'
-	//   contentType: 'application/json'
-	//   data: '{"message": "Hello world!"}'
+	//   template:
+	//     spec:
+	//       containers:
+	//         - image: this-image
+	//           name: user-container
 	//   sink:
 	//     ref:
 	//       kind: sinkkind
 	//       namespace: bar
 	//       name: sinkname
 	//       apiVersion: sinkversion
-	//     uri: uri/parts
 }
 
-func Example_fullbase64() {
+func Example_full() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{
-		"name":        "foo",
-		"namespace":   "bar",
-		"schedule":    "*/1 * * * *",
-		"contentType": "application/json",
-		"dataBase64":  "aabbccddeeff",
+		"name":      "foo",
+		"namespace": "bar",
 		"sink": map[string]interface{}{
 			"ref": map[string]string{
 				"kind":       "sinkkind",
@@ -108,6 +80,21 @@ func Example_fullbase64() {
 				"apiVersion": "sinkversion",
 			},
 			"uri": "uri/parts",
+		},
+		"image": "this-image",
+		"args": []string{
+			"arg set 1",
+			"arg set 2",
+		},
+		"env": map[string]string{
+			"env1": "value1",
+			"env2": "value2",
+		},
+		"ceOverrides": map[string]interface{}{
+			"extensions": map[string]string{
+				"ext1": "value1",
+				"ext2": "value2",
+			},
 		},
 	}
 
@@ -118,15 +105,29 @@ func Example_fullbase64() {
 
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
-	// kind: PingSource
+	// apiVersion: sources.knative.dev/v1
+	// kind: ContainerSource
 	// metadata:
 	//   name: foo
 	//   namespace: bar
 	// spec:
-	//   schedule: '*/1 * * * *'
-	//   contentType: 'application/json'
-	//   dataBase64: 'aabbccddeeff'
+	//   ceOverrides:
+	//     extensions:
+	//       ext1: value1
+	//       ext2: value2
+	//   template:
+	//     spec:
+	//       containers:
+	//         - image: this-image
+	//           name: user-container
+	//           args:
+	//             - arg set 1
+	//             - arg set 2
+	//           env:
+	//             - name: env1
+	//               value: value1
+	//             - name: env2
+	//               value: value2
 	//   sink:
 	//     ref:
 	//       kind: sinkkind

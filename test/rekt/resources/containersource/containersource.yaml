@@ -12,13 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: sources.knative.dev/v1beta2
+apiVersion: sources.knative.dev/v1
 kind: ContainerSource
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
 spec:
-  {{if .sink }}
+  {{ if .ceOverrides }}
+  ceOverrides:
+    {{ if .ceOverrides.extensions }}
+    extensions:
+      {{ range $key, $value := .ceOverrides.extensions }}
+      {{ $key }}: {{ $value }}
+      {{ end}}
+    {{ end }}
+  {{ end }}
+  template:
+    spec:
+      containers:
+        - image: {{ .image }}
+          name: user-container
+          {{ if .args }}
+          args:
+            {{ range $value := .args }}
+            - {{ $value }}
+            {{ end }}
+          {{ end }}
+          {{ if .env }}
+          env:
+            {{ range $key, $value := .env }}
+            - name: {{ $key }}
+              value: {{ $value }}
+            {{ end }}
+          {{ end }}
   sink:
     {{ if .sink.ref }}
     ref:
@@ -30,4 +56,3 @@ spec:
     {{ if .sink.uri }}
     uri: {{ .sink.uri }}
     {{ end }}
-  {{ end }}

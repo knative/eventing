@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/test/rekt/features/containersource"
 	"strconv"
 	"testing"
 
@@ -102,5 +103,24 @@ func TestSmoke_PingSource(t *testing.T) {
 			}
 			env.Test(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
 		}
+	}
+}
+
+// TestSmoke_ContainerSource
+func TestSmoke_ContainerSource(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, containersource.GoesReady(name))
 	}
 }

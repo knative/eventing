@@ -18,6 +18,7 @@ package containersource
 
 import (
 	"context"
+	"knative.dev/reconciler-test/pkg/environment"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,44 +34,58 @@ func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "containersources"}
 }
 
+func init() {
+	// Heartbeats is the default image.
+	environment.RegisterPackage("knative.dev/eventing/test/test_images/heartbeats")
+}
+
 // Install will create a ContainerSource resource, augmented with the config fn options.
 func Install(name string, sink *duckv1.Destination, opts ...CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name": name,
-		"sink": sink,
+		"name":  name,
+		"image": "ko://knative.dev/eventing/test/test_images/heartbeats",
 	}
+
+	// TODO: move this to a common sources resource.
+	{
+		s := map[string]interface{}{}
+		if sink.URI != nil {
+			s["uri"] = sink.URI
+		}
+		if sink.Ref != nil {
+			if _, set := s["ref"]; !set {
+				s["ref"] = map[string]interface{}{}
+			}
+			sref := s["ref"].(map[string]interface{})
+			sref["apiVersion"] = sink.Ref.APIVersion
+			sref["kind"] = sink.Ref.Kind
+			// skip namespace
+			sref["name"] = sink.Ref.Name
+		}
+		cfg["sink"] = s
+	}
+
 	for _, fn := range opts {
 		fn(cfg)
 	}
 	return func(ctx context.Context, t feature.T) {
+
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}
 }
 
-type EzTemplate struct {
-	Image string
-	Args  []string
-	Env   map[string]string
-}
-
 // WithTemplate adds the template related config to a ContainerSource spec.
-func WithTemplate(template *EzTemplate) CfgFn {
+// This is MVP at the moment, it might get more complicated as tests need it.
+func WithTemplate(image string, args []string, env map[string]string) CfgFn {
 	return func(cfg map[string]interface{}) {
-		if _, set := cfg["template"]; !set {
-			cfg["template"] = map[string]interface{}{}
+		cfg["image"] = image
+		if args != nil {
+			cfg["args"] = args
 		}
-		ceOverrides := cfg["ceOverrides"].(map[string]interface{})
-
-		if extensions != nil {
-			if _, set := ceOverrides["extensions"]; !set {
-				ceOverrides["ref"] = map[string]interface{}{}
-			}
-			ceExt := ceOverrides["extensions"].(map[string]interface{})
-			for k, v := range extensions {
-				ceExt[k] = v
-			}
+		if env != nil {
+			cfg["env"] = args
 		}
 	}
 }

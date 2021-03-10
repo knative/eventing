@@ -58,10 +58,10 @@ type envConfig struct {
 	CEOverrides string `envconfig:"K_CE_OVERRIDES"`
 
 	// Name of this pod.
-	Name string `envconfig:"POD_NAME" required:"true"`
+	Name string `envconfig:"POD_NAME" default:"UNSET" required:"true"`
 
 	// Namespace this pod exists in.
-	Namespace string `envconfig:"POD_NAMESPACE" required:"true"`
+	Namespace string `envconfig:"POD_NAMESPACE" default:"UNSET" required:"true"`
 
 	OneShot bool `envconfig:"ONE_SHOT" default:"false"`
 }
