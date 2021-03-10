@@ -46,16 +46,16 @@ func Example_min() {
 	//   name: foo
 	//   namespace: bar
 	// spec:
-	//   schedule: "*/1 * * * *"
-	//   contentType: "application/json"
-	//   data: '{"message": "Hello world!"}'
 }
 
 func Example_full() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{
-		"name":      "foo",
-		"namespace": "bar",
+		"name":        "foo",
+		"namespace":   "bar",
+		"schedule":    "*/1 * * * *",
+		"contentType": "application/json",
+		"data":        `{"message": "Hello world!"}`,
 		"sink": map[string]interface{}{
 			"ref": map[string]string{
 				"kind":       "sinkkind",
@@ -80,9 +80,53 @@ func Example_full() {
 	//   name: foo
 	//   namespace: bar
 	// spec:
-	//   schedule: "*/1 * * * *"
-	//   contentType: "application/json"
+	//   schedule: '*/1 * * * *'
+	//   contentType: 'application/json'
 	//   data: '{"message": "Hello world!"}'
+	//   sink:
+	//     ref:
+	//       kind: sinkkind
+	//       namespace: bar
+	//       name: sinkname
+	//       apiVersion: sinkversion
+	//     uri: uri/parts
+}
+
+func Example_fullbase64() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":        "foo",
+		"namespace":   "bar",
+		"schedule":    "*/1 * * * *",
+		"contentType": "application/json",
+		"dataBase64":  "aabbccddeeff",
+		"sink": map[string]interface{}{
+			"ref": map[string]string{
+				"kind":       "sinkkind",
+				"namespace":  "sinknamespace",
+				"name":       "sinkname",
+				"apiVersion": "sinkversion",
+			},
+			"uri": "uri/parts",
+		},
+	}
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1beta2
+	// kind: PingSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   schedule: '*/1 * * * *'
+	//   contentType: 'application/json'
+	//   dataBase64: 'aabbccddeeff'
 	//   sink:
 	//     ref:
 	//       kind: sinkkind

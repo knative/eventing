@@ -44,7 +44,7 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 	}
 	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
-			t.Fatal(err)
+			t.Fatal(err, cfg)
 		}
 	}
 }
@@ -74,6 +74,30 @@ func WithSink(ref *duckv1.KReference, uri string) CfgFn {
 			sref["kind"] = ref.Kind
 			// skip namespace
 			sref["name"] = ref.Name
+		}
+	}
+}
+
+// WithData adds the contentType and data config to a PingSource spec.
+func WithData(contentType, data string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if contentType != "" {
+			cfg["contentType"] = contentType
+		}
+		if data != "" {
+			cfg["data"] = data
+		}
+	}
+}
+
+// WithDataBase64 adds the contentType and dataBase64 config to a PingSource spec.
+func WithDataBase64(contentType, dataBase64 string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		if contentType != "" {
+			cfg["contentType"] = contentType
+		}
+		if dataBase64 != "" {
+			cfg["dataBase64"] = dataBase64
 		}
 	}
 }

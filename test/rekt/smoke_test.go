@@ -19,13 +19,15 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/eventing/test/rekt/features/sinkbinding"
+	"strconv"
 	"testing"
 
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/pingsource"
+	"knative.dev/eventing/test/rekt/features/sinkbinding"
+	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
 // TestSmoke_Broker
@@ -82,11 +84,25 @@ func TestSmoke_PingSource(t *testing.T) {
 		"customname",
 		"name-with-dash",
 		"name1with2numbers3",
-		"name63-01234567890123456789012345678901234567890123456789012345",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	configs := [][]ps.CfgFn{
+		{},
+		{ps.WithData("application/json", `{"hello":"world"}`)},
+		{ps.WithData("text/plain", "hello, world!")},
+		{ps.WithDataBase64("application/json", "eyJoZWxsbyI6IndvcmxkIn0=")},
+		{ps.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ==")},
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, pingsource.PingSourceGoesReady(name))
+		for i, cfg := range configs {
+			n := name + strconv.Itoa(i) // Make the name unique for each config.
+			if len(n) >= 64 {
+				n = n[:63] // 63 is the max length.
+			}
+			env.Test(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
+		}
 	}
 }
 
