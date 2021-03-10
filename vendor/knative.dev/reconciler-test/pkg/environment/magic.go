@@ -62,6 +62,7 @@ type MagicEnvironment struct {
 	namespace        string
 	namespaceCreated bool
 	refs             []corev1.ObjectReference
+
 	// milestones sends milestone events, if configured.
 	milestones milestone.Emitter
 }
@@ -196,33 +197,8 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 	for _, s := range steps[feature.Setup] {
 		s := s
 
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
-
-		var internalT feature.T
-		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
-			internalT = st
-			st.Helper()
-			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
-
-			mr.milestones.StepStarted(f.Name, &s, internalT)
-			originalT.Cleanup(func() {
-				mr.milestones.StepFinished(f.Name, &s, internalT)
-			})
-
-			if mr.s&s.S == 0 {
-				st.Skipf("%s features not enabled for testing", s.S)
-			}
-			if mr.l&s.L == 0 {
-				st.Skipf("%s requirement not enabled for testing", s.L)
-			}
-
-			// Perform step.
-			s.Fn(ctx, st)
-		})
-
-		// Wait for the test to execute before spawning the next one
-		wg.Wait()
+		// Setup are executed always, no matter their level and state
+		internalT := mr.executeWithoutWrappingT(ctx, originalT, f, &s)
 
 		// Failed setup fails everything, so just run the teardown
 		if internalT.Failed() {
@@ -238,33 +214,8 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 			break
 		}
 
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
-
-		var internalT feature.T
-		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
-			internalT = createRequirementT(st)
-			st.Helper()
-			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
-
-			mr.milestones.StepStarted(f.Name, &s, internalT)
-			originalT.Cleanup(func() {
-				mr.milestones.StepFinished(f.Name, &s, internalT)
-			})
-
-			if mr.s&s.S == 0 {
-				st.Skipf("%s features not enabled for testing", s.S)
-			}
-			if mr.l&s.L == 0 {
-				st.Skipf("%s requirement not enabled for testing", s.L)
-			}
-
-			// Perform step.
-			s.Fn(ctx, internalT)
-		})
-
-		// Wait for the test to execute before spawning the next one
-		wg.Wait()
+		// Requirement never fails the parent test
+		internalT := mr.executeWithSkippingT(ctx, originalT, f, &s)
 
 		if internalT.Failed() {
 			skipAssertions = true
@@ -280,37 +231,13 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 			break
 		}
 
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
+		if mr.shouldFail(&s) {
+			mr.executeWithoutWrappingT(ctx, originalT, f, &s)
+		} else {
+			mr.executeWithSkippingT(ctx, originalT, f, &s)
+		}
 
-		var internalT feature.T
-		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
-			internalT = st
-			st.Helper()
-			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
-
-			mr.milestones.StepStarted(f.Name, &s, internalT)
-			originalT.Cleanup(func() {
-				mr.milestones.StepFinished(f.Name, &s, internalT)
-			})
-
-			// TODO here we should run all the asserts and not filter them
-			//  and then we record which one failed and which not, computing the actual compliance
-			if mr.s&s.S == 0 {
-				st.Skipf("%s features not enabled for testing", s.S)
-			}
-			if mr.l&s.L == 0 {
-				st.Skipf("%s requirement not enabled for testing", s.L)
-			}
-
-			// Perform step.
-			s.Fn(ctx, st)
-		})
-
-		// Wait for the test to execute before spawning the next one
-		wg.Wait()
-
-		// TODO record compliance level and fail parent test accordingly
+		// TODO implement fail fast feature to avoid proceeding with testing if an "expected level" assert fails here
 	}
 
 	for _, s := range steps[feature.Teardown] {
@@ -319,35 +246,17 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 
-		var internalT feature.T
-		originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
-			internalT = st
-			st.Helper()
-			st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
-
-			mr.milestones.StepStarted(f.Name, &s, internalT)
-			originalT.Cleanup(func() {
-				mr.milestones.StepFinished(f.Name, &s, internalT)
-			})
-
-			if mr.s&s.S == 0 {
-				st.Skipf("%s features not enabled for testing", s.S)
-			}
-			if mr.l&s.L == 0 {
-				st.Skipf("%s requirement not enabled for testing", s.L)
-			}
-
-			// Perform step.
-			s.Fn(ctx, st)
-		})
-
-		// Wait for the test to execute before spawning the next one
-		wg.Wait()
+		// Teardown are executed always, no matter their level and state
+		mr.executeWithoutWrappingT(ctx, originalT, f, &s)
 	}
 
 	if skipReason != "" {
 		originalT.Skipf("Skipping feature '%s' assertions because %s", f.Name, skipReason)
 	}
+}
+
+func (mr *MagicEnvironment) shouldFail(s *feature.Step) bool {
+	return !(mr.s&s.S == 0 || mr.l&s.L == 0)
 }
 
 // TestSet implements Environment.TestSet
