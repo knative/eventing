@@ -36,6 +36,14 @@ rules:
     verbs:
       - update
   - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels/finalizers
+      - inmemorychannels/status
+      - inmemorychannels
+    verbs:
+      - patch
+  - apiGroups:
       - ""
     resources:
       - services
