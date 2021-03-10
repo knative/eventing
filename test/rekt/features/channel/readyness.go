@@ -18,6 +18,7 @@ package channel
 
 import (
 	"fmt"
+
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/reconciler-test/pkg/feature"
