@@ -8,95 +8,95 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
-// requirementT records if the test succeeded or failing, but never fails it in order to avoid bad reporting
-type requirementT struct {
+// skippingT records if the test succeeded or failing, but never fails it
+type skippingT struct {
 	*testing.T
 
 	failed  *atomic.Bool
 	skipped *atomic.Bool
 }
 
-var _ feature.T = (*requirementT)(nil)
+var _ feature.T = (*skippingT)(nil)
 
-func createRequirementT(originalT *testing.T) *requirementT {
-	return &requirementT{
+func createSkippingT(originalT *testing.T) feature.T {
+	return &skippingT{
 		T:       originalT,
 		failed:  atomic.NewBool(false),
 		skipped: atomic.NewBool(false),
 	}
 }
 
-func (t *requirementT) Error(args ...interface{}) {
+func (t *skippingT) Error(args ...interface{}) {
 	t.T.Helper()
 	t.failed.Store(true)
 	t.T.Log(args...)
 }
 
-func (t *requirementT) Errorf(format string, args ...interface{}) {
+func (t *skippingT) Errorf(format string, args ...interface{}) {
 	t.T.Helper()
 	t.failed.Store(true)
 	t.T.Logf(format, args...)
 }
 
-func (t *requirementT) Fail() {
+func (t *skippingT) Fail() {
 	t.T.Helper()
 	t.failed.Store(true)
 }
 
-func (t *requirementT) FailNow() {
+func (t *skippingT) FailNow() {
 	t.T.Helper()
 	t.failed.Store(true)
 	t.T.SkipNow()
 }
 
-func (t *requirementT) Failed() bool {
+func (t *skippingT) Failed() bool {
 	return t.failed.Load()
 }
 
-func (t *requirementT) Fatal(args ...interface{}) {
+func (t *skippingT) Fatal(args ...interface{}) {
 	t.T.Helper()
 	t.failed.Store(true)
 	t.T.Log(args...)
 	t.T.SkipNow()
 }
 
-func (t *requirementT) Fatalf(format string, args ...interface{}) {
+func (t *skippingT) Fatalf(format string, args ...interface{}) {
 	t.T.Helper()
 	t.failed.Store(true)
 	t.T.Logf(format, args...)
 	t.T.SkipNow()
 }
 
-func (t *requirementT) Log(args ...interface{}) {
+func (t *skippingT) Log(args ...interface{}) {
 	t.T.Helper()
 	t.T.Log(args...)
 }
 
-func (t *requirementT) Logf(format string, args ...interface{}) {
+func (t *skippingT) Logf(format string, args ...interface{}) {
 	t.T.Helper()
 	t.T.Logf(format, args...)
 }
 
-func (t *requirementT) Skip(args ...interface{}) {
+func (t *skippingT) Skip(args ...interface{}) {
 	t.T.Helper()
 	t.skipped.Store(true)
 	t.T.Log(args...)
 	t.T.SkipNow()
 }
 
-func (t *requirementT) Skipf(format string, args ...interface{}) {
+func (t *skippingT) Skipf(format string, args ...interface{}) {
 	t.T.Helper()
 	t.skipped.Store(true)
 	t.T.Logf(format, args...)
 	t.T.SkipNow()
 }
 
-func (t *requirementT) SkipNow() {
+func (t *skippingT) SkipNow() {
 	t.T.Helper()
 	t.skipped.Store(true)
 	t.T.SkipNow()
 }
 
-func (t *requirementT) Skipped() bool {
+func (t *skippingT) Skipped() bool {
 	return t.skipped.Load()
 }
