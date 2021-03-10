@@ -18,13 +18,14 @@ package sinkbinding
 
 import (
 	"context"
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"time"
 )
 
 type CfgFn func(map[string]interface{})
