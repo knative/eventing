@@ -18,9 +18,9 @@ package svc
 
 import (
 	"context"
-	"knative.dev/pkg/tracker"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
