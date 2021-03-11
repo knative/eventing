@@ -17,23 +17,14 @@ limitations under the License.
 package containersource
 
 import (
-	"fmt"
-
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/containersource"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // GoesReady returns a feature testing if a containersource becomes ready.
-func GoesReady(name string, cfg ...containersource.CfgFn) *feature.Feature {
+func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("ContainerSource goes ready.")
-
-	sink := feature.MakeRandomK8sName("sink")
-	f.Setup("install a Service", svc.Install(sink, "app", "rekt"))
-
-	f.Setup(fmt.Sprintf("install a ContainerSource named %q", name),
-		containersource.Install(name, svc.AsDestinationRef(sink), cfg...))
 
 	f.Assert("ContainerSource is ready", containersource.IsReady(name, features.Interval, features.Timeout))
 

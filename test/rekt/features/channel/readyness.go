@@ -17,18 +17,14 @@ limitations under the License.
 package channel
 
 import (
-	"fmt"
-
 	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // GoesReady returns a feature testing if a Channel becomes ready.
-func GoesReady(name string, cfg ...channel.CfgFn) *feature.Feature {
+func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("Channel goes ready.")
-
-	f.Setup(fmt.Sprintf("install a Channel named %q", name), channel.Install(name, cfg...))
 
 	f.Stable("Channel").
 		Must("be ready", channel.IsReady(name, features.Interval, features.Timeout)).

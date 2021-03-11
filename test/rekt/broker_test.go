@@ -29,6 +29,26 @@ import (
 	"knative.dev/eventing/test/rekt/features/broker"
 )
 
+// TestSmoke_Broker
+func TestSmoke_Broker(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"default",
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, broker.BrokerGoesReady(name, "MTChannelBroker"))
+	}
+}
+
 // TestBrokerAsMiddleware
 func TestBrokerAsMiddleware(t *testing.T) {
 	t.Parallel()
