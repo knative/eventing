@@ -88,6 +88,15 @@ func (mr *MagicEnvironment) Finish() {
 	mr.milestones.Finished()
 }
 
+// Managed enables auto-lifecycle management of the environment. Including:
+//  - registers a t.Cleanup callback on env.Finish().
+func Managed(t feature.T) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		t.Cleanup(env.Finish)
+		return ctx, nil
+	}
+}
+
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
 	images, err := ProduceImages()
 	if err != nil {
