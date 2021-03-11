@@ -2,7 +2,7 @@
 
 ## Specification
 
-This [document](../spec/sources.md) contains the source specification.
+This [document](https://github.com/knative/specs/specs/eventing/sources.md) contains the source specification.
 
 ## Implementations
 
