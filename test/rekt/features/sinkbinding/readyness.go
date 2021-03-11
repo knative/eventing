@@ -18,23 +18,13 @@ package sinkbinding
 
 import (
 	"knative.dev/eventing/test/rekt/features"
-	"knative.dev/eventing/test/rekt/resources/deployment"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // GoesReady returns a feature testing if a SinkBinding becomes ready.
 func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("SinkBinding goes ready.")
-
-	sink := feature.MakeRandomK8sName("sink")
-	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
-
-	subject := feature.MakeRandomK8sName("subject")
-	f.Setup("install a deployment", deployment.Install(subject))
-
-	f.Setup("install a sinkbinding", sinkbinding.Install(name, svc.AsDestinationRef(sink), deployment.AsTrackerReference(subject)))
 
 	f.Stable("sinkbinding").
 		Must("be ready", sinkbinding.IsReady(name, features.Interval, features.Timeout))
