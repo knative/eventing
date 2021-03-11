@@ -3,7 +3,7 @@
 The `psbinding` package provides facilities to make authoring
 [Bindings](https://docs.google.com/document/d/1t5WVrj2KQZ2u5s0LvIUtfHnSonBv5Vcv8Gl2k5NXrCQ/edit)
 whose subjects adhere to
-[`duckv1.PodSpecable`](https://github.com/knative/pkg/blob/master/apis/duck/v1/podspec_types.go#L32)
+[`duckv1.PodSpecable`](https://github.com/knative/pkg/blob/main/apis/duck/v1/podspec_types.go#L32)
 easier. The Bindings doc mentions two key elements of the controller
 architecture:
 

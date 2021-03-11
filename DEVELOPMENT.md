@@ -40,7 +40,6 @@ You must install these tools:
    later version. For running some automations, such as dependencies updates and
    code generators.
 
-
 ### Create a cluster and a repo
 
 1. [Set up a kubernetes cluster](https://www.knative.dev/docs/install/)
