@@ -18,6 +18,7 @@ package environment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -157,6 +158,22 @@ func (mr *MagicEnvironment) RequirementLevel() feature.Levels {
 
 func (mr *MagicEnvironment) FeatureState() feature.States {
 	return mr.s
+}
+
+// InNamespace takes the namespace that the tests should be run in instead of creating
+// a namespace. This is useful if the Unit Under Test (UUT) is created ahead of the tests
+// to be run. Longer term this should make it easier to decouple the UUT from the generic
+// conformance tests, for example, create a Broker of type {Kafka, RabbitMQ} and the tests
+// themselves should not care.
+func InNamespace(namespace string) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		mr, ok := env.(*MagicEnvironment)
+		if !ok {
+			return ctx, errors.New("InNamespace: not a magic env")
+		}
+		mr.namespace = namespace
+		return ctx, nil
+	}
 }
 
 func (mr *MagicEnvironment) Namespace() string {
