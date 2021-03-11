@@ -1,0 +1,38 @@
+/*
+Copyright 2021 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package channel
+
+import (
+	"fmt"
+
+	"knative.dev/eventing/test/rekt/features"
+	"knative.dev/eventing/test/rekt/resources/channel"
+	"knative.dev/reconciler-test/pkg/feature"
+)
+
+// GoesReady returns a feature testing if a Channel becomes ready.
+func GoesReady(name string, cfg ...channel.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("Channel goes ready.")
+
+	f.Setup(fmt.Sprintf("install a Channel named %q", name), channel.Install(name, cfg...))
+
+	f.Stable("Channel").
+		Must("be ready", channel.IsReady(name, features.Interval, features.Timeout)).
+		Must("be addressable", channel.IsAddressable(name, features.Interval, features.Timeout))
+
+	return f
+}
