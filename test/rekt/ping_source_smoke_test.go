@@ -19,16 +19,14 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/eventing/test/rekt/resources/svc"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/feature"
 	"strconv"
 	"testing"
 
-	_ "knative.dev/pkg/system/testing"
-
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
+	"knative.dev/eventing/test/rekt/resources/svc"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // TestSmoke_PingSource
