@@ -112,9 +112,9 @@ func TestBrokerConformance(t *testing.T) {
 
 	ctx, env := global.Environment(environment.Managed(t))
 
-	// Install and wait for a Ready Broker.
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
 
-	// Test that a Broker can act as middleware.
-	env.Test(ctx, t, broker.ControlPlaneConformance("default"))
+	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
+	env.TestSet(ctx, t, broker.DeliveryConformance("default"))
+	env.TestSet(ctx, t, broker.DataPlaneObservability("default"))
 }

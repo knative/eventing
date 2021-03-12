@@ -28,7 +28,18 @@ import (
 	"knative.dev/reconciler-test/pkg/state"
 )
 
-func ControlPlaneConformance(brokerName string) *feature.Feature {
+func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
+	return &feature.FeatureSet{
+		Name: "Knative Broker Specification - Control Plane",
+		Features: []feature.Feature{
+			*ControlPlaneBroker(brokerName),
+			*ControlPlaneTrigger(brokerName),
+			*ControlPlaneDelivery(brokerName),
+		},
+	}
+}
+
+func ControlPlaneBroker(brokerName string) *feature.Feature {
 	f := new(feature.Feature)
 
 	f.Setup("Set Broker Name", func(ctx context.Context, t feature.T) {
@@ -44,6 +55,65 @@ func ControlPlaneConformance(brokerName string) *feature.Feature {
 			readyBrokerIsAddressable).
 		Should("The class of a Broker object SHOULD be immutable.",
 			brokerClassIsImmutable)
+	return f
+}
+
+func ControlPlaneTrigger(brokerName string) *feature.Feature {
+	f := new(feature.Feature)
+
+	/*
+		Triggers SHOULD include a Ready condition in their status.
+
+		The Trigger SHOULD indicate Ready=True when events can be delivered to its
+		subscriber.
+
+		While a Trigger is Ready, it SHOULD indicate its subscriber's URI via the
+		`status.subscriberUri` field.
+
+		Triggers MUST be assigned to exactly one Broker. The assigned Broker of a
+		trigger SHOULD be immutable. Triggers SHOULD be assigned a default Broker upon
+		creation if no Broker is specified by the user.
+
+		A Trigger MAY be created before its assigned Broker exists. A Trigger SHOULD
+		progress to Ready when its assigned Broker exists and is Ready.
+
+		The attributes filter specifying a list of key-value pairs MUST be supported by
+		Trigger. Events that pass the attributes filter MUST include context or
+		extension attributes that match all key-value pairs exactly.
+	*/
+
+	//f.Setup("Set Broker Name", func(ctx context.Context, t feature.T) {
+	//	state.SetOrFail(ctx, t, "brokerName", brokerName)
+	//})
+	//
+	//f.Stable("Control Plane Conformance").
+	//	Should("Broker objects SHOULD include a Ready condition in their status",
+	//		brokerHasReadyInConditions).
+	//	Should("The Broker SHOULD indicate Ready=True when its ingress is available to receive events.",
+	//		readyBrokerHasIngressAvailable).
+	//	Should("While a Broker is Ready, it SHOULD be a valid Addressable and its `status.address.url` field SHOULD indicate the address of its ingress.",
+	//		readyBrokerIsAddressable).
+	//	Should("The class of a Broker object SHOULD be immutable.",
+	//		brokerClassIsImmutable)
+	return f
+}
+
+func ControlPlaneDelivery(brokerName string) *feature.Feature {
+	f := new(feature.Feature)
+
+	//f.Setup("Set Broker Name", func(ctx context.Context, t feature.T) {
+	//	state.SetOrFail(ctx, t, "brokerName", brokerName)
+	//})
+	//
+	//f.Stable("Control Plane Conformance").
+	//	Should("Broker objects SHOULD include a Ready condition in their status",
+	//		brokerHasReadyInConditions).
+	//	Should("The Broker SHOULD indicate Ready=True when its ingress is available to receive events.",
+	//		readyBrokerHasIngressAvailable).
+	//	Should("While a Broker is Ready, it SHOULD be a valid Addressable and its `status.address.url` field SHOULD indicate the address of its ingress.",
+	//		readyBrokerIsAddressable).
+	//	Should("The class of a Broker object SHOULD be immutable.",
+	//		brokerClassIsImmutable)
 	return f
 }
 
