@@ -81,7 +81,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithRetry(), b.WithBrokerClass(class)))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
@@ -104,4 +104,17 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
+}
+
+// TestBrokerConformance
+func TestBrokerConformance(t *testing.T) {
+	class := "MTChannelBroker"
+
+	ctx, env := global.Environment(environment.Managed(t))
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.ControlPlaneConformance("default"))
 }
