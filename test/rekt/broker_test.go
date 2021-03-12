@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/reconciler-test/pkg/environment"
 	"testing"
 
 	"knative.dev/pkg/system"
@@ -27,6 +28,7 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 
 	"knative.dev/eventing/test/rekt/features/broker"
+	b "knative.dev/eventing/test/rekt/resources/broker"
 )
 
 // TestBrokerAsMiddleware
@@ -41,7 +43,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.BrokerGoesReady("default", "MTChannelBroker"))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass("MTChannelBroker")))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSink("default"))
@@ -64,4 +66,42 @@ func TestBrokerIngressConformance(t *testing.T) {
 	}
 
 	env.Finish()
+}
+
+// TestBrokerDLQ
+func TestBrokerWithDLQ(t *testing.T) {
+	class := "MTChannelBroker"
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithRetry(), b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
+}
+
+// TestBrokerWithFlakyDLQ
+func TestBrokerWithFlakyDLQ(t *testing.T) {
+	class := "MTChannelBroker"
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
 }

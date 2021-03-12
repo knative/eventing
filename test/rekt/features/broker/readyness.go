@@ -54,17 +54,10 @@ func TriggerGoesReady(name, brokerName string) *feature.Feature {
 	return f
 }
 
-// BrokerGoesReady returns a feature that will create a Broker of the given
+// GoesReady returns a feature that will create a Broker of the given
 // name and class, and confirm it becomes ready with an address.
-func BrokerGoesReady(name, class string) *feature.Feature {
-	cfg := []brokercfg.CfgFn(nil)
-
+func GoesReady(name string, cfg ...brokercfg.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
-
-	// Set the class of the broker.
-	if class != "" {
-		cfg = append(cfg, brokercfg.WithBrokerClass(class))
-	}
 
 	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name, cfg...))
 
