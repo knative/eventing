@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package svc
+package deployment
 
 import (
 	"context"
@@ -25,13 +25,14 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-// Install will create a Service resource mapping :80 to :8080 on the provided
-// selector for pods.
-func Install(name, selectorKey, selectorValue string) feature.StepFn {
+// Install will create a Deployment with defaults that can be overwritten by
+// the With* methods.
+func Install(name string) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":          name,
-		"selectorKey":   selectorKey,
-		"selectorValue": selectorValue,
+		"name":      name,
+		"selectors": map[string]string{"app": name},         // default
+		"image":     "gcr.io/knative-samples/helloworld-go", // default
+		"port":      8080,                                   // default
 	}
 
 	return func(ctx context.Context, t feature.T) {
@@ -41,25 +42,21 @@ func Install(name, selectorKey, selectorValue string) feature.StepFn {
 	}
 }
 
+// TODO: add With* methods as we need them.
+
 // AsRef returns a KRef for a Service without namespace.
 func AsRef(name string) *duckv1.KReference {
 	return &duckv1.KReference{
-		Kind:       "Service",
+		Kind:       "Deployment",
+		APIVersion: "apps/v1",
 		Name:       name,
-		APIVersion: "v1",
 	}
 }
 
 func AsTrackerReference(name string) *tracker.Reference {
 	return &tracker.Reference{
-		Kind:       "Service",
+		Kind:       "Deployment",
+		APIVersion: "apps/v1",
 		Name:       name,
-		APIVersion: "v1",
-	}
-}
-
-func AsDestinationRef(name string) *duckv1.Destination {
-	return &duckv1.Destination{
-		Ref: AsRef(name),
 	}
 }
