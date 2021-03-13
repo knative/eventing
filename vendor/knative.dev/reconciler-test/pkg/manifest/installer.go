@@ -30,16 +30,11 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 )
 
-func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifest, error) {
+func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (Manifest, error) {
 	env := environment.FromContext(ctx)
 	cfg := env.TemplateConfig(base)
 
-	pwd, _ := os.Getwd()
-	log.Println("PWD: ", pwd)
-	_, filename, _, _ := runtime.Caller(1)
-	log.Println("FILENAME: ", filename)
-
-	yamls, err := ParseTemplates(path.Dir(filename), env.Images(), cfg)
+	yamls, err := ParseTemplates(dir, env.Images(), cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +61,16 @@ func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifes
 		log.Println(ref)
 	}
 	return manifest, nil
+
+}
+
+func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifest, error) {
+	pwd, _ := os.Getwd()
+	log.Println("PWD: ", pwd)
+	_, filename, _, _ := runtime.Caller(1)
+	log.Println("FILENAME: ", filename)
+
+	return InstallYaml(ctx, path.Dir(filename), base)
 }
 
 func ImagesLocalYaml() []string {
