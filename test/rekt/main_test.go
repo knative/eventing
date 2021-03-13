@@ -36,10 +36,31 @@ import (
 // the testing config for the test run. The config will specify the cluster
 // config as well as the parsing level and state flags.
 var global environment.GlobalEnvironment
+var eventingGlobal EventingGlobal
+
+type EventingGlobal struct {
+	eventingFlags map[string]interface{}
+}
 
 func init() {
 	// environment.InitFlags registers state and level filter flags.
 	environment.InitFlags(flag.CommandLine)
+	class, ok := os.LookupEnv("BROKER_CLASS")
+	if !ok {
+		panic("Brokerclass not specified with ENV BROKER_CLASS")
+	}
+
+	brokerFiles, ok := os.LookupEnv("BROKER_FILES")
+	if !ok {
+		brokerFiles = ""
+	}
+
+	eventingGlobal = EventingGlobal{
+		eventingFlags: map[string]interface{}{
+			"BrokerClass": class,
+			"BrokerFiles": brokerFiles,
+		},
+	}
 }
 
 // TestMain is the first entry point for `go test`.

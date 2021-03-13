@@ -46,6 +46,12 @@ func WithBrokerClass(class string) CfgFn {
 	}
 }
 
+func WithBrokerTemplateFiles(dir string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["__brokerTemplateDir"] = dir
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
 func WithDeadLetterSink(ref *duckv1.KReference, uri string) CfgFn {
 	return func(cfg map[string]interface{}) {
@@ -98,6 +104,13 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 	}
 	for _, fn := range opts {
 		fn(cfg)
+	}
+	if dir, ok := cfg["__brokerTemplateDir"]; ok {
+		return func(ctx context.Context, t feature.T) {
+			if _, err := manifest.InstallYaml(ctx, dir.(string), cfg); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
