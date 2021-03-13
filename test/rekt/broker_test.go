@@ -115,6 +115,5 @@ func TestBrokerConformance(t *testing.T) {
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
 
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
-	env.TestSet(ctx, t, broker.DeliveryConformance("default"))
-	env.TestSet(ctx, t, broker.DataPlaneObservability("default"))
+	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }
