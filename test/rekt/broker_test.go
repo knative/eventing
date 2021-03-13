@@ -19,7 +19,6 @@ limitations under the License.
 package rekt
 
 import (
-	"os"
 	"testing"
 
 	"knative.dev/reconciler-test/pkg/environment"
@@ -110,15 +109,15 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 
 // TestBrokerConformance
 func TestBrokerConformance(t *testing.T) {
-	class := eventingGlobal.eventingFlags["BrokerClass"]
-	brokerFiles := eventingGlobal.eventingFlags["BrokerFiles"]
+	class := eventingGlobal.eventingFlags["BrokerClass"].(string)
+	brokerFiles := eventingGlobal.eventingFlags["BrokerFiles"].(string)
 	ctx, env := global.Environment(environment.Managed(t))
 
 	// Install and wait for a Ready Broker.
 	if brokerFiles != "" {
 		env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class), b.WithBrokerTemplateFiles("/Users/vaikas/projects/go/src/knative.dev/eventing-rabbitmq/testroot/with-operator")))
 	} else {
-		env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class))
+		env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
 	}
 
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
