@@ -19,6 +19,8 @@ package broker
 import (
 	"context"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
@@ -38,10 +40,13 @@ func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 			*ControlPlaneBroker(brokerName),
 			*ControlPlaneTrigger_GivenBroker(brokerName),
 			*ControlPlaneTrigger_WithBrokerLifecycle(),
-			*ControlPlaneTrigger_WithFilters(brokerName),
+			*ControlPlaneTrigger_WithValidFilters(brokerName),
 			*ControlPlaneDelivery(brokerName),
 		},
 	}
+	// TODO: This is not a control plane test, or at best it is a blend with data plane.
+	// Must("Events that pass the attributes filter MUST include context or extension attributes that match all key-value pairs exactly.", todo)
+
 	return fs
 }
 
@@ -124,16 +129,32 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 	return f
 }
 
-func ControlPlaneTrigger_WithFilters(brokerName string) *feature.Feature {
-	f := feature.NewFeatureNamed("Trigger, Given Broker")
+func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
+	f := feature.NewFeatureNamed("Trigger, With Filters")
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
 	subscriberName := feature.MakeRandomK8sName("sub")
 	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
 
+	// CloudEvents attribute names MUST consist of lower-case letters ('a' to 'z') or digits ('0' to '9') from the ASCII character set. Attribute names SHOULD be descriptive and terse and SHOULD NOT exceed 20 characters in length.
+	filters := map[string]string{
+		"source":               "a source",
+		"id":                   "an id",
+		"specversion":          "the spec version",
+		"type":                 "the type",
+		"subject":              "a subject",
+		"time":                 "a time",
+		"datacontenttype":      "a datacontenttype",
+		"dataschema":           "a dataschema",
+		"aaa":                  "bbb",
+		"c1d2e3":               "123",
+		"abcdefghijklmnopqrst": "max length",
+	}
+
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", trigger.Install(triggerName, brokerName,
 		trigger.WithSubscriber(svc.AsRef(subscriberName), ""),
+		trigger.WithFilter(filters),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -142,9 +163,17 @@ func ControlPlaneTrigger_WithFilters(brokerName string) *feature.Feature {
 
 	f.Stable("Conformance").
 		Must("The attributes filter specifying a list of key-value pairs MUST be supported by Trigger.",
-			todo).
-		Must("Events that pass the attributes filter MUST include context or extension attributes that match all key-value pairs exactly.",
-			todo)
+			// Compare the passed filters with what is found on the control plane.
+			func(ctx context.Context, t feature.T) {
+				trig := getTrigger(ctx, t)
+				got := trig.Spec.Filter.Attributes
+				want := filters
+				if diff := cmp.Diff(want, got, cmpopts.SortMaps(func(a, b string) bool {
+					return a < b
+				})); diff != "" {
+					t.Error("Filters do not match (-want, +got) =", diff)
+				}
+			})
 
 	return f
 }
