@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/pkg/apis/eventing"
 	"testing"
 
 	"knative.dev/reconciler-test/pkg/environment"
@@ -44,7 +45,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass("MTChannelBroker")))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSink("default"))
@@ -62,7 +63,7 @@ func TestBrokerIngressConformance(t *testing.T) {
 		k8s.WithEventListener,
 	)
 
-	for _, f := range broker.BrokerIngressConformanceFeatures("MTChannelBroker") {
+	for _, f := range broker.BrokerIngressConformanceFeatures(eventing.MTChannelBrokerClassValue) {
 		env.Test(ctx, t, f)
 	}
 
@@ -71,7 +72,7 @@ func TestBrokerIngressConformance(t *testing.T) {
 
 // TestBrokerDLQ
 func TestBrokerWithDLQ(t *testing.T) {
-	class := "MTChannelBroker"
+	class := eventing.MTChannelBrokerClassValue
 
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
@@ -90,7 +91,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 
 // TestBrokerWithFlakyDLQ
 func TestBrokerWithFlakyDLQ(t *testing.T) {
-	class := "MTChannelBroker"
+	class := eventing.MTChannelBrokerClassValue
 
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),

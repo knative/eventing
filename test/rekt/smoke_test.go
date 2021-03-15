@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	"knative.dev/eventing/pkg/apis/eventing"
 	"strconv"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.GoesReady(name, b.WithBrokerClass("MTChannelBroker")))
+		env.Test(ctx, t, broker.GoesReady(name, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 	}
 }
 
@@ -67,7 +68,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	}
 	brokerName := "broker-rekt"
 
-	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass("MTChannelBroker")))
+	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 
 	for _, name := range names {
 		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))
