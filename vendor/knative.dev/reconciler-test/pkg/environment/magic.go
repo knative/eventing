@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -86,6 +87,13 @@ func (mr *MagicEnvironment) Finish() {
 		panic(err)
 	}
 	mr.milestones.Finished()
+}
+
+// WithPollTimings is an environment option to override default poll timings.
+func WithPollTimings(interval, timeout time.Duration) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		return ContextWithPollTimings(ctx, interval, timeout), nil
+	}
 }
 
 // Managed enables auto-lifecycle management of the environment. Including:

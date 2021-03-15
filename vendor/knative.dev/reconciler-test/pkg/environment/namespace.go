@@ -19,18 +19,12 @@ package environment
 import (
 	"context"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-)
-
-const (
-	interval = 1 * time.Second
-	timeout  = 45 * time.Second
 )
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
@@ -53,6 +47,8 @@ func (mr *MagicEnvironment) CreateNamespaceIfNeeded() error {
 		}
 		mr.namespaceCreated = true
 		mr.milestones.NamespaceCreated(mr.namespace)
+
+		interval, timeout := PollTimingsFromContext(mr.c)
 
 		// https://github.com/kubernetes/kubernetes/issues/66689
 		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
