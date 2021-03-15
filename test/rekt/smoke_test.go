@@ -19,7 +19,6 @@ limitations under the License.
 package rekt
 
 import (
-	b "knative.dev/eventing/test/rekt/resources/broker"
 	"strconv"
 	"testing"
 
@@ -28,6 +27,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/channel"
 	"knative.dev/eventing/test/rekt/features/pingsource"
+	b "knative.dev/eventing/test/rekt/resources/broker"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 )
 

@@ -17,9 +17,10 @@ SYSTEM_NAMESPACE=knative-eventing go test -count=1 -v -tags=e2e -run Smoke_PingS
 
 ## Broker tests.
 
-The Broker class can be overridden by using the envvar `BROKER_CLASS`. By default, this will be `MTChannelBasedBroker`. 
+The Broker class can be overridden by using the envvar `BROKER_CLASS`. By
+default, this will be `MTChannelBasedBroker`.
 
-The Broker templates can be overridden by using the env var `BROKER_TEMPLATES`. 
+The Broker templates can be overridden by using the env var `BROKER_TEMPLATES`.
 
 ```bash
 BROKER_CLASS=MyCustomBroker
@@ -36,8 +37,8 @@ The minimum shape of a custom template for namespaced resources:
 apiVersion: rando.api/v1
 kind: MyResource
 metadata:
-  name: {{ .name }}
-  namespace: {{ .namespace }}
+  name: { { .name } }
+  namespace: { { .namespace } }
 spec:
   any:
     thing: that

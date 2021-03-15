@@ -19,11 +19,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	_ "knative.dev/pkg/system/testing"
-	"log"
-	"os"
 )
 
 type envConfig struct {
@@ -60,6 +61,6 @@ func main() {
 		}
 		return fmt.Errorf("rejected %d", count)
 	}); err != nil {
-		log.Fatalf("failed to start reciever: %s", err.Error())
+		log.Fatalf("failed to start receiver: %s", err.Error())
 	}
 }
