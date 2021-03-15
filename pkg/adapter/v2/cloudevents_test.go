@@ -180,14 +180,15 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				if !tc.wantErr && cloudevents.IsUndelivered(err) {
 					t.Fatal(err)
 				} else if tc.wantErr && cloudevents.IsACK(err) {
-				if !cloudevents.IsACK(err) && tc.event.Type() != "unit.retries" {
-					//handle err
-					t.Fatal(err)
+					if !cloudevents.IsACK(err) && tc.event.Type() != "unit.retries" {
+						//handle err
+						t.Fatal(err)
+					}
+					validateSent(t, innerClient, tc.event.Type())
+					validateMetric(t, got.reporter, 1, tc.event.Type())
+				} else {
+					validateNotSent(t, innerClient)
 				}
-				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1, tc.event.Type())
-			} else {
-				validateNotSent(t, innerClient)
 			}
 		})
 	}
@@ -279,7 +280,7 @@ func validateMetric(t *testing.T, reporter source.StatsReporter, want int, event
 		t.Errorf("Reporter is not a mockReporter")
 	} else if mockReporter.eventCount != want {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
-	} else if mockReporter.retryEventCount != want && eventType == "unit.retries"{
+	} else if mockReporter.retryEventCount != want && eventType == "unit.retries" {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.retryEventCount)
 	}
 }
