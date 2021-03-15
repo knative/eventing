@@ -109,17 +109,16 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 
 // TestBrokerConformance
 func TestBrokerConformance(t *testing.T) {
-	class := eventingGlobal.eventingFlags["BrokerClass"].(string)
-	brokerFiles := eventingGlobal.eventingFlags["BrokerFiles"].(string)
 	ctx, env := global.Environment(environment.Managed(t))
 
-	// Install and wait for a Ready Broker.
-	if brokerFiles != "" {
-		env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class), b.WithBrokerTemplateFiles("/Users/vaikas/projects/go/src/knative.dev/eventing-rabbitmq/testroot/with-operator")))
-	} else {
-		env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+	cfg := []b.CfgFn{b.WithBrokerClass(eventingGlobal.BrokerClass)}
+
+	if eventingGlobal.BrokerTemplatesDir != "" {
+		cfg = append(cfg, b.WithBrokerTemplateFiles(eventingGlobal.BrokerTemplatesDir))
 	}
 
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", cfg...))
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }
