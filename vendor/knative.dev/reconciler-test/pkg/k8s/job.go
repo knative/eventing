@@ -33,7 +33,10 @@ import (
 )
 
 // WaitUntilJobDone waits until a job has finished.
-func WaitUntilJobDone(client kubernetes.Interface, namespace, name string, interval, timeout time.Duration) error {
+// Timing is optional but if provided is [interval, timeout].
+func WaitUntilJobDone(ctx context.Context, client kubernetes.Interface, namespace, name string, timing ...time.Duration) error {
+	interval, timeout := pollTimings(ctx, timing)
+
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		job, err := client.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
@@ -54,7 +57,10 @@ func WaitUntilJobDone(client kubernetes.Interface, namespace, name string, inter
 }
 
 // WaitForJobTerminationMessage waits for a job to end and then collects the termination message.
-func WaitForJobTerminationMessage(client kubernetes.Interface, namespace, name string, interval, timeout time.Duration) (string, error) {
+// Timing is optional but if provided is [interval, timeout].
+func WaitForJobTerminationMessage(ctx context.Context, client kubernetes.Interface, namespace, name string, timing ...time.Duration) (string, error) {
+	interval, timeout := pollTimings(ctx, timing)
+
 	// poll until the pod is terminated.
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		pod, err := GetJobPodByJobName(context.Background(), client, namespace, name)
