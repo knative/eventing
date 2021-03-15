@@ -91,6 +91,8 @@ func TestBrokerWithDLQ(t *testing.T) {
 
 // TestBrokerWithFlakyDLQ
 func TestBrokerWithFlakyDLQ(t *testing.T) {
+	t.Skip("Eventshub needs work")
+
 	class := eventing.MTChannelBrokerClassValue
 
 	ctx, env := global.Environment(
@@ -110,6 +112,8 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 
 // TestBrokerConformance
 func TestBrokerConformance(t *testing.T) {
+	t.Skip("Eventshub needs work")
+
 	ctx, env := global.Environment(environment.Managed(t))
 
 	cfg := []b.CfgFn{b.WithBrokerClass(eventingGlobal.BrokerClass)}
