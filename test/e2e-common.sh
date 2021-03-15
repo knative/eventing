@@ -237,15 +237,17 @@ function install_sugar() {
 }
 
 function unleash_duck() {
+  # Extra parameters for ko apply
+  KO_FLAGS="${KO_FLAGS:-}"
   echo "enable debug logging"
   cat test/config/config-logging.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict -f - || return $?
+    ko apply --strict ${KO_FLAGS} -f - || return $?
 
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict -f - || return $?
+    ko apply --strict ${KO_FLAGS} -f - || return $?
 }
 
 # Teardown the Knative environment after tests finish.
