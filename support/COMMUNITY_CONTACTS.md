@@ -8,8 +8,11 @@ community contact's duty (subject to change) is as followed:
 
 - Check the knative-users@ mailing list and #eventing-questions Slack channel
   for new unanswered questions.
-- Check
+- Check Eventing
   [unassigned issues / untriaged issues](https://github.com/knative/eventing/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+no%3Amilestone)
+  for unanswered questions.
+- Check Docs
+  [unassigned issues / untriaged issues](https://github.com/knative/docs/issues?q=is%3Aopen+is%3Aissue+label%3Akind%2Feventing+label%3Atriage%2Fneeds-eng-input)
   for unanswered questions.
 - You should already be added to @eventing-help usergroup by the previous
   contact person, and will be tagged into user questions in other channels.
