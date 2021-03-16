@@ -24,9 +24,11 @@ import (
 
 	_ "knative.dev/pkg/system/testing"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/channel"
 	"knative.dev/eventing/test/rekt/features/pingsource"
+	b "knative.dev/eventing/test/rekt/resources/broker"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 )
 
@@ -46,7 +48,7 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.BrokerGoesReady(name, "MTChannelBroker"))
+		env.Test(ctx, t, broker.GoesReady(name, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 	}
 }
 
@@ -66,7 +68,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	}
 	brokerName := "broker-rekt"
 
-	env.Prerequisite(ctx, t, broker.BrokerGoesReady(brokerName, "MTChannelBroker"))
+	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 
 	for _, name := range names {
 		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))

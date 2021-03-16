@@ -66,6 +66,28 @@ func Example_min() {
 	//       apiVersion: subversion
 }
 
+func Example_zero() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Trigger
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+}
+
 func Example_full() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{

@@ -21,15 +21,13 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/pkg/apis"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/k8s"
-
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -43,6 +41,12 @@ func Gvr() schema.GroupVersionResource {
 func WithBrokerClass(class string) CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["brokerClass"] = class
+	}
+}
+
+func WithBrokerTemplateFiles(dir string) CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["__brokerTemplateDir"] = dir
 	}
 }
 
@@ -98,6 +102,13 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 	}
 	for _, fn := range opts {
 		fn(cfg)
+	}
+	if dir, ok := cfg["__brokerTemplateDir"]; ok {
+		return func(ctx context.Context, t feature.T) {
+			if _, err := manifest.InstallYaml(ctx, dir.(string), cfg); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {

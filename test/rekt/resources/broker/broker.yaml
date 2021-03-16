@@ -18,7 +18,7 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
   {{ if .brokerClass }}
-  labels:
+  annotations:
     eventing.knative.dev/broker.class: {{ .brokerClass }}
   {{ end }}
 spec:

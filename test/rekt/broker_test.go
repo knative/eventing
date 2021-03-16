@@ -23,10 +23,13 @@ import (
 
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
+	b "knative.dev/eventing/test/rekt/resources/broker"
 )
 
 // TestBrokerAsMiddleware
@@ -41,7 +44,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.BrokerGoesReady("default", "MTChannelBroker"))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSink("default"))
@@ -59,9 +62,67 @@ func TestBrokerIngressConformance(t *testing.T) {
 		k8s.WithEventListener,
 	)
 
-	for _, f := range broker.BrokerIngressConformanceFeatures("MTChannelBroker") {
+	for _, f := range broker.BrokerIngressConformanceFeatures(eventing.MTChannelBrokerClassValue) {
 		env.Test(ctx, t, f)
 	}
 
 	env.Finish()
+}
+
+// TestBrokerDLQ
+func TestBrokerWithDLQ(t *testing.T) {
+	class := eventing.MTChannelBrokerClassValue
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
+}
+
+// TestBrokerWithFlakyDLQ
+func TestBrokerWithFlakyDLQ(t *testing.T) {
+	t.Skip("Eventshub needs work")
+
+	class := eventing.MTChannelBrokerClassValue
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
+}
+
+// TestBrokerConformance
+func TestBrokerConformance(t *testing.T) {
+	t.Skip("Eventshub needs work")
+
+	ctx, env := global.Environment(environment.Managed(t))
+
+	cfg := []b.CfgFn{b.WithBrokerClass(eventingGlobal.BrokerClass)}
+
+	if eventingGlobal.BrokerTemplatesDir != "" {
+		cfg = append(cfg, b.WithBrokerTemplateFiles(eventingGlobal.BrokerTemplatesDir))
+	}
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", cfg...))
+	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
+	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }

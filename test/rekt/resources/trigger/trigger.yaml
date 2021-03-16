@@ -18,7 +18,9 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
 spec:
+  {{ if .brokerName }}
   broker: {{ .brokerName }}
+  {{ end }}
   {{ if .filter }}
   filter:
     attributes:

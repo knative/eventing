@@ -93,7 +93,7 @@ func Example_full() {
 	// metadata:
 	//   name: foo
 	//   namespace: bar
-	//   labels:
+	//   annotations:
 	//     eventing.knative.dev/broker.class: a-broker-class
 	// spec:
 	//   delivery:
@@ -130,7 +130,7 @@ func ExampleWithBrokerClass() {
 	// metadata:
 	//   name: foo
 	//   namespace: bar
-	//   labels:
+	//   annotations:
 	//     eventing.knative.dev/broker.class: a-broker-class
 	// spec:
 }

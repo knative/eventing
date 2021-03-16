@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,31 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package svc
+package flaker
 
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/tracker"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-func Gvr() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
+func init() {
+	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
 }
 
-// Install will create a Service resource mapping :80 to :8080 on the provided
-// selector for pods.
-func Install(name, selectorKey, selectorValue string) feature.StepFn {
+// Install
+func Install(name, sink string) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":          name,
-		"selectorKey":   selectorKey,
-		"selectorValue": selectorValue,
+		"name": name,
+		"sink": sink,
 	}
 
 	return func(ctx context.Context, t feature.T) {
@@ -48,30 +43,13 @@ func Install(name, selectorKey, selectorValue string) feature.StepFn {
 	}
 }
 
+// TODO: add With* methods as we need them.
+
 // AsRef returns a KRef for a Service without namespace.
 func AsRef(name string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       "Service",
-		Name:       name,
 		APIVersion: "v1",
-	}
-}
-
-func AsTrackerReference(name string) *tracker.Reference {
-	return &tracker.Reference{
-		Kind:       "Service",
 		Name:       name,
-		APIVersion: "v1",
 	}
-}
-
-func AsDestinationRef(name string) *duckv1.Destination {
-	return &duckv1.Destination{
-		Ref: AsRef(name),
-	}
-}
-
-// Address
-func Address(ctx context.Context, name string) (*apis.URL, error) {
-	return k8s.Address(ctx, Gvr(), name)
 }
