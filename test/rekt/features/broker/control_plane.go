@@ -18,6 +18,7 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -351,7 +352,8 @@ func readyTriggerHasSubscriberURI(ctx context.Context, t feature.T) {
 		}
 		// Success!
 	} else {
-		t.Errorf("trigger was not ready")
+		j, _ := json.Marshal(trigger)
+		t.Errorf("trigger was not ready, \n%s", string(j))
 	}
 }
 
