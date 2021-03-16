@@ -99,29 +99,12 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 
 # Schedule
 
-| Week       | Contact                                               |
-| ---------- | ----------------------------------------------------- |
-| 2021-01-04 | [n3wscott](https://github.com/n3wscott)               |
-| 2021-01-11 | [vaikas](https://github.com/vaikas)                   |
-| 2021-01-18 | [grantr](https://github.com/grantr)                   |
-| 2021-01-25 | [lionelvillard](https://github.com/lionelvillard)     |
-| 2021-02-01 | [zhongduo](https://github.com/zhongduo)               |
-| 2021-02-08 | [antoineco](https://github.com/antoineco)             |
-| 2021-02-15 | [matzew](https://github.com/matzew)                   |
-| 2021-02-22 | [vaikas](https://github.com/vaikas)                   |
-| 2021-03-01 | [pierDipi](https://github.com/pierDipi)               |
-| 2021-03-08 | [aliok](https://github.com/aliok)                     |
-| 2021-03-15 | [lberk](https://github.com/lberk)                     |
-| 2021-03-22 | [devguyio](https://github.com/devguyio)               |
-| 2021-03-29 | [n3wscott](https://github.com/n3wscott)               |
-| 2021-04-05 | [slinkydeveloper](https://github.com/slinkydeveloper) |
-| 2021-04-12 | [grantr](https://github.com/grantr)                   |
-| 2021-04-19 | [lionelvillard](https://github.com/lionelvillard)     |
-| 2021-04-26 | [slinkydeveloper](https://github.com/slinkydeveloper) |
-| 2021-05-03 | [antoineco](https://github.com/antoineco)             |
-| 2021-05-10 | [matzew](https://github.com/matzew)                   |
-| 2021-05-17 | [lberk](https://github.com/lberk)                     |
-| 2021-05-24 | [pierDipi](https://github.com/pierDipi)               |
-| 2021-05-31 | [aliok](https://github.com/aliok)                     |
-| 2021-06-07 | [zhongduo](https://github.com/zhongduo)               |
-| 2021-06-14 | [devguyio](https://github.com/devguyio)               |
+See [a machine-readable schedule here](schedule.rotation). The format is:
+```
+# comment lines are okay
+#@ metadata: value of the metadata
+RFC3339-date  |  username
+```
+
+You can see the current oncall at https://knative.party/ (which reads the
+machine-readable file).
