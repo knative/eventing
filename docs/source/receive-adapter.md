@@ -55,7 +55,7 @@ making your adapter highly-available and scalable.
 
 ## Multiple resources (aka multi-tenancy)
 
-As described in the [source specification](../spec/sources.md), a source is
+As described in the [source specification](https://github.com/knative/specs/blob/main/specs/eventing/sources.md), a source is
 configured by creating an instance of the resource described by a CRD (e.g. the
 PingSource CRD). The receive adapter library provide some flexibility regarding
 how many custom resources are handled by a single receive adapter instance (i.e.
@@ -71,7 +71,7 @@ compare to their multi-resources equivalent (see below).
 The receive adapter library automatically configures the CloudEvent client with
 the target defined in the `K_SINK` environment variable when defined, in
 conformance with the
-[SinkBinding runtime contract](../spec/sources.md#sinkbinding).
+[SinkBinding runtime contract](https://github.com/knative/specs/blob/main/specs/eventing/sources.md#sinkbinding).
 
 ### Multiple resources
 
