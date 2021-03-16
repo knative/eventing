@@ -18,6 +18,7 @@ package flaker
 
 import (
 	"context"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"

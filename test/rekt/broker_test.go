@@ -19,16 +19,15 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/eventing/pkg/apis/eventing"
 	"testing"
-
-	"knative.dev/reconciler-test/pkg/environment"
 
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 )
