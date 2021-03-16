@@ -376,14 +376,15 @@ _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents. Sources
 SHOULD send events to its
 [Destination](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1?tab=doc#Destination).
 
-### CloudEvent `knsource` extension
+### CloudEvent `subscription` extension
 
-Sources SHOULD produce CloudEvents with the `knsource` CloudEvent extension
+Sources SHOULD produce CloudEvents with the `subscription` CloudEvent extension
 identifying the originating [Source Custom Object](#source-custom-objects).
 
-The `knsource` value SHOULD be of the form `<name>.<plural>.<group>`, where:
+The `subscription` value SHOULD be of the form `<name>.<namespace>.<plural>.<group>`, where:
 
 - `name` is the [Source Custom Object](#source-custom-objects) name
+- `namespace` is the [Source Custom Object](#source-custom-objects) namespace
 - `plural` is the [Source CRD](#source-crds)
   [plural](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition)
 - `group` is the [Source CRD](#source-crds)
@@ -391,18 +392,18 @@ The `knsource` value SHOULD be of the form `<name>.<plural>.<group>`, where:
 
 Examples:
 
-- `hello.pingsources.sources.knative.dev`
-- `myqueue.rabbitmqsources.sources.knative.dev`
+- `hello.default.pingsources.sources.knative.dev`
+- `myqueue.rabbitns.rabbitmqsources.sources.knative.dev`
 
 It is allowed to specify an alternative value in
-[`spec.ceOverrides.extensions`](#duckspec), in which case the `knsource` value
+[`spec.ceOverrides.extensions`](#duckspec), in which case the `subscription` value
 can be of any shape.
 
-When the `knsource` CloudEvent extension already exists in the CloudEvent being
+When the `subscription` CloudEvent extension already exists in the CloudEvent being
 forwarded by a Source, its value SHOULD be overridden when the value described
 above is set.
 
-One use case addressed by the `knsource` CloudEvent extension is event filtering
+One use case addressed by the `subscription` CloudEvent extension is event filtering
 based on [Source Custom Object](#source-custom-objects). For instance, triggers
 can be configured to receive events coming from a specific
 [Source Custom Object](#source-custom-objects) by filtering events on this
