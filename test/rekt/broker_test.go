@@ -111,8 +111,6 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 
 // TestBrokerConformance
 func TestBrokerConformance(t *testing.T) {
-	t.Skip("Eventshub needs work")
-
 	ctx, env := global.Environment(environment.Managed(t))
 
 	cfg := []b.CfgFn{b.WithBrokerClass(eventingGlobal.BrokerClass)}

@@ -94,6 +94,6 @@ func Install(name, brokerName string, opts ...CfgFn) feature.StepFn {
 }
 
 // IsReady tests to see if a Trigger becomes ready within the time given.
-func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsReady(gvr(), name, interval, timeout)
+func IsReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsReady(gvr(), name, timing...)
 }
