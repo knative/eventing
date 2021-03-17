@@ -321,6 +321,12 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eventingduckv1.Channelable, pkgreconciler.Event) {
 	logging.FromContext(ctx).Infow("Getting channel", zap.Any("channel", sub.Spec.Channel))
 
+	// HACK if a channel ref is a kafka channel ref, we need to hack it around to use only v1beta1
+	//  TODO REMOVE AFTER 0.22 release
+	if sub.Spec.Channel.Kind == "KafkaChannel" && sub.Spec.Channel.APIVersion == "messaging.knative.dev/v1alpha1" {
+		sub.Spec.Channel.APIVersion = "messaging.knative.dev/v1beta1"
+	}
+
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
 	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
