@@ -154,7 +154,7 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 			triggerHasOneBroker).
 		Should("A Trigger SHOULD progress to Ready when its assigned Broker exists and is Ready.",
 			func(ctx context.Context, t feature.T) {
-				brokerresources.Install(brokerName)(ctx, t) // Default broker.
+				brokerresources.Install(brokerName, brokerresources.WithEnvConfig()...)(ctx, t) // Default broker from Env.
 				brokerresources.IsReady(brokerName)(ctx, t)
 				triggerresources.IsReady(triggerName)(ctx, t)
 			})

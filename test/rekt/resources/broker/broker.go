@@ -18,8 +18,10 @@ package broker
 
 import (
 	"context"
+	"log"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -30,6 +32,29 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+var EnvCfg EnvConfig
+
+type EnvConfig struct {
+	BrokerClass        string `envconfig:"BROKER_CLASS" default:"MTChannelBasedBroker" required:"true"`
+	BrokerTemplatesDir string `envconfig:"BROKER_TEMPLATES"`
+}
+
+func init() {
+	// Process EventingGlobal.
+	if err := envconfig.Process("", &EnvCfg); err != nil {
+		log.Fatal("Failed to process env var", err)
+	}
+}
+
+func WithEnvConfig() []CfgFn {
+	cfg := []CfgFn{WithBrokerClass(EnvCfg.BrokerClass)}
+
+	if EnvCfg.BrokerTemplatesDir != "" {
+		cfg = append(cfg, WithBrokerTemplateFiles(EnvCfg.BrokerTemplatesDir))
+	}
+	return cfg
+}
 
 type CfgFn func(map[string]interface{})
 
