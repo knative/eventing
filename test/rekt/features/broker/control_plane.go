@@ -18,16 +18,20 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/knconf"
+	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/svc"
-	"knative.dev/eventing/test/rekt/resources/trigger"
+	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
@@ -39,6 +43,7 @@ func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 		Features: []feature.Feature{
 			*ControlPlaneBroker(brokerName),
 			*ControlPlaneTrigger_GivenBroker(brokerName),
+			*ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName),
 			*ControlPlaneTrigger_WithBrokerLifecycle(),
 			*ControlPlaneTrigger_WithValidFilters(brokerName),
 			*ControlPlaneDelivery(brokerName),
@@ -81,8 +86,8 @@ func ControlPlaneTrigger_GivenBroker(brokerName string) *feature.Feature {
 	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
 
 	triggerName := feature.MakeRandomK8sName("trigger")
-	f.Setup("Create a Trigger", trigger.Install(triggerName, brokerName,
-		trigger.WithSubscriber(svc.AsRef(subscriberName), ""),
+	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
+		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -94,12 +99,35 @@ func ControlPlaneTrigger_GivenBroker(brokerName string) *feature.Feature {
 			triggerHasReadyInConditions).
 		Should("The Trigger SHOULD indicate Ready=True when events can be delivered to its subscriber.",
 			readyTriggerCanDeliver).
-		Should("While a Trigger is Ready, it SHOULD indicate its subscriber's URI via the `status.subscriberUri` field.",
-			readyTriggerHasSubscriberURI).
 		Must("Triggers MUST be assigned to exactly one Broker.",
 			triggerHasOneBroker).
 		Must("The assigned Broker of a Trigger SHOULD be immutable.",
 			triggerSpecBrokerIsImmutable)
+
+	return f
+}
+
+func ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName string) *feature.Feature {
+	f := feature.NewFeatureNamed("Trigger, Given Broker")
+	f.Setup("Set Broker Name", setBrokerName(brokerName))
+
+	subscriberName := feature.MakeRandomK8sName("sub")
+	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+
+	triggerName := feature.MakeRandomK8sName("trigger")
+	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
+		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+	))
+
+	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
+		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
+	})
+
+	f.Requirement("The Trigger is Ready", triggerresources.IsReady(triggerName))
+
+	f.Stable("Conformance").
+		Should("While a Trigger is Ready, it SHOULD indicate its subscriber's URI via the `status.subscriberUri` field.",
+			readyTriggerHasSubscriberURI)
 
 	return f
 }
@@ -110,9 +138,11 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 	subscriberName := feature.MakeRandomK8sName("sub")
 	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
 
+	brokerName := feature.MakeRandomK8sName("broker")
+
 	triggerName := feature.MakeRandomK8sName("trigger")
-	f.Setup("Create a Trigger", trigger.Install(triggerName, "",
-		trigger.WithSubscriber(svc.AsRef(subscriberName), ""),
+	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
+		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -120,12 +150,14 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 	})
 
 	f.Stable("Conformance").
-		Should("Triggers SHOULD be assigned a default Broker upon creation if no Broker is specified by the user.",
-			todo).
 		May("A Trigger MAY be created before its assigned Broker exists.",
-			todo).
+			triggerHasOneBroker).
 		Should("A Trigger SHOULD progress to Ready when its assigned Broker exists and is Ready.",
-			todo)
+			func(ctx context.Context, t feature.T) {
+				brokerresources.Install(brokerName)(ctx, t) // Default broker.
+				brokerresources.IsReady(brokerName)(ctx, t)
+				triggerresources.IsReady(triggerName)(ctx, t)
+			})
 	return f
 }
 
@@ -152,9 +184,9 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 	}
 
 	triggerName := feature.MakeRandomK8sName("trigger")
-	f.Setup("Create a Trigger", trigger.Install(triggerName, brokerName,
-		trigger.WithSubscriber(svc.AsRef(subscriberName), ""),
-		trigger.WithFilter(filters),
+	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
+		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+		triggerresources.WithFilter(filters),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -165,8 +197,11 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 		Must("The attributes filter specifying a list of key-value pairs MUST be supported by Trigger.",
 			// Compare the passed filters with what is found on the control plane.
 			func(ctx context.Context, t feature.T) {
-				trig := getTrigger(ctx, t)
-				got := trig.Spec.Filter.Attributes
+				trigger := getTrigger(ctx, t)
+				got := make(map[string]string)
+				for k, v := range trigger.Spec.Filter.Attributes {
+					got[k] = v
+				}
 				want := filters
 				if diff := cmp.Diff(want, got, cmpopts.SortMaps(func(a, b string) bool {
 					return a < b
@@ -229,15 +264,28 @@ func getTrigger(ctx context.Context, t feature.T) *eventingv1.Trigger {
 	c := Client(ctx)
 	name := state.GetStringOrFail(ctx, t, TriggerNameKey)
 
-	trig, err := c.Triggers.Get(ctx, name, metav1.GetOptions{})
+	trigger, err := c.Triggers.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("failed to get Trigger, %v", err)
 	}
-	return trig
+	return trigger
 }
 
 func brokerHasReadyInConditions(ctx context.Context, t feature.T) {
-	broker := getBroker(ctx, t)
+	var broker *eventingv1.Broker
+
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		broker = getBroker(ctx, t)
+		if broker.Status.ObservedGeneration != 0 {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Errorf("unable to get a reconciled Broker (status.observedGeneration != 0)")
+	}
+
 	knconf.HasReadyInConditions(ctx, t, broker.Status.Status)
 }
 
@@ -273,41 +321,59 @@ func brokerClassIsImmutable(ctx context.Context, t feature.T) {
 }
 
 func triggerHasReadyInConditions(ctx context.Context, t feature.T) {
-	trig := getTrigger(ctx, t)
-	knconf.HasReadyInConditions(ctx, t, trig.Status.Status)
+	var trigger *eventingv1.Trigger
+
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		trigger = getTrigger(ctx, t)
+		if trigger.Status.ObservedGeneration != 0 {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Errorf("unable to get a reconciled Trigger (status.observedGeneration != 0)")
+	}
+
+	knconf.HasReadyInConditions(ctx, t, trigger.Status.Status)
 }
 
 func readyTriggerCanDeliver(ctx context.Context, t feature.T) {
-	trig := getTrigger(ctx, t)
-	_ = trig
+	trigger := getTrigger(ctx, t)
+	_ = trigger
 	// TODO: I am not sure how to test this from the outside.
 }
 
 func readyTriggerHasSubscriberURI(ctx context.Context, t feature.T) {
-	trig := getTrigger(ctx, t)
-	if trig.Status.IsReady() {
-		if trig.Status.SubscriberURI == nil {
+	trigger := getTrigger(ctx, t)
+	if trigger.Status.IsReady() {
+		if trigger.Status.SubscriberURI == nil {
 			t.Errorf("trigger did not have subscriber uri in status")
 		}
 		// Success!
 	} else {
-		t.Errorf("trigger was not ready")
+		j, _ := json.Marshal(trigger)
+		t.Errorf("trigger was not ready, \n%s", string(j))
 	}
 }
 
 func triggerHasOneBroker(ctx context.Context, t feature.T) {
-	trig := getTrigger(ctx, t)
-	_ = trig
-	// TODO: I am not sure how to test this from the outside.
+	trigger := getTrigger(ctx, t)
+	if trigger.Spec.Broker == "" {
+		t.Error("broker is empty")
+	}
+	if strings.Contains(trigger.Spec.Broker, ",") {
+		t.Errorf("more than one broker specified: %q", trigger.Spec.Broker)
+	}
 }
 
 func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
-	trig := getTrigger(ctx, t)
+	trigger := getTrigger(ctx, t)
 
 	// Update spec.broker
-	trig.Spec.Broker = "Rekt.BrokerImmutable"
+	trigger.Spec.Broker = "Rekt.BrokerImmutable"
 
-	if _, err := Client(ctx).Triggers.Update(ctx, trig, metav1.UpdateOptions{}); err != nil {
+	if _, err := Client(ctx).Triggers.Update(ctx, trigger, metav1.UpdateOptions{}); err != nil {
 		// Success!
 		t.Log("Trigger spec.broker is immutable")
 	} else {

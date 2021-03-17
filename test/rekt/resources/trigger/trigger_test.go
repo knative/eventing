@@ -126,8 +126,8 @@ func Example_full() {
 	//   broker: baz
 	//   filter:
 	//     attributes:
-	//       type: z
-	//       x: y
+	//       type: "z"
+	//       x: "y"
 	//   subscriber:
 	//     ref:
 	//       kind: subkind
@@ -203,6 +203,6 @@ func ExampleWithFilter() {
 	//   broker: baz
 	//   filter:
 	//     attributes:
-	//       type: z
-	//       x: y
+	//       type: "z"
+	//       x: "y"
 }

@@ -25,7 +25,7 @@ spec:
   filter:
     attributes:
     {{ range $key, $value := .filter.attributes }}
-      {{ $key }}: {{ $value }}
+      {{ $key }}: "{{ $value }}"
     {{ end }}
   {{end}}
   {{if .subscriber }}

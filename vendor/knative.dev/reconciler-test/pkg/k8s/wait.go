@@ -117,6 +117,11 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 		obj.ResourceVersion = gvr.Version
 		obj.APIVersion = gvr.GroupVersion().String()
 
+		// First see if the resource has conditions.
+		if len(obj.Status.Conditions) == 0 {
+			return false, nil // keep polling
+		}
+
 		// Ready type.
 		ready := obj.Status.GetCondition(apis.ConditionReady)
 		if ready != nil {

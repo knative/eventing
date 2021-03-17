@@ -49,7 +49,7 @@ func ContextWithPollTimings(ctx context.Context, interval, timeout time.Duration
 // - defaults.
 func PollTimingsFromContext(ctx context.Context) (time.Duration, time.Duration) {
 	if t, ok := ctx.Value(timingsKey{}).(timingsType); ok {
-		return t.interval, t.interval
+		return t.interval, t.timeout
 	}
 	return DefaultPollInterval, DefaultPollTimeout
 }

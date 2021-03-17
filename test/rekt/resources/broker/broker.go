@@ -118,8 +118,8 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 }
 
 // IsReady tests to see if a Broker becomes ready within the time given.
-func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, interval, timeout)
+func IsReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsReady(Gvr(), name, timing...)
 }
 
 // IsAddressable tests to see if a Broker becomes addressable within the  time
