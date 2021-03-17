@@ -126,8 +126,6 @@ spec:
           status:
             description: Status represents the current state of the Trigger. This data may be out of date.
             type: object
-            required:
-              - subscriberUri
             properties:
               annotations:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
@@ -254,8 +252,6 @@ spec:
           status:
             description: Status represents the current state of the Trigger. This data may be out of date.
             type: object
-            required:
-              - subscriberUri
             properties:
               annotations:
                 description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
