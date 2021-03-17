@@ -25,7 +25,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
-// This is a demo of what the CLI looks like, copy and implement your own.
+// schema is a tool to dump the schema for Eventing resources.
 func main() {
 	registry.Register(&eventingv1.Broker{})
 	registry.Register(&eventingv1.Trigger{})

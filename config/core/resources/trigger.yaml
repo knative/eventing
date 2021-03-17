@@ -151,6 +151,7 @@ spec:
     storage: true
     schema:
       openAPIV3Schema:
+        description: 'Trigger represents a request to have events delivered to a subscriber from a Broker''s event pool.'
         type: object
         properties:
           spec:
