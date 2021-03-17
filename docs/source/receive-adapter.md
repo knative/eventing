@@ -55,11 +55,12 @@ making your adapter highly-available and scalable.
 
 ## Multiple resources (aka multi-tenancy)
 
-As described in the [source specification](https://github.com/knative/specs/blob/main/specs/eventing/sources.md), a source is
-configured by creating an instance of the resource described by a CRD (e.g. the
-PingSource CRD). The receive adapter library provide some flexibility regarding
-how many custom resources are handled by a single receive adapter instance (i.e.
-a pod).
+As described in the
+[source specification](https://github.com/knative/specs/blob/main/specs/eventing/sources.md),
+a source is configured by creating an instance of the resource described by a
+CRD (e.g. the PingSource CRD). The receive adapter library provide some
+flexibility regarding how many custom resources are handled by a single receive
+adapter instance (i.e. a pod).
 
 ### Single resource
 
