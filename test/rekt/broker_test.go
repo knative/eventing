@@ -113,14 +113,8 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 func TestBrokerConformance(t *testing.T) {
 	ctx, env := global.Environment(environment.Managed(t))
 
-	cfg := []b.CfgFn{b.WithBrokerClass(eventingGlobal.BrokerClass)}
-
-	if eventingGlobal.BrokerTemplatesDir != "" {
-		cfg = append(cfg, b.WithBrokerTemplateFiles(eventingGlobal.BrokerTemplatesDir))
-	}
-
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", cfg...))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }

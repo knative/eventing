@@ -20,12 +20,8 @@ package rekt
 
 import (
 	"flag"
-	"log"
 	"os"
 	"testing"
-
-	"github.com/kelseyhightower/envconfig"
-	"go.uber.org/zap"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -40,21 +36,10 @@ import (
 // the testing config for the test run. The config will specify the cluster
 // config as well as the parsing level and state flags.
 var global environment.GlobalEnvironment
-var eventingGlobal EventingGlobal
-
-type EventingGlobal struct {
-	BrokerClass        string `envconfig:"BROKER_CLASS" default:"MTChannelBasedBroker" required:"true"`
-	BrokerTemplatesDir string `envconfig:"BROKER_TEMPLATES"`
-}
 
 func init() {
 	// environment.InitFlags registers state and level filter flags.
 	environment.InitFlags(flag.CommandLine)
-
-	// Process EventingGlobal.
-	if err := envconfig.Process("", &eventingGlobal); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
-	}
 }
 
 // TestMain is the first entry point for `go test`.
