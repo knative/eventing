@@ -248,10 +248,19 @@ func generateSliceSchema(t reflect.Type, history ...reflect.Type) JSONSchemaProp
 	s := JSONSchemaProps{
 		Type: "array",
 	}
-	history = append(history, t.Elem())
-	is := generateSchema(t.Elem(), history...)
-	s.Items = &JSONSchemaPropsOrArray{
-		Schema: &is,
+	// Special case bad actors.
+	switch t.Elem().Name() {
+	case "JSONSchemaProps":
+		s.Items = &JSONSchemaPropsOrArray{
+			Schema: &JSONSchemaProps{
+				Type: "object",
+			},
+		}
+	default:
+		is := generateSchema(t.Elem(), history...)
+		s.Items = &JSONSchemaPropsOrArray{
+			Schema: &is,
+		}
 	}
 	return s
 }

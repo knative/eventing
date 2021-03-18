@@ -47,8 +47,8 @@ func init() {
 	}
 }
 
-func WithEnvConfig() []CfgFn {
-	cfg := []CfgFn{WithBrokerClass(EnvCfg.BrokerClass)}
+func WithEnvConfig() []manifest.CfgFn {
+	cfg := []manifest.CfgFn{WithBrokerClass(EnvCfg.BrokerClass)}
 
 	if EnvCfg.BrokerTemplatesDir != "" {
 		cfg = append(cfg, WithBrokerTemplateFiles(EnvCfg.BrokerTemplatesDir))
@@ -56,27 +56,25 @@ func WithEnvConfig() []CfgFn {
 	return cfg
 }
 
-type CfgFn func(map[string]interface{})
-
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
 }
 
 // WithBrokerClass adds the broker class config to a Broker spec.
-func WithBrokerClass(class string) CfgFn {
+func WithBrokerClass(class string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["brokerClass"] = class
 	}
 }
 
-func WithBrokerTemplateFiles(dir string) CfgFn {
+func WithBrokerTemplateFiles(dir string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["__brokerTemplateDir"] = dir
 	}
 }
 
 // WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
-func WithDeadLetterSink(ref *duckv1.KReference, uri string) CfgFn {
+func WithDeadLetterSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["delivery"]; !set {
 			cfg["delivery"] = map[string]interface{}{}
@@ -103,7 +101,7 @@ func WithDeadLetterSink(ref *duckv1.KReference, uri string) CfgFn {
 }
 
 // WithRetry adds the retry related config to a Broker spec.
-func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoffDelay *string) CfgFn {
+func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoffDelay *string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["delivery"]; !set {
 			cfg["delivery"] = map[string]interface{}{}
@@ -121,13 +119,14 @@ func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoff
 }
 
 // Install will create a Broker resource, augmented with the config fn options.
-func Install(name string, opts ...CfgFn) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}
 	for _, fn := range opts {
 		fn(cfg)
 	}
+
 	if dir, ok := cfg["__brokerTemplateDir"]; ok {
 		return func(ctx context.Context, t feature.T) {
 			if _, err := manifest.InstallYaml(ctx, dir.(string), cfg); err != nil {
@@ -149,12 +148,13 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 
 // IsAddressable tests to see if a Broker becomes addressable within the  time
 // given.
-func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsAddressable(Gvr(), name, interval, timeout)
+func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
+	return k8s.IsAddressable(Gvr(), name, timings...)
 }
 
 // Address returns a broker's address.
-func Address(ctx context.Context, name string, interval, timeout time.Duration) (*apis.URL, error) {
+func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.URL, error) {
+	interval, timeout := k8s.PollTimings(ctx, timings)
 	var addr *apis.URL
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		var err error

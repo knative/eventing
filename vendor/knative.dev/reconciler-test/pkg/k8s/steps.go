@@ -42,7 +42,7 @@ import (
 // within the time given. Timing is optional but if provided is [interval, timeout].
 func IsReady(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		interval, timeout := pollTimings(ctx, timing)
+		interval, timeout := PollTimings(ctx, timing)
 		env := environment.FromContext(ctx)
 		if err := WaitForResourceReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
 			t.Error(gvr, "did not become ready,", err)
@@ -54,7 +54,7 @@ func IsReady(gvr schema.GroupVersionResource, name string, timing ...time.Durati
 // given. Timing is optional but if provided is [interval, timeout].
 func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		interval, timeout := pollTimings(ctx, timing)
+		interval, timeout := PollTimings(ctx, timing)
 		lastMsg := ""
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			addr, err := Address(ctx, gvr, name)

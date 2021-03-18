@@ -30,6 +30,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 // TestSmoke_Broker
@@ -89,7 +90,7 @@ func TestSmoke_PingSource(t *testing.T) {
 		"name63-0123456789012345678901234567890123456789012345678901234",
 	}
 
-	configs := [][]ps.CfgFn{
+	configs := [][]manifest.CfgFn{
 		{},
 		{ps.WithData("application/json", `{"hello":"world"}`)},
 		{ps.WithData("text/plain", "hello, world!")},

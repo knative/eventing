@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/flaker"
 	"knative.dev/eventing/test/rekt/resources/svc"
@@ -30,6 +29,7 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -48,15 +48,15 @@ func SourceToSink(brokerName string) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []trigger.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via, features.Interval, features.Timeout))
+	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
+		u, err := broker.Address(ctx, brokerName)
 		if err != nil || u == nil {
 			t.Error("failed to get the address of the broker", brokerName, err)
 		}
@@ -92,15 +92,15 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(svc.AsRef(dlq), "")))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []trigger.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via, features.Interval, features.Timeout))
+	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
+		u, err := broker.Address(ctx, brokerName)
 		if err != nil || u == nil {
 			t.Error("failed to get the address of the broker", brokerName, err)
 		}
@@ -148,15 +148,15 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(svc.AsRef(dlq), "")))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []trigger.CfgFn{trigger.WithSubscriber(flaker.AsRef(flake), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(flaker.AsRef(flake), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
 
-	f.Setup("trigger goes ready", trigger.IsReady(via, features.Interval, features.Timeout))
+	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
+		u, err := broker.Address(ctx, brokerName)
 		if err != nil || u == nil {
 			t.Error("failed to get the address of the broker", brokerName, err)
 		}

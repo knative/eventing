@@ -18,6 +18,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -60,11 +61,12 @@ func addDumpCmd(root *cobra.Command) {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s := schema.GenerateForType(registry.TypeFor(kind))
-			b, err := yaml.Marshal(s)
+			enc := yaml.NewEncoder(os.Stdout)
+			enc.SetIndent(2)
+			err := enc.Encode(s)
 			if err != nil {
 				return err
 			}
-			fmt.Print(string(b))
 			return nil
 		},
 	}

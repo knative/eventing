@@ -17,7 +17,6 @@ limitations under the License.
 package sinkbinding
 
 import (
-	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/sinkbinding"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -27,7 +26,7 @@ func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("SinkBinding goes ready.")
 
 	f.Stable("sinkbinding").
-		Must("be ready", sinkbinding.IsReady(name, features.Interval, features.Timeout))
+		Must("be ready", sinkbinding.IsReady(name))
 
 	return f
 }
