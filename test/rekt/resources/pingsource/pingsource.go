@@ -28,14 +28,12 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-type CfgFn func(map[string]interface{})
-
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1beta2", Resource: "pingsources"}
 }
 
 // Install will create a Broker resource, augmented with the config fn options.
-func Install(name string, opts ...CfgFn) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}
@@ -50,12 +48,12 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 }
 
 // IsReady tests to see if a PingSource becomes ready within the time given.
-func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, interval, timeout)
+func IsReady(name string, timings ...time.Duration) feature.StepFn {
+	return k8s.IsReady(Gvr(), name, timings...)
 }
 
 // WithSink adds the sink related config to a PingSource spec.
-func WithSink(ref *duckv1.KReference, uri string) CfgFn {
+func WithSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["sink"]; !set {
 			cfg["sink"] = map[string]interface{}{}
@@ -79,7 +77,7 @@ func WithSink(ref *duckv1.KReference, uri string) CfgFn {
 }
 
 // WithData adds the contentType and data config to a PingSource spec.
-func WithData(contentType, data string) CfgFn {
+func WithData(contentType, data string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if contentType != "" {
 			cfg["contentType"] = contentType
@@ -91,7 +89,7 @@ func WithData(contentType, data string) CfgFn {
 }
 
 // WithDataBase64 adds the contentType and dataBase64 config to a PingSource spec.
-func WithDataBase64(contentType, dataBase64 string) CfgFn {
+func WithDataBase64(contentType, dataBase64 string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if contentType != "" {
 			cfg["contentType"] = contentType

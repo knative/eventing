@@ -27,14 +27,12 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-type CfgFn func(map[string]interface{})
-
 func gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
 }
 
 // WithFilter adds the filter related config to a Trigger spec.
-func WithFilter(attributes map[string]string) CfgFn {
+func WithFilter(attributes map[string]string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["filter"]; !set {
 			cfg["filter"] = map[string]interface{}{}
@@ -52,7 +50,7 @@ func WithFilter(attributes map[string]string) CfgFn {
 }
 
 // WithSubscriber adds the subscriber related config to a Trigger spec.
-func WithSubscriber(ref *duckv1.KReference, uri string) CfgFn {
+func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["subscriber"]; !set {
 			cfg["subscriber"] = map[string]interface{}{}
@@ -76,7 +74,7 @@ func WithSubscriber(ref *duckv1.KReference, uri string) CfgFn {
 }
 
 // Install will create a Trigger resource, augmented with the config fn options.
-func Install(name, brokerName string, opts ...CfgFn) feature.StepFn {
+func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}

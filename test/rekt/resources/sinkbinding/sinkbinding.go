@@ -28,14 +28,12 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-type CfgFn func(map[string]interface{})
-
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "sinkbindings"}
 }
 
 // Install will create a SinkBinding resource, augmented with the config fn options.
-func Install(name string, sink *duckv1.Destination, subject *tracker.Reference, opts ...CfgFn) feature.StepFn {
+func Install(name string, sink *duckv1.Destination, subject *tracker.Reference, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}
@@ -85,7 +83,7 @@ func Install(name string, sink *duckv1.Destination, subject *tracker.Reference, 
 }
 
 // WithExtensions adds the ceOVerrides related config to a PingSource spec.
-func WithExtensions(extensions map[string]string) CfgFn {
+func WithExtensions(extensions map[string]string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		if _, set := cfg["ceOverrides"]; !set {
 			cfg["ceOverrides"] = map[string]interface{}{}
@@ -105,6 +103,6 @@ func WithExtensions(extensions map[string]string) CfgFn {
 }
 
 // IsReady tests to see if a PingSource becomes ready within the time given.
-func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, interval, timeout)
+func IsReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsReady(Gvr(), name, timing...)
 }

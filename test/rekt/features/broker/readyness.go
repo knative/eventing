@@ -20,10 +20,9 @@ import (
 	"fmt"
 
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 
-	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
-	brokercfg "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
@@ -31,7 +30,7 @@ import (
 // TriggerGoesReady returns a feature that tests after the creation of a
 // Trigger, it becomes ready. This feature assumes the Broker already exists.
 func TriggerGoesReady(name, brokerName string) *feature.Feature {
-	cfg := []trigger.CfgFn(nil)
+	cfg := []manifest.CfgFn(nil)
 
 	f := new(feature.Feature)
 
@@ -46,24 +45,24 @@ func TriggerGoesReady(name, brokerName string) *feature.Feature {
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))
 
 	// Wait for a ready broker.
-	f.Requirement("broker is ready", broker.IsReady(brokerName, features.Interval, features.Timeout))
+	f.Requirement("broker is ready", broker.IsReady(brokerName))
 
 	f.Stable("trigger").
-		Must("be ready", trigger.IsReady(name, features.Interval, features.Timeout))
+		Must("be ready", trigger.IsReady(name))
 
 	return f
 }
 
 // GoesReady returns a feature that will create a Broker of the given
 // name and class, and confirm it becomes ready with an address.
-func GoesReady(name string, cfg ...brokercfg.CfgFn) *feature.Feature {
+func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
 
 	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name, cfg...))
 
 	f.Stable("broker").
-		Must("be ready", broker.IsReady(name, features.Interval, features.Timeout)).
-		Must("be addressable", broker.IsAddressable(name, features.Interval, features.Timeout))
+		Must("be ready", broker.IsReady(name)).
+		Must("be addressable", broker.IsAddressable(name))
 
 	return f
 }

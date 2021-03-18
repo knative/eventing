@@ -111,7 +111,7 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		panic(err)
 	}
 
-	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("rekt"))
+	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
 
 	env := &MagicEnvironment{
 		c:         mr.c,

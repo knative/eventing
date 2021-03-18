@@ -30,6 +30,9 @@ import (
 	"knative.dev/reconciler-test/pkg/environment"
 )
 
+// CfgFn is the function signature of configuration mutation options.
+type CfgFn func(map[string]interface{})
+
 func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (Manifest, error) {
 	env := environment.FromContext(ctx)
 	cfg := env.TemplateConfig(base)

@@ -31,14 +31,12 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-type CfgFn func(map[string]interface{})
-
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "channels"}
 }
 
 // Install will create a Channel resource, augmented with the config fn options.
-func Install(name string, opts ...CfgFn) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}
@@ -53,18 +51,19 @@ func Install(name string, opts ...CfgFn) feature.StepFn {
 }
 
 // IsReady tests to see if a Channel becomes ready within the time given.
-func IsReady(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, interval, timeout)
+func IsReady(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsReady(Gvr(), name, timing...)
 }
 
 // IsAddressable tests to see if a Channel becomes addressable within the  time
 // given.
-func IsAddressable(name string, interval, timeout time.Duration) feature.StepFn {
-	return k8s.IsAddressable(Gvr(), name, interval, timeout)
+func IsAddressable(name string, timing ...time.Duration) feature.StepFn {
+	return k8s.IsAddressable(Gvr(), name, timing...)
 }
 
 // Address returns a Channel's address.
-func Address(ctx context.Context, name string, interval, timeout time.Duration) (*apis.URL, error) {
+func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.URL, error) {
+	interval, timeout := k8s.PollTimings(ctx, timings)
 	var addr *apis.URL
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		var err error

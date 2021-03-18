@@ -35,14 +35,6 @@ func Example_min() {
 		"name":       "foo",
 		"namespace":  "bar",
 		"brokerName": "baz",
-		"subscriber": map[string]interface{}{
-			"ref": map[string]string{
-				"kind":       "subkind",
-				"namespace":  "subnamespace",
-				"name":       "subname",
-				"apiVersion": "subversion",
-			},
-		},
 	}
 
 	files, err := manifest.ExecuteLocalYAML(images, cfg)
@@ -66,6 +58,11 @@ func Example_full() {
 		"name":        "foo",
 		"namespace":   "bar",
 		"brokerClass": "a-broker-class",
+		"config": map[string]interface{}{
+			"kind":       "cfgkind",
+			"name":       "cfgname",
+			"apiVersion": "cfgapi",
+		},
 		"delivery": map[string]interface{}{
 			"retry":         "42",
 			"backoffPolicy": "exponential",
@@ -96,6 +93,11 @@ func Example_full() {
 	//   annotations:
 	//     eventing.knative.dev/broker.class: a-broker-class
 	// spec:
+	//   config:
+	//     kind: cfgkind
+	//     namespace: bar
+	//     name: cfgname
+	//     apiVersion: cfgapi
 	//   delivery:
 	//     deadLetterSink:
 	//       ref:
