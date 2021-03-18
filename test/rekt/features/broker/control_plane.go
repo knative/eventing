@@ -181,7 +181,6 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 		"dataschema":           "a dataschema",
 		"aaa":                  "bbb",
 		"c1d2e3":               "123",
-		"123":                  "123",
 		"abcdefghijklmnopqrst": "max length",
 	}
 
@@ -224,16 +223,16 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 
 	// CloudEvents attribute names MUST consist of lower-case letters ('a' to 'z') or digits ('0' to '9') from the ASCII character set. Attribute names SHOULD be descriptive and terse and SHOULD NOT exceed 20 characters in length.
 	filters := map[string]string{
-		"SOURCE":                     "not lower case letters, all",
-		"Source":                     "not lower case letters, first",
-		"souRce":                     "not lower case letters, not first",
-		"s pace s":                   "no spaces",
-		"s_pace_s":                   "no underscores",
-		"s-pace-s":                   "no dashes",
-		"😊":                          "unicode not supported",
-		"abcdefghijklmnopqrstuvwxyz": "too long",
-		"!@#$%^&*()-_=_`~+\\":        "other non-(a-z,0-9) type chars, top row",
-		"{}[];':\"<>,./?":            "other non-(a-z,0-9) type chars, brackets",
+		"SOURCE":              "not lower case letters, all",
+		"Source":              "not lower case letters, first",
+		"souRce":              "not lower case letters, not first",
+		"s pace s":            "no spaces",
+		"s_pace_s":            "no underscores",
+		"s-pace-s":            "no dashes",
+		"123":                 "just numbers",
+		"😊":                   "unicode not supported",
+		"!@#$%^&*()-_=_`~+\\": "other non-(a-z,0-9) type chars, top row",
+		"{}[];':\"<>,./?":     "other non-(a-z,0-9) type chars, brackets",
 	}
 
 	triggerName := feature.MakeRandomK8sName("trigger")
