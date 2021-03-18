@@ -100,6 +100,7 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 # Schedule
 
 See [a machine-readable schedule here](support.rotation). The format is:
+
 ```
 # comment lines are okay
 #@ metadata: value of the metadata
