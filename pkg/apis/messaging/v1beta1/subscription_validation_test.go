@@ -286,7 +286,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "valid, kafkachannel hack",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel:    corev1.ObjectReference{
+				Channel: corev1.ObjectReference{
 					Name:       channelName,
 					Kind:       "KafkaChannel",
 					APIVersion: "messaging.knative.dev/v1beta1",
@@ -296,7 +296,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel:    corev1.ObjectReference{
+				Channel: corev1.ObjectReference{
 					Name:       channelName,
 					Kind:       "KafkaChannel",
 					APIVersion: "messaging.knative.dev/v1alpha1",
