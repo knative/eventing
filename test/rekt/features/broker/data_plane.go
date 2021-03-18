@@ -23,7 +23,6 @@ import (
 	"github.com/google/uuid"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
-	"knative.dev/eventing/test/rekt/features"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -160,7 +159,7 @@ func todo(ctx context.Context, t feature.T) {
 func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
 
-	u, err := broker.Address(ctx, brokerName, features.Interval, features.Timeout)
+	u, err := broker.Address(ctx, brokerName)
 	if err != nil || u == nil {
 		t.Error("failed to get the address of the broker", brokerName, err)
 	}
