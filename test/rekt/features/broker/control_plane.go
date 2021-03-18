@@ -46,6 +46,7 @@ func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 			*ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName),
 			*ControlPlaneTrigger_WithBrokerLifecycle(),
 			*ControlPlaneTrigger_WithValidFilters(brokerName),
+			*ControlPlaneTrigger_WithInvalidFilters(brokerName),
 			*ControlPlaneDelivery(brokerName),
 		},
 	}
@@ -213,6 +214,68 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 	return f
 }
 
+func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature {
+	f := feature.NewFeatureNamed("Trigger, With Filters")
+	f.Setup("Set Broker Name", setBrokerName(brokerName))
+
+	subscriberName := feature.MakeRandomK8sName("sub")
+	f.Setup("Install Subscriber", svc.Install(subscriberName, "bad", "svc"))
+
+	// CloudEvents attribute names MUST consist of lower-case letters ('a' to 'z') or digits ('0' to '9') from the ASCII character set. Attribute names SHOULD be descriptive and terse and SHOULD NOT exceed 20 characters in length.
+	filters := map[string]string{
+		"SOURCE":              "not lower case letters, all",
+		"Source":              "not lower case letters, first",
+		"souRce":              "not lower case letters, not first",
+		"s pace s":            "no spaces",
+		"s_pace_s":            "no underscores",
+		"s-pace-s":            "no dashes",
+		"123":                 "just numbers",
+		"😊":                   "unicode not supported",
+		"!@#$%^&*()-_=_`~+\\": "other non-(a-z,0-9) type chars, top row",
+		"{}[];':\"<>,./?":     "other non-(a-z,0-9) type chars, brackets",
+	}
+
+	triggerName := feature.MakeRandomK8sName("trigger")
+	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
+		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+	))
+
+	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
+		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
+	})
+
+	asserter := f.Stable("Conformance - Negatives - The attributes filter specifying a list of key-value pairs MUST be supported by Trigger.")
+
+	for key, value := range filters {
+		k := key
+		v := value
+		asserter.Must("Reject invalid filter - "+k+" - "+v,
+			// Compare the passed filters with what is found on the control plane.
+			func(ctx context.Context, t feature.T) {
+				trigger := getTrigger(ctx, t)
+
+				if trigger.Spec.Filter == nil {
+					trigger.Spec.Filter = &eventingv1.TriggerFilter{
+						Attributes: map[string]string{},
+					}
+				} else if trigger.Spec.Filter.Attributes == nil {
+					trigger.Spec.Filter.Attributes = map[string]string{}
+				}
+
+				trigger.Spec.Filter.Attributes[k] = v
+
+				_, err := Client(ctx).Triggers.Update(ctx, trigger, metav1.UpdateOptions{})
+				if err != nil {
+					// We expect an error.
+					// Success!
+				} else {
+					t.Error("expected Trigger to reject the spec.filter update.")
+				}
+			})
+	}
+	return f
+}
+
 func ControlPlaneDelivery(brokerName string) *feature.Feature {
 	f := feature.NewFeatureNamed("Delivery Spec")
 
@@ -309,6 +372,9 @@ func readyBrokerIsAddressable(ctx context.Context, t feature.T) {
 func brokerClassIsImmutable(ctx context.Context, t feature.T) {
 	broker := getBroker(ctx, t)
 
+	if broker.Annotations == nil {
+		broker.Annotations = map[string]string{}
+	}
 	// update annotations
 	broker.Annotations[eventingv1.BrokerClassAnnotationKey] = "Rekt.brokerClassIsImmutable"
 
