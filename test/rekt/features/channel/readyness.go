@@ -18,10 +18,10 @@ package channel
 
 import (
 	"fmt"
-	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 // GoesReady returns a feature testing if a Channel becomes ready.
