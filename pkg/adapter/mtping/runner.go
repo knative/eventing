@@ -97,8 +97,13 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1beta1.PingSource) cron.Ent
 		ResourceGroup: resourceGroup,
 	}
 
+	schedule := source.Spec.Schedule
+	if source.Spec.Timezone != "" {
+		schedule = "CRON_TZ=" + source.Spec.Timezone + " " + schedule
+	}
+
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
-	id, _ := a.cron.AddFunc(source.Spec.Schedule, a.cronTick(ctx, event))
+	id, _ := a.cron.AddFunc(schedule, a.cronTick(ctx, event))
 	return id
 }
 
