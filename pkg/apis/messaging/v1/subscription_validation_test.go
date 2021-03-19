@@ -330,6 +330,29 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "valid, kafkachannel hack",
+		c: &Subscription{
+			Spec: SubscriptionSpec{
+				Channel: corev1.ObjectReference{
+					Name:       channelName,
+					Kind:       "KafkaChannel",
+					APIVersion: "messaging.knative.dev/v1beta1",
+				},
+				Subscriber: getValidDestination(),
+			},
+		},
+		og: &Subscription{
+			Spec: SubscriptionSpec{
+				Channel: corev1.ObjectReference{
+					Name:       channelName,
+					Kind:       "KafkaChannel",
+					APIVersion: "messaging.knative.dev/v1alpha1",
+				},
+				Subscriber: getValidDestination(),
+			},
+		},
+		want: nil,
+	}, {
 		name: "Channel changed",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
