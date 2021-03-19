@@ -622,6 +622,8 @@ github.com/tsenart/vegeta/v12 v12.8.4/go.mod h1:ZiJtwLn/9M4fTPdMY7bdbIeyNeFVE8/A
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
+github.com/vaikas/reconciler-test v0.0.0-20210319204903-628b8e5e4cd0 h1:rM/vdW3twLyuowlK08nji9VFmCCccDbhIiyL7t9gQN8=
+github.com/vaikas/reconciler-test v0.0.0-20210319204903-628b8e5e4cd0/go.mod h1:QSd2hWDDwFh+9AHOkiECsj2ZY2DGJBKnj6aT6LITBuw=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
@@ -1091,16 +1093,12 @@ k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6 h1:+WnxoVtG8TMiudHBSEtrVL
 k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6/go.mod h1:UuqjUnNftUyPE5H64/qeyjQoUZhGpeFDVdxjTeEVN2o=
 k8s.io/utils v0.0.0-20200729134348-d5654de09c73 h1:uJmqzgNWG7XyClnU/mLPBWwfKKF1K8Hf8whTseBgJcg=
 k8s.io/utils v0.0.0-20200729134348-d5654de09c73/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
-knative.dev/hack v0.0.0-20210309141825-9b73a256fd9a/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack v0.0.0-20210317214554-58edbdc42966 h1:qSnMQkq4gnhD5Hb8Mpfn7IrpkiQFhXXFPOA7uIl2lAc=
 knative.dev/hack v0.0.0-20210317214554-58edbdc42966/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack/schema v0.0.0-20210317214554-58edbdc42966 h1:r1whHDyfHm+seDPt0+rn9YKiGhDSbkz/4DlkLpIRK3A=
 knative.dev/hack/schema v0.0.0-20210317214554-58edbdc42966/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
-knative.dev/pkg v0.0.0-20210315160101-6a33a1ab29ac/go.mod h1:7swdJzGy7U6iq8538vt2yFsZJqmnSAxMFexWK9Ktyes=
 knative.dev/pkg v0.0.0-20210318052054-dfeeb1817679 h1:5yTTe0oW2/a13DU2b4U42h7lSHZLWy32a/8DEkkH7C4=
 knative.dev/pkg v0.0.0-20210318052054-dfeeb1817679/go.mod h1:o1aTlbc+h60DP9P6nd/WmP99Ny9Ls3U/JIjL4xMgqpw=
-knative.dev/reconciler-test v0.0.0-20210318201654-cee1961aec9e h1:oDLr53xvxm2+36YgetdA76/iBgmHpCgLU0zULmRaOfQ=
-knative.dev/reconciler-test v0.0.0-20210318201654-cee1961aec9e/go.mod h1:0Rqoen7S2xgblliOrJfSe127JjPI2tMaTnEqhvmjtBI=
 pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

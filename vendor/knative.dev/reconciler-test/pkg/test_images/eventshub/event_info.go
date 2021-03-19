@@ -60,6 +60,10 @@ type EventInfo struct {
 	Observer string    `json:"observer,omitempty"`
 	Time     time.Time `json:"time,omitempty"`
 	Sequence uint64    `json:"sequence"`
+	// This is just a convenience / correlator. We take the ID of the sent event
+	// and in the Response also jot it down so you can correlate which event (ID)
+	// as well as sequence to match sent/response 1:1.
+	Id string `json:"id"`
 }
 
 // Pretty print the event. Meant for debugging.
@@ -96,6 +100,7 @@ func (ei *EventInfo) String() string {
 	sb.WriteString("--- Observer: '" + ei.Observer + "' ---\n")
 	sb.WriteString("--- Time: " + ei.Time.String() + " ---\n")
 	sb.WriteString(fmt.Sprintf("--- Sequence: %d ---\n", ei.Sequence))
+	sb.WriteString("--- Id:  '" + ei.Id + " ---\n")
 	sb.WriteString("--------------------\n")
 	return sb.String()
 }

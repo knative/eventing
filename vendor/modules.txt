@@ -1100,7 +1100,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20210318201654-cee1961aec9e
+# knative.dev/reconciler-test v0.0.0-20210318201654-cee1961aec9e => github.com/vaikas/reconciler-test v0.0.0-20210319204903-628b8e5e4cd0
 ## explicit
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
@@ -1128,3 +1128,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit
 sigs.k8s.io/yaml
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+# knative.dev/reconciler-test => github.com/vaikas/reconciler-test v0.0.0-20210319204903-628b8e5e4cd0
