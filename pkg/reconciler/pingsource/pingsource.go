@@ -151,7 +151,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	}
 	expected := resources.MakeReceiveAdapterEnvVar(args)
 
-	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
+	d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Get(ctx, mtadapterName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))
