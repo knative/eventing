@@ -11,7 +11,7 @@ community contact's duty (subject to change) is as followed:
 - Check Eventing
   [unassigned issues / untriaged issues](https://github.com/knative/eventing/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+no%3Amilestone)
   for unanswered questions.
-- Check Slack channel [#eventing-questions](https://knative.slack.com/archives/C0186KU7STW) for unanswered questions.
+- Check Slack channel [#eventing-questions](https://knative.slack.com/archives/C017X0PFC0P) for unanswered questions.
   Any questions that relates to usability please instruct user
   to [open an usablity issue](https://github.com/knative/ux/issues/new?assignees=&labels=kind%2Ffriction-point&template=friction-point-template.md&title=)
   and to join the channel [#user-experience](https://knative.slack.com/archives/C01JBD1LSF3) to capture user feedback.
