@@ -18,9 +18,16 @@ package broker
 
 import (
 	"context"
+	"errors"
 
+	"github.com/google/uuid"
+
+	. "github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
+	eventshubmain "knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
 func DataPlaneConformance(brokerName string) *feature.FeatureSet {
@@ -45,7 +52,7 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 		Should("A Broker SHOULD expose either an HTTP or HTTPS endpoint as ingress. It MAY expose both.",
 			todo).
 		Must("The ingress endpoint(s) MUST conform to at least one of the following versions of the specification: 0.3, 1.0",
-			todo).
+			brokerAcceptsCEVersions).
 		May("Other versions MAY be rejected.",
 			todo).
 		ShouldNot("The Broker SHOULD NOT perform an upgrade of the produced event's CloudEvents version.",
@@ -147,4 +154,55 @@ func DataPlaneObservability(brokerName string) *feature.Feature {
 
 func todo(ctx context.Context, t feature.T) {
 	t.Log("TODO, Implement this.")
+}
+
+func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	u, err := broker.Address(ctx, brokerName)
+	if err != nil || u == nil {
+		t.Error("failed to get the address of the broker", brokerName, err)
+	}
+
+	opts := []eventshub.EventsHubOption{eventshub.StartSenderURL(u.String())}
+	uuids := map[string]string{
+		uuid.New().String(): "1.0",
+		uuid.New().String(): "0.3",
+	}
+	for uuid, version := range uuids {
+		// We need to use a different source name, otherwise, it will try to update
+		// the pod, which is immutable.
+		source := feature.MakeRandomK8sName("source")
+		event := FullEvent()
+		event.SetID(uuid)
+		event.SetSpecVersion(version)
+		opts = append(opts, eventshub.InputEvent(event))
+
+		eventshub.Install(source, opts...)(ctx, t)
+		store := eventshub.StoreFromContext(ctx, source)
+		// We are looking for two events, one of them is the sent event and the other
+		// is Response. We want to make sure the event was sent and that it was accepted.
+		// TODO: Figure out how to send events via eventshub that
+		events := store.AssertAtLeast(2, sentEventMatcher(uuid))
+		for _, e := range events {
+			if e.Kind == eventshubmain.EventResponse {
+				if e.StatusCode != 202 {
+					t.Errorf("Expected statuscode %d got %d", 202, e.StatusCode)
+				}
+			}
+			// Make sure HTTP headers are 202
+		}
+	}
+}
+
+func sentEventMatcher(uuid string) func(eventshubmain.EventInfo) error {
+	return func(ei eventshubmain.EventInfo) error {
+		if ei.Kind == eventshubmain.EventSent && ei.Event.ID() == uuid {
+			return nil
+		}
+		if ei.Kind == eventshubmain.EventResponse {
+			return nil
+		}
+		return errors.New("no match")
+	}
 }
