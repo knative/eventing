@@ -186,11 +186,11 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 		events := store.AssertAtLeast(2, sentEventMatcher(uuid))
 		for _, e := range events {
 			if e.Kind == eventshubmain.EventResponse {
-				if e.StatusCode != 202 {
-					t.Errorf("Expected statuscode %d got %d", 202, e.StatusCode)
+				// Make sure HTTP response code is 2XX
+				if e.StatusCode < 200 || e.StatusCode > 299 {
+					t.Errorf("Expected statuscode 2XX got %d", e.StatusCode)
 				}
 			}
-			// Make sure HTTP headers are 202
 		}
 	}
 }
