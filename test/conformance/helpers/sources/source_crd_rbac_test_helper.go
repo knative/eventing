@@ -18,11 +18,11 @@ package sources
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/pkg/apis/duck"
@@ -30,7 +30,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-var clusterRoleName = "eventing-sources-source-observer"
+var clusterRoleNameSuffix = "source-observer"
 var clusterRoleLabel = map[string]string{
 	duck.SourceDuckVersionLabel: "true",
 }
@@ -38,7 +38,7 @@ var clusterRoleLabel = map[string]string{
 /*
 	The test checks for the following in this order:
 	1. Find cluster roles that match these criteria -
-		a. Has name "eventing-sources-source-observer",
+		a. Has suffix "source-observer" in name like "foos-source-observer",
 		b. Has label duck.knative.dev/source: "true",
 		c. Has the eventing source in Resources for a Policy Rule, and
 		d. Has all the expected verbs (get, list, watch)
@@ -105,19 +105,20 @@ func getSourcePluralName(client *testlib.Client, object metav1.TypeMeta) string 
 
 func clusterRoleMeetsSpecs(client *testlib.Client, labelSelector *metav1.LabelSelector, crdSourceName string) bool {
 	crs, err := client.Kube.RbacV1().ClusterRoles().List(context.Background(), metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("metadata.name", clusterRoleName).String(), //Cluster Role with name "eventing-sources-source-observer"
-		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),                         //Cluster Role with duck.knative.dev/source: "true" label
+		LabelSelector: labels.Set(labelSelector.MatchLabels).String(), //Cluster Role with duck.knative.dev/source: "true" label
 	})
 	if err != nil {
 		client.T.Errorf("error while getting cluster roles %v", err)
 	}
 
 	for _, cr := range crs.Items {
-		for _, pr := range cr.Rules {
-			if contains(pr.Resources, crdSourceName) && //Cluster Role has the eventing source listed in Resources for a Policy Rule
-				((contains(pr.Verbs, "get") && contains(pr.Verbs, "list") && contains(pr.Verbs, "watch")) ||
-					contains(pr.Verbs, rbacv1.VerbAll)) { //Cluster Role has all the expected Verbs
-				return true
+		if strings.HasSuffix(cr.ObjectMeta.Name, clusterRoleNameSuffix) { //Cluster Role with suffix "source-observer" in name
+			for _, pr := range cr.Rules {
+				if contains(pr.Resources, crdSourceName) && //Cluster Role has the eventing source listed in Resources for a Policy Rule
+					((contains(pr.Verbs, "get") && contains(pr.Verbs, "list") && contains(pr.Verbs, "watch")) ||
+						contains(pr.Verbs, rbacv1.VerbAll)) { //Cluster Role has all the expected Verbs
+					return true
+				}
 			}
 		}
 	}
