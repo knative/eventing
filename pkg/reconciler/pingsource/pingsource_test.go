@@ -370,11 +370,9 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			configAcc:        &reconcilersource.EmptyVarsGenerator{},
-			kubeClientSet:    fakekubeclient.Get(ctx),
-			pingLister:       listers.GetPingSourceV1beta2Lister(),
-			deploymentLister: listers.GetDeploymentLister(),
-			tracker:          tracker.New(func(types.NamespacedName) {}, 0),
+			configAcc:     &reconcilersource.EmptyVarsGenerator{},
+			kubeClientSet: fakekubeclient.Get(ctx),
+			tracker:       tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
