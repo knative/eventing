@@ -59,7 +59,7 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 		Must("The ingress endpoint(s) MUST conform to at least one of the following versions of the specification: 0.3, 1.0",
 			brokerAcceptsCEVersions).
 		May("Other versions MAY be rejected.",
-			todo).
+			brokerRejectsUnknownCEVersion).
 		ShouldNot("The Broker SHOULD NOT perform an upgrade of the produced event's CloudEvents version.",
 			todo).
 		Should("It SHOULD support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
@@ -188,12 +188,51 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 		// We are looking for two events, one of them is the sent event and the other
 		// is Response, so correlate them first. We want to make sure the event was sent and that the
 		// response was what was expected.
-		// TODO: Figure out how to send events via eventshub that are invalid (say, wrong version)
 		events := correlate(store.AssertAtLeast(2, sentEventMatcher(uuid)))
 		for _, e := range events {
 			// Make sure HTTP response code is 2XX
 			if e.response.StatusCode < 200 || e.response.StatusCode > 299 {
 				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
+			}
+		}
+	}
+}
+
+func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	u, err := broker.Address(ctx, brokerName)
+	if err != nil || u == nil {
+		t.Error("failed to get the address of the broker", brokerName, err)
+	}
+
+	uuids := map[string]string{
+		uuid.New().String(): "19.0",
+	}
+	for uuid, version := range uuids {
+		// We need to use a different source name, otherwise, it will try to update
+		// the pod, which is immutable.
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+			eventshub.InputHeader("ce-specversion", version),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", uuid),
+			eventshub.InputBody("{}}"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		// We are looking for two events, one of them is the sent event and the other
+		// is Response, so correlate them first. We want to make sure the event was sent and that the
+		// response was what was expected.
+		// Note: We pass in "" for the match ID because when we construct the headers manually
+		// above, they do not get stuff into the sent/response SentId fields.
+		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
+		for _, e := range events {
+			// Make sure HTTP response code is 4XX
+			if e.response.StatusCode < 400 || e.response.StatusCode > 499 {
+				t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
 			}
 		}
 	}
