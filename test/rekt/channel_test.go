@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ limitations under the License.
 package rekt
 
 import (
-	"knative.dev/eventing/test/rekt/features/channel"
 	"testing"
 
+	"knative.dev/eventing/test/rekt/features/channel"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
