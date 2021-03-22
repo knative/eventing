@@ -52,8 +52,8 @@ spec:
         resources:
           requests:
             # taken from serving.
-            cpu: 20m
-            memory: 20Mi
+            cpu: 100m
+            memory: 50Mi
           limits:
             # taken from serving.
             cpu: 200m
