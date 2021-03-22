@@ -41,6 +41,11 @@ func DataPlaneConformance(brokerName string) *feature.FeatureSet {
 	}
 }
 
+type EventInfoCombined struct {
+	sent     eventshubmain.EventInfo
+	response eventshubmain.EventInfo
+}
+
 func DataPlaneIngress(brokerName string) *feature.Feature {
 	f := feature.NewFeatureNamed("Ingress")
 
@@ -181,15 +186,14 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 		eventshub.Install(source, opts...)(ctx, t)
 		store := eventshub.StoreFromContext(ctx, source)
 		// We are looking for two events, one of them is the sent event and the other
-		// is Response. We want to make sure the event was sent and that it was accepted.
-		// TODO: Figure out how to send events via eventshub that
-		events := store.AssertAtLeast(2, sentEventMatcher(uuid))
+		// is Response, so correlate them first. We want to make sure the event was sent and that the
+		// response was what was expected.
+		// TODO: Figure out how to send events via eventshub that are invalid (say, wrong version)
+		events := correlate(store.AssertAtLeast(2, sentEventMatcher(uuid)))
 		for _, e := range events {
-			if e.Kind == eventshubmain.EventResponse {
-				// Make sure HTTP response code is 2XX
-				if e.StatusCode < 200 || e.StatusCode > 299 {
-					t.Errorf("Expected statuscode 2XX got %d", e.StatusCode)
-				}
+			// Make sure HTTP response code is 2XX
+			if e.response.StatusCode < 200 || e.response.StatusCode > 299 {
+				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
 			}
 		}
 	}
@@ -197,12 +201,27 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 
 func sentEventMatcher(uuid string) func(eventshubmain.EventInfo) error {
 	return func(ei eventshubmain.EventInfo) error {
-		if ei.Kind == eventshubmain.EventSent && ei.Event.ID() == uuid {
-			return nil
-		}
-		if ei.Kind == eventshubmain.EventResponse {
+		if (ei.Kind == eventshubmain.EventSent || ei.Kind == eventshubmain.EventResponse) && ei.SentId == uuid {
 			return nil
 		}
 		return errors.New("no match")
 	}
+}
+
+// correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
+// and correlates them based on the sequence into a pair.
+func correlate(in []eventshubmain.EventInfo) []EventInfoCombined {
+	var out []EventInfoCombined
+	// not too many events, this will suffice...
+	for i, e := range in {
+		if e.Kind == eventshubmain.EventSent {
+			looking := e.Sequence
+			for j := i + 1; j <= len(in)-1; j++ {
+				if in[j].Kind == eventshubmain.EventResponse && in[j].Sequence == looking {
+					out = append(out, EventInfoCombined{sent: e, response: in[j]})
+				}
+			}
+		}
+	}
+	return out
 }

@@ -30,6 +30,7 @@ import (
 
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents"
 )
 
 // EventsHubOption is used to define an env for the eventshub image
@@ -101,6 +102,17 @@ func ResponseWaitTime(delay time.Duration) EventsHubOption {
 	return envDuration("RESPONSE_WAIT_TIME", delay)
 }
 
+// FibonacciDrop will cause the receiver to reply with a bad status code following the fibonacci sequence
+var FibonacciDrop = envOption("SKIP_ALGORITHM", dropevents.Fibonacci)
+
+// DropFirstN will cause the receiver to reply with a bad status code to the first n events
+func DropFirstN(n uint) EventsHubOption {
+	return compose(
+		envOption("SKIP_ALGORITHM", dropevents.Sequence),
+		envOption("SKIP_COUNTER", strconv.FormatUint(uint64(n), 10)),
+	)
+}
+
 // --- Sender options
 
 // InitialSenderDelay defines how much the sender has to wait, when started, before start sending events.
@@ -157,6 +169,11 @@ func InputBody(b string) EventsHubOption {
 	return envOption("INPUT_BODY", b)
 }
 
+// InputMethod overrides which http method to use when sending events (default is POST)
+func InputMethod(method string) EventsHubOption {
+	return envOption("INPUT_METHOD", method)
+}
+
 // AddTracing adds tracing headers when sending events.
 var AddTracing = envOption("ADD_TRACING", "true")
 
@@ -166,6 +183,9 @@ var AddSequence = envOption("ADD_SEQUENCE", "true")
 
 // EnableIncrementalId replaces the event id with a new incremental id for each sent event.
 var EnableIncrementalId = envOption("INCREMENTAL_ID", "true")
+
+// OverrideTime overrides the event time with the time when sending the event.
+var OverrideTime = envOption("OVERRIDE_TIME", "true")
 
 // SendMultipleEvents defines how much events to send and the period between them.
 func SendMultipleEvents(numberOfEvents int, period time.Duration) EventsHubOption {

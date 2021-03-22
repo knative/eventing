@@ -68,6 +68,9 @@ type envConfig struct {
 	// InputBody to send (this overrides any event provided input)
 	InputBody string `envconfig:"INPUT_BODY" required:"false"`
 
+	// InputMethod to use when sending the http request
+	InputMethod string `envconfig:"INPUT_METHOD" default:"POST" required:"false"`
+
 	// Should tracing be added to events sent.
 	AddTracing bool `envconfig:"ADD_TRACING" default:"false" required:"false"`
 
@@ -76,6 +79,9 @@ type envConfig struct {
 
 	// Override the event id with an incremental id.
 	IncrementalId bool `envconfig:"INCREMENTAL_ID" default:"false" required:"false"`
+
+	// Override the event time with the time when sending the event.
+	OverrideTime bool `envconfig:"OVERRIDE_TIME" default:"false" required:"false"`
 
 	// The number of seconds between messages.
 	Period int `envconfig:"PERIOD" default:"5" required:"false"`
@@ -152,7 +158,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 
 	ticker := time.NewTicker(period)
 	for {
-		req, err := nethttp.NewRequest(nethttp.MethodPost, env.Sink, nil)
+		req, err := nethttp.NewRequest(env.InputMethod, env.Sink, nil)
 		if err != nil {
 			logging.FromContext(ctx).Error("Cannot create the request: ", err)
 			return err
@@ -170,6 +176,9 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 			if env.IncrementalId {
 				event.SetID(strconv.Itoa(sequence))
 			}
+			if env.OverrideTime {
+				event.SetTime(time.Now())
+			}
 
 			logging.FromContext(ctx).Info("I'm going to send\n", event)
 
@@ -178,6 +187,10 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 				logging.FromContext(ctx).Error("Cannot write the event: ", err)
 				return err
 			}
+		}
+		var eventId string
+		if event != nil {
+			eventId = event.ID()
 		}
 
 		if len(env.InputHeaders) != 0 {
@@ -201,6 +214,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 				Observer: env.SenderName,
 				Time:     time.Now(),
 				Sequence: uint64(sequence),
+				SentId:   eventId,
 			}); err != nil {
 				return fmt.Errorf("cannot forward event info: %w", err)
 			}
@@ -212,6 +226,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 				Observer: env.SenderName,
 				Time:     time.Now(),
 				Sequence: uint64(sequence),
+				SentId:   eventId,
 			}
 
 			sentHeaders := make(nethttp.Header)
@@ -242,6 +257,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 				Time:        time.Now(),
 				Sequence:    uint64(sequence),
 				StatusCode:  res.StatusCode,
+				SentId:      eventId,
 			}
 			if responseMessage.ReadEncoding() == binding.EncodingUnknown {
 				body, err := ioutil.ReadAll(res.Body)

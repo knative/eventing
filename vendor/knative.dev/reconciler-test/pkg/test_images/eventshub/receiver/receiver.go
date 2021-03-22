@@ -105,7 +105,7 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 	} else {
 		counter = &dropevents.CounterHandler{
 			// Don't skip anything, since count is 0. nop skipper.
-			Skipper: dropevents.SkipperAlgorithmWithCount(dropevents.Sequence, 0),
+			Skipper: dropevents.NoopSkipper,
 		}
 	}
 
