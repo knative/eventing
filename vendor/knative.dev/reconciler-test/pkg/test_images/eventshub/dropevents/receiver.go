@@ -17,8 +17,6 @@ limitations under the License.
 package dropevents
 
 import (
-	"os"
-	"strconv"
 	"sync"
 
 	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfibonacci"
@@ -26,52 +24,22 @@ import (
 )
 
 const (
-	Fibonacci        = "fibonacci"
-	Sequence         = "sequence"
-	SkipAlgorithmKey = "SKIP_ALGORITHM"
-	NumberKey        = "NUMBER"
+	Fibonacci = "fibonacci"
+	Sequence  = "sequence"
 )
-
-// count is only used for SKIP_ALGORITHM=Sequence.
-func SkipperAlgorithmWithCount(algorithm string, count uint64) Skipper {
-	switch algorithm {
-	case Fibonacci:
-		return &dropeventsfibonacci.Fibonacci{Prev: 1, Current: 1}
-
-	case Sequence:
-		return dropeventsfirst.First{N: count}
-
-	default:
-		panic("unknown algorithm: " + algorithm)
-	}
-}
-
-func SkipperAlgorithm(algorithm string) Skipper {
-
-	switch algorithm {
-
-	case Fibonacci:
-		return &dropeventsfibonacci.Fibonacci{Prev: 1, Current: 1}
-
-	case Sequence:
-		numberEnv, ok := os.LookupEnv(NumberKey)
-		var n int
-		if !ok {
-			n = 10
-		} else {
-			n, _ = strconv.Atoi(numberEnv)
-		}
-		return dropeventsfirst.First{N: uint64(n)}
-
-	default:
-		panic("unknown algorithm: " + algorithm)
-	}
-}
 
 // Skipper represents the logic to apply to accept/reject events.
 type Skipper interface {
 	// Skip returns true if the message must be rejected
 	Skip(counter uint64) bool
+}
+
+type noopSkip struct{}
+
+var NoopSkipper Skipper = noopSkip{}
+
+func (n noopSkip) Skip(uint64) bool {
+	return false
 }
 
 type CounterHandler struct {
@@ -86,4 +54,18 @@ func (h *CounterHandler) Skip() bool {
 
 	h.counter++
 	return h.Skipper.Skip(h.counter)
+}
+
+// count is only used for SKIP_ALGORITHM=Sequence.
+func SkipperAlgorithmWithCount(algorithm string, count uint64) Skipper {
+	switch algorithm {
+	case Fibonacci:
+		return &dropeventsfibonacci.Fibonacci{Prev: 1, Current: 1}
+
+	case Sequence:
+		return dropeventsfirst.First{N: count}
+
+	default:
+		panic("unknown algorithm: " + algorithm)
+	}
 }

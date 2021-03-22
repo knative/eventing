@@ -201,7 +201,7 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 
 func sentEventMatcher(uuid string) func(eventshubmain.EventInfo) error {
 	return func(ei eventshubmain.EventInfo) error {
-		if (ei.Kind == eventshubmain.EventSent || ei.Kind == eventshubmain.EventResponse) && ei.Id == uuid {
+		if (ei.Kind == eventshubmain.EventSent || ei.Kind == eventshubmain.EventResponse) && ei.SentId == uuid {
 			return nil
 		}
 		return errors.New("no match")
