@@ -271,9 +271,9 @@ func brokerRejectsGetRequest(ctx context.Context, t feature.T) {
 		// above, they do not get stuff into the sent/response SentId fields.
 		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
 		for _, e := range events {
-			// Make sure HTTP response code is 4XX
-			if e.response.StatusCode < 400 || e.response.StatusCode > 499 {
-				t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
+			// Make sure HTTP response code is 405
+			if e.response.StatusCode != 405 {
+				t.Errorf("Expected statuscode 405 for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
 			}
 		}
 	}
