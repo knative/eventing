@@ -19,13 +19,18 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1lister "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
@@ -65,6 +70,9 @@ func newChannelWarnEvent(messageFmt string, args ...interface{}) pkgreconciler.E
 type Reconciler struct {
 	// DynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	// crdLister is used to resolve the ref version
+	crdLister apiextensionsv1lister.CustomResourceDefinitionLister
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
@@ -321,11 +329,18 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eventingduckv1.Channelable, pkgreconciler.Event) {
 	logging.FromContext(ctx).Infow("Getting channel", zap.Any("channel", sub.Spec.Channel))
 
+	if err := r.resolveRefAPIVersion(&sub.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Warnw("failed to resolve the ref", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
+		return nil, err
+	}
+
+	logging.FromContext(ctx).Infow("Resolved channel ref", zap.Any("channel", sub.Spec.Channel))
+
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
 	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
 	if err != nil {
-		logging.FromContext(ctx).Warnw("failed", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
+		logging.FromContext(ctx).Warnw("failed to track and fetch channel", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
 		return nil, err
 	}
 
@@ -511,4 +526,38 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 		delivery.BackoffDelay = sub.Spec.Delivery.BackoffDelay
 	}
 	return
+}
+
+// TODO(slinkydeveloper) this can be refactored in a separate object that takes care of "ref resolution"
+func (r *Reconciler) resolveRefAPIVersion(objRef *corev1.ObjectReference) error {
+	if objRef.APIVersion == "" || strings.Contains(objRef.APIVersion, "/") {
+		// Either it's Core v1 or the version is specified manually
+		return nil
+	}
+
+	actualGvk := schema.GroupVersionKind{Group: objRef.APIVersion, Kind: objRef.Kind}
+	pluralGvk, _ := meta.UnsafeGuessKindToResource(actualGvk)
+	crd, err := r.crdLister.Get(pluralGvk.GroupResource().String())
+	if err != nil {
+		return err
+	}
+
+	actualGvk.Version, err = findCRDStorageVersion(crd)
+	if err != nil {
+		return err
+	}
+
+	objRef.SetGroupVersionKind(actualGvk)
+
+	return nil
+}
+
+// This function runs under the assumption that there must be exactly one "storage" version
+func findCRDStorageVersion(crd *apiextensionsv1.CustomResourceDefinition) (string, error) {
+	for _, version := range crd.Spec.Versions {
+		if version.Storage {
+			return version.Name, nil
+		}
+	}
+	return "", fmt.Errorf("this CRD %s doesn't have a storage version! Kubernetes, you're drunk, go home", crd.Name)
 }

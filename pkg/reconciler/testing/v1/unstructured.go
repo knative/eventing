@@ -60,6 +60,9 @@ func WithUnstructuredAddressable(hostname string) UnstructuredOption {
 }
 
 func apiVersion(gvk metav1.GroupVersionKind) string {
+	if gvk.Version == "" {
+		return gvk.Group
+	}
 	groupVersion := gvk.Version
 	if gvk.Group != "" {
 		groupVersion = gvk.Group + "/" + gvk.Version
