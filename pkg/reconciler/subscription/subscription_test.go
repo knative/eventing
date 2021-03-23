@@ -120,8 +120,8 @@ var (
 	}
 
 	imcGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Kind:    "InMemoryChannel",
+		Group: "messaging.knative.dev",
+		Kind:  "InMemoryChannel",
 	}
 
 	channelV1GVK = metav1.GroupVersionKind{
@@ -276,10 +276,10 @@ func TestAllCases(t *testing.T) {
 				// IMC CRD
 				pkgtesting.NewCustomResourceDefinition(messaging.InMemoryChannelsResource.String(),
 					pkgtesting.WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
-						Name: "v1beta1",
+						Name:    "v1beta1",
 						Storage: false,
 					}, {
-						Name: "v1",
+						Name:    "v1",
 						Storage: true,
 					}}),
 				),

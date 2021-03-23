@@ -47,7 +47,7 @@ func NewController(
 
 	r := &Reconciler{
 		dynamicClientSet:   dynamicclient.Get(ctx),
-		crdLister: customresourcedefinition.Get(ctx).Lister(),
+		crdLister:          customresourcedefinition.Get(ctx).Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		channelLister:      channelInformer.Lister(),
 	}
