@@ -57,17 +57,13 @@ func ControlPlaneChannel() *feature.Feature {
 		Must("The category `channel`", todo)
 
 	f.Stable("Annotation Requirements").
-		Should("have annotation: messaging.knative.dev/subscribable: [v1beta1 || v1]", todo)
+		Should("have annotation: messaging.knative.dev/subscribable: v1", todo)
 
-	f.Stable("Spec Requirements - v1beta1").
+	f.Stable("Spec Requirements").
 		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers", todo)
 		// Special note for Channel tests: The array of subscribers MUST NOT be set directly on the generic Channel custom object, but rather appended to the backing channel by the subscription itself.
 
-	f.Stable("Spec Requirements - v1").
-		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers", todo)
-		// Special note for Channel tests: The array of subscribers MUST NOT be set directly on the generic Channel custom object, but rather appended to the backing channel by the subscription itself.
-
-	f.Stable("Status Requirements - v1beta1").
+	f.Stable("Status Requirements").
 		Must("Each channel CRD MUST have a status subresource which contains [address]", todo).
 		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]", todo).
 		Should("SHOULD have in status observedGeneration", todo).
@@ -75,26 +71,11 @@ func ControlPlaneChannel() *feature.Feature {
 		Should("SHOULD have in status conditions (as an array)", todo).
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present", todo)
 
-	f.Stable("Status Requirements - v1").
-		Must("Each channel CRD MUST have a status subresource which contains [address]", todo).
-		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]", todo).
-		Should("SHOULD have in status observedGeneration", todo).
-		Must("observedGeneration MUST be populated if present", todo).
-		Should("SHOULD have in status conditions (as an array)", todo).
-		Should("status.conditions SHOULD indicate status transitions and error reasons if present", todo)
-
-	f.Stable("Channel Status - v1beta1").
+	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated", todo).
 		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True", todo)
 
-	f.Stable("Channel Status - v1").
-		Must("When the channel instance is ready to receive events status.address.url MUST be populated", todo).
-		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True", todo)
-
-	f.Stable("Channel Subscriber Status - v1beta1").
-		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed", todo)
-
-	f.Stable("Channel Subscriber Status - v1").
+	f.Stable("Channel Subscriber Status").
 		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed", todo)
 
 	return f
