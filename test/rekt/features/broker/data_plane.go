@@ -69,7 +69,7 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.",
 			todo).
 		Must("Brokers MUST reject all HTTP produce requests with a method other than POST responding with HTTP status code `405 Method Not Supported`.",
-			todo).
+			brokerRejectsGetRequest).
 		Must("The Broker MUST respond with a 200-level HTTP status code if a produce request is accepted.",
 			todo).
 		Must("If a Broker receives a produce request and is unable to parse a valid CloudEvent, then it MUST reject the request with HTTP status code `400 Bad Request`.",
@@ -233,6 +233,47 @@ func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 			// Make sure HTTP response code is 4XX
 			if e.response.StatusCode < 400 || e.response.StatusCode > 499 {
 				t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
+			}
+		}
+	}
+}
+
+func brokerRejectsGetRequest(ctx context.Context, t feature.T) {
+	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	u, err := broker.Address(ctx, brokerName)
+	if err != nil || u == nil {
+		t.Error("failed to get the address of the broker", brokerName, err)
+	}
+
+	uuids := map[string]string{
+		uuid.New().String(): "1.0",
+	}
+	for uuid, version := range uuids {
+		// We need to use a different source name, otherwise, it will try to update
+		// the pod, which is immutable.
+		source := feature.MakeRandomK8sName("source")
+		eventshub.Install(source,
+			eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+			eventshub.InputHeader("ce-specversion", version),
+			eventshub.InputHeader("ce-type", "sometype"),
+			eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
+			eventshub.InputHeader("ce-id", uuid),
+			eventshub.InputBody("{}}"),
+			eventshub.InputMethod("GET"),
+		)(ctx, t)
+
+		store := eventshub.StoreFromContext(ctx, source)
+		// We are looking for two events, one of them is the sent event and the other
+		// is Response, so correlate them first. We want to make sure the event was sent and that the
+		// response was what was expected.
+		// Note: We pass in "" for the match ID because when we construct the headers manually
+		// above, they do not get stuff into the sent/response SentId fields.
+		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
+		for _, e := range events {
+			// Make sure HTTP response code is 405
+			if e.response.StatusCode != 405 {
+				t.Errorf("Expected statuscode 405 for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
 			}
 		}
 	}
