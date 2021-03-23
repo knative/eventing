@@ -98,8 +98,6 @@ spec:
               address:
                 description: Broker is Addressable. It exposes the endpoint as an URI to get events delivered into the Broker mesh.
                 type: object
-                required:
-                  - url
                 properties:
                   url:
                     type: string
