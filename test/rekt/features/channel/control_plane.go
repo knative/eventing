@@ -19,13 +19,7 @@ package channel
 import (
 	"context"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/state"
 )
 
 func ControlPlaneConformance() *feature.FeatureSet {
@@ -106,36 +100,38 @@ func ControlPlaneChannel() *feature.Feature {
 	return f
 }
 
-type EventingClient struct {
-	Channels messagingclientsetv1.ChannelInterface
-}
-
-func Client(ctx context.Context) *EventingClient {
-	mc := eventingclient.Get(ctx).MessagingV1()
-	env := environment.FromContext(ctx)
-
-	return &EventingClient{
-		Channels: mc.Channels(env.Namespace()),
-	}
-}
-
-const (
-	ChannelNameKey = "channelName"
-)
-
-func setChannelName(name string) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		state.SetOrFail(ctx, t, ChannelNameKey, name)
-	}
-}
-
-func getChannel(ctx context.Context, t feature.T) *messagingv1.Channel {
-	c := Client(ctx)
-	name := state.GetStringOrFail(ctx, t, ChannelNameKey)
-
-	channel, err := c.Channels.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		t.Errorf("failed to get Channel, %v", err)
-	}
-	return channel
-}
+// I want this for later:
+//
+//type EventingClient struct {
+//	Channels messagingclientsetv1.ChannelInterface
+//}
+//
+//func Client(ctx context.Context) *EventingClient {
+//	mc := eventingclient.Get(ctx).MessagingV1()
+//	env := environment.FromContext(ctx)
+//
+//	return &EventingClient{
+//		Channels: mc.Channels(env.Namespace()),
+//	}
+//}
+//
+//const (
+//	ChannelNameKey = "channelName"
+//)
+//
+//func setChannelName(name string) feature.StepFn {
+//	return func(ctx context.Context, t feature.T) {
+//		state.SetOrFail(ctx, t, ChannelNameKey, name)
+//	}
+//}
+//
+//func getChannel(ctx context.Context, t feature.T) *messagingv1.Channel {
+//	c := Client(ctx)
+//	name := state.GetStringOrFail(ctx, t, ChannelNameKey)
+//
+//	channel, err := c.Channels.Get(ctx, name, metav1.GetOptions{})
+//	if err != nil {
+//		t.Errorf("failed to get Channel, %v", err)
+//	}
+//	return channel
+//}

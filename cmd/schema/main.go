@@ -23,7 +23,7 @@ import (
 	"knative.dev/hack/schema/registry"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 // schema is a tool to dump the schema for Eventing resources.

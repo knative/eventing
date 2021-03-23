@@ -39,6 +39,5 @@ func TestChannelConformance(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	//env.Prerequisite(ctx, t, channel.GoesReady("default", b.WithEnvConfig()...))
 	env.TestSet(ctx, t, channel.ControlPlaneConformance())
 }
