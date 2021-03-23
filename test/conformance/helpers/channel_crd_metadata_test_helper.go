@@ -34,6 +34,7 @@ var channelLabels = map[string]string{
 
 // ChannelCRDMetadataTestHelperWithChannelTestRunner runs the Channel CRD metadata tests for all
 // Channel resources in the ComponentsTestRunner.
+// Deprecated, use reconciler-test based tests.
 func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
@@ -56,6 +57,7 @@ func ChannelCRDMetadataTestHelperWithChannelTestRunner(
 	})
 }
 
+// Deprecated, use reconciler-test based tests.
 func channelIsNamespaced(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec: Each channel is namespaced
 
@@ -68,6 +70,7 @@ func channelIsNamespaced(st *testing.T, client *testlib.Client, channel metav1.T
 	}
 }
 
+// Deprecated, use reconciler-test based tests.
 func channelCRDHasRequiredLabels(client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following:
@@ -77,6 +80,7 @@ func channelCRDHasRequiredLabels(client *testlib.Client, channel metav1.TypeMeta
 	ValidateRequiredLabels(client, channel, channelLabels)
 }
 
+// Deprecated, use reconciler-test based tests.
 func channelCRDHasProperCategory(st *testing.T, client *testlib.Client, channel metav1.TypeMeta) {
 	// From spec:
 	// Each channel MUST have the following: the category channel

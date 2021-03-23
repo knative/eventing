@@ -18,6 +18,7 @@ package pingsource
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -63,6 +64,14 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Namespace:  testNS,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1beta1",
+		},
+	}
+	sinkDestNoNS = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Namespace:  "",
 			Kind:       "Channel",
 			APIVersion: "messaging.knative.dev/v1beta1",
 		},
@@ -140,6 +149,136 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
 					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1beta1"}}`),
 			},
+		}, {
+			Name: "sink ref has no namespace",
+			Objects: []runtime.Object{
+				rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDestNoNS,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDestNoNS,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1beta2.WithInitPingSourceConditions,
+					rtv1beta2.WithPingSourceStatusObservedGeneration(generation),
+					rtv1beta2.WithPingSourceSinkNotFound,
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SinkNotFound",
+					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1beta1"}}`),
+			},
+		}, {
+			Name: "error creating deployment",
+			Objects: []runtime.Object{
+				rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1beta1.NewChannel(sinkName, testNS,
+					rtv1beta1.WithInitChannelConditions,
+					rtv1beta1.WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", "deployments.apps \"pingsource-mt-adapter\" not found"),
+			},
+			WantErr: true,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1beta2.WithInitPingSourceConditions,
+					rtv1beta2.WithPingSourceSink(sinkURI),
+					rtv1beta2.WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+		}, {
+			Name: "deployment update due to env",
+			Objects: []runtime.Object{
+				rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+				),
+				rtv1beta1.NewChannel(sinkName, testNS,
+					rtv1beta1.WithInitChannelConditions,
+					rtv1beta1.WithChannelAddress(sinkDNS),
+				),
+				makeAvailableMTAdapterWithDifferentEnv(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, pingSourceDeploymentUpdated, `pingsource adapter deployment updated`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: rtv1beta2.NewPingSource(sourceName, testNS,
+					rtv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+						Schedule:    testSchedule,
+						ContentType: testContentType,
+						Data:        testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: sinkDest,
+						},
+					}),
+					rtv1beta2.WithPingSource(sourceUID),
+					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					rtv1beta2.WithInitPingSourceConditions,
+					rtv1beta2.WithPingSourceDeployed,
+					rtv1beta2.WithPingSourceSink(sinkURI),
+					rtv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1beta2.WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeAvailableMTAdapter(),
+			}},
 		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
@@ -231,11 +370,9 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			configAcc:        &reconcilersource.EmptyVarsGenerator{},
-			kubeClientSet:    fakekubeclient.Get(ctx),
-			pingLister:       listers.GetPingSourceV1beta2Lister(),
-			deploymentLister: listers.GetDeploymentLister(),
-			tracker:          tracker.New(func(types.NamespacedName) {}, 0),
+			configAcc:     &reconcilersource.EmptyVarsGenerator{},
+			kubeClientSet: fakekubeclient.Get(ctx),
+			tracker:       tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
@@ -274,4 +411,13 @@ func makeAvailableMTAdapter() *appsv1.Deployment {
 	ma := MakeMTAdapter()
 	WithDeploymentAvailable()(ma)
 	return ma
+}
+
+func makeAvailableMTAdapterWithDifferentEnv() *appsv1.Deployment {
+	os.Setenv("K_SINK_TIMEOUT", "500")
+	ma := MakeMTAdapter()
+	os.Unsetenv("K_SINK_TIMEOUT")
+	WithDeploymentAvailable()(ma)
+	return ma
+
 }

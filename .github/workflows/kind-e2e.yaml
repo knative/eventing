@@ -65,6 +65,9 @@ jobs:
       CLUSTER_SUFFIX: c${{ github.run_id }}.local
       ARTIFACTS: ${{ github.workspace }}/artifacts
 
+      NODE_VERSION: ${{ matrix.k8s-version }}
+      NODE_SHA: ${{ matrix.kind-image-sha }}
+
     steps:
     - name: Set up Go 1.15.x
       uses: actions/setup-go@v2
@@ -98,43 +101,9 @@ jobs:
         chmod +x ./kind
         sudo mv kind /usr/local/bin
 
-    - name: Configure KinD Cluster
-      working-directory: ./src/knative.dev/eventing
-      run: |
-        set -x
-
-        # KinD configuration.
-        cat > kind.yaml <<EOF
-        apiVersion: kind.x-k8s.io/v1alpha4
-        kind: Cluster
-
-        # This is needed in order to support projected volumes with service account tokens.
-        # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600268272383600
-        kubeadmConfigPatches:
-          - |
-            apiVersion: kubeadm.k8s.io/v1beta2
-            kind: ClusterConfiguration
-            metadata:
-              name: config
-            apiServer:
-              extraArgs:
-                "service-account-issuer": "kubernetes.default.svc"
-                "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
-            networking:
-              dnsDomain: "${CLUSTER_SUFFIX}"
-        nodes:
-        - role: control-plane
-          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
-        - role: worker
-          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
-        EOF
-
     - name: Create KinD Cluster
       working-directory: ./src/knative.dev/eventing
-      run: |
-        set -x
-
-        kind create cluster --config kind.yaml
+      run: ./hack/create-kind-cluster.sh
 
     - name: Install Knative Eventing
       run: |

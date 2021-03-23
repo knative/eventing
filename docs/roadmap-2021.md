@@ -2,7 +2,8 @@
 
 ## Next 3 Months (Short-term)
 
-### Knative Eventing 1.0 Ready 
+### Knative Eventing 1.0 Ready
+
 Make the current feature set of Eventing ready for a 1.0 release.
 
 **GitHub Issue** https://github.com/knative/eventing/issues/5039
