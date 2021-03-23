@@ -66,11 +66,9 @@ func NewController(
 	pingSourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		kubeClientSet:    kubeclient.Get(ctx),
-		pingLister:       pingSourceInformer.Lister(),
-		deploymentLister: deploymentInformer.Lister(),
-		leConfig:         leConfig,
-		configAcc:        reconcilersource.WatchConfigurations(ctx, component, cmw),
+		kubeClientSet: kubeclient.Get(ctx),
+		leConfig:      leConfig,
+		configAcc:     reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)

@@ -29,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/utils/pointer"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -44,7 +43,6 @@ import (
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
@@ -66,10 +64,6 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
-
-	// listers index properties about resources
-	pingLister       listers.PingSourceLister
-	deploymentLister appsv1listers.DeploymentLister
 
 	// tracking mt adapter deployment changes
 	tracker tracker.Interface
@@ -151,7 +145,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta
 	}
 	expected := resources.MakeReceiveAdapterEnvVar(args)
 
-	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
+	d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Get(ctx, mtadapterName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))
