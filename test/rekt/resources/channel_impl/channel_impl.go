@@ -18,19 +18,17 @@ package channel_impl
 
 import (
 	"context"
-	"github.com/kelseyhightower/envconfig"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"log"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/reconciler-test/pkg/k8s"
-
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
