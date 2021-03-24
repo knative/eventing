@@ -278,7 +278,7 @@ func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 		"ce-id":          uuid.New().String(),
 	}
 
-	for k, _ := range headers {
+	for k := range headers {
 		// Add all but the one key we want to omit.
 		// https://github.com/knative/eventing/issues/5143
 		if k == "ce-type" || k == "ce-source" || k == "ce-id" {
