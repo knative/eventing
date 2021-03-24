@@ -69,7 +69,7 @@ func ControlPlaneBroker(brokerName string) *feature.Feature {
 
 	f.Stable("Conformance").
 		Should("Broker objects SHOULD include a Ready condition in their status",
-			brokerHasReadyInConditions).
+			knconf.KResourceHasReadyInConditions(brokerresources.Gvr(), brokerName)).
 		Should("The Broker SHOULD indicate Ready=True when its ingress is available to receive events.",
 			readyBrokerHasIngressAvailable).
 		Should("While a Broker is Ready, it SHOULD be a valid Addressable and its `status.address.url` field SHOULD indicate the address of its ingress.",
@@ -332,24 +332,6 @@ func getTrigger(ctx context.Context, t feature.T) *eventingv1.Trigger {
 		t.Errorf("failed to get Trigger, %v", err)
 	}
 	return trigger
-}
-
-func brokerHasReadyInConditions(ctx context.Context, t feature.T) {
-	var broker *eventingv1.Broker
-
-	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		broker = getBroker(ctx, t)
-		if broker.Status.ObservedGeneration != 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		t.Errorf("unable to get a reconciled Broker (status.observedGeneration != 0)")
-	}
-
-	knconf.HasReadyInConditions(ctx, t, broker.Status.Status)
 }
 
 func readyBrokerHasIngressAvailable(ctx context.Context, t feature.T) {
