@@ -55,6 +55,11 @@ func (mr *MagicEnvironment) executeStep(ctx context.Context, originalT *testing.
 	originalT.Run(s.T.String()+"/"+s.TestName(), func(st *testing.T) {
 		st.Helper()
 		internalT = tDecorator(st)
+		defer func() {
+			if r := recover(); r != nil {
+				internalT.Error("panic happened", r)
+			}
+		}()
 		st.Cleanup(wg.Done) // Make sure wg.Done() is always invoked, no matter what
 
 		// Create a cancel tied to this step

@@ -238,6 +238,7 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 		if internalT.Failed() {
 			skipAssertions = true
 			skipRequirements = true // No need to test other requirements
+			break                   // No need to continue the setup
 		}
 	}
 
