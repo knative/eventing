@@ -18,7 +18,14 @@ package channel
 
 import (
 	"context"
+	"strings"
 
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/messaging"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/pkg/apis/duck"
+	apiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
@@ -51,13 +58,15 @@ func ControlPlaneChannel() *feature.Feature {
 		Must("Each channel MUST have the duck.knative.dev/addressable: \"true\" label on its addressable-resolver ClusterRole.", todo)
 
 	f.Stable("CustomResourceDefinition per Channel").
-		// Each channel is namespaced and MUST have the following: TODO: seems like we wanted to say channels must be namespaced?
-		Must("label of messaging.knative.dev/subscribable: true", todo).
-		Must("label of duck.knative.dev/addressable: true", todo).
-		Must("The category `channel`", todo)
+		Must("Each channel is namespaced", crdOfChannelIsNamespaced).
+		Must("label of messaging.knative.dev/subscribable: true",
+			crdOfChannelIsLabeled(messaging.SubscribableDuckVersionAnnotation, "true")).
+		Must("label of duck.knative.dev/addressable: true",
+			crdOfChannelIsLabeled(duck.AddressableDuckVersionLabel, "true")).
+		Must("The category `channel`", crdOfChannelHasCategory("channel"))
 
 	f.Stable("Annotation Requirements").
-		Should("have annotation: messaging.knative.dev/subscribable: v1", todo)
+		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1", todo)
 
 	f.Stable("Spec Requirements").
 		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers", todo)
@@ -116,3 +125,52 @@ func ControlPlaneChannel() *feature.Feature {
 //	}
 //	return channel
 //}
+
+func crdOfChannel(ctx context.Context, t feature.T) *apiextv1.CustomResourceDefinition {
+	gvr := channel_impl.GVR()
+	name := strings.Join([]string{gvr.Resource, gvr.Group}, ".")
+
+	crd, err := apiextensionsclient.Get(ctx).ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	return crd
+}
+
+func crdOfChannelIsNamespaced(ctx context.Context, t feature.T) {
+	crd := crdOfChannel(ctx, t)
+
+	if crd.Spec.Scope != apiextv1.NamespaceScoped {
+		t.Logf("%q CRD is not namespaced", crd.Name)
+		t.Fail()
+	}
+}
+
+func crdOfChannelIsLabeled(key, want string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		crd := crdOfChannel(ctx, t)
+
+		if got, found := crd.Labels[key]; !found {
+			t.Logf("%q CRD does not have label %q", crd.Name, key)
+			t.Fail()
+		} else if got != want {
+			t.Logf("%q CRD label %q expected to be %s, got %s", crd.Name, key, want, got)
+			t.Fail()
+		}
+	}
+}
+
+func crdOfChannelHasCategory(want string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		crd := crdOfChannel(ctx, t)
+
+		for _, got := range crd.Spec.Names.Categories {
+			if got == want {
+				// Success!
+				return
+			}
+		}
+		t.Logf("%q CRD does not have Category %q", crd.Name, want)
+	}
+}
