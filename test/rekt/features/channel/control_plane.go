@@ -19,7 +19,6 @@ package channel
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/test/rekt/resources/account_role"
 	"strings"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -27,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/messaging"
+	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/pkg/apis/duck"
 	apiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client"

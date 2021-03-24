@@ -17,9 +17,9 @@ limitations under the License.
 package account_role_test
 
 import (
-	"knative.dev/eventing/test/rekt/resources/account_role"
 	"os"
 
+	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
