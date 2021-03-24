@@ -17,11 +17,11 @@ limitations under the License.
 package channel_impl_test
 
 import (
-	"github.com/kelseyhightower/envconfig"
-	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"log"
 	"os"
 
+	"github.com/kelseyhightower/envconfig"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
