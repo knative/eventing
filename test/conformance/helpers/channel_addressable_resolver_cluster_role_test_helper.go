@@ -29,6 +29,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
+// Deprecated
 func TestChannelAddressableResolverClusterRoleTestRunner(
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,

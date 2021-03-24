@@ -29,6 +29,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
+// Deprecated
 func TestChannelChannelableManipulatorClusterRoleTestRunner(
 	ctx context.Context,
 	t *testing.T,
