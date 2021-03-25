@@ -308,9 +308,9 @@ func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 		// above, they do not get stuff into the sent/response SentId fields.
 		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
 		for _, e := range events {
-			// Make sure HTTP response code is 400
-			if e.response.StatusCode != 400 {
-				t.Errorf("Expected statuscode 400 with missing required field %q for sequence %d got %d", k, e.response.Sequence, e.response.StatusCode)
+			// Make sure HTTP response code is 4XX
+			if e.response.StatusCode < 400 || e.response.StatusCode > 499 {
+				t.Errorf("Expected statuscode 4XX with missing required field %q for sequence %d got %d", k, e.response.Sequence, e.response.StatusCode)
 				t.Logf("Sent event was: %s\nresponse: %s\n", e.sent.String(), e.response.String())
 			}
 		}
