@@ -18,7 +18,6 @@ package v1beta1
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -123,61 +122,6 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 				},
 			},
 		},
-	}, {
-		"full with jsonData that cannot be unmarshalled",
-		&PingSource{
-			ObjectMeta: meta,
-			Spec: PingSourceSpec{
-				SourceSpec: duckv1.SourceSpec{
-					Sink: sink,
-				},
-				Schedule: "* * * * *",
-				JsonData: "hello",
-			},
-			Status: PingSourceStatus{
-				SourceStatus: duckv1.SourceStatus{
-					Status: duckv1.Status{
-						ObservedGeneration: 1,
-						Conditions: duckv1.Conditions{{
-							Type:   "Ready",
-							Status: "True",
-						}},
-					},
-					SinkURI: sinkUri,
-				},
-			},
-		},
-	}, {
-		"full with invalid v1beta2 spec annotation",
-		&PingSource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "ping-name",
-				Namespace:  "ping-ns",
-				Generation: 17,
-				Annotations: map[string]string{
-					V1B2SpecAnnotationKey: "$$ invalid json $$",
-				},
-			},
-			Spec: PingSourceSpec{
-				SourceSpec: duckv1.SourceSpec{
-					Sink: sink,
-				},
-				Schedule: "* * * * *",
-				JsonData: "hello",
-			},
-			Status: PingSourceStatus{
-				SourceStatus: duckv1.SourceStatus{
-					Status: duckv1.Status{
-						ObservedGeneration: 1,
-						Conditions: duckv1.Conditions{{
-							Type:   "Ready",
-							Status: "True",
-						}},
-					},
-					SinkURI: sinkUri,
-				},
-			},
-		},
 	}}
 
 	for _, test := range tests {
@@ -194,7 +138,7 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 					t.Error("ConvertFrom() =", err)
 				}
 
-				if diff := diffIgnoringAnnotations(test.in, got); diff != "" {
+				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Error("roundtrip (-want, +got) =", diff)
 				}
 			})
@@ -202,8 +146,196 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 	}
 }
 
-// This tests round tripping from a higher version -> v1beta1 and back to the higher version.
-func TestPingSourceConversionRoundTripDown(t *testing.T) {
+// one way conversion: v1beta1 -> higher version
+func TestPingSourceConversionOneWayUp(t *testing.T) {
+	path := apis.HTTP("")
+	path.Path = "/path"
+
+	sinkUri := apis.HTTP("example.com")
+	sinkUri.Path = "path"
+	sink := duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Kind:       "Foo",
+			Namespace:  "Bar",
+			Name:       "Baz",
+			APIVersion: "Baf",
+		},
+		URI: path,
+	}
+
+	ceOverrides := duckv1.CloudEventOverrides{
+		Extensions: map[string]string{
+			"foo": "bar",
+			"baz": "baf",
+		},
+	}
+
+	ceAttributes := []duckv1.CloudEventAttributes{{
+		Type:   PingSourceEventType,
+		Source: PingSourceSource("ping-ns", "ping-name"),
+	}}
+
+	tests := []struct {
+		name string
+		in   *PingSource
+		out  *v1beta2.PingSource
+	}{{name: "empty",
+		in: &PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec:   PingSourceSpec{},
+			Status: PingSourceStatus{},
+		},
+		out: &v1beta2.PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec:   v1beta2.PingSourceSpec{},
+			Status: v1beta2.PingSourceStatus{},
+		},
+	}, {name: "full configuration: marshalable jsonData",
+		in: &PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule: "1 2 3 4 5",
+				Timezone: "Knative/Land",
+				JsonData: `{"foo":"bar"}`,
+			},
+			Status: PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+		out: &v1beta2.PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1beta2.PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule:    "1 2 3 4 5",
+				Timezone:    "Knative/Land",
+				ContentType: cloudevents.ApplicationJSON,
+				Data:        `{"foo":"bar"}`,
+			},
+			Status: v1beta2.PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+	}, {name: "full configuration: unmarshalable jsonData",
+		in: &PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule: "1 2 3 4 5",
+				Timezone: "Knative/Land",
+				JsonData: "hello",
+			},
+			Status: PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+		out: &v1beta2.PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: v1beta2.PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule:    "1 2 3 4 5",
+				Timezone:    "Knative/Land",
+				ContentType: cloudevents.ApplicationJSON,
+				Data:        `{"body":"hello"}`,
+			},
+			Status: v1beta2.PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := &v1beta2.PingSource{}
+			if err := test.in.ConvertTo(context.Background(), result); err != nil {
+				t.Error("ConvertFrom() =", err)
+			}
+
+			if diff := cmp.Diff(test.out, result); diff != "" {
+				t.Error("one-way up conversion (-want, +got) =", diff)
+			}
+		})
+	}
+}
+
+// one way conversion: higher version -> v1beta1
+func TestPingSourceConversionOneWayDown(t *testing.T) {
 	path := apis.HTTP("")
 	path.Path = "/path"
 
@@ -234,6 +366,7 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 	tests := []struct {
 		name string
 		in   *v1beta2.PingSource
+		out  *PingSource
 	}{{name: "empty",
 		in: &v1beta2.PingSource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -244,32 +377,16 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 			Spec:   v1beta2.PingSourceSpec{},
 			Status: v1beta2.PingSourceStatus{},
 		},
-	}, {name: "simple configuration",
-		in: &v1beta2.PingSource{
+		out: &PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
 				Namespace:  "ping-ns",
 				Generation: 17,
 			},
-			Spec: v1beta2.PingSourceSpec{
-				SourceSpec: duckv1.SourceSpec{
-					Sink: sink,
-				},
-			},
-			Status: v1beta2.PingSourceStatus{
-				SourceStatus: duckv1.SourceStatus{
-					Status: duckv1.Status{
-						ObservedGeneration: 1,
-						Conditions: duckv1.Conditions{{
-							Type:   "Ready",
-							Status: "True",
-						}},
-					},
-					SinkURI: sinkUri,
-				},
-			},
+			Spec:   PingSourceSpec{},
+			Status: PingSourceStatus{},
 		},
-	}, {name: "full: v1beta1 annotation does not exist",
+	}, {name: "full configuration: json",
 		in: &v1beta2.PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
@@ -300,23 +417,41 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 			},
 		},
-	}, {name: "full: v1beta1 spec annotation is inconsistent with v1beta2 spec",
+		out: &PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule: "1 2 3 4 5",
+				Timezone: "Knative/Land",
+				JsonData: `{"foo":"bar"}`,
+			},
+			Status: PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+	}, {name: "full configuration: xml payload",
 		in: &v1beta2.PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
 				Namespace:  "ping-ns",
 				Generation: 17,
-				Annotations: map[string]string{
-					V1B1SpecAnnotationKey: toJSON(PingSourceSpec{
-						SourceSpec: duckv1.SourceSpec{
-							Sink:                sink,
-							CloudEventOverrides: &ceOverrides,
-						},
-						Schedule: "1 2 3 4 5",
-						Timezone: "Knative/GoLand",
-						JsonData: `{"foo":"bar"}`,
-					}),
-				},
 			},
 			Spec: v1beta2.PingSourceSpec{
 				SourceSpec: duckv1.SourceSpec{
@@ -325,8 +460,8 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 				Schedule:    "1 2 3 4 5",
 				Timezone:    "Knative/Land",
-				ContentType: cloudevents.ApplicationJSON,
-				Data:        `{"foo":"bar"}`,
+				ContentType: cloudevents.ApplicationXML,
+				Data:        "<note>hello world</note>",
 			},
 			Status: v1beta2.PingSourceStatus{
 				SourceStatus: duckv1.SourceStatus{
@@ -342,23 +477,40 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 			},
 		},
-	}, {name: "full: v1beta1 spec annotation is consistent with v1beta2 spec",
+		out: &PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "ping-name",
+				Namespace:  "ping-ns",
+				Generation: 17,
+			},
+			Spec: PingSourceSpec{
+				SourceSpec: duckv1.SourceSpec{
+					Sink:                sink,
+					CloudEventOverrides: &ceOverrides,
+				},
+				Schedule: "1 2 3 4 5",
+				Timezone: "Knative/Land",
+			},
+			Status: PingSourceStatus{
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI:              sinkUri,
+					CloudEventAttributes: ceAttributes,
+				},
+			},
+		},
+	}, {name: "full configuration: binary payload",
 		in: &v1beta2.PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
 				Namespace:  "ping-ns",
 				Generation: 17,
-				Annotations: map[string]string{
-					V1B1SpecAnnotationKey: toJSON(PingSourceSpec{
-						SourceSpec: duckv1.SourceSpec{
-							Sink:                sink,
-							CloudEventOverrides: &ceOverrides,
-						},
-						Schedule: "1 2 3 4 5",
-						Timezone: "Knative/Land",
-						JsonData: `{"foo":"bar"}`,
-					}),
-				},
 			},
 			Spec: v1beta2.PingSourceSpec{
 				SourceSpec: duckv1.SourceSpec{
@@ -367,8 +519,8 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 				Schedule:    "1 2 3 4 5",
 				Timezone:    "Knative/Land",
-				ContentType: cloudevents.ApplicationJSON,
-				Data:        `{"foo":"bar"}`,
+				ContentType: cloudevents.TextPlain,
+				Data:        "ZGF0YQ==",
 			},
 			Status: v1beta2.PingSourceStatus{
 				SourceStatus: duckv1.SourceStatus{
@@ -384,27 +536,21 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 				},
 			},
 		},
-	}, {name: "full: v1beta1 spec annotation is invalid",
-		in: &v1beta2.PingSource{
+		out: &PingSource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "ping-name",
 				Namespace:  "ping-ns",
 				Generation: 17,
-				Annotations: map[string]string{
-					V1B1SpecAnnotationKey: "$$ invalid json $$",
-				},
 			},
-			Spec: v1beta2.PingSourceSpec{
+			Spec: PingSourceSpec{
 				SourceSpec: duckv1.SourceSpec{
 					Sink:                sink,
 					CloudEventOverrides: &ceOverrides,
 				},
-				Schedule:    "1 2 3 4 5",
-				Timezone:    "Knative/Land",
-				ContentType: cloudevents.ApplicationJSON,
-				Data:        `{"body":"hello"}`,
+				Schedule: "1 2 3 4 5",
+				Timezone: "Knative/Land",
 			},
-			Status: v1beta2.PingSourceStatus{
+			Status: PingSourceStatus{
 				SourceStatus: duckv1.SourceStatus{
 					Status: duckv1.Status{
 						ObservedGeneration: 1,
@@ -422,32 +568,14 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			down := &PingSource{}
-			if err := down.ConvertFrom(context.Background(), test.in); err != nil {
-				t.Error("ConvertTo() =", err)
-			}
-
-			got := &v1beta2.PingSource{}
-
-			if err := down.ConvertTo(context.Background(), got); err != nil {
+			result := &PingSource{}
+			if err := result.ConvertFrom(context.Background(), test.in); err != nil {
 				t.Error("ConvertFrom() =", err)
 			}
-			if diff := diffIgnoringAnnotations(test.in, got); diff != "" {
-				t.Error("roundtrip (-want, +got) =", diff)
+
+			if diff := cmp.Diff(test.out, result); diff != "" {
+				t.Error("one-way down conversion (-want, +got) =", diff)
 			}
 		})
 	}
-}
-
-// returns the diff of want and got, but ignoring the difference of annotations.
-func diffIgnoringAnnotations(want metav1.Object, got metav1.Object) string {
-	want.SetAnnotations(nil)
-	got.SetAnnotations(nil)
-	return cmp.Diff(want, got)
-}
-
-// marshal an interface to JSON string, ignoring error
-func toJSON(obj interface{}) string {
-	marshalled, _ := json.Marshal(obj)
-	return string(marshalled)
 }
