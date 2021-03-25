@@ -168,7 +168,8 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 		t.Error("failed to get the address of the broker", brokerName, err)
 	}
 
-	opts := []eventshub.EventsHubOption{eventshub.StartSenderURL(u.String())}
+	opts := []eventshub.EventsHubOption{eventshub.StartSenderToResource(broker.Gvr(), brokerName)}
+
 	uuids := map[string]string{
 		uuid.New().String(): "1.0",
 		uuid.New().String(): "0.3",
@@ -199,11 +200,6 @@ func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
 
 func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
-
-	u, err := broker.Address(ctx, brokerName)
-	if err != nil || u == nil {
-		t.Error("failed to get the address of the broker", brokerName, err)
-	}
 
 	uuids := map[string]string{
 		uuid.New().String(): "19.0",
@@ -240,11 +236,6 @@ func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 func brokerRejectsGetRequest(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
 
-	u, err := broker.Address(ctx, brokerName)
-	if err != nil || u == nil {
-		t.Error("failed to get the address of the broker", brokerName, err)
-	}
-
 	uuids := map[string]string{
 		uuid.New().String(): "1.0",
 	}
@@ -280,27 +271,34 @@ func brokerRejectsGetRequest(ctx context.Context, t feature.T) {
 
 func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
-
-	u, err := broker.Address(ctx, brokerName)
-	if err != nil || u == nil {
-		t.Error("failed to get the address of the broker", brokerName, err)
+	headers := map[string]string{
+		"ce-specversion": "1.0",
+		"ce-type":        "sometype",
+		"ce-source":      "conformancetest.request.sender.test.knative.dev",
+		"ce-id":          uuid.New().String(),
 	}
 
-	uuids := []string{
-		uuid.New().String(),
-	}
-	for _, uuid := range uuids {
+	for k := range headers {
+		// Add all but the one key we want to omit.
+		// https://github.com/knative/eventing/issues/5143
+		if k == "ce-type" || k == "ce-source" || k == "ce-id" {
+			t.Logf("SKIPPING missing header %q due to known bug: https://github.com/knative/eventing/issues/5143", k)
+			continue
+		}
+
+		var options []eventshub.EventsHubOption
+		for k2, v2 := range headers {
+			if k != k2 {
+				options = append(options, eventshub.InputHeader(k2, v2))
+				t.Logf("Adding Header Value: %q => %q", k2, v2)
+			}
+		}
+		options = append(options, eventshub.StartSenderToResource(broker.Gvr(), brokerName))
+		options = append(options, eventshub.InputBody("{}"))
 		// We need to use a different source name, otherwise, it will try to update
 		// the pod, which is immutable.
 		source := feature.MakeRandomK8sName("source")
-		eventshub.Install(source,
-			eventshub.StartSenderToResource(broker.Gvr(), brokerName),
-			// Missing version here, should be rejected.
-			eventshub.InputHeader("ce-type", "sometype"),
-			eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
-			eventshub.InputHeader("ce-id", uuid),
-			eventshub.InputBody("{}"),
-		)(ctx, t)
+		eventshub.Install(source, options...)(ctx, t)
 
 		store := eventshub.StoreFromContext(ctx, source)
 		// We are looking for two events, one of them is the sent event and the other
@@ -312,7 +310,8 @@ func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 		for _, e := range events {
 			// Make sure HTTP response code is 400
 			if e.response.StatusCode != 400 {
-				t.Errorf("Expected statuscode 400 for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
+				t.Errorf("Expected statuscode 400 with missing required field %q for sequence %d got %d", k, e.response.Sequence, e.response.StatusCode)
+				t.Logf("Sent event was: %s\nresponse: %s\n", e.sent.String(), e.response.String())
 			}
 		}
 	}
