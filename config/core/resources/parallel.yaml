@@ -62,6 +62,9 @@ spec:
                           description: BackoffPolicy is the retry backoff
                               policy (linear, exponential).
                           type: string
+                        timeout:
+                          description: Timeout is the timeout of each single request.
+                          type: string
                         deadLetterSink:
                           description: DeadLetterSink is the sink receiving
                               event that could not be sent to a destination.
