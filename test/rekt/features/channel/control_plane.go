@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
@@ -332,22 +331,4 @@ func channelAllowsSubscribers(ctx context.Context, t feature.T) {
 	if !found {
 		t.Error("Round trip Subscriber failed.")
 	}
-}
-
-func channelHasReadyInConditions(ctx context.Context, t feature.T) {
-	var ch *duckv1.Channelable
-
-	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		ch = getChannelable(ctx, t)
-		if ch.Status.ObservedGeneration != 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		t.Errorf("unable to get a reconciled ChannelImpl (status.observedGeneration != 0)")
-	}
-
-	knconf.HasReadyInConditions(ctx, t, ch.Status.Status)
 }
