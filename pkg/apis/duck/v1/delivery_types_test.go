@@ -28,8 +28,8 @@ import (
 func TestDeliverySpecValidation(t *testing.T) {
 	invalidString := "invalid time"
 	bop := BackoffPolicyExponential
-	validBackoffDelay := "PT2S"
-	invalidBackoffDelay := "1985-04-12T23:20:50.52Z"
+	validDuration := "PT2S"
+	invalidDuration := "1985-04-12T23:20:50.52Z"
 	tests := []struct {
 		name string
 		spec *DeliverySpec
@@ -51,24 +51,34 @@ func TestDeliverySpecValidation(t *testing.T) {
 			return apis.ErrGeneric("expected at least one, got none", "ref", "uri").ViaField("deadLetterSink")
 		}(),
 	}, {
+		name: "valid timeout",
+		spec: &DeliverySpec{Timeout: &validDuration},
+		want: nil,
+	}, {
+		name: "invalid timeout",
+		spec: &DeliverySpec{Timeout: &invalidDuration},
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue(invalidDuration, "timeout")
+		}(),
+	}, {
 		name: "valid backoffPolicy",
 		spec: &DeliverySpec{BackoffPolicy: &bop},
 		want: nil,
 	}, {
 		name: "valid backoffDelay",
-		spec: &DeliverySpec{BackoffDelay: &validBackoffDelay},
+		spec: &DeliverySpec{BackoffDelay: &validDuration},
 		want: nil,
 	}, {
 		name: "invalid backoffDelay",
-		spec: &DeliverySpec{BackoffDelay: &invalidBackoffDelay},
+		spec: &DeliverySpec{BackoffDelay: &invalidDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrGeneric("invalid value: "+invalidBackoffDelay, "backoffDelay")
+			return apis.ErrInvalidValue(invalidDuration, "backoffDelay")
 		}(),
 	}, {
 		name: "negative retry",
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(-1)},
 		want: func() *apis.FieldError {
-			return apis.ErrGeneric("invalid value: -1", "retry")
+			return apis.ErrInvalidValue("-1", "retry")
 		}(),
 	}, {
 		name: "valid retry 0",
