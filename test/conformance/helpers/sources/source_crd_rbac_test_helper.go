@@ -18,7 +18,6 @@ package sources
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,7 +29,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-var clusterRoleNameSuffix = "source-observer"
 var clusterRoleLabel = map[string]string{
 	duck.SourceDuckVersionLabel: "true",
 }
@@ -38,10 +36,9 @@ var clusterRoleLabel = map[string]string{
 /*
 	The test checks for the following in this order:
 	1. Find cluster roles that match these criteria -
-		a. Has suffix "source-observer" in name like "foos-source-observer",
-		b. Has label duck.knative.dev/source: "true",
-		c. Has the eventing source in Resources for a Policy Rule, and
-		d. Has all the expected verbs (get, list, watch)
+		a. Has label duck.knative.dev/source: "true",
+		b. Has the eventing source in Resources for a Policy Rule, and
+		c. Has all the expected verbs (get, list, watch)
 */
 func SourceCRDRBACTestHelperWithComponentsTestRunner(
 	t *testing.T,
@@ -112,13 +109,11 @@ func clusterRoleMeetsSpecs(client *testlib.Client, labelSelector *metav1.LabelSe
 	}
 
 	for _, cr := range crs.Items {
-		if strings.HasSuffix(cr.ObjectMeta.Name, clusterRoleNameSuffix) { //Cluster Role with suffix "source-observer" in name
-			for _, pr := range cr.Rules {
-				if contains(pr.Resources, crdSourceName) && //Cluster Role has the eventing source listed in Resources for a Policy Rule
-					((contains(pr.Verbs, "get") && contains(pr.Verbs, "list") && contains(pr.Verbs, "watch")) ||
-						contains(pr.Verbs, rbacv1.VerbAll)) { //Cluster Role has all the expected Verbs
-					return true
-				}
+		for _, pr := range cr.Rules {
+			if contains(pr.Resources, crdSourceName) && //Cluster Role has the eventing source listed in Resources for a Policy Rule
+				((contains(pr.Verbs, "get") && contains(pr.Verbs, "list") && contains(pr.Verbs, "watch")) ||
+					contains(pr.Verbs, rbacv1.VerbAll)) { //Cluster Role has all the expected Verbs
+				return true
 			}
 		}
 	}
