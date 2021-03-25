@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Use this aggregated ClusterRole when you need readonly access to "Addressables"
+# Use this aggregated ClusterRole when you need readonly access to "PodSpecables"
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

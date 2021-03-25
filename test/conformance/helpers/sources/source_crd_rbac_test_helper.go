@@ -22,7 +22,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/pkg/apis/duck"
@@ -30,7 +29,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-var clusterRoleName = "eventing-sources-source-observer"
 var clusterRoleLabel = map[string]string{
 	duck.SourceDuckVersionLabel: "true",
 }
@@ -38,10 +36,9 @@ var clusterRoleLabel = map[string]string{
 /*
 	The test checks for the following in this order:
 	1. Find cluster roles that match these criteria -
-		a. Has name "eventing-sources-source-observer",
-		b. Has label duck.knative.dev/source: "true",
-		c. Has the eventing source in Resources for a Policy Rule, and
-		d. Has all the expected verbs (get, list, watch)
+		a. Has label duck.knative.dev/source: "true",
+		b. Has the eventing source in Resources for a Policy Rule, and
+		c. Has all the expected verbs (get, list, watch)
 */
 func SourceCRDRBACTestHelperWithComponentsTestRunner(
 	t *testing.T,
@@ -105,8 +102,7 @@ func getSourcePluralName(client *testlib.Client, object metav1.TypeMeta) string 
 
 func clusterRoleMeetsSpecs(client *testlib.Client, labelSelector *metav1.LabelSelector, crdSourceName string) bool {
 	crs, err := client.Kube.RbacV1().ClusterRoles().List(context.Background(), metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("metadata.name", clusterRoleName).String(), //Cluster Role with name "eventing-sources-source-observer"
-		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),                         //Cluster Role with duck.knative.dev/source: "true" label
+		LabelSelector: labels.Set(labelSelector.MatchLabels).String(), //Cluster Role with duck.knative.dev/source: "true" label
 	})
 	if err != nil {
 		client.T.Errorf("error while getting cluster roles %v", err)
