@@ -61,28 +61,32 @@ func TestMain_WithController_DisableHA(t *testing.T) {
 	})
 
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
-	MainWithInformers(ctx,
-		"mycomponent",
-		env,
-		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
-			env := processed.(*myEnvConfig)
+	done := make(chan bool)
+	go func() {
+		MainWithInformers(ctx,
+			"mycomponent",
+			env,
+			func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+				env := processed.(*myEnvConfig)
 
-			if env.Mode != "mymode" {
-				t.Error("Expected mode mymode, got:", env.Mode)
-			}
+				if env.Mode != "mymode" {
+					t.Error("Expected mode mymode, got:", env.Mode)
+				}
 
-			if env.Sink != "http://sink" {
-				t.Error("Expected sinkURI http://sink, got:", env.Sink)
-			}
+				if env.Sink != "http://sink" {
+					t.Error("Expected sinkURI http://sink, got:", env.Sink)
+				}
 
-			if leaderelection.HasLeaderElection(ctx) {
-				t.Error("Expected no leader election, but got leader election")
-			}
-			return &myAdapter{}
-		})
+				if leaderelection.HasLeaderElection(ctx) {
+					t.Error("Expected no leader election, but got leader election")
+				}
+				return &myAdapter{blocking: true}
+			})
+		done <- true
+	}()
 
 	cancel()
-
+	<-done
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
@@ -116,14 +120,17 @@ func TestMain_WithControllerHA(t *testing.T) {
 	})
 
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
-	MainWithInformers(ctx,
-		"mycomponent",
-		env,
-		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
-			return &myAdapter{}
-		})
-
+	done := make(chan bool)
+	go func() {
+		MainWithInformers(ctx,
+			"mycomponent",
+			env,
+			func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+				return &myAdapter{blocking: true}
+			})
+		done <- true
+	}()
 	cancel()
-
+	<-done
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
