@@ -31,7 +31,9 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-type myAdapter struct{}
+type myAdapter struct {
+	blocking bool
+}
 
 func TestMainWithNothing(t *testing.T) {
 	os.Setenv("K_SINK", "http://sink")
@@ -87,28 +89,32 @@ func TestMainWithInformerNoLeaderElection(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
-	MainWithInformers(ctx,
-		"mycomponent",
-		env,
-		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
-			env := processed.(*myEnvConfig)
+	done := make(chan bool)
+	go func() {
+		MainWithInformers(ctx,
+			"mycomponent",
+			env,
+			func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+				env := processed.(*myEnvConfig)
 
-			if env.Mode != "mymode" {
-				t.Error("Expected mode mymode, got:", env.Mode)
-			}
+				if env.Mode != "mymode" {
+					t.Error("Expected mode mymode, got:", env.Mode)
+				}
 
-			if env.Sink != "http://sink" {
-				t.Error("Expected sinkURI http://sink, got:", env.Sink)
-			}
+				if env.Sink != "http://sink" {
+					t.Error("Expected sinkURI http://sink, got:", env.Sink)
+				}
 
-			if leaderelection.HasLeaderElection(ctx) {
-				t.Error("Expected no leader election, but got leader election")
-			}
-			return &myAdapter{}
-		})
+				if leaderelection.HasLeaderElection(ctx) {
+					t.Error("Expected no leader election, but got leader election")
+				}
+				return &myAdapter{blocking: true}
+			})
+		done <- true
+	}()
 
 	cancel()
-
+	<-done
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
@@ -141,28 +147,32 @@ func TestMain_MetricsConfig(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
-	MainWithInformers(ctx,
-		"mycomponent",
-		env,
-		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
-			env := processed.(*myEnvConfig)
+	done := make(chan bool)
+	go func() {
+		MainWithInformers(ctx,
+			"mycomponent",
+			env,
+			func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
+				env := processed.(*myEnvConfig)
 
-			if env.Mode != "mymode" {
-				t.Error("Expected mode mymode, got:", env.Mode)
-			}
+				if env.Mode != "mymode" {
+					t.Error("Expected mode mymode, got:", env.Mode)
+				}
 
-			if env.Sink != "http://sink" {
-				t.Error("Expected sinkURI http://sink, got:", env.Sink)
-			}
+				if env.Sink != "http://sink" {
+					t.Error("Expected sinkURI http://sink, got:", env.Sink)
+				}
 
-			if leaderelection.HasLeaderElection(ctx) {
-				t.Error("Expected no leader election, but got leader election")
-			}
-			return &myAdapter{}
-		})
+				if leaderelection.HasLeaderElection(ctx) {
+					t.Error("Expected no leader election, but got leader election")
+				}
+				return &myAdapter{blocking: true}
+			})
+		done <- true
+	}()
 
 	cancel()
-
+	<-done
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
@@ -196,7 +206,10 @@ func (m *myAdapter) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (m *myAdapter) Start(_ context.Context) error {
+func (m *myAdapter) Start(ctx context.Context) error {
+	if m.blocking {
+		<-ctx.Done()
+	}
 	return nil
 }
 

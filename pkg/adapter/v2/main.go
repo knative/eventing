@@ -23,6 +23,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -178,6 +179,8 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		ctx = leaderelection.WithStandardLeaderElectorBuilder(ctx, kubeclient.Get(ctx), *leConfig)
 	}
 
+	wg := sync.WaitGroup{}
+
 	// Create and start controller is needed
 	if ctor := ControllerFromContext(ctx); ctor != nil {
 		ctrl := ctor(ctx, adapter)
@@ -190,13 +193,19 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		}
 
 		logger.Info("Starting controller")
-		go controller.StartAll(ctx, ctrl)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			controller.StartAll(ctx, ctrl)
+		}()
 	}
 
 	// Finally start the adapter (blocking)
 	if err := adapter.Start(ctx); err != nil {
 		logger.Fatalw("Start returned an error", zap.Error(err))
 	}
+
+	wg.Wait()
 }
 
 func ConstructEnvOrDie(ector EnvConfigConstructor) EnvConfigAccessor {
