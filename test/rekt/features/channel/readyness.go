@@ -60,7 +60,7 @@ func SubscriptionGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature 
 	f.Setup(fmt.Sprintf("install a Subscription named %q", name), subscription.Install(name, cfg...))
 
 	f.Stable("Subscription").
-		Must("be ready", channel.IsReady(name))
+		Must("be ready", subscription.IsReady(name))
 
 	return f
 }
