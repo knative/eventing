@@ -16,7 +16,7 @@ name: Downstream
 
 on:
   pull_request:
-    branches: [ 'master', 'release-*' ]
+    branches: [ 'main', 'master' ]
 
 jobs:
 
