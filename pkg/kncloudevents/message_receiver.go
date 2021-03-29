@@ -38,7 +38,8 @@ type HTTPMessageReceiver struct {
 	server   *http.Server
 	listener net.Listener
 
-	checker http.HandlerFunc
+	checker          http.HandlerFunc
+	drainQuietPeriod time.Duration
 }
 
 // HTTPMessageReceiverOption enables further configuration of a HTTPMessageReceiver.
@@ -64,6 +65,13 @@ func WithChecker(checker http.HandlerFunc) HTTPMessageReceiverOption {
 	}
 }
 
+// WithDrainQuietPeriod configures the QuietPeriod for the Drainer.
+func WithDrainQuietPeriod(duration time.Duration) HTTPMessageReceiverOption {
+	return func(h *HTTPMessageReceiver) {
+		h.drainQuietPeriod = duration
+	}
+}
+
 // Blocking
 func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
@@ -74,6 +82,7 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 	drainer := &handlers.Drainer{
 		Inner:       CreateHandler(handler),
 		HealthCheck: recv.checker,
+		QuietPeriod: recv.drainQuietPeriod,
 	}
 	recv.server = &http.Server{
 		Addr:    recv.listener.Addr().String(),
