@@ -26,7 +26,6 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
-	"knative.dev/eventing/test/rekt/features/channel"
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
@@ -106,24 +105,5 @@ func TestSmoke_PingSource(t *testing.T) {
 			}
 			env.Test(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
 		}
-	}
-}
-
-// TestSmoke_Channel
-func TestSmoke_Channel(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment()
-	t.Cleanup(env.Finish)
-
-	names := []string{
-		"customname",
-		"name-with-dash",
-		"name1with2numbers3",
-		"name63-01234567890123456789012345678901234567890123456789012345",
-	}
-
-	for _, name := range names {
-		env.Test(ctx, t, channel.GoesReady(name))
 	}
 }

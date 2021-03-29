@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"knative.dev/eventing/test/rekt/resources/channel"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -33,6 +34,19 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f.Stable("Channel").
 		Must("be ready", channel.IsReady(name)).
 		Must("be addressable", channel.IsAddressable(name))
+
+	return f
+}
+
+// ImplGoesReady returns a feature testing if a channel impl becomes ready.
+func ImplGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("ChannelImpl goes ready.")
+
+	f.Setup(fmt.Sprintf("install a %s named %q", channel_impl.GVK().Kind, name), channel_impl.Install(name, cfg...))
+
+	f.Stable("ChannelImpl").
+		Must("be ready", channel_impl.IsReady(name)).
+		Must("be addressable", channel_impl.IsAddressable(name))
 
 	return f
 }

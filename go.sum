@@ -1095,7 +1095,6 @@ knative.dev/hack v0.0.0-20210317214554-58edbdc42966 h1:qSnMQkq4gnhD5Hb8Mpfn7Irpk
 knative.dev/hack v0.0.0-20210317214554-58edbdc42966/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack/schema v0.0.0-20210317214554-58edbdc42966 h1:r1whHDyfHm+seDPt0+rn9YKiGhDSbkz/4DlkLpIRK3A=
 knative.dev/hack/schema v0.0.0-20210317214554-58edbdc42966/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
-knative.dev/pkg v0.0.0-20210318052054-dfeeb1817679 h1:5yTTe0oW2/a13DU2b4U42h7lSHZLWy32a/8DEkkH7C4=
 knative.dev/pkg v0.0.0-20210318052054-dfeeb1817679/go.mod h1:o1aTlbc+h60DP9P6nd/WmP99Ny9Ls3U/JIjL4xMgqpw=
 knative.dev/pkg v0.0.0-20210323202917-b558677ab034 h1:Uj1gJL+G6cEInJ7dbCSrtxAhtxoLLjIjRCA7xeQyUrQ=
 knative.dev/pkg v0.0.0-20210323202917-b558677ab034/go.mod h1:o1aTlbc+h60DP9P6nd/WmP99Ny9Ls3U/JIjL4xMgqpw=

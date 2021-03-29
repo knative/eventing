@@ -21,25 +21,37 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
+	"go.uber.org/zap"
 	authv1 "k8s.io/api/authorization/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
+	messagingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	apiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/state"
 )
 
-func ControlPlaneConformance() *feature.FeatureSet {
+func ControlPlaneConformance(channelName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Channel Specification - Control Plane",
 		Features: []feature.Feature{
-			*ControlPlaneChannel(),
+			*ControlPlaneChannel(channelName),
 		},
 	}
 
@@ -52,8 +64,10 @@ func todo(ctx context.Context, t feature.T) {
 
 func noop(ctx context.Context, t feature.T) {}
 
-func ControlPlaneChannel() *feature.Feature {
+func ControlPlaneChannel(channelName string) *feature.Feature {
 	f := feature.NewFeatureNamed("Conformance")
+
+	f.Setup("Set Channel Name", setChannelableName(channelName))
 
 	sacmName := feature.MakeRandomK8sName("channelable-manipulator")
 	f.Setup("Create Service Account for Channelable Manipulator",
@@ -88,19 +102,25 @@ func ControlPlaneChannel() *feature.Feature {
 		Must("The category `channel`", crdOfChannelHasCategory("channel"))
 
 	f.Stable("Annotation Requirements").
-		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1", todo)
+		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1",
+			channelHasAnnotations)
 
 	f.Stable("Spec Requirements").
-		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers", todo)
+		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers",
+			channelAllowsSubscribers)
 		// Special note for Channel tests: The array of subscribers MUST NOT be set directly on the generic Channel custom object, but rather appended to the backing channel by the subscription itself.
 
 	f.Stable("Status Requirements").
 		Must("Each channel CRD MUST have a status subresource which contains [address]", todo).
 		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]", todo).
-		Should("SHOULD have in status observedGeneration", todo).
-		Must("observedGeneration MUST be populated if present", todo).
-		Should("SHOULD have in status conditions (as an array)", todo).
-		Should("status.conditions SHOULD indicate status transitions and error reasons if present", todo)
+		Should("SHOULD have in status observedGeneration",
+			noop). // tested by knconf.KResourceHasReadyInConditions
+		Must("observedGeneration MUST be populated if present",
+			noop). // tested by knconf.KResourceHasReadyInConditions
+		Should("SHOULD have in status conditions (as an array)",
+			knconf.KResourceHasReadyInConditions(channel_impl.GVR(), channelName)).
+		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
+			noop)
 
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated", todo).
@@ -112,41 +132,68 @@ func ControlPlaneChannel() *feature.Feature {
 	return f
 }
 
-// I want this for later:
-//
-//type EventingClient struct {
-//	Channels messagingclientsetv1.ChannelInterface
-//}
-//
-//func Client(ctx context.Context) *EventingClient {
-//	mc := eventingclient.Get(ctx).MessagingV1()
-//	env := environment.FromContext(ctx)
-//
-//	return &EventingClient{
-//		Channels: mc.Channels(env.Namespace()),
-//	}
-//}
-//
-//const (
-//	ChannelNameKey = "channelName"
-//)
-//
-//func setChannelName(name string) feature.StepFn {
-//	return func(ctx context.Context, t feature.T) {
-//		state.SetOrFail(ctx, t, ChannelNameKey, name)
-//	}
-//}
-//
-//func getChannel(ctx context.Context, t feature.T) *messagingv1.Channel {
-//	c := Client(ctx)
-//	name := state.GetStringOrFail(ctx, t, ChannelNameKey)
-//
-//	channel, err := c.Channels.Get(ctx, name, metav1.GetOptions{})
-//	if err != nil {
-//		t.Errorf("failed to get Channel, %v", err)
-//	}
-//	return channel
-//}
+type EventingClient struct {
+	Channels    messagingclientsetv1.ChannelInterface
+	ChannelImpl dynamic.ResourceInterface
+}
+
+func Client(ctx context.Context) *EventingClient {
+	env := environment.FromContext(ctx)
+
+	mc := eventingclient.Get(ctx).MessagingV1()
+	dc := dynamicclient.Get(ctx)
+
+	return &EventingClient{
+		Channels:    mc.Channels(env.Namespace()),
+		ChannelImpl: dc.Resource(channel_impl.GVR()).Namespace(env.Namespace()),
+	}
+}
+
+const (
+	ChannelableNameKey = "channelableName"
+)
+
+func setChannelableName(name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		state.SetOrFail(ctx, t, ChannelableNameKey, name)
+	}
+}
+
+func getChannelable(ctx context.Context, t feature.T) *duckv1.Channelable {
+	c := Client(ctx)
+	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+
+	obj, err := c.ChannelImpl.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("failed to get ChannelImpl, %v", err)
+	}
+
+	channel := &duckv1.Channelable{}
+	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, channel); err != nil {
+		t.Fatalf("Failed to convert channelImpl to Channelable: %v", err)
+	}
+	channel.ResourceVersion = channel_impl.GVR().Version
+	channel.APIVersion = channel_impl.GVR().GroupVersion().String()
+
+	return channel
+}
+
+func patchChannelable(ctx context.Context, t feature.T, before, after *duckv1.Channelable) {
+	patch, err := duck.CreateMergePatch(before, after)
+	if err != nil {
+		t.Fatalf("Failed to create merge patch: %v", err)
+	}
+	// If there is nothing to patch, we are good, just return.
+	// Empty patch is {}, hence we check for that.
+	if len(patch) <= 2 {
+		return
+	}
+
+	_, err = Client(ctx).ChannelImpl.Patch(ctx, before.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		t.Fatal("Failed to patch the ChannelImpl", zap.Error(err), zap.Any("patch", patch))
+	}
+}
 
 func crdOfChannel(ctx context.Context, t feature.T) *apiextv1.CustomResourceDefinition {
 	gvr := channel_impl.GVR()
@@ -241,5 +288,47 @@ func serviceAccountIsAddressableResolver(name string) feature.StepFn {
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "status", name, verb)
 		}
 
+	}
+}
+
+func channelHasAnnotations(ctx context.Context, t feature.T) {
+	ch := getChannelable(ctx, t)
+	if version, found := ch.Annotations["messaging.knative.dev/subscribable"]; !found {
+		t.Error(`expected annotations["messaging.knative.dev/subscribable"] to exist`)
+	} else if version != "v1" {
+		t.Error(`expected "messaging.knative.dev/subscribable" to be "v1", found`, version)
+	}
+}
+
+func channelAllowsSubscribers(ctx context.Context, t feature.T) {
+	ch := getChannelable(ctx, t)
+	original := ch.DeepCopy()
+
+	u, _ := apis.ParseURL("http://example.com")
+	want := duckv1.SubscriberSpec{
+		UID:           "abc123",
+		Generation:    1,
+		SubscriberURI: u,
+	}
+
+	ch.Spec.Subscribers = append(ch.Spec.Subscribers, want)
+	patchChannelable(ctx, t, original, ch)
+
+	updated := getChannelable(ctx, t)
+	if len(updated.Spec.Subscribers) <= 0 {
+		t.Errorf("subscriber was not saved")
+	}
+
+	found := false
+	for _, got := range updated.Spec.Subscribers {
+		if got.UID == want.UID {
+			found = true
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Error("Round trip Subscriber has a delta, (-want, +got) =", diff)
+			}
+		}
+	}
+	if !found {
+		t.Error("Round trip Subscriber failed.")
 	}
 }

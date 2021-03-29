@@ -39,5 +39,48 @@ func TestChannelConformance(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.TestSet(ctx, t, channel.ControlPlaneConformance())
+	channelName := "mychannelimpl"
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, channel.ImplGoesReady(channelName))
+
+	env.TestSet(ctx, t, channel.ControlPlaneConformance(channelName))
+}
+
+// TestSmoke_Channel
+func TestSmoke_Channel(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, channel.GoesReady(name))
+	}
+}
+
+// TestSmoke_ChannelImpl
+func TestSmoke_ChannelImpl(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, channel.ImplGoesReady(name))
+	}
 }
