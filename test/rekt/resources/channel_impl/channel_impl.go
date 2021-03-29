@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -107,4 +108,14 @@ func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.
 		return true, nil
 	})
 	return addr, err
+}
+
+// AsRef returns a KRef for a Channel without namespace.
+func AsRef(name string) *duckv1.KReference {
+	apiVersion, kind := GVK().ToAPIVersionAndKind()
+	return &duckv1.KReference{
+		Kind:       kind,
+		APIVersion: apiVersion,
+		Name:       name,
+	}
 }

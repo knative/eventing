@@ -91,7 +91,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Must("This ClusterRole MUST include permissions to get, list, and watch the CRD's custom objects and their status.",
 			noop). // Tested by serviceAccountIsAddressableResolver
 		Must("Each channel MUST have the duck.knative.dev/addressable: \"true\" label on its addressable-resolver ClusterRole.",
-			todo) // Tested by serviceAccountIsAddressableResolver
+			noop) // Tested by serviceAccountIsAddressableResolver
 
 	f.Stable("CustomResourceDefinition per Channel").
 		Must("Each channel is namespaced", crdOfChannelIsNamespaced).
@@ -108,10 +108,13 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	f.Stable("Spec Requirements").
 		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers",
 			channelAllowsSubscribers)
-		// Special note for Channel tests: The array of subscribers MUST NOT be set directly on the generic Channel custom object, but rather appended to the backing channel by the subscription itself.
+		// Special note for Channel tests: The array of subscribers MUST NOT be
+		// set directly on the generic Channel custom object, but rather
+		// appended to the backing channel by the subscription itself.
 
 	f.Stable("Status Requirements").
-		Must("Each channel CRD MUST have a status subresource which contains [address]", todo).
+		Must("Each channel CRD MUST have a status subresource which contains [address]",
+			noop). // tested by readyChannelIsAddressable
 		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]", todo).
 		Should("SHOULD have in status observedGeneration",
 			noop). // tested by knconf.KResourceHasReadyInConditions
@@ -120,14 +123,17 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("SHOULD have in status conditions (as an array)",
 			knconf.KResourceHasReadyInConditions(channel_impl.GVR(), channelName)).
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
-			noop)
+			todo) // how to test this?
 
 	f.Stable("Channel Status").
-		Must("When the channel instance is ready to receive events status.address.url MUST be populated", todo).
-		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True", todo)
+		Must("When the channel instance is ready to receive events status.address.url MUST be populated",
+			readyChannelIsAddressable).
+		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
+			noop) // tested by readyChannelIsAddressable
 
 	f.Stable("Channel Subscriber Status").
-		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed", todo)
+		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed",
+			todo)
 
 	return f
 }
@@ -330,5 +336,18 @@ func channelAllowsSubscribers(ctx context.Context, t feature.T) {
 	}
 	if !found {
 		t.Error("Round trip Subscriber failed.")
+	}
+}
+
+func readyChannelIsAddressable(ctx context.Context, t feature.T) {
+	channel := getChannelable(ctx, t)
+
+	if c := channel.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+		if channel.Status.Address.URL == nil {
+			t.Errorf("channel is not addressable")
+		}
+		// Success!
+	} else {
+		t.Errorf("channel was not ready")
 	}
 }

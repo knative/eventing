@@ -21,6 +21,7 @@ import (
 
 	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/subscription"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -47,6 +48,19 @@ func ImplGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f.Stable("ChannelImpl").
 		Must("be ready", channel_impl.IsReady(name)).
 		Must("be addressable", channel_impl.IsAddressable(name))
+
+	return f
+}
+
+// SubscriptionGoesReady returns a feature testing if a Subscription becomes
+// ready.
+func SubscriptionGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("Subscription goes ready.")
+
+	f.Setup(fmt.Sprintf("install a Subscription named %q", name), subscription.Install(name, cfg...))
+
+	f.Stable("Subscription").
+		Must("be ready", subscription.IsReady(name))
 
 	return f
 }
