@@ -25,9 +25,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
@@ -74,49 +73,10 @@ func WithBrokerTemplateFiles(dir string) manifest.CfgFn {
 }
 
 // WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
-func WithDeadLetterSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if _, set := cfg["delivery"]; !set {
-			cfg["delivery"] = map[string]interface{}{}
-		}
-		delivery := cfg["delivery"].(map[string]interface{})
-		if _, set := delivery["deadLetterSink"]; !set {
-			delivery["deadLetterSink"] = map[string]interface{}{}
-		}
-		dls := delivery["deadLetterSink"].(map[string]interface{})
-		if uri != "" {
-			dls["uri"] = uri
-		}
-		if ref != nil {
-			if _, set := dls["ref"]; !set {
-				dls["ref"] = map[string]interface{}{}
-			}
-			dref := dls["ref"].(map[string]interface{})
-			dref["apiVersion"] = ref.APIVersion
-			dref["kind"] = ref.Kind
-			// Skip namespace.
-			dref["name"] = ref.Name
-		}
-	}
-}
+var WithDeadLetterSink = delivery.WithDeadLetterSink
 
 // WithRetry adds the retry related config to a Broker spec.
-func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoffDelay *string) manifest.CfgFn {
-	return func(cfg map[string]interface{}) {
-		if _, set := cfg["delivery"]; !set {
-			cfg["delivery"] = map[string]interface{}{}
-		}
-		delivery := cfg["delivery"].(map[string]interface{})
-
-		delivery["retry"] = count
-		if backoffPolicy != nil {
-			delivery["backoffPolicy"] = backoffPolicy
-		}
-		if backoffDelay != nil {
-			delivery["backoffDelay"] = backoffDelay
-		}
-	}
-}
+var WithRetry = delivery.WithRetry
 
 // Install will create a Broker resource, augmented with the config fn options.
 func Install(name string, opts ...manifest.CfgFn) feature.StepFn {

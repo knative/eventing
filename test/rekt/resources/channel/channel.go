@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
@@ -31,8 +33,12 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-func Gvr() schema.GroupVersionResource {
+func GVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "channels"}
+}
+
+func GVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "messaging.knative.dev", Version: "v1", Kind: "Channel"}
 }
 
 // Install will create a Channel resource, augmented with the config fn options.
@@ -52,13 +58,13 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 
 // IsReady tests to see if a Channel becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, timing...)
+	return k8s.IsReady(GVR(), name, timing...)
 }
 
 // IsAddressable tests to see if a Channel becomes addressable within the  time
 // given.
 func IsAddressable(name string, timing ...time.Duration) feature.StepFn {
-	return k8s.IsAddressable(Gvr(), name, timing...)
+	return k8s.IsAddressable(GVR(), name, timing...)
 }
 
 // Address returns a Channel's address.
@@ -67,7 +73,7 @@ func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.
 	var addr *apis.URL
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		var err error
-		addr, err = k8s.Address(ctx, Gvr(), name)
+		addr, err = k8s.Address(ctx, GVR(), name)
 		if err == nil && addr == nil {
 			// keep polling
 			return false, nil
@@ -84,4 +90,14 @@ func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.
 		return true, nil
 	})
 	return addr, err
+}
+
+// AsRef returns a KRef for a Channel without namespace.
+func AsRef(name string) *duckv1.KReference {
+	apiVersion, kind := GVK().ToAPIVersionAndKind()
+	return &duckv1.KReference{
+		Kind:       kind,
+		APIVersion: apiVersion,
+		Name:       name,
+	}
 }
