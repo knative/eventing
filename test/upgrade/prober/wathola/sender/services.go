@@ -113,14 +113,14 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 	return e
 }
 
-// Register will register a EventSender to be used.
-func Register(es EventSender) {
+// RegisterEventSender will register a EventSender to be used.
+func RegisterEventSender(es EventSender) {
 	eventSenders = append(eventSenders, es)
 }
 
 // SendEvent will send cloud event to given url
 func SendEvent(ce cloudevents.Event, endpoint interface{}) error {
-	senders := make([]EventSender, len(eventSenders), len(eventSenders)+1)
+	senders := make([]EventSender, 0, len(eventSenders)+1)
 	senders = append(senders, eventSenders...)
 	if len(senders) == 0 {
 		senders = append(senders, httpSender{})
