@@ -19,6 +19,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -107,19 +108,20 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 
 	f.Stable("Spec Requirements").
 		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers",
-			channelAllowsSubscribers)
+			channelAllowsSubscribersAndStatus)
 		// Special note for Channel tests: The array of subscribers MUST NOT be
 		// set directly on the generic Channel custom object, but rather
 		// appended to the backing channel by the subscription itself.
 
 	f.Stable("Status Requirements").
 		Must("Each channel CRD MUST have a status subresource which contains [address]",
-			noop). // tested by readyChannelIsAddressable
-		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]", todo).
+			noop). // Tested by readyChannelIsAddressable
+		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]",
+			noop). // Tested by channelAllowsSubscribersAndStatus
 		Should("SHOULD have in status observedGeneration",
-			noop). // tested by knconf.KResourceHasReadyInConditions
+			noop). // Tested by knconf.KResourceHasReadyInConditions
 		Must("observedGeneration MUST be populated if present",
-			noop). // tested by knconf.KResourceHasReadyInConditions
+			noop). // Tested by knconf.KResourceHasReadyInConditions
 		Should("SHOULD have in status conditions (as an array)",
 			knconf.KResourceHasReadyInConditions(channel_impl.GVR(), channelName)).
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
@@ -129,11 +131,11 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated",
 			readyChannelIsAddressable).
 		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
-			noop) // tested by readyChannelIsAddressable
+			noop) // Tested by readyChannelIsAddressable
 
 	f.Stable("Channel Subscriber Status").
 		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed",
-			todo)
+			noop) // Tested by channelAllowsSubscribersAndStatus
 
 	return f
 }
@@ -306,7 +308,7 @@ func channelHasAnnotations(ctx context.Context, t feature.T) {
 	}
 }
 
-func channelAllowsSubscribers(ctx context.Context, t feature.T) {
+func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 	ch := getChannelable(ctx, t)
 	original := ch.DeepCopy()
 
@@ -318,6 +320,7 @@ func channelAllowsSubscribers(ctx context.Context, t feature.T) {
 	}
 
 	ch.Spec.Subscribers = append(ch.Spec.Subscribers, want)
+
 	patchChannelable(ctx, t, original, ch)
 
 	updated := getChannelable(ctx, t)
@@ -336,6 +339,19 @@ func channelAllowsSubscribers(ctx context.Context, t feature.T) {
 	}
 	if !found {
 		t.Error("Round trip Subscriber failed.")
+	}
+
+	if len(updated.Status.Subscribers) != 1 {
+		t.Error("Subscribers not in status.")
+	} else {
+		for _, got := range updated.Status.Subscribers {
+			// want should be Ready.
+			if got.UID == want.UID {
+				if want := corev1.ConditionTrue; got.Ready != want {
+					t.Error("Expected subscriber to be %q, got %q", want, got.Ready)
+				}
+			}
+		}
 	}
 }
 
