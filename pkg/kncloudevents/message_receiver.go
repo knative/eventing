@@ -40,6 +40,9 @@ type HTTPMessageReceiver struct {
 
 	checker          http.HandlerFunc
 	drainQuietPeriod time.Duration
+
+	// Used to signal when receiver is listening
+	Ready chan interface{}
 }
 
 // HTTPMessageReceiverOption enables further configuration of a HTTPMessageReceiver.
@@ -49,6 +52,9 @@ func NewHTTPMessageReceiver(port int, o ...HTTPMessageReceiverOption) *HTTPMessa
 	h := &HTTPMessageReceiver{
 		port: port,
 	}
+
+	h.Ready = make(chan interface{})
+
 	for _, opt := range o {
 		opt(h)
 	}
@@ -91,6 +97,7 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 
 	errChan := make(chan error, 1)
 	go func() {
+		close(recv.Ready)
 		errChan <- recv.server.Serve(recv.listener)
 	}()
 
