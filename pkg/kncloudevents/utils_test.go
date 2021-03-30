@@ -68,14 +68,14 @@ func TestWriteHTTPRequestWithAdditionalHeadersAddsHeadersToRequest(t *testing.T)
 	defer message.Finish(nil)
 
 	additionalHeaders := http.Header{}
-	additionalHeaders["some-key"] = []string{"some-value"}
-	additionalHeaders["another-key"] = []string{"another-value"}
+	additionalHeaders["Some-Key"] = []string{"some-value"}
+	additionalHeaders["Another-Key"] = []string{"another-value"}
 
 	err := WriteHTTPRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
 	assert.NoError(t, err)
 
-	assert.Equal(t, additionalHeaders["some-key"], request.Header["some-key"])
-	assert.Equal(t, additionalHeaders["another-key"], request.Header["another-key"])
+	assert.Equal(t, additionalHeaders["Some-Key"], request.Header["Some-Key"])
+	assert.Equal(t, additionalHeaders["Another-Key"], request.Header["Another-Key"])
 
 }
 
