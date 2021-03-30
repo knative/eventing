@@ -48,8 +48,8 @@ type EventInfo struct {
 	Error string `json:"error,omitempty"`
 	// Event received if the cloudevent received by the pod passed validation
 	Event *cloudevents.Event `json:"event,omitempty"`
-	// In case there is a valid event in this instance, this contains only non CE headers.
-	// Otherwise, it contains all the headers
+	// In case there is a valid event in this instance, this contains all the HTTP headers,
+	// including the CE- headers.
 	HTTPHeaders map[string][]string `json:"httpHeaders,omitempty"`
 	// In case there is a valid event in this instance, this field is not filled
 	Body []byte `json:"body,omitempty"`

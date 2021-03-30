@@ -27,4 +27,4 @@ webhooks:
   failurePolicy: Fail
   sideEffects: None
   name: sinkbindings.webhook.sources.knative.dev
-  timeoutSeconds: 2
+  timeoutSeconds: 10

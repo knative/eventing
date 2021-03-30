@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	nethttp "net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -231,9 +230,7 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 
 			sentHeaders := make(nethttp.Header)
 			for k, v := range req.Header {
-				if !strings.HasPrefix(k, "Ce-") {
-					sentHeaders[k] = v
-				}
+				sentHeaders[k] = v
 			}
 			sentEventInfo.HTTPHeaders = sentHeaders
 
