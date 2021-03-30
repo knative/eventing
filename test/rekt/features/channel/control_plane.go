@@ -19,12 +19,12 @@ package channel
 import (
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	authv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
