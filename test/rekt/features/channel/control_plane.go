@@ -19,6 +19,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -186,6 +187,23 @@ func getChannelable(ctx context.Context, t feature.T) *duckv1.Channelable {
 	return channel
 }
 
+func getChannelableWithStatus(ctx context.Context, t feature.T) *duckv1.Channelable {
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	var ch *duckv1.Channelable
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		ch = getChannelable(ctx, t)
+		if ch.Status.ObservedGeneration != ch.Generation {
+			// keep polling.
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ch
+}
+
 func patchChannelable(ctx context.Context, t feature.T, before, after *duckv1.Channelable) {
 	patch, err := duck.CreateMergePatch(before, after)
 	if err != nil {
@@ -323,7 +341,7 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 
 	patchChannelable(ctx, t, original, ch)
 
-	updated := getChannelable(ctx, t)
+	updated := getChannelableWithStatus(ctx, t)
 	if len(updated.Spec.Subscribers) <= 0 {
 		t.Errorf("subscriber was not saved")
 	}
@@ -353,6 +371,7 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 			}
 		}
 	}
+
 }
 
 func readyChannelIsAddressable(ctx context.Context, t feature.T) {
