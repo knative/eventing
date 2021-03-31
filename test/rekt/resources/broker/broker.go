@@ -22,9 +22,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/pkg/apis"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -55,7 +54,7 @@ func WithEnvConfig() []manifest.CfgFn {
 	return cfg
 }
 
-func Gvr() schema.GroupVersionResource {
+func GVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}
 }
 
@@ -103,36 +102,16 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 
 // IsReady tests to see if a Broker becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
-	return k8s.IsReady(Gvr(), name, timing...)
+	return k8s.IsReady(GVR(), name, timing...)
 }
 
 // IsAddressable tests to see if a Broker becomes addressable within the  time
 // given.
 func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
-	return k8s.IsAddressable(Gvr(), name, timings...)
+	return k8s.IsAddressable(GVR(), name, timings...)
 }
 
 // Address returns a broker's address.
 func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.URL, error) {
-	interval, timeout := k8s.PollTimings(ctx, timings)
-	var addr *apis.URL
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		var err error
-		addr, err = k8s.Address(ctx, Gvr(), name)
-		if err == nil && addr == nil {
-			// keep polling
-			return false, nil
-		}
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// keep polling
-				return false, nil
-			}
-			// seems fatal.
-			return false, err
-		}
-		// success!
-		return true, nil
-	})
-	return addr, err
+	return addressable.Address(ctx, GVR(), name, timings...)
 }
