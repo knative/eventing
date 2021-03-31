@@ -47,8 +47,6 @@ func todo(ctx context.Context, t feature.T) {
 	t.Log("TODO, Implement this.")
 }
 
-func noop(ctx context.Context, t feature.T) {}
-
 type EventingClient struct {
 	Channels    messagingclientsetv1.ChannelInterface
 	ChannelImpl dynamic.ResourceInterface

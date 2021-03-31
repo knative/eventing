@@ -56,20 +56,16 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		account_role.Install(saarName, account_role.AsAddressableResolver))
 
 	f.Stable("Aggregated Channelable Manipulator ClusterRole").
-		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the channelable-manipulator ClusterRole.",
-			serviceAccountIsChannelableManipulator(sacmName)).
-		Must("This ClusterRole MUST include permissions to create, get, list, watch, patch, and update the CRD's custom objects and their status.",
-			noop). // Tested by serviceAccountIsChannelableManipulator
-		Must("Each channel MUST have the duck.knative.dev/channelable: \"true\" label on its channelable-manipulator ClusterRole.",
-			noop) // Tested by serviceAccountIsChannelableManipulator
+		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the channelable-manipulator ClusterRole."+
+			"This ClusterRole MUST include permissions to create, get, list, watch, patch, and update the CRD's custom objects and their status. "+
+			"Each channel MUST have the duck.knative.dev/channelable: \"true\" label on its channelable-manipulator ClusterRole.",
+			serviceAccountIsChannelableManipulator(sacmName))
 
 	f.Stable("Aggregated Addressable Resolver ClusterRole").
-		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the addressable-resolver ClusterRole.",
-			serviceAccountIsAddressableResolver(saarName)).
-		Must("This ClusterRole MUST include permissions to get, list, and watch the CRD's custom objects and their status.",
-			noop). // Tested by serviceAccountIsAddressableResolver
-		Must("Each channel MUST have the duck.knative.dev/addressable: \"true\" label on its addressable-resolver ClusterRole.",
-			noop) // Tested by serviceAccountIsAddressableResolver
+		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the addressable-resolver ClusterRole. "+
+			"This ClusterRole MUST include permissions to get, list, and watch the CRD's custom objects and their status. "+
+			"Each channel MUST have the duck.knative.dev/addressable: \"true\" label on its addressable-resolver ClusterRole.",
+			serviceAccountIsAddressableResolver(saarName))
 
 	f.Stable("CustomResourceDefinition per Channel").
 		Must("Each channel is namespaced", crdOfChannelIsNamespaced).
@@ -93,23 +89,19 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		// appended to the backing channel by the subscription itself.
 
 	f.Stable("Status Requirements").
-		Must("Each channel CRD MUST have a status subresource which contains [address]",
-			noop). // Tested by readyChannelIsAddressable
-
-		Should("SHOULD have in status observedGeneration",
-			noop). // Tested by knconf.KResourceHasReadyInConditions
 		Must("observedGeneration MUST be populated if present",
-			noop). // Tested by knconf.KResourceHasReadyInConditions
-		Should("SHOULD have in status conditions (as an array)",
+			knconf.KResourceHasObservedGeneration(channel_impl.GVR(), channelName)).
+		Should("SHOULD have in status observedGeneration. "+
+			"SHOULD have in status conditions (as an array)",
 			knconf.KResourceHasReadyInConditions(channel_impl.GVR(), channelName)).
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
 			todo) // how to test this?
 
 	f.Stable("Channel Status").
-		Must("When the channel instance is ready to receive events status.address.url MUST be populated",
-			readyChannelIsAddressable).
-		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
-			noop) // Tested by readyChannelIsAddressable
+		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
+			"Each channel CRD MUST have a status subresource which contains [address]. "+
+			"When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
+			readyChannelIsAddressable)
 
 	return f
 }
@@ -121,7 +113,6 @@ func serviceAccountIsChannelableManipulator(name string) feature.StepFn {
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "", name, verb)
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "status", name, verb)
 		}
-
 	}
 }
 
@@ -132,7 +123,6 @@ func serviceAccountIsAddressableResolver(name string) feature.StepFn {
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "", name, verb)
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "status", name, verb)
 		}
-
 	}
 }
 
