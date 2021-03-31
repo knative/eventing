@@ -83,8 +83,10 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1",
 			channelHasAnnotations)
 
-	f.Stable("Spec Requirements").
-		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers",
+	f.Stable("Spec and Status Requirements for Subscribers").
+		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers. "+
+			"Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]. "+
+			"The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.",
 			channelAllowsSubscribersAndStatus)
 		// Special note for Channel tests: The array of subscribers MUST NOT be
 		// set directly on the generic Channel custom object, but rather
@@ -93,8 +95,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	f.Stable("Status Requirements").
 		Must("Each channel CRD MUST have a status subresource which contains [address]",
 			noop). // Tested by readyChannelIsAddressable
-		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]",
-			noop). // Tested by channelAllowsSubscribersAndStatus
+
 		Should("SHOULD have in status observedGeneration",
 			noop). // Tested by knconf.KResourceHasReadyInConditions
 		Must("observedGeneration MUST be populated if present",
@@ -109,10 +110,6 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 			readyChannelIsAddressable).
 		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
 			noop) // Tested by readyChannelIsAddressable
-
-	f.Stable("Channel Subscriber Status").
-		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed",
-			noop) // Tested by channelAllowsSubscribersAndStatus
 
 	return f
 }
