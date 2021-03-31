@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/test/rekt/features/knconf"
@@ -55,20 +56,16 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		account_role.Install(saarName, account_role.AsAddressableResolver))
 
 	f.Stable("Aggregated Channelable Manipulator ClusterRole").
-		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the channelable-manipulator ClusterRole.",
-			serviceAccountIsChannelableManipulator(sacmName)).
-		Must("This ClusterRole MUST include permissions to create, get, list, watch, patch, and update the CRD's custom objects and their status.",
-			noop). // Tested by serviceAccountIsChannelableManipulator
-		Must("Each channel MUST have the duck.knative.dev/channelable: \"true\" label on its channelable-manipulator ClusterRole.",
-			noop) // Tested by serviceAccountIsChannelableManipulator
+		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the channelable-manipulator ClusterRole."+
+			"This ClusterRole MUST include permissions to create, get, list, watch, patch, and update the CRD's custom objects and their status. "+
+			"Each channel MUST have the duck.knative.dev/channelable: \"true\" label on its channelable-manipulator ClusterRole.",
+			serviceAccountIsChannelableManipulator(sacmName))
 
 	f.Stable("Aggregated Addressable Resolver ClusterRole").
-		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the addressable-resolver ClusterRole.",
-			serviceAccountIsAddressableResolver(saarName)).
-		Must("This ClusterRole MUST include permissions to get, list, and watch the CRD's custom objects and their status.",
-			noop). // Tested by serviceAccountIsAddressableResolver
-		Must("Each channel MUST have the duck.knative.dev/addressable: \"true\" label on its addressable-resolver ClusterRole.",
-			noop) // Tested by serviceAccountIsAddressableResolver
+		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the addressable-resolver ClusterRole. "+
+			"This ClusterRole MUST include permissions to get, list, and watch the CRD's custom objects and their status. "+
+			"Each channel MUST have the duck.knative.dev/addressable: \"true\" label on its addressable-resolver ClusterRole.",
+			serviceAccountIsAddressableResolver(saarName))
 
 	f.Stable("CustomResourceDefinition per Channel").
 		Must("Each channel is namespaced", crdOfChannelIsNamespaced).
@@ -82,35 +79,29 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("each instance SHOULD have annotation: messaging.knative.dev/subscribable: v1",
 			channelHasAnnotations)
 
-	f.Stable("Spec Requirements").
-		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers",
-			channelAllowsSubscribers)
+	f.Stable("Spec and Status Requirements for Subscribers").
+		Must("Each channel CRD MUST contain an array of subscribers: spec.subscribers. "+
+			"Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]. "+
+			"The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.",
+			channelAllowsSubscribersAndStatus)
 		// Special note for Channel tests: The array of subscribers MUST NOT be
 		// set directly on the generic Channel custom object, but rather
 		// appended to the backing channel by the subscription itself.
 
 	f.Stable("Status Requirements").
-		Must("Each channel CRD MUST have a status subresource which contains [address]",
-			noop). // tested by readyChannelIsAddressable
-		Must("Each channel CRD MUST have a status subresource which contains [subscribers (as an array)]", todo).
-		Should("SHOULD have in status observedGeneration",
-			noop). // tested by knconf.KResourceHasReadyInConditions
 		Must("observedGeneration MUST be populated if present",
-			noop). // tested by knconf.KResourceHasReadyInConditions
-		Should("SHOULD have in status conditions (as an array)",
+			knconf.KResourceHasObservedGeneration(channel_impl.GVR(), channelName)).
+		Should("SHOULD have in status observedGeneration. "+
+			"SHOULD have in status conditions (as an array)",
 			knconf.KResourceHasReadyInConditions(channel_impl.GVR(), channelName)).
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
 			todo) // how to test this?
 
 	f.Stable("Channel Status").
-		Must("When the channel instance is ready to receive events status.address.url MUST be populated",
-			readyChannelIsAddressable).
-		Must("When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
-			noop) // tested by readyChannelIsAddressable
-
-	f.Stable("Channel Subscriber Status").
-		Must("The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed",
-			todo)
+		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
+			"Each channel CRD MUST have a status subresource which contains [address]. "+
+			"When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
+			readyChannelIsAddressable)
 
 	return f
 }
@@ -122,7 +113,6 @@ func serviceAccountIsChannelableManipulator(name string) feature.StepFn {
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "", name, verb)
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "status", name, verb)
 		}
-
 	}
 }
 
@@ -133,7 +123,6 @@ func serviceAccountIsAddressableResolver(name string) feature.StepFn {
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "", name, verb)
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "status", name, verb)
 		}
-
 	}
 }
 
@@ -146,7 +135,7 @@ func channelHasAnnotations(ctx context.Context, t feature.T) {
 	}
 }
 
-func channelAllowsSubscribers(ctx context.Context, t feature.T) {
+func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 	ch := getChannelable(ctx, t)
 	original := ch.DeepCopy()
 
@@ -158,9 +147,10 @@ func channelAllowsSubscribers(ctx context.Context, t feature.T) {
 	}
 
 	ch.Spec.Subscribers = append(ch.Spec.Subscribers, want)
+
 	patchChannelable(ctx, t, original, ch)
 
-	updated := getChannelable(ctx, t)
+	updated := getChannelableWithStatus(ctx, t)
 	if len(updated.Spec.Subscribers) <= 0 {
 		t.Errorf("subscriber was not saved")
 	}
@@ -176,6 +166,19 @@ func channelAllowsSubscribers(ctx context.Context, t feature.T) {
 	}
 	if !found {
 		t.Error("Round trip Subscriber failed.")
+	}
+
+	if len(updated.Status.Subscribers) != 1 {
+		t.Error("Subscribers not in status.")
+	} else {
+		for _, got := range updated.Status.Subscribers {
+			// want should be Ready.
+			if got.UID == want.UID {
+				if want := corev1.ConditionTrue; got.Ready != want {
+					t.Error("Expected subscriber to be %q, got %q", want, got.Ready)
+				}
+			}
+		}
 	}
 }
 

@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	messagingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
@@ -45,8 +46,6 @@ import (
 func todo(ctx context.Context, t feature.T) {
 	t.Log("TODO, Implement this.")
 }
-
-func noop(ctx context.Context, t feature.T) {}
 
 type EventingClient struct {
 	Channels    messagingclientsetv1.ChannelInterface
@@ -92,6 +91,23 @@ func getChannelable(ctx context.Context, t feature.T) *duckv1.Channelable {
 	channel.APIVersion = channel_impl.GVR().GroupVersion().String()
 
 	return channel
+}
+
+func getChannelableWithStatus(ctx context.Context, t feature.T) *duckv1.Channelable {
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	var ch *duckv1.Channelable
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		ch = getChannelable(ctx, t)
+		if ch.Status.ObservedGeneration != ch.Generation {
+			// keep polling.
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ch
 }
 
 func patchChannelable(ctx context.Context, t feature.T, before, after *duckv1.Channelable) {
