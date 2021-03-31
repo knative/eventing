@@ -69,7 +69,7 @@ func ControlPlaneBroker(brokerName string) *feature.Feature {
 
 	f.Stable("Conformance").
 		Should("Broker objects SHOULD include a Ready condition in their status",
-			knconf.KResourceHasReadyInConditions(brokerresources.Gvr(), brokerName)).
+			knconf.KResourceHasReadyInConditions(brokerresources.GVR(), brokerName)).
 		Should("The Broker SHOULD indicate Ready=True when its ingress is available to receive events.",
 			readyBrokerHasIngressAvailable).
 		Should("While a Broker is Ready, it SHOULD be a valid Addressable and its `status.address.url` field SHOULD indicate the address of its ingress.",

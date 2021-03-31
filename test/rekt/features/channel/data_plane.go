@@ -17,7 +17,12 @@ limitations under the License.
 package channel
 
 import (
+	"context"
+
+	"knative.dev/eventing/test/rekt/features/knconf"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 func DataPlaneConformance(channelName string) *feature.FeatureSet {
@@ -38,7 +43,8 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 
 	f.Stable("Input").
 		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", todo).
-		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.", todo).
+		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
+			channelAcceptsCEVersions).
 		MustNot("The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with the same version.", todo).
 		Must("It MUST support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", todo).
 		May("When dispatching the event, the channel MAY use a different HTTP Message mode of the one used by the event.", todo).
@@ -90,4 +96,9 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		// messaging.message_id: the event ID
 
 	return f
+}
+
+func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
+	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
+	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
 }

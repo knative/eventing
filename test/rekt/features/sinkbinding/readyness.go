@@ -25,8 +25,9 @@ import (
 func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("SinkBinding goes ready.")
 
-	f.Stable("sinkbinding").
-		Must("be ready", sinkbinding.IsReady(name))
+	f.Requirement("SinkBinding is ready", sinkbinding.IsReady(name))
+
+	f.Stable("sinkbinding")
 
 	return f
 }

@@ -18,16 +18,13 @@ package broker
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
-
-	. "github.com/cloudevents/sdk-go/v2/test"
+	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
-	eventshubmain "knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
 func DataPlaneConformance(brokerName string) *feature.FeatureSet {
@@ -39,11 +36,6 @@ func DataPlaneConformance(brokerName string) *feature.FeatureSet {
 			*DataPlaneObservability(brokerName),
 		},
 	}
-}
-
-type EventInfoCombined struct {
-	sent     eventshubmain.EventInfo
-	response eventshubmain.EventInfo
 }
 
 func DataPlaneIngress(brokerName string) *feature.Feature {
@@ -161,41 +153,8 @@ func todo(ctx context.Context, t feature.T) {
 }
 
 func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {
-	brokerName := state.GetStringOrFail(ctx, t, "brokerName")
-
-	u, err := broker.Address(ctx, brokerName)
-	if err != nil || u == nil {
-		t.Error("failed to get the address of the broker", brokerName, err)
-	}
-
-	opts := []eventshub.EventsHubOption{eventshub.StartSenderToResource(broker.Gvr(), brokerName)}
-
-	uuids := map[string]string{
-		uuid.New().String(): "1.0",
-		uuid.New().String(): "0.3",
-	}
-	for uuid, version := range uuids {
-		// We need to use a different source name, otherwise, it will try to update
-		// the pod, which is immutable.
-		source := feature.MakeRandomK8sName("source")
-		event := FullEvent()
-		event.SetID(uuid)
-		event.SetSpecVersion(version)
-		opts = append(opts, eventshub.InputEvent(event))
-
-		eventshub.Install(source, opts...)(ctx, t)
-		store := eventshub.StoreFromContext(ctx, source)
-		// We are looking for two events, one of them is the sent event and the other
-		// is Response, so correlate them first. We want to make sure the event was sent and that the
-		// response was what was expected.
-		events := correlate(store.AssertAtLeast(2, sentEventMatcher(uuid)))
-		for _, e := range events {
-			// Make sure HTTP response code is 2XX
-			if e.response.StatusCode < 200 || e.response.StatusCode > 299 {
-				t.Errorf("Expected statuscode 2XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
-			}
-		}
-	}
+	name := state.GetStringOrFail(ctx, t, "brokerName")
+	knconf.AcceptsCEVersions(ctx, t, broker.GVR(), name)
 }
 
 func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
@@ -204,16 +163,16 @@ func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 	uuids := map[string]string{
 		uuid.New().String(): "19.0",
 	}
-	for uuid, version := range uuids {
+	for id, version := range uuids {
 		// We need to use a different source name, otherwise, it will try to update
 		// the pod, which is immutable.
 		source := feature.MakeRandomK8sName("source")
 		eventshub.Install(source,
-			eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
 			eventshub.InputHeader("ce-specversion", version),
 			eventshub.InputHeader("ce-type", "sometype"),
 			eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
-			eventshub.InputHeader("ce-id", uuid),
+			eventshub.InputHeader("ce-id", id),
 			eventshub.InputBody("{}"),
 		)(ctx, t)
 
@@ -223,11 +182,11 @@ func brokerRejectsUnknownCEVersion(ctx context.Context, t feature.T) {
 		// response was what was expected.
 		// Note: We pass in "" for the match ID because when we construct the headers manually
 		// above, they do not get stuff into the sent/response SentId fields.
-		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
+		events := knconf.Correlate(store.AssertAtLeast(2, knconf.SentEventMatcher("")))
 		for _, e := range events {
 			// Make sure HTTP response code is 4XX
-			if e.response.StatusCode < 400 || e.response.StatusCode > 499 {
-				t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
+			if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {
+				t.Errorf("Expected statuscode 4XX for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
 			}
 		}
 	}
@@ -239,16 +198,16 @@ func brokerRejectsGetRequest(ctx context.Context, t feature.T) {
 	uuids := map[string]string{
 		uuid.New().String(): "1.0",
 	}
-	for uuid, version := range uuids {
+	for id, version := range uuids {
 		// We need to use a different source name, otherwise, it will try to update
 		// the pod, which is immutable.
 		source := feature.MakeRandomK8sName("source")
 		eventshub.Install(source,
-			eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+			eventshub.StartSenderToResource(broker.GVR(), brokerName),
 			eventshub.InputHeader("ce-specversion", version),
 			eventshub.InputHeader("ce-type", "sometype"),
 			eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
-			eventshub.InputHeader("ce-id", uuid),
+			eventshub.InputHeader("ce-id", id),
 			eventshub.InputBody("{}"),
 			eventshub.InputMethod("GET"),
 		)(ctx, t)
@@ -259,11 +218,11 @@ func brokerRejectsGetRequest(ctx context.Context, t feature.T) {
 		// response was what was expected.
 		// Note: We pass in "" for the match ID because when we construct the headers manually
 		// above, they do not get stuff into the sent/response SentId fields.
-		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
+		events := knconf.Correlate(store.AssertAtLeast(2, knconf.SentEventMatcher("")))
 		for _, e := range events {
 			// Make sure HTTP response code is 405
-			if e.response.StatusCode != 405 {
-				t.Errorf("Expected statuscode 405 for sequence %d got %d", e.response.Sequence, e.response.StatusCode)
+			if e.Response.StatusCode != 405 {
+				t.Errorf("Expected statuscode 405 for sequence %d got %d", e.Response.Sequence, e.Response.StatusCode)
 			}
 		}
 	}
@@ -293,7 +252,7 @@ func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 				t.Logf("Adding Header Value: %q => %q", k2, v2)
 			}
 		}
-		options = append(options, eventshub.StartSenderToResource(broker.Gvr(), brokerName))
+		options = append(options, eventshub.StartSenderToResource(broker.GVR(), brokerName))
 		options = append(options, eventshub.InputBody("{}"))
 		// We need to use a different source name, otherwise, it will try to update
 		// the pod, which is immutable.
@@ -306,40 +265,13 @@ func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 		// response was what was expected.
 		// Note: We pass in "" for the match ID because when we construct the headers manually
 		// above, they do not get stuff into the sent/response SentId fields.
-		events := correlate(store.AssertAtLeast(2, sentEventMatcher("")))
+		events := knconf.Correlate(store.AssertAtLeast(2, knconf.SentEventMatcher("")))
 		for _, e := range events {
 			// Make sure HTTP response code is 4XX
-			if e.response.StatusCode < 400 || e.response.StatusCode > 499 {
-				t.Errorf("Expected statuscode 4XX with missing required field %q for sequence %d got %d", k, e.response.Sequence, e.response.StatusCode)
-				t.Logf("Sent event was: %s\nresponse: %s\n", e.sent.String(), e.response.String())
+			if e.Response.StatusCode < 400 || e.Response.StatusCode > 499 {
+				t.Errorf("Expected statuscode 4XX with missing required field %q for sequence %d got %d", k, e.Response.Sequence, e.Response.StatusCode)
+				t.Logf("Sent event was: %s\nresponse: %s\n", e.Sent.String(), e.Response.String())
 			}
 		}
 	}
-}
-
-func sentEventMatcher(uuid string) func(eventshubmain.EventInfo) error {
-	return func(ei eventshubmain.EventInfo) error {
-		if (ei.Kind == eventshubmain.EventSent || ei.Kind == eventshubmain.EventResponse) && ei.SentId == uuid {
-			return nil
-		}
-		return errors.New("no match")
-	}
-}
-
-// correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
-// and correlates them based on the sequence into a pair.
-func correlate(in []eventshubmain.EventInfo) []EventInfoCombined {
-	var out []EventInfoCombined
-	// not too many events, this will suffice...
-	for i, e := range in {
-		if e.Kind == eventshubmain.EventSent {
-			looking := e.Sequence
-			for j := i + 1; j <= len(in)-1; j++ {
-				if in[j].Kind == eventshubmain.EventResponse && in[j].Sequence == looking {
-					out = append(out, EventInfoCombined{sent: e, response: in[j]})
-				}
-			}
-		}
-	}
-	return out
 }

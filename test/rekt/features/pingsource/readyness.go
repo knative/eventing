@@ -37,10 +37,11 @@ func PingSourceGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 		APIVersion: "v1",
 	}, ""))
 
-	f.Setup("install a pingsource", pingsource.Install(name, cfg...))
+	f.Setup("install a PingSource", pingsource.Install(name, cfg...))
 
-	f.Stable("pingsource").
-		Must("be ready", pingsource.IsReady(name))
+	f.Requirement("PingSource is ready", pingsource.IsReady(name))
+
+	f.Stable("PingSource")
 
 	return f
 }
