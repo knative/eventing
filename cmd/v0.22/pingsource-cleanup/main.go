@@ -58,7 +58,7 @@ func main() {
 	for _, ns := range nss.Items {
 		fmt.Printf("# processing namespace %s\n", ns.Name)
 
-		pingsources, err := client.Sourcesv1beta2().PingSources(ns.Name).List(ctx, metav1.ListOptions{})
+		pingsources, err := client.SourcesV1beta2().PingSources(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			fmt.Printf("# [error] failed to list pingsources in namespace %q, %s\n", ns.Name, err)
 		}
@@ -83,7 +83,7 @@ func main() {
 			finalizers.Delete("pingsources.sources.knative.dev")
 			ref.Finalizers = finalizers.List()
 
-			if _, err := client.Sourcesv1beta2().PingSources(ref.Namespace).Update(ctx, &ref, metav1.UpdateOptions{}); err != nil {
+			if _, err := client.SourcesV1beta2().PingSources(ref.Namespace).Update(ctx, &ref, metav1.UpdateOptions{}); err != nil {
 				fmt.Printf("# [error] failed to update %s/%s %s\n", ref.Namespace, ref.Name, err)
 			}
 		}

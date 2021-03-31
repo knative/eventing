@@ -68,7 +68,7 @@ kubectl apply --filename https://storage.googleapis.com/knative-nightly/eventing
 kubectl apply --filename https://storage.googleapis.com/knative-nightly/eventing/latest/eventing-post-install-jobs.yaml
 
 or
-ko apply -f ./config/post-install/v0.22.0/
+ko apply -f ./config/post-install/
 ```
 
 # clean up
