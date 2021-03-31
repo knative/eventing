@@ -20,16 +20,12 @@ import (
 	"context"
 	"time"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/pkg/apis"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/reconciler-test/pkg/k8s"
-
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -69,27 +65,7 @@ func IsAddressable(name string, timing ...time.Duration) feature.StepFn {
 
 // Address returns a Channel's address.
 func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.URL, error) {
-	interval, timeout := k8s.PollTimings(ctx, timings)
-	var addr *apis.URL
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		var err error
-		addr, err = k8s.Address(ctx, GVR(), name)
-		if err == nil && addr == nil {
-			// keep polling
-			return false, nil
-		}
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// keep polling
-				return false, nil
-			}
-			// seems fatal.
-			return false, err
-		}
-		// success!
-		return true, nil
-	})
-	return addr, err
+	return addressable.Address(ctx, GVR(), name, timings...)
 }
 
 // AsRef returns a KRef for a Channel without namespace.

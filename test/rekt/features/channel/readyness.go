@@ -32,8 +32,9 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 
 	f.Setup(fmt.Sprintf("install a Channel named %q", name), channel.Install(name, cfg...))
 
+	f.Requirement("Channel is ready", channel.IsReady(name))
+
 	f.Stable("Channel").
-		Must("be ready", channel.IsReady(name)).
 		Must("be addressable", channel.IsAddressable(name))
 
 	return f
@@ -45,8 +46,9 @@ func ImplGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 
 	f.Setup(fmt.Sprintf("install a %s named %q", channel_impl.GVK().Kind, name), channel_impl.Install(name, cfg...))
 
+	f.Requirement(channel_impl.GVK().Kind+" is ready", channel_impl.IsReady(name))
+
 	f.Stable("ChannelImpl").
-		Must("be ready", channel_impl.IsReady(name)).
 		Must("be addressable", channel_impl.IsAddressable(name))
 
 	return f
@@ -59,8 +61,9 @@ func SubscriptionGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature 
 
 	f.Setup(fmt.Sprintf("install a Subscription named %q", name), subscription.Install(name, cfg...))
 
-	f.Stable("Subscription").
-		Must("be ready", subscription.IsReady(name))
+	f.Requirement("Subscription is ready", subscription.IsReady(name))
+
+	f.Stable("Subscription")
 
 	return f
 }

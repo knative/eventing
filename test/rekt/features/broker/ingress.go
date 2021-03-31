@@ -60,7 +60,7 @@ func brokerIngressConformanceFeature(brokerClass string, version string, enc clo
 
 	f.Setup("install source", eventshub.Install(
 		sourceName,
-		eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputEventWithEncoding(event, enc),
 	))
 
@@ -95,7 +95,7 @@ func brokerIngressConformanceBadEvent(brokerClass string) *feature.Feature {
 	f.Setup("broker is addressable", broker.IsAddressable(brokerName))
 
 	f.Setup("install source", eventshub.Install(sourceName,
-		eventshub.StartSenderToResource(broker.Gvr(), brokerName),
+		eventshub.StartSenderToResource(broker.GVR(), brokerName),
 		eventshub.InputHeader("ce-specversion", "9000.1"),
 		eventshub.InputHeader("ce-type", "sometype"),
 		eventshub.InputHeader("ce-source", "400.request.sender.test.knative.dev"),
