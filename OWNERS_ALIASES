@@ -1,31 +1,44 @@
 aliases:
-  toc:
+  technical-oversight-committee:
   - evankanderson
   - grantr
   - markusthoemmes
   - mattmoor
-  - tcnghia
+  - rhuss
+
+  eventing-writers:
+  - akashrv
+  - aliok
+  - antoineco
+  - devguyio
+  - grantr
+  - lberk
+  - lionelvillard
+  - matzew
+  - n3wscott
+  - pierDipi
+  - slinkydeveloper
+  - vaikas
+  - zhongduo
+
+  eventing-reviewers:
+  - aslom
+  - nlopezgi
+  - tayarani
+  - tommyreddad
 
   # These aliases are for OWNERS of the various Channel implementations. These
   # Are in addition to the repo level OWNERS.
 
-  performance-approvers:
-  - chaodaiG
+  productivity-writers:
   - chizhg
-  - slinkydeveloper
-  performance-reviewers:
-  - chaodaiG
-  - chizhg
-  - slinkydeveloper
-
-  productivity-approvers:
-  - chaodaiG
-  - chizhg
+  - n3wscott
   productivity-reviewers:
-  - chaodaiG
-  - chizhg
+  - coryrc
+  - evankanderson
   - steuhs
   - yt3liu
 
-  channel-reviewers:
+  channel-wg-leads:
+  - matzew
   - slinkydeveloper

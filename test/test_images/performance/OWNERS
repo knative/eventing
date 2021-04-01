@@ -1,10 +1,12 @@
 # The OWNERS file is used by prow to automatically merge approved PRs.
 
 approvers:
-- performance-approvers
+- productivity-writers
+- slinkydeveloper
 
 reviewers:
-- performance-reviewers
+- productivity-writers
+- slinkydeveloper
 
 labels:
 - area/performance
