@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/test/rekt/resources/eventprober"
 
 	"github.com/google/uuid"
 
@@ -72,44 +73,38 @@ func SourceToSink(brokerName string) *feature.Feature {
 
 // SourceToSinkWithDLQ tests to see if a Ready Broker acts as middleware.
 //
-// source ---> broker --[trigger]--> bad uri
-//                  |
-//                  +--[DLQ]--> recorder
+// source ---> broker<Via> --[trigger]--> bad uri
+//                |
+//                +--[DLQ]--> recorder
 //
 func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
-	source := feature.MakeRandomK8sName("source")
-	sink := feature.MakeRandomK8sName("sink")
-	dlq := feature.MakeRandomK8sName("dlq")
+	prober := eventprober.New(broker.GVR(), brokerName, "")
+	prober.LoadFullEvents(1)
+
 	via := feature.MakeRandomK8sName("via")
-	event := FullEvent()
 
 	f := new(feature.Feature)
 
-	f.Setup("install sink", svc.Install(sink, "bad", "svc"))
+	// Setup Probes
+	f.Setup("install recorder", prober.RxInstall("recorder"))
 
-	f.Setup("install dlq", eventshub.Install(dlq, eventshub.StartReceiver))
+	// Setup data plane
+	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("recorder")))
+	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 
-	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(svc.AsRef(dlq), "")))
-
-	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
-
-	// Install the trigger
-	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
-
+	// Resources ready.
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
-	f.Setup("install source", func(ctx context.Context, t feature.T) {
-		u, err := broker.Address(ctx, brokerName)
-		if err != nil || u == nil {
-			t.Error("failed to get the address of the broker", brokerName, err)
-		}
-		eventshub.Install(source, eventshub.StartSenderURL(u.String()), eventshub.InputEvent(event))(ctx, t)
-	})
+	// Install events after data plane is ready.
+	f.Setup("install source", prober.TxInstall("source"))
 
-	f.Stable("broker with DQL").
-		Must("deliver event to DLQ",
-			OnStore(dlq).MatchEvent(HasId(event.ID())).Exact(1))
+	// After we have finished sending.
+	f.Requirement("sender is finished", prober.TxDone("source"))
+
+	// Assert events ended up where we expected.
+	f.Stable("broker with DLQ").
+		Must("accepted all events", prober.AssertSentAll("source")).
+		Must("deliver event to DLQ", prober.AssertReceivedAll("recorder"))
 
 	return f
 }

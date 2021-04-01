@@ -80,7 +80,7 @@ func (ei *Store) getDebugInfo() string {
 	return fmt.Sprintf("Pod '%s' in namespace '%s'", ei.podName, ei.podNamespace)
 }
 
-func (ei *Store) getEventInfo() []eventshub.EventInfo {
+func (ei *Store) Collected() []eventshub.EventInfo {
 	ei.lock.Lock()
 	defer ei.lock.Unlock()
 	return ei.collected
@@ -134,7 +134,7 @@ func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, even
 	lastEvents := []eventshub.EventInfo{}
 	var nonMatchingErrors []error
 
-	allEvents := ei.getEventInfo()
+	allEvents := ei.Collected()
 	for i := range allEvents {
 		if err := f(allEvents[i]); err == nil {
 			allMatch = append(allMatch, allEvents[i])
