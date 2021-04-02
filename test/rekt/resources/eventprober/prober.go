@@ -3,20 +3,19 @@ package eventprober
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/reconciler-test/pkg/environment"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	eventshubmain "knative.dev/reconciler-test/pkg/test_images/eventshub"
 
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
@@ -55,8 +54,8 @@ type target struct {
 }
 
 type EventInfoCombined struct {
-	Sent     eventshubmain.EventInfo
-	Response eventshubmain.EventInfo
+	Sent     eventshub.EventInfo
+	Response eventshub.EventInfo
 }
 
 func (p *EventProber) RxInstall(prefix string) feature.StepFn {
@@ -94,6 +93,11 @@ func (p *EventProber) TxInstall(prefix string) feature.StepFn {
 		} else {
 			t.Fatal("no target is configured for event loop")
 		}
+		opts = append(opts, func(ctx context.Context, cfg map[string]interface{}) error {
+			envs := cfg["envs"].(map[string]string)
+			envs["EVENT_GENERATORS"] = "sender-yaml" // TODO: depends on setting Volume
+			return nil
+		}, eventshub.WithVolume("three")) // TODO: just testing...
 		// Install into the env.
 		eventshub.Install(name, opts...)(ctx, t)
 	}
@@ -101,14 +105,14 @@ func (p *EventProber) TxInstall(prefix string) feature.StepFn {
 
 // Correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
 // and correlates them based on the sequence into a pair.
-func Correlate(origin string, in []eventshubmain.EventInfo) []EventInfoCombined {
+func Correlate(origin string, in []eventshub.EventInfo) []EventInfoCombined {
 	var out []EventInfoCombined
 	// not too many events, this will suffice...
 	for i, e := range in {
-		if e.Origin == origin && e.Kind == eventshubmain.EventSent {
+		if e.Origin == origin && e.Kind == eventshub.EventSent {
 			looking := e.Sequence
 			for j := i + 1; j <= len(in)-1; j++ {
-				if in[j].Kind == eventshubmain.EventResponse && in[j].Sequence == looking {
+				if in[j].Kind == eventshub.EventResponse && in[j].Sequence == looking {
 					out = append(out, EventInfoCombined{Sent: e, Response: in[j]})
 				}
 			}

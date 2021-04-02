@@ -29,12 +29,12 @@ import (
 	"knative.dev/pkg/network"
 
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub/dropevents"
 	"knative.dev/reconciler-test/pkg/k8s"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents"
 )
 
 // EventsHubOption is used to define an env for the eventshub image
-type EventsHubOption = func(context.Context, map[string]string) error
+type EventsHubOption = func(context.Context, map[string]interface{}) error
 
 // StartReceiver starts the receiver in the eventshub
 // This can be used together with EchoEvent, ReplyWithTransformedEvent, ReplyWithAppendedData
@@ -43,7 +43,8 @@ var StartReceiver EventsHubOption = envAdditive("EVENT_GENERATORS", "receiver")
 // StartSender starts the sender in the eventshub
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSender(sinkSvc string) EventsHubOption {
-	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, cfg map[string]interface{}) error {
+		envs := cfg["envs"].(map[string]string)
 		envs["SINK"] = "http://" + network.GetServiceHostname(sinkSvc, environment.FromContext(ctx).Namespace())
 		return nil
 	})
@@ -52,7 +53,7 @@ func StartSender(sinkSvc string) EventsHubOption {
 // StartSenderToResource starts the sender in the eventshub pointing to the provided resource
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsHubOption {
-	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, cfg map[string]interface{}) error {
 		u, err := k8s.Address(ctx, gvr, name)
 		if err != nil {
 			return err
@@ -60,6 +61,7 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 		if u == nil {
 			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
 		}
+		envs := cfg["envs"].(map[string]string)
 		envs["SINK"] = u.String()
 		return nil
 	})
@@ -68,7 +70,8 @@ func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsH
 // StartSenderURL starts the sender in the eventshub sinking to a URL.
 // This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
 func StartSenderURL(sink string) EventsHubOption {
-	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, cfg map[string]interface{}) error {
+		envs := cfg["envs"].(map[string]string)
 		envs["SINK"] = sink
 		return nil
 	})
@@ -138,7 +141,7 @@ var DisableProbeSink = envOption("PROBE_SINK", "false")
 func InputEvent(event cloudevents.Event) EventsHubOption {
 	encodedEvent, err := json.Marshal(event)
 	if err != nil {
-		return func(ctx context.Context, envs map[string]string) error {
+		return func(ctx context.Context, cfg map[string]interface{}) error {
 			return err
 		}
 	}
@@ -149,7 +152,7 @@ func InputEvent(event cloudevents.Event) EventsHubOption {
 func InputEventWithEncoding(event cloudevents.Event, encoding cloudevents.Encoding) EventsHubOption {
 	encodedEvent, err := json.Marshal(event)
 	if err != nil {
-		return func(ctx context.Context, envs map[string]string) error {
+		return func(ctx context.Context, cfg map[string]interface{}) error {
 			return err
 		}
 	}
@@ -195,16 +198,29 @@ func SendMultipleEvents(numberOfEvents int, period time.Duration) EventsHubOptio
 	)
 }
 
+// WithVolume TODO
+func WithVolume(configMapName string) EventsHubOption {
+	return func(ctx context.Context, cfg map[string]interface{}) error {
+		envs := cfg["envs"].(map[string]string)
+		envs["EVENTS_YAML"] = "/etc/cloudevents/"
+		cfg["volume"] = map[string]string{
+			"name": configMapName,
+			"path": "/etc/cloudevents/",
+		}
+		return nil
+	}
+}
+
 // --- Options utils
 
-func noop(context.Context, map[string]string) error {
+func noop(context.Context, map[string]interface{}) error {
 	return nil
 }
 
 func compose(options ...EventsHubOption) EventsHubOption {
-	return func(ctx context.Context, envs map[string]string) error {
+	return func(ctx context.Context, cfg map[string]interface{}) error {
 		for _, opt := range options {
-			if err := opt(ctx, envs); err != nil {
+			if err := opt(ctx, cfg); err != nil {
 				return err
 			}
 		}
@@ -214,7 +230,8 @@ func compose(options ...EventsHubOption) EventsHubOption {
 
 func envOptionalOpt(key, value string) EventsHubOption {
 	if value != "" {
-		return func(ctx context.Context, envs map[string]string) error {
+		return func(ctx context.Context, cfg map[string]interface{}) error {
+			envs := cfg["envs"].(map[string]string)
 			envs[key] = value
 			return nil
 		}
@@ -224,18 +241,20 @@ func envOptionalOpt(key, value string) EventsHubOption {
 }
 
 func envOption(key, value string) EventsHubOption {
-	return func(ctx context.Context, envs map[string]string) error {
+	return func(ctx context.Context, cfg map[string]interface{}) error {
+		envs := cfg["envs"].(map[string]string)
 		envs[key] = value
 		return nil
 	}
 }
 
 func envAdditive(key, value string) EventsHubOption {
-	return func(ctx context.Context, m map[string]string) error {
-		if containedValue, ok := m[key]; ok {
-			m[key] = containedValue + "," + value
+	return func(ctx context.Context, cfg map[string]interface{}) error {
+		envs := cfg["envs"].(map[string]string)
+		if containedValue, ok := envs[key]; ok {
+			envs[key] = containedValue + "," + value
 		} else {
-			m[key] = value
+			envs[key] = value
 		}
 		return nil
 	}

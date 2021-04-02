@@ -25,8 +25,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
-
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 func NoOpReply(_ context.Context, writer http.ResponseWriter, _ eventshub.EventInfo) {

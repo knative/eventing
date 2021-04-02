@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	cloudevents "knative.dev/eventing/test/rekt/resources/cloudevents/three"
 	"knative.dev/eventing/test/rekt/resources/eventprober"
 
 	"github.com/google/uuid"
@@ -75,7 +76,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 //
 // source ---> broker<Via> --[trigger]--> bad uri
 //                |
-//                +--[DLQ]--> recorder
+//                +--[DLQ]--> sink
 //
 func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	prober := eventprober.New(broker.GVR(), brokerName, "")
@@ -85,11 +86,13 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 
 	f := new(feature.Feature)
 
+	f.Setup("install events", cloudevents.Install("three"))
+
 	// Setup Probes
-	f.Setup("install recorder", prober.RxInstall("recorder"))
+	f.Setup("install recorder", prober.RxInstall("sink"))
 
 	// Setup data plane
-	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("recorder")))
+	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("sink")))
 	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 
 	// Resources ready.
@@ -104,7 +107,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ", prober.AssertReceivedAll("recorder"))
+		Must("deliver event to DLQ", prober.AssertReceivedAll("sink"))
 
 	return f
 }
@@ -129,6 +132,8 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 	}
 
 	f := new(feature.Feature)
+
+	//
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 

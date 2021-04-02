@@ -30,8 +30,8 @@ import (
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents"
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/dropevents"
 )
 
 // Receiver is the entry point for sinking events into the event log.

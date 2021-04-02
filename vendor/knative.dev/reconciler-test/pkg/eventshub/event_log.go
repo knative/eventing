@@ -49,6 +49,7 @@ type EventGeneratorType string
 const (
 	ReceiverEventGenerator EventGeneratorType = "receiver"
 	SenderEventGenerator   EventGeneratorType = "sender"
+	SenderEventYAML        EventGeneratorType = "sender-yaml"
 )
 
 type EventLogType string

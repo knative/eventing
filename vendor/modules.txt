@@ -1100,12 +1100,19 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20210401145623-185d7f2a06be
+# knative.dev/reconciler-test v0.0.0-20210401145623-185d7f2a06be => ../../knative-sandbox/reconciler-test
 ## explicit
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
 knative.dev/reconciler-test/pkg/eventshub
 knative.dev/reconciler-test/pkg/eventshub/assert
+knative.dev/reconciler-test/pkg/eventshub/dropevents
+knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfibonacci
+knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfirst
+knative.dev/reconciler-test/pkg/eventshub/logger_vent
+knative.dev/reconciler-test/pkg/eventshub/receiver
+knative.dev/reconciler-test/pkg/eventshub/recorder_vent
+knative.dev/reconciler-test/pkg/eventshub/sender
 knative.dev/reconciler-test/pkg/feature
 knative.dev/reconciler-test/pkg/images
 knative.dev/reconciler-test/pkg/k8s
@@ -1114,17 +1121,10 @@ knative.dev/reconciler-test/pkg/manifest
 knative.dev/reconciler-test/pkg/milestone
 knative.dev/reconciler-test/pkg/state
 knative.dev/reconciler-test/pkg/test_images
-knative.dev/reconciler-test/pkg/test_images/eventshub
-knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents
-knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfibonacci
-knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfirst
-knative.dev/reconciler-test/pkg/test_images/eventshub/logger_vent
-knative.dev/reconciler-test/pkg/test_images/eventshub/receiver
-knative.dev/reconciler-test/pkg/test_images/eventshub/recorder_vent
-knative.dev/reconciler-test/pkg/test_images/eventshub/sender
 # sigs.k8s.io/structured-merge-diff/v4 v4.0.1
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit
 sigs.k8s.io/yaml
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+# knative.dev/reconciler-test => ../../knative-sandbox/reconciler-test

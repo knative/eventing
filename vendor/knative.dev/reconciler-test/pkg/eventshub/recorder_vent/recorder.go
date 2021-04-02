@@ -29,8 +29,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
-
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 type recorder struct {

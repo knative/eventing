@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,14 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package logger_vent
+package cloudevents
 
-import "knative.dev/reconciler-test/pkg/test_images/eventshub"
+import (
+	"context"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+)
 
-type Logger func(string, ...interface{})
-
-func (l Logger) Vent(observed eventshub.EventInfo) error {
-	l("Event: \n%s", observed.String())
-
-	return nil
+// Install will TODO
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
+	cfg := map[string]interface{}{
+		"name": name,
+	}
+	for _, fn := range opts {
+		fn(cfg)
+	}
+	return func(ctx context.Context, t feature.T) {
+		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+			t.Fatal(err)
+		}
+	}
 }

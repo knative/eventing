@@ -26,7 +26,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	eventshubmain "knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
 func AcceptsCEVersions(ctx context.Context, t feature.T, gvr schema.GroupVersionResource, name string) {
@@ -66,13 +65,13 @@ func AcceptsCEVersions(ctx context.Context, t feature.T, gvr schema.GroupVersion
 }
 
 type EventInfoCombined struct {
-	Sent     eventshubmain.EventInfo
-	Response eventshubmain.EventInfo
+	Sent     eventshub.EventInfo
+	Response eventshub.EventInfo
 }
 
-func SentEventMatcher(uuid string) func(eventshubmain.EventInfo) error {
-	return func(ei eventshubmain.EventInfo) error {
-		if (ei.Kind == eventshubmain.EventSent || ei.Kind == eventshubmain.EventResponse) && ei.SentId == uuid {
+func SentEventMatcher(uuid string) func(eventshub.EventInfo) error {
+	return func(ei eventshub.EventInfo) error {
+		if (ei.Kind == eventshub.EventSent || ei.Kind == eventshub.EventResponse) && ei.SentId == uuid {
 			return nil
 		}
 		return errors.New("no match")
@@ -81,14 +80,14 @@ func SentEventMatcher(uuid string) func(eventshubmain.EventInfo) error {
 
 // Correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
 // and correlates them based on the sequence into a pair.
-func Correlate(in []eventshubmain.EventInfo) []EventInfoCombined {
+func Correlate(in []eventshub.EventInfo) []EventInfoCombined {
 	var out []EventInfoCombined
 	// not too many events, this will suffice...
 	for i, e := range in {
-		if e.Kind == eventshubmain.EventSent {
+		if e.Kind == eventshub.EventSent {
 			looking := e.Sequence
 			for j := i + 1; j <= len(in)-1; j++ {
-				if in[j].Kind == eventshubmain.EventResponse && in[j].Sequence == looking {
+				if in[j].Kind == eventshub.EventResponse && in[j].Sequence == looking {
 					out = append(out, EventInfoCombined{Sent: e, Response: in[j]})
 				}
 			}

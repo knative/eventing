@@ -41,3 +41,12 @@ spec:
         - name: {{printf "%q" $key}}
           value: {{printf "%q" $value}}
         {{ end }}
+  {{ if .volume }}
+      volumeMounts:
+        - name: config-volume
+          mountPath: {{ .volume.path }}
+  volumes:
+    - name: config-volume
+      configMap:
+         name: {{ .volume.name }}
+  {{ end }}
