@@ -20,7 +20,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	corev1 "k8s.io/api/core/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -28,9 +31,7 @@ import (
 var (
 	trueValue  = true
 	falseValue = false
-)
 
-var (
 	eventTypeConditionReady = apis.Condition{
 		Type:   EventTypeConditionReady,
 		Status: corev1.ConditionTrue,
@@ -45,6 +46,10 @@ var (
 		Type:   EventTypeConditionBrokerReady,
 		Status: corev1.ConditionTrue,
 	}
+
+	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
+		apis.Condition{},
+		"LastTransitionTime", "Message", "Reason", "Severity")
 )
 
 func TestEventTypeGetConditionSet(t *testing.T) {
@@ -206,12 +211,12 @@ func TestEventTypeConditionStatus(t *testing.T) {
 	tests := []struct {
 		name                string
 		markBrokerExists    *bool
-		brokerStatus        *BrokerStatus
+		brokerStatus        *eventingv1.BrokerStatus
 		wantConditionStatus corev1.ConditionStatus
 	}{{
 		name:                "all happy",
 		markBrokerExists:    &trueValue,
-		brokerStatus:        TestHelper.ReadyBrokerStatus(),
+		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatus(),
 		wantConditionStatus: corev1.ConditionTrue,
 	}, {
 		name:                "broker exist sad",
@@ -221,12 +226,12 @@ func TestEventTypeConditionStatus(t *testing.T) {
 	}, {
 		name:                "broker ready sad",
 		markBrokerExists:    &trueValue,
-		brokerStatus:        TestHelper.FalseBrokerStatus(),
+		brokerStatus:        eventingv1.TestHelper.FalseBrokerStatus(),
 		wantConditionStatus: corev1.ConditionFalse,
 	}, {
 		name:                "broker ready unknown",
 		markBrokerExists:    &trueValue,
-		brokerStatus:        TestHelper.UnknownBrokerStatus(),
+		brokerStatus:        eventingv1.TestHelper.UnknownBrokerStatus(),
 		wantConditionStatus: corev1.ConditionUnknown,
 	}, {
 		name:                "all sad",

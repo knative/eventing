@@ -19,8 +19,8 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -47,42 +47,6 @@ func (testHelper) FalseSubscriptionCondition() *apis.Condition {
 	}
 }
 
-func (testHelper) ReadySubscriptionStatus() *messagingv1beta1.SubscriptionStatus {
-	ss := &messagingv1beta1.SubscriptionStatus{}
-	ss.MarkChannelReady()
-	ss.MarkReferencesResolved()
-	ss.MarkAddedToChannel()
-	return ss
-}
-
-func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
-	bs := &BrokerStatus{}
-	bs.PropagateIngressAvailability(t.AvailableEndpoints())
-	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateFilterAvailability(t.AvailableEndpoints())
-	bs.SetAddress(apis.HTTP("example.com"))
-	return bs
-}
-
-func (testHelper) ReadyBrokerCondition() *apis.Condition {
-	return &apis.Condition{
-		Type:     apis.ConditionReady,
-		Status:   corev1.ConditionTrue,
-		Severity: apis.ConditionSeverityError,
-	}
-}
-
-func (testHelper) UnknownBrokerStatus() *BrokerStatus {
-	bs := &BrokerStatus{}
-	return bs
-}
-
-func (testHelper) FalseBrokerStatus() *BrokerStatus {
-	bs := &BrokerStatus{}
-	bs.SetAddress(nil)
-	return bs
-}
-
 func (testHelper) UnavailableEndpoints() *corev1.Endpoints {
 	ep := &corev1.Endpoints{}
 	ep.Name = "unavailable"
@@ -105,15 +69,15 @@ func (testHelper) AvailableEndpoints() *corev1.Endpoints {
 	return ep
 }
 
-func (testHelper) ReadyChannelStatus() *duckv1beta1.ChannelableStatus {
-	cs := &duckv1beta1.ChannelableStatus{
+func (testHelper) ReadyChannelStatus() *eventingduckv1.ChannelableStatus {
+	cs := &eventingduckv1.ChannelableStatus{
 		Status: duckv1.Status{},
 		AddressStatus: duckv1.AddressStatus{
 			Address: &duckv1.Addressable{
 				URL: &apis.URL{Scheme: "http", Host: "foo"},
 			},
 		},
-		SubscribableStatus: duckv1beta1.SubscribableStatus{}}
+		SubscribableStatus: eventingduckv1.SubscribableStatus{}}
 	return cs
 }
 
