@@ -228,6 +228,16 @@ func WithAttributesTriggerFilter(eventSource, eventType string, extensions map[s
 	}
 }
 
+// WithDependencyAnnotationTrigger returns an option that adds a dependency annotation to the given Trigger.
+func WithDependencyAnnotationTrigger(dependencyAnnotation string) TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		if t.Annotations == nil {
+			t.Annotations = make(map[string]string)
+		}
+		t.Annotations[eventingv1.DependencyAnnotation] = dependencyAnnotation
+	}
+}
+
 // WithSubscriberServiceRefForTrigger returns an option that adds a Subscriber Knative Service Ref for the given v1 Trigger.
 func WithSubscriberServiceRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1.Trigger) {
