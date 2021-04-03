@@ -115,22 +115,22 @@ func BrokerChannelFlowWithTransformation(
 		)
 
 		// create trigger1 to receive the original event, and do event transformation
-			client.CreateTriggerOrFail(
-				triggerName1,
-				resources.WithBroker(brokerName),
-				resources.WithAttributesTriggerFilter(eventSource, eventType, nil),
-				resources.WithSubscriberServiceRefForTrigger(transformationPodName),
-			)
+		client.CreateTriggerOrFail(
+			triggerName1,
+			resources.WithBroker(brokerName),
+			resources.WithAttributesTriggerFilter(eventSource, eventType, nil),
+			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
+		)
 		// create event tracker that should receive all sent events
 		allEventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, allEventsRecorderPodName)
 
 		// create trigger to receive all the events
-			client.CreateTriggerOrFail(
-				triggerName2,
-				resources.WithBroker(brokerName),
-				resources.WithAttributesTriggerFilter(any, any, nil),
-				resources.WithSubscriberServiceRefForTrigger(allEventsRecorderPodName),
-			)
+		client.CreateTriggerOrFail(
+			triggerName2,
+			resources.WithBroker(brokerName),
+			resources.WithAttributesTriggerFilter(any, any, nil),
+			resources.WithSubscriberServiceRefForTrigger(allEventsRecorderPodName),
+		)
 		// create channel for trigger3
 		client.CreateChannelOrFail(channelName, &channel)
 		client.WaitForResourceReadyOrFail(channelName, &channel)
@@ -140,12 +140,12 @@ func BrokerChannelFlowWithTransformation(
 		if err != nil {
 			st.Fatalf("Failed to get the url for the channel %q: %+v", channelName, err)
 		}
-			client.CreateTriggerOrFail(
-				triggerName3,
-				resources.WithBroker(brokerName),
-				resources.WithAttributesTriggerFilter(transformedEventSource, transformedEventType, nil),
-				resources.WithSubscriberURIForTrigger(channelURL),
-			)
+		client.CreateTriggerOrFail(
+			triggerName3,
+			resources.WithBroker(brokerName),
+			resources.WithAttributesTriggerFilter(transformedEventSource, transformedEventType, nil),
+			resources.WithSubscriberURIForTrigger(channelURL),
+		)
 
 		// create event tracker that should receive only transformed events
 		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, transformedEventsRecorderPodName)

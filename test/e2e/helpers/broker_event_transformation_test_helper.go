@@ -85,22 +85,22 @@ func EventTransformationForTriggerTestHelper(
 	)
 
 	// create trigger1 for event transformation
-		client.CreateTriggerOrFail(
-			originalTriggerName,
-			resources.WithBroker(brokerName),
-			resources.WithAttributesTriggerFilter(eventSource, eventType, nil),
-			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
-		)
+	client.CreateTriggerOrFail(
+		originalTriggerName,
+		resources.WithBroker(brokerName),
+		resources.WithAttributesTriggerFilter(eventSource, eventType, nil),
+		resources.WithSubscriberServiceRefForTrigger(transformationPodName),
+	)
 
 	// create logger pod and service
 	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 	// create trigger2 for event receiving
-		client.CreateTriggerOrFail(
-			transformedTriggerName,
-			resources.WithBroker(brokerName),
-			resources.WithAttributesTriggerFilter(transformedEventSource, transformedEventType, nil),
-			resources.WithSubscriberServiceRefForTrigger(recordEventsPodName),
-		)
+	client.CreateTriggerOrFail(
+		transformedTriggerName,
+		resources.WithBroker(brokerName),
+		resources.WithAttributesTriggerFilter(transformedEventSource, transformedEventType, nil),
+		resources.WithSubscriberServiceRefForTrigger(recordEventsPodName),
+	)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
