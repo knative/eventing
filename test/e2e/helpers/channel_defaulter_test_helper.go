@@ -35,7 +35,7 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/recordevents"

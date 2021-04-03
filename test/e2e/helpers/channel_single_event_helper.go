@@ -76,13 +76,6 @@ func SingleEventForChannelTestHelper(
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		switch subscriptionVersion {
 		case SubscriptionV1:
-			client.CreateSubscriptionV1OrFail(
-				subscriptionName,
-				channelName,
-				&channel,
-				resources.WithSubscriberForSubscriptionV1(eventRecorder),
-			)
-		case SubscriptionV1beta1:
 			client.CreateSubscriptionOrFail(
 				subscriptionName,
 				channelName,

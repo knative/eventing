@@ -41,7 +41,6 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 
 	defaultconfig "knative.dev/eventing/pkg/apis/config"
-	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"

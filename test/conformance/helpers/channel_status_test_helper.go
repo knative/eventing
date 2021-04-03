@@ -59,7 +59,7 @@ func channelHasRequiredStatus(st *testing.T, client *testlib.Client, channel met
 		st.Fatalf("Unexpected duck type version, wanted [v1, v1beta] got: %s", dtsv)
 	}
 
-	channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
+	channelable, err := getChannelAsChannelable(channelName, client, channel)
 	if err != nil {
 		st.Fatalf("Unable to get channel %q to v1beta1 duck type: %q", channel, err)
 	}

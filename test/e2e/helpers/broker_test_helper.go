@@ -107,14 +107,9 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) Brok
 
 		switch version {
 		case "v1":
-			client.CreateBrokerV1OrFail(brokerName,
-				resources.WithBrokerClassForBrokerV1(brokerClass),
-				resources.WithConfigForBrokerV1(config),
-			)
-		case "v1beta1":
-			client.CreateBrokerV1Beta1OrFail(brokerName,
-				resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
-				resources.WithConfigForBrokerV1Beta1(config),
+			client.CreateBrokerOrFail(brokerName,
+				resources.WithBrokerClassForBroker(brokerClass),
+				resources.WithConfigForBroker(config),
 			)
 		default:
 			panic("unknown version: " + version)
@@ -247,7 +242,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 
 			if shouldLabelNamespace {
 				// Test if namespace reconciler would recreate broker once broker was deleted.
-				if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(context.Background(), brokerName, metav1.DeleteOptions{}); err != nil {
+				if err := client.Eventing.EventingV1().Brokers(client.Namespace).Delete(context.Background(), brokerName, metav1.DeleteOptions{}); err != nil {
 					t.Fatal("Can't delete default broker in namespace:", client.Namespace)
 				}
 				client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
@@ -262,10 +257,10 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 				eventTrackers[subscriberName] = eventTracker
 				// Create trigger.
 				triggerName := "trigger-" + event.String()
-				client.CreateTriggerOrFailV1Beta1(triggerName,
-					resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
-					resources.WithAttributesTriggerFilterV1Beta1(event.Source, event.Type, event.Extensions),
-					resources.WithBrokerV1Beta1(brokerName),
+				client.CreateTriggerOrFail(triggerName,
+					resources.WithSubscriberServiceRefForTrigger(subscriberName),
+					resources.WithAttributesTriggerFilter(event.Source, event.Type, event.Extensions),
+					resources.WithBroker(brokerName),
 				)
 			}
 			// Wait for all test resources to become ready before sending the events.

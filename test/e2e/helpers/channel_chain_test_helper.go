@@ -78,18 +78,18 @@ func ChannelChainTestHelper(
 			)
 		case SubscriptionV1beta1:
 			// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-			client.CreateSubscriptionsV1OrFail(
+			client.CreateSubscriptionsOrFail(
 				subscriptionNames1,
 				channelNames[0],
 				&channel,
-				resources.WithReplyForSubscriptionV1(channelNames[1], &channel),
+				resources.WithReplyForSubscription(channelNames[1], &channel),
 			)
 			// create subscriptions that subscribe the second channel, and call the logging service
-			client.CreateSubscriptionsV1OrFail(
+			client.CreateSubscriptionsOrFail(
 				subscriptionNames2,
 				channelNames[1],
 				&channel,
-				resources.WithSubscriberForSubscriptionV1(recordEventsPodName),
+				resources.WithSubscriberForSubscription(recordEventsPodName),
 			)
 
 		default:
