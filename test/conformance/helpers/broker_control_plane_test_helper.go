@@ -73,7 +73,7 @@ func BrokerV1ControlPlaneTest(
 	})
 
 	t.Run("Ready Trigger V1 (no Broker) set Broker and includes status.subscriber Uri", func(t *testing.T) {
-		triggerV1CanNotUpdateBroker(t, triggerNoBroker, brokerName, client)
+		triggerV1CanNotUpdateBroker(t, triggerNoBroker, brokerName+"different", client)
 	})
 
 	t.Run("Ready Trigger V1 includes status.subscriber Uri", func(t *testing.T) {
