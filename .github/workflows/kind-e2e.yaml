@@ -48,12 +48,12 @@ jobs:
         - test-suite: ./test/e2e
           extra-test-flags: >
             -brokerclass=MTChannelBasedBroker
-            -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
+            -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1alpha2:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1alpha2:PingSource
         - test-suite: ./test/conformance
           extra-test-flags: >
-            -brokers=eventing.knative.dev/v1beta1:MTChannelBasedBroker
-            -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
+            -brokers=eventing.knative.dev/v1:MTChannelBasedBroker
+            -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource
     env:
       GOPATH: ${{ github.workspace }}
