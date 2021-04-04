@@ -33,6 +33,8 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
+const brokerName = "br"
+
 // Creates a Broker with the given name.
 type BrokerCreator func(client *testlib.Client, name string)
 
@@ -51,11 +53,10 @@ func BrokerV1ControlPlaneTest(
 
 	client := testlib.Setup(t, false, setupClient...)
 	defer testlib.TearDown(client)
-	brokerName := "br"
 	triggerNoBroker := "trigger-no-broker"
 	triggerWithBroker := "trigger-with-broker"
 
-	t.Run("Trigger V1 can be crated before Broker (with attributes filter)", func(t *testing.T) {
+	t.Run("Trigger V1 can be created before Broker (with attributes filter)", func(t *testing.T) {
 		triggerV1BeforeBrokerHelper(triggerNoBroker, client)
 	})
 
@@ -89,13 +90,12 @@ func triggerV1BeforeBrokerHelper(triggerName string, client *testlib.Client) {
 	client.CreateTriggerOrFail(triggerName,
 		resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
 		resources.WithSubscriberServiceRefForTrigger(loggerPodName),
+		resources.WithBroker(brokerName),
 	)
 }
 
 func brokerV1CreatedToReadyHelper(brokerName string, client *testlib.Client, brokerCreator BrokerCreator) {
-
 	brokerCreator(client, brokerName)
-
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 }
 

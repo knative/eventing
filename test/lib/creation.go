@@ -247,7 +247,7 @@ func (c *Client) CreateBrokerOrFail(name string, options ...resources.BrokerOpti
 	return retBroker
 }
 
-// CreateTriggerOrFailV1 will create a v1 Trigger or fail the test if there is an error.
+// CreateTriggerOrFail will create a v1 Trigger or fail the test if there is an error.
 func (c *Client) CreateTriggerOrFail(name string, options ...resources.TriggerOption) *eventingv1.Trigger {
 	namespace := c.Namespace
 	trigger := resources.Trigger(name, options...)

@@ -76,22 +76,6 @@ func ChannelChainTestHelper(
 				&channel,
 				resources.WithSubscriberForSubscription(recordEventsPodName),
 			)
-		case SubscriptionV1beta1:
-			// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-			client.CreateSubscriptionsOrFail(
-				subscriptionNames1,
-				channelNames[0],
-				&channel,
-				resources.WithReplyForSubscription(channelNames[1], &channel),
-			)
-			// create subscriptions that subscribe the second channel, and call the logging service
-			client.CreateSubscriptionsOrFail(
-				subscriptionNames2,
-				channelNames[1],
-				&channel,
-				resources.WithSubscriberForSubscription(recordEventsPodName),
-			)
-
 		default:
 			t.Fatalf("Invalid subscription version")
 		}

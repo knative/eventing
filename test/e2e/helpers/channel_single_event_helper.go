@@ -36,8 +36,7 @@ import (
 type SubscriptionVersion string
 
 const (
-	SubscriptionV1beta1 SubscriptionVersion = "v1beta1"
-	SubscriptionV1      SubscriptionVersion = "v1"
+	SubscriptionV1 SubscriptionVersion = "v1"
 )
 
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
