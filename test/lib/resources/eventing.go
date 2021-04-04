@@ -62,7 +62,7 @@ func KnativeRefForService(name, namespace string) *duckv1.KReference {
 func KnativeRefForBroker(name, namespace string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       "Broker",
-		APIVersion: "eventing.knative.dev/v1beta1",
+		APIVersion: "eventing.knative.dev/v1",
 		Name:       name,
 		Namespace:  namespace,
 	}

@@ -236,7 +236,7 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 				// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
 			}),
 	)
-	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1beta1", Kind: "Broker", Name: sugarresources.DefaultBrokerName, Namespace: client.Namespace}}
+	apiServerSource.Spec.Sink = duckv1.Destination{Ref: &duckv1.KReference{APIVersion: "eventing.knative.dev/v1", Kind: "Broker", Name: sugarresources.DefaultBrokerName, Namespace: client.Namespace}}
 
 	client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
 

@@ -54,7 +54,7 @@ var (
 			Name:       sinkName,
 			Namespace:  testNS,
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1beta1",
+			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
 
