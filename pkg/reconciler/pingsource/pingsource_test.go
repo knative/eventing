@@ -64,7 +64,7 @@ var (
 			Name:       sinkName,
 			Namespace:  testNS,
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1beta1",
+			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
 	sinkDestNoNS = duckv1.Destination{
@@ -72,7 +72,7 @@ var (
 			Name:       sinkName,
 			Namespace:  "",
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1beta1",
+			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
 	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
@@ -146,7 +146,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
-					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1beta1"}}`),
+					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
 			},
 		}, {
 			Name: "sink ref has no namespace",
@@ -185,7 +185,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
-					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1beta1"}}`),
+					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
 			},
 		}, {
 			Name: "error creating deployment",
