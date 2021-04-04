@@ -150,8 +150,6 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 		eventFilters []eventTestCase
 		// TriggerFilter with DeprecatedSourceAndType or not
 		deprecatedTriggerFilter bool
-		// Use v1beta1 trigger
-		v1beta1 bool
 	}{
 		{
 			name: "test default broker with many deprecated triggers",
@@ -183,22 +181,6 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 				{Type: eventType1, Source: eventSource1},
 			},
 			deprecatedTriggerFilter: false,
-		}, {
-			name: "test default broker with many attribute triggers using v1beta1 trigger",
-			eventsToSend: []eventTestCase{
-				{Type: eventType1, Source: eventSource1},
-				{Type: eventType1, Source: eventSource2},
-				{Type: eventType2, Source: eventSource1},
-				{Type: eventType2, Source: eventSource2},
-			},
-			eventFilters: []eventTestCase{
-				{Type: any, Source: any},
-				{Type: eventType1, Source: any},
-				{Type: any, Source: eventSource1},
-				{Type: eventType1, Source: eventSource1},
-			},
-			deprecatedTriggerFilter: false,
-			v1beta1:                 true,
 		}, {
 			name: "test default broker with many attribute and extension triggers",
 			eventsToSend: []eventTestCase{
@@ -235,7 +217,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 				}
 			}
 
-			brokerName := brokerCreator(client, "v1beta1")
+			brokerName := brokerCreator(client, "v1")
 
 			// Wait for broker ready.
 			client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)

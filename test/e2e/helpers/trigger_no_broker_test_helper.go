@@ -67,7 +67,7 @@ func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brok
 	}
 
 	// Then create the Broker and just make sure they both come ready.
-	if bn := brokerCreator(client, "v1beta1"); bn != brokerName {
+	if bn := brokerCreator(client, "v1"); bn != brokerName {
 		t.Fatalf("Broker created with unexpected name, wanted %q got %q", brokerName, bn)
 	}
 
