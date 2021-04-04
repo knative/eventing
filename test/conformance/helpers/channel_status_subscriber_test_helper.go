@@ -75,8 +75,8 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	if err != nil {
 		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
-	if dtsv != "v1" && dtsv != "v1beta1" {
-		st.Fatalf("Unexpected duck type version, wanted [v1, v1beta] got: %s", dtsv)
+	if dtsv != "v1" {
+		st.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
 	}
 
 	channelable, err := getChannelAsChannelable(channelName, client, channel)

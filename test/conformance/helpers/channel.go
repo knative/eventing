@@ -30,13 +30,6 @@ import (
 )
 
 var (
-	channelv1beta1GVK = (&messagingv1.Channel{}).GetGroupVersionKind()
-
-	channelv1beta1 = metav1.TypeMeta{
-		Kind:       channelv1beta1GVK.Kind,
-		APIVersion: channelv1beta1GVK.GroupVersion().String(),
-	}
-
 	channelv1GVK = (&messagingv1.Channel{}).GetGroupVersionKind()
 
 	channelv1 = metav1.TypeMeta{
