@@ -18,6 +18,8 @@ package v1beta1
 
 import (
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestKind(t *testing.T) {
@@ -31,5 +33,20 @@ func TestResource(t *testing.T) {
 	schemaGroupResource := Resource("EventType")
 	if schemaGroupResource.Group != "eventing.knative.dev" || schemaGroupResource.Resource != "EventType" {
 		t.Errorf("Unexpected GroupResource: %+v", schemaGroupResource)
+	}
+}
+
+func TestKnownTypes(t *testing.T) {
+	scheme := runtime.NewScheme()
+	addKnownTypes(scheme)
+	types := scheme.KnownTypes(SchemeGroupVersion)
+
+	for _, name := range []string{
+		"EventType",
+		"EventTypeList",
+	} {
+		if _, ok := types[name]; !ok {
+			t.Errorf("Did not find %q as registered type", name)
+		}
 	}
 }
