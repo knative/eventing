@@ -93,7 +93,7 @@ type TriggerSpec struct {
 	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
-// FilterSpec allows to define a filter
+// FilterSpec allows to define a filter expression.
 // If multiple filters are specified, then the same semantics of FilterSpec.All is applied.
 // If no filter dialect or empty object is specified, then the filter always accept the events.
 type FilterSpec struct {
