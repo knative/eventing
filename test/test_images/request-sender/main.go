@@ -70,7 +70,7 @@ func main() {
 	}
 
 	// I need the httpClient to report to responseSink
-	ceClient, err := cloudevents.NewDefaultClient()
+	ceClient, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		log.Fatalf("failed to create httpClient, %v", err)
 	}
