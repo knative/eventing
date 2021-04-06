@@ -3,7 +3,6 @@ package eventprober
 import (
 	"context"
 	"fmt"
-
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -205,10 +204,10 @@ func (p *EventProber) DeadLetterSinkCfg(prefix string) manifest.CfgFn {
 	return delivery.WithDeadLetterSink(p.AsRef(prefix), "")
 }
 
-// [Source] ---> { Target(Broker)}--> [Sink1] --> {reply}
-//                  	|
-//   	                +-(DLQ)-> [Sink2]
-//
+//// [Source] ---> { Target(Broker)}--> [Sink1] --> {reply}
+////                  	|
+////   	                +-(DLQ)-> [Sink2]
+////
 //func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 //	prober := New(broker.GVR(), brokerName, "")
 //
