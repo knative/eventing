@@ -35,7 +35,7 @@ func (t *Trigger) SetDefaults(ctx context.Context) {
 func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	// Make a default filter that allows anything.
 	if ts.Filter == nil {
-		ts.Filter = &TriggerFilter{}
+		ts.Filter = &FilterSpec{}
 	}
 	// Default the Subscriber namespace
 	ts.Subscriber.SetDefaults(ctx)

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -53,16 +54,8 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if ts.Filter != nil {
-		for attr := range map[string]string(ts.Filter.Attributes) {
-			if !validAttributeName.MatchString(attr) {
-				fe := &apis.FieldError{
-					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
-					Paths:   []string{"filter.attributes"},
-				}
-				errs = errs.Also(fe)
-			}
-		}
+	for _, err := range validateFilterSpec(ts.Filter, []string{"filter"}) {
+		errs = errs.Also(err)
 	}
 
 	if fe := ts.Subscriber.Validate(ctx); fe != nil {
@@ -76,6 +69,113 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	return errs
+}
+
+func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldError) {
+	if filter == nil {
+		return nil
+	}
+
+	// Validate Attributes
+	for attr := range map[string]string(filter.Attributes) {
+		if !validAttributeName.MatchString(attr) {
+			errs = append(errs, &apis.FieldError{
+				Message: fmt.Sprintf("Invalid attribute name: %q", attr),
+				Paths:   []string{strings.Join(append(path, "attributes"), ".")},
+			})
+		}
+	}
+
+	// Validate Exact
+	if filter.Exact != nil {
+		if len(filter.Exact) != 1 {
+			errs = append(errs, &apis.FieldError{
+				Message: fmt.Sprintf("Exact can have only one key-value"),
+				Paths:   []string{strings.Join(append(path, "exact"), ".")},
+			})
+		}
+		for attr := range filter.Exact {
+			if !validAttributeName.MatchString(attr) {
+				errs = append(errs, &apis.FieldError{
+					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
+					Paths:   []string{strings.Join(append(path, "exact"), ".")},
+				})
+			}
+		}
+	}
+
+	// Validate Prefix
+	if filter.Prefix != nil {
+		if len(filter.Prefix) != 1 {
+			errs = append(errs, &apis.FieldError{
+				Message: fmt.Sprintf("Prefix can have only one key-value"),
+				Paths:   []string{strings.Join(append(path, "prefix"), ".")},
+			})
+		}
+		for attr := range filter.Prefix {
+			if !validAttributeName.MatchString(attr) {
+				errs = append(errs, &apis.FieldError{
+					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
+					Paths:   []string{strings.Join(append(path, "prefix"), ".")},
+				})
+			}
+		}
+	}
+
+	// Validate Suffix
+	if filter.Suffix != nil {
+		if len(filter.Suffix) != 1 {
+			errs = append(errs, &apis.FieldError{
+				Message: fmt.Sprintf("Suffix can have only one key-value"),
+				Paths:   []string{strings.Join(append(path, "suffix"), ".")},
+			})
+		}
+		for attr := range filter.Suffix {
+			if !validAttributeName.MatchString(attr) {
+				errs = append(errs, &apis.FieldError{
+					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
+					Paths:   []string{strings.Join(append(path, "suffix"), ".")},
+				})
+			}
+		}
+	}
+
+	// Validate All
+	if filter.All != nil {
+		if len(filter.All) < 1 {
+			errs = append(errs, &apis.FieldError{
+				Message: fmt.Sprintf("All must contain at least one nested filter"),
+				Paths:   []string{strings.Join(append(path, "all"), ".")},
+			})
+		}
+
+		for i, f := range filter.All {
+			f := f
+			errs = append(errs, validateFilterSpec(&f, append(path, "all", fmt.Sprintf("[%d]", i)))...)
+		}
+	}
+
+	// Validate Any
+	if filter.Any != nil {
+		if len(filter.Any) < 1 {
+			errs = append(errs, &apis.FieldError{
+				Message: fmt.Sprintf("Any must contain at least one nested filter"),
+				Paths:   []string{strings.Join(append(path, "any"), ".")},
+			})
+		}
+
+		for i, f := range filter.Any {
+			f := f
+			errs = append(errs, validateFilterSpec(&f, append(path, "any", fmt.Sprintf("[%d]", i)))...)
+		}
+	}
+
+	// Validate Not
+	if filter.Not != nil {
+		errs = append(errs, validateFilterSpec(filter.Not, append(path, "not"))...)
+	}
+
+	return
 }
 
 // CheckImmutableFields checks that any immutable fields were not changed.

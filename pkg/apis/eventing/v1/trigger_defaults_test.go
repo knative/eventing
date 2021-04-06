@@ -31,7 +31,7 @@ var (
 	defaultBroker      = "default"
 	otherBroker        = "other_broker"
 	namespace          = "testnamespace"
-	emptyTriggerFilter = &TriggerFilter{}
+	emptyTriggerFilter = &FilterSpec{}
 	defaultTrigger     = Trigger{Spec: TriggerSpec{Filter: emptyTriggerFilter}}
 )
 

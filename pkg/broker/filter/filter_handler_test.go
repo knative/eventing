@@ -555,8 +555,8 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func makeTriggerFilterWithAttributes(t, s string) *eventingv1.TriggerFilter {
-	return &eventingv1.TriggerFilter{
+func makeTriggerFilterWithAttributes(t, s string) *eventingv1.FilterSpec {
+	return &eventingv1.FilterSpec{
 		Attributes: eventingv1.TriggerFilterAttributes{
 			"type":   t,
 			"source": s,
@@ -564,8 +564,8 @@ func makeTriggerFilterWithAttributes(t, s string) *eventingv1.TriggerFilter {
 	}
 }
 
-func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1.TriggerFilter {
-	return &eventingv1.TriggerFilter{
+func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1.FilterSpec {
+	return &eventingv1.FilterSpec{
 		Attributes: eventingv1.TriggerFilterAttributes{
 			"type":        t,
 			"source":      s,
@@ -574,13 +574,13 @@ func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1.Tri
 	}
 }
 
-func makeTriggerWithDifferentUID(filter *eventingv1.TriggerFilter) *eventingv1.Trigger {
+func makeTriggerWithDifferentUID(filter *eventingv1.FilterSpec) *eventingv1.Trigger {
 	t := makeTrigger(filter)
 	t.ObjectMeta.UID = "wrongone"
 	return t
 }
 
-func makeTrigger(filter *eventingv1.TriggerFilter) *eventingv1.Trigger {
+func makeTrigger(filter *eventingv1.FilterSpec) *eventingv1.Trigger {
 	return &eventingv1.Trigger{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1beta1",

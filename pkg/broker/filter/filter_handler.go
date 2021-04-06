@@ -324,7 +324,7 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
+func filterEvent(ctx context.Context, filter *eventingv1.FilterSpec, event cloudevents.Event) eventfilter.FilterResult {
 	if filter == nil {
 		return eventfilter.NoFilter
 	}
@@ -337,7 +337,7 @@ func filterEvent(ctx context.Context, filter *eventingv1.TriggerFilter, event cl
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
 // returns the any value filter.
-func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName string) string {
+func triggerFilterAttribute(filter *eventingv1.FilterSpec, attributeName string) string {
 	attributeValue := eventingv1.TriggerAnyFilter
 	if filter != nil {
 		attrs := map[string]string(filter.Attributes)
