@@ -24,21 +24,12 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 
 	"knative.dev/eventing/pkg/apis/messaging"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 var (
-	channelv1beta1GVK = (&messagingv1beta1.Channel{}).GetGroupVersionKind()
-
-	channelv1beta1 = metav1.TypeMeta{
-		Kind:       channelv1beta1GVK.Kind,
-		APIVersion: channelv1beta1GVK.GroupVersion().String(),
-	}
-
 	channelv1GVK = (&messagingv1.Channel{}).GetGroupVersionKind()
 
 	channelv1 = metav1.TypeMeta{
@@ -60,7 +51,7 @@ func getChannelDuckTypeSupportVersion(channelName string, client *testlib.Client
 	return channelable.ObjectMeta.Annotations[messaging.SubscribableDuckVersionAnnotation], nil
 }
 
-func getChannelAsV1Channelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1.Channelable, error) {
+func getChannelAsChannelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1.Channelable, error) {
 	metaResource := resources.NewMetaResource(channelName, client.Namespace, &channel)
 	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1.Channelable{})
 	if err != nil {
@@ -69,20 +60,6 @@ func getChannelAsV1Channelable(channelName string, client *testlib.Client, chann
 	channelable, ok := obj.(*eventingduckv1.Channelable)
 	if !ok {
 		return nil, errors.Errorf("Unable to cast channel %q to v1 duck type", channel)
-	}
-
-	return channelable, nil
-}
-
-func getChannelAsV1Beta1Channelable(channelName string, client *testlib.Client, channel metav1.TypeMeta) (*eventingduckv1beta1.Channelable, error) {
-	metaResource := resources.NewMetaResource(channelName, client.Namespace, &channel)
-	obj, err := duck.GetGenericObject(client.Dynamic, metaResource, &eventingduckv1beta1.Channelable{})
-	if err != nil {
-		return nil, errors.Wrapf(err, "Unable to get the channel as v1beta1 Channel duck type: %q", channel)
-	}
-	channelable, ok := obj.(*eventingduckv1beta1.Channelable)
-	if !ok {
-		return nil, errors.Errorf("Unable to cast channel %q to v1beta1 duck type", channel)
 	}
 
 	return channelable, nil

@@ -25,13 +25,15 @@ import (
 
 	"knative.dev/pkg/reconciler"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/test/lib/recordevents"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
+
+const brokerName = "br"
 
 // Creates a Broker with the given name.
 type BrokerCreator func(client *testlib.Client, name string)
@@ -43,7 +45,7 @@ type BrokerCreator func(client *testlib.Client, name string)
 // 4. Trigger with Ready broker progresses to Ready
 // 5. Trigger with no broker, updated with broker, updates status to include subscriberURI
 // 6. Ready Trigger includes status.subscriberUri
-func BrokerV1Beta1ControlPlaneTest(
+func BrokerV1ControlPlaneTest(
 	t *testing.T,
 	brokerCreator BrokerCreator,
 	setupClient ...testlib.SetupClientOption,
@@ -51,55 +53,53 @@ func BrokerV1Beta1ControlPlaneTest(
 
 	client := testlib.Setup(t, false, setupClient...)
 	defer testlib.TearDown(client)
-	brokerName := "br"
 	triggerNoBroker := "trigger-no-broker"
 	triggerWithBroker := "trigger-with-broker"
 
-	t.Run("Trigger V1Beta1 can be crated before Broker (with attributes filter)", func(t *testing.T) {
-		triggerV1Beta1BeforeBrokerHelper(triggerNoBroker, client)
+	t.Run("Trigger V1 can be created before Broker (with attributes filter)", func(t *testing.T) {
+		triggerV1BeforeBrokerHelper(triggerNoBroker, client)
 	})
 
-	t.Run("Broker V1Beta1 can be created and progresses to Ready", func(t *testing.T) {
-		brokerV1Beta1CreatedToReadyHelper(brokerName, client, brokerCreator)
+	t.Run("Broker V1 can be created and progresses to Ready", func(t *testing.T) {
+		brokerV1CreatedToReadyHelper(brokerName, client, brokerCreator)
 	})
 
-	t.Run("Ready Broker V1Beta1 is Addressable", func(t *testing.T) {
-		readyBrokerV1Beta1AvailableHelper(t, brokerName, client)
+	t.Run("Ready Broker V1 is Addressable", func(t *testing.T) {
+		readyBrokerV1AvailableHelper(t, brokerName, client)
 	})
 
-	t.Run("Trigger V1Beta1 with Ready broker progresses to Ready", func(t *testing.T) {
-		triggerV1Beta1ReadyBrokerReadyHelper(triggerWithBroker, brokerName, client)
+	t.Run("Trigger V1 with Ready broker progresses to Ready", func(t *testing.T) {
+		triggerV1ReadyBrokerReadyHelper(triggerWithBroker, brokerName, client)
 	})
 
-	t.Run("Ready Trigger V1Beta1 (no Broker) set Broker and includes status.subscriber Uri", func(t *testing.T) {
-		triggerV1Beta1CanNotUpdateBroker(t, triggerNoBroker, brokerName, client)
+	t.Run("Ready Trigger V1 (no Broker) set Broker and includes status.subscriber Uri", func(t *testing.T) {
+		triggerV1CanNotUpdateBroker(t, triggerNoBroker, brokerName+"different", client)
 	})
 
-	t.Run("Ready Trigger V1Beta1 includes status.subscriber Uri", func(t *testing.T) {
-		triggerV1Beta1ReadyIncludesSubURI(t, triggerWithBroker, client)
+	t.Run("Ready Trigger V1 includes status.subscriber Uri", func(t *testing.T) {
+		triggerV1ReadyIncludesSubURI(t, triggerWithBroker, client)
 	})
 }
 
-func triggerV1Beta1BeforeBrokerHelper(triggerName string, client *testlib.Client) {
+func triggerV1BeforeBrokerHelper(triggerName string, client *testlib.Client) {
 	const etLogger = "logger"
 	const loggerPodName = "logger-pod"
 
 	_ = recordevents.DeployEventRecordOrFail(context.TODO(), client, loggerPodName)
 	client.WaitForAllTestResourcesReadyOrFail(context.Background()) // Can't do this for the trigger because it's not 'ready' yet
-	client.CreateTriggerOrFailV1Beta1(triggerName,
-		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
-		resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName),
+	client.CreateTriggerOrFail(triggerName,
+		resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
+		resources.WithSubscriberServiceRefForTrigger(loggerPodName),
+		resources.WithBroker(brokerName),
 	)
 }
 
-func brokerV1Beta1CreatedToReadyHelper(brokerName string, client *testlib.Client, brokerCreator BrokerCreator) {
-
+func brokerV1CreatedToReadyHelper(brokerName string, client *testlib.Client, brokerCreator BrokerCreator) {
 	brokerCreator(client, brokerName)
-
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 }
 
-func readyBrokerV1Beta1AvailableHelper(t *testing.T, brokerName string, client *testlib.Client) {
+func readyBrokerV1AvailableHelper(t *testing.T, brokerName string, client *testlib.Client) {
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 	obj := resources.NewMetaResource(brokerName, client.Namespace, testlib.BrokerTypeMeta)
 	_, err := duck.GetAddressableURI(client.Dynamic, obj)
@@ -108,27 +108,27 @@ func readyBrokerV1Beta1AvailableHelper(t *testing.T, brokerName string, client *
 	}
 }
 
-func triggerV1Beta1ReadyBrokerReadyHelper(triggerName, brokerName string, client *testlib.Client) {
+func triggerV1ReadyBrokerReadyHelper(triggerName, brokerName string, client *testlib.Client) {
 	const etLogger = "logger"
 	const loggerPodName = "logger-pod"
 
-	trigger := client.CreateTriggerOrFailV1Beta1(triggerName,
-		resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
-		resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName),
-		resources.WithBrokerV1Beta1(brokerName),
+	trigger := client.CreateTriggerOrFail(triggerName,
+		resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
+		resources.WithSubscriberServiceRefForTrigger(loggerPodName),
+		resources.WithBroker(brokerName),
 	)
 
 	client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
 }
 
-func triggerV1Beta1CanNotUpdateBroker(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
+func triggerV1CanNotUpdateBroker(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
-		tr, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
+		tr, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
 		if err != nil {
 			t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
 		}
 		tr.Spec.Broker = brokerName
-		_, e := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Update(context.Background(), tr, metav1.UpdateOptions{})
+		_, e := client.Eventing.EventingV1().Triggers(client.Namespace).Update(context.Background(), tr, metav1.UpdateOptions{})
 		return e
 	})
 	if err == nil {
@@ -140,13 +140,13 @@ func triggerV1Beta1CanNotUpdateBroker(t *testing.T, triggerName, brokerName stri
 	}
 }
 
-func triggerV1Beta1ReadyIncludesSubURI(t *testing.T, triggerName string, client *testlib.Client) {
+func triggerV1ReadyIncludesSubURI(t *testing.T, triggerName string, client *testlib.Client) {
 	client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
-	var tr *eventingv1beta1.Trigger
-	triggers := client.Eventing.EventingV1beta1().Triggers(client.Namespace)
+	var tr *eventingv1.Trigger
+	triggers := client.Eventing.EventingV1().Triggers(client.Namespace)
 	err := client.RetryWebhookErrors(func(attempts int) (err error) {
 		var e error
-		client.T.Logf("Getting v1beta1 trigger %s", triggerName)
+		client.T.Logf("Getting v1 trigger %s", triggerName)
 		tr, e = triggers.Get(context.Background(), triggerName, metav1.GetOptions{})
 		if e != nil {
 			client.T.Logf("Failed to get trigger %q: %v", triggerName, e)

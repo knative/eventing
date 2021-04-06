@@ -25,10 +25,10 @@ import (
 	"knative.dev/eventing/test/conformance/helpers"
 )
 
-func TestBrokerV1Beta1DataPlaneIngress(t *testing.T) {
-	helpers.BrokerV1Beta1IngressDataPlaneTestHelper(context.Background(), t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(context.Background(), brokerTestRunner.ComponentNamespace))
+func TestBrokerDataPlaneIngress(t *testing.T) {
+	helpers.BrokerIngressDataPlaneTestHelper(context.Background(), t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(context.Background(), brokerTestRunner.ComponentNamespace))
 }
 
-func TestBrokerV1Beta1DataPlaneConsumer(t *testing.T) {
-	helpers.BrokerV1Beta1ConsumerDataPlaneTestHelper(context.Background(), t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(context.Background(), brokerTestRunner.ComponentNamespace))
+func TestBrokerDataPlaneConsumer(t *testing.T) {
+	helpers.BrokerConsumerDataPlaneTestHelper(context.Background(), t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(context.Background(), brokerTestRunner.ComponentNamespace))
 }

@@ -28,7 +28,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
@@ -64,7 +64,7 @@ type Config struct {
 	Serving       ServingConfig
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
-	BrokerOpts    []resources.BrokerV1Beta1Option
+	BrokerOpts    []resources.BrokerOption
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -100,7 +100,7 @@ func NewConfig(namespace string) *Config {
 		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
 		OnDuplicate:   Warn,
-		BrokerOpts:    make([]resources.BrokerV1Beta1Option, 0),
+		BrokerOpts:    make([]resources.BrokerOption, 0),
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
@@ -134,7 +134,7 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deployBroker() {
-	p.client.CreateBrokerV1Beta1OrFail(p.config.BrokerName, p.config.BrokerOpts...)
+	p.client.CreateBrokerOrFail(p.config.BrokerName, p.config.BrokerOpts...)
 }
 
 func (p *prober) fetchBrokerURL() (*apis.URL, error) {
@@ -148,7 +148,7 @@ func (p *prober) fetchBrokerURL() (*apis.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	broker, err := p.client.Eventing.EventingV1beta1().Brokers(namespace).Get(
+	broker, err := p.client.Eventing.EventingV1().Brokers(namespace).Get(
 		context.Background(), p.config.BrokerName, metav1.GetOptions{},
 	)
 	if err != nil {
@@ -175,14 +175,14 @@ func (p *prober) deployTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		fullType := fmt.Sprintf("%v.%v", p.config.EventsTypePrefix, eventType)
-		subscriberOption := resources.WithSubscriberServiceRefForTriggerV1Beta1(receiverName)
+		subscriberOption := resources.WithSubscriberServiceRefForTrigger(receiverName)
 		if p.config.Serving.Use {
 			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
 		}
-		p.client.CreateTriggerOrFailV1Beta1(name,
-			resources.WithBrokerV1Beta1(p.config.BrokerName),
-			resources.WithAttributesTriggerFilterV1Beta1(
-				eventingv1beta1.TriggerAnyFilter,
+		p.client.CreateTriggerOrFail(name,
+			resources.WithBroker(p.config.BrokerName),
+			resources.WithAttributesTriggerFilter(
+				eventingv1.TriggerAnyFilter,
 				fullType,
 				map[string]interface{}{},
 			),

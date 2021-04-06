@@ -28,7 +28,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
@@ -62,7 +62,7 @@ func NewController(
 
 	// Watch brokers.
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(func(obj interface{}) {
-		if b, ok := obj.(*v1beta1.Broker); ok {
+		if b, ok := obj.(*v1.Broker); ok {
 			triggers, err := triggerInformer.Lister().Triggers(b.Namespace).List(labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: b.Name}))
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to list triggers", zap.String("Namespace", b.Namespace), zap.String("Broker", b.Name))

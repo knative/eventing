@@ -28,7 +28,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/util/retry"
 
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/pkg/apis"
 )
@@ -44,7 +44,7 @@ func ChannelSpecTestHelperWithChannelTestRunner(
 		defer testlib.TearDown(client)
 
 		t.Run("Channel spec allows subscribers", func(t *testing.T) {
-			if channel == channelv1beta1 || channel == channelv1 {
+			if channel == channelv1 {
 				t.Skip("Not running spec.subscribers array test for generic Channel")
 			}
 			channelSpecAllowsSubscribersArray(st, client, channel)
@@ -60,8 +60,8 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 		if err != nil {
 			st.Fatalf("Unable to check Channel duck type support version for %s: %s", channel, err)
 		}
-		if dtsv != "v1" && dtsv != "v1beta1" {
-			st.Fatalf("Unexpected duck type version, wanted [v1, v1beta] got: %s", dtsv)
+		if dtsv != "v1" {
+			st.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
 		}
 		channelName := names.SimpleNameGenerator.GenerateName("channel-spec-subscribers-")
 		client.T.Logf("Creating channel %+v-%s", channel, channelName)
@@ -73,13 +73,13 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 
 		var ch interface{}
 
-		channelable, err := getChannelAsV1Beta1Channelable(channelName, client, channel)
+		channelable, err := getChannelAsChannelable(channelName, client, channel)
 		if err != nil {
-			st.Fatalf("Unable to get channel %s to v1beta1 duck type: %s", channel, err)
+			st.Fatalf("Unable to get channel %s to v1 duck type: %s", channel, err)
 		}
 
 		// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribers
-		channelable.Spec.Subscribers = []eventingduckv1beta1.SubscriberSpec{
+		channelable.Spec.Subscribers = []eventingduckv1.SubscriberSpec{
 			{
 				UID:      "1234",
 				ReplyURI: sampleUrl,
