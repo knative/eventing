@@ -289,9 +289,11 @@ Kubernetes.
 telepresence --namespace knative-eventing --swap-deployment eventing-controller --env-json eventing-controller-local-env.json
 ```
 
-For debugging applications that receive traffic, such as webhooks, you also need to pass `--expose` parameter.
+For debugging applications that receive traffic, such as webhooks, you also need
+to pass `--expose` parameter.
 
 For example:
+
 ```
 telepresence --swap-deployment kafka-controller-manager --namespace knative-eventing --env-json kafka-controller-manager.json --expose 8443
 ```
