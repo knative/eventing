@@ -115,7 +115,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	return f
 }
 
-// SourceToSinkWithDLQ tests to see if a Ready Broker acts as middleware.
+// SourceToTwoSinksWithDLQ tests to see if a Ready Broker acts as middleware.
 //
 // source ---> broker +--[trigger<via1>]--> bad uri
 //                |   |
