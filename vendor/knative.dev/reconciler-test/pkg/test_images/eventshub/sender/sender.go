@@ -20,27 +20,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	nethttp "net/http"
 	"strconv"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/plugin/ochttp"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
-type envConfig struct {
+type generator struct {
 	SenderName string `envconfig:"POD_NAME" default:"sender-default" required:"true"`
 
 	// Sink url for the message destination
@@ -87,21 +85,27 @@ type envConfig struct {
 
 	// The number of messages to attempt to send. 0 for unlimited.
 	MaxMessages int `envconfig:"MAX_MESSAGES" default:"1" required:"false"`
+
+	// --- Processed State ---
+
+	// baseEvent is parsed from InputEvent.
+	baseEvent *cloudevents.Event
+
+	// sequence is state counter for outbound events.
+	sequence int
 }
 
 func Start(ctx context.Context, logs *eventshub.EventLogs) error {
-	var env envConfig
+	var env generator
 	if err := envconfig.Process("", &env); err != nil {
 		return fmt.Errorf("failed to process env var. %w", err)
+	}
+	if err := env.init(); err != nil {
+		return err
 	}
 
 	logging.FromContext(ctx).Infof("Sender environment configuration: %+v", env)
 
-	if env.InputEvent == "" && env.InputBody == "" && len(env.InputHeaders) == 0 {
-		return fmt.Errorf("input values not provided")
-	}
-
-	flag.Parse()
 	period := time.Duration(env.Period) * time.Second
 	delay := time.Duration(env.Delay) * time.Second
 
@@ -129,6 +133,14 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 		}
 	}
 
+	httpClient := &nethttp.Client{}
+	if env.AddTracing {
+		httpClient.Transport = &ochttp.Transport{
+			Base:        nethttp.DefaultTransport,
+			Propagation: tracecontextb3.TraceContextEgress,
+		}
+	}
+
 	switch env.EventEncoding {
 	case "binary":
 		ctx = cloudevents.WithEncodingBinary(ctx)
@@ -138,160 +150,183 @@ func Start(ctx context.Context, logs *eventshub.EventLogs) error {
 		return fmt.Errorf("unsupported encoding option: %q", env.EventEncoding)
 	}
 
-	httpClient := &nethttp.Client{}
-	if env.AddTracing {
-		httpClient.Transport = &ochttp.Transport{
-			Base:        nethttp.DefaultTransport,
-			Propagation: tracecontextb3.TraceContextEgress,
-		}
-	}
-
-	var baseEvent *cloudevents.Event
-	if env.InputEvent != "" {
-		if err := json.Unmarshal([]byte(env.InputEvent), &baseEvent); err != nil {
-			return fmt.Errorf("unable to unmarshal the event from json: %w", err)
-		}
-	}
-
-	sequence := 0
-
 	ticker := time.NewTicker(period)
 	for {
-		req, err := nethttp.NewRequest(env.InputMethod, env.Sink, nil)
+
+		req, event, err := env.next(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Error("Cannot create the request: ", err)
 			return err
 		}
 
-		var event *cloudevents.Event
-		if baseEvent != nil {
-			e := baseEvent.Clone()
-			event = &e
-
-			sequence++
-			if env.AddSequence {
-				event.SetExtension("sequence", sequence)
-			}
-			if env.IncrementalId {
-				event.SetID(strconv.Itoa(sequence))
-			}
-			if env.OverrideTime {
-				event.SetTime(time.Now())
-			}
-
-			logging.FromContext(ctx).Info("I'm going to send\n", event)
-
-			err := cehttp.WriteRequest(ctx, binding.ToMessage(event), req)
-			if err != nil {
-				logging.FromContext(ctx).Error("Cannot write the event: ", err)
-				return err
-			}
-		}
-		var eventId string
-		if event != nil {
-			eventId = event.ID()
-		}
-
-		if len(env.InputHeaders) != 0 {
-			for k, v := range env.InputHeaders {
-				req.Header.Add(k, v)
-			}
-		}
-
-		if env.InputBody != "" {
-			req.Body = ioutil.NopCloser(bytes.NewReader([]byte(env.InputBody)))
-		}
-
 		res, err := httpClient.Do(req)
+		// Publish sent event info
+		if err := logs.Vent(env.sentInfo(event, req, err)); err != nil {
+			return fmt.Errorf("cannot forward event info: %w", err)
+		}
 
-		if err != nil {
-			// Publish error
-			if err := logs.Vent(eventshub.EventInfo{
-				Kind:     eventshub.EventSent,
-				Error:    err.Error(),
-				Origin:   env.SenderName,
-				Observer: env.SenderName,
-				Time:     time.Now(),
-				Sequence: uint64(sequence),
-				SentId:   eventId,
-			}); err != nil {
-				return fmt.Errorf("cannot forward event info: %w", err)
-			}
-		} else {
-			sentEventInfo := eventshub.EventInfo{
-				Kind:     eventshub.EventSent,
-				Event:    event,
-				Origin:   env.SenderName,
-				Observer: env.SenderName,
-				Time:     time.Now(),
-				Sequence: uint64(sequence),
-				SentId:   eventId,
-			}
-
-			sentHeaders := make(nethttp.Header)
-			for k, v := range req.Header {
-				sentHeaders[k] = v
-			}
-			sentEventInfo.HTTPHeaders = sentHeaders
-
-			if env.InputBody != "" {
-				sentEventInfo.Body = []byte(env.InputBody)
-			}
-
-			// Publish sent event info
-			if err := logs.Vent(sentEventInfo); err != nil {
-				return fmt.Errorf("cannot forward event info: %w", err)
-			}
-
-			// Now let's figure out what's inside the response
-			responseMessage := cehttp.NewMessageFromHttpResponse(res)
-
-			responseInfo := eventshub.EventInfo{
-				Kind:        eventshub.EventResponse,
-				HTTPHeaders: res.Header,
-				Origin:      env.Sink,
-				Observer:    env.SenderName,
-				Time:        time.Now(),
-				Sequence:    uint64(sequence),
-				StatusCode:  res.StatusCode,
-				SentId:      eventId,
-			}
-			if responseMessage.ReadEncoding() == binding.EncodingUnknown {
-				body, err := ioutil.ReadAll(res.Body)
-
-				if err != nil {
-					responseInfo.Error = err.Error()
-				} else {
-					responseInfo.Body = body
-				}
-			} else {
-				responseEvent, err := binding.ToEvent(ctx, responseMessage)
-				if err != nil {
-					responseInfo.Error = err.Error()
-				} else {
-					responseInfo.Event = responseEvent
-				}
-			}
-
+		if err == nil {
 			// Vent the response info
-			if err := logs.Vent(responseInfo); err != nil {
+			if err := logs.Vent(env.responseInfo(res, event)); err != nil {
 				return fmt.Errorf("cannot forward event info: %w", err)
 			}
 		}
 
-		// Wait for next tick
-		<-ticker.C
-		// Only send a limited number of messages.
-		if env.MaxMessages != 0 && env.MaxMessages == sequence {
+		if !env.hasNext() {
 			return nil
 		}
 
 		// Check if ctx is done before the next loop
 		select {
+		// Wait for next tick
+		case <-ticker.C:
+			// Keep looping.
 		case <-ctx.Done():
 			logging.FromContext(ctx).Infof("Canceled sending messages because context was closed")
 			return nil
-		default:
 		}
 	}
+}
+
+func (g *generator) sentInfo(event *cloudevents.Event, req *nethttp.Request, err error) eventshub.EventInfo {
+	var eventId string
+	if event != nil {
+		eventId = event.ID()
+	}
+
+	if err != nil {
+		return eventshub.EventInfo{
+			Kind:     eventshub.EventSent,
+			Error:    err.Error(),
+			Origin:   g.SenderName,
+			Observer: g.SenderName,
+			Time:     time.Now(),
+			Sequence: uint64(g.sequence),
+			SentId:   eventId,
+		}
+	}
+
+	sentEventInfo := eventshub.EventInfo{
+		Kind:     eventshub.EventSent,
+		Event:    event,
+		Origin:   g.SenderName,
+		Observer: g.SenderName,
+		Time:     time.Now(),
+		Sequence: uint64(g.sequence),
+		SentId:   eventId,
+	}
+
+	sentHeaders := make(nethttp.Header)
+	for k, v := range req.Header {
+		sentHeaders[k] = v
+	}
+	sentEventInfo.HTTPHeaders = sentHeaders
+
+	if g.InputBody != "" {
+		sentEventInfo.Body = []byte(g.InputBody)
+	}
+	return sentEventInfo
+}
+
+func (g *generator) responseInfo(res *nethttp.Response, event *cloudevents.Event) eventshub.EventInfo {
+	var eventId string
+	if event != nil {
+		eventId = event.ID()
+	}
+
+	responseInfo := eventshub.EventInfo{
+		Kind:        eventshub.EventResponse,
+		HTTPHeaders: res.Header,
+		Origin:      g.Sink,
+		Observer:    g.SenderName,
+		Time:        time.Now(),
+		Sequence:    uint64(g.sequence),
+		StatusCode:  res.StatusCode,
+		SentId:      eventId,
+	}
+
+	responseMessage := cehttp.NewMessageFromHttpResponse(res)
+
+	if responseMessage.ReadEncoding() == binding.EncodingUnknown {
+		body, err := ioutil.ReadAll(res.Body)
+
+		if err != nil {
+			responseInfo.Error = err.Error()
+		} else {
+			responseInfo.Body = body
+		}
+	} else {
+		responseEvent, err := binding.ToEvent(context.Background(), responseMessage)
+		if err != nil {
+			responseInfo.Error = err.Error()
+		} else {
+			responseInfo.Event = responseEvent
+		}
+	}
+	return responseInfo
+}
+
+func (g *generator) init() error {
+	if g.InputEvent != "" {
+		if err := json.Unmarshal([]byte(g.InputEvent), &g.baseEvent); err != nil {
+			return fmt.Errorf("unable to unmarshal the event from json: %w", err)
+		}
+	}
+
+	if g.InputEvent == "" && g.InputBody == "" && len(g.InputHeaders) == 0 {
+		return fmt.Errorf("input values not provided")
+	}
+
+	return nil
+}
+
+func (g *generator) hasNext() bool {
+	if g.MaxMessages == 0 {
+		return true
+	}
+	return g.sequence < g.MaxMessages
+}
+
+func (g *generator) next(ctx context.Context) (*nethttp.Request, *cloudevents.Event, error) {
+	req, err := nethttp.NewRequest(g.InputMethod, g.Sink, nil)
+	if err != nil {
+		logging.FromContext(ctx).Error("Cannot create the request: ", err)
+		return nil, nil, err
+	}
+
+	var event *cloudevents.Event
+	if g.baseEvent != nil {
+		e := g.baseEvent.Clone()
+		event = &e
+
+		g.sequence++
+		if g.AddSequence {
+			event.SetExtension("sequence", g.sequence)
+		}
+		if g.IncrementalId {
+			event.SetID(strconv.Itoa(g.sequence))
+		}
+		if g.OverrideTime {
+			event.SetTime(time.Now())
+		}
+
+		logging.FromContext(ctx).Info("I'm going to send\n", event)
+
+		err := cehttp.WriteRequest(ctx, binding.ToMessage(event), req)
+		if err != nil {
+			logging.FromContext(ctx).Error("Cannot write the event: ", err)
+			return nil, nil, err
+		}
+	}
+
+	if len(g.InputHeaders) != 0 {
+		for k, v := range g.InputHeaders {
+			req.Header.Add(k, v)
+		}
+	}
+
+	if g.InputBody != "" {
+		req.Body = ioutil.NopCloser(bytes.NewReader([]byte(g.InputBody)))
+	}
+
+	return req, event, nil
 }

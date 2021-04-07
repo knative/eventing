@@ -55,7 +55,7 @@ func AcceptsCEVersions(ctx context.Context, t feature.T, gvr schema.GroupVersion
 		// We are looking for two events, one of them is the sent event and the other
 		// is Response, so correlate them first. We want to make sure the event was sent and that the
 		// response was what was expected.
-		events := Correlate(store.AssertAtLeast(2, SentEventMatcher(id)))
+		events := Correlate(store.AssertAtLeast(t, 2, SentEventMatcher(id)))
 		for _, e := range events {
 			// Make sure HTTP response code is 2XX
 			if e.Response.StatusCode < 200 || e.Response.StatusCode > 299 {
