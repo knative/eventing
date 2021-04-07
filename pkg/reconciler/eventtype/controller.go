@@ -25,8 +25,8 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/pkg/apis/flows/v1beta1"
-	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
 )
@@ -56,7 +56,7 @@ func NewController(
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(
 			r.tracker.OnChanged,
-			v1beta1.SchemeGroupVersion.WithKind("Broker"),
+			v1.SchemeGroupVersion.WithKind("Broker"),
 		),
 	))
 

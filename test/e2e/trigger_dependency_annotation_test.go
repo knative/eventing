@@ -70,9 +70,10 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client.WaitForAllTestResourcesReadyOrFail(ctx)
 
 	// Create triggers.
-	client.CreateTriggerOrFailV1Beta1(triggerName,
-		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
-		resources.WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation),
+	client.CreateTriggerOrFail(triggerName,
+		resources.WithSubscriberServiceRefForTrigger(subscriberName),
+		resources.WithDependencyAnnotationTrigger(dependencyAnnotation),
+		resources.WithBroker(defaultBrokerName),
 	)
 
 	jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())

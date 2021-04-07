@@ -38,7 +38,7 @@ func (m MatchAssertionBuilder) MatchEvent(matchers ...cetest.EventMatcher) Match
 // OnStore(store).Match(matchers).AtLeast(min) is equivalent to StoreFromContext(ctx, store).AssertAtLeast(min, matchers)
 func (m MatchAssertionBuilder) AtLeast(min int) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		eventshub.StoreFromContext(ctx, m.storeName).AssertAtLeast(min, m.matchers...)
+		eventshub.StoreFromContext(ctx, m.storeName).AssertAtLeast(t, min, m.matchers...)
 	}
 }
 
@@ -46,7 +46,7 @@ func (m MatchAssertionBuilder) AtLeast(min int) feature.StepFn {
 // OnStore(store).Match(matchers).InRange(min, max) is equivalent to StoreFromContext(ctx, store).AssertInRange(min, max, matchers)
 func (m MatchAssertionBuilder) InRange(min int, max int) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		eventshub.StoreFromContext(ctx, m.storeName).AssertInRange(min, max, m.matchers...)
+		eventshub.StoreFromContext(ctx, m.storeName).AssertInRange(t, min, max, m.matchers...)
 	}
 }
 
@@ -54,7 +54,7 @@ func (m MatchAssertionBuilder) InRange(min int, max int) feature.StepFn {
 // OnStore(store).Match(matchers).Exact(n) is equivalent to StoreFromContext(ctx, store).AssertExact(n, matchers)
 func (m MatchAssertionBuilder) Exact(n int) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		eventshub.StoreFromContext(ctx, m.storeName).AssertExact(n, m.matchers...)
+		eventshub.StoreFromContext(ctx, m.storeName).AssertExact(t, n, m.matchers...)
 	}
 }
 
@@ -62,6 +62,6 @@ func (m MatchAssertionBuilder) Exact(n int) feature.StepFn {
 // OnStore(store).Match(matchers).Not() is equivalent to StoreFromContext(ctx, store).AssertNot(matchers)
 func (m MatchAssertionBuilder) Not() feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		eventshub.StoreFromContext(ctx, m.storeName).AssertNot(m.matchers...)
+		eventshub.StoreFromContext(ctx, m.storeName).AssertNot(t, m.matchers...)
 	}
 }

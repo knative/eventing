@@ -81,7 +81,10 @@ github.com/census-instrumentation/opencensus-proto/gen-go/agent/trace/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
-# github.com/cloudevents/sdk-go/v2 v2.2.0
+# github.com/cloudevents/conformance v0.2.0
+github.com/cloudevents/conformance/pkg/event
+github.com/cloudevents/conformance/pkg/http
+# github.com/cloudevents/sdk-go/v2 v2.4.0
 ## explicit
 github.com/cloudevents/sdk-go/v2
 github.com/cloudevents/sdk-go/v2/binding
@@ -97,8 +100,6 @@ github.com/cloudevents/sdk-go/v2/event/datacodec
 github.com/cloudevents/sdk-go/v2/event/datacodec/json
 github.com/cloudevents/sdk-go/v2/event/datacodec/text
 github.com/cloudevents/sdk-go/v2/event/datacodec/xml
-github.com/cloudevents/sdk-go/v2/extensions
-github.com/cloudevents/sdk-go/v2/observability
 github.com/cloudevents/sdk-go/v2/protocol
 github.com/cloudevents/sdk-go/v2/protocol/http
 github.com/cloudevents/sdk-go/v2/test
@@ -209,9 +210,6 @@ github.com/jstemmer/go-junit-report/parser
 github.com/kelseyhightower/envconfig
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/lightstep/tracecontext.go v0.0.0-20181129014701-1757c391b1ac
-github.com/lightstep/tracecontext.go/traceparent
-github.com/lightstep/tracecontext.go/tracestate
 # github.com/mailru/easyjson v0.7.1-0.20191009090205-6c0755d89d1e
 github.com/mailru/easyjson
 github.com/mailru/easyjson/buffer
@@ -975,7 +973,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20210331065221-952fdd90dbb0
+# knative.dev/pkg v0.0.0-20210406170139-b8e331a6abf3
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1100,19 +1098,12 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20210401145623-185d7f2a06be => ../../knative-sandbox/reconciler-test
+# knative.dev/reconciler-test v0.0.0-20210407152849-1103d57c0808 => ../../knative-sandbox/reconciler-test
 ## explicit
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
 knative.dev/reconciler-test/pkg/eventshub
 knative.dev/reconciler-test/pkg/eventshub/assert
-knative.dev/reconciler-test/pkg/eventshub/dropevents
-knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfibonacci
-knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfirst
-knative.dev/reconciler-test/pkg/eventshub/logger_vent
-knative.dev/reconciler-test/pkg/eventshub/receiver
-knative.dev/reconciler-test/pkg/eventshub/recorder_vent
-knative.dev/reconciler-test/pkg/eventshub/sender
 knative.dev/reconciler-test/pkg/feature
 knative.dev/reconciler-test/pkg/images
 knative.dev/reconciler-test/pkg/k8s
@@ -1121,6 +1112,14 @@ knative.dev/reconciler-test/pkg/manifest
 knative.dev/reconciler-test/pkg/milestone
 knative.dev/reconciler-test/pkg/state
 knative.dev/reconciler-test/pkg/test_images
+knative.dev/reconciler-test/pkg/test_images/eventshub
+knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents
+knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfibonacci
+knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfirst
+knative.dev/reconciler-test/pkg/test_images/eventshub/logger_vent
+knative.dev/reconciler-test/pkg/test_images/eventshub/receiver
+knative.dev/reconciler-test/pkg/test_images/eventshub/recorder_vent
+knative.dev/reconciler-test/pkg/test_images/eventshub/sender
 # sigs.k8s.io/structured-merge-diff/v4 v4.0.1
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0

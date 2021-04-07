@@ -26,19 +26,21 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/tracker"
 
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
-	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	listersv1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	listersv1beta1 "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 )
 
 type Reconciler struct {
 	// listers index properties about resources
-	eventTypeLister listers.EventTypeLister
-	brokerLister    listers.BrokerLister
+	eventTypeLister listersv1beta1.EventTypeLister
+	brokerLister    listersv1.BrokerLister
 	tracker         tracker.Interface
 }
 
-var brokerGVK = v1beta1.SchemeGroupVersion.WithKind("Broker")
+var brokerGVK = v1.SchemeGroupVersion.WithKind("Broker")
 
 // Check that our Reconciler implements interface
 var _ eventtypereconciler.Interface = (*Reconciler)(nil)
@@ -80,6 +82,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1beta1.EventType) p
 }
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
-func (r *Reconciler) getBroker(et *v1beta1.EventType) (*v1beta1.Broker, error) {
+func (r *Reconciler) getBroker(et *v1beta1.EventType) (*v1.Broker, error) {
 	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Broker)
 }

@@ -29,11 +29,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
-	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -70,7 +67,7 @@ func ParallelTestHelper(
 		defer testlib.TearDown(client)
 
 		for _, tc := range table {
-			parallelBranches := make([]v1beta1.ParallelBranch, len(tc.branchesConfig))
+			parallelBranches := make([]flowsv1.ParallelBranch, len(tc.branchesConfig))
 			for branchNumber, cse := range tc.branchesConfig {
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
@@ -89,7 +86,7 @@ func ParallelTestHelper(
 					recordevents.ReplyWithAppendedData(subPodName),
 				)
 
-				parallelBranches[branchNumber] = v1beta1.ParallelBranch{
+				parallelBranches[branchNumber] = flowsv1.ParallelBranch{
 					Filter: &duckv1.Destination{
 						Ref: resources.KnativeRefForService(filterPodName, client.Namespace),
 					},
@@ -99,7 +96,7 @@ func ParallelTestHelper(
 				}
 			}
 
-			channelTemplate := &messagingv1beta1.ChannelTemplateSpec{
+			channelTemplate := &messagingv1.ChannelTemplateSpec{
 				TypeMeta: channel,
 			}
 
@@ -236,12 +233,12 @@ func ParallelV1TestHelper(
 				resources.WithSubscriberForSubscription(eventRecorder),
 			)
 
-			parallel := eventingtestingv1.NewFlowsParallel(tc.name, client.Namespace,
-				eventingtestingv1.WithFlowsParallelChannelTemplateSpec(channelTemplate),
-				eventingtestingv1.WithFlowsParallelBranches(parallelBranches),
-				eventingtestingv1.WithFlowsParallelReply(&duckv1.Destination{Ref: &duckv1.KReference{Kind: channel.Kind, APIVersion: channel.APIVersion, Name: replyChannelName, Namespace: client.Namespace}}))
+			parallel := eventingtesting.NewFlowsParallel(tc.name, client.Namespace,
+				eventingtesting.WithFlowsParallelChannelTemplateSpec(channelTemplate),
+				eventingtesting.WithFlowsParallelBranches(parallelBranches),
+				eventingtesting.WithFlowsParallelReply(&duckv1.Destination{Ref: &duckv1.KReference{Kind: channel.Kind, APIVersion: channel.APIVersion, Name: replyChannelName, Namespace: client.Namespace}}))
 
-			client.CreateFlowsParallelV1OrFail(parallel)
+			client.CreateFlowsParallelOrFail(parallel)
 
 			client.WaitForAllTestResourcesReadyOrFail(ctx)
 

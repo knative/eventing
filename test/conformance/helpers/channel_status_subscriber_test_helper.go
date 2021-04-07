@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -75,11 +75,11 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	if err != nil {
 		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
-	if dtsv != "v1" && dtsv != "v1beta1" {
-		st.Fatalf("Unexpected duck type version, wanted [v1, v1beta] got: %s", dtsv)
+	if dtsv != "v1" {
+		st.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
 	}
 
-	channelable, err := getChannelAsV1Channelable(channelName, client, channel)
+	channelable, err := getChannelAsChannelable(channelName, client, channel)
 	if err != nil {
 		st.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
 	}
@@ -99,7 +99,7 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	}
 }
 
-func findSubscriberStatusV1(statusArr []duckv1.SubscriberStatus, subscription *eventingv1beta1.Subscription) *duckv1.SubscriberStatus {
+func findSubscriberStatusV1(statusArr []duckv1.SubscriberStatus, subscription *eventingv1.Subscription) *duckv1.SubscriberStatus {
 	for _, v := range statusArr {
 		if v.UID == subscription.UID {
 			return &v

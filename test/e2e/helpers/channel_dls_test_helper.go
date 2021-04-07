@@ -65,14 +65,6 @@ func ChannelDeadLetterSinkTestHelper(
 		// create subscriptions that subscribe to a service that does not exist
 		switch subscriptionVersion {
 		case SubscriptionV1:
-			client.CreateSubscriptionsV1OrFail(
-				subscriptionNames,
-				channelNames[0],
-				&channel,
-				resources.WithSubscriberForSubscriptionV1("does-not-exist"),
-				resources.WithDeadLetterSinkForSubscriptionV1(recordEventsPodName),
-			)
-		case SubscriptionV1beta1:
 			client.CreateSubscriptionsOrFail(
 				subscriptionNames,
 				channelNames[0],
@@ -133,7 +125,7 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 		defer testlib.TearDown(client)
 
 		// create channel
-		client.CreateChannelV1WithDefaultOrFail(&messagingv1.Channel{
+		client.CreateChannelWithDefaultOrFail(&messagingv1.Channel{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      channelName,
 				Namespace: client.Namespace,
@@ -157,11 +149,11 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 		// create event logger pod and service as the subscriber
 		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 		// create subscriptions that subscribe to a service that does not exist
-		client.CreateSubscriptionsV1OrFail(
+		client.CreateSubscriptionsOrFail(
 			subscriptionNames,
 			channelName,
 			&channel,
-			resources.WithSubscriberForSubscriptionV1("does-not-exist"),
+			resources.WithSubscriberForSubscription("does-not-exist"),
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events

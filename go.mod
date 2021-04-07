@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cloudevents/sdk-go/v2 v2.2.0
+	github.com/cloudevents/sdk-go/v2 v2.4.0
 	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.5
 	github.com/google/gofuzz v1.2.0
@@ -39,11 +39,12 @@ require (
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 	knative.dev/hack v0.0.0-20210325223819-b6ab329907d3
 	knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3
-	knative.dev/pkg v0.0.0-20210331065221-952fdd90dbb0
-	knative.dev/reconciler-test v0.0.0-20210401145623-185d7f2a06be
+	knative.dev/pkg v0.0.0-20210406170139-b8e331a6abf3
+	knative.dev/reconciler-test v0.0.0-20210407152849-1103d57c0808
 	sigs.k8s.io/yaml v1.2.0
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 
+// DO NOT MERGE
 replace knative.dev/reconciler-test => ../../knative-sandbox/reconciler-test

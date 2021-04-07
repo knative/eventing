@@ -24,21 +24,22 @@ import (
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 
 	pkgeventshub "knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
 // EventInfo is a re-export of eventshub.EventInfo for convenience
-type EventInfo = pkgeventshub.EventInfo
+type EventInfo = eventshub.EventInfo
 
 // Matcher that never fails
 func Any() pkgeventshub.EventInfoMatcher {
-	return func(ei pkgeventshub.EventInfo) error {
+	return func(ei eventshub.EventInfo) error {
 		return nil
 	}
 }
 
 // Matcher that fails if there is an error in the EventInfo
 func NoError() pkgeventshub.EventInfoMatcher {
-	return func(ei pkgeventshub.EventInfo) error {
+	return func(ei eventshub.EventInfo) error {
 		if ei.Error != "" {
 			return fmt.Errorf("not expecting an error in event info: %s", ei.Error)
 		}
@@ -50,7 +51,7 @@ func NoError() pkgeventshub.EventInfoMatcher {
 // that checks EventInfo structures, returning an error for any that don't
 // contain valid events.
 func MatchEvent(evf ...cetest.EventMatcher) pkgeventshub.EventInfoMatcher {
-	return func(ei pkgeventshub.EventInfo) error {
+	return func(ei eventshub.EventInfo) error {
 		if ei.Event == nil {
 			return fmt.Errorf("Saw nil event")
 		} else {
@@ -64,7 +65,7 @@ func MatchEvent(evf ...cetest.EventMatcher) pkgeventshub.EventInfoMatcher {
 // contain valid events.
 func HasAdditionalHeader(key, value string) pkgeventshub.EventInfoMatcher {
 	key = strings.ToLower(key)
-	return func(ei pkgeventshub.EventInfo) error {
+	return func(ei eventshub.EventInfo) error {
 		for k, v := range ei.HTTPHeaders {
 			if strings.ToLower(k) == key && v[0] == value {
 				return nil
@@ -76,16 +77,16 @@ func HasAdditionalHeader(key, value string) pkgeventshub.EventInfoMatcher {
 
 // Reexport kinds here to simplify the usage
 const (
-	EventReceived = pkgeventshub.EventReceived
-	EventRejected = pkgeventshub.EventRejected
+	EventReceived = eventshub.EventReceived
+	EventRejected = eventshub.EventRejected
 
-	EventSent     = pkgeventshub.EventSent
-	EventResponse = pkgeventshub.EventResponse
+	EventSent     = eventshub.EventSent
+	EventResponse = eventshub.EventResponse
 )
 
 // MatchKind matches the kind of EventInfo
-func MatchKind(kind pkgeventshub.EventKind) pkgeventshub.EventInfoMatcher {
-	return func(info pkgeventshub.EventInfo) error {
+func MatchKind(kind eventshub.EventKind) pkgeventshub.EventInfoMatcher {
+	return func(info eventshub.EventInfo) error {
 		if kind != info.Kind {
 			return fmt.Errorf("event kind don't match. Expected: '%s', Actual: '%s'", kind, info.Kind)
 		}
@@ -95,7 +96,7 @@ func MatchKind(kind pkgeventshub.EventKind) pkgeventshub.EventInfoMatcher {
 
 // MatchStatusCode matches the status code of EventInfo
 func MatchStatusCode(statusCode int) pkgeventshub.EventInfoMatcher {
-	return func(info pkgeventshub.EventInfo) error {
+	return func(info eventshub.EventInfo) error {
 		if info.StatusCode != statusCode {
 			return fmt.Errorf("event status code don't match. Expected: '%d', Actual: '%d'", statusCode, info.StatusCode)
 		}

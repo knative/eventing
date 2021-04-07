@@ -79,12 +79,15 @@ func (b *messageToEventBuilder) End(ctx context.Context) error {
 }
 
 func (b *messageToEventBuilder) SetData(data io.Reader) error {
-	var buf bytes.Buffer
-	w, err := io.Copy(&buf, data)
-	if err != nil {
-		return err
+	buf, ok := data.(*bytes.Buffer)
+	if !ok {
+		buf = new(bytes.Buffer)
+		_, err := io.Copy(buf, data)
+		if err != nil {
+			return err
+		}
 	}
-	if w != 0 {
+	if buf.Len() > 0 {
 		b.DataEncoded = buf.Bytes()
 	}
 	return nil

@@ -28,13 +28,13 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
-func TestBrokerV1Beta1ControlPlane(t *testing.T) {
+func TestBrokerV1ControlPlane(t *testing.T) {
 	brokerTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 
 		client := testlib.Setup(t, true, testlib.SetupClientOptionNoop)
 		defer testlib.TearDown(client)
 
-		helpers.BrokerV1Beta1ControlPlaneTest(
+		helpers.BrokerV1ControlPlaneTest(
 			t,
 			func(client *testlib.Client, name string) {
 				helpers.BrokerDataPlaneSetupHelper(context.Background(), client, brokerClass, brokerTestRunner)

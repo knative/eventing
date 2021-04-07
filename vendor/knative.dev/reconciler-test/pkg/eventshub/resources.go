@@ -45,23 +45,20 @@ func init() {
 func Install(name string, options ...EventsHubOption) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		// Compute the user provided envs
-		cfg := map[string]interface{}{
-			"name": name,
-			"envs": make(map[string]string),
-		}
-
-		if err := compose(options...)(ctx, cfg); err != nil {
+		envs := make(map[string]string)
+		if err := compose(options...)(ctx, envs); err != nil {
 			t.Fatalf("Error while computing environment variables for eventshub: %s", err)
 		}
 
-		envs := cfg["envs"].(map[string]string)
 		// eventshub needs tracing and logging config
-		// TODO: does it?
 		envs[test_images.ConfigLoggingEnv] = knative.LoggingConfigFromContext(ctx)
 		envs[test_images.ConfigTracingEnv] = knative.TracingConfigFromContext(ctx)
 
 		// Deploy
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallLocalYaml(ctx, map[string]interface{}{
+			"name": name,
+			"envs": envs,
+		}); err != nil {
 			t.Fatal(err)
 		}
 

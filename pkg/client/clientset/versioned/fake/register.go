@@ -27,9 +27,7 @@ import (
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
-	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
@@ -43,9 +41,7 @@ var codecs = serializer.NewCodecFactory(scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	eventingv1beta1.AddToScheme,
 	eventingv1.AddToScheme,
-	flowsv1beta1.AddToScheme,
 	flowsv1.AddToScheme,
-	messagingv1beta1.AddToScheme,
 	messagingv1.AddToScheme,
 	sourcesv1alpha1.AddToScheme,
 	sourcesv1alpha2.AddToScheme,

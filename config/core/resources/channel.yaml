@@ -24,10 +24,9 @@ metadata:
 spec:
   group: messaging.knative.dev
   versions:
-  - &version
-    name: v1beta1
+  - name: v1
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
     additionalPrinterColumns:
@@ -44,7 +43,7 @@ spec:
       type: string
       jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
     schema:
-      openAPIV3Schema: &openAPIV3Schema
+      openAPIV3Schema:
         type: object
         properties:
           spec:
@@ -237,14 +236,6 @@ spec:
                       description: UID is used to understand the origin of the
                           subscriber.
                       type: string
-  - << : *version
-    name: v1
-    served: true
-    storage: true
-    # the schema of v1 is exactly the same as v1beta1 schema
-    schema:
-      openAPIV3Schema:
-        << : *openAPIV3Schema
   names:
     kind: Channel
     plural: channels

@@ -25,12 +25,12 @@ import (
 	"knative.dev/pkg/logging"
 	_ "knative.dev/pkg/system/testing"
 
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/logger_vent"
-	"knative.dev/reconciler-test/pkg/eventshub/receiver"
-	"knative.dev/reconciler-test/pkg/eventshub/recorder_vent"
-	"knative.dev/reconciler-test/pkg/eventshub/sender"
 	"knative.dev/reconciler-test/pkg/test_images"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub/logger_vent"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub/receiver"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub/recorder_vent"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub/sender"
 )
 
 type envConfig struct {

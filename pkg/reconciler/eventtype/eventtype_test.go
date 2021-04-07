@@ -26,10 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/eventtype"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -55,7 +55,7 @@ var (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
 }
 
 func TestReconcile(t *testing.T) {
