@@ -86,6 +86,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
+	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ("default"))
 }
 
 // TestBrokerWithFlakyDLQ

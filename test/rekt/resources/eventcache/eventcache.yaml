@@ -13,35 +13,29 @@
 # limitations under the License.
 
 apiVersion: v1
-kind: ConfigMap
+kind: Pod
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
-data:
+  labels:
+    app: cache-{{ .name }}
+spec:
+  restartPolicy: "Never"
+  containers:
+    - name: flaker
+      image: ko://knative.dev/eventing/test/test_images/event-cache
+      imagePullPolicy: "IfNotPresent"
 
-  NOTE TO YOU: fetch this via url.
-
-  events.yaml: |
-    ContextAttributes:
-      specversion: "1.0"
-      type: a.type
-      id: abc-123-1
-      source: foo/bar
-      datacontenttype: application/json
-    Data: '{"hello":"world"}'
-    ---
-    ContextAttributes:
-      specversion: "1.0"
-      type: a.type
-      id: abc-123-2
-      source: foo/bar
-      datacontenttype: application/json
-    Data: '{"hello":"world"}'
-    ---
-    ContextAttributes:
-      specversion: "1.0"
-      type: a.type
-      id: abc-123-3
-      source: foo/bar
-      datacontenttype: application/json
-    Data: '{"hello":"world"}'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+spec:
+  selector:
+    app: cache-{{ .name }}
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

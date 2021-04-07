@@ -3,6 +3,7 @@ package eventprober
 import (
 	"context"
 	"fmt"
+	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -13,10 +14,9 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-
-	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
 
 // Phases:
@@ -41,6 +41,7 @@ type EventProber struct {
 
 	shortNameToName map[string]string
 
+	hasCache      bool
 	ids           []string
 	senderOptions []eventshub.EventsHubOption
 }
@@ -53,8 +54,8 @@ type target struct {
 }
 
 type EventInfoCombined struct {
-	Sent     eventshub.EventInfo
-	Response eventshub.EventInfo
+	Sent     EventInfo
+	Response EventInfo
 }
 
 func (p *EventProber) RxInstall(prefix string) feature.StepFn {
@@ -92,11 +93,6 @@ func (p *EventProber) TxInstall(prefix string) feature.StepFn {
 		} else {
 			t.Fatal("no target is configured for event loop")
 		}
-		opts = append(opts, func(ctx context.Context, cfg map[string]interface{}) error {
-			envs := cfg["envs"].(map[string]string)
-			envs["EVENT_GENERATORS"] = "sender-yaml" // TODO: depends on setting Volume
-			return nil
-		}, eventshub.WithVolume("three")) // TODO: just testing...
 		// Install into the env.
 		eventshub.Install(name, opts...)(ctx, t)
 	}
@@ -104,14 +100,14 @@ func (p *EventProber) TxInstall(prefix string) feature.StepFn {
 
 // Correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
 // and correlates them based on the sequence into a pair.
-func Correlate(origin string, in []eventshub.EventInfo) []EventInfoCombined {
+func Correlate(origin string, in []EventInfo) []EventInfoCombined {
 	var out []EventInfoCombined
 	// not too many events, this will suffice...
 	for i, e := range in {
-		if e.Origin == origin && e.Kind == eventshub.EventSent {
+		if e.Origin == origin && e.Kind == EventSent {
 			looking := e.Sequence
 			for j := i + 1; j <= len(in)-1; j++ {
-				if in[j].Kind == eventshub.EventResponse && in[j].Sequence == looking {
+				if in[j].Kind == EventResponse && in[j].Sequence == looking {
 					out = append(out, EventInfoCombined{Sent: e, Response: in[j]})
 				}
 			}
@@ -129,6 +125,20 @@ func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoComb
 	}
 
 	return Correlate(name, store.Collected())
+}
+
+func (p *EventProber) ExpectYAMLEvents(path string) error {
+	events, err := conformanceevent.FromYaml(path, true)
+	if err != nil {
+		return err
+	}
+	if len(events) == 0 {
+		return fmt.Errorf("failed to load events from %q", path)
+	}
+	for _, event := range events {
+		p.ids = append(p.ids, event.Attributes.ID)
+	}
+	return nil
 }
 
 func (p *EventProber) LoadFullEvents(count int) {
@@ -151,6 +161,17 @@ func (p *EventProber) LoadMinEvents(count int) {
 	}
 }
 
+func (p *EventProber) EventsFromSVC(svcName, path string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		u, err := svc.Address(ctx, svcName)
+		if err != nil {
+			t.Error(err)
+		}
+		u.Path = path
+		p.senderOptions = append(p.senderOptions, eventshub.InputYAML(u.String()))
+	}
+}
+
 func (p *EventProber) AsRef(prefix string) *duckv1.KReference {
 	name := p.shortNameToName[prefix]
 	return svc.AsRef(name)
@@ -161,12 +182,12 @@ func (p *EventProber) Rx(prefix string) MatchAssertionBuilder {
 	return OnStore(name)
 }
 
-func (p *EventProber) AssertSentAll(prefix string) feature.StepFn {
+func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		events := p.SentBy(ctx, prefix)
+		events := p.SentBy(ctx, fromPrefix)
 		if len(p.ids) != len(events) {
 			t.Errorf("expected %q to have sent %d events, actually sent %d",
-				prefix, len(p.ids), len(events))
+				fromPrefix, len(p.ids), len(events))
 		}
 		for _, id := range p.ids {
 			found := false
@@ -186,7 +207,7 @@ func (p *EventProber) AssertSentAll(prefix string) feature.StepFn {
 	}
 }
 
-func (p *EventProber) AssertReceivedAll(prefix string) feature.StepFn {
+func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 
 	}

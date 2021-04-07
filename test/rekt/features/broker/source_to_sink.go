@@ -19,12 +19,11 @@ package broker
 import (
 	"context"
 	"fmt"
-	cloudevents "knative.dev/eventing/test/rekt/resources/cloudevents/three"
-	"knative.dev/eventing/test/rekt/resources/eventprober"
 
 	"github.com/google/uuid"
-
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/eventcache"
+	"knative.dev/eventing/test/rekt/resources/eventprober"
 	"knative.dev/eventing/test/rekt/resources/flaker"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -80,13 +79,17 @@ func SourceToSink(brokerName string) *feature.Feature {
 //
 func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	prober := eventprober.New(broker.GVR(), brokerName, "")
-	prober.LoadFullEvents(1)
 
 	via := feature.MakeRandomK8sName("via")
 
-	f := new(feature.Feature)
+	f := feature.NewFeature()
 
-	f.Setup("install events", cloudevents.Install("three"))
+	lib := feature.MakeRandomK8sName("lib")
+	f.Setup("install events", eventcache.Install(lib))
+	f.Setup("use events cache", prober.EventsFromSVC(lib, "events/three.ce"))
+	if err := prober.ExpectYAMLEvents(eventcache.PathFor("events/three.ce")); err != nil {
+		panic(fmt.Errorf("can not find event files: %s", err))
+	}
 
 	// Setup Probes
 	f.Setup("install recorder", prober.RxInstall("sink"))
@@ -107,7 +110,58 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ", prober.AssertReceivedAll("sink"))
+		Must("deliver event to DLQ", prober.AssertReceivedAll("source", "sink"))
+
+	return f
+}
+
+// SourceToSinkWithDLQ tests to see if a Ready Broker acts as middleware.
+//
+// source ---> broker +--[trigger<via1>]--> bad uri
+//                |   |
+//                |   +--[trigger<vai2>]--> sink2
+//                |
+//                +--[DLQ]--> sink1
+//
+func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
+	prober := eventprober.New(broker.GVR(), brokerName, "")
+
+	via1 := feature.MakeRandomK8sName("via")
+	via2 := feature.MakeRandomK8sName("via")
+
+	f := feature.NewFeature()
+
+	lib := feature.MakeRandomK8sName("lib")
+	f.Setup("install events", eventcache.Install(lib))
+	f.Setup("use events cache", prober.EventsFromSVC(lib, "events/three.ce"))
+	if err := prober.ExpectYAMLEvents(eventcache.PathFor("events/three.ce")); err != nil {
+		panic(fmt.Errorf("can not find event files: %s", err))
+	}
+
+	// Setup Probes
+	f.Setup("install recorder1", prober.RxInstall("sink1"))
+	f.Setup("install recorder2", prober.RxInstall("sink2"))
+
+	// Setup data plane
+	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("sink1")))
+	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsRef("sink2"), "")))
+
+	// Resources ready.
+	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
+	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
+
+	// Install events after data plane is ready.
+	f.Setup("install source", prober.TxInstall("source"))
+
+	// After we have finished sending.
+	f.Requirement("sender is finished", prober.TxDone("source"))
+
+	// Assert events ended up where we expected.
+	f.Stable("broker with DLQ").
+		Must("accepted all events", prober.AssertSentAll("source")).
+		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", "sink1")).
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", "sink2"))
 
 	return f
 }
@@ -131,7 +185,7 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 		uuid.New().String(),
 	}
 
-	f := new(feature.Feature)
+	f := feature.NewFeature()
 
 	//
 

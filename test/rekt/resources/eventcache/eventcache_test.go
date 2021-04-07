@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cloudevents_test
+package eventcache_test
 
 import (
 	"os"
@@ -22,11 +22,10 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-// The following examples validate the processing of the With* helper methods
-// applied to config and go template parser.
-
-func Example_min() {
-	images := map[string]string{}
+func Example() {
+	images := map[string]string{
+		"ko://knative.dev/eventing/test/test_images/event-cache": "gcr.io/knative-samples/helloworld-go",
+	}
 	cfg := map[string]interface{}{
 		"name":      "foo",
 		"namespace": "bar",
@@ -40,16 +39,29 @@ func Example_min() {
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
 	// apiVersion: v1
-	// kind: ConfigMap
+	// kind: Pod
 	// metadata:
 	//   name: foo
 	//   namespace: bar
-	// data:
-	//   events.yaml:    ContextAttributes:
-	//       specversion: "1.0"
-	//       type: a.type
-	//       id: abc-123
-	//       source: foo/bar
-	//       datacontenttype: application/json
-	//     Data: '{"hello":"world"}'
+	//   labels:
+	//     app: cache-foo
+	// spec:
+	//   restartPolicy: "Never"
+	//   containers:
+	//     - name: flaker
+	//       image: gcr.io/knative-samples/helloworld-go
+	//       imagePullPolicy: "IfNotPresent"
+	// ---
+	// apiVersion: v1
+	// kind: Service
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   selector:
+	//     app: cache-foo
+	//   ports:
+	//     - protocol: TCP
+	//       port: 80
+	//       targetPort: 8080
 }

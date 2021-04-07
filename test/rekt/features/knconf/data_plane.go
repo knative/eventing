@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
@@ -65,13 +66,13 @@ func AcceptsCEVersions(ctx context.Context, t feature.T, gvr schema.GroupVersion
 }
 
 type EventInfoCombined struct {
-	Sent     eventshub.EventInfo
-	Response eventshub.EventInfo
+	Sent     EventInfo
+	Response EventInfo
 }
 
-func SentEventMatcher(uuid string) func(eventshub.EventInfo) error {
-	return func(ei eventshub.EventInfo) error {
-		if (ei.Kind == eventshub.EventSent || ei.Kind == eventshub.EventResponse) && ei.SentId == uuid {
+func SentEventMatcher(uuid string) func(EventInfo) error {
+	return func(ei EventInfo) error {
+		if (ei.Kind == EventSent || ei.Kind == EventResponse) && ei.SentId == uuid {
 			return nil
 		}
 		return errors.New("no match")
@@ -80,14 +81,14 @@ func SentEventMatcher(uuid string) func(eventshub.EventInfo) error {
 
 // Correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
 // and correlates them based on the sequence into a pair.
-func Correlate(in []eventshub.EventInfo) []EventInfoCombined {
+func Correlate(in []EventInfo) []EventInfoCombined {
 	var out []EventInfoCombined
 	// not too many events, this will suffice...
 	for i, e := range in {
-		if e.Kind == eventshub.EventSent {
+		if e.Kind == EventSent {
 			looking := e.Sequence
 			for j := i + 1; j <= len(in)-1; j++ {
-				if in[j].Kind == eventshub.EventResponse && in[j].Sequence == looking {
+				if in[j].Kind == EventResponse && in[j].Sequence == looking {
 					out = append(out, EventInfoCombined{Sent: e, Response: in[j]})
 				}
 			}

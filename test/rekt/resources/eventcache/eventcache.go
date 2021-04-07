@@ -14,25 +14,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cloudevents
+package eventcache
 
 import (
 	"context"
+	"log"
+	"path"
+	"runtime"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-// Install will TODO
-func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
+func init() {
+	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
+}
+
+// Install
+func Install(name string) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name": name,
 	}
-	for _, fn := range opts {
-		fn(cfg)
-	}
+
 	return func(ctx context.Context, t feature.T) {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func PathFor(file string) string {
+	_, filename, _, _ := runtime.Caller(0)
+	log.Println("FILENAME: ", filename)
+
+	return path.Join(path.Dir(filename), file)
+}
+
+// TODO: add With* methods as we need them.
+
+// AsRef returns a KRef for a Service without namespace.
+func AsRef(name string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Service",
+		APIVersion: "v1",
+		Name:       name,
 	}
 }
