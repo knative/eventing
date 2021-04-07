@@ -108,7 +108,7 @@ func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldEr
 	if filter.Prefix != nil {
 		if len(filter.Prefix) != 1 {
 			errs = append(errs, &apis.FieldError{
-				Message: fmt.Sprintf("Prefix can have only one key-value"),
+				Message: "Prefix can have only one key-value",
 				Paths:   []string{strings.Join(append(path, "prefix"), ".")},
 			})
 		}
@@ -126,7 +126,7 @@ func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldEr
 	if filter.Suffix != nil {
 		if len(filter.Suffix) != 1 {
 			errs = append(errs, &apis.FieldError{
-				Message: fmt.Sprintf("Suffix can have only one key-value"),
+				Message: "Suffix can have only one key-value",
 				Paths:   []string{strings.Join(append(path, "suffix"), ".")},
 			})
 		}
@@ -144,7 +144,7 @@ func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldEr
 	if filter.All != nil {
 		if len(filter.All) < 1 {
 			errs = append(errs, &apis.FieldError{
-				Message: fmt.Sprintf("All must contain at least one nested filter"),
+				Message: "All must contain at least one nested filter",
 				Paths:   []string{strings.Join(append(path, "all"), ".")},
 			})
 		}
@@ -159,7 +159,7 @@ func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldEr
 	if filter.Any != nil {
 		if len(filter.Any) < 1 {
 			errs = append(errs, &apis.FieldError{
-				Message: fmt.Sprintf("Any must contain at least one nested filter"),
+				Message: "Any must contain at least one nested filter",
 				Paths:   []string{strings.Join(append(path, "any"), ".")},
 			})
 		}
