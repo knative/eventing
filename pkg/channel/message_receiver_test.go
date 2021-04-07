@@ -25,26 +25,24 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"knative.dev/pkg/network"
-
+	obsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace"
-	_ "knative.dev/pkg/system/testing"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
-
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
-
-	"knative.dev/eventing/pkg/kncloudevents"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/pkg/network"
+	_ "knative.dev/pkg/system/testing"
+	"knative.dev/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
 func TestMessageReceiver_ServeHTTP(t *testing.T) {
@@ -228,10 +226,10 @@ func TestMessageReceiver_ServerStart_trace_propagation(t *testing.T) {
 	require.NoError(t, err)
 	p.RequestTemplate.Host = host
 
-	client, err := cloudevents.NewClient(p, cloudevents.WithTracePropagation)
+	c, err := cloudevents.NewClient(p, client.WithObservabilityService(obsclient.New()))
 	require.NoError(t, err)
 
-	res := client.Send(context.Background(), want)
+	res := c.Send(context.Background(), want)
 	require.True(t, cloudevents.IsACK(res))
 	var httpResult *http.Result
 	require.True(t, cloudevents.ResultAs(res, &httpResult))

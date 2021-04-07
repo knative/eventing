@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/client"
@@ -148,7 +149,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			tracing.BrokerMessagingDestinationAttribute(brokerNamespacedName),
 			tracing.MessagingMessageIDAttribute(event.ID()),
 		)
-		span.AddAttributes(client.EventTraceAttributes(event)...)
+		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
 	}
 
 	reporterArgs := &ReportArgs{

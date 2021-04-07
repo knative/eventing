@@ -147,7 +147,7 @@ func (r *Receiver) processEvents() {
 }
 
 func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
-	cli, err := cloudevents.NewDefaultClient()
+	cli, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		return fmt.Errorf("failed to create CloudEvents client: %v", err)
 	}
