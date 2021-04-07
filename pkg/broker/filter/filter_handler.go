@@ -23,9 +23,9 @@ import (
 	"net/http"
 	"time"
 
+	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
@@ -140,7 +140,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			tracing.TriggerMessagingDestinationAttribute(triggerRef.NamespacedName),
 			tracing.MessagingMessageIDAttribute(event.ID()),
 		)
-		span.AddAttributes(client.EventTraceAttributes(event)...)
+		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
 	}
 
 	// Remove the TTL attribute that is used by the Broker.

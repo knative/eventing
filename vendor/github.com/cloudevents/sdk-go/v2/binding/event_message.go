@@ -48,7 +48,7 @@ func (m *EventMessage) ReadBinary(ctx context.Context, b BinaryWriter) (err erro
 	// Pass the body
 	body := (*event.Event)(m).Data()
 	if len(body) > 0 {
-		err = b.SetData(bytes.NewReader(body))
+		err = b.SetData(bytes.NewBuffer(body))
 		if err != nil {
 			return err
 		}

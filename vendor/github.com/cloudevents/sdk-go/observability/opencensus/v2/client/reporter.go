@@ -1,4 +1,4 @@
-package observability
+package client
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 	"go.opencensus.io/tag"
 )
 
-// Observable represents the the customization used by the Reporter for a given
-// measurement and trace for a single method.
-type Observable interface {
-	MethodName() string
-	LatencyMs() *stats.Float64Measure
-}
+const (
+	// ResultError is a shared result tag value for error.
+	ResultError = "error"
+	// ResultOK is a shared result tag value for success.
+	ResultOK = "success"
+)
 
 // Reporter represents a running latency counter. When Error or OK are
 // called, the latency is calculated. Error or OK are only allowed to
@@ -30,14 +30,6 @@ type reporter struct {
 	start time.Time
 	once  sync.Once
 }
-
-// LatencyTags returns all tags used for Latency measurements.
-func LatencyTags() []tag.Key {
-	return []tag.Key{KeyMethod, KeyResult}
-}
-
-// EnableTracing is deprecated. Tracing is always enabled.
-func EnableTracing(enabled bool) {}
 
 // NewReporter creates and returns a reporter wrapping the provided Observable.
 func NewReporter(ctx context.Context, on Observable) (context.Context, Reporter) {

@@ -52,7 +52,7 @@ func receive(event cloudevents.Event) *cloudevents.Event {
 func main() {
 	flag.Parse()
 
-	ce, err := cloudevents.NewDefaultClient()
+	ce, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		log.Fatalf("failed to create CloudEvent client, %s", err)
 	}
