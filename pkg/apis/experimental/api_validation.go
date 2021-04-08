@@ -8,7 +8,7 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// ValidateAPIFields checks if the flag is enabled
+// ValidateAPIFields checks that the experimental features fields are disabled if the experimental flag is disabled
 func ValidateAPIFields(ctx context.Context, featureName string, object interface{}, experimentalFields ...string) (errs *apis.FieldError) {
 	obj := reflect.ValueOf(object)
 	obj = reflect.Indirect(obj)
