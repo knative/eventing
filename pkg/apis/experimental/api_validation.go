@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -25,6 +26,23 @@ func ValidateAPIFields(ctx context.Context, featureName string, object interface
 				errs = errs.Also(&apis.FieldError{
 					Message: fmt.Sprintf("Disallowed field because the experimental feature '%s' is disabled", featureName),
 					Paths:   []string{fmt.Sprintf("%s.%s", obj.Type().Name(), fieldName)},
+				})
+			}
+		}
+	}
+
+	return errs
+}
+
+// ValidateAnnotations checks that the experimental features annotations are disabled if the experimental flag is disabled
+func ValidateAnnotations(ctx context.Context, featureName string, object metav1.Object, experimentalAnnotations ...string) (errs *apis.FieldError) {
+	// If feature not enabled, let's check the annotation is not used
+	if !FromContext(ctx).IsEnabled(featureName) {
+		for _, annotation := range experimentalAnnotations {
+			if _, ok := object.GetAnnotations()[annotation]; ok {
+				errs = errs.Also(&apis.FieldError{
+					Message: fmt.Sprintf("Disallowed annotation because the experimental feature '%s' is disabled", featureName),
+					Paths:   []string{annotation},
 				})
 			}
 		}
