@@ -18,6 +18,7 @@ package eventprober
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
@@ -48,13 +49,10 @@ func New(targetGVR schema.GroupVersionResource, targetName, targetURI string) *E
 }
 
 type EventProber struct {
-	target target
-
+	target          target
 	shortNameToName map[string]string
-
-	hasCache      bool
-	ids           []string
-	senderOptions []eventshub.EventsHubOption
+	ids             []string
+	senderOptions   []eventshub.EventsHubOption
 }
 
 type target struct {
@@ -109,9 +107,9 @@ func (p *EventProber) TxInstall(prefix string) feature.StepFn {
 	}
 }
 
-// Correlate takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
+// CorrelateSent takes in an array of mixed Sent / Response events (matched with sentEventMatcher for example)
 // and correlates them based on the sequence into a pair.
-func Correlate(origin string, in []EventInfo) []EventInfoCombined {
+func CorrelateSent(origin string, in []EventInfo) []EventInfoCombined {
 	var out []EventInfoCombined
 	// not too many events, this will suffice...
 	for i, e := range in {
@@ -135,7 +133,25 @@ func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoComb
 		fmt.Printf("%#v\n", c)
 	}
 
-	return Correlate(name, store.Collected())
+	return CorrelateSent(name, store.Collected())
+}
+
+func (p *EventProber) ReceivedBy(ctx context.Context, prefix string) []EventInfo {
+	name := p.shortNameToName[prefix]
+	store := eventshub.StoreFromContext(ctx, name)
+
+	for _, c := range store.Collected() {
+		fmt.Printf("%#v\n", c)
+	}
+
+	events, _, _, _ := store.Find(func(info EventInfo) error {
+		if info.Observer == name && info.Kind == EventReceived {
+			return nil
+		}
+		return errors.New("not a match")
+	})
+
+	return events
 }
 
 func (p *EventProber) ExpectYAMLEvents(path string) error {
@@ -220,12 +236,30 @@ func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 
 func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		sent := p.SentBy(ctx, toPrefix)
+		ids := make([]string, len(sent))
+		for i, s := range sent {
+			ids[i] = s.Sent.SentId
+		}
 
+		events := p.ReceivedBy(ctx, fromPrefix)
+		if len(ids) != len(events) {
+			t.Errorf("expected %q to have received %d events, actually received %d",
+				fromPrefix, len(ids), len(events))
+		}
+		for _, id := range ids {
+			found := false
+			for _, event := range events {
+				if id == event.SentId {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("Failed to receive event id=%s", id)
+			}
+		}
 	}
-}
-
-func foo(ctx context.Context, t feature.T) {
-
 }
 
 func (p *EventProber) TriggerSubscriberCfg(prefix string) manifest.CfgFn {

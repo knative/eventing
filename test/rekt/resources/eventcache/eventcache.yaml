@@ -22,7 +22,7 @@ metadata:
 spec:
   restartPolicy: "Never"
   containers:
-    - name: flaker
+    - name: cache
       image: ko://knative.dev/eventing/test/test_images/event-cache
       imagePullPolicy: "IfNotPresent"
 
