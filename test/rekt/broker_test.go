@@ -52,23 +52,6 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	env.Finish()
 }
 
-func TestBrokerIngressConformance(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-	)
-
-	for _, f := range broker.BrokerIngressConformanceFeatures(eventing.MTChannelBrokerClassValue) {
-		env.Test(ctx, t, f)
-	}
-
-	env.Finish()
-}
-
 // TestBrokerDLQ
 func TestBrokerWithDLQ(t *testing.T) {
 	class := eventing.MTChannelBrokerClassValue
