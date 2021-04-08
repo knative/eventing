@@ -82,11 +82,16 @@ func TestBrokerWithDLQ(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+	env.Prerequisite(ctx, t, broker.GoesReady("test1", b.WithBrokerClass(class)))
 
 	// Test that a Broker can act as middleware.
-	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
-	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ("default"))
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ("test1"))
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("test2", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ("test2"))
 }
 
 // TestBrokerWithFlakyDLQ
