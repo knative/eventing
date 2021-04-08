@@ -48,7 +48,7 @@ func Example() {
 	// spec:
 	//   restartPolicy: "Never"
 	//   containers:
-	//     - name: flaker
+	//     - name: cache
 	//       image: gcr.io/knative-samples/helloworld-go
 	//       imagePullPolicy: "IfNotPresent"
 	// ---
