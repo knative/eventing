@@ -1,8 +1,25 @@
+/*
+Copyright 2021 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package eventprober
 
 import (
 	"context"
 	"fmt"
+
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
@@ -18,12 +35,6 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
-
-// Phases:
-// 	Setup
-//	Requirement
-//	Assert
-//	Teardown
 
 func New(targetGVR schema.GroupVersionResource, targetName, targetURI string) *EventProber {
 	return &EventProber{
@@ -224,90 +235,3 @@ func (p *EventProber) TriggerSubscriberCfg(prefix string) manifest.CfgFn {
 func (p *EventProber) DeadLetterSinkCfg(prefix string) manifest.CfgFn {
 	return delivery.WithDeadLetterSink(p.AsRef(prefix), "")
 }
-
-//// [Source] ---> { Target(Broker)}--> [Sink1] --> {reply}
-////                  	|
-////   	                +-(DLQ)-> [Sink2]
-////
-//func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
-//	prober := New(broker.GVR(), brokerName, "")
-//
-//	prober.LoadFullEvents(3)
-//
-//	via := feature.MakeRandomK8sName("via")
-//
-//	f := new(feature.Feature)
-//
-//	// Setup Probes
-//	f.Setup("install sink", prober.RxInstall("sink1"))
-//	//f.Setup("install sink", prober.FxInstall("sink3"))
-//	f.Setup("install dlq", prober.RxInstall("dlq"))
-//
-//	// Setup data plane
-//	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("dlq")))
-//	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(prober.AsRef("dlq"), ""), prober.TriggerSubscriberCfg("sink"), trigger.WithFilter()))
-//
-//	// Resources ready.
-//	f.Setup("trigger goes ready", trigger.IsReady(via))
-//
-//	// Install events after data plane is ready.
-//	f.Setup("install source", prober.TxInstall("source"))
-//
-//	// Assert events ended up +1.
-//	f.Stable("broker with DLQ").
-//		Must("deliver event to DLQ", prober.Rx("sink").)
-//		//OnStore(dlq).MatchEvent(HasId(event.ID())).Exact(1))
-//
-//		//[]eventsByWho := prober.SentEvents()
-//		prober.WantEventsSeenBy("prefix", )
-//
-//	f.Assert("all events were accepted", func(ctx context.Context, t feature.T) {
-//		prober.
-//	})
-//
-//	return f
-//}
-//
-//// trigger.WithSubscriber(loop.AsRef("dlq"), "")
-//// loop.TriggerSubscriberCfg("sink")
-//
-//// TODO: EventProbe
-//// [Source] ---> { Target(Broker)}+----> [Sink1] --> {reply}
-////                      |         |
-////                      |         +--->[Sink3]
-////                  	|
-////   	                +-(DLQ)-> [Sink2]
-////
-//
-//func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
-//	prober := New(broker.GVR(), brokerName, "")
-//
-//	loop.LoadFullEvents(3)
-//
-//	via := feature.MakeRandomK8sName("via")
-//
-//	f := new(feature.Feature)
-//
-//	// Setup Probes
-//	f.Setup("install prober", prober.Install())
-//
-//	// Setup data plane
-//	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("dlq")))
-//	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(loop.AsRef("dlq"), ""),loop.TriggerSubscriberCfg("sink"), trigger.WithFilter()))
-//
-//	// Resources ready.
-//	f.Setup("resources goes ready", trigger.AsRef(via), broker.AsRef(brokerName))
-//
-//	// Install events after data plane is ready.
-//	f.Setup("install source", loop.TxInstall("source"))
-//
-//	// Assert events ended up +1.
-//	f.Stable("broker with DLQ").
-//		Must("deliver event to DLQ", loop.Rx("sink").)
-//	//OnStore(dlq).MatchEvent(HasId(event.ID())).Exact(1))
-//
-//	//[]eventsByWho := loop.SentEvents()
-//	loop.WantEventsSeenBy("prefix", )
-//
-//	return f
-//}
