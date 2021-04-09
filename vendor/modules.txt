@@ -979,7 +979,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20210408144251-728bc4ad4ee3
+# knative.dev/pkg v0.0.0-20210409203851-3a2ae6db7097
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate

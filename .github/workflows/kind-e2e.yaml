@@ -138,6 +138,7 @@ jobs:
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
         export SYSTEM_NAMESPACE=knative-eventing
+        export CLUSTER_DOMAIN=${CLUSTER_SUFFIX}
         # Run the tests tagged as e2e on the KinD cluster.
         go test -race -count=1 -parallel=12 -v -timeout=50m -tags=e2e \
            ${{ matrix.test-suite }} ${{ matrix.extra-test-flags }}

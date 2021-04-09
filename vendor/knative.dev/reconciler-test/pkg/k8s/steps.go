@@ -23,7 +23,8 @@ import (
 	"time"
 
 	"knative.dev/pkg/apis"
-	"github.com/kelseyhightower/envconfig"
+	"knative.dev/pkg/network"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,17 +84,6 @@ func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.
 	}
 }
 
-
-type envConfig struct {
-	clusterSuffix string `envconfig:"CLUSTER_SUFFIX" default:"cluster.local" required:"true"`
-}
-var cfg envConfig
-func init() {
-	if err := envconfig.Process("", &cfg); err != nil {
-		log.Fatal("Failed to process env var", err)
-	}
-}
-
 // Address attempts to resolve an Addressable address into a URL. If the
 // resource is found but not Addressable, Address will return (nil, nil).
 func Address(ctx context.Context, gvr schema.GroupVersionResource, name string) (*apis.URL, error) {
@@ -101,7 +91,7 @@ func Address(ctx context.Context, gvr schema.GroupVersionResource, name string) 
 
 	// Special case Service.
 	if gvr.Group == "" && gvr.Version == "v1" && gvr.Resource == "services" {
-		u := fmt.Sprintf("%s.%s.svc.%s", name, env.Namespace(), cfg.clusterSuffix)
+		u := "http://" + network.GetServiceHostname(name, env.Namespace())
 		return apis.ParseURL(u)
 	}
 
