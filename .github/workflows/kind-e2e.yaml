@@ -145,21 +145,27 @@ jobs:
     - name: Collect system diagnostics
       if: ${{ failure() }}
       run: |
-        kubectl -n${SYSTEM_NAMESPACE} get pods
+        echo '::group:: all pods'
+        kubectl get pods --all-namespaces=true
+        echo '::endgroup::'
 
-        echo '::group:: describe'
+        echo '::group:: describe system pods'
         kubectl -n${SYSTEM_NAMESPACE} describe pods
         echo '::endgroup::'
 
         for x in $(kubectl get pods -n${SYSTEM_NAMESPACE} -oname); do
-          echo "::group:: describe $x"
+          echo "::group:: describe system $x"
           kubectl -n${SYSTEM_NAMESPACE} describe $x
           echo '::endgroup::'
 
-          echo "::group:: $x logs"
+          echo "::group:: $x system logs"
           kubectl -n${SYSTEM_NAMESPACE} logs $x --all-containers
           echo '::endgroup::'
         done
+
+        echo "::group:: all events"
+          kubectl get events --all-namespaces=true
+        echo '::endgroup::'
 
     - name: Dump Artifacts
       if: ${{ failure() }}
