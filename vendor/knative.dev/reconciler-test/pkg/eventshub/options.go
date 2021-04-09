@@ -136,7 +136,6 @@ var DisableProbeSink = envOption("PROBE_SINK", "false")
 
 // InputYAML is an option to provide the events to send via yaml path when deploying the event sender
 func InputYAML(path string) EventsHubOption {
-	fmt.Println("INPUT_YAML---> ", path)
 	return envAdditive("INPUT_YAML", path)
 }
 

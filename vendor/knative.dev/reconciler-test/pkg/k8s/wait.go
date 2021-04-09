@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -171,24 +170,8 @@ func WaitForServiceEndpointsOrFail(ctx context.Context, t feature.T, svcName str
 
 // WaitForPodRunningOrFail wraps the utility from pkg and uses the context to extract kubeclient and namespace
 func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
-	client := kubeclient.Get(ctx)
-	namespace := environment.FromContext(ctx).Namespace()
-	if err := pkgtest.WaitForPodRunning(ctx, client, podName, namespace); err != nil {
-		sb := strings.Builder{}
-		if p, err := client.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{}); err != nil {
-			sb.WriteString(err.Error())
-			sb.WriteString("\n")
-		} else {
-			for _, c := range p.Spec.Containers {
-				if b, err := pkgtest.PodLogs(ctx, client, podName, c.Name, namespace); err != nil {
-					sb.WriteString(err.Error())
-				} else {
-					sb.Write(b)
-				}
-				sb.WriteString("\n")
-			}
-		}
-		t.Fatalf("Failed while waiting for pod %s running: %+v\n%s", podName, errors.WithStack(err), sb.String())
+	if err := pkgtest.WaitForPodRunning(ctx, kubeclient.Get(ctx), podName, environment.FromContext(ctx).Namespace()); err != nil {
+		t.Fatalf("Failed while waiting for pod %s running: %+v", podName, errors.WithStack(err))
 	}
 }
 
