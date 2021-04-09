@@ -101,7 +101,6 @@ func Address(ctx context.Context, gvr schema.GroupVersionResource, name string) 
 
 	// Special case Service.
 	if gvr.Group == "" && gvr.Version == "v1" && gvr.Resource == "services" {
-
 		u := fmt.Sprintf("%s.%s.svc.%s", name, env.Namespace(), cfg.clusterSuffix)
 		return apis.ParseURL(u)
 	}
