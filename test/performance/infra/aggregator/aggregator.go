@@ -29,7 +29,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
 	"knative.dev/pkg/ptr"
@@ -203,13 +202,13 @@ func (ag *Aggregator) Run(ctx context.Context) {
 
 	for sentID := range ag.sentEvents.Events {
 		timestampSentProto := ag.sentEvents.Events[sentID]
-		timestampSent, _ := ptypes.Timestamp(timestampSentProto)
+		timestampSent := timestampSentProto.AsTime()
 
 		timestampAcceptedProto, accepted := ag.acceptedEvents.Events[sentID]
-		timestampAccepted, _ := ptypes.Timestamp(timestampAcceptedProto)
+		timestampAccepted := timestampAcceptedProto.AsTime()
 
 		timestampReceivedProto, received := ag.receivedEvents.Events[sentID]
-		timestampReceived, _ := ptypes.Timestamp(timestampReceivedProto)
+		timestampReceived := timestampReceivedProto.AsTime()
 
 		if !accepted {
 			publishErrorTimestamps = append(publishErrorTimestamps, timestampSent)
@@ -304,7 +303,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Time {
 	values := make([]time.Time, 0, len(*events))
 	for _, v := range *events {
-		t, _ := ptypes.Timestamp(v)
+		t := v.AsTime()
 		values = append(values, t)
 	}
 	return values

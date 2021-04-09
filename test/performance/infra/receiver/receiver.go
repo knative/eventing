@@ -19,13 +19,13 @@ package receiver
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
 	"runtime"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
 	"knative.dev/eventing/test/performance/infra/common"
@@ -161,7 +161,7 @@ func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 	t := r.typeExtractor(event)
 	switch t {
 	case common.MeasureEventType:
-		r.receivedCh <- common.EventTimestamp{EventId: r.idExtractor(event), At: ptypes.TimestampNow()}
+		r.receivedCh <- common.EventTimestamp{EventId: r.idExtractor(event), At: timestamppb.Now()}
 	case common.GCEventType:
 		runtime.GC()
 	case common.EndEventType:

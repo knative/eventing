@@ -19,13 +19,13 @@ package sender
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"math/rand"
 	"net"
 	"net/http"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
@@ -140,12 +140,12 @@ func NewHTTPLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 				Transport: requestInterceptor{
 					before: func(request *http.Request) {
 						id := request.Header.Get("Ce-Id")
-						loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+						loadGen.sentCh <- common.EventTimestamp{EventId: id, At: timestamppb.Now()}
 					},
 					transport: vegetaAttackerTransport(),
 					after: func(request *http.Request, response *http.Response, e error) {
 						id := request.Header.Get("Ce-Id")
-						t := ptypes.TimestampNow()
+						t := timestamppb.Now()
 						if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 							loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
 						}
