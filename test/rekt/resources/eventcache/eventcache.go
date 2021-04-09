@@ -48,6 +48,7 @@ func Install(name string) feature.StepFn {
 
 func IsReady(name string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
+		k8s.WaitForPodRunningOrFail(ctx, t, name)
 		k8s.WaitForServiceEndpointsOrFail(ctx, t, name, 1)
 	}
 }
