@@ -19,7 +19,6 @@ package sender
 import (
 	"context"
 	"fmt"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"math/rand"
 	"net"
 	"net/http"
@@ -29,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"knative.dev/eventing/test/performance/infra/common"
 )

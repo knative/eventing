@@ -19,7 +19,6 @@ package receiver
 import (
 	"context"
 	"fmt"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
 	"runtime"
@@ -27,6 +26,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"knative.dev/eventing/test/performance/infra/common"
 	pb "knative.dev/eventing/test/performance/infra/event_state"
