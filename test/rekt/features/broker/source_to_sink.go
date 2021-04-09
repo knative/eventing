@@ -86,6 +86,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventcache.Install(lib))
+	f.Setup("event cache is ready", eventcache.IsReady(lib))
 	f.Setup("use events cache", prober.EventsFromSVC(lib, "events/three.ce"))
 	if err := prober.ExpectYAMLEvents(eventcache.PathFor("events/three.ce")); err != nil {
 		panic(fmt.Errorf("can not find event files: %s", err))
@@ -133,6 +134,7 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventcache.Install(lib))
+	f.Setup("event cache is ready", eventcache.IsReady(lib))
 	f.Setup("use events cache", prober.EventsFromSVC(lib, "events/three.ce"))
 	if err := prober.ExpectYAMLEvents(eventcache.PathFor("events/three.ce")); err != nil {
 		panic(fmt.Errorf("can not find event files: %s", err))

@@ -18,6 +18,7 @@ package eventcache
 
 import (
 	"context"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"log"
 	"path"
 	"runtime"
@@ -42,6 +43,12 @@ func Install(name string) feature.StepFn {
 		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func IsReady(name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		k8s.WaitForServiceEndpointsOrFail(ctx, t, name, 1)
 	}
 }
 
