@@ -60,6 +60,9 @@ func main() {
 		logging.FromContext(ctx).Fatal("Error during start: ", err)
 	}
 
+	// Wait until sigterm.
+	<-ctx.Done()
+
 	logging.FromContext(ctx).Info("Closing the eventshub process")
 }
 
