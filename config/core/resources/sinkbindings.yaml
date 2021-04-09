@@ -257,6 +257,7 @@ spec:
       - bindings
     kind: SinkBinding
     plural: sinkbindings
+    singular: sinkbinding
   scope: Namespaced
   conversion:
     strategy: Webhook

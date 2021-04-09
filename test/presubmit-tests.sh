@@ -29,6 +29,7 @@
 export DISABLE_MD_LINTING=1
 export GO111MODULE=on
 
+export KO_FLAGS="--platform=linux/amd64"
 source "$(dirname "${BASH_SOURCE[0]}")/../vendor/knative.dev/hack/presubmit-tests.sh"
 
 # We use the default build, unit and integration test runners.

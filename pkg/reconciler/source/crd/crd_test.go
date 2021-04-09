@@ -92,9 +92,7 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "unable to find GVR or GVK for %s", crdName),
 			},
-		},
-		{
-
+		}, {
 			Name: "reconcile succeeded",
 			Objects: []runtime.Object{
 				NewCustomResourceDefinition(crdName,
@@ -113,8 +111,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: crdName,
 			Ctx: ctx,
-		},
-		{
+		}, {
 			Name: "reconcile deleted",
 			Objects: []runtime.Object{
 				NewCustomResourceDefinition(crdName,
@@ -135,8 +132,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: crdName,
 			Ctx: ctx,
-		},
-		{
+		}, {
 			Name: "reconcile not Served",
 			Objects: []runtime.Object{
 				NewCustomResourceDefinition(crdName,

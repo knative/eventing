@@ -8,7 +8,7 @@
 
 1. Install Knative eventing and components used in the performance test, such as
    MT broker, by following the steps in
-   https://github.com/knative/eventing/blob/master/DEVELOPMENT.md.
+   https://github.com/knative/eventing/blob/main/DEVELOPMENT.md.
 
 1. Create a ConfigMap called `config-mako` in your chosen namespace containing
    the Mako config file.
@@ -23,7 +23,7 @@ kubectl create configmap -n perf-eventing config-mako --from-file=test/performan
    kubectl edit configmap -n perf-eventing config-mako
    ```
 
-[`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
+[`NewConfigFromMap`](https://github.com/knative/pkg/blob/main/test/mako/config.go#L41)
 determines the valid keys in this ConfigMap. Current keys are:
 
 - `environment`: Select a Mako config file in the ConfigMap. E.g.
@@ -60,7 +60,7 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 1. Wait until all the pods in namespace `perf-eventing` are completed.
 
 1. Retrieve results from mako-stub using the script in
-   [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh)
+   [knative/pkg](https://github.com/knative/pkg/blob/main/test/mako/stub-sidecar/read_results.sh)
    where `pod_name` is the name of the aggregator pod:
 
    ```
@@ -101,7 +101,7 @@ gnuplot -c test/performance/latency-and-thpt-plot.plg data.csv 0.005 480 520
 Most eventing binaries under `cmd` package are bootstrapped by either
 `sharedmain.Main` in `knative.dev/pkg/injection/sharedmain` or `adapter.Main` in
 `knative.dev/eventing/pkg/adapter`. These `Main` helper functions uses the
-[profiling](https://github.com/knative/pkg/blob/master/profiling/server.go)
+[profiling](https://github.com/knative/pkg/blob/main/profiling/server.go)
 package to enable golang profiling by reading the `profiling.enable` flag in the
 `config-observability` configmap.
 

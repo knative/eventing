@@ -19,13 +19,15 @@ package mtping
 import (
 	"context"
 
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
+	"k8s.io/client-go/tools/cache"
 
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 )
 
 // TODO: code generation
@@ -36,7 +38,10 @@ type MTAdapter interface {
 	Update(ctx context.Context, source *v1beta2.PingSource)
 
 	// Remove is called when the source has been deleted.
-	Remove(ctx context.Context, source *v1beta2.PingSource)
+	Remove(source *v1beta2.PingSource)
+
+	// RemoveAll is called when the adapter stopped leading
+	RemoveAll(ctx context.Context)
 }
 
 // NewController initializes the controller. This is called by the shared adapter Main
@@ -49,30 +54,21 @@ func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Imp
 
 	r := &Reconciler{mtadapter}
 
-	// TODO: need pkg#1683
-	// lister := pingsourceinformer.Get(ctx).Lister()
-	//opts := func(impl *controller.Impl) controller.Options {
-	//	return controller.Options{
-	//		DemoteFunc: func(b reconciler.Bucket) {
-	//			all, _ := lister.List(labels.Everything())
-	//			// TODO: demote with error
-	//			//if err != nil {
-	//			//	return err
-	//			//}
-	//			for _, elt := range all {
-	//				mtadapter.Remove(ctx, elt)
-	//			}
-	//		},
-	//	}
-	//}
-
 	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 		return controller.Options{
 			SkipStatusUpdates: true,
+			DemoteFunc: func(b reconciler.Bucket) {
+				mtadapter.RemoveAll(ctx)
+			},
 		}
 	})
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
-	pingsourceinformer.Get(ctx).Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	pingsourceinformer.Get(ctx).Informer().AddEventHandler(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.Enqueue,
+			UpdateFunc: controller.PassNew(impl.Enqueue),
+			DeleteFunc: r.deleteFunc,
+		})
 	return impl
 }

@@ -28,12 +28,32 @@ import (
 )
 
 type TestCloudEventsClient struct {
-	lock  sync.Mutex
-	sent  []cloudevents.Event
-	delay time.Duration
+	lock          sync.Mutex
+	sent          []cloudevents.Event
+	delay         time.Duration
+	resultSend    []protocol.Result
+	resultRequest []struct {
+		event  *event.Event
+		result protocol.Result
+	}
 }
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
+
+// Send_AppendResult will enqueue a response for the following Send call.
+// For testing.
+func (c *TestCloudEventsClient) Send_AppendResult(r protocol.Result) {
+	c.resultSend = append(c.resultSend, r)
+}
+
+// Request_AppendResult will enqueue a response for the following Request call.
+// For testing.
+func (c *TestCloudEventsClient) Request_AppendResult(e *event.Event, r protocol.Result) {
+	c.resultRequest = append(c.resultRequest, struct {
+		event  *event.Event
+		result protocol.Result
+	}{event: e, result: r})
+}
 
 func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) protocol.Result {
 	if c.delay > 0 {
@@ -43,6 +63,11 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
+	if len(c.resultSend) != 0 {
+		resp := c.resultSend[0]
+		c.resultSend = c.resultSend[1:]
+		return resp
+	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
 }
 

@@ -36,11 +36,11 @@ import (
 // UnknownChannelError represents the error when an event is received by a channel dispatcher for a
 // channel that does not exist.
 type UnknownChannelError struct {
-	c ChannelReference
+	Channel ChannelReference
 }
 
 func (e *UnknownChannelError) Error() string {
-	return fmt.Sprint("unknown channel: ", e.c)
+	return fmt.Sprint("unknown channel: ", e.Channel)
 }
 
 // UnknownHostError represents the error when a ResolveMessageChannelFromHostHeader func cannot resolve an host

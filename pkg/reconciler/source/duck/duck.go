@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +47,7 @@ type Reconciler struct {
 
 	// listers index properties about resources
 	eventTypeLister listers.EventTypeLister
-	crdLister       apiextensionsv1beta1.CustomResourceDefinitionLister
+	crdLister       apiextensionsv1.CustomResourceDefinitionLister
 	sourceLister    cache.GenericLister
 
 	gvr     schema.GroupVersionResource
@@ -196,18 +196,18 @@ func (r *Reconciler) makeEventTypes(ctx context.Context, src *duckv1.Source) []v
 			// Cannot have empty spec.type
 			continue
 		}
-		var schema, description string
+		var s, description string
 		if v, ok := entries[attrib.Type]; ok {
-			schema = v.Schema
+			s = v.Schema
 			description = v.Description
 		}
 		sourceURL, err := apis.ParseURL(attrib.Source)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to parse source as a URL", zap.String("source", attrib.Source), zap.Error(err))
 		}
-		schemaURL, err := apis.ParseURL(schema)
+		schemaURL, err := apis.ParseURL(s)
 		if err != nil {
-			logging.FromContext(ctx).Warnw("Failed to parse schema as a URL", zap.String("schema", schema), zap.Error(err))
+			logging.FromContext(ctx).Warnw("Failed to parse schema as a URL", zap.String("schema", s), zap.Error(err))
 		}
 		eventType := resources.MakeEventType(&resources.EventTypeArgs{
 			Source:      src,

@@ -66,15 +66,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, crd *v1.CustomResourceDe
 		return err
 	}
 
-	if !crd.DeletionTimestamp.IsZero() {
-		// We are intentionally not setting up a finalizer on the CRD.
-		// This might leave unnecessary dynamic controllers running.
-		// This is a best effort to try to clean them up.
-		// Note that without a finalizer there is no guarantee we will be called.
-		r.deleteController(ctx, gvr)
-		return nil
-	}
-
 	r.reconcileController(ctx, crd, gvr, gvk)
 
 	return nil
@@ -106,23 +97,6 @@ func (r *Reconciler) resolveGroupVersions(crd *v1.CustomResourceDefinition) (*sc
 	return gvr, gvk, nil
 }
 
-func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVersionResource) {
-	r.lock.RLock()
-	_, found := r.controllers[*gvr]
-	r.lock.RUnlock()
-	if found {
-		r.lock.Lock()
-		// Now that we grabbed the write lock, check that nobody deleted it already.
-		rc, found := r.controllers[*gvr]
-		if found {
-			logging.FromContext(ctx).Infow("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
-			rc.cancel()
-			delete(r.controllers, *gvr)
-		}
-		r.lock.Unlock()
-	}
-}
-
 func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) {
 	r.lock.RLock()
 	_, found := r.controllers[*gvr]
@@ -143,6 +117,7 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1.CustomReso
 	sdc := duck.NewController(crd.Name, *gvr, *gvk)
 	if sdc == nil {
 		logging.FromContext(ctx).Errorw("Source Duck Controller is nil.", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+
 		return
 	}
 

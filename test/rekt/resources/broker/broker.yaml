@@ -18,11 +18,18 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
   {{ if .brokerClass }}
-  labels:
+  annotations:
     eventing.knative.dev/broker.class: {{ .brokerClass }}
   {{ end }}
 spec:
-  {{if .delivery }}
+  {{ if .config }}
+  config:
+    kind: {{ .config.kind }}
+    namespace: {{ .namespace }}
+    name: {{ .config.name }}
+    apiVersion: {{ .config.apiVersion }}
+  {{ end }}
+  {{ if .delivery }}
   delivery:
     {{ if .delivery.deadLetterSink }}
     deadLetterSink:

@@ -18,20 +18,27 @@ package environment
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"sync"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/logging"
+
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/milestone"
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
-
 	fmt.Printf("level %s, state %s\n\n", l, s)
 
 	return &MagicGlobalEnvironment{
 		c:                ctx,
+		instanceID:       uuid.New().String(),
 		RequirementLevel: *l,
 		FeatureState:     *s,
 	}
@@ -39,6 +46,9 @@ func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
 
 type MagicGlobalEnvironment struct {
 	c context.Context
+	// instanceID represents this instance of the GlobalEnvironment. It is used
+	// to link runs together from a single global environment.
+	instanceID string
 
 	RequirementLevel feature.Levels
 	FeatureState     feature.States
@@ -53,7 +63,14 @@ type MagicEnvironment struct {
 	namespace        string
 	namespaceCreated bool
 	refs             []corev1.ObjectReference
+
+	// milestones sends milestone events, if configured.
+	milestones milestone.Emitter
 }
+
+const (
+	NamespaceDeleteErrorReason = "NamespaceDeleteError"
+)
 
 func (mr *MagicEnvironment) Reference(ref ...corev1.ObjectReference) {
 	mr.refs = append(mr.refs, ref...)
@@ -64,7 +81,27 @@ func (mr *MagicEnvironment) References() []corev1.ObjectReference {
 }
 
 func (mr *MagicEnvironment) Finish() {
-	mr.DeleteNamespaceIfNeeded()
+	if err := mr.DeleteNamespaceIfNeeded(); err != nil {
+		mr.milestones.Exception(NamespaceDeleteErrorReason, "failed to delete namespace %q, %v", mr.namespace, err)
+		panic(err)
+	}
+	mr.milestones.Finished()
+}
+
+// WithPollTimings is an environment option to override default poll timings.
+func WithPollTimings(interval, timeout time.Duration) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		return ContextWithPollTimings(ctx, interval, timeout), nil
+	}
+}
+
+// Managed enables auto-lifecycle management of the environment. Including:
+//  - registers a t.Cleanup callback on env.Finish().
+func Managed(t feature.T) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		t.Cleanup(env.Finish)
+		return ctx, nil
+	}
 }
 
 func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context, Environment) {
@@ -73,7 +110,7 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		panic(err)
 	}
 
-	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("rekt"))
+	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
 
 	env := &MagicEnvironment{
 		c:         mr.c,
@@ -91,9 +128,29 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 		}
 	}
 
+	// It is possible to have milestones set in the options, check for nil in
+	// env first before attempting to pull one from the os environment.
+	if env.milestones == nil {
+		milestones, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
+		if err != nil {
+			// This is just an FYI error, don't block the test run.
+			logging.FromContext(mr.c).Error("failed to create the milestone event sender", zap.Error(err))
+		}
+		if milestones != nil {
+			env.milestones = milestones
+		}
+	}
+
 	if err := env.CreateNamespaceIfNeeded(); err != nil {
 		panic(err)
 	}
+
+	env.milestones.Environment(map[string]string{
+		// TODO: we could add more detail here, don't send secrets.
+		"requirementLevel": env.RequirementLevel().String(),
+		"featureState":     env.FeatureState().String(),
+		"namespace":        env.Namespace(),
+	})
 
 	return ctx, env
 }
@@ -119,6 +176,22 @@ func (mr *MagicEnvironment) FeatureState() feature.States {
 	return mr.s
 }
 
+// InNamespace takes the namespace that the tests should be run in instead of creating
+// a namespace. This is useful if the Unit Under Test (UUT) is created ahead of the tests
+// to be run. Longer term this should make it easier to decouple the UUT from the generic
+// conformance tests, for example, create a Broker of type {Kafka, RabbitMQ} and the tests
+// themselves should not care.
+func InNamespace(namespace string) EnvOpts {
+	return func(ctx context.Context, env Environment) (context.Context, error) {
+		mr, ok := env.(*MagicEnvironment)
+		if !ok {
+			return ctx, errors.New("InNamespace: not a magic env")
+		}
+		mr.namespace = namespace
+		return ctx, nil
+	}
+}
+
 func (mr *MagicEnvironment) Namespace() string {
 	return mr.namespace
 }
@@ -130,48 +203,102 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 	})
 }
 
-func (mr *MagicEnvironment) Test(ctx context.Context, t *testing.T, f *feature.Feature) {
-	t.Helper() // Helper marks the calling function as a test helper function.
+// Test implements Environment.Test.
+// In the MagicEnvironment implementation, the Store that is inside of the
+// Feature will be assigned to the context. If no Store is set on Feature,
+// Test will create a new store.KVStore and set it on the feature and then
+// apply it to the Context.
+func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
+	originalT.Helper() // Helper marks the calling function as a test helper function.
 
-	steps := feature.CollapseSteps(f.Steps)
+	mr.milestones.TestStarted(f.Name, originalT)
+	defer mr.milestones.TestFinished(f.Name, originalT)
 
-	for _, timing := range feature.Timings() {
-		// do it the slow way first.
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
+	if f.State == nil {
+		f.State = &state.KVStore{}
+	}
+	ctx = state.ContextWith(ctx, f.State)
 
-		t.Run(timing.String(), func(t *testing.T) {
-			t.Helper()      // Helper marks the calling function as a test helper function.
-			defer wg.Done() // Outer wait.
+	steps := categorizeSteps(f.Steps)
 
-			for _, s := range steps {
-				// Skip if step phase is not running.
-				if s.T != timing {
-					continue
-				}
-				t.Run(s.TestName(), func(t *testing.T) {
-					wg.Add(1)
-					defer wg.Done()
+	skipAssertions := false
+	skipRequirements := false
+	skipReason := ""
 
-					if mr.s&s.S == 0 {
-						t.Skipf("%s features not enabled for testing", s.S)
-					}
-					if mr.l&s.L == 0 {
-						t.Skipf("%s requirement not enabled for testing", s.L)
-					}
+	for _, s := range steps[feature.Setup] {
+		s := s
 
-					s := s
+		// Setup are executed always, no matter their level and state
+		internalT := mr.executeWithoutWrappingT(ctx, originalT, f, &s)
 
-					t.Helper() // Helper marks the calling function as a test helper function.
+		// Failed setup fails everything, so just run the teardown
+		if internalT.Failed() {
+			skipAssertions = true
+			skipRequirements = true // No need to test other requirements
+			break                   // No need to continue the setup
+		}
+	}
 
-					// Perform step.
-					s.Fn(ctx, t)
+	for _, s := range steps[feature.Requirement] {
+		s := s
 
-				})
-			}
-		})
+		if skipRequirements {
+			break
+		}
 
-		wg.Wait()
+		// Requirement never fails the parent test
+		internalT := mr.executeWithSkippingT(ctx, originalT, f, &s)
+
+		if internalT.Failed() {
+			skipAssertions = true
+			skipRequirements = true // No need to test other requirements
+			skipReason = fmt.Sprintf("requirement %q failed", s.Name)
+		}
+	}
+
+	for _, s := range steps[feature.Assert] {
+		s := s
+
+		if skipAssertions {
+			break
+		}
+
+		if mr.shouldFail(&s) {
+			mr.executeWithoutWrappingT(ctx, originalT, f, &s)
+		} else {
+			mr.executeWithSkippingT(ctx, originalT, f, &s)
+		}
+
+		// TODO implement fail fast feature to avoid proceeding with testing if an "expected level" assert fails here
+	}
+
+	for _, s := range steps[feature.Teardown] {
+		s := s
+
+		// Teardown are executed always, no matter their level and state
+		mr.executeWithoutWrappingT(ctx, originalT, f, &s)
+	}
+
+	if skipReason != "" {
+		originalT.Skipf("Skipping feature '%s' assertions because %s", f.Name, skipReason)
+	}
+}
+
+func (mr *MagicEnvironment) shouldFail(s *feature.Step) bool {
+	return !(mr.s&s.S == 0 || mr.l&s.L == 0)
+}
+
+// TestSet implements Environment.TestSet
+func (mr *MagicEnvironment) TestSet(ctx context.Context, t *testing.T, fs *feature.FeatureSet) {
+	t.Helper() // Helper marks the calling function as a test helper function
+
+	mr.milestones.TestSetStarted(fs.Name, t)
+	defer mr.milestones.TestSetFinished(fs.Name, t)
+
+	for _, f := range fs.Features {
+		// Make sure the name is appended
+		f.Name = fs.Name + "/" + f.Name
+		mr.Test(ctx, t, &f)
 	}
 }
 

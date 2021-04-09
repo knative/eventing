@@ -23,10 +23,13 @@ import (
 
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	"knative.dev/eventing/test/rekt/features"
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/test/rekt/features/broker"
+	b "knative.dev/eventing/test/rekt/resources/broker"
 )
 
 // TestBrokerAsMiddleware
@@ -41,10 +44,83 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, features.BrokerGoesReady("default", "MTChannelBroker"))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 
 	// Test that a Broker can act as middleware.
-	env.Test(ctx, t, features.BrokerAsMiddleware("default"))
+	env.Test(ctx, t, broker.SourceToSink("default"))
 
 	env.Finish()
+}
+
+func TestBrokerIngressConformance(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+	)
+
+	for _, f := range broker.BrokerIngressConformanceFeatures(eventing.MTChannelBrokerClassValue) {
+		env.Test(ctx, t, f)
+	}
+
+	env.Finish()
+}
+
+// TestBrokerDLQ
+func TestBrokerWithDLQ(t *testing.T) {
+	class := eventing.MTChannelBrokerClassValue
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
+}
+
+// TestBrokerWithFlakyDLQ
+func TestBrokerWithFlakyDLQ(t *testing.T) {
+	t.Skip("Eventshub needs work")
+
+	class := eventing.MTChannelBrokerClassValue
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+
+	// Test that a Broker can act as middleware.
+	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
+}
+
+// TestBrokerConformance
+func TestBrokerConformance(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
+	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
+	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }

@@ -22,8 +22,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
+	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/eventfilter"
-	broker "knative.dev/eventing/pkg/mtbroker"
 )
 
 const (

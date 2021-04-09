@@ -20,6 +20,7 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
@@ -36,42 +37,49 @@ type resourceDelegate struct {
 var _ cache.Store = (*resourceDelegate)(nil)
 
 func (a *resourceDelegate) Add(obj interface{}) error {
-	event, err := events.MakeAddEvent(a.source, obj, a.ref)
+	ctx, event, err := events.MakeAddEvent(a.source, obj, a.ref)
 	if err != nil {
 		a.logger.Infow("event creation failed", zap.Error(err))
 		return err
 	}
-
-	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
-		a.logger.Errorw("failed to send event", zap.Error(result))
-	}
+	a.sendCloudEvent(ctx, event)
 	return nil
 }
 
 func (a *resourceDelegate) Update(obj interface{}) error {
-	event, err := events.MakeUpdateEvent(a.source, obj, a.ref)
+	ctx, event, err := events.MakeUpdateEvent(a.source, obj, a.ref)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
 		return err
 	}
-
-	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
-		a.logger.Error("failed to send event", zap.Error(result))
-	}
+	a.sendCloudEvent(ctx, event)
 	return nil
 }
 
 func (a *resourceDelegate) Delete(obj interface{}) error {
-	event, err := events.MakeDeleteEvent(a.source, obj, a.ref)
+	ctx, event, err := events.MakeDeleteEvent(a.source, obj, a.ref)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
 		return err
 	}
-
-	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
-		a.logger.Error("failed to send event", zap.Error(result))
-	}
+	a.sendCloudEvent(ctx, event)
 	return nil
+}
+
+// sendCloudEvent sends a cloudevent everytime k8s api event is created, updated or deleted.
+func (a *resourceDelegate) sendCloudEvent(ctx context.Context, event cloudevents.Event) {
+	event.SetID(uuid.New().String()) // provide an ID here so we can track it with logging
+	defer a.logger.Debug("Finished sending cloudevent id: ", event.ID())
+	source := event.Context.GetSource()
+	subject := event.Context.GetSubject()
+	a.logger.Debugf("sending cloudevent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+
+	if result := a.ce.Send(ctx, event); !cloudevents.IsACK(result) {
+		a.logger.Errorw("failed to send cloudevent", zap.Error(result), zap.String("source", source),
+			zap.String("subject", subject), zap.String("id", event.ID()))
+	} else {
+		a.logger.Debugf("cloudevent sent id: %s, source: %s, subject: %s", event.ID(), source, subject)
+	}
 }
 
 // Stub cache.Store impl

@@ -32,7 +32,7 @@ func runSmokeTest(t *testing.T) {
 		context.Background(),
 		t,
 		cloudevents.EncodingBinary,
-		helpers.SubscriptionV1beta1,
+		helpers.SubscriptionV1,
 		"",
 		channelTestRunner,
 	)

@@ -18,12 +18,14 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
 spec:
+  {{ if .brokerName }}
   broker: {{ .brokerName }}
+  {{ end }}
   {{ if .filter }}
   filter:
     attributes:
     {{ range $key, $value := .filter.attributes }}
-      {{ $key }}: {{ $value }}
+      {{ $key }}: "{{ $value }}"
     {{ end }}
   {{end}}
   {{if .subscriber }}

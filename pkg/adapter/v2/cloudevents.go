@@ -75,7 +75,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, target string, ceOverri
 		return nil, err
 	}
 
-	ceClient, err := cloudevents.NewClientObserved(p, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
+	ceClient, err := cloudevents.NewClient(p, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 
 	if crStatusEventClient == nil {
 		crStatusEventClient = crstatusevent.GetDefaultClient()

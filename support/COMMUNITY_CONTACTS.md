@@ -8,8 +8,19 @@ community contact's duty (subject to change) is as followed:
 
 - Check the knative-users@ mailing list and #eventing-questions Slack channel
   for new unanswered questions.
-- Check
+- Check Eventing
   [unassigned issues / untriaged issues](https://github.com/knative/eventing/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+no%3Amilestone)
+  for unanswered questions.
+- Check Slack channel
+  [#eventing-questions](https://knative.slack.com/archives/C017X0PFC0P) for
+  unanswered questions. Any questions that relates to usability please instruct
+  user to
+  [open an usablity issue](https://github.com/knative/ux/issues/new?assignees=&labels=kind%2Ffriction-point&template=friction-point-template.md&title=)
+  and to join the channel
+  [#user-experience](https://knative.slack.com/archives/C01JBD1LSF3) to capture
+  user feedback.
+- Check Docs
+  [unassigned issues / untriaged issues](https://github.com/knative/docs/issues?q=is%3Aopen+is%3Aissue+label%3Akind%2Feventing+label%3Atriage%2Fneeds-eng-input)
   for unanswered questions.
 - You should already be added to @eventing-help usergroup by the previous
   contact person, and will be tagged into user questions in other channels.
@@ -21,8 +32,8 @@ community contact's duty (subject to change) is as followed:
 ### Monday
 
 - Check 'Eventing Triage' Peribolos group
-  https://github.com/knative/community/blob/509d00841920181611a8457da3f655ef014ff9bf/peribolos/knative.yaml#L669
-  and send a PR to add yourself if you aren't already in there.
+  https://github.com/knative/community/blob/main/peribolos/knative.yaml and send
+  a PR to add yourself if you aren't already in there.
 - Check the [Eventing test grid](https://testgrid.k8s.io/knative-eventing) for
   flakiness to pick a test and focus on fixing it during your week. Once you
   pick the test flake, assign the corresponding bug filed by flakiness test
@@ -78,7 +89,7 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 ```
 
 - [grantr](https://github.com/grantr)
-- [Harwayne](https://github.com/Harwayne)
+- [antoineco](https://github.com/antoineco)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
 - [n3wscott](https://github.com/n3wscott)
@@ -96,29 +107,13 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 
 # Schedule
 
-| Week       | Contact                                               |
-| ---------- | ----------------------------------------------------- |
-| 2021-01-04 | [n3wscott](https://github.com/n3wscott)               |
-| 2021-01-11 | [vaikas](https://github.com/vaikas)                   |
-| 2021-01-18 | [grantr](https://github.com/grantr)                   |
-| 2021-01-25 | [lionelvillard](https://github.com/lionelvillard)     |
-| 2021-02-01 | [zhongduo](https://github.com/zhongduo)               |
-| 2021-02-08 | [Harwayne](https://github.com/Harwayne)               |
-| 2021-02-15 | [matzew](https://github.com/matzew)                   |
-| 2021-02-22 | [lberk](https://github.com/lberk)                     |
-| 2021-03-01 | [pierDipi](https://github.com/pierDipi)               |
-| 2021-03-08 | [aliok](https://github.com/aliok)                     |
-| 2021-03-15 | [slinkydeveloper](https://github.com/slinkydeveloper) |
-| 2021-03-22 | [devguyio](https://github.com/devguyio)               |
-| 2021-03-29 | [n3wscott](https://github.com/n3wscott)               |
-| 2021-04-05 | [vaikas](https://github.com/vaikas)                   |
-| 2021-04-12 | [grantr](https://github.com/grantr)                   |
-| 2021-04-19 | [lionelvillard](https://github.com/lionelvillard)     |
-| 2021-04-26 | [slinkydeveloper](https://github.com/slinkydeveloper) |
-| 2021-05-03 | [Harwayne](https://github.com/Harwayne)               |
-| 2021-05-10 | [matzew](https://github.com/matzew)                   |
-| 2021-05-17 | [lberk](https://github.com/lberk)                     |
-| 2021-05-24 | [pierDipi](https://github.com/pierDipi)               |
-| 2021-05-31 | [aliok](https://github.com/aliok)                     |
-| 2021-06-07 | [zhongduo](https://github.com/zhongduo)               |
-| 2021-06-14 | [devguyio](https://github.com/devguyio)               |
+See [a machine-readable schedule here](support.rotation). The format is:
+
+```
+# comment lines are okay
+#@ metadata: value of the metadata
+RFC3339-date  |  username
+```
+
+You can see the current oncall at https://knative.party/ (which reads the
+machine-readable file).

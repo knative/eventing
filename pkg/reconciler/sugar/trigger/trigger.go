@@ -23,10 +23,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1beta1/trigger"
-	listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
+	listers "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/pkg/logging"
@@ -48,7 +48,7 @@ type Reconciler struct {
 // Check that our Reconciler implements triggerreconciler.Interface
 var _ triggerreconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1.Trigger) reconciler.Event {
 	if !r.isEnabled(t.GetAnnotations()) {
 		logging.FromContext(ctx).Debug("Injection for Trigger not enabled.")
 		return nil
@@ -58,7 +58,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1beta1.Trigger) reco
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		_, err = r.eventingClientSet.EventingV1beta1().Brokers(t.Namespace).Create(
+		_, err = r.eventingClientSet.EventingV1().Brokers(t.Namespace).Create(
 			ctx, resources.MakeBroker(t.Namespace, t.Spec.Broker), metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("Unable to create Broker: %w", err)

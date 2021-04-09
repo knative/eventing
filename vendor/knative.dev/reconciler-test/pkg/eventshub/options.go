@@ -19,14 +19,18 @@ package eventshub
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/network"
 
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/k8s"
+	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents"
 )
 
 // EventsHubOption is used to define an env for the eventshub image
@@ -41,6 +45,22 @@ var StartReceiver EventsHubOption = envAdditive("EVENT_GENERATORS", "receiver")
 func StartSender(sinkSvc string) EventsHubOption {
 	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
 		envs["SINK"] = "http://" + network.GetServiceHostname(sinkSvc, environment.FromContext(ctx).Namespace())
+		return nil
+	})
+}
+
+// StartSenderToResource starts the sender in the eventshub pointing to the provided resource
+// This can be used together with InputEvent, AddTracing, EnableIncrementalId, InputEncoding and InputHeader options
+func StartSenderToResource(gvr schema.GroupVersionResource, name string) EventsHubOption {
+	return compose(envAdditive("EVENT_GENERATORS", "sender"), func(ctx context.Context, envs map[string]string) error {
+		u, err := k8s.Address(ctx, gvr, name)
+		if err != nil {
+			return err
+		}
+		if u == nil {
+			return fmt.Errorf("resource %v named %s is not addressable", gvr, name)
+		}
+		envs["SINK"] = u.String()
 		return nil
 	})
 }
@@ -74,6 +94,22 @@ func ReplyWithAppendedData(appendData string) EventsHubOption {
 	return compose(
 		envOption("REPLY", "true"),
 		envOptionalOpt("REPLY_APPEND_DATA", appendData),
+	)
+}
+
+// ResponseWaitTime defines how much the receiver has to wait before replying.
+func ResponseWaitTime(delay time.Duration) EventsHubOption {
+	return envDuration("RESPONSE_WAIT_TIME", delay)
+}
+
+// FibonacciDrop will cause the receiver to reply with a bad status code following the fibonacci sequence
+var FibonacciDrop = envOption("SKIP_ALGORITHM", dropevents.Fibonacci)
+
+// DropFirstN will cause the receiver to reply with a bad status code to the first n events
+func DropFirstN(n uint) EventsHubOption {
+	return compose(
+		envOption("SKIP_ALGORITHM", dropevents.Sequence),
+		envOption("SKIP_COUNTER", strconv.FormatUint(uint64(n), 10)),
 	)
 }
 
@@ -133,6 +169,11 @@ func InputBody(b string) EventsHubOption {
 	return envOption("INPUT_BODY", b)
 }
 
+// InputMethod overrides which http method to use when sending events (default is POST)
+func InputMethod(method string) EventsHubOption {
+	return envOption("INPUT_METHOD", method)
+}
+
 // AddTracing adds tracing headers when sending events.
 var AddTracing = envOption("ADD_TRACING", "true")
 
@@ -142,6 +183,9 @@ var AddSequence = envOption("ADD_SEQUENCE", "true")
 
 // EnableIncrementalId replaces the event id with a new incremental id for each sent event.
 var EnableIncrementalId = envOption("INCREMENTAL_ID", "true")
+
+// OverrideTime overrides the event time with the time when sending the event.
+var OverrideTime = envOption("OVERRIDE_TIME", "true")
 
 // SendMultipleEvents defines how much events to send and the period between them.
 func SendMultipleEvents(numberOfEvents int, period time.Duration) EventsHubOption {

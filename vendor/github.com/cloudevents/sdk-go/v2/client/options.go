@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"github.com/cloudevents/sdk-go/v2/binding"
 )
@@ -63,11 +64,11 @@ func WithTimeNow() Option {
 
 // WithTracePropagation enables trace propagation via the distributed tracing
 // extension.
+// Deprecated: this is now noop and will be removed in future releases.
+// Don't use distributed tracing extension to propagate traces:
+// https://github.com/cloudevents/spec/blob/v1.0.1/extensions/distributed-tracing.md#using-the-distributed-tracing-extension
 func WithTracePropagation() Option {
 	return func(i interface{}) error {
-		if c, ok := i.(*obsClient); ok {
-			c.addTracing = true
-		}
 		return nil
 	}
 }
@@ -79,6 +80,30 @@ func WithPollGoroutines(pollGoroutines int) Option {
 	return func(i interface{}) error {
 		if c, ok := i.(*ceClient); ok {
 			c.pollGoroutines = pollGoroutines
+		}
+		return nil
+	}
+}
+
+// WithObservabilityService configures the observability service to use
+// to record traces and metrics
+func WithObservabilityService(service ObservabilityService) Option {
+	return func(i interface{}) error {
+		if c, ok := i.(*ceClient); ok {
+			c.observabilityService = service
+			c.inboundContextDecorators = append(c.inboundContextDecorators, service.InboundContextDecorators()...)
+		}
+		return nil
+	}
+}
+
+// WithInboundContextDecorator configures a new inbound context decorator.
+// Inbound context decorators are invoked to wrap additional informations from the binding.Message
+// and propagate these informations in the context passed to the event receiver.
+func WithInboundContextDecorator(dec func(context.Context, binding.Message) context.Context) Option {
+	return func(i interface{}) error {
+		if c, ok := i.(*ceClient); ok {
+			c.inboundContextDecorators = append(c.inboundContextDecorators, dec)
 		}
 		return nil
 	}

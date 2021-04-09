@@ -4,12 +4,13 @@ go 1.15
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cloudevents/sdk-go/v2 v2.2.0
+	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.0
+	github.com/cloudevents/sdk-go/v2 v2.4.0
 	github.com/golang/protobuf v1.4.3
-	github.com/google/go-cmp v0.5.4
-	github.com/google/gofuzz v1.1.0
+	github.com/google/go-cmp v0.5.5
+	github.com/google/gofuzz v1.2.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -24,23 +25,23 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tsenart/vegeta/v12 v12.8.4
 	github.com/wavesoftware/go-ensure v1.0.0
-	go.opencensus.io v0.22.5
+	go.opencensus.io v0.23.0
 	go.opentelemetry.io/otel v0.16.0
 	go.uber.org/atomic v1.7.0
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	google.golang.org/grpc v1.34.0
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
+	google.golang.org/grpc v1.36.0
 	k8s.io/api v0.19.7
 	k8s.io/apiextensions-apiserver v0.19.7
 	k8s.io/apimachinery v0.19.7
 	k8s.io/apiserver v0.19.7
 	k8s.io/client-go v0.19.7
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
-	knative.dev/hack v0.0.0-20210120165453-8d623a0af457
-	knative.dev/pkg v0.0.0-20210127163530-0d31134d5f4e
-	knative.dev/reconciler-test v0.0.0-20210127151131-28c3852c3e9b
+	knative.dev/hack v0.0.0-20210325223819-b6ab329907d3
+	knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3
+	knative.dev/pkg v0.0.0-20210406170139-b8e331a6abf3
+	knative.dev/reconciler-test v0.0.0-20210407152849-1103d57c0808
 	sigs.k8s.io/yaml v1.2.0
 )
 

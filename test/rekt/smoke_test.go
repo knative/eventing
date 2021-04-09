@@ -19,11 +19,17 @@ limitations under the License.
 package rekt
 
 import (
+	"strconv"
 	"testing"
 
 	_ "knative.dev/pkg/system/testing"
 
-	"knative.dev/eventing/test/rekt/features"
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/features/pingsource"
+	b "knative.dev/eventing/test/rekt/resources/broker"
+	ps "knative.dev/eventing/test/rekt/resources/pingsource"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 // TestSmoke_Broker
@@ -31,6 +37,7 @@ func TestSmoke_Broker(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
 
 	names := []string{
 		"default",
@@ -41,10 +48,8 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, features.BrokerGoesReady(name, "MTChannelBroker"))
+		env.Test(ctx, t, broker.GoesReady(name, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 	}
-
-	env.Finish()
 }
 
 // TestSmoke_Trigger
@@ -52,6 +57,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
 
 	names := []string{
 		"default",
@@ -62,11 +68,42 @@ func TestSmoke_Trigger(t *testing.T) {
 	}
 	brokerName := "broker-rekt"
 
-	env.Prerequisite(ctx, t, features.BrokerGoesReady(brokerName, "MTChannelBroker"))
+	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 
 	for _, name := range names {
-		env.Test(ctx, t, features.TriggerGoesReady(name, brokerName))
+		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))
+	}
+}
+
+// TestSmoke_PingSource
+func TestSmoke_PingSource(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
 	}
 
-	env.Finish()
+	configs := [][]manifest.CfgFn{
+		{},
+		{ps.WithData("application/json", `{"hello":"world"}`)},
+		{ps.WithData("text/plain", "hello, world!")},
+		{ps.WithDataBase64("application/json", "eyJoZWxsbyI6IndvcmxkIn0=")},
+		{ps.WithDataBase64("text/plain", "aGVsbG8sIHdvcmxkIQ==")},
+	}
+
+	for _, name := range names {
+		for i, cfg := range configs {
+			n := name + strconv.Itoa(i) // Make the name unique for each config.
+			if len(n) >= 64 {
+				n = n[:63] // 63 is the max length.
+			}
+			env.Test(ctx, t, pingsource.PingSourceGoesReady(n, cfg...))
+		}
+	}
 }

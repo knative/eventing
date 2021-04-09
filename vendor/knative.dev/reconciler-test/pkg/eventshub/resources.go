@@ -19,7 +19,6 @@ package eventshub
 import (
 	"context"
 	"strings"
-	"testing"
 
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -44,7 +43,7 @@ func init() {
 //     k8s.WithEventListener,
 //   )
 func Install(name string, options ...EventsHubOption) feature.StepFn {
-	return func(ctx context.Context, t *testing.T) {
+	return func(ctx context.Context, t feature.T) {
 		// Compute the user provided envs
 		envs := make(map[string]string)
 		if err := compose(options...)(ctx, envs); err != nil {

@@ -129,10 +129,10 @@ automatically._
 The [`upload-test-images.sh`](./upload-test-images.sh) script can be used to
 build and push the test images used by the e2e tests. It requires:
 
-- [`KO_DOCKER_REPO`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
+- [`KO_DOCKER_REPO`](https://github.com/knative/serving/blob/main/DEVELOPMENT.md#environment-setup)
   to be set
 - You to be
-  [authenticated with your `KO_DOCKER_REPO`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
+  [authenticated with your `KO_DOCKER_REPO`](https://github.com/knative/serving/blob/main/DEVELOPMENT.md#environment-setup)
 - [`docker`](https://docs.docker.com/install/) to be installed
 
 `PLATFORM` environment variable is optional. If it is specified, test images
@@ -163,4 +163,4 @@ uploading test images, `ko` will build an image from this folder.
 ## Flags
 
 Flags are similar to those in
-[`Knative Serving`](https://github.com/knative/serving/blob/master/test/README.md#flags-1).
+[`Knative Serving`](https://github.com/knative/serving/blob/main/test/README.md#flags-1).

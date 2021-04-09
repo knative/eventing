@@ -19,15 +19,15 @@ package resources
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
 const (
 	DefaultBrokerName = "default"
 )
 
-func MakeBroker(namespace, name string) *v1beta1.Broker {
-	return &v1beta1.Broker{
+func MakeBroker(namespace, name string) *v1.Broker {
+	return &v1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
 			Name:        name,

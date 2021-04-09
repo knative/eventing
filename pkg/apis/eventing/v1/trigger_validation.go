@@ -69,6 +69,12 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 
+	if ts.Delivery != nil {
+		if de := ts.Delivery.Validate(ctx); de != nil {
+			errs = errs.Also(de.ViaField("delivery"))
+		}
+	}
+
 	return errs
 }
 

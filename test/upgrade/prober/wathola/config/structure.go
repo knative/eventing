@@ -52,7 +52,7 @@ type SenderConfig struct {
 
 // ForwarderConfig holds configuration for forwarder
 type ForwarderConfig struct {
-	Target interface{}
+	Target string
 	Port   int
 }
 

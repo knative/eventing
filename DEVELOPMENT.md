@@ -19,14 +19,26 @@ Once you meet these requirements, you can
 > :information_source: If you intend to use event sinks based on Knative
 > Services as described in some of our examples, consider installing
 > [Knative Serving](http://github.com/knative/serving). A few
-> [contrib](http://github.com/knative/eventing-contrib) projects also have a
-> dependency on Serving.
+> [Knative Sandbox](https://github.com/knative-sandbox/?q=eventing&type=&language=)
+> projects also have a dependency on Serving.
 
 Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 
 ### Requirements
 
-You must have [`ko`](https://github.com/google/ko) installed.
+You must install these tools:
+
+1. [`go`](https://golang.org/doc/install): The language `Knative Eventing` is
+   developed with (version 1.15 or higher)
+1. [`git`](https://help.github.com/articles/set-up-git/): For source control
+1. [`ko`](https://github.com/google/ko): For building and deploying container
+   images to Kubernetes in a single command.
+1. [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/): For
+   managing development environments.
+1. [`bash`](https://www.gnu.org/software/bash/) v4 or higher. On macOS the
+   default bash is too old, you can use [Homebrew](https://brew.sh) to install a
+   later version. For running some automations, such as dependencies updates and
+   code generators.
 
 ### Create a cluster and a repo
 
@@ -125,21 +137,21 @@ kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=e
 ## Install Channels
 
 Install the
-[In-Memory-Channel](https://github.com/knative/eventing/tree/master/config/channels/in-memory-channel)
+[In-Memory-Channel](https://github.com/knative/eventing/tree/main/config/channels/in-memory-channel)
 since this is the
-[default channel](https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md).
+[default channel](https://github.com/knative/docs/blob/main/docs/eventing/channels/default-channels.md).
 
 ```shell
 ko apply -f config/channels/in-memory-channel/
 ```
 
 Depending on your needs you might want to install other
-[channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
+[channel implementations](https://github.com/knative/docs/blob/main/docs/eventing/channels/channels-crds.md).
 
 ## Install Broker
 
 Install the
-[MT Channel Broker](https://github.com/knative/eventing/tree/master/config/brokers/mt-channel-broker)
+[MT Channel Broker](https://github.com/knative/eventing/tree/main/config/brokers/mt-channel-broker)
 or any of the other Brokers available inside the `config/brokers/` directory.
 
 ```shell
@@ -147,7 +159,7 @@ ko apply -f config/brokers/mt-channel-broker/
 ```
 
 Depending on your needs you might want to install other
-[Broker implementations](https://github.com/knative/eventing/tree/master/docs/broker).
+[Broker implementations](https://github.com/knative/eventing/tree/main/docs/broker).
 
 ## (Optional) Install Sugar controller
 
@@ -252,3 +264,76 @@ Wireshark:
 ```
 kubectl sniff <POD_NAME> -n knative-eventing
 ```
+
+## Debugging Knative controllers and friends locally with Intellij Idea
+
+[Telepresence](https://www.telepresence.io/) can be leveraged to debug Knative
+controllers, webhooks and similar components.
+
+Telepresence allows you to use your local process, IDE, debugger, etc. but
+Kubernetes service calls get redirected to the process on your local. Similarly
+the calls on the local process goes to actual services that are running in
+Kubernetes.
+
+- Install Telepresence
+
+- Deploy Knative Eventing on your Kubernetes cluster.
+
+- Install [EnvFile plugin](https://plugins.jetbrains.com/plugin/7861-envfile) to
+  your Intellij
+
+- Run following command to swap the controller with the controller that we will
+  start later.
+
+```
+telepresence --namespace knative-eventing --swap-deployment eventing-controller --env-json eventing-controller-local-env.json
+```
+
+For debugging applications that receive traffic, such as webhooks, you also need
+to pass `--expose` parameter.
+
+For example:
+
+```
+telepresence --swap-deployment kafka-controller-manager --namespace knative-eventing --env-json kafka-controller-manager.json --expose 8443
+```
+
+This will replace the `eventing-controller` deployment on the cluster with a
+proxy.
+
+It will also create a `eventing-controller-local-env.json` file which we will
+use later on. Content of this `envfile` looks like this:
+
+```
+{
+    "CONFIG_LOGGING_NAME": "config-logging",
+    "EVENTING_WEBHOOK_PORT": "tcp://10.105.47.10:443",
+    "EVENTING_WEBHOOK_PORT_443_TCP": "tcp://10.105.47.10:443",
+    "EVENTING_WEBHOOK_PORT_443_TCP_ADDR": "10.105.47.10",
+    ...
+}
+```
+
+We need to pass these environment variables when we are starting our controller.
+
+- Create a run configuration in Intellij for `cmd/controller/main.go`:
+
+![Imgur](http://i.imgur.com/M6F3XA2.png)
+
+- Use the `envfile`:
+
+![Imgur](http://i.imgur.com/cdXkKNo.png)
+
+Now, use the run configuration and start the local controller in debug mode. You
+will see that the execution will pause in your breakpoints.
+
+- Clean up is easy. Just kill your local controller process and then hit
+  `Ctrl+C` on the terminal windows that you ran Telepresence initially.
+  Telepresence will delete the proxy. It will also revert the deployment on the
+  cluster back to its original state.
+
+**Notes**:
+
+- Networking works fine, but volumes (i.e. being able to access Kubernetes
+  volumes from local controller) are not tested
+- This method can also be used in production, but proceed with caution.

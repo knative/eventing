@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -29,22 +30,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/adapter/v2"
 
-	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/mtping"
+	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/apis/sources/v1beta2"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
@@ -67,19 +65,16 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 type Reconciler struct {
 	kubeClientSet kubernetes.Interface
 
-	// listers index properties about resources
-	pingLister       listers.PingSourceLister
-	deploymentLister appsv1listers.DeploymentLister
-
 	// tracking mt adapter deployment changes
 	tracker tracker.Interface
 
-	loggingContext context.Context
-	sinkResolver   *resolver.URIResolver
+	sinkResolver *resolver.URIResolver
+
+	// config accessor for observability/logging/tracing
+	configAcc reconcilersource.ConfigAccessor
 
 	// Leader election configuration for the mt receive adapter
 	leConfig string
-	configs  *reconcilersource.ConfigWatcher
 }
 
 // Check that our Reconciler implements ReconcileKind
@@ -142,26 +137,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1beta2.PingSour
 }
 
 func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1beta2.PingSource) (*appsv1.Deployment, error) {
-	loggingConfig, err := logging.ConfigToJSON(r.configs.LoggingConfig())
-	if err != nil {
-		logging.FromContext(ctx).Errorw("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
-	}
-
-	metricsConfig, err := metrics.OptionsToJSON(r.configs.MetricsConfig())
-	if err != nil {
-		logging.FromContext(ctx).Errorw("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
-	}
-
 	args := resources.Args{
-		LoggingConfig:   loggingConfig,
-		MetricsConfig:   metricsConfig,
+		ConfigEnvVars:   r.configAcc.ToEnvVars(),
 		LeConfig:        r.leConfig,
 		NoShutdownAfter: mtping.GetNoShutDownAfterValue(),
 		SinkTimeout:     adapter.GetSinkTimeout(logging.FromContext(ctx)),
 	}
 	expected := resources.MakeReceiveAdapterEnvVar(args)
 
-	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(mtadapterName)
+	d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Get(ctx, mtadapterName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))

@@ -81,22 +81,6 @@ func EventTransformationForSubscriptionTestHelper(
 		switch subscriptionVersion {
 		case SubscriptionV1:
 			// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
-			client.CreateSubscriptionsV1OrFail(
-				subscriptionNames1,
-				channelNames[0],
-				&channel,
-				resources.WithSubscriberForSubscriptionV1(transformationPodName),
-				resources.WithReplyForSubscriptionV1(channelNames[1], &channel),
-			)
-			// create subscriptions that subscribe the second channel, and forward the received events to the logger service
-			client.CreateSubscriptionsV1OrFail(
-				subscriptionNames2,
-				channelNames[1],
-				&channel,
-				resources.WithSubscriberForSubscriptionV1(recordEventsPodName),
-			)
-		case SubscriptionV1beta1:
-			// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
 			client.CreateSubscriptionsOrFail(
 				subscriptionNames1,
 				channelNames[0],
@@ -111,7 +95,6 @@ func EventTransformationForSubscriptionTestHelper(
 				&channel,
 				resources.WithSubscriberForSubscription(recordEventsPodName),
 			)
-
 		default:
 			t.Fatalf("Invalid subscription version")
 		}

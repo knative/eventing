@@ -9,8 +9,8 @@ Each specification for _Sources_ and _Channels_ define some more fine-grained
 delivery mechanism around their data plane. For details consult the respective
 specifications.
 
-- [Source Delivery](../spec/sources.md#source-event-delivery)
-- [Channel Delivery](../spec/channel.md#data-plane)
+- [Source Delivery](https://github.com/knative/specs/blob/main/specs/eventing/sources.md#source-event-delivery)
+- [Channel Delivery](https://github.com/knative/specs/blob/main/specs/eventing/channel.md#data-plane)
 
 ## Problem
 

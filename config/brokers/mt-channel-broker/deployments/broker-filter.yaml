@@ -34,7 +34,7 @@ spec:
       containers:
       - name: filter
         terminationMessagePolicy: FallbackToLogsOnError
-        image: ko://knative.dev/eventing/cmd/mtbroker/filter
+        image: ko://knative.dev/eventing/cmd/broker/filter
         readinessProbe: &probe
           failureThreshold: 3
           httpGet:

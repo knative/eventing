@@ -71,6 +71,8 @@ SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(latest_version)
 
+readonly SKIP_UPLOAD_TEST_IMAGES="${SKIP_UPLOAD_TEST_IMAGES:-}"
+
 UNINSTALL_LIST=()
 
 # Setup the Knative environment for running tests.
@@ -237,15 +239,17 @@ function install_sugar() {
 }
 
 function unleash_duck() {
+  # Extra parameters for ko apply
+  KO_FLAGS="${KO_FLAGS:-}"
   echo "enable debug logging"
   cat test/config/config-logging.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict -f - || return $?
+    ko apply --strict ${KO_FLAGS} -f - || return $?
 
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict -f - || return $?
+    ko apply --strict ${KO_FLAGS} -f - || return $?
 }
 
 # Teardown the Knative environment after tests finish.
@@ -293,10 +297,13 @@ function test_setup() {
   # Clean up kail so it doesn't interfere with job shutting down
   add_trap "kill $kail_pid || true" EXIT
 
+  export KO_FLAGS="--platform=linux/amd64"
   install_test_resources || return 1
 
-  echo ">> Publish test images"
-  "$(dirname "${BASH_SOURCE[0]}")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
+  if [[ -z "${SKIP_UPLOAD_TEST_IMAGES:-}" ]]; then
+    echo ">> Publish test images"
+    "$(dirname "${BASH_SOURCE[0]}")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
+  fi
 }
 
 # Tear down resources used in the eventing tests.

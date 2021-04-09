@@ -34,7 +34,7 @@ func WithLoggingConfig(ctx context.Context, env environment.Environment) (contex
 	knativeNamespace := KnativeNamespaceFromContext(ctx)
 	cm, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(knativeNamespace).Get(context.Background(), logging.ConfigMapName(), metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error while retrieving the %s config map in namespace %s: %+v", logging.ConfigMapName(), knativeNamespaceConfig{}, errors.WithStack(err))
+		return nil, fmt.Errorf("error while retrieving the %s config map in namespace %s: %+v", logging.ConfigMapName(), knativeNamespace, errors.WithStack(err))
 	}
 
 	config, err := logging.NewConfigFromMap(cm.Data)

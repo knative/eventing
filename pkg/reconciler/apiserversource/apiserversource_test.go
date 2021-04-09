@@ -294,6 +294,102 @@ func TestReconcile(t *testing.T) {
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}, {
+		Name: "missing sink",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+		},
+		Key: testNS + "/" + sourceName,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "SinkNotFound",
+				`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceSinkNotFound,
+			),
+		}},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "receive adapter does not exist, fails to create",
+		Objects: []runtime.Object{
+			rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			rttestingv1.NewChannel(sinkName, testNS,
+				rttestingv1.WithInitChannelConditions,
+				rttestingv1.WithChannelAddress(sinkDNS),
+			),
+		},
+		Key:     testNS + "/" + sourceName,
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, apiserversourceDeploymentCreated,
+				"Deployment created, error:inducing failure for create deployments"),
+			Eventf(corev1.EventTypeWarning, "InternalError",
+				"inducing failure for create deployments"),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: rttestingv1.NewApiServerSource(sourceName, testNS,
+				rttestingv1.WithApiServerSourceSpec(sourcesv1.ApiServerSourceSpec{
+					Resources: []sourcesv1.APIVersionKindSelector{{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					}},
+					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
+				}),
+				rttestingv1.WithApiServerSourceUID(sourceUID),
+				rttestingv1.WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				rttestingv1.WithInitApiServerSourceConditions,
+				rttestingv1.WithApiServerSourceSink(sinkURI),
+				rttestingv1.WithApiServerSourceStatusObservedGeneration(generation),
+				rttestingv1.WithApiServerSourceSufficientPermissions,
+			),
+		}},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+			makeReceiveAdapter(t),
+		},
+		WithReactors: []clientgotesting.ReactionFunc{
+			subjectAccessReviewCreateReactor(true),
+			InduceFailure("create", "Deployments"),
+		},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+
+	}, {
 		Name: "valid with relative uri reference",
 		Objects: []runtime.Object{
 			rttestingv1.NewApiServerSource(sourceName, testNS,

@@ -113,7 +113,7 @@ func (a *mtpingAdapter) Update(ctx context.Context, source *v1beta2.PingSource) 
 	a.entryidMu.Unlock()
 }
 
-func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta2.PingSource) {
+func (a *mtpingAdapter) Remove(source *v1beta2.PingSource) {
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 
 	a.entryidMu.RLock()
@@ -127,4 +127,14 @@ func (a *mtpingAdapter) Remove(ctx context.Context, source *v1beta2.PingSource) 
 		delete(a.entryids, key)
 		a.entryidMu.Unlock()
 	}
+}
+
+func (a *mtpingAdapter) RemoveAll(ctx context.Context) {
+	a.entryidMu.Lock()
+	defer a.entryidMu.Unlock()
+
+	for _, id := range a.entryids {
+		a.runner.RemoveSchedule(id)
+	}
+	a.entryids = make(map[string]cron.EntryID)
 }

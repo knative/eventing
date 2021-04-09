@@ -19,17 +19,48 @@ package feature
 import (
 	"context"
 	"fmt"
-	"testing"
+	"runtime"
+	"strings"
+
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 // Feature is a list of steps and feature name.
 type Feature struct {
 	Name  string
 	Steps []Step
+	State state.Store
+}
+
+// NewFeatureNamed creates a new feature with the provided name
+func NewFeatureNamed(name string) *Feature {
+	f := new(Feature)
+	f.Name = name
+	return f
+}
+
+// NewFeature creates a new feature with name taken from the caller name
+func NewFeature() *Feature {
+	f := new(Feature)
+
+	pc, _, _, _ := runtime.Caller(1)
+	caller := runtime.FuncForPC(pc)
+	if caller != nil {
+		splitted := strings.Split(caller.Name(), ".")
+		f.Name = splitted[len(splitted)-1]
+	}
+
+	return f
+}
+
+// FeatureSet is a list of features and feature set name.
+type FeatureSet struct {
+	Name     string
+	Features []Feature
 }
 
 // StepFn is the function signature for steps.
-type StepFn func(ctx context.Context, t *testing.T)
+type StepFn func(ctx context.Context, t T)
 
 // Step is a structure to hold the step function, step name and state, level and
 // timing configuration.
@@ -72,6 +103,12 @@ func (f *Feature) Requirement(name string, fn StepFn) {
 		T:    Requirement,
 		Fn:   fn,
 	})
+}
+
+// Assert is a shortcut for Stable(name).Must(name, fn),
+// useful for developing integration tests that doesn't require assertion levels.
+func (f *Feature) Assert(name string, fn StepFn) {
+	f.Stable(name).Must(name, fn)
 }
 
 // Assert adds a step function to the feature set at the Assert timing phase.

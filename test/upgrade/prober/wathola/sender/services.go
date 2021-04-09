@@ -147,7 +147,7 @@ func (h httpSender) Supports(endpoint interface{}) bool {
 
 func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error {
 	url := endpoint.(string)
-	c, err := cloudevents.NewDefaultClient()
+	c, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		return err
 	}

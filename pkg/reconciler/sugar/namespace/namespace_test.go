@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -35,7 +35,7 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -45,7 +45,7 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
 }
 
 func TestEnabledByDefault(t *testing.T) {
@@ -126,7 +126,7 @@ func TestEnabledByDefault(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(sugar.InjectionDisabledLabels()),
 			),
-			&v1beta1.Broker{
+			&v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      resources.DefaultBrokerName,
@@ -143,7 +143,7 @@ func TestEnabledByDefault(t *testing.T) {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			isEnabled:         sugar.OnByDefault,
-			brokerLister:      listers.GetV1Beta1BrokerLister(),
+			brokerLister:      listers.GetBrokerLister(),
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,
@@ -224,7 +224,7 @@ func TestDisabledByDefault(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(sugar.InjectionDisabledLabels()),
 			),
-			&v1beta1.Broker{
+			&v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      resources.DefaultBrokerName,
@@ -241,7 +241,7 @@ func TestDisabledByDefault(t *testing.T) {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			isEnabled:         sugar.OffByDefault,
-			brokerLister:      listers.GetV1Beta1BrokerLister(),
+			brokerLister:      listers.GetBrokerLister(),
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,

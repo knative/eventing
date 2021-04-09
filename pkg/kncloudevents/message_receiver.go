@@ -38,7 +38,11 @@ type HTTPMessageReceiver struct {
 	server   *http.Server
 	listener net.Listener
 
-	checker http.HandlerFunc
+	checker          http.HandlerFunc
+	drainQuietPeriod time.Duration
+
+	// Used to signal when receiver is listening
+	Ready chan interface{}
 }
 
 // HTTPMessageReceiverOption enables further configuration of a HTTPMessageReceiver.
@@ -48,6 +52,9 @@ func NewHTTPMessageReceiver(port int, o ...HTTPMessageReceiverOption) *HTTPMessa
 	h := &HTTPMessageReceiver{
 		port: port,
 	}
+
+	h.Ready = make(chan interface{})
+
 	for _, opt := range o {
 		opt(h)
 	}
@@ -64,6 +71,13 @@ func WithChecker(checker http.HandlerFunc) HTTPMessageReceiverOption {
 	}
 }
 
+// WithDrainQuietPeriod configures the QuietPeriod for the Drainer.
+func WithDrainQuietPeriod(duration time.Duration) HTTPMessageReceiverOption {
+	return func(h *HTTPMessageReceiver) {
+		h.drainQuietPeriod = duration
+	}
+}
+
 // Blocking
 func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.Handler) error {
 	var err error
@@ -74,6 +88,7 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 	drainer := &handlers.Drainer{
 		Inner:       CreateHandler(handler),
 		HealthCheck: recv.checker,
+		QuietPeriod: recv.drainQuietPeriod,
 	}
 	recv.server = &http.Server{
 		Addr:    recv.listener.Addr().String(),
@@ -82,6 +97,7 @@ func (recv *HTTPMessageReceiver) StartListen(ctx context.Context, handler http.H
 
 	errChan := make(chan error, 1)
 	go func() {
+		close(recv.Ready)
 		errChan <- recv.server.Serve(recv.listener)
 	}()
 

@@ -26,6 +26,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
+// Deprecated
 func ServiceAccountCanDoVerbOnResourceOrFail(client *testlib.Client, gvr schema.GroupVersionResource, subresource string, saName string, verb string) {
 	r, err := client.Kube.AuthorizationV1().SubjectAccessReviews().Create(context.Background(), &authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{

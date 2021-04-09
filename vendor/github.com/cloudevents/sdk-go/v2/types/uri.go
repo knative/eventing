@@ -68,6 +68,10 @@ func (u *URI) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
+func (u URI) Validate() bool {
+	return u.IsAbs()
+}
+
 // String returns the full string representation of the URI-Reference.
 func (u *URI) String() string {
 	if u == nil {

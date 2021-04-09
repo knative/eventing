@@ -23,13 +23,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
@@ -40,11 +40,12 @@ const (
 	retryTimeout  = 4 * time.Minute
 )
 
+// EventInfoMatcher returns an error if the input event info doesn't match the criteria
+type EventInfoMatcher func(eventshub.EventInfo) error
+
 // Stateful store of events published by eventshub pod it is pointed at.
 // Implements k8s.EventHandler
 type Store struct {
-	tb testing.TB
-
 	podName      string
 	podNamespace string
 
@@ -62,22 +63,21 @@ func StoreFromContext(ctx context.Context, name string) *Store {
 	panic("no event store found in the context for the provided name " + name)
 }
 
-func registerEventsHubStore(eventListener *k8s.EventListener, tb testing.TB, podName string, podNamespace string) {
+func registerEventsHubStore(eventListener *k8s.EventListener, t feature.T, podName string, podNamespace string) {
 	store := &Store{
-		tb:           tb,
 		podName:      podName,
 		podNamespace: podNamespace,
 	}
 
 	numEventsAlreadyPresent := eventListener.AddHandler(podName, store)
-	tb.Logf("Store added to the EventListener, which has already seen %v events", numEventsAlreadyPresent)
+	t.Logf("Store added to the EventListener, which has already seen %v events", numEventsAlreadyPresent)
 }
 
 func (ei *Store) getDebugInfo() string {
 	return fmt.Sprintf("Pod '%s' in namespace '%s'", ei.podName, ei.podNamespace)
 }
 
-func (ei *Store) getEventInfo() []eventshub.EventInfo {
+func (ei *Store) Collected() []eventshub.EventInfo {
 	ei.lock.Lock()
 	defer ei.lock.Unlock()
 	return ei.collected
@@ -96,7 +96,7 @@ func (ei *Store) Handle(event *corev1.Event) {
 	eventInfo := eventshub.EventInfo{}
 	err := json.Unmarshal([]byte(event.Message), &eventInfo)
 	if err != nil {
-		ei.tb.Errorf("Received EventInfo that cannot be unmarshalled! %+v", err)
+		fmt.Printf("[ERROR] Received EventInfo that cannot be unmarshalled! %+v\n", err)
 		return
 	}
 
@@ -131,7 +131,7 @@ func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, even
 	lastEvents := []eventshub.EventInfo{}
 	var nonMatchingErrors []error
 
-	allEvents := ei.getEventInfo()
+	allEvents := ei.Collected()
 	for i := range allEvents {
 		if err := f(allEvents[i]); err == nil {
 			allMatch = append(allMatch, allEvents[i])
@@ -152,52 +152,48 @@ func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, even
 
 // AssertAtLeast assert that there are at least min number of match for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertAtLeast(min int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
-	ei.tb.Helper()
+func (ei *Store) AssertAtLeast(t feature.T, min int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
 	events, err := ei.waitAtLeastNMatch(allOf(matchers...), min)
 	if err != nil {
-		ei.tb.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
+		t.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
-	ei.tb.Logf("Assert passed")
+	t.Logf("Assert passed")
 	return events
 }
 
 // AssertInRange asserts that there are at least min number of matches and at most max number of matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertInRange(min int, max int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
-	ei.tb.Helper()
-	events := ei.AssertAtLeast(min, matchers...)
+func (ei *Store) AssertInRange(t feature.T, min int, max int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
+	events := ei.AssertAtLeast(t, min, matchers...)
 	if max > 0 && len(events) > max {
-		ei.tb.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
+		t.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
-	ei.tb.Logf("Assert passed")
+	t.Logf("Assert passed")
 	return events
 }
 
 // AssertNot asserts that there aren't any matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertNot(matchers ...EventInfoMatcher) []eventshub.EventInfo {
-	ei.tb.Helper()
+func (ei *Store) AssertNot(t feature.T, matchers ...EventInfoMatcher) []eventshub.EventInfo {
 	res, recentEvents, _, err := ei.Find(matchers...)
 	if err != nil {
-		ei.tb.Fatalf("Unexpected error during find on eventshub '%s': %+v", ei.podName, errors.WithStack(err))
+		t.Fatalf("Unexpected error during find on eventshub '%s': %+v", ei.podName, errors.WithStack(err))
 	}
 
 	if len(res) != 0 {
-		ei.tb.Fatalf("Assert not failed: %+v", errors.WithStack(
+		t.Fatalf("Assert not failed: %+v", errors.WithStack(
 			fmt.Errorf("Unexpected matches on eventshub '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
-	ei.tb.Logf("Assert passed")
+	t.Logf("Assert passed")
 	return res
 }
 
 // AssertExact assert that there are exactly n matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertExact(n int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
-	ei.tb.Helper()
-	events := ei.AssertInRange(n, n, matchers...)
-	ei.tb.Logf("Assert passed")
+func (ei *Store) AssertExact(t feature.T, n int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
+	events := ei.AssertInRange(t, n, n, matchers...)
+	t.Logf("Assert passed")
 	return events
 }
 
@@ -242,4 +238,16 @@ func formatErrors(errs []error) string {
 		sb.WriteRune('\n')
 	}
 	return sb.String()
+}
+
+// We don't need to expose this, since all the signatures already executes this
+func allOf(matchers ...EventInfoMatcher) EventInfoMatcher {
+	return func(have eventshub.EventInfo) error {
+		for _, m := range matchers {
+			if err := m(have); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }

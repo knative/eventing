@@ -34,28 +34,6 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 
-func TestSingleBinaryEventForChannelV1Beta1(t *testing.T) {
-	helpers.SingleEventForChannelTestHelper(
-		context.Background(),
-		t,
-		cloudevents.EncodingBinary,
-		helpers.SubscriptionV1beta1,
-		"",
-		channelTestRunner,
-	)
-}
-
-func TestSingleStructuredEventForChannelV1Beta1(t *testing.T) {
-	helpers.SingleEventForChannelTestHelper(
-		context.Background(),
-		t,
-		cloudevents.EncodingStructured,
-		helpers.SubscriptionV1beta1,
-		"",
-		channelTestRunner,
-	)
-}
-
 func TestSingleBinaryEventForChannelV1(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		context.Background(),

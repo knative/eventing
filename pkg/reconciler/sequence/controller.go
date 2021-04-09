@@ -22,7 +22,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/flows/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -61,7 +61,7 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1beta1.Kind("Sequence")),
+		FilterFunc: controller.FilterControllerGK(v1.Kind("Sequence")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

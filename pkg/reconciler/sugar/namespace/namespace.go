@@ -29,7 +29,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 )
@@ -61,7 +61,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) pk
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		_, err = r.eventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(
+		_, err = r.eventingClientSet.EventingV1().Brokers(ns.Name).Create(
 			ctx, resources.MakeBroker(ns.Name, resources.DefaultBrokerName), metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to create Broker: %w", err)

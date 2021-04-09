@@ -17,7 +17,6 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -105,24 +104,6 @@ func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1.Broker) {
 	b.Status = *v1.TestHelper.ReadyBrokerStatus()
-}
-
-func WithDeprecatedStatus(b *v1.Broker) {
-	dc := apis.Condition{
-		Type:     "Deprecated",
-		Reason:   "SingleTenantChannelBrokerDeprecated",
-		Status:   corev1.ConditionTrue,
-		Severity: apis.ConditionSeverityWarning,
-		Message:  "Single Tenant Channel Brokers are deprecated and will be removed in release 0.16. Use Multi Tenant Channel Brokers instead.",
-	}
-
-	for i, c := range b.Status.Status.Conditions {
-		if c.Type == dc.Type {
-			b.Status.Status.Conditions[i] = dc
-			return
-		}
-	}
-	b.Status.Status.Conditions = append(b.Status.Status.Conditions, dc)
 }
 
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.

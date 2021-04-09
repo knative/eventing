@@ -2,7 +2,7 @@ name: KinD e2e tests
 
 on:
   pull_request:
-    branches: [ 'master' ]
+    branches: [ 'main', 'master' ]
 
   schedule:
   - cron: '0 */2 * * *'
@@ -21,9 +21,9 @@ jobs:
       fail-fast: false # Keep running if one leg fails.
       matrix:
         k8s-version:
-        - v1.18.8
-        - v1.19.4
-        - v1.20.0
+        - v1.18.15
+        - v1.19.7
+        - v1.20.2
 
         test-suite:
         - ./test/rekt/...
@@ -32,28 +32,28 @@ jobs:
 
         # Map between K8s and KinD versions.
         # This is attempting to make it a bit clearer what's being tested.
-        # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.9.0
+        # See: https://github.com/kubernetes-sigs/kind/releases/tag/v0.10.0
         include:
-        - k8s-version: v1.18.8
-          kind-version: v0.9.0
-          kind-image-sha: sha256:f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb
-        - k8s-version: v1.19.4
-          kind-version: v0.9.0
-          kind-image-sha: sha256:796d09e217d93bed01ecf8502633e48fd806fe42f9d02fdd468b81cd4e3bd40b
-        - k8s-version: v1.20.0
-          kind-version: v0.9.0
-          kind-image-sha: sha256:b40ecf8bcb188f6a0d0f5d406089c48588b75edc112c6f635d26be5de1c89040
+        - k8s-version: v1.18.15
+          kind-version: v0.10.0
+          kind-image-sha: sha256:5c1b980c4d0e0e8e7eb9f36f7df525d079a96169c8a8f20d8bd108c0d0889cc4
+        - k8s-version: v1.19.7
+          kind-version: v0.10.0
+          kind-image-sha: sha256:a70639454e97a4b733f9d9b67e12c01f6b0297449d5b9cbbef87473458e26dca
+        - k8s-version: v1.20.2
+          kind-version: v0.10.0
+          kind-image-sha: sha256:8f7ea6e7642c0da54f04a7ee10431549c0257315b3a634f6ef2fecaaedb19bab
 
         # Add the flags we use for each of these test suites.
         - test-suite: ./test/e2e
           extra-test-flags: >
             -brokerclass=MTChannelBasedBroker
-            -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
+            -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1alpha2:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1alpha2:PingSource
         - test-suite: ./test/conformance
           extra-test-flags: >
-            -brokers=eventing.knative.dev/v1beta1:MTChannelBasedBroker
-            -channels=messaging.knative.dev/v1beta1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel,messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
+            -brokers=eventing.knative.dev/v1:MTChannelBasedBroker
+            -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource
     env:
       GOPATH: ${{ github.workspace }}
@@ -64,6 +64,9 @@ jobs:
       # so reruns don't just give us a completely new value.
       CLUSTER_SUFFIX: c${{ github.run_id }}.local
       ARTIFACTS: ${{ github.workspace }}/artifacts
+
+      NODE_VERSION: ${{ matrix.k8s-version }}
+      NODE_SHA: ${{ matrix.kind-image-sha }}
 
     steps:
     - name: Set up Go 1.15.x
@@ -98,43 +101,9 @@ jobs:
         chmod +x ./kind
         sudo mv kind /usr/local/bin
 
-    - name: Configure KinD Cluster
-      working-directory: ./src/knative.dev/eventing
-      run: |
-        set -x
-
-        # KinD configuration.
-        cat > kind.yaml <<EOF
-        apiVersion: kind.x-k8s.io/v1alpha4
-        kind: Cluster
-
-        # This is needed in order to support projected volumes with service account tokens.
-        # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600268272383600
-        kubeadmConfigPatches:
-          - |
-            apiVersion: kubeadm.k8s.io/v1beta2
-            kind: ClusterConfiguration
-            metadata:
-              name: config
-            apiServer:
-              extraArgs:
-                "service-account-issuer": "kubernetes.default.svc"
-                "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
-            networking:
-              dnsDomain: "${CLUSTER_SUFFIX}"
-        nodes:
-        - role: control-plane
-          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
-        - role: worker
-          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
-        EOF
-
     - name: Create KinD Cluster
       working-directory: ./src/knative.dev/eventing
-      run: |
-        set -x
-
-        kind create cluster --config kind.yaml
+      run: ./hack/create-kind-cluster.sh
 
     - name: Install Knative Eventing
       run: |
@@ -145,26 +114,18 @@ jobs:
         # Build and Publish our containers to the docker daemon (including test assets)
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
-        ko apply -P \
-           -f config/ \
-           `# Install the MT Broker` \
-           -f config/core/configmaps/default-broker.yaml \
-           -f config/brokers/mt-channel-broker \
-           `# Install the sugar controller` \
-           -f config/sugar/500-controller.yaml \
-           `# Install the in-memory channel` \
-           -f config/channels/in-memory-channel
-
-        # Change the cluster domain to the correct one.
-        ko apply -Pf test/config/
+           
+        export KO_FLAGS="--platform=linux/amd64"
+        source ./test/e2e-common.sh
+        knative_setup
 
         # Be KinD to these tests.
         kubectl scale -n${SYSTEM_NAMESPACE} deployment/chaosduck --replicas=0
 
-    - name: Upload Test Images
+    - name: Test Setup
       run: |
-        # Build and Publish our test images to the docker daemon.
-        ./test/upload-test-images.sh
+        source ./test/e2e-common.sh
+        test_setup
 
     - name: Wait for things to be up
       run: |
