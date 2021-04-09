@@ -44,7 +44,7 @@ import (
 // Client holds instances of interfaces for making requests to Knative.
 type Client struct {
 	Kube          *test.KubeClient
-	Eventing      *eventing.Clientset
+	Eventing      eventing.Interface
 	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
 	Dynamic       dynamic.Interface
 	Config        *rest.Config

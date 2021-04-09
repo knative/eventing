@@ -107,7 +107,7 @@ func NewConfig(namespace string) *Config {
 		},
 		Wathola: Wathola{
 			ConfigMap: ConfigMap{
-				ConfigTemplate:   defaultConfigFilename,
+				ConfigTemplate:   "",
 				ConfigMapName:    defaultConfigName,
 				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
 				ConfigFilename:   defaultConfigFilename,
@@ -191,10 +191,13 @@ func (p *prober) deployTriggers() {
 	}
 }
 
-func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) string {
-	_, filename, _, _ := runtime.Caller(0)
-	templateFilepath := path.Join(path.Dir(filename), templateName)
-	templateBytes, err := ioutil.ReadFile(templateFilepath)
+func (p *prober) compileTemplate(templatePath string, brokerURL fmt.Stringer) string {
+	templateName := "upgrade-test-config.toml"
+	if !path.IsAbs(templatePath) {
+		_, filename, _, _ := runtime.Caller(0)
+		templatePath = path.Join(path.Dir(filename), templatePath)
+	}
+	templateBytes, err := ioutil.ReadFile(templatePath)
 	ensure.NoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
 	ensure.NoError(err)
