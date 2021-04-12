@@ -25,7 +25,6 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/pkg/test_images"
 )
 
 func init() {
@@ -51,8 +50,8 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		}
 
 		// eventshub needs tracing and logging config
-		envs[test_images.ConfigLoggingEnv] = knative.LoggingConfigFromContext(ctx)
-		envs[test_images.ConfigTracingEnv] = knative.TracingConfigFromContext(ctx)
+		envs[ConfigLoggingEnv] = knative.LoggingConfigFromContext(ctx)
+		envs[ConfigTracingEnv] = knative.TracingConfigFromContext(ctx)
 
 		// Deploy
 		if _, err := manifest.InstallLocalYaml(ctx, map[string]interface{}{

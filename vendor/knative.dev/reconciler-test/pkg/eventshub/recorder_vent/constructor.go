@@ -21,16 +21,14 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"knative.dev/pkg/system"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	ref "k8s.io/client-go/tools/reference"
-
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/system"
 
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 type envConfig struct {
