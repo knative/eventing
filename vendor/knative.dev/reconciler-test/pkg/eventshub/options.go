@@ -134,6 +134,11 @@ func EnableProbeSink(timeout time.Duration) EventsHubOption {
 // DisableProbeSink will disable the probe sink feature of sender, starting sending directly events after it's started.
 var DisableProbeSink = envOption("PROBE_SINK", "false")
 
+// InputYAML is an option to provide the events to send via yaml path when deploying the event sender
+func InputYAML(path string) EventsHubOption {
+	return envAdditive("INPUT_YAML", path)
+}
+
 // InputEvent is an option to provide the event to send when deploying the event sender
 func InputEvent(event cloudevents.Event) EventsHubOption {
 	encodedEvent, err := json.Marshal(event)

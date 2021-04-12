@@ -96,7 +96,7 @@ func (ei *Store) Handle(event *corev1.Event) {
 	eventInfo := eventshub.EventInfo{}
 	err := json.Unmarshal([]byte(event.Message), &eventInfo)
 	if err != nil {
-		fmt.Printf("[ERROR] Received EventInfo that cannot be unmarshalled! %+v\n", err)
+		fmt.Printf("[ERROR] Received EventInfo that cannot be unmarshalled! \n----\n%s\n----\n%+v\n", event.Message, err)
 		return
 	}
 
@@ -157,7 +157,6 @@ func (ei *Store) AssertAtLeast(t feature.T, min int, matchers ...EventInfoMatche
 	if err != nil {
 		t.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
-	t.Logf("Assert passed")
 	return events
 }
 
@@ -168,7 +167,6 @@ func (ei *Store) AssertInRange(t feature.T, min int, max int, matchers ...EventI
 	if max > 0 && len(events) > max {
 		t.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
-	t.Logf("Assert passed")
 	return events
 }
 
@@ -185,7 +183,6 @@ func (ei *Store) AssertNot(t feature.T, matchers ...EventInfoMatcher) []eventshu
 			fmt.Errorf("Unexpected matches on eventshub '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
-	t.Logf("Assert passed")
 	return res
 }
 
@@ -193,7 +190,6 @@ func (ei *Store) AssertNot(t feature.T, matchers ...EventInfoMatcher) []eventshu
 // This method fails the test if the assert is not fulfilled.
 func (ei *Store) AssertExact(t feature.T, n int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
 	events := ei.AssertInRange(t, n, n, matchers...)
-	t.Logf("Assert passed")
 	return events
 }
 

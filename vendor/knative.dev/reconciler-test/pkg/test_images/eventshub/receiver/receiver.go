@@ -152,6 +152,12 @@ func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.
 }
 
 func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	// Special case probe events.
+	if request.Method == http.MethodHead {
+		writer.WriteHeader(http.StatusOK)
+		return
+	}
+
 	m := cloudeventshttp.NewMessageFromHttpRequest(request)
 	defer m.Finish(nil)
 
