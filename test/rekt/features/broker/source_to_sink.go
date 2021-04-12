@@ -93,7 +93,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	}
 
 	// Setup Probes
-	f.Setup("install recorder", prober.RxInstall("sink"))
+	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
 	// Setup data plane
 	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("sink")))
@@ -103,10 +103,10 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.TxInstall("source"))
+	f.Setup("install source", prober.SenderInstall("source"))
 
 	// After we have finished sending.
-	f.Requirement("sender is finished", prober.TxDone("source"))
+	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
@@ -141,8 +141,8 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 	}
 
 	// Setup Probes
-	f.Setup("install recorder1", prober.RxInstall("sink1"))
-	f.Setup("install recorder2", prober.RxInstall("sink2"))
+	f.Setup("install recorder1", prober.ReceiverInstall("sink1"))
+	f.Setup("install recorder2", prober.ReceiverInstall("sink2"))
 
 	// Setup data plane
 	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("sink1")))
@@ -154,10 +154,10 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.TxInstall("source"))
+	f.Setup("install source", prober.SenderInstall("source"))
 
 	// After we have finished sending.
-	f.Requirement("sender is finished", prober.TxDone("source"))
+	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").

@@ -67,14 +67,15 @@ type EventInfoCombined struct {
 	Response EventInfo
 }
 
-func (p *EventProber) RxInstall(prefix string) feature.StepFn {
+// ReceiverInstall installs an eventshub receiver into the test env.
+func (p *EventProber) ReceiverInstall(prefix string) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.shortNameToName[prefix] = name
 	return eventshub.Install(name, eventshub.StartReceiver)
 }
 
-func (p *EventProber) TxDone(prefix string) feature.StepFn {
-	//	name := p.shortNameToName[prefix]
+// SenderDone will poll until the sender sends all expected events.
+func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
@@ -90,7 +91,8 @@ func (p *EventProber) TxDone(prefix string) feature.StepFn {
 	}
 }
 
-func (p *EventProber) TxInstall(prefix string) feature.StepFn {
+// ReceiverInstall installs an eventshub sender resource into the test env.
+func (p *EventProber) SenderInstall(prefix string) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.shortNameToName[prefix] = name
 	return func(ctx context.Context, t feature.T) {
@@ -125,6 +127,7 @@ func CorrelateSent(origin string, in []EventInfo) []EventInfoCombined {
 	return out
 }
 
+// SentBy returns events sent by the named sender.
 func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoCombined {
 	name := p.shortNameToName[prefix]
 	store := eventshub.StoreFromContext(ctx, name)
@@ -136,6 +139,7 @@ func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoComb
 	return CorrelateSent(name, store.Collected())
 }
 
+// ReceivedBy returns events received by the named receiver.
 func (p *EventProber) ReceivedBy(ctx context.Context, prefix string) []EventInfo {
 	name := p.shortNameToName[prefix]
 	store := eventshub.StoreFromContext(ctx, name)
@@ -154,6 +158,7 @@ func (p *EventProber) ReceivedBy(ctx context.Context, prefix string) []EventInfo
 	return events
 }
 
+// ExpectYAMLEvents registered expected events into the prober.
 func (p *EventProber) ExpectYAMLEvents(path string) error {
 	events, err := conformanceevent.FromYaml(path, true)
 	if err != nil {
@@ -168,6 +173,8 @@ func (p *EventProber) ExpectYAMLEvents(path string) error {
 	return nil
 }
 
+// LoadFullEvents loads `count` cloudevents.FullEvent events with new IDs into a
+// sender and registers them for the prober.
 func (p *EventProber) LoadFullEvents(count int) {
 	for i := 0; i < count; i++ {
 		id := uuid.New().String()
@@ -178,6 +185,8 @@ func (p *EventProber) LoadFullEvents(count int) {
 	}
 }
 
+// LoadMinEvents loads `count` cloudevents.MinEvent events with new IDs into a
+// sender and registers them for the prober.
 func (p *EventProber) LoadMinEvents(count int) {
 	for i := 0; i < count; i++ {
 		id := uuid.New().String()
@@ -188,6 +197,7 @@ func (p *EventProber) LoadMinEvents(count int) {
 	}
 }
 
+// EventsFromSVC configures a sender to send a url/yaml based events.
 func (p *EventProber) EventsFromSVC(svcName, path string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		u, err := svc.Address(ctx, svcName)
@@ -199,16 +209,12 @@ func (p *EventProber) EventsFromSVC(svcName, path string) feature.StepFn {
 	}
 }
 
+// AsRef returns the short-named component as a KReference.
 func (p *EventProber) AsRef(prefix string) *duckv1.KReference {
-	name := p.shortNameToName[prefix]
-	return svc.AsRef(name)
+	return svc.AsRef(p.shortNameToName[prefix])
 }
 
-func (p *EventProber) Rx(prefix string) MatchAssertionBuilder {
-	name := p.shortNameToName[prefix]
-	return OnStore(name)
-}
-
+// AssertSentAll tests that `fromPrefix` sent all known events known to the prober.
 func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		events := p.SentBy(ctx, fromPrefix)
@@ -234,6 +240,7 @@ func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 	}
 }
 
+// AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
 func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		sent := p.SentBy(ctx, toPrefix)
@@ -262,10 +269,12 @@ func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.Ste
 	}
 }
 
+// TriggerSubscriberCfg is a helper to apply the trigger.WithSubscriber config option.
 func (p *EventProber) TriggerSubscriberCfg(prefix string) manifest.CfgFn {
 	return trigger.WithSubscriber(p.AsRef(prefix), "")
 }
 
+// DeadLetterSinkCfg is a helper to apply the delivery.WithDeadLetterSink config option.
 func (p *EventProber) DeadLetterSinkCfg(prefix string) manifest.CfgFn {
 	return delivery.WithDeadLetterSink(p.AsRef(prefix), "")
 }

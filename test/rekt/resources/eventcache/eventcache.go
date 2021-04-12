@@ -60,8 +60,6 @@ func PathFor(file string) string {
 	return path.Join(path.Dir(filename), file)
 }
 
-// TODO: add With* methods as we need them.
-
 // AsRef returns a KRef for a Service without namespace.
 func AsRef(name string) *duckv1.KReference {
 	return &duckv1.KReference{
