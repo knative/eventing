@@ -20,15 +20,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	nethttp "net/http"
 	"strconv"
 	"time"
 
+	conformanceevent "github.com/cloudevents/conformance/pkg/event"
+	conformancehttp "github.com/cloudevents/conformance/pkg/http"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/types"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/plugin/ochttp"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -52,6 +56,10 @@ type generator struct {
 
 	// ProbeSinkTimeout defines the maximum amount of time in seconds to wait for the probe sink to succeed.
 	ProbeSinkTimeout int `envconfig:"PROBE_SINK_TIMEOUT" required:"false" default:"60"`
+
+	// InputYAML points to a file, folder, or url to load CloudEvents Conformance yaml event payload to send.
+	// If set, InputEvent, InputHeaders, InputBody, MaxMessages are ignored.
+	InputYAML []string `envconfig:"INPUT_YAML" required:"false"`
 
 	// InputEvent json encoded
 	InputEvent string `envconfig:"INPUT_EVENT" required:"false"`
@@ -83,8 +91,8 @@ type generator struct {
 	// The number of seconds between messages.
 	Period int `envconfig:"PERIOD" default:"5" required:"false"`
 
-	// The number of messages to attempt to send. 0 for unlimited.
-	MaxMessages int `envconfig:"MAX_MESSAGES" default:"1" required:"false"`
+	// The number of messages to attempt to send. -1 for inferred, 0 for unlimited.
+	MaxMessages int `envconfig:"MAX_MESSAGES" default:"-1" required:"false"`
 
 	// --- Processed State ---
 
@@ -93,6 +101,9 @@ type generator struct {
 
 	// sequence is state counter for outbound events.
 	sequence int
+
+	// eventQueue defines a sequence of events to send.
+	eventQueue []conformanceevent.Event
 }
 
 func Start(ctx context.Context, logs *eventshub.EventLogs) error {
@@ -224,6 +235,7 @@ func (g *generator) sentInfo(event *cloudevents.Event, req *nethttp.Request, err
 	if g.InputBody != "" {
 		sentEventInfo.Body = []byte(g.InputBody)
 	}
+
 	return sentEventInfo
 }
 
@@ -270,10 +282,35 @@ func (g *generator) init() error {
 		if err := json.Unmarshal([]byte(g.InputEvent), &g.baseEvent); err != nil {
 			return fmt.Errorf("unable to unmarshal the event from json: %w", err)
 		}
+		// Inferred number is 1.
+		if g.MaxMessages == -1 {
+			g.MaxMessages = 1
+		}
 	}
 
-	if g.InputEvent == "" && g.InputBody == "" && len(g.InputHeaders) == 0 {
+	if len(g.InputYAML) == 0 && g.InputEvent == "" && g.InputBody == "" && len(g.InputHeaders) == 0 {
 		return fmt.Errorf("input values not provided")
+	}
+
+	if len(g.InputYAML) > 0 {
+		if g.baseEvent != nil {
+			return errors.New("only use InputYAML or InputEvent, not both")
+		}
+
+		for _, path := range g.InputYAML {
+			events, err := conformanceevent.FromYaml(path, true)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Loaded YAML events.", len(events))
+			if len(events) > 0 {
+				g.eventQueue = append(g.eventQueue, events...)
+			}
+		}
+		// Inferred number is len(g.eventQueue).
+		if g.MaxMessages == -1 {
+			g.MaxMessages = len(g.eventQueue)
+		}
 	}
 
 	return nil
@@ -287,6 +324,80 @@ func (g *generator) hasNext() bool {
 }
 
 func (g *generator) next(ctx context.Context) (*nethttp.Request, *cloudevents.Event, error) {
+	g.sequence++
+
+	if len(g.eventQueue) > 0 {
+		return g.nextQueued(ctx)
+	}
+	return g.nextGenerated(ctx)
+}
+
+func (g *generator) nextQueued(ctx context.Context) (*nethttp.Request, *cloudevents.Event, error) {
+	next := g.eventQueue[0]
+
+	if g.MaxMessages == 0 {
+		// Move to the back.
+		g.eventQueue = append(g.eventQueue[1:], next)
+	} else {
+		// Pop off the front.
+		if len(g.eventQueue) > 1 {
+			g.eventQueue = g.eventQueue[1:]
+		} else {
+			g.eventQueue = nil
+		}
+	}
+
+	if g.AddSequence {
+		if next.Attributes.Extensions == nil {
+			next.Attributes.Extensions = make(conformanceevent.Extensions)
+		}
+		next.Attributes.Extensions["sequence"] = strconv.Itoa(g.sequence)
+	}
+	if g.IncrementalId {
+		next.Attributes.ID = strconv.Itoa(g.sequence)
+	}
+	if g.OverrideTime {
+		now := types.Timestamp{Time: time.Now()}
+		next.Attributes.Time = now.String()
+	}
+
+	req, err := conformancehttp.EventToRequest(g.Sink, next)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	event := eventToEvent(next)
+
+	if len(g.InputHeaders) != 0 {
+		for k, v := range g.InputHeaders {
+			req.Header.Add(k, v)
+		}
+	}
+
+	return req, event, nil
+}
+
+func eventToEvent(conf conformanceevent.Event) *cloudevents.Event {
+	event := cloudevents.NewEvent(conf.Attributes.SpecVersion)
+
+	event.SetSpecVersion(conf.Attributes.SpecVersion)
+	event.SetType(conf.Attributes.Type)
+	if t, _ := types.ParseTimestamp(conf.Attributes.Time); t != nil {
+		event.SetTime(t.Time)
+	}
+	event.SetID(conf.Attributes.ID)
+	event.SetSource(conf.Attributes.Source)
+	event.SetSubject(conf.Attributes.Subject)
+	event.SetDataSchema(conf.Attributes.DataSchema)
+	event.SetDataContentType(conf.Attributes.DataContentType)
+	for key, value := range conf.Attributes.Extensions {
+		event.SetExtension(key, value)
+	}
+
+	return &event
+}
+
+func (g *generator) nextGenerated(ctx context.Context) (*nethttp.Request, *cloudevents.Event, error) {
 	req, err := nethttp.NewRequest(g.InputMethod, g.Sink, nil)
 	if err != nil {
 		logging.FromContext(ctx).Error("Cannot create the request: ", err)
@@ -298,7 +409,6 @@ func (g *generator) next(ctx context.Context) (*nethttp.Request, *cloudevents.Ev
 		e := g.baseEvent.Clone()
 		event = &e
 
-		g.sequence++
 		if g.AddSequence {
 			event.SetExtension("sequence", g.sequence)
 		}
