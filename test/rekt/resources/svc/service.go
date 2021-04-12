@@ -34,6 +34,7 @@ func Gvr() schema.GroupVersionResource {
 
 // Install will create a Service resource mapping :80 to :8080 on the provided
 // selector for pods.
+// Deprecated
 func Install(name, selectorKey, selectorValue string) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name":          name,
