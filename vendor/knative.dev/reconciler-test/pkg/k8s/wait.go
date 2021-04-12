@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -34,8 +35,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-	pkgtest "knative.dev/pkg/test"
-
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -161,18 +160,73 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 	})
 }
 
-// WaitForServiceEndpointsOrFail wraps the utility from pkg and uses the context to extract kubeclient and namespace
+// WaitForServiceEndpointsOrFail polls the status of the specified Service
+// every interval until number of service endpoints >= numOfEndpoints.
 func WaitForServiceEndpointsOrFail(ctx context.Context, t feature.T, svcName string, numberOfExpectedEndpoints int) {
-	if err := pkgtest.WaitForServiceEndpoints(ctx, kubeclient.Get(ctx), svcName, environment.FromContext(ctx).Namespace(), numberOfExpectedEndpoints); err != nil {
+	endpointsService := kubeclient.Get(ctx).CoreV1().Endpoints(environment.FromContext(ctx).Namespace())
+	interval, timeout := PollTimings(ctx, nil)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		endpoint, err := endpointsService.Get(ctx, svcName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		return countEndpointsNum(endpoint) >= numberOfExpectedEndpoints, nil
+	})
+	if err != nil {
 		t.Fatalf("Failed while waiting for %d endpoints in service %s: %+v", numberOfExpectedEndpoints, svcName, errors.WithStack(err))
 	}
 }
 
-// WaitForPodRunningOrFail wraps the utility from pkg and uses the context to extract kubeclient and namespace
+// WaitForPodRunningOrFail waits for the given pod to be in running state.
 func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
-	if err := pkgtest.WaitForPodRunning(ctx, kubeclient.Get(ctx), podName, environment.FromContext(ctx).Namespace()); err != nil {
+	podClient := kubeclient.Get(ctx).CoreV1().Pods(environment.FromContext(ctx).Namespace())
+	p := podClient
+	interval, timeout := PollTimings(ctx, nil)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		p, err := p.Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			return true, err
+		}
+		return podRunning(p), nil
+	})
+	if err != nil {
+		sb := strings.Builder{}
+		if p, err := podClient.Get(ctx, podName, metav1.GetOptions{}); err != nil {
+			sb.WriteString(err.Error())
+			sb.WriteString("\n")
+		} else {
+			for _, c := range p.Spec.Containers {
+				if b, err := PodLogs(ctx, podName, c.Name, environment.FromContext(ctx).Namespace()); err != nil {
+					sb.WriteString(err.Error())
+				} else {
+					sb.Write(b)
+				}
+				sb.WriteString("\n")
+			}
+		}
 		t.Fatalf("Failed while waiting for pod %s running: %+v", podName, errors.WithStack(err))
 	}
+}
+
+// PodLogs returns Pod logs for given Pod and Container in the namespace
+func PodLogs(ctx context.Context, podName, containerName, namespace string) ([]byte, error) {
+	podClient := kubeclient.Get(ctx).CoreV1().Pods(namespace)
+	podList, err := podClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for i := range podList.Items {
+		// Pods are big, so avoid copying.
+		pod := &podList.Items[i]
+		if strings.Contains(pod.Name, podName) {
+			result := podClient.GetLogs(pod.Name, &corev1.PodLogOptions{
+				Container: containerName,
+			}).Do(ctx)
+			return result.Raw()
+		}
+	}
+	return nil, fmt.Errorf("could not find logs for %s/%s:%s", namespace, podName, containerName)
 }
 
 // WaitForAddress waits until a resource has an address.
@@ -200,4 +254,20 @@ func WaitForAddress(ctx context.Context, gvr schema.GroupVersionResource, name s
 		return true, nil
 	})
 	return addr, err
+}
+
+func countEndpointsNum(e *corev1.Endpoints) int {
+	if e == nil || e.Subsets == nil {
+		return 0
+	}
+	num := 0
+	for _, sub := range e.Subsets {
+		num += len(sub.Addresses)
+	}
+	return num
+}
+
+// podRunning will check the status conditions of the pod and return true if it's Running.
+func podRunning(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded
 }

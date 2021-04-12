@@ -16,7 +16,9 @@ limitations under the License.
 
 package logger_vent
 
-import "knative.dev/reconciler-test/pkg/test_images/eventshub"
+import (
+	"knative.dev/reconciler-test/pkg/eventshub"
+)
 
 type Logger func(string, ...interface{})
 

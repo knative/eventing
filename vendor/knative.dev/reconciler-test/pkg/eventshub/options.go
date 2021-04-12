@@ -29,8 +29,8 @@ import (
 	"knative.dev/pkg/network"
 
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub/dropevents"
 	"knative.dev/reconciler-test/pkg/k8s"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents"
 )
 
 // EventsHubOption is used to define an env for the eventshub image
