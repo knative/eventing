@@ -53,7 +53,7 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 		May("Other versions MAY be rejected.",
 			brokerRejectsUnknownCEVersion).
 		ShouldNot("The Broker SHOULD NOT perform an upgrade of the produced event's CloudEvents version.",
-			todo).
+			brokerEventVersionNotUpgraded).
 		Should("It SHOULD support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
 			todo).
 		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.",
@@ -274,4 +274,11 @@ func brokerRejectsMalformedCE(ctx context.Context, t feature.T) {
 			}
 		}
 	}
+}
+
+// source ---> [broker] ---[trigger]--> recorder
+func brokerEventVersionNotUpgraded(ctx context.Context, t feature.T) {
+	// brokerName := state.GetStringOrFail(ctx, t, "brokerName")
+
+	// Create a trigger,
 }

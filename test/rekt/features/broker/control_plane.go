@@ -19,6 +19,8 @@ package broker
 import (
 	"context"
 	"encoding/json"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -281,13 +283,45 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
-	f.Stable("Conformance").
-		Should("When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
-			todo).
-		Should("When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used.",
-			todo).
-		Should("When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used.",
-			todo)
+	// Make three brokers.
+
+	// tabletest
+	for i, tt := range []struct {
+		name     string
+		brokerDS *v1.DeliverySpec
+		t1DS     *v1.DeliverySpec
+		t2DS     *v1.DeliverySpec
+	}{{
+		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
+	}} {
+		prober := eventshub.NewProber()
+
+		f.Setup("setup", createBrokerTriggerDeliveryTopology(prober, tt.brokerDS, tt.t1DS, tt.t2DS))
+
+		// TODO: set prober with events and send them.
+		prober.SenderFullEvents(1)
+		f.Setup("install source", prober.SenderInstall("source"))
+		f.Requirement("sender is finished", prober.SenderDone("source"))
+
+		// All events have been sent, time to look at the specs and confirm we got them.
+
+		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t1DS, "t1")
+		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "t2")
+
+		//f.Stable("Conformance").
+		//	Should(tt.name,
+		//		brokerTriggerDeliverySpec(prober, brokerDS, t1DS, t2DS))
+	}
+	//
+	//f.Stable("Conformance").
+	//	Should("When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
+	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS)).
+	//	Should("When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used.",
+	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS)).
+	//	Should("When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used.",
+	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS)).
+	//	Should("When both `BrokerSpec.Delivery` and `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used.",
+	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS))
 
 	return f
 }
@@ -427,4 +461,68 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 	} else {
 		t.Errorf("Trigger spec.broker is mutable")
 	}
+}
+
+// source ---> [broker (brokerDS)] ---[trigger(ds)]--> `tSink`
+//                    |                      |
+//                    |                      +--> `tDLQ` (optional)
+//                    |
+//                    + --> "dlq" (optional)
+func assertBrokerTriggerDeliverySpec(prober *eventshub.EventProber, brokerDS, triggerDS *v1.DeliverySpec, tPrefix string) feature.StepFn {
+
+	// one or both brokerDS
+
+	f.Stable("broker with DLQ").
+		Must("accepted all events", prober.AssertSentAll("source")).
+		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", tPrefix+"dlq")).
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", "sink2"))
+
+		// AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
+
+	sent := p.SentBy(ctx, toPrefix)
+	ids := make([]string, len(sent))
+	for i, s := range sent {
+		ids[i] = s.Sent.SentId
+	}
+
+	events := p.ReceivedBy(ctx, fromPrefix)
+	if len(ids) != len(events) {
+		t.Errorf("expected %q to have received %d events, actually received %d",
+			fromPrefix, len(ids), len(events))
+	}
+	for _, id := range ids {
+		found := false
+		for _, event := range events {
+			if id == event.SentId {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Failed to receive event id=%s", id)
+		}
+	}
+
+	return todo
+}
+
+//
+// createBrokerTriggerDeliveryTopology tests a broker and trigger pair
+// source ---> [broker (brokerDS)] --+--[trigger1 (t1ds)]--> "t1"
+//                  |                |                 |
+//                  |                |                 +--> "t1dlq" (optional)
+//                  |                |
+//                  |                +-[trigger2 (t2ds)]--> "t2"
+//                  |                |              |
+//                  |                |              +--> "t2dlq" (optional)
+//                  |                |
+//                  +--[DLQ]--> "dlq" (optional)
+//
+func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerDS, t1DS, t2DS *v1.DeliverySpec) feature.StepFn {
+	// This will set or clear the broker delivery spec settings.
+	// Make trigger with delivery settings.
+	// Make a trigger with no delivery spec.
+
+	// To test, we will have to compute what the expected delivery spec each recorder.
+	return todo
 }
