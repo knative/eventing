@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package eventcache_test
+package eventlibrary_test
 
 import (
 	"os"
@@ -24,7 +24,7 @@ import (
 
 func Example() {
 	images := map[string]string{
-		"ko://knative.dev/eventing/test/test_images/event-cache": "gcr.io/knative-samples/helloworld-go",
+		"ko://knative.dev/eventing/test/test_images/event-library": "gcr.io/knative-samples/helloworld-go",
 	}
 	cfg := map[string]interface{}{
 		"name":      "foo",

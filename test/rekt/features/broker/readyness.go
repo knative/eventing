@@ -23,8 +23,8 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // TriggerGoesReady returns a feature that tests after the creation of a
@@ -39,7 +39,7 @@ func TriggerGoesReady(name, brokerName string) *feature.Feature {
 	f.Setup("install a service", svc.Install(sub, "app", "rekt"))
 
 	// Point the Trigger subscriber to the service installed in setup.
-	cfg = append(cfg, trigger.WithSubscriber(svc.AsRef(name), ""))
+	cfg = append(cfg, trigger.WithSubscriber(svc.AsKReference(name), ""))
 
 	// Install the trigger
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))

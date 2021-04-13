@@ -18,12 +18,12 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
   labels:
-    app: cache-{{ .name }}
+    app: library-{{ .name }}
 spec:
   restartPolicy: "Never"
   containers:
-    - name: cache
-      image: ko://knative.dev/eventing/test/test_images/event-cache
+    - name: library
+      image: ko://knative.dev/eventing/test/test_images/event-library
       imagePullPolicy: "IfNotPresent"
 
 ---
@@ -34,7 +34,7 @@ metadata:
   namespace: {{ .namespace }}
 spec:
   selector:
-    app: cache-{{ .name }}
+    app: library-{{ .name }}
   ports:
     - protocol: TCP
       port: 80

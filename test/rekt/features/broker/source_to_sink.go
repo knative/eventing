@@ -22,15 +22,15 @@ import (
 
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/eventcache"
-	"knative.dev/eventing/test/rekt/resources/eventprober"
+	"knative.dev/eventing/test/rekt/resources/delivery"
+	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/flaker"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -49,7 +49,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	// Point the Trigger subscriber to the sink svc.
-	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsRef(sink), "")}
+	cfg := []manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sink), "")}
 
 	// Install the trigger
 	f.Setup("install trigger", trigger.Install(via, brokerName, cfg...))
@@ -78,17 +78,18 @@ func SourceToSink(brokerName string) *feature.Feature {
 //                +--[DLQ]--> sink
 //
 func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
-	prober := eventprober.New(broker.GVR(), brokerName, "")
+	prober := eventshub.NewProber()
+	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	via := feature.MakeRandomK8sName("via")
 
 	f := feature.NewFeature()
 
 	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventcache.Install(lib))
-	f.Setup("event cache is ready", eventcache.IsReady(lib))
-	f.Setup("use events cache", prober.EventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventcache.PathFor("events/three.ce")); err != nil {
+	f.Setup("install events", eventlibrary.Install(lib))
+	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
+	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
+	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
 
@@ -96,7 +97,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
 	// Setup data plane
-	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("sink")))
+	f.Setup("update broker with DLQ", broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference("sink"), "")))
 	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 
 	// Resources ready.
@@ -125,7 +126,8 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 //                +--[DLQ]--> sink1
 //
 func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
-	prober := eventprober.New(broker.GVR(), brokerName, "")
+	prober := eventshub.NewProber()
+	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	via1 := feature.MakeRandomK8sName("via")
 	via2 := feature.MakeRandomK8sName("via")
@@ -133,10 +135,10 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 	f := feature.NewFeature()
 
 	lib := feature.MakeRandomK8sName("lib")
-	f.Setup("install events", eventcache.Install(lib))
-	f.Setup("event cache is ready", eventcache.IsReady(lib))
-	f.Setup("use events cache", prober.EventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventcache.PathFor("events/three.ce")); err != nil {
+	f.Setup("install events", eventlibrary.Install(lib))
+	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
+	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
+	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
 
@@ -145,9 +147,9 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("install recorder2", prober.ReceiverInstall("sink2"))
 
 	// Setup data plane
-	f.Setup("update broker with DLQ", broker.Install(brokerName, prober.DeadLetterSinkCfg("sink1")))
+	f.Setup("update broker with DLQ", broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference("sink"), "")))
 	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
-	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsRef("sink2"), "")))
+	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference("sink2"), "")))
 
 	// Resources ready.
 	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
@@ -201,7 +203,7 @@ func SourceToSinkWithFlakyDLQ(brokerName string) *feature.Feature {
 
 	f.Setup("install dlq", eventshub.Install(dlq, eventshub.StartReceiver))
 
-	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(svc.AsRef(dlq), "")))
+	f.Setup("update broker with DLQ", broker.Install(brokerName, broker.WithDeadLetterSink(svc.AsKReference(dlq), "")))
 
 	// Point the Trigger subscriber to the sink svc.
 	cfg := []manifest.CfgFn{trigger.WithSubscriber(flaker.AsRef(flake), "")}

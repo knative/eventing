@@ -39,7 +39,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 type generator struct {

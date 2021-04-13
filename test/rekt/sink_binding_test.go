@@ -24,8 +24,8 @@ import (
 	"knative.dev/eventing/test/rekt/features/sinkbinding"
 	"knative.dev/eventing/test/rekt/resources/deployment"
 	sb "knative.dev/eventing/test/rekt/resources/sinkbinding"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // TestSmoke_SinkBinding

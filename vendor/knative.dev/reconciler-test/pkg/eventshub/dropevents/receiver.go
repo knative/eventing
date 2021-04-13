@@ -19,8 +19,8 @@ package dropevents
 import (
 	"sync"
 
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfibonacci"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/dropevents/dropeventsfirst"
+	"knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfibonacci"
+	"knative.dev/reconciler-test/pkg/eventshub/dropevents/dropeventsfirst"
 )
 
 const (

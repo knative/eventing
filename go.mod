@@ -33,6 +33,7 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.36.1
+	google.golang.org/protobuf v1.26.0
 	k8s.io/api v0.19.7
 	k8s.io/apiextensions-apiserver v0.19.7
 	k8s.io/apimachinery v0.19.7
@@ -41,8 +42,8 @@ require (
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 	knative.dev/hack v0.0.0-20210325223819-b6ab329907d3
 	knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3
-	knative.dev/pkg v0.0.0-20210409203851-3a2ae6db7097
-	knative.dev/reconciler-test v0.0.0-20210408195651-721473fa3c57
+	knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
+	knative.dev/reconciler-test v0.0.0-20210412220859-730c55592c9b
 	sigs.k8s.io/yaml v1.2.0
 )
 
