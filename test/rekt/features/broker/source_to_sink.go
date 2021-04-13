@@ -19,7 +19,6 @@ package broker
 import (
 	"context"
 	"fmt"
-
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
@@ -147,7 +146,7 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("install recorder2", prober.ReceiverInstall("sink2"))
 
 	// Setup data plane
-	f.Setup("update broker with DLQ", broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference("sink"), "")))
+	f.Setup("update broker with DLQ", broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference("sink1"), "")))
 	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference("sink2"), "")))
 
