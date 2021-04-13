@@ -292,23 +292,78 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 	for i, tt := range []struct {
 		name     string
 		brokerDS *v1.DeliverySpec
+		// Trigger 1 Delivery spec
 		t1DS     *v1.DeliverySpec
+		// How many events to fail before succeeding
+		t1FailCount int
+		// Trigger 2 Delivery spec
 		t2DS     *v1.DeliverySpec
+		// How many events to fail before succeeding
+		t2FailCount int
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
 	}} {
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
 		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS)
 
-		// TODO: set prober with events and send them.
+		// Send an event into the matrix and hope for the best
 		prober.SenderFullEvents(1)
 		f.Setup("install source", prober.SenderInstall("source"))
 		f.Requirement("sender is finished", prober.SenderDone("source"))
 
 		// All events have been sent, time to look at the specs and confirm we got them.
-
 		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t1DS, "t1")
+		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t1DS, "t1dlq")
+
+		// ...Simple test case...
+		// Broker has no retries
+
+
+		expectedDeliverySpec
+
+
+		expectedEvents := buildMap(tt.BrokerDS, tt.T1DS, tt.t2DS)
+		// Helper that takes in: Delivery Specs => Returns "Places to Look [t1 => assertFunction, t1dlq => assertFunction, brokerdlq => assertFunction]
+		// "t1" => {6 events, 6 failures, 0 success, linear}
+		// "t1dlq" => {1 event}
+		// "t2" => {6 events, 6 failures, 0 success exponential}
+		// "t2dlq" => {0 events}
+		// "brokerdql" => {1 event}
+
+		// "t1" => {6 events, 5 failures, 1 success, linear}
+		// "t1dlq" => {0 event}
+		// "t2" => {6 events, 6 failures, 0 success exponential}
+		// "t2dlq" => {0 events}
+		// "brokerdql" => {1 event}
+
+		assertEvents(expectedEvents[])
+	    assertEvents("t1", "6 events", linear)
+
+		// Make sure that Trigger 1 respected linear back, and failed 6 times
+		assertEventsSeen("t1", helpers.SawLinearBackoff(tt.t1DS))
+		// After 6 failures, was sent to DLQ
+		prober.AssertReceivedAll("{key in the map", mapEntry)
+
+		// Make sure that Trigger 2 respected linear back, and failed 6 times
+		assertEventsSeen("t1", helpers.SawLinearBackoff(tt.t1DS))
+		// After 6 failures, was sent to DLQ
+		prober.AssertReceivedAll("t1dlq", )
+
+
 		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "t2")
+		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "t2dlq")
+		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "brokerdlq")
+
+		assertBrokerXXX(prober, tt.t1Ds, "t1")
+		assertBrokerXXX(prober, tt.t1Ds, "t1")
+
+/*
+	f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
+	f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
+	f.Setup("install recorder for t2", prober.ReceiverInstall("t2"))
+	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
+	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
+	*/		
 
 		//f.Stable("Conformance").
 		//	Should(tt.name,
@@ -474,7 +529,8 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 // 1. Which event we sent
 // 2. What the topology looks like
 // We should then be able to check which recorder (tPrefix) received which events.
-func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, triggerDS *v1.DeliverySpec, tPrefix string) feature.Feature {
+// Take in a magic picture and make sure that all the pieces saw the events they were supposed to.
+func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, trigger1DS, trigger2DS *v1.DeliverySpec, tPrefix string) feature.Feature {
 
 	// one or both brokerDS
 
@@ -526,16 +582,16 @@ func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.Even
 //                  |                |
 //                  +--[DLQ]--> "dlq" (optional)
 //
-func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec) *eventshub.EventProber {
+func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount int) *eventshub.EventProber {
 	prober := eventshub.NewProber()
 	// This will set or clear the broker delivery spec settings.
 	// Make trigger with delivery settings.
 	// Make a trigger with no delivery spec.
 
 	// TODO: Optimize these to only install things required. For example, if there's no t2 dlq, no point creating a prober for it.
-	f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
+	f.Setup("install recorder for t1", prober.ReceiverInstall("t1")) // (wire in t1FailCount)
 	f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
-	f.Setup("install recorder for t2", prober.ReceiverInstall("t2"))
+	f.Setup("install recorder for t2", prober.ReceiverInstall("t2")) // (wire in t2FailCount)
 	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
 	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
 
