@@ -18,7 +18,6 @@ package svc
 
 import (
 	"context"
-	"knative.dev/reconciler-test/resources/svc"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
@@ -27,6 +26,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // Deprecated, use reconciler-test/resources/svc
