@@ -82,10 +82,6 @@ github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
 # github.com/cloudevents/conformance v0.2.0
-<<<<<<< HEAD
-## explicit
-=======
->>>>>>> master
 github.com/cloudevents/conformance/pkg/event
 github.com/cloudevents/conformance/pkg/http
 # github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.0
@@ -523,10 +519,7 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.26.0
-<<<<<<< HEAD
-=======
 ## explicit
->>>>>>> master
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen
 google.golang.org/protobuf/encoding/protojson
@@ -986,11 +979,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-<<<<<<< HEAD
-# knative.dev/pkg v0.0.0-20210409203851-3a2ae6db7097
-=======
 # knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
->>>>>>> master
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1115,11 +1104,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-<<<<<<< HEAD
-# knative.dev/reconciler-test v0.0.0-20210408195651-721473fa3c57
-=======
 # knative.dev/reconciler-test v0.0.0-20210412220859-730c55592c9b
->>>>>>> master
 ## explicit
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment
