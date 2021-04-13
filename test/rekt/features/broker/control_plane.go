@@ -479,7 +479,7 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 // 1. Which event we sent
 // 2. What the topology looks like
 // We should then be able to check which recorder (tPrefix) received which events.
-func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, triggerDS *v1.DeliverySpec, tPrefix string) feature.StepFn {
+func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, triggerDS *v1.DeliverySpec, tPrefix string) feature.Feature {
 
 	// one or both brokerDS
 
@@ -531,7 +531,8 @@ func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.Even
 //                  |                |
 //                  +--[DLQ]--> "dlq" (optional)
 //
-func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec) feature.StepFn {
+func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec) *feature.Feature {
+	f := feature.NewFeature()
 	// This will set or clear the broker delivery spec settings.
 	// Make trigger with delivery settings.
 	// Make a trigger with no delivery spec.
@@ -544,7 +545,8 @@ func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerNa
 	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
 
 	if brokerDS != nil {
-		f.Setup("Create Broker with DLQ", brokerresources.Install(brokerName), delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), ""))
+		f.Setup("Create Broker with DLQ", brokerresources.Install(brokerName,
+			delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), "")))
 	} else {
 		f.Setup("Create Broker with no DLQ", brokerresources.Install(brokerName))
 	}
