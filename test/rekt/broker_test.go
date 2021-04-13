@@ -64,16 +64,26 @@ func TestBrokerWithDLQ(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	// Install and wait for a Ready Broker.
+	// The following will reuse the same environment for two different tests.
+
+	// Install and wait for a Ready Broker "test1".
 	env.Prerequisite(ctx, t, broker.GoesReady("test1", b.WithBrokerClass(class)))
 
-	// Test that a Broker can act as middleware.
+	// Test that a Broker "test1" works as expected with the following topology:
+	// source ---> broker<Via> --[trigger]--> bad uri
+	//                |
+	//                +--[DLQ]--> sink
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ("test1"))
 
-	// Install and wait for a Ready Broker.
+	// Install and wait for a Ready Broker "test2"
 	env.Prerequisite(ctx, t, broker.GoesReady("test2", b.WithBrokerClass(class)))
 
-	// Test that a Broker can act as middleware.
+	// Test that a Broker "test1" works as expected with the following topology:
+	// source ---> broker +--[trigger<via1>]--> bad uri
+	//                |   |
+	//                |   +--[trigger<vai2>]--> sink2
+	//                |
+	//                +--[DLQ]--> sink1
 	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ("test2"))
 }
 

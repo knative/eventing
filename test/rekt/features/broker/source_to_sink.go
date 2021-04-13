@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"

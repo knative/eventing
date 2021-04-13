@@ -27,6 +27,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 func init() {
@@ -60,11 +61,8 @@ func PathFor(file string) string {
 	return path.Join(path.Dir(filename), file)
 }
 
-// AsRef returns a KRef for a Service without namespace.
-func AsRef(name string) *duckv1.KReference {
-	return &duckv1.KReference{
-		Kind:       "Service",
-		APIVersion: "v1",
-		Name:       name,
-	}
+// AsKReference returns a KReference for the svc the event library uses to be
+// addressable.
+func AsKReference(name string) *duckv1.KReference {
+	return svc.AsKReference(name)
 }
