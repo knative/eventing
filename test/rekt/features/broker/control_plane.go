@@ -19,9 +19,11 @@ package broker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
+
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -31,7 +33,9 @@ import (
 	eventingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/knconf"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -294,9 +298,12 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
 	}} {
+		brokerName := fmt.Sprintf("delivery-%d", i)
 		prober := eventshub.NewProber()
 
-		f.Setup("setup", createBrokerTriggerDeliveryTopology(prober, tt.brokerDS, tt.t1DS, tt.t2DS))
+		f.Setup("Create Broker", broker.Install(brokerName))
+
+		f.Setup("setup", createBrokerTriggerDeliveryTopology(prober, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS))
 
 		// TODO: set prober with events and send them.
 		prober.SenderFullEvents(1)
@@ -468,7 +475,11 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 //                    |                      +--> `tDLQ` (optional)
 //                    |
 //                    + --> "dlq" (optional)
-func assertBrokerTriggerDeliverySpec(prober *eventshub.EventProber, brokerDS, triggerDS *v1.DeliverySpec, tPrefix string) feature.StepFn {
+// Given that we know:
+// 1. Which event we sent
+// 2. What the topology looks like
+// We should then be able to check which recorder (tPrefix) received which events.
+func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, triggerDS *v1.DeliverySpec, tPrefix string) feature.StepFn {
 
 	// one or both brokerDS
 
@@ -485,7 +496,7 @@ func assertBrokerTriggerDeliverySpec(prober *eventshub.EventProber, brokerDS, tr
 		ids[i] = s.Sent.SentId
 	}
 
-	events := p.ReceivedBy(ctx, fromPrefix)
+	events := p.ReceivedBy(ctx, tPrefix)
 	if len(ids) != len(events) {
 		t.Errorf("expected %q to have received %d events, actually received %d",
 			fromPrefix, len(ids), len(events))
@@ -507,7 +518,9 @@ func assertBrokerTriggerDeliverySpec(prober *eventshub.EventProber, brokerDS, tr
 }
 
 //
-// createBrokerTriggerDeliveryTopology tests a broker and trigger pair
+// createBrokerTriggerDeliveryTopology creates a topology that allows us to test the various
+// delivery configurations.
+//
 // source ---> [broker (brokerDS)] --+--[trigger1 (t1ds)]--> "t1"
 //                  |                |                 |
 //                  |                |                 +--> "t1dlq" (optional)
@@ -518,11 +531,42 @@ func assertBrokerTriggerDeliverySpec(prober *eventshub.EventProber, brokerDS, tr
 //                  |                |
 //                  +--[DLQ]--> "dlq" (optional)
 //
-func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerDS, t1DS, t2DS *v1.DeliverySpec) feature.StepFn {
+func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec) feature.StepFn {
 	// This will set or clear the broker delivery spec settings.
 	// Make trigger with delivery settings.
 	// Make a trigger with no delivery spec.
 
+	// TODO: Optimize these to only install things required. For example, if there's no t2 dlq, no point creating a prober for it.
+	f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
+	f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
+	f.Setup("install recorder for t2", prober.ReceiverInstall("t2"))
+	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
+	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
+
+	if brokerDS != nil {
+		f.Setup("Create Broker with DLQ", brokerresources.Install(brokerName), delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), ""))
+	} else {
+		f.Setup("Create Broker with no DLQ", brokerresources.Install(brokerName))
+	}
+
+	if t1DS != nil {
+		f.Setup("Create Trigger1 with recorder", triggerresources.Install("t1", brokerName,
+			triggerresources.WithSubscriber(prober.AsKReference("t1"), "")))
+	} else {
+		f.Setup("Create Trigger1 with recorder", triggerresources.Install("t1", brokerName,
+			triggerresources.WithSubscriber(prober.AsKReference("t1"), ""),
+			delivery.WithDeadLetterSink(prober.AsKReference("t1dlq"), "")))
+	}
+
+	if t2DS != nil {
+		f.Setup("Create Trigger2 with recorder", triggerresources.Install("t2", brokerName,
+			triggerresources.WithSubscriber(prober.AsKReference("t2"), "")))
+	} else {
+		f.Setup("Create Trigger2 with recorder", triggerresources.Install("t2", brokerName,
+			triggerresources.WithSubscriber(prober.AsKReference("t2"), ""),
+			delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), "")))
+	}
+
 	// To test, we will have to compute what the expected delivery spec each recorder.
-	return todo
+	return f
 }
