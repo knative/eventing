@@ -26,14 +26,17 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
+// Deprecated, use reconciler-test/resources/svc
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 }
 
 // Install will create a Service resource mapping :80 to :8080 on the provided
 // selector for pods.
+// Deprecated, use reconciler-test/resources/svc
 func Install(name, selectorKey, selectorValue string) feature.StepFn {
 	cfg := map[string]interface{}{
 		"name":          name,
@@ -49,6 +52,7 @@ func Install(name, selectorKey, selectorValue string) feature.StepFn {
 }
 
 // AsRef returns a KRef for a Service without namespace.
+// Deprecated, use reconciler-test/resources/svc
 func AsRef(name string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       "Service",
@@ -57,6 +61,7 @@ func AsRef(name string) *duckv1.KReference {
 	}
 }
 
+// Deprecated, use reconciler-test/resources/svc
 func AsTrackerReference(name string) *tracker.Reference {
 	return &tracker.Reference{
 		Kind:       "Service",
@@ -65,6 +70,7 @@ func AsTrackerReference(name string) *tracker.Reference {
 	}
 }
 
+// Deprecated, use reconciler-test/resources/svc
 func AsDestinationRef(name string) *duckv1.Destination {
 	return &duckv1.Destination{
 		Ref: AsRef(name),
@@ -72,6 +78,7 @@ func AsDestinationRef(name string) *duckv1.Destination {
 }
 
 // Address
+// Deprecated, use reconciler-test/resources/svc
 func Address(ctx context.Context, name string) (*apis.URL, error) {
-	return k8s.Address(ctx, Gvr(), name)
+	return k8s.Address(ctx, svc.GVR(), name)
 }
