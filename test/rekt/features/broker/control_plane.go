@@ -33,7 +33,6 @@ import (
 	eventingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/knconf"
-	"knative.dev/eventing/test/rekt/resources/broker"
 	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/svc"
@@ -298,12 +297,8 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
 	}} {
-		brokerName := fmt.Sprintf("delivery-%d", i)
-		prober := eventshub.NewProber()
-
-		f.Setup("Create Broker", broker.Install(brokerName))
-
-		f.Setup("setup", createBrokerTriggerDeliveryTopology(prober, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS))
+		brokerName := fmt.Sprintf("dlq-test-%d", i)
+		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS)
 
 		// TODO: set prober with events and send them.
 		prober.SenderFullEvents(1)
@@ -531,8 +526,8 @@ func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.Even
 //                  |                |
 //                  +--[DLQ]--> "dlq" (optional)
 //
-func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec) *feature.Feature {
-	f := feature.NewFeature()
+func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec) *eventshub.EventProber {
+	prober := eventshub.NewProber()
 	// This will set or clear the broker delivery spec settings.
 	// Make trigger with delivery settings.
 	// Make a trigger with no delivery spec.
@@ -544,12 +539,14 @@ func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerNa
 	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
 	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
 
+	brokerOpts := brokerresources.WithEnvConfig()
+
 	if brokerDS != nil {
-		f.Setup("Create Broker with DLQ", brokerresources.Install(brokerName,
-			delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), "")))
-	} else {
-		f.Setup("Create Broker with no DLQ", brokerresources.Install(brokerName))
+		// TODO: fix this crap
+		// With URI, or with retries, etc.
+		brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), ""))
 	}
+	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
 
 	if t1DS != nil {
 		f.Setup("Create Trigger1 with recorder", triggerresources.Install("t1", brokerName,
@@ -570,5 +567,5 @@ func createBrokerTriggerDeliveryTopology(prober *eventshub.EventProber, brokerNa
 	}
 
 	// To test, we will have to compute what the expected delivery spec each recorder.
-	return f
+	return prober
 }
