@@ -44,11 +44,11 @@ func Example() {
 	//   name: foo
 	//   namespace: bar
 	//   labels:
-	//     app: cache-foo
+	//     app: library-foo
 	// spec:
 	//   restartPolicy: "Never"
 	//   containers:
-	//     - name: cache
+	//     - name: library
 	//       image: gcr.io/knative-samples/helloworld-go
 	//       imagePullPolicy: "IfNotPresent"
 	// ---
@@ -59,7 +59,7 @@ func Example() {
 	//   namespace: bar
 	// spec:
 	//   selector:
-	//     app: cache-foo
+	//     app: library-foo
 	//   ports:
 	//     - protocol: TCP
 	//       port: 80
