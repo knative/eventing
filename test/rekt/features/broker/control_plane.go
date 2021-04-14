@@ -639,21 +639,34 @@ func retryCount(r *int32) uint {
 }
 
 func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) map[string]expectedEvents {
-	r := make(map[string]expectedEvents, 5)
+	// By default, assume that nothing gets anything.
+	r := map[string]expectedEvents{
+		"t1": {
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		},
+		"t2": {
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		},
+		"t1dlq": {
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		},
+		"t2dlq": {
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		},
+		"brokerdlq": {
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		},
+	}
 
 	// For now we assume that there is only one incoming event that will then get retried at respective triggers according
 	// to their Delivery policy. Also depending on how the Delivery is configured, it may be delivered to triggers DLQ or
 	// the Broker DLQ.
-
-	// If t1 has no Delivery or DeadLetterSink configured, then t1dlq should never receive any events.
-	if t1DS == nil || t1DS.DeadLetterSink == nil {
-		// TODO: Maybe not just return anything here... But returning 0 so it's hopefully easier to loop over so we can
-		// just make sure there are no events without special casing missing things.
-		r["t1dlq"] = expectedEvents{
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		}
-	} else if t1DS.DeadLetterSink != nil {
+	if t1DS != nil && t1DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
 		retryCount := retryCount(t1DS.Retry)
 		if retryCount >= 0 && t1FailCount >= retryCount {
@@ -665,14 +678,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		}
 	}
 
-	// If t2 has no Delivery or DeadLetterSink configured, then t2dlq should never receive any events.
-	if t2DS == nil || t2DS.DeadLetterSink == nil {
-		// TODO: Maybe not just return anything here...
-		r["t2dlq"] = expectedEvents{
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		}
-	} else if t2DS.DeadLetterSink != nil {
+	if t2DS != nil && t2DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
 		retryCount := retryCount(t2DS.Retry)
 		if retryCount >= 0 && t2FailCount >= retryCount {
@@ -684,14 +690,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		}
 	}
 
-	// If Broker has no Delivery or DeadLetterSink configured, then brokerdlq should never receive any events.
-	if brokerDS == nil || brokerDS.DeadLetterSink == nil {
-		// TODO: Maybe not just return anything here...
-		r["brokerdlq"] = expectedEvents{
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		}
-	} else if brokerDS.DeadLetterSink != nil {
+	if brokerDS != nil && brokerDS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount or t2FailCount is greater than retry count
 		retryCount := retryCount(brokerDS.Retry)
 		if retryCount >= 0 {
