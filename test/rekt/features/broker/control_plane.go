@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"knative.dev/pkg/ptr"
 	"sort"
 	"strings"
 
@@ -303,6 +304,13 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 		t2FailCount uint
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
+	}, {
+		name: "When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used. (Retry x3)",
+		brokerDS: &v1.DeliverySpec{
+			Retry: ptr.Int32(3),
+		},
+		t1FailCount: 2, // Should get event.
+		t2FailCount: 3, // Should end up in DLQ.
 	}} {
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
 		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
@@ -319,7 +327,22 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 			assertEventDelivery(k, v)
 		}
 
-		//f.Requirement("receiver is done", prober.Re)
+		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
+			interval, timeout := environment.PollTimingsFromContext(ctx)
+			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+				gtg := true
+				for prefix, want := range expectedEvents {
+					events := prober.ReceivedOrRejectedBy(ctx, prefix)
+					if len(events) != len(want.eventSuccess) {
+						gtg = false
+					}
+				}
+				return gtg, nil
+			})
+			if err != nil {
+				t.Failed()
+			}
+		})
 
 		f.Assert("maps match", assertExpectedEvents(prober, expectedEvents))
 		/*
@@ -572,19 +595,19 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 	prober.SetTargetResource(brokerresources.GVR(), brokerName)
 
 	if t1DS != nil {
-		f.Setup("Create Trigger1 with recorder", triggerresources.Install("t1", brokerName,
+		f.Setup("Create Trigger1 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t1"), brokerName,
 			triggerresources.WithSubscriber(prober.AsKReference("t1"), "")))
 	} else {
-		f.Setup("Create Trigger1 with recorder", triggerresources.Install("t1", brokerName,
+		f.Setup("Create Trigger1 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t1"), brokerName,
 			triggerresources.WithSubscriber(prober.AsKReference("t1"), ""),
 			delivery.WithDeadLetterSink(prober.AsKReference("t1dlq"), "")))
 	}
 
 	if t2DS != nil {
-		f.Setup("Create Trigger2 with recorder", triggerresources.Install("t2", brokerName,
+		f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName,
 			triggerresources.WithSubscriber(prober.AsKReference("t2"), "")))
 	} else {
-		f.Setup("Create Trigger2 with recorder", triggerresources.Install("t2", brokerName,
+		f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName,
 			triggerresources.WithSubscriber(prober.AsKReference("t2"), ""),
 			delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), "")))
 	}
@@ -743,15 +766,19 @@ func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]exp
 		for prefix, want := range expected {
 			got := happened(ctx, prober, prefix)
 
-			t.Logf("Expected Events; \nGot: %#v\n Want: %#v", got, want)
+			t.Logf("Expected Events %s; \nGot: %#v\n Want: %#v", prefix, got, want)
 
 			// Check event acceptance.
-			if diff := cmp.Diff(want.eventSuccess, got.eventSuccess); diff != "" {
-				t.Error("unexpected event acceptance behaviour (-want, +got) =", diff)
+			if len(want.eventSuccess) != 0 && len(got.eventSuccess) != 0 {
+				if diff := cmp.Diff(want.eventSuccess, got.eventSuccess); diff != "" {
+					t.Error("unexpected event acceptance behaviour (-want, +got) =", diff)
+				}
 			}
 			// Check timing.
-			if diff := cmp.Diff(want.eventInterval, got.eventInterval); diff != "" {
-				t.Error("unexpected event interval behaviour (-want, +got) =", diff)
+			if len(want.eventInterval) != 0 && len(got.eventInterval) != 0 {
+				if diff := cmp.Diff(want.eventInterval, got.eventInterval); diff != "" {
+					t.Error("unexpected event interval behaviour (-want, +got) =", diff)
+				}
 			}
 		}
 	}
