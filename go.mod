@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.0
-	github.com/cloudevents/sdk-go/v2 v2.4.0
+	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
+	github.com/cloudevents/sdk-go/v2 v2.4.1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
 	github.com/google/gofuzz v1.2.0

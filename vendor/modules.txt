@@ -84,11 +84,11 @@ github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
 # github.com/cloudevents/conformance v0.2.0
 github.com/cloudevents/conformance/pkg/event
 github.com/cloudevents/conformance/pkg/http
-# github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.0
+# github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
 ## explicit
 github.com/cloudevents/sdk-go/observability/opencensus/v2/client
 github.com/cloudevents/sdk-go/observability/opencensus/v2/http
-# github.com/cloudevents/sdk-go/v2 v2.4.0
+# github.com/cloudevents/sdk-go/v2 v2.4.1
 ## explicit
 github.com/cloudevents/sdk-go/v2
 github.com/cloudevents/sdk-go/v2/binding
