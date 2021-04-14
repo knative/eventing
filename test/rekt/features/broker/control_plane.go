@@ -610,9 +610,9 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 
 	t2Opts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference("t2"), "")}
 	if t2DS != nil {
-		t2Opts = append(t1Opts, delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), ""))
+		t2Opts = append(t2Opts, delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), ""))
 		if t2DS.Retry != nil {
-			t2Opts = append(t1Opts, delivery.WithRetry(*t1DS.Retry, t2DS.BackoffPolicy, t2DS.BackoffDelay))
+			t2Opts = append(t2Opts, delivery.WithRetry(*t2DS.Retry, t2DS.BackoffPolicy, t2DS.BackoffDelay))
 		}
 	}
 	f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName, t2Opts...))
