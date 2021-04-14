@@ -359,7 +359,8 @@ func consumeDataAsBytes(e *Event, isBase64 bool, b []byte) error {
 	}
 
 	mt, _ := e.Context.GetDataMediaType()
-	if mt != ApplicationJSON && mt != TextJSON {
+	// Empty content type assumes json
+	if mt != "" && mt != ApplicationJSON && mt != TextJSON {
 		// If not json, then data is encoded as string
 		iter := jsoniter.ParseBytes(jsoniter.ConfigFastest, b)
 		src := iter.ReadString() // handles escaping
