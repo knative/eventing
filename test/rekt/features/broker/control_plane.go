@@ -255,7 +255,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 				trigger := getTrigger(ctx, t)
 
 				if trigger.Spec.Filter == nil {
-					trigger.Spec.Filter = &eventingv1.FilterSpec{
+					trigger.Spec.Filter = &eventingv1.TriggerFilter{
 						Attributes: map[string]string{},
 					}
 				} else if trigger.Spec.Filter.Attributes == nil {

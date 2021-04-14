@@ -222,7 +222,7 @@ func WithAttributesTriggerFilter(eventSource, eventType string, extensions map[s
 		attrs[k] = fmt.Sprintf("%v", v)
 	}
 	return func(t *eventingv1.Trigger) {
-		t.Spec.Filter = &eventingv1.FilterSpec{
+		t.Spec.Filter = &eventingv1.TriggerFilter{
 			Attributes: eventingv1.TriggerFilterAttributes(attrs),
 		}
 	}

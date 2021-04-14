@@ -928,7 +928,7 @@ func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
 		},
 		Spec: eventingv1.TriggerSpec{
 			Broker: brokerName,
-			Filter: &eventingv1.FilterSpec{
+			Filter: &eventingv1.TriggerFilter{
 				Attributes: map[string]string{"Source": "Any", "Type": "Any"},
 			},
 			Subscriber: duckv1.Destination{

@@ -71,7 +71,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldError) {
+func validateFilterSpec(filter *TriggerFilter, path []string) (errs []*apis.FieldError) {
 	if filter == nil {
 		return nil
 	}
@@ -90,7 +90,7 @@ func validateFilterSpec(filter *FilterSpec, path []string) (errs []*apis.FieldEr
 	if filter.Exact != nil {
 		if len(filter.Exact) != 1 {
 			errs = append(errs, &apis.FieldError{
-				Message: fmt.Sprintf("Exact can have only one key-value"),
+				Message: "Exact can have only one key-value",
 				Paths:   []string{strings.Join(append(path, "exact"), ".")},
 			})
 		}

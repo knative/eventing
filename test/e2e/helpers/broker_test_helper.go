@@ -148,7 +148,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 		// to set in the subscriber and services pod
 		// The attributes in these test cases will be used as assertions on the receivers
 		eventFilters []eventTestCase
-		// FilterSpec with DeprecatedSourceAndType or not
+		// TriggerFilter with DeprecatedSourceAndType or not
 		deprecatedTriggerFilter bool
 	}{
 		{

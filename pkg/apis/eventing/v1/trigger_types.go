@@ -79,10 +79,10 @@ type TriggerSpec struct {
 
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
-	// If multiple filters are specified, then the same semantics of FilterSpec.All is applied.
+	// If multiple filters are specified, then the same semantics of TriggerFilter.All is applied.
 	//
 	// +optional
-	Filter *FilterSpec `json:"filter,omitempty"`
+	Filter *TriggerFilter `json:"filter,omitempty"`
 
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
@@ -93,10 +93,10 @@ type TriggerSpec struct {
 	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
 
-// FilterSpec allows to define a filter expression.
-// If multiple filters are specified, then the same semantics of FilterSpec.All is applied.
+// TriggerFilter allows to define a filter expression.
+// If multiple filters are specified, then the same semantics of TriggerFilter.All is applied.
 // If no filter dialect or empty object is specified, then the filter always accept the events.
-type FilterSpec struct {
+type TriggerFilter struct {
 	// Attributes filters events by exact match on event context attributes.
 	// Each key in the map is compared with the equivalent key in the event
 	// context. An event passes the filter if all values are equal to the
@@ -112,19 +112,19 @@ type FilterSpec struct {
 	// All must contain at least one filter expression.
 	//
 	// +optional
-	All []FilterSpec `json:"all,omitempty"`
+	All []TriggerFilter `json:"all,omitempty"`
 
 	// Any evaluates to true if at least one of the nested expressions evaluate to true.
 	//
 	// Any must contain at least one filter expression.
 	//
 	// +optional
-	Any []FilterSpec `json:"any,omitempty"`
+	Any []TriggerFilter `json:"any,omitempty"`
 
 	// Not evaluates to true if the nested expression evaluates to false.
 	//
 	// +optional
-	Not *FilterSpec `json:"not,omitempty"`
+	Not *TriggerFilter `json:"not,omitempty"`
 
 	// Exact evaluates to true if the value of the matching CloudEvents attribute is matches exactly the String value specified (case sensitive).
 	// Exact must contain exactly one property, where the key is the name of the CloudEvents attribute to be matched, and its value is the String value to use in the comparison.

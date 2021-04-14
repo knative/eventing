@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	validEmptyFilter      = &FilterSpec{}
-	validAttributesFilter = &FilterSpec{
+	validEmptyFilter      = &TriggerFilter{}
+	validAttributesFilter = &TriggerFilter{
 		Attributes: TriggerFilterAttributes{
 			"type":   "other_type",
 			"source": "other_source",
@@ -369,7 +369,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "missing attributes keys, match all",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: &FilterSpec{
+			Filter: &TriggerFilter{
 				Attributes: TriggerFilterAttributes{},
 			},
 			Subscriber: validSubscriber,
@@ -379,7 +379,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "invalid attribute name, start with number",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: &FilterSpec{
+			Filter: &TriggerFilter{
 				Attributes: TriggerFilterAttributes{
 					"0invalid": "my-value",
 				},
@@ -394,7 +394,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "invalid attribute name, capital letters",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: &FilterSpec{
+			Filter: &TriggerFilter{
 				Attributes: TriggerFilterAttributes{
 					"invALID": "my-value",
 				},
@@ -478,17 +478,17 @@ func TestTriggerSpecValidation(t *testing.T) {
 func TestFilterSpecValidation(t *testing.T) {
 	tests := []struct {
 		name   string
-		filter *FilterSpec
+		filter *TriggerFilter
 		want   *apis.FieldError
 	}{{
 		name: "missing attributes keys, match all",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Attributes: TriggerFilterAttributes{},
 		},
 		want: &apis.FieldError{},
 	}, {
 		name: "invalid attribute name, start with number",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Attributes: TriggerFilterAttributes{
 				"0invalid": "my-value",
 			},
@@ -499,7 +499,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "invalid attribute name, capital letters",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Attributes: TriggerFilterAttributes{
 				"invALID": "my-value",
 			},
@@ -522,7 +522,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		want:   &apis.FieldError{},
 	}, {
 		name: "exact filter contains more than one attribute",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Exact: map[string]string{
 				"myext":      "abc",
 				"anotherext": "xyz",
@@ -534,7 +534,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "exact filter contains invalid attribute name",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Exact: map[string]string{
 				"invALID": "abc",
 			},
@@ -545,7 +545,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "valid exact filter",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Exact: map[string]string{
 				"valid": "abc",
 			},
@@ -553,7 +553,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: &apis.FieldError{},
 	}, {
 		name: "suffix filter contains more than one attribute",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Suffix: map[string]string{
 				"myext":      "abc",
 				"anotherext": "xyz",
@@ -565,7 +565,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "suffix filter contains invalid attribute name",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Suffix: map[string]string{
 				"invALID": "abc",
 			},
@@ -576,7 +576,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "valid suffix filter",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Suffix: map[string]string{
 				"valid": "abc",
 			},
@@ -584,7 +584,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: &apis.FieldError{},
 	}, {
 		name: "prefix filter contains more than one attribute",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Prefix: map[string]string{
 				"myext":      "abc",
 				"anotherext": "xyz",
@@ -596,7 +596,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "prefix filter contains invalid attribute name",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Prefix: map[string]string{
 				"invALID": "abc",
 			},
@@ -607,7 +607,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "valid prefix filter",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Prefix: map[string]string{
 				"valid": "abc",
 			},
@@ -615,14 +615,14 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: &apis.FieldError{},
 	}, {
 		name: "not nested expression is valid",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Not: validAttributesFilter,
 		},
 		want: &apis.FieldError{},
 	}, {
 		name: "not nested expression is invalid",
-		filter: &FilterSpec{
-			Not: &FilterSpec{
+		filter: &TriggerFilter{
+			Not: &TriggerFilter{
 				Prefix: map[string]string{
 					"invALID": "abc",
 				},
@@ -634,8 +634,8 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "all filter is empty",
-		filter: &FilterSpec{
-			All: []FilterSpec{},
+		filter: &TriggerFilter{
+			All: []TriggerFilter{},
 		},
 		want: &apis.FieldError{
 			Message: `All must contain at least one nested filter`,
@@ -643,8 +643,8 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "all filter is valid",
-		filter: &FilterSpec{
-			All: []FilterSpec{
+		filter: &TriggerFilter{
+			All: []TriggerFilter{
 				*validAttributesFilter,
 				{Exact: map[string]string{"myattr": "myval"}},
 			},
@@ -652,8 +652,8 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: &apis.FieldError{},
 	}, {
 		name: "all filter sub expression is invalid",
-		filter: &FilterSpec{
-			All: []FilterSpec{
+		filter: &TriggerFilter{
+			All: []TriggerFilter{
 				*validAttributesFilter,
 				{Exact: map[string]string{"myattr": "myval"}},
 				{Prefix: map[string]string{
@@ -667,8 +667,8 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "any filter is empty",
-		filter: &FilterSpec{
-			Any: []FilterSpec{},
+		filter: &TriggerFilter{
+			Any: []TriggerFilter{},
 		},
 		want: &apis.FieldError{
 			Message: `Any must contain at least one nested filter`,
@@ -676,8 +676,8 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "any filter is valid",
-		filter: &FilterSpec{
-			Any: []FilterSpec{
+		filter: &TriggerFilter{
+			Any: []TriggerFilter{
 				*validAttributesFilter,
 				{Exact: map[string]string{"myattr": "myval"}},
 			},
@@ -685,8 +685,8 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: &apis.FieldError{},
 	}, {
 		name: "any filter sub expression is invalid",
-		filter: &FilterSpec{
-			Any: []FilterSpec{
+		filter: &TriggerFilter{
+			Any: []TriggerFilter{
 				*validAttributesFilter,
 				{Exact: map[string]string{"myattr": "myval"}},
 				{Prefix: map[string]string{
@@ -700,7 +700,7 @@ func TestFilterSpecValidation(t *testing.T) {
 		},
 	}, {
 		name: "raw extension expression is valid",
-		filter: &FilterSpec{
+		filter: &TriggerFilter{
 			Extensions: map[string]*runtime.RawExtension{
 				"juel": {Raw: []byte("\"myExpressionUsingJUEL\"")},
 			},
