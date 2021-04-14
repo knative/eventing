@@ -27,6 +27,7 @@ import (
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/manifest"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -590,29 +591,31 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 		// TODO: fix this crap
 		// With URI, or with retries, etc.
 		brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), ""))
+		if brokerDS.Retry != nil {
+			brokerOpts = append(brokerOpts, delivery.WithRetry(*brokerDS.Retry, brokerDS.BackoffPolicy, brokerDS.BackoffDelay))
+		}
 	}
 	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
 
 	prober.SetTargetResource(brokerresources.GVR(), brokerName)
+	t1Opts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference("t1"), "")}
 
 	if t1DS != nil {
-		f.Setup("Create Trigger1 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t1"), brokerName,
-			triggerresources.WithSubscriber(prober.AsKReference("t1"), "")))
-	} else {
-		f.Setup("Create Trigger1 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t1"), brokerName,
-			triggerresources.WithSubscriber(prober.AsKReference("t1"), ""),
-			delivery.WithDeadLetterSink(prober.AsKReference("t1dlq"), "")))
+		t1Opts = append(t1Opts, delivery.WithDeadLetterSink(prober.AsKReference("t1dlq"), ""))
+		if t1DS.Retry != nil {
+			t1Opts = append(t1Opts, delivery.WithRetry(*t1DS.Retry, t1DS.BackoffPolicy, t1DS.BackoffDelay))
+		}
 	}
+	f.Setup("Create Trigger1 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t1"), brokerName, t1Opts...))
 
+	t2Opts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference("t2"), "")}
 	if t2DS != nil {
-		f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName,
-			triggerresources.WithSubscriber(prober.AsKReference("t2"), "")))
-	} else {
-		f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName,
-			triggerresources.WithSubscriber(prober.AsKReference("t2"), ""),
-			delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), "")))
+		t2Opts = append(t2Opts, delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), ""))
+		if t2DS.Retry != nil {
+			t2Opts = append(t2Opts, delivery.WithRetry(*t2DS.Retry, t2DS.BackoffPolicy, t2DS.BackoffDelay))
+		}
 	}
-
+	f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName, t2Opts...))
 	return prober
 }
 
