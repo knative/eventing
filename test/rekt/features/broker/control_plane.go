@@ -20,9 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"knative.dev/pkg/ptr"
 	"sort"
 	"strings"
+
+	"knative.dev/pkg/ptr"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -643,23 +644,23 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	r := map[string]expectedEvents{
 		"t1": {
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		},
 		"t2": {
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		},
 		"t1dlq": {
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		},
 		"t2dlq": {
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		},
 		"brokerdlq": {
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		},
 	}
 

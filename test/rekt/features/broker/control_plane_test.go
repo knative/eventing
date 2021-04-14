@@ -183,11 +183,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		want: map[string]expectedEvents{
 			"t1": {
 				eventSuccess:  []bool{false, false, false, true},
-				eventInterval: []int{0, 0, 0, 0},
+				eventInterval: []uint{0, 0, 0, 0},
 			},
 			"t2": {
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
