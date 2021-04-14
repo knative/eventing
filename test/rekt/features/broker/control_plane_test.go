@@ -24,6 +24,7 @@ import (
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 )
 
 var noEvents = expectedEvents{
@@ -84,6 +85,14 @@ func TestHelper(t *testing.T) {
 			eventSuccess:  []bool{false, false, true},
 			eventInterval: []uint{0, 0, 0},
 		},
+	}, {
+		// Test with 3 retries => 4 sends alltogether (one initial, plus 3 retries)
+		retry:    3,
+		failures: 4,
+		want: expectedEvents{
+			eventSuccess:  []bool{false, false, false, false},
+			eventInterval: []uint{0, 0, 0, 0},
+		},
 	}} {
 		got := helper(tt.retry, tt.failures, false)
 		if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(expectedEvents{})); diff != "" {
@@ -93,8 +102,6 @@ func TestHelper(t *testing.T) {
 }
 
 func TestCreateExpectedEventMap(t *testing.T) {
-	one := int32(1)
-	four := int32(4)
 	//	two := int32(2)
 
 	for _, tt := range []struct {
@@ -129,7 +136,7 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		name:     "t1, one retry, no failures, both t1 / t2 get it, nothing else",
 		brokerDS: nil,
 		t1DS: &v1.DeliverySpec{
-			Retry: &one,
+			Retry: ptr.Int32(1),
 		},
 		t2DS:        nil,
 		t1FailCount: 0,
@@ -151,16 +158,16 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		name:     "t1, one retry, one failure, both t1 / t2 get it, t1dlq gets it too",
 		brokerDS: nil,
 		t1DS: &v1.DeliverySpec{
-			Retry:          &one,
+			Retry:          ptr.Int32(1),
 			DeadLetterSink: dlqSink,
 		},
 		t2DS:        nil,
-		t1FailCount: 1,
+		t1FailCount: 2,
 		t2FailCount: 0,
 		want: map[string]expectedEvents{
 			"t1": {
-				eventSuccess:  []bool{false},
-				eventInterval: []uint{0},
+				eventSuccess:  []bool{false, false},
+				eventInterval: []uint{0, 0},
 			},
 			"t2": {
 				eventSuccess:  []bool{true},
@@ -174,7 +181,7 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		name:     "t1, four retries with linear, 5 seconds apart, 3 failures, both t1 / t2 get it, no dlq gets it because succeeds on 4th try",
 		brokerDS: nil,
 		t1DS: &v1.DeliverySpec{
-			Retry:          &four,
+			Retry:          ptr.Int32(4),
 			DeadLetterSink: dlqSink,
 		},
 		t2DS:        nil,
@@ -194,11 +201,34 @@ func TestCreateExpectedEventMap(t *testing.T) {
 			"brokerdlq": noEvents,
 		},
 	}, {
+		name:     "t1, three retries with linear, 5 seconds apart, 4 failures, both t1 / t2 get it, t1dlq gets it because fails all 4 tries",
+		brokerDS: nil,
+		t1DS: &v1.DeliverySpec{
+			Retry:          ptr.Int32(3),
+			DeadLetterSink: dlqSink,
+		},
+		t2DS:        nil,
+		t1FailCount: 4,
+		t2FailCount: 0,
+		want: map[string]expectedEvents{
+			"t1": {
+				eventSuccess:  []bool{false, false, false, false},
+				eventInterval: []uint{0, 0, 0, 0},
+			},
+			"t2": {
+				eventSuccess:  []bool{true},
+				eventInterval: []uint{0},
+			},
+			"t1dlq":     oneSuccessfulEvent,
+			"t2dlq":     noEvents,
+			"brokerdlq": noEvents,
+		},
+	}, {
 		name:     "t2, one retry, one failure, both t1 / t2 get it, t2dlq gets it too",
 		brokerDS: nil,
 		t1DS:     nil,
 		t2DS: &v1.DeliverySpec{
-			Retry:          &one,
+			Retry:          ptr.Int32(1),
 			DeadLetterSink: dlqSink,
 		},
 		t1FailCount: 0,
@@ -209,8 +239,8 @@ func TestCreateExpectedEventMap(t *testing.T) {
 				eventInterval: []uint{0},
 			},
 			"t2": {
-				eventSuccess:  []bool{false},
-				eventInterval: []uint{0},
+				eventSuccess:  []bool{false, true},
+				eventInterval: []uint{0, 0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     oneSuccessfulEvent,
@@ -219,7 +249,7 @@ func TestCreateExpectedEventMap(t *testing.T) {
 	}, {
 		name: "t1, one retry, one failure, both t1 / t2 get it, brokerdlq gets it too",
 		brokerDS: &v1.DeliverySpec{
-			Retry:          &one,
+			Retry:          ptr.Int32(1),
 			DeadLetterSink: dlqSink,
 		},
 		t1DS:        nil,
@@ -228,8 +258,8 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2FailCount: 0,
 		want: map[string]expectedEvents{
 			"t1": {
-				eventSuccess:  []bool{false},
-				eventInterval: []uint{0},
+				eventSuccess:  []bool{false, true},
+				eventInterval: []uint{0, 0},
 			},
 			"t2": {
 				eventSuccess:  []bool{true},

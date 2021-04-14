@@ -312,7 +312,7 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 			Retry: ptr.Int32(3),
 		},
 		t1FailCount: 2, // Should get event.
-		t2FailCount: 3, // Should end up in DLQ.
+		t2FailCount: 4, // Should end up in DLQ.
 	}} {
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
 		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
@@ -347,28 +347,7 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 		})
 
 		f.Assert("maps match", assertExpectedEvents(prober, expectedEvents))
-		/*
-			f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
-			f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
-			f.Setup("install recorder for t2", prober.ReceiverInstall("t2"))
-			f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
-			f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
-		*/
-
-		//f.Stable("Conformance").
-		//	Should(tt.name,
-		//		brokerTriggerDeliverySpec(prober, brokerDS, t1DS, t2DS))
 	}
-	//
-	//f.Stable("Conformance").
-	//	Should("When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
-	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS)).
-	//	Should("When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used.",
-	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS)).
-	//	Should("When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used.",
-	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS)).
-	//	Should("When both `BrokerSpec.Delivery` and `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used.",
-	//		brokerTriggerDeliverySpec(brokerDS, t1DS, t2DS))
 
 	return f
 }
@@ -508,54 +487,6 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 	} else {
 		t.Errorf("Trigger spec.broker is mutable")
 	}
-}
-
-// source ---> [broker (brokerDS)] ---[trigger(ds)]--> `tSink`
-//                    |                      |
-//                    |                      +--> `tDLQ` (optional)
-//                    |
-//                    + --> "dlq" (optional)
-// Given that we know:
-// 1. Which event we sent
-// 2. What the topology looks like
-// We should then be able to check which recorder (tPrefix) received which events.
-// Take in a magic picture and make sure that all the pieces saw the events they were supposed to.
-func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, trigger1DS, trigger2DS *v1.DeliverySpec, tPrefix string) *feature.Feature {
-	/*
-		// one or both brokerDS
-
-		f.Stable("broker with DLQ").
-			Must("accepted all events", prober.AssertSentAll("source")).
-			Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", tPrefix+"dlq")).
-			Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", "sink2"))
-
-			// AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
-
-		sent := p.SentBy(ctx, toPrefix)
-		ids := make([]string, len(sent))
-		for i, s := range sent {
-			ids[i] = s.Sent.SentId
-		}
-
-		events := p.ReceivedBy(ctx, tPrefix)
-		if len(ids) != len(events) {
-			t.Errorf("expected %q to have received %d events, actually received %d",
-				fromPrefix, len(ids), len(events))
-		}
-		for _, id := range ids {
-			found := false
-			for _, event := range events {
-				if id == event.SentId {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("Failed to receive event id=%s", id)
-			}
-		}
-	*/
-	return nil
 }
 
 //
@@ -752,7 +683,7 @@ func helper(retry, failures uint, isLinear bool) expectedEvents {
 		eventSuccess:  make([]bool, 0),
 		eventInterval: make([]uint, 0),
 	}
-	for i := uint(0); i < retry; i++ {
+	for i := uint(0); i <= retry; i++ {
 		if failures == i {
 			r.eventSuccess = append(r.eventSuccess, true)
 			r.eventInterval = append(r.eventInterval, 0)
