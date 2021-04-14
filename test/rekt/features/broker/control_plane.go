@@ -293,18 +293,18 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 		name     string
 		brokerDS *v1.DeliverySpec
 		// Trigger 1 Delivery spec
-		t1DS     *v1.DeliverySpec
+		t1DS *v1.DeliverySpec
 		// How many events to fail before succeeding
 		t1FailCount int
 		// Trigger 2 Delivery spec
-		t2DS     *v1.DeliverySpec
+		t2DS *v1.DeliverySpec
 		// How many events to fail before succeeding
 		t2FailCount int
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
 	}} {
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
-		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS)
+		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
 
 		// Send an event into the matrix and hope for the best
 		prober.SenderFullEvents(1)
@@ -312,58 +312,18 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 		f.Requirement("sender is finished", prober.SenderDone("source"))
 
 		// All events have been sent, time to look at the specs and confirm we got them.
-		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t1DS, "t1")
-		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t1DS, "t1dlq")
-
-		// ...Simple test case...
-		// Broker has no retries
-
-
-		expectedDeliverySpec
-
-
-		expectedEvents := buildMap(tt.BrokerDS, tt.T1DS, tt.t2DS)
-		// Helper that takes in: Delivery Specs => Returns "Places to Look [t1 => assertFunction, t1dlq => assertFunction, brokerdlq => assertFunction]
-		// "t1" => {6 events, 6 failures, 0 success, linear}
-		// "t1dlq" => {1 event}
-		// "t2" => {6 events, 6 failures, 0 success exponential}
-		// "t2dlq" => {0 events}
-		// "brokerdql" => {1 event}
-
-		// "t1" => {6 events, 5 failures, 1 success, linear}
-		// "t1dlq" => {0 event}
-		// "t2" => {6 events, 6 failures, 0 success exponential}
-		// "t2dlq" => {0 events}
-		// "brokerdql" => {1 event}
-
-		assertEvents(expectedEvents[])
-	    assertEvents("t1", "6 events", linear)
-
-		// Make sure that Trigger 1 respected linear back, and failed 6 times
-		assertEventsSeen("t1", helpers.SawLinearBackoff(tt.t1DS))
-		// After 6 failures, was sent to DLQ
-		prober.AssertReceivedAll("{key in the map", mapEntry)
-
-		// Make sure that Trigger 2 respected linear back, and failed 6 times
-		assertEventsSeen("t1", helpers.SawLinearBackoff(tt.t1DS))
-		// After 6 failures, was sent to DLQ
-		prober.AssertReceivedAll("t1dlq", )
-
-
-		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "t2")
-		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "t2dlq")
-		assertBrokerTriggerDeliverySpec(prober, tt.brokerDS, tt.t2DS, "brokerdlq")
-
-		assertBrokerXXX(prober, tt.t1Ds, "t1")
-		assertBrokerXXX(prober, tt.t1Ds, "t1")
-
-/*
-	f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
-	f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
-	f.Setup("install recorder for t2", prober.ReceiverInstall("t2"))
-	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
-	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
-	*/		
+		expectedEvents := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		for k, v := range expectedEvents {
+			fmt.Printf("%s => %+v %+v", k, v.eventSuccess, v.eventInterval)
+			assertEventDelivery(k, v)
+		}
+		/*
+			f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
+			f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
+			f.Setup("install recorder for t2", prober.ReceiverInstall("t2"))
+			f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
+			f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
+		*/
 
 		//f.Stable("Conformance").
 		//	Should(tt.name,
@@ -530,42 +490,42 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 // 2. What the topology looks like
 // We should then be able to check which recorder (tPrefix) received which events.
 // Take in a magic picture and make sure that all the pieces saw the events they were supposed to.
-func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, trigger1DS, trigger2DS *v1.DeliverySpec, tPrefix string) feature.Feature {
+func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.EventProber, brokerDS, trigger1DS, trigger2DS *v1.DeliverySpec, tPrefix string) *feature.Feature {
+	/*
+		// one or both brokerDS
 
-	// one or both brokerDS
+		f.Stable("broker with DLQ").
+			Must("accepted all events", prober.AssertSentAll("source")).
+			Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", tPrefix+"dlq")).
+			Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", "sink2"))
 
-	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", tPrefix+"dlq")).
-		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", "sink2"))
+			// AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
 
-		// AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
+		sent := p.SentBy(ctx, toPrefix)
+		ids := make([]string, len(sent))
+		for i, s := range sent {
+			ids[i] = s.Sent.SentId
+		}
 
-	sent := p.SentBy(ctx, toPrefix)
-	ids := make([]string, len(sent))
-	for i, s := range sent {
-		ids[i] = s.Sent.SentId
-	}
-
-	events := p.ReceivedBy(ctx, tPrefix)
-	if len(ids) != len(events) {
-		t.Errorf("expected %q to have received %d events, actually received %d",
-			fromPrefix, len(ids), len(events))
-	}
-	for _, id := range ids {
-		found := false
-		for _, event := range events {
-			if id == event.SentId {
-				found = true
-				break
+		events := p.ReceivedBy(ctx, tPrefix)
+		if len(ids) != len(events) {
+			t.Errorf("expected %q to have received %d events, actually received %d",
+				fromPrefix, len(ids), len(events))
+		}
+		for _, id := range ids {
+			found := false
+			for _, event := range events {
+				if id == event.SentId {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("Failed to receive event id=%s", id)
 			}
 		}
-		if !found {
-			t.Errorf("Failed to receive event id=%s", id)
-		}
-	}
-
-	return todo
+	*/
+	return nil
 }
 
 //
@@ -622,6 +582,151 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 			delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), "")))
 	}
 
-	// To test, we will have to compute what the expected delivery spec each recorder.
 	return prober
+}
+
+func assertEventDelivery(receiver string, e expectedEvents) {
+	// TODO something like
+	// Get all the events for `receiver`, then make sure the right number was received and receive times match eventIntervals between received Events.
+}
+
+// createExpectedEventMap creates a datastructure for a given test topology created by `createBrokerTriggerDeliveryTopology` function.
+// Things we know from the DeliverySpecs passed in are where failed events from both t1 and t2 should land in.
+// We also know how many events (incoming as well as how many failures the trigger subscriber is supposed to see).
+// Note there are lot of baked assumptions and very tight coupling between this and `createBrokerTriggerDeliveryTopology` function.
+type expectedEvents struct {
+	eventSuccess []bool // events and their outcomes (succeeded or failed) in order received by the Receiver
+	// What is the minimum time between events above. If there's only one entry, it's irrelevant and will be useless. If there's, say
+	// two entries, the second entry is the time between the first and second event. And yeah, there should be 2 events in the above array.
+	eventInterval []int
+}
+
+func retryCount(r *int32) int {
+	if r == nil {
+		return 0
+	}
+	return int(*r)
+}
+
+func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount int) map[string]expectedEvents {
+	r := make(map[string]expectedEvents, 5)
+
+	// For now we assume that there is only one incoming event that will then get retried at respective triggers according
+	// to their Delivery policy. Also depending on how the Delivery is configured, it may be delivered to triggers DLQ or
+	// the Broker DLQ.
+
+	// If t1 has no Delivery or DeadLetterSink configured, then t1dlq should never receive any events.
+	if t1DS == nil || t1DS.DeadLetterSink == nil {
+		// TODO: Maybe not just return anything here... But returning 0 so it's hopefully easier to loop over so we can
+		// just make sure there are no events without special casing missing things.
+		r["t1dlq"] = expectedEvents{
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		}
+	} else if t1DS.DeadLetterSink != nil {
+		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
+		retryCount := retryCount(t1DS.Retry)
+		if retryCount >= 0 && t1FailCount >= retryCount {
+			// Ok, so we should have more failures than retries => one event in the t1dlq
+			r["t1dlq"] = expectedEvents{
+				eventSuccess:  []bool{true},
+				eventInterval: []int{0},
+			}
+		}
+	}
+
+	// If t2 has no Delivery or DeadLetterSink configured, then t2dlq should never receive any events.
+	if t2DS == nil || t2DS.DeadLetterSink == nil {
+		// TODO: Maybe not just return anything here...
+		r["t2dlq"] = expectedEvents{
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		}
+	} else if t2DS.DeadLetterSink != nil {
+		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
+		retryCount := retryCount(t2DS.Retry)
+		if retryCount >= 0 && t2FailCount >= retryCount {
+			// Ok, so we should have more failures than retries => one event in the t1dlq
+			r["t2dlq"] = expectedEvents{
+				eventSuccess:  []bool{true},
+				eventInterval: []int{0},
+			}
+		}
+	}
+
+	// If Broker has no Delivery or DeadLetterSink configured, then brokerdlq should never receive any events.
+	if brokerDS == nil || brokerDS.DeadLetterSink == nil {
+		// TODO: Maybe not just return anything here...
+		r["brokerdlq"] = expectedEvents{
+			eventSuccess:  []bool{},
+			eventInterval: []int{},
+		}
+	} else if brokerDS.DeadLetterSink != nil {
+		// There's a dead letter sink specified. Events can end up here if t1FailCount or t2FailCount is greater than retry count
+		retryCount := retryCount(brokerDS.Retry)
+		if retryCount >= 0 {
+			if t2FailCount >= retryCount || t1FailCount >= retryCount {
+				// Ok, so we should have more failures than retries => one event in the t1dlq
+				r["brokerdlq"] = expectedEvents{
+					eventSuccess:  []bool{true},
+					eventInterval: []int{0},
+				}
+			}
+		}
+	}
+
+	// Ok, so that basically hopefully took care of if any of the DLQs should get events.
+
+	// Default is that there are no retries (they will get constructed below if there are), so assume
+	// no retries and failure or success based on the t1FailCount
+	r["t1"] = expectedEvents{
+		eventSuccess:  []bool{t1FailCount == 0},
+		eventInterval: []int{0},
+	}
+
+	if t1DS != nil || brokerDS != nil {
+		// Check to see which DeliverySpec applies to Trigger
+		effectiveT1DS := t1DS
+		if t1DS == nil {
+			effectiveT1DS = brokerDS
+		}
+		r["t1"] = helper(retryCount(effectiveT1DS.Retry), t1FailCount, true)
+	}
+	r["t2"] = expectedEvents{
+		eventSuccess:  []bool{t2FailCount == 0},
+		eventInterval: []int{0},
+	}
+	if t2DS != nil || brokerDS != nil {
+		// Check to see which DeliverySpec applies to Trigger
+		effectiveT2DS := t2DS
+		if t2DS == nil {
+			effectiveT2DS = brokerDS
+		}
+		r["t2"] = helper(retryCount(effectiveT2DS.Retry), t2FailCount, true)
+	}
+	return r
+}
+
+func helper(retry, failures int, isLinear bool) expectedEvents {
+	if retry == 0 {
+		return expectedEvents{
+			eventSuccess:  []bool{failures == 0},
+			eventInterval: []int{0},
+		}
+
+	}
+	r := expectedEvents{
+		eventSuccess:  make([]bool, 0),
+		eventInterval: make([]int, 0),
+	}
+	for i := 0; i < retry; i++ {
+		if failures == i {
+			r.eventSuccess = append(r.eventSuccess, true)
+			r.eventInterval = append(r.eventInterval, 0)
+			break
+		}
+		r.eventSuccess = append(r.eventSuccess, false)
+		r.eventInterval = append(r.eventInterval, 0)
+	}
+	return r
 }
