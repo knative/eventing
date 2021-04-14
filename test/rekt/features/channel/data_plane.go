@@ -125,14 +125,14 @@ func (s *subCfg) cuteName(suffix string) string {
 //             |       |            |
 //             |       |            +-->sub1dlq (optional)
 //             |       |
-//             |       +-[sub2 (sub2DS)]--> sub2sub
+//             |       +-[subn (sub2DS)]--> sub2sub
 //             |                   |
-//             |                   +-->sub2dlq (optional)
+//             |                   +-->subndlq (optional)
 //             |
 //             +--[DLQ]--> dlq
 //
-func createChannelTopology(f *feature.Feature, prober *eventshub.EventProber, chDS *v1.DeliverySpec, subs []subCfg) feature.StepFn {
-
+func createChannelTopology(f *feature.Feature, chDS *v1.DeliverySpec, subs []subCfg) *eventshub.EventProber {
+	prober := eventshub.NewProber()
 	// Install the receivers.
 	f.Setup("install channel DLQ", prober.ReceiverInstall("dlq"))
 
@@ -159,8 +159,9 @@ func createChannelTopology(f *feature.Feature, prober *eventshub.EventProber, ch
 		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(sub.prefix, opts...))
 	}
 
-	// Update Channel with delivery spec.
+	// Create Channel with delivery spec.
 
-	f.Setup("install subscription2 DLQ", prober.ReceiverInstall("sub2dlq"))
+	// f.Setup("install subscription2 DLQ", prober.ReceiverInstall("sub2dlq"))
 
+	return prober
 }
