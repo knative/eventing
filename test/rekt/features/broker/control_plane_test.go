@@ -94,6 +94,7 @@ func TestHelper(t *testing.T) {
 
 func TestCreateExpectedEventMap(t *testing.T) {
 	one := int32(1)
+	four := int32(4)
 	//	two := int32(2)
 
 	for _, tt := range []struct {
@@ -112,11 +113,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t1FailCount: 0,
 		t2FailCount: 0,
 		want: map[string]expectedEvents{
-			"t1": expectedEvents{
+			"t1": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
-			"t2": expectedEvents{
+			"t2": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
@@ -134,11 +135,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t1FailCount: 0,
 		t2FailCount: 0,
 		want: map[string]expectedEvents{
-			"t1": expectedEvents{
+			"t1": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
-			"t2": expectedEvents{
+			"t2": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
@@ -157,15 +158,38 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t1FailCount: 1,
 		t2FailCount: 0,
 		want: map[string]expectedEvents{
-			"t1": expectedEvents{
+			"t1": {
 				eventSuccess:  []bool{false},
 				eventInterval: []uint{0},
 			},
-			"t2": expectedEvents{
+			"t2": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
 			"t1dlq":     oneSuccessfulEvent,
+			"t2dlq":     noEvents,
+			"brokerdlq": noEvents,
+		},
+	}, {
+		name:     "t1, four retries with linear, 5 seconds apart, 3 failures, both t1 / t2 get it, no dlq gets it because succeeds on 4th try",
+		brokerDS: nil,
+		t1DS: &v1.DeliverySpec{
+			Retry:          &four,
+			DeadLetterSink: dlqSink,
+		},
+		t2DS:        nil,
+		t1FailCount: 3,
+		t2FailCount: 0,
+		want: map[string]expectedEvents{
+			"t1": {
+				eventSuccess:  []bool{false, false, false, true},
+				eventInterval: []uint{0, 0, 0, 0},
+			},
+			"t2": {
+				eventSuccess:  []bool{true},
+				eventInterval: []uint{0},
+			},
+			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
 			"brokerdlq": noEvents,
 		},
@@ -180,11 +204,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t1FailCount: 0,
 		t2FailCount: 1,
 		want: map[string]expectedEvents{
-			"t1": expectedEvents{
+			"t1": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
-			"t2": expectedEvents{
+			"t2": {
 				eventSuccess:  []bool{false},
 				eventInterval: []uint{0},
 			},
@@ -203,11 +227,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t1FailCount: 1,
 		t2FailCount: 0,
 		want: map[string]expectedEvents{
-			"t1": expectedEvents{
+			"t1": {
 				eventSuccess:  []bool{false},
 				eventInterval: []uint{0},
 			},
-			"t2": expectedEvents{
+			"t2": {
 				eventSuccess:  []bool{true},
 				eventInterval: []uint{0},
 			},
@@ -220,9 +244,5 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		if !reflect.DeepEqual(tt.want, got) {
 			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}
-
-		//		if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(map[string]expectedEvents{})); diff != "" {
-		//			t.Log("Unexpected diff: ", diff)
-		//		}
 	}
 }
