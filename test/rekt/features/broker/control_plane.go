@@ -290,9 +290,6 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
 
-	// Make three brokers.
-
-	// tabletest
 	for i, tt := range []struct {
 		name     string
 		brokerDS *v1.DeliverySpec
@@ -324,10 +321,6 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 
 		// All events have been sent, time to look at the specs and confirm we got them.
 		expectedEvents := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
-		for k, v := range expectedEvents {
-			fmt.Printf("%s => %+v %+v", k, v.eventSuccess, v.eventInterval)
-			assertEventDelivery(k, v)
-		}
 
 		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
 			interval, timeout := environment.PollTimingsFromContext(ctx)
@@ -346,7 +339,7 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 			}
 		})
 
-		f.Assert("maps match", assertExpectedEvents(prober, expectedEvents))
+		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expectedEvents))
 	}
 
 	return f
@@ -494,14 +487,14 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 // delivery configurations.
 //
 // source ---> [broker (brokerDS)] --+--[trigger1 (t1ds)]--> "t1"
-//                  |                |                 |
-//                  |                |                 +--> "t1dlq" (optional)
-//                  |                |
-//                  |                +-[trigger2 (t2ds)]--> "t2"
-//                  |                |              |
-//                  |                |              +--> "t2dlq" (optional)
-//                  |                |
-//                  +--[DLQ]--> "dlq" (optional)
+//                         |         |              |
+//                         |         |              +--> "t1dlq" (optional)
+//                         |         |
+//                         |         +-[trigger2 (t2ds)]--> "t2"
+//                         |                       |
+//                         |                       +--> "t2dlq" (optional)
+//                         |
+//                         +--[DLQ]--> "dlq" (optional)
 //
 func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) *eventshub.EventProber {
 	prober := eventshub.NewProber()
@@ -527,6 +520,7 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 		}
 	}
 	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
+	f.Setup("Broker is Ready", brokerresources.IsReady(brokerName)) // We want to block until broker is ready to go.
 
 	prober.SetTargetResource(brokerresources.GVR(), brokerName)
 	t1Opts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference("t1"), "")}
@@ -548,11 +542,6 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 	}
 	f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName, t2Opts...))
 	return prober
-}
-
-func assertEventDelivery(receiver string, e expectedEvents) {
-	// TODO something like
-	// Get all the events for `receiver`, then make sure the right number was received and receive times match eventIntervals between received Events.
 }
 
 // createExpectedEventMap creates a datastructure for a given test topology created by `createBrokerTriggerDeliveryTopology` function.
