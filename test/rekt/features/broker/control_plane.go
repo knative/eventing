@@ -569,6 +569,8 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 	}
 	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
 
+	prober.SetTargetResource(brokerresources.GVR(), brokerName)
+
 	if t1DS != nil {
 		f.Setup("Create Trigger1 with recorder", triggerresources.Install("t1", brokerName,
 			triggerresources.WithSubscriber(prober.AsKReference("t1"), "")))
@@ -740,8 +742,16 @@ func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]exp
 	return func(ctx context.Context, t feature.T) {
 		for prefix, want := range expected {
 			got := happened(ctx, prober, prefix)
-			if diff := cmp.Diff(want, got); diff != "" {
-				t.Error("unexpected event behaviour (-want, +got) =", diff)
+
+			t.Logf("Expected Events; \nGot: %#v\n Want: %#v", got, want)
+
+			// Check event acceptance.
+			if diff := cmp.Diff(want.eventSuccess, got.eventSuccess); diff != "" {
+				t.Error("unexpected event acceptance behaviour (-want, +got) =", diff)
+			}
+			// Check timing.
+			if diff := cmp.Diff(want.eventInterval, got.eventInterval); diff != "" {
+				t.Error("unexpected event interval behaviour (-want, +got) =", diff)
 			}
 		}
 	}
@@ -753,7 +763,10 @@ func happened(ctx context.Context, prober *eventshub.EventProber, prefix string)
 	sort.Slice(events, func(i, j int) bool {
 		return events[i].Time.Before(events[j].Time)
 	})
-	got := expectedEvents{}
+	got := expectedEvents{
+		eventSuccess:  make([]bool, 0),
+		eventInterval: make([]uint, 0),
+	}
 	for i, event := range events {
 		got.eventSuccess = append(got.eventSuccess, event.Kind == eventshub.EventReceived)
 		if i == 0 {
