@@ -23,16 +23,11 @@ import (
 	"sort"
 	"strings"
 
-	"knative.dev/pkg/ptr"
-
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/manifest"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -41,8 +36,11 @@ import (
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -304,12 +302,29 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
 	}, {
-		name: "When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used. (Retry x3)",
+		name: "When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used. (Retry)",
 		brokerDS: &v1.DeliverySpec{
 			Retry: ptr.Int32(3),
 		},
-		t1FailCount: 2, // Should get event.
+		t1FailCount: 3, // Should get event.
 		t2FailCount: 4, // Should end up in DLQ.
+	}, {
+		name: "When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry)",
+		t1DS: &v1.DeliverySpec{
+			Retry: ptr.Int32(3),
+		},
+		t1FailCount: 3, // Should get event.
+		t2FailCount: 1, // Should end up in DLQ.
+	}, {
+		name: "When both `BrokerSpec.Delivery` and `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry)",
+		brokerDS: &v1.DeliverySpec{
+			Retry: ptr.Int32(1),
+		},
+		t1DS: &v1.DeliverySpec{
+			Retry: ptr.Int32(3),
+		},
+		t1FailCount: 3, // Should get event.
+		t2FailCount: 2, // Should end up in DLQ.
 	}} {
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
 		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
