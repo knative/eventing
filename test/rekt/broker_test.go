@@ -52,23 +52,6 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	env.Finish()
 }
 
-func TestBrokerIngressConformance(t *testing.T) {
-	t.Parallel()
-
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-	)
-
-	for _, f := range broker.BrokerIngressConformanceFeatures(eventing.MTChannelBrokerClassValue) {
-		env.Test(ctx, t, f)
-	}
-
-	env.Finish()
-}
-
 // TestBrokerDLQ
 func TestBrokerWithDLQ(t *testing.T) {
 	class := eventing.MTChannelBrokerClassValue
@@ -81,11 +64,27 @@ func TestBrokerWithDLQ(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+	// The following will reuse the same environment for two different tests.
 
-	// Test that a Broker can act as middleware.
-	env.Test(ctx, t, broker.SourceToSinkWithDLQ("default"))
+	// Install and wait for a Ready Broker "test1".
+	env.Prerequisite(ctx, t, broker.GoesReady("test1", b.WithBrokerClass(class)))
+
+	// Test that a Broker "test1" works as expected with the following topology:
+	// source ---> broker<Via> --[trigger]--> bad uri
+	//                |
+	//                +--[DLQ]--> sink
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ("test1"))
+
+	// Install and wait for a Ready Broker "test2"
+	env.Prerequisite(ctx, t, broker.GoesReady("test2", b.WithBrokerClass(class)))
+
+	// Test that a Broker "test1" works as expected with the following topology:
+	// source ---> broker +--[trigger<via1>]--> bad uri
+	//                |   |
+	//                |   +--[trigger<vai2>]--> sink2
+	//                |
+	//                +--[DLQ]--> sink1
+	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ("test2"))
 }
 
 // TestBrokerWithFlakyDLQ

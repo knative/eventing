@@ -34,7 +34,6 @@ import (
 	"knative.dev/eventing/test/rekt/features/knconf"
 	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
@@ -43,6 +42,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/state"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
@@ -96,7 +96,7 @@ func ControlPlaneTrigger_GivenBroker(brokerName string) *feature.Feature {
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -125,7 +125,7 @@ func ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName string) *feature.Fea
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -151,7 +151,7 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
@@ -194,7 +194,7 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 		triggerresources.WithFilter(filters),
 	))
 
@@ -245,7 +245,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 
 	triggerName := feature.MakeRandomK8sName("trigger")
 	f.Setup("Create a Trigger", triggerresources.Install(triggerName, brokerName,
-		triggerresources.WithSubscriber(svc.AsRef(subscriberName), ""),
+		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
 	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
