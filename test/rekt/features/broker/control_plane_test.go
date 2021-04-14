@@ -28,12 +28,12 @@ import (
 
 var noEvents = expectedEvents{
 	eventSuccess:  []bool{},
-	eventInterval: []int{},
+	eventInterval: []uint{},
 }
 
 var oneSuccessfulEvent = expectedEvents{
 	eventSuccess:  []bool{true},
-	eventInterval: []int{0},
+	eventInterval: []uint{0},
 }
 
 var dlqSink = &pkgduckv1.Destination{
@@ -46,43 +46,43 @@ var dlqSink = &pkgduckv1.Destination{
 
 func TestHelper(t *testing.T) {
 	for _, tt := range []struct {
-		retry    int
-		failures int
+		retry    uint
+		failures uint
 		want     expectedEvents
 	}{{
 		retry:    0,
 		failures: 1,
 		want: expectedEvents{
 			eventSuccess:  []bool{false},
-			eventInterval: []int{0},
+			eventInterval: []uint{0},
 		},
 	}, {
 		retry:    0,
 		failures: 0,
 		want: expectedEvents{
 			eventSuccess:  []bool{true},
-			eventInterval: []int{0},
+			eventInterval: []uint{0},
 		},
 	}, {
 		retry:    0,
 		failures: 5,
 		want: expectedEvents{
 			eventSuccess:  []bool{false},
-			eventInterval: []int{0},
+			eventInterval: []uint{0},
 		},
 	}, {
 		retry:    3,
 		failures: 0,
 		want: expectedEvents{
 			eventSuccess:  []bool{true},
-			eventInterval: []int{0},
+			eventInterval: []uint{0},
 		},
 	}, {
 		retry:    3,
 		failures: 2,
 		want: expectedEvents{
 			eventSuccess:  []bool{false, false, true},
-			eventInterval: []int{0, 0, 0},
+			eventInterval: []uint{0, 0, 0},
 		},
 	}} {
 		got := helper(tt.retry, tt.failures, false)
@@ -101,8 +101,8 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		brokerDS    *v1.DeliverySpec
 		t1DS        *v1.DeliverySpec
 		t2DS        *v1.DeliverySpec
-		t1FailCount int
-		t2FailCount int
+		t1FailCount uint
+		t2FailCount uint
 		want        map[string]expectedEvents
 	}{{
 		name:        "no retries, no failures, both t1 / t2 get it, nothing else",
@@ -114,11 +114,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		want: map[string]expectedEvents{
 			"t1": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t2": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
@@ -136,11 +136,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		want: map[string]expectedEvents{
 			"t1": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t2": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
@@ -159,11 +159,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		want: map[string]expectedEvents{
 			"t1": expectedEvents{
 				eventSuccess:  []bool{false},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t2": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t1dlq":     oneSuccessfulEvent,
 			"t2dlq":     noEvents,
@@ -182,11 +182,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		want: map[string]expectedEvents{
 			"t1": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t2": expectedEvents{
 				eventSuccess:  []bool{false},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     oneSuccessfulEvent,
@@ -205,11 +205,11 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		want: map[string]expectedEvents{
 			"t1": expectedEvents{
 				eventSuccess:  []bool{false},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t2": expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,

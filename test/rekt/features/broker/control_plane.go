@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -295,11 +296,11 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 		// Trigger 1 Delivery spec
 		t1DS *v1.DeliverySpec
 		// How many events to fail before succeeding
-		t1FailCount int
+		t1FailCount uint
 		// Trigger 2 Delivery spec
 		t2DS *v1.DeliverySpec
 		// How many events to fail before succeeding
-		t2FailCount int
+		t2FailCount uint
 	}{{
 		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
 	}} {
@@ -546,16 +547,16 @@ func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.Even
 //                  |                |
 //                  +--[DLQ]--> "dlq" (optional)
 //
-func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount int) *eventshub.EventProber {
+func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) *eventshub.EventProber {
 	prober := eventshub.NewProber()
 	// This will set or clear the broker delivery spec settings.
 	// Make trigger with delivery settings.
 	// Make a trigger with no delivery spec.
 
 	// TODO: Optimize these to only install things required. For example, if there's no t2 dlq, no point creating a prober for it.
-	f.Setup("install recorder for t1", prober.ReceiverInstall("t1")) // (wire in t1FailCount)
+	f.Setup("install recorder for t1", prober.ReceiverInstall("t1", eventshub.DropFirstN(t1FailCount)))
 	f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
-	f.Setup("install recorder for t2", prober.ReceiverInstall("t2")) // (wire in t2FailCount)
+	f.Setup("install recorder for t2", prober.ReceiverInstall("t2", eventshub.DropFirstN(t2FailCount)))
 	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
 	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
 
@@ -602,17 +603,17 @@ type expectedEvents struct {
 	eventSuccess []bool // events and their outcomes (succeeded or failed) in order received by the Receiver
 	// What is the minimum time between events above. If there's only one entry, it's irrelevant and will be useless. If there's, say
 	// two entries, the second entry is the time between the first and second event. And yeah, there should be 2 events in the above array.
-	eventInterval []int
+	eventInterval []uint
 }
 
-func retryCount(r *int32) int {
+func retryCount(r *int32) uint {
 	if r == nil {
 		return 0
 	}
-	return int(*r)
+	return uint(*r)
 }
 
-func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount int) map[string]expectedEvents {
+func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) map[string]expectedEvents {
 	r := make(map[string]expectedEvents, 5)
 
 	// For now we assume that there is only one incoming event that will then get retried at respective triggers according
@@ -625,7 +626,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		// just make sure there are no events without special casing missing things.
 		r["t1dlq"] = expectedEvents{
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		}
 	} else if t1DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
@@ -634,7 +635,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 			// Ok, so we should have more failures than retries => one event in the t1dlq
 			r["t1dlq"] = expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			}
 		}
 	}
@@ -644,7 +645,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		// TODO: Maybe not just return anything here...
 		r["t2dlq"] = expectedEvents{
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		}
 	} else if t2DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
@@ -653,7 +654,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 			// Ok, so we should have more failures than retries => one event in the t1dlq
 			r["t2dlq"] = expectedEvents{
 				eventSuccess:  []bool{true},
-				eventInterval: []int{0},
+				eventInterval: []uint{0},
 			}
 		}
 	}
@@ -663,7 +664,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		// TODO: Maybe not just return anything here...
 		r["brokerdlq"] = expectedEvents{
 			eventSuccess:  []bool{},
-			eventInterval: []int{},
+			eventInterval: []uint{},
 		}
 	} else if brokerDS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount or t2FailCount is greater than retry count
@@ -673,7 +674,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 				// Ok, so we should have more failures than retries => one event in the t1dlq
 				r["brokerdlq"] = expectedEvents{
 					eventSuccess:  []bool{true},
-					eventInterval: []int{0},
+					eventInterval: []uint{0},
 				}
 			}
 		}
@@ -685,7 +686,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	// no retries and failure or success based on the t1FailCount
 	r["t1"] = expectedEvents{
 		eventSuccess:  []bool{t1FailCount == 0},
-		eventInterval: []int{0},
+		eventInterval: []uint{0},
 	}
 
 	if t1DS != nil || brokerDS != nil {
@@ -698,7 +699,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	}
 	r["t2"] = expectedEvents{
 		eventSuccess:  []bool{t2FailCount == 0},
-		eventInterval: []int{0},
+		eventInterval: []uint{0},
 	}
 	if t2DS != nil || brokerDS != nil {
 		// Check to see which DeliverySpec applies to Trigger
@@ -711,19 +712,19 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	return r
 }
 
-func helper(retry, failures int, isLinear bool) expectedEvents {
+func helper(retry, failures uint, isLinear bool) expectedEvents {
 	if retry == 0 {
 		return expectedEvents{
 			eventSuccess:  []bool{failures == 0},
-			eventInterval: []int{0},
+			eventInterval: []uint{0},
 		}
 
 	}
 	r := expectedEvents{
 		eventSuccess:  make([]bool, 0),
-		eventInterval: make([]int, 0),
+		eventInterval: make([]uint, 0),
 	}
-	for i := 0; i < retry; i++ {
+	for i := uint(0); i < retry; i++ {
 		if failures == i {
 			r.eventSuccess = append(r.eventSuccess, true)
 			r.eventInterval = append(r.eventInterval, 0)
@@ -736,5 +737,31 @@ func helper(retry, failures int, isLinear bool) expectedEvents {
 }
 
 func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]expectedEvents) feature.StepFn {
-	return nil
+	return func(ctx context.Context, t feature.T) {
+		for prefix, want := range expected {
+			got := happened(ctx, prober, prefix)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Error("unexpected event behaviour (-want, +got) =", diff)
+			}
+		}
+	}
+}
+
+// TODO: this function could be moved to the prober directly.
+func happened(ctx context.Context, prober *eventshub.EventProber, prefix string) expectedEvents {
+	events := prober.ReceivedOrRejectedBy(ctx, prefix)
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Time.Before(events[j].Time)
+	})
+	got := expectedEvents{}
+	for i, event := range events {
+		got.eventSuccess = append(got.eventSuccess, event.Kind == eventshub.EventReceived)
+		if i == 0 {
+			got.eventInterval = []uint{0}
+		} else {
+			diff := events[i-1].Time.Unix() - event.Time.Unix()
+			got.eventInterval = append(got.eventInterval, uint(diff))
+		}
+	}
+	return got
 }
