@@ -317,6 +317,10 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 			fmt.Printf("%s => %+v %+v", k, v.eventSuccess, v.eventInterval)
 			assertEventDelivery(k, v)
 		}
+
+		//f.Requirement("receiver is done", prober.Re)
+
+		f.Assert("maps match", assertExpectedEvents(prober, expectedEvents))
 		/*
 			f.Setup("install recorder for t1", prober.ReceiverInstall("t1"))
 			f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
@@ -729,4 +733,8 @@ func helper(retry, failures int, isLinear bool) expectedEvents {
 		r.eventInterval = append(r.eventInterval, 0)
 	}
 	return r
+}
+
+func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]expectedEvents) feature.StepFn {
+	return nil
 }

@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.0
-	github.com/cloudevents/sdk-go/v2 v2.4.0
+	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
+	github.com/cloudevents/sdk-go/v2 v2.4.1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
 	github.com/google/gofuzz v1.2.0
@@ -42,7 +42,7 @@ require (
 	knative.dev/hack v0.0.0-20210325223819-b6ab329907d3
 	knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3
 	knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
-	knative.dev/reconciler-test v0.0.0-20210412220859-730c55592c9b
+	knative.dev/reconciler-test v0.0.0-20210414181401-b0c3de288f3b
 	sigs.k8s.io/yaml v1.2.0
 )
 
