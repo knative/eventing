@@ -36,6 +36,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/svc"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -304,24 +305,28 @@ func ControlPlaneDelivery(brokerName string) *feature.Feature {
 	}, {
 		name: "When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used. (Retry)",
 		brokerDS: &v1.DeliverySpec{
-			Retry: ptr.Int32(3),
+			DeadLetterSink: new(duckv1.Destination),
+			Retry:          ptr.Int32(3),
 		},
 		t1FailCount: 3, // Should get event.
 		t2FailCount: 4, // Should end up in DLQ.
 	}, {
 		name: "When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry)",
 		t1DS: &v1.DeliverySpec{
-			Retry: ptr.Int32(3),
+			DeadLetterSink: new(duckv1.Destination),
+			Retry:          ptr.Int32(3),
 		},
 		t1FailCount: 3, // Should get event.
-		t2FailCount: 1, // Should end up in DLQ.
+		t2FailCount: 1, // Should be dropped.
 	}, {
 		name: "When both `BrokerSpec.Delivery` and `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry)",
 		brokerDS: &v1.DeliverySpec{
-			Retry: ptr.Int32(1),
+			DeadLetterSink: new(duckv1.Destination),
+			Retry:          ptr.Int32(1),
 		},
 		t1DS: &v1.DeliverySpec{
-			Retry: ptr.Int32(3),
+			DeadLetterSink: new(duckv1.Destination),
+			Retry:          ptr.Int32(3),
 		},
 		t1FailCount: 3, // Should get event.
 		t2FailCount: 2, // Should end up in DLQ.
