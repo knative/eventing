@@ -525,7 +525,7 @@ func assertBrokerTriggerDeliverySpec(ctx context.Context, prober *eventshub.Even
 			}
 		}
 	*/
-	return todo
+	return nil
 }
 
 //
@@ -582,7 +582,7 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 			delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), "")))
 	}
 
-	// To test, we will have to compute what the expected delivery spec each recorder.		return prober
+	return prober
 }
 
 func assertEventDelivery(receiver string, e expectedEvents) {
@@ -626,13 +626,11 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	} else if t1DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
 		retryCount := retryCount(t1DS.Retry)
-		if retryCount >= 0 {
-			if t1FailCount > retryCount {
-				// Ok, so we should have more failures than retries => one event in the t1dlq
-				r["t1dlq"] = expectedEvents{
-					eventSuccess:  []bool{true},
-					eventInterval: []int{0},
-				}
+		if retryCount >= 0 && t1FailCount >= retryCount {
+			// Ok, so we should have more failures than retries => one event in the t1dlq
+			r["t1dlq"] = expectedEvents{
+				eventSuccess:  []bool{true},
+				eventInterval: []int{0},
 			}
 		}
 	}
@@ -647,13 +645,11 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	} else if t2DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
 		retryCount := retryCount(t2DS.Retry)
-		if retryCount >= 0 {
-			if t2FailCount > retryCount {
-				// Ok, so we should have more failures than retries => one event in the t1dlq
-				r["t2dlq"] = expectedEvents{
-					eventSuccess:  []bool{true},
-					eventInterval: []int{0},
-				}
+		if retryCount >= 0 && t2FailCount >= retryCount {
+			// Ok, so we should have more failures than retries => one event in the t1dlq
+			r["t2dlq"] = expectedEvents{
+				eventSuccess:  []bool{true},
+				eventInterval: []int{0},
 			}
 		}
 	}
@@ -669,7 +665,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		// There's a dead letter sink specified. Events can end up here if t1FailCount or t2FailCount is greater than retry count
 		retryCount := retryCount(brokerDS.Retry)
 		if retryCount >= 0 {
-			if t2FailCount > retryCount || t1FailCount > retryCount {
+			if t2FailCount >= retryCount || t1FailCount >= retryCount {
 				// Ok, so we should have more failures than retries => one event in the t1dlq
 				r["brokerdlq"] = expectedEvents{
 					eventSuccess:  []bool{true},
@@ -684,9 +680,10 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	// Default is that there are no retries (they will get constructed below if there are), so assume
 	// no retries and failure or success based on the t1FailCount
 	r["t1"] = expectedEvents{
-		eventSuccess:  []bool{t1FailCount > 0},
+		eventSuccess:  []bool{t1FailCount == 0},
 		eventInterval: []int{0},
 	}
+
 	if t1DS != nil || brokerDS != nil {
 		// Check to see which DeliverySpec applies to Trigger
 		effectiveT1DS := t1DS
@@ -696,7 +693,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 		r["t1"] = helper(retryCount(effectiveT1DS.Retry), t1FailCount, true)
 	}
 	r["t2"] = expectedEvents{
-		eventSuccess:  []bool{t1FailCount > 0},
+		eventSuccess:  []bool{t2FailCount == 0},
 		eventInterval: []int{0},
 	}
 	if t2DS != nil || brokerDS != nil {
@@ -713,9 +710,10 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 func helper(retry, failures int, isLinear bool) expectedEvents {
 	if retry == 0 {
 		return expectedEvents{
-			eventSuccess:  []bool{failures > 0},
+			eventSuccess:  []bool{failures == 0},
 			eventInterval: []int{0},
 		}
+
 	}
 	r := expectedEvents{
 		eventSuccess:  make([]bool, 0),
@@ -724,9 +722,11 @@ func helper(retry, failures int, isLinear bool) expectedEvents {
 	for i := 0; i < retry; i++ {
 		if failures == i {
 			r.eventSuccess = append(r.eventSuccess, true)
+			r.eventInterval = append(r.eventInterval, 0)
 			break
 		}
 		r.eventSuccess = append(r.eventSuccess, false)
+		r.eventInterval = append(r.eventInterval, 0)
 	}
 	return r
 }
