@@ -18,6 +18,8 @@ package testing
 
 import (
 	"context"
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +55,33 @@ func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	uri, _ := apis.ParseURL(rawurl)
 	return func(t *v1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{URI: uri}
+	}
+}
+
+func WithTriggerDeadLeaderSink(ref *duckv1.KReference, uri string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Spec.Delivery == nil {
+			t.Spec.Delivery = new(eventingv1.DeliverySpec)
+		}
+		var u *apis.URL
+		if uri != "" {
+			u, _ = apis.ParseURL(uri)
+		}
+		t.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
+			Ref: ref,
+			URI: u,
+		}
+	}
+}
+
+func WithTriggerRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoffDelay *string) TriggerOption {
+	return func(t *v1.Trigger) {
+		if t.Spec.Delivery == nil {
+			t.Spec.Delivery = new(eventingv1.DeliverySpec)
+		}
+		t.Spec.Delivery.Retry = ptr.Int32(count)
+		t.Spec.Delivery.BackoffPolicy = backoffPolicy
+		t.Spec.Delivery.BackoffDelay = backoffDelay
 	}
 }
 
