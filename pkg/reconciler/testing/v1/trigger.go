@@ -18,16 +18,16 @@ package testing
 
 import (
 	"context"
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/pkg/ptr"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 )
 
 // TriggerOption enables further configuration of a Trigger.

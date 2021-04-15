@@ -19,18 +19,15 @@ package mttrigger
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/ptr"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -54,6 +51,7 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
