@@ -616,7 +616,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	if t1DS != nil && t1DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
 		retryCount := retryCount(t1DS.Retry)
-		if retryCount >= 0 && t1FailCount >= retryCount {
+		if t1FailCount >= retryCount {
 			// Ok, so we should have more failures than retries => one event in the t1dlq
 			r["t1dlq"] = expectedEvents{
 				eventSuccess:  []bool{true},
@@ -628,7 +628,7 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	if t2DS != nil && t2DS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
 		retryCount := retryCount(t2DS.Retry)
-		if retryCount >= 0 && t2FailCount >= retryCount {
+		if t2FailCount >= retryCount {
 			// Ok, so we should have more failures than retries => one event in the t1dlq
 			r["t2dlq"] = expectedEvents{
 				eventSuccess:  []bool{true},
@@ -640,13 +640,11 @@ func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, 
 	if brokerDS != nil && brokerDS.DeadLetterSink != nil {
 		// There's a dead letter sink specified. Events can end up here if t1FailCount or t2FailCount is greater than retry count
 		retryCount := retryCount(brokerDS.Retry)
-		if retryCount >= 0 {
-			if t2FailCount >= retryCount || t1FailCount >= retryCount {
-				// Ok, so we should have more failures than retries => one event in the t1dlq
-				r["brokerdlq"] = expectedEvents{
-					eventSuccess:  []bool{true},
-					eventInterval: []uint{0},
-				}
+		if t2FailCount >= retryCount || t1FailCount >= retryCount {
+			// Ok, so we should have more failures than retries => one event in the t1dlq
+			r["brokerdlq"] = expectedEvents{
+				eventSuccess:  []bool{true},
+				eventInterval: []uint{0},
 			}
 		}
 	}

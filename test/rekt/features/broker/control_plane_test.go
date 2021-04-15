@@ -86,7 +86,7 @@ func TestHelper(t *testing.T) {
 			eventInterval: []uint{0, 0, 0},
 		},
 	}, {
-		// Test with 3 retries => 4 sends alltogether (one initial, plus 3 retries)
+		// Test with 3 retries => 4 sends altogether(one initial, plus 3 retries)
 		retry:    3,
 		failures: 4,
 		want: expectedEvents{
