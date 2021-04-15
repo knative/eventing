@@ -23,9 +23,7 @@ CLUSTER_SUFFIX=${CLUSTER_SUFFIX:-"cluster.local"}
 NODE_VERSION=${NODE_VERSION:-"v1.20.0"}
 NODE_SHA=${NODE_SHA:-"sha256:b40ecf8bcb188f6a0d0f5d406089c48588b75edc112c6f635d26be5de1c89040"}
 
-dir=$(mktemp -d --suffix=knative)
-
-cat >"${dir}"/kind.yaml <<EOF
+cat <<EOF | kind create cluster --config=-
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
 
@@ -49,7 +47,3 @@ nodes:
 - role: worker
   image: kindest/node:${NODE_VERSION}@${NODE_SHA}
 EOF
-
-kind create cluster --config "${dir}/kind.yaml"
-
-rm -r "${dir}"

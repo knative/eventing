@@ -138,28 +138,35 @@ jobs:
         export GO111MODULE=on
         export GOFLAGS=-mod=vendor
         export SYSTEM_NAMESPACE=knative-eventing
+        export CLUSTER_DOMAIN=${CLUSTER_SUFFIX}
         # Run the tests tagged as e2e on the KinD cluster.
-        go test -race -count=1 -parallel=12 -timeout=50m -tags=e2e \
+        go test -race -count=1 -parallel=12 -v -timeout=50m -tags=e2e \
            ${{ matrix.test-suite }} ${{ matrix.extra-test-flags }}
 
     - name: Collect system diagnostics
       if: ${{ failure() }}
       run: |
-        kubectl -n${SYSTEM_NAMESPACE} get pods
+        echo '::group:: all pods'
+        kubectl get pods --all-namespaces=true
+        echo '::endgroup::'
 
-        echo '::group:: describe'
+        echo '::group:: describe system pods'
         kubectl -n${SYSTEM_NAMESPACE} describe pods
         echo '::endgroup::'
 
         for x in $(kubectl get pods -n${SYSTEM_NAMESPACE} -oname); do
-          echo "::group:: describe $x"
+          echo "::group:: describe system $x"
           kubectl -n${SYSTEM_NAMESPACE} describe $x
           echo '::endgroup::'
 
-          echo "::group:: $x logs"
+          echo "::group:: $x system logs"
           kubectl -n${SYSTEM_NAMESPACE} logs $x --all-containers
           echo '::endgroup::'
         done
+
+        echo "::group:: all events"
+          kubectl get events --all-namespaces=true
+        echo '::endgroup::'
 
     - name: Dump Artifacts
       if: ${{ failure() }}

@@ -23,14 +23,12 @@ import (
 	"golang.org/x/sync/errgroup"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
-	_ "knative.dev/pkg/system/testing"
 
-	"knative.dev/reconciler-test/pkg/test_images"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/logger_vent"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/receiver"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/recorder_vent"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub/sender"
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/logger_vent"
+	"knative.dev/reconciler-test/pkg/eventshub/receiver"
+	"knative.dev/reconciler-test/pkg/eventshub/recorder_vent"
+	"knative.dev/reconciler-test/pkg/eventshub/sender"
 )
 
 type envConfig struct {
@@ -41,9 +39,9 @@ type envConfig struct {
 func main() {
 	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
 	ctx, _ := injection.EnableInjectionOrDie(nil, nil)
-	ctx = test_images.ConfigureLogging(ctx, "eventshub")
+	ctx = eventshub.ConfigureLogging(ctx, "eventshub")
 
-	if err := test_images.ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
+	if err := eventshub.ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
 		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
 	}
 
@@ -84,7 +82,7 @@ func startEventGenerators(ctx context.Context, genTypes []string, eventLogs *eve
 		switch eventshub.EventGeneratorType(genType) {
 		case eventshub.ReceiverEventGenerator:
 			errs.Go(func() error {
-				return receiver.NewFromEnv(ctx, eventLogs).Start(ctx, test_images.WithTracing)
+				return receiver.NewFromEnv(ctx, eventLogs).Start(ctx, eventshub.WithTracing)
 			})
 		case eventshub.SenderEventGenerator:
 			errs.Go(func() error {
