@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
@@ -45,6 +47,7 @@ type EventProber struct {
 	shortNameToName map[string]string
 	ids             []string
 	senderOptions   []EventsHubOption
+	receiverOptions []EventsHubOption
 }
 
 type target struct {
@@ -94,23 +97,36 @@ func (p *EventProber) SetTargetURI(targetURI string) {
 	}
 }
 
+// ReceiversRejectFirstN adds DropFirstN to the default config for new receivers.
+func (p *EventProber) ReceiversRejectFirstN(n uint) {
+	p.receiverOptions = append(p.receiverOptions, DropFirstN(n))
+}
+
+// ReceiversHaveResponseDelay adds ResponseWaitTime to the default config for
+// new receivers.
+func (p *EventProber) ReceiversHaveResponseDelay(delay time.Duration) {
+	p.receiverOptions = append(p.receiverOptions, ResponseWaitTime(delay))
+}
+
 // ReceiverInstall installs an eventshub receiver into the test env.
-func (p *EventProber) ReceiverInstall(prefix string) feature.StepFn {
+func (p *EventProber) ReceiverInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.shortNameToName[prefix] = name
-	return Install(name, StartReceiver)
+	opts = append(p.receiverOptions, opts...)
+	opts = append(opts, StartReceiver)
+	return Install(name, opts...)
 }
 
 // SenderInstall installs an eventshub sender resource into the test env.
-func (p *EventProber) SenderInstall(prefix string) feature.StepFn {
+func (p *EventProber) SenderInstall(prefix string, opts ...EventsHubOption) feature.StepFn {
 	name := feature.MakeRandomK8sName(prefix)
 	p.shortNameToName[prefix] = name
 	return func(ctx context.Context, t feature.T) {
-		var opts []EventsHubOption
+		opts := append(opts, p.senderOptions...)
 		if len(p.target.uri) > 0 {
-			opts = append(p.senderOptions, StartSenderURL(p.target.uri))
+			opts = append(opts, StartSenderURL(p.target.uri))
 		} else if !p.target.gvr.Empty() {
-			opts = append(p.senderOptions, StartSenderToResource(p.target.gvr, p.target.name))
+			opts = append(opts, StartSenderToResource(p.target.gvr, p.target.name))
 		} else {
 			t.Fatal("no target is configured for event loop")
 		}
@@ -125,7 +141,33 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			events := p.SentBy(ctx, prefix)
+			fmt.Println(prefix, "has sent", len(events))
 			if len(events) == len(p.ids) {
+				return true, nil
+			}
+			return false, nil
+		})
+		if err != nil {
+			t.Failed()
+		}
+	}
+}
+
+// ReceiverDone will poll until the receiver has received all expected events.
+func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		interval, timeout := environment.PollTimingsFromContext(ctx)
+		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			sent := p.SentBy(ctx, from)
+			fmt.Println(from, "has sent", len(sent))
+
+			received := p.ReceivedBy(ctx, to)
+			fmt.Println(to, "has received", len(received))
+
+			rejected := p.RejectedBy(ctx, to)
+			fmt.Println(to, "has rejected", len(rejected))
+
+			if len(sent) == len(received)+len(rejected) {
 				return true, nil
 			}
 			return false, nil
@@ -159,10 +201,6 @@ func (p *EventProber) SentBy(ctx context.Context, prefix string) []EventInfoComb
 	name := p.shortNameToName[prefix]
 	store := StoreFromContext(ctx, name)
 
-	for _, c := range store.Collected() {
-		fmt.Printf("%#v\n", c)
-	}
-
 	return CorrelateSent(name, store.Collected())
 }
 
@@ -171,12 +209,38 @@ func (p *EventProber) ReceivedBy(ctx context.Context, prefix string) []EventInfo
 	name := p.shortNameToName[prefix]
 	store := StoreFromContext(ctx, name)
 
-	for _, c := range store.Collected() {
-		fmt.Printf("%#v\n", c)
-	}
-
 	events, _, _, _ := store.Find(func(info EventInfo) error {
 		if info.Observer == name && info.Kind == EventReceived {
+			return nil
+		}
+		return errors.New("not a match")
+	})
+
+	return events
+}
+
+// RejectedBy returns events rejected by the named receiver.
+func (p *EventProber) RejectedBy(ctx context.Context, prefix string) []EventInfo {
+	name := p.shortNameToName[prefix]
+	store := StoreFromContext(ctx, name)
+
+	events, _, _, _ := store.Find(func(info EventInfo) error {
+		if info.Observer == name && info.Kind == EventRejected {
+			return nil
+		}
+		return errors.New("not a match")
+	})
+
+	return events
+}
+
+// ReceivedOrRejectedBy returns events received or rejected by the named receiver.
+func (p *EventProber) ReceivedOrRejectedBy(ctx context.Context, prefix string) []EventInfo {
+	name := p.shortNameToName[prefix]
+	store := StoreFromContext(ctx, name)
+
+	events, _, _, _ := store.Find(func(info EventInfo) error {
+		if info.Observer == name && (info.Kind == EventReceived || info.Kind == EventRejected) {
 			return nil
 		}
 		return errors.New("not a match")
@@ -221,25 +285,40 @@ func (p *EventProber) SenderEventsFromSVC(svcName, path string) feature.StepFn {
 
 // SenderFullEvents creates `count` cloudevents.FullEvent events with new IDs into a
 // sender and registers them for the prober.
+// Warning: only call once.
 func (p *EventProber) SenderFullEvents(count int) {
-	for i := 0; i < count; i++ {
+	event := cetest.FullEvent()
+	if count == 1 {
 		id := uuid.New().String()
-		event := cetest.FullEvent()
 		event.SetID(id)
-		p.ids = append(p.ids, id)
+		p.ids = []string{id}
 		p.senderOptions = append(p.senderOptions, InputEvent(event))
+	} else {
+		p.senderOptions = append(p.senderOptions,
+			InputEvent(event), SendMultipleEvents(count, 10*time.Millisecond), EnableIncrementalId) // TODO: make configurable.
+		p.ids = []string{}
+		for i := 1; i <= count; i++ {
+			p.ids = append(p.ids, strconv.Itoa(i))
+		}
 	}
 }
 
 // SenderMinEvents creates `count` cloudevents.MinEvent events with new IDs into a
 // sender and registers them for the prober.
+// Warning: only call once.
 func (p *EventProber) SenderMinEvents(count int) {
-	for i := 0; i < count; i++ {
+	event := cetest.MinEvent()
+	if count == 1 {
 		id := uuid.New().String()
-		event := cetest.MinEvent()
 		event.SetID(id)
-		p.ids = append(p.ids, id)
+		p.ids = []string{id}
 		p.senderOptions = append(p.senderOptions, InputEvent(event))
+	} else {
+		p.senderOptions = append(p.senderOptions, InputEvent(event), SendMultipleEvents(count, 10*time.Millisecond)) // TODO: make configurable.
+		p.ids = []string{}
+		for i := 1; i <= count; i++ {
+			p.ids = append(p.ids, strconv.Itoa(i))
+		}
 	}
 }
 
@@ -277,13 +356,43 @@ func (p *EventProber) AssertSentAll(fromPrefix string) feature.StepFn {
 // AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
 func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
-		sent := p.SentBy(ctx, toPrefix)
+		sent := p.SentBy(ctx, fromPrefix)
 		ids := make([]string, len(sent))
 		for i, s := range sent {
 			ids[i] = s.Sent.SentId
 		}
 
-		events := p.ReceivedBy(ctx, fromPrefix)
+		events := p.ReceivedBy(ctx, toPrefix)
+		if len(ids) != len(events) {
+			t.Errorf("expected %q to have received %d events, actually received %d",
+				toPrefix, len(ids), len(events))
+		}
+		for _, id := range ids {
+			found := false
+			for _, event := range events {
+				if event.Event != nil && id == event.Event.ID() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("Failed to receive event id=%s", id)
+			}
+		}
+	}
+}
+
+// AssertReceivedAll tests that all events sent by `fromPrefix` were received by `toPrefix`.
+func (p *EventProber) AssertReceivedOrRejectedAll(fromPrefix, toPrefix string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		sent := p.SentBy(ctx, fromPrefix)
+		ids := make([]string, len(sent))
+		for i, s := range sent {
+			ids[i] = s.Sent.SentId
+		}
+
+		events := p.ReceivedOrRejectedBy(ctx, toPrefix)
+
 		if len(ids) != len(events) {
 			t.Errorf("expected %q to have received %d events, actually received %d",
 				fromPrefix, len(ids), len(events))
@@ -291,7 +400,7 @@ func (p *EventProber) AssertReceivedAll(fromPrefix, toPrefix string) feature.Ste
 		for _, id := range ids {
 			found := false
 			for _, event := range events {
-				if id == event.SentId {
+				if event.Event != nil && id == event.Event.ID() {
 					found = true
 					break
 				}

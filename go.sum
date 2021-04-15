@@ -125,7 +125,6 @@ github.com/cloudevents/conformance v0.2.0 h1:NvSXOKlagcsOWMEbi8U7Ex/0oQ4JZE1HQ45
 github.com/cloudevents/conformance v0.2.0/go.mod h1:rHKDwylBH89Rns6U3wL9ww8bg9/4GbwRCDNuyoC6bcc=
 github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1 h1:UHjY9+DJyjELyFA8vU/KHHXix1F1z7QLFskzdJZkP+0=
 github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1/go.mod h1:lhEpxMrIUkeu9rVRgoAbyqZ8GR8Hd3DUy+thHUxAHoI=
-github.com/cloudevents/sdk-go/v2 v2.4.0/go.mod h1:MZiMwmAh5tGj+fPFvtHv9hKurKqXtdB9haJYMJ/7GJY=
 github.com/cloudevents/sdk-go/v2 v2.4.1 h1:rZJoz9QVLbWQmnvLPDFEmv17Czu+CfSPwMO6lhJ72xQ=
 github.com/cloudevents/sdk-go/v2 v2.4.1/go.mod h1:MZiMwmAh5tGj+fPFvtHv9hKurKqXtdB9haJYMJ/7GJY=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
@@ -1116,11 +1115,10 @@ knative.dev/hack v0.0.0-20210325223819-b6ab329907d3 h1:km0Rrh0T9/wA2pivQm1hqSPVw
 knative.dev/hack v0.0.0-20210325223819-b6ab329907d3/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3 h1:F/pVm+rB+WpyVhH9cmVn3Lh53+UI24qlnjaYiqaw1pw=
 knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
-knative.dev/pkg v0.0.0-20210409203851-3a2ae6db7097/go.mod h1:V/yjYpwRpIoUCavOoF8plCw72kF7rMjWPms5v2QqxA4=
 knative.dev/pkg v0.0.0-20210412173742-b51994e3b312 h1:tE80vxKw9ENrLRe+U9BvLAcJ5UYpDc40r5hFoRFUXh0=
 knative.dev/pkg v0.0.0-20210412173742-b51994e3b312/go.mod h1:V/yjYpwRpIoUCavOoF8plCw72kF7rMjWPms5v2QqxA4=
-knative.dev/reconciler-test v0.0.0-20210412220859-730c55592c9b h1:iZmF4VAtAVmgroOTeZkcEMADn2hTvJ/x462s+WJe7Mc=
-knative.dev/reconciler-test v0.0.0-20210412220859-730c55592c9b/go.mod h1:25eIFZKVo0CgZ8hGCK9Lxv2sH9VIZGQyCX64RQnP9Uk=
+knative.dev/reconciler-test v0.0.0-20210414181401-b0c3de288f3b h1:7doQCjkEY0Zg7H5Wa5Bqt0azIL4tjlvJK6qoKRjWjFc=
+knative.dev/reconciler-test v0.0.0-20210414181401-b0c3de288f3b/go.mod h1:lo1LZBzDHGKn2KXxEbZfmrmEH03RkC4uC9nBlMvwyz4=
 pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
