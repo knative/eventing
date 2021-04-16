@@ -22,7 +22,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
@@ -271,6 +273,105 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		},
 	}} {
 		got := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		if !reflect.DeepEqual(tt.want, got) {
+			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
+		}
+	}
+}
+
+func TestEventMatchesTrigger(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		event  conformanceevent.Event
+		filter *eventingv1.TriggerFilter
+		want   bool
+	}{{
+		name:   "nil filter matches everything",
+		event:  conformanceevent.Event{},
+		filter: nil,
+		want:   true,
+	}, {
+		name: "correct match on type",
+		event: conformanceevent.Event{
+			Attributes: conformanceevent.ContextAttributes{
+				Type: "eventtype",
+			},
+		},
+		filter: &eventingv1.TriggerFilter{
+			Attributes: eventingv1.TriggerFilterAttributes{
+				"type": "eventtype",
+			},
+		},
+		want: true,
+	}, {
+		name: "wrong type",
+		event: conformanceevent.Event{
+			Attributes: conformanceevent.ContextAttributes{
+				Type: "eventtype",
+			},
+		},
+		filter: &eventingv1.TriggerFilter{
+			Attributes: eventingv1.TriggerFilterAttributes{
+				"type": "wrongtype",
+			},
+		},
+		want: false,
+	}} {
+		if got := eventMatchesTrigger(tt.event, tt.filter); got != tt.want {
+			t.Errorf("%q : Event: %+v Trigger: %+v wanted match: %t but got %t", tt.name, tt.event, tt.filter, tt.want, got)
+		}
+	}
+}
+
+func TestCreateExpectedEventDeliveryMap(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		inevents []conformanceevent.Event
+		replies  []*conformanceevent.Event
+		filters  []*eventingv1.TriggerFilter
+		want     map[string][]conformanceevent.Event
+	}{{
+		name: "nil filter matches everything",
+		inevents: []conformanceevent.Event{
+			conformanceevent.Event{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "eventtype",
+				},
+			},
+		},
+		replies: make([]*conformanceevent.Event, 1),   // no replies
+		filters: make([]*eventingv1.TriggerFilter, 1), // no filters
+		want: map[string][]conformanceevent.Event{
+			"t0": []conformanceevent.Event{
+				conformanceevent.Event{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "eventtype",
+					},
+				},
+			},
+		},
+	}, {
+		name: "wrong fff",
+		inevents: []conformanceevent.Event{
+			conformanceevent.Event{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "eventtype",
+				},
+			},
+		},
+		replies: make([]*conformanceevent.Event, 1),   // no replies
+		filters: make([]*eventingv1.TriggerFilter, 1), // no filters
+		want: map[string][]conformanceevent.Event{
+			"t0": []conformanceevent.Event{
+				conformanceevent.Event{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "eventtype",
+					},
+				},
+			},
+		},
+	}} {
+		got := createExpectedEventDeliveryMap(tt.filters, tt.inevents, tt.replies)
 		if !reflect.DeepEqual(tt.want, got) {
 			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}

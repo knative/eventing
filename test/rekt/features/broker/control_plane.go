@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 
+	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -516,9 +517,6 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 //
 func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) *eventshub.EventProber {
 	prober := eventshub.NewProber()
-	// This will set or clear the broker delivery spec settings.
-	// Make trigger with delivery settings.
-	// Make a trigger with no delivery spec.
 
 	// TODO: Optimize these to only install things required. For example, if there's no t2 dlq, no point creating a prober for it.
 	f.Setup("install recorder for t1", prober.ReceiverInstall("t1", eventshub.DropFirstN(t1FailCount)))
@@ -566,10 +564,6 @@ func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, 
 	return prober
 }
 
-// createExpectedEventMap creates a datastructure for a given test topology created by `createBrokerTriggerDeliveryTopology` function.
-// Things we know from the DeliverySpecs passed in are where failed events from both t1 and t2 should land in.
-// We also know how many events (incoming as well as how many failures the trigger subscriber is supposed to see).
-// Note there are lot of baked assumptions and very tight coupling between this and `createBrokerTriggerDeliveryTopology` function.
 type expectedEvents struct {
 	eventSuccess []bool // events and their outcomes (succeeded or failed) in order received by the Receiver
 	// What is the minimum time between events above. If there's only one entry, it's irrelevant and will be useless. If there's, say
@@ -584,6 +578,10 @@ func retryCount(r *int32) uint {
 	return uint(*r)
 }
 
+// createExpectedEventMap creates a datastructure for a given test topology created by `createBrokerTriggerDeliveryTopology` function.
+// Things we know from the DeliverySpecs passed in are where failed events from both t1 and t2 should land in.
+// We also know how many events (incoming as well as how many failures the trigger subscriber is supposed to see).
+// Note there are lot of baked assumptions and very tight coupling between this and `createBrokerTriggerDeliveryTopology` function.
 func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) map[string]expectedEvents {
 	// By default, assume that nothing gets anything.
 	r := map[string]expectedEvents{
@@ -747,4 +745,99 @@ func happened(ctx context.Context, prober *eventshub.EventProber, prefix string)
 		}
 	}
 	return got
+}
+
+//
+// createBrokerTriggerEventDeliveryTopology creates a topology that allows us to test the various
+// trigger filter configurations.
+//
+// source ---> [broker] --+--[trigger0 (t1ds)]--> "t1"
+//                         |         |              |
+//                         |         |              +--> "t1dlq" (optional)
+//                         |         |
+//                         |         +-[trigger2 (t2ds)]--> "t2"
+//                         |                       |
+//                         |                       +--> "t2dlq" (optional)
+//                         |
+//                         +--[DLQ]--> "dlq" (optional)
+//
+func createBrokerTriggerEventDeliveryTopology(f *feature.Feature, brokerName string, filters []*eventingv1.TriggerFilter, replies []*conformanceevent.Event) *eventshub.EventProber {
+	prober := eventshub.NewProber()
+
+	// Install the receivers for all the triggers
+	for i, reply := range filters {
+		triggerName := fmt.Sprintf("t%d", i)
+		// TODO: If there's a corresponding reply, need to wire it in here
+		if reply != nil {
+			fmt.Printf("TODO: WIRE UP REPLY TO TRIGGER %s", triggerName)
+		}
+		f.Setup(fmt.Sprintf("install recorder for %s", triggerName), prober.ReceiverInstall(triggerName))
+	}
+
+	brokerOpts := brokerresources.WithEnvConfig()
+
+	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
+	f.Setup("Broker is Ready", brokerresources.IsReady(brokerName)) // We want to block until broker is ready to go.
+
+	prober.SetTargetResource(brokerresources.GVR(), brokerName)
+
+	for i, filter := range filters {
+		triggerName := fmt.Sprintf("t%d", i)
+		tOpts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference(triggerName), "")}
+		if filter != nil {
+			tOpts = append(tOpts, triggerresources.WithFilter(filter.Attributes))
+		}
+		f.Setup(fmt.Sprintf("Create %s with recorder", triggerName), triggerresources.Install(feature.MakeRandomK8sName(triggerName), brokerName, tOpts...))
+	}
+	return prober
+}
+
+func createExpectedEventDeliveryMap(filters []*eventingv1.TriggerFilter, inEvents []conformanceevent.Event, replies []*conformanceevent.Event) map[string][]conformanceevent.Event {
+	ret := make(map[string][]conformanceevent.Event, len(filters))
+
+	// for each of the events (both incoming and newly created (replies)) check each trigger filter and append
+	// to the expected events if it matches.
+	for _, e := range inEvents {
+		for i, filter := range filters {
+			triggerName := fmt.Sprintf("t%d", i)
+			if eventMatchesTrigger(e, filter) {
+				ret[triggerName] = append(ret[triggerName], e)
+			}
+		}
+	}
+	for _, e := range replies {
+		if e != nil {
+			for i, filter := range filters {
+				triggerName := fmt.Sprintf("t%d", i)
+				if eventMatchesTrigger(*e, filter) {
+					ret[triggerName] = append(ret[triggerName], *e)
+				}
+			}
+		}
+	}
+	return ret
+}
+
+func eventMatchesTrigger(event conformanceevent.Event, filter *eventingv1.TriggerFilter) bool {
+	// With no filter, everything matches
+	if filter == nil {
+		return true
+	}
+	for attribute, value := range filter.Attributes {
+		switch attribute {
+		case "type":
+			return event.Attributes.Type == value
+		case "source":
+			return event.Attributes.Source == value
+		}
+		// Not a well known attribute, check extensions.
+		filterAttribute, ok := event.Attributes.Extensions[attribute]
+		if !ok {
+			// We want an attribute on the event, but it's not there, so no soup for you.
+			return false
+		}
+		return filterAttribute == attribute
+	}
+	// do actual matching here...
+	return false
 }
