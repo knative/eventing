@@ -37,7 +37,7 @@ var (
 	// ErrEndpointTypeNotSupported is raised if configured endpoint isn't
 	// supported by any of the event senders that are registered.
 	ErrEndpointTypeNotSupported = errors.New("given endpoint isn't " +
-			"supported by any registered event sender")
+		"supported by any registered event sender")
 	log          = config.Log
 	senderConfig = &config.Instance.Sender
 	eventSenders = make([]EventSender, 0, 1)
@@ -104,7 +104,7 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 	ensure.NoError(err)
 	e.SetSource(fmt.Sprintf("knative://%s/wathola/sender", host))
 	e.SetID(NewEventID())
-	e.SetTime(time.Now())
+	e.SetTime(time.Now().UTC())
 	err = e.SetData(cloudevents.ApplicationJSON, data)
 	ensure.NoError(err)
 	errs := e.Validate()
@@ -112,6 +112,11 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 		ensure.NoError(errs)
 	}
 	return e
+}
+
+// ResetEventSenders will reset configured event senders to defaults.
+func ResetEventSenders() {
+	eventSenders = make([]EventSender, 0, 1)
 }
 
 // RegisterEventSender will register a EventSender to be used.
@@ -142,7 +147,7 @@ func (h httpSender) Supports(endpoint interface{}) bool {
 		return false
 	case string:
 		return strings.HasPrefix(url, "http://") ||
-				strings.HasPrefix(url, "https://")
+			strings.HasPrefix(url, "https://")
 	}
 }
 
