@@ -56,8 +56,8 @@ func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 			*ControlPlaneTrigger_WithBrokerLifecycle(),
 			*ControlPlaneTrigger_WithValidFilters(brokerName),
 			*ControlPlaneTrigger_WithInvalidFilters(brokerName),
-			*ControlPlaneDelivery(brokerName),
-			*ControlPlaneEventRouting(brokerName),
+			*ControlPlaneDelivery(),
+			*ControlPlaneEventRouting(),
 		},
 	}
 	// TODO: This is not a control plane test, or at best it is a blend with data plane.
@@ -365,7 +365,7 @@ func ControlPlaneDelivery() *feature.Feature {
 	return f
 }
 
-func ControlPlaneEventRouting(brokerName string) *feature.Feature {
+func ControlPlaneEventRouting() *feature.Feature {
 	f := feature.NewFeatureNamed("Event Routing Spec")
 
 	f.Setup("Set Broker Name", setBrokerName(brokerName))
