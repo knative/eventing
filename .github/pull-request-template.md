@@ -19,10 +19,10 @@ Fixes #
 
 <!-- If these boxes are not checked, you will be asked to complete these requirements or explain why they do not apply to your PR. -->
 
-- [ ] **80% unit test coverage**
+- [ ] **At least 80% unit test coverage**
 - [ ] **E2E tests** for any new behavior
 - [ ] **Docs PR** for any user-facing impact
-- [ ] **Spec PR** for any new feature
+- [ ] **Spec PR** for any new API feature
 - [ ] **Conformance test** for any change to the spec
 
 **Release Note**
