@@ -61,18 +61,13 @@ func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Even
 		var value interface{}
 		value, ok := ce[k]
 		// If the attribute does not exist in the event, return false.
-		if !ok {
+		if !ok || (v == eventingv1.TriggerAnyFilter && value == ""){
 			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
 			return eventfilter.FailFilter
 		}
 		// If the attribute is not set to any and is different than the one from the event, return false.
 		if v != eventingv1.TriggerAnyFilter && v != value {
 			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
-			return eventfilter.FailFilter
-		}
-		// If the attribute is set to any and is not set in the event itself, return false.
-		if v == eventingv1.TriggerAnyFilter && value == "" {
-			logging.FromContext(ctx).Debug("Attribute not set in the event", zap.String("attribute", k))
 			return eventfilter.FailFilter
 		}
 	}
