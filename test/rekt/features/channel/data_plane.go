@@ -18,13 +18,6 @@ package channel
 
 import (
 	"context"
-	"fmt"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/test/rekt/resources/subscription"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"strconv"
-
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -107,61 +100,4 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
 	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
-}
-
-type subCfg struct {
-	prefix   string
-	hasSub   bool
-	hasReply bool
-	hasDLQ   bool
-	delivery *v1.DeliverySpec
-}
-
-func (s *subCfg) cuteName(suffix string) string {
-	return fmt.Sprintf("%s%s", s.prefix, suffix)
-}
-
-//  [channel (chDS)] --+--[sub1 (sub1DS)]--> sub1sub ->
-//             |       |            |
-//             |       |            +-->sub1dlq (optional)
-//             |       |
-//             |       +-[subn (sub2DS)]--> sub2sub
-//             |                   |
-//             |                   +-->subndlq (optional)
-//             |
-//             +--[DLQ]--> dlq
-//
-func createChannelTopology(f *feature.Feature, chDS *v1.DeliverySpec, subs []subCfg) *eventshub.EventProber {
-	prober := eventshub.NewProber()
-	// Install the receivers.
-	f.Setup("install channel DLQ", prober.ReceiverInstall("dlq"))
-
-	// Install subscriptions.
-	for i, sub := range subs {
-		var opts []manifest.CfgFn
-		if sub.hasSub {
-			f.Setup("install subscription"+strconv.Itoa(i)+" subscriber", prober.ReceiverInstall(sub.cuteName("sub")))
-			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.cuteName("sub")), ""))
-		}
-		if sub.hasReply {
-			f.Setup("install subscription"+strconv.Itoa(i)+" reply", prober.ReceiverInstall(sub.cuteName("reply")))
-			opts = append(opts, subscription.WithReply(prober.AsKReference(sub.cuteName("reply")), ""))
-		}
-		if sub.delivery != nil {
-			if sub.hasDLQ {
-				f.Setup("install subscription"+strconv.Itoa(i)+" DLQ", prober.ReceiverInstall(sub.cuteName("dlq")))
-				opts = append(opts, subscription.WithDeadLetterSink(prober.AsKReference(sub.cuteName("dlq")), ""))
-			}
-			if sub.delivery.Retry != nil {
-				opts = append(opts, subscription.WithRetry(*sub.delivery.Retry, sub.delivery.BackoffPolicy, sub.delivery.BackoffDelay))
-			}
-		}
-		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(sub.prefix, opts...))
-	}
-
-	// Create Channel with delivery spec.
-
-	// f.Setup("install subscription2 DLQ", prober.ReceiverInstall("sub2dlq"))
-
-	return prober
 }
