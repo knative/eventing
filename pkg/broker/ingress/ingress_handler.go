@@ -132,6 +132,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// run validation for the extracted event
+	validationErr := event.Validate()
+	if validationErr != nil {
+		h.Logger.Warn("failed to validate extractd event", zap.Error(validationErr))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	brokerNamespace := nsBrokerName[1]
 	brokerName := nsBrokerName[2]
 	brokerNamespacedName := types.NamespacedName{
