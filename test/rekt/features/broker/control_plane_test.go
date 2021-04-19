@@ -98,7 +98,7 @@ func TestHelper(t *testing.T) {
 	}} {
 		got := helper(tt.retry, tt.failures, false)
 		if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(expectedEvents{})); diff != "" {
-			t.Log("Unexpected out: ", diff)
+			t.Error("Unexpected out: ", diff)
 		}
 	}
 }
@@ -274,7 +274,7 @@ func TestCreateExpectedEventMap(t *testing.T) {
 	}} {
 		got := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
 		if !reflect.DeepEqual(tt.want, got) {
-			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
+			t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}
 	}
 }
@@ -414,6 +414,37 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 	}, {
+		name: "Two triggers, incoming matches no triggers, hence there's no reply. Reply from t0 matches nothing",
+		inevents: []conformanceevent.Event{
+			{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "eventtype",
+				},
+			},
+		},
+		config: []triggerTestConfig{
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "replyeventtype",
+					},
+				},
+			},
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "eventtypenomatch",
+					},
+				},
+				reply: &conformanceevent.Event{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "replyeventtype",
+					},
+				},
+			},
+		},
+		want: map[string][]conformanceevent.Event{},
+	}, {
 		name: "Two triggers, matches the second one (t1), not first (t0)",
 		inevents: []conformanceevent.Event{
 			{
@@ -491,7 +522,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 	}} {
 		got := createExpectedEventRoutingMap(tt.config, tt.inevents)
 		if !reflect.DeepEqual(tt.want, got) {
-			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
+			t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}
 	}
 }

@@ -475,6 +475,36 @@ func ControlPlaneEventRouting() *feature.Feature {
 			},
 		},
 	}, {
+		name: "Two triggers, with filter, first one matches incoming event, creates reply, which matches the second one",
+		config: []triggerTestConfig{
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "com.example.FullEvent",
+					},
+				},
+				reply: &conformanceevent.Event{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "com.example.ReplyEvent",
+					},
+				},
+			},
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "com.example.ReplyEvent",
+					},
+				},
+			},
+		},
+		inEvents: []conformanceevent.Event{
+			{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "com.example.FullEvent",
+				},
+			},
+		},
+	}, {
 		name:   "Two triggers, with no filters, both get the event",
 		config: []triggerTestConfig{{}, {}},
 		inEvents: []conformanceevent.Event{
@@ -973,11 +1003,11 @@ func createBrokerTriggerEventRoutingTopology(f *feature.Feature, brokerName stri
 	// Install the receivers for all the triggers
 	for i, config := range triggerConfigs {
 		triggerName := fmt.Sprintf("t%d", i)
-		// TODO: If there's a corresponding reply, need to wire it in here
+		var proberOpts []eventshub.EventsHubOption
 		if config.reply != nil {
-			fmt.Printf("TODO: WIRE UP REPLY TO TRIGGER %s", triggerName)
+			proberOpts = append(proberOpts, eventshub.ReplyWithTransformedEvent(config.reply.Attributes.Type, config.reply.Attributes.Source, config.reply.Data))
 		}
-		f.Setup(fmt.Sprintf("install recorder for %s", triggerName), prober.ReceiverInstall(triggerName))
+		f.Setup(fmt.Sprintf("install recorder for %s", triggerName), prober.ReceiverInstall(triggerName, proberOpts...))
 	}
 
 	brokerOpts := brokerresources.WithEnvConfig()
@@ -1001,31 +1031,35 @@ func createBrokerTriggerEventRoutingTopology(f *feature.Feature, brokerName stri
 // createExpectedEventRoutingMap takes in an array of trigger configurations as well as incoming events and
 // constructs a map of where the events should land. Any replies in trigger configurations will be treated
 // as matchable events (since they are going to be sent back to the Broker).
+// TODO: This function only handles replies generated to incoming events properly and it's fine for our
+// tests for now. But if you wanted to test calling filter T0 which would generated EReply which would
+// match filter T1 which would generate EReplyTwo, then that won't work.
 func createExpectedEventRoutingMap(triggerConfigs []triggerTestConfig, inEvents []conformanceevent.Event) map[string][]conformanceevent.Event {
 	ret := make(map[string][]conformanceevent.Event, len(triggerConfigs))
 
-	// for each of the events (both incoming and newly created (replies)) check each trigger filter and append
+	repliesGenerated := make([]conformanceevent.Event, 0)
+
+	// For each of the events (both incoming and newly created (replies)) check each trigger filter and append
 	// to the expected events if it matches.
 	for _, e := range inEvents {
 		for i, config := range triggerConfigs {
 			triggerName := fmt.Sprintf("t%d", i)
 			if eventMatchesTrigger(e, config.filter) {
 				ret[triggerName] = append(ret[triggerName], e)
+				// Ok, so if there is a reply, and this trigger was tickled, add as "generated reply" event that's
+				// used below.
+				if config.reply != nil {
+					repliesGenerated = append(repliesGenerated, *config.reply)
+				}
 			}
 		}
 	}
-	// TODO(vaikas): I'm certain there's a bug/cornercase here. We should make sure that a Reply is considered
-	// to be sent ONLY if there's an event that matches that trigger filter so as to actually invoke the Trigger
-	// and therefore generating a reply.
-	// Basically we need to look at all the incoming events (basically above) and make a note if a trigger
-	// subscriber gets called and add that logic here.
-	for _, e := range triggerConfigs {
-		if e.reply != nil {
-			for i, config := range triggerConfigs {
-				triggerName := fmt.Sprintf("t%d", i)
-				if eventMatchesTrigger(*e.reply, config.filter) {
-					ret[triggerName] = append(ret[triggerName], *e.reply)
-				}
+
+	for _, e := range repliesGenerated {
+		for i, config := range triggerConfigs {
+			triggerName := fmt.Sprintf("t%d", i)
+			if eventMatchesTrigger(e, config.filter) {
+				ret[triggerName] = append(ret[triggerName], e)
 			}
 		}
 	}
