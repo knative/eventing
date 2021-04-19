@@ -24,10 +24,4 @@ func (s *Subscription) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
-	// HACK if a channel ref is a kafka channel ref, we need to hack it around to use only v1beta1
-	//  TODO(slinkydeveloper) REMOVE AFTER 0.22 release
-	if ss.Channel.Kind == "KafkaChannel" && ss.Channel.APIVersion == "messaging.knative.dev/v1alpha1" {
-		ss.Channel.APIVersion = "messaging.knative.dev/v1beta1"
-	}
-}
+func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {}
