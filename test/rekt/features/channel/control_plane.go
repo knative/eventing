@@ -18,11 +18,10 @@ package channel
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/reconciler-test/pkg/environment"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/test/rekt/features/knconf"
@@ -30,6 +29,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
