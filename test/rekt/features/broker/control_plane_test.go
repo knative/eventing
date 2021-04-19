@@ -327,23 +327,21 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		inevents []conformanceevent.Event
-		replies  []*conformanceevent.Event
-		filters  []*eventingv1.TriggerFilter
+		config   []triggerTestConfig
 		want     map[string][]conformanceevent.Event
 	}{{
 		name: "nil filter matches everything",
 		inevents: []conformanceevent.Event{
-			conformanceevent.Event{
+			{
 				Attributes: conformanceevent.ContextAttributes{
 					Type: "eventtype",
 				},
 			},
 		},
-		replies: make([]*conformanceevent.Event, 1),   // no replies
-		filters: make([]*eventingv1.TriggerFilter, 1), // no filters
+		config: make([]triggerTestConfig, 1), // One trigger, no filter, no reply
 		want: map[string][]conformanceevent.Event{
-			"t0": []conformanceevent.Event{
-				conformanceevent.Event{
+			"t0": {
+				{
 					Attributes: conformanceevent.ContextAttributes{
 						Type: "eventtype",
 					},
@@ -351,19 +349,139 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 	}, {
-		name: "wrong fff",
+		name: "wrong event type, no match ",
 		inevents: []conformanceevent.Event{
-			conformanceevent.Event{
+			{
 				Attributes: conformanceevent.ContextAttributes{
 					Type: "eventtype",
 				},
 			},
 		},
-		replies: make([]*conformanceevent.Event, 1),   // no replies
-		filters: make([]*eventingv1.TriggerFilter, 1), // no filters
+		config: []triggerTestConfig{
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "wrongtype",
+					},
+				},
+			},
+		},
+		want: map[string][]conformanceevent.Event{},
+	}, {
+		name: "Two triggers, incoming matches the second one (t1), not first (t0). Reply from t1 matches t0",
+		inevents: []conformanceevent.Event{
+			{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "eventtype",
+				},
+			},
+		},
+		config: []triggerTestConfig{
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "replyeventtype",
+					},
+				},
+			},
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "eventtype",
+					},
+				},
+				reply: &conformanceevent.Event{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "replyeventtype",
+					},
+				},
+			},
+		},
 		want: map[string][]conformanceevent.Event{
-			"t0": []conformanceevent.Event{
-				conformanceevent.Event{
+			"t0": {
+				{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "replyeventtype",
+					},
+				},
+			},
+			"t1": {
+				{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "eventtype",
+					},
+				},
+			},
+		},
+	}, {
+		name: "Two triggers, matches the second one (t1), not first (t0)",
+		inevents: []conformanceevent.Event{
+			{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "eventtype",
+				},
+			},
+		},
+		config: []triggerTestConfig{
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "wrongtype",
+					},
+				},
+			},
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "eventtype",
+					},
+				},
+			},
+		},
+		want: map[string][]conformanceevent.Event{
+			"t1": {
+				{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "eventtype",
+					},
+				},
+			},
+		},
+	}, {
+		name: "Two triggers, both get the same event",
+		inevents: []conformanceevent.Event{
+			{
+				Attributes: conformanceevent.ContextAttributes{
+					Type: "eventtype",
+				},
+			},
+		},
+		config: []triggerTestConfig{
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "eventtype",
+					},
+				},
+			},
+			{
+				filter: &eventingv1.TriggerFilter{
+					Attributes: eventingv1.TriggerFilterAttributes{
+						"type": "eventtype",
+					},
+				},
+			},
+		},
+		want: map[string][]conformanceevent.Event{
+			"t0": {
+				{
+					Attributes: conformanceevent.ContextAttributes{
+						Type: "eventtype",
+					},
+				},
+			},
+			"t1": {
+				{
 					Attributes: conformanceevent.ContextAttributes{
 						Type: "eventtype",
 					},
@@ -371,7 +489,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 	}} {
-		got := createExpectedEventDeliveryMap(tt.filters, tt.inevents, tt.replies)
+		got := createExpectedEventRoutingMap(tt.config, tt.inevents)
 		if !reflect.DeepEqual(tt.want, got) {
 			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}
