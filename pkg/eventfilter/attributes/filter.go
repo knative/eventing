@@ -63,7 +63,7 @@ func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Even
 		// If the attribute does not exist in the event (extension context attributes) or if the event attribute
 		// has an empty string value (optional attributes) - which means it was never set in the incoming event,
 		// return false.
-		if !ok || (v == eventingv1.TriggerAnyFilter && value == ""){
+		if !ok || (v == eventingv1.TriggerAnyFilter && value == "") {
 			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
 			return eventfilter.FailFilter
 		}

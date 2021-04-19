@@ -158,8 +158,8 @@ func attributesWithExtension(t, s, e string) map[string]string {
 
 func attributesWithSubject(t, s, sub string) map[string]string {
 	return map[string]string{
-		"type":        t,
-		"source":      s,
-		"subject":     sub,
+		"type":    t,
+		"source":  s,
+		"subject": sub,
 	}
 }
