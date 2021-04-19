@@ -42,7 +42,7 @@ const (
 )
 
 // Verify will verify prober state after finished has been sent.
-func (p *prober) Verify(ctx context.Context) ([]error, int) {
+func (p *prober) Verify(ctx context.Context) (eventErrs []error, eventsSent int, fetchErr error) {
 	report := p.fetchReport(ctx)
 	availRate := 0.0
 	if report.TotalRequests != 0 {
@@ -53,26 +53,25 @@ func (p *prober) Verify(ctx context.Context) ([]error, int) {
 	p.log.Infof("Availability: %.3f%%, Requests sent: %d.",
 		availRate, report.TotalRequests)
 	if report.State == "active" {
-		panic(errors.New("report fetched too early, receiver is in active state"))
+		return nil, report.EventsSent, errors.New("report fetched too early, receiver is in active state")
 	}
-	errs := make([]error, 0)
 	for _, t := range report.Thrown.Missing {
-		errs = append(errs, errors.New(t))
+		eventErrs = append(eventErrs, errors.New(t))
 	}
 	for _, t := range report.Thrown.Unexpected {
-		errs = append(errs, errors.New(t))
+		eventErrs = append(eventErrs, errors.New(t))
 	}
 	for _, t := range report.Thrown.Unavailable {
-		errs = append(errs, errors.New(t))
+		eventErrs = append(eventErrs, errors.New(t))
 	}
 	for _, t := range report.Thrown.Duplicated {
 		if p.config.OnDuplicate == Warn {
 			p.log.Warn("Duplicate events: ", t)
 		} else if p.config.OnDuplicate == Error {
-			errs = append(errs, errors.New(t))
+			eventErrs = append(eventErrs, errors.New(t))
 		}
 	}
-	return errs, report.EventsSent
+	return eventErrs, report.EventsSent, nil
 }
 
 // Finish terminates sender which sends finished event.

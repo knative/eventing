@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -72,6 +73,12 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 		}
 	}
 }
+
+// WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
+var WithDeadLetterSink = delivery.WithDeadLetterSink
+
+// WithRetry adds the retry related config to a Trigger spec.
+var WithRetry = delivery.WithRetry
 
 // Install will create a Trigger resource, augmented with the config fn options.
 func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
