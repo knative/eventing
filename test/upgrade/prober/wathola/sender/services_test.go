@@ -20,7 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/phayes/freeport"
@@ -39,6 +41,7 @@ func TestHTTPEventSender(t *testing.T) {
 		events = append(events, e)
 	})
 	cancel := <-canceling
+	waitForPort(t, port)
 	err := sender.SendEvent(ce, fmt.Sprintf("http://localhost:%d", port))
 	cancel()
 	assert.NoError(t, err)
@@ -68,6 +71,24 @@ func TestUnsupportedEventSender(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, sender.ErrEndpointTypeNotSupported))
+}
+
+func waitForPort(t *testing.T, port int) {
+	i := 0
+	for {
+		conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
+		if conn != nil {
+			assert.NoError(t, conn.Close())
+			return
+		}
+		if err != nil {
+			time.Sleep(time.Millisecond)
+			i++
+		}
+		if i > 10_000 {
+			t.Fatal("timeout waiting for port to open: ", port)
+		}
+	}
 }
 
 type testEventSender struct{}
