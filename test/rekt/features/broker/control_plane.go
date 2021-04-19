@@ -368,8 +368,6 @@ func ControlPlaneDelivery() *feature.Feature {
 func ControlPlaneEventRouting() *feature.Feature {
 	f := feature.NewFeatureNamed("Event Routing Spec")
 
-	f.Setup("Set Broker Name", setBrokerName(brokerName))
-
 	for i, tt := range []struct {
 		name     string
 		config   []triggerTestConfig
@@ -489,6 +487,7 @@ func ControlPlaneEventRouting() *feature.Feature {
 		},
 	}} {
 		brokerName := fmt.Sprintf("routing-test-%d", i)
+		f.Setup("Set Broker Name", setBrokerName(brokerName))
 		prober := createBrokerTriggerEventRoutingTopology(f, brokerName, tt.config)
 
 		// Send an event into the matrix and hope for the best
