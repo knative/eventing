@@ -45,6 +45,7 @@ func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Even
 		"subject":         event.Subject(),
 		"id":              event.ID(),
 		"time":            event.Time().String(),
+		"dataschema":      event.DataSchema(),
 		"schemaurl":       event.DataSchema(),
 		"datacontenttype": event.DataContentType(),
 		"datamediatype":   event.DataMediaType(),
@@ -67,6 +68,11 @@ func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Even
 		// If the attribute is not set to any and is different than the one from the event, return false.
 		if v != eventingv1.TriggerAnyFilter && v != value {
 			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
+			return eventfilter.FailFilter
+		}
+		// If the attribute is set to any and is not set in the event itself, return false.
+		if v == eventingv1.TriggerAnyFilter && value == "" {
+			logging.FromContext(ctx).Debug("Attribute not set in the event", zap.String("attribute", k))
 			return eventfilter.FailFilter
 		}
 	}
