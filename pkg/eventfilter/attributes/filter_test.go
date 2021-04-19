@@ -31,6 +31,7 @@ const (
 	eventSource    = `/mycontext`
 	extensionName  = `myextension`
 	extensionValue = `my-extension-value`
+	subjectValue   = `mysubject`
 )
 
 func TestAttributesFilter_Filter(t *testing.T) {
@@ -72,6 +73,29 @@ func TestAttributesFilter_Filter(t *testing.T) {
 			event:  makeEventWithExtension(extensionName, extensionValue),
 			want:   eventfilter.PassFilter,
 		},
+		"Any Extension with attribs - without Extension in Event": {
+			filter: attributesWithExtension(eventType, eventSource, ""),
+			want:   eventfilter.FailFilter,
+		},
+		"Any Extension with attribs - with Extension in Event": {
+			filter: attributesWithExtension(eventType, eventSource, ""),
+			event:  makeEventWithExtension(extensionName, extensionValue),
+			want:   eventfilter.PassFilter,
+		},
+		"Subject with attribs": {
+			filter: attributesWithSubject(eventType, eventSource, subjectValue),
+			event:  makeEventWithSubject(subjectValue),
+			want:   eventfilter.PassFilter,
+		},
+		"Any Subject with attribs - without Subject in Event": {
+			filter: attributesWithSubject(eventType, eventSource, ""),
+			want:   eventfilter.FailFilter,
+		},
+		"Any Subject with attribs - with Subject in Event": {
+			filter: attributesWithSubject(eventType, eventSource, ""),
+			event:  makeEventWithSubject(subjectValue),
+			want:   eventfilter.PassFilter,
+		},
 		"Any with attribs - Arrival extension": {
 			filter: attributes("", ""),
 			event:  makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
@@ -111,6 +135,12 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 	return e
 }
 
+func makeEventWithSubject(sub string) *cloudevents.Event {
+	e := makeEvent()
+	e.SetSubject(sub)
+	return e
+}
+
 func attributes(t, s string) map[string]string {
 	return map[string]string{
 		"type":   t,
@@ -123,5 +153,13 @@ func attributesWithExtension(t, s, e string) map[string]string {
 		"type":        t,
 		"source":      s,
 		extensionName: e,
+	}
+}
+
+func attributesWithSubject(t, s, sub string) map[string]string {
+	return map[string]string{
+		"type":    t,
+		"source":  s,
+		"subject": sub,
 	}
 }

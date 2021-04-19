@@ -163,7 +163,13 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		Name:       b.Name,
 		Namespace:  b.Namespace,
 	}
-	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, uri, b.Spec.Delivery)
+
+	delivery := t.Spec.Delivery
+	if delivery == nil {
+		delivery = b.Spec.Delivery
+	}
+
+	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, uri, delivery)
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.

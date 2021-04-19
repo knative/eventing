@@ -14,25 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deployment
+package eventlibrary
 
 import (
 	"context"
+	"log"
+	"path"
+	"runtime"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/tracker"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
-// Install will create a Deployment with defaults that can be overwritten by
-// the With* methods.
+func init() {
+	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
+}
+
+// Install
 func Install(name string) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":      name,
-		"selectors": map[string]string{"app": name},         // default
-		"image":     "gcr.io/knative-samples/helloworld-go", // default
-		"port":      8080,                                   // default
+		"name": name,
 	}
 
 	return func(ctx context.Context, t feature.T) {
@@ -42,19 +47,22 @@ func Install(name string) feature.StepFn {
 	}
 }
 
-// AsRef returns a KRef for a Service without namespace.
-func AsRef(name string) *duckv1.KReference {
-	return &duckv1.KReference{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-		Name:       name,
+func IsReady(name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		k8s.WaitForPodRunningOrFail(ctx, t, name)
+		k8s.WaitForServiceEndpointsOrFail(ctx, t, name, 1)
 	}
 }
 
-func AsTrackerReference(name string) *tracker.Reference {
-	return &tracker.Reference{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-		Name:       name,
-	}
+func PathFor(file string) string {
+	_, filename, _, _ := runtime.Caller(0)
+	log.Println("FILENAME: ", filename)
+
+	return path.Join(path.Dir(filename), file)
+}
+
+// AsKReference returns a KReference for the svc the event library uses to be
+// addressable.
+func AsKReference(name string) *duckv1.KReference {
+	return svc.AsKReference(name)
 }
