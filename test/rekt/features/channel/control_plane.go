@@ -18,6 +18,8 @@ package channel
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/reconciler-test/pkg/environment"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -150,7 +152,28 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 
 	patchChannelable(ctx, t, original, ch)
 
-	updated := getChannelableWithStatus(ctx, t)
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	var updated *duckv1.Channelable
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		updated = getChannelable(ctx, t)
+		if ch.Status.ObservedGeneration != ch.Generation {
+			// keep polling.
+			return false, nil
+		}
+		for _, got := range updated.Spec.Subscribers {
+			if got.UID == want.UID {
+				if diff := cmp.Diff(want, got); diff != "" {
+					return false, nil
+				}
+				return true, nil
+			}
+		}
+		return true, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if len(updated.Spec.Subscribers) <= 0 {
 		t.Errorf("subscriber was not saved")
 	}
