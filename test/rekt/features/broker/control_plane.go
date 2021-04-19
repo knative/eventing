@@ -933,13 +933,13 @@ func happenedFullEvent(ctx context.Context, prober *eventshub.EventProber, prefi
 	sort.Slice(events, func(i, j int) bool {
 		return events[i].Time.Before(events[j].Time)
 	})
-	var ret []conformanceevent.Event
-	for _, e := range events {
+	ret := make([]conformanceevent.Event, len(events))
+	for i, e := range events {
 		// TODO: yeah, like full event please...
-		ret = append(ret, conformanceevent.Event{
+		ret[i] = conformanceevent.Event{
 			Attributes: conformanceevent.ContextAttributes{
 				Type: e.Event.Type(),
-			}})
+			}}
 	}
 	return ret
 
