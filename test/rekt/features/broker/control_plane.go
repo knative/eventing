@@ -56,10 +56,12 @@ func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 			*ControlPlaneTrigger_WithBrokerLifecycle(),
 			*ControlPlaneTrigger_WithValidFilters(brokerName),
 			*ControlPlaneTrigger_WithInvalidFilters(brokerName),
-			*ControlPlaneDelivery(),
-			*ControlPlaneEventRouting(),
 		},
 	}
+
+	// Add each feature of event routing and Delivery tests as a new feature
+	addControlPlaneEventRouting(fs)
+	addControlPlaneDelivery(fs)
 	// TODO: This is not a control plane test, or at best it is a blend with data plane.
 	// Must("Events that pass the attributes filter MUST include context or extension attributes that match all key-value pairs exactly.", todo)
 
@@ -286,8 +288,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 	return f
 }
 
-func ControlPlaneDelivery() *feature.Feature {
-	f := feature.NewFeatureNamed("Delivery Spec")
+func addControlPlaneDelivery(fs *feature.FeatureSet) {
 
 	for i, tt := range []struct {
 		name     string
@@ -331,7 +332,12 @@ func ControlPlaneDelivery() *feature.Feature {
 		t1FailCount: 3, // Should get event.
 		t2FailCount: 2, // Should end up in DLQ.
 	}} {
+		// TODO: Each of these creates quite a few resources. We need to figure out a way
+		// to delete the resources for each Feature once the test completes. Today it's
+		// not easy (if at all possible) to do this, since Environment contains the References
+		// to created resources, but it's not granular enough.
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
+		f := feature.NewFeatureNamed(fmt.Sprintf("Delivery Spec - %s", brokerName))
 		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
 
 		// Send an event into the matrix and hope for the best
@@ -360,14 +366,11 @@ func ControlPlaneDelivery() *feature.Feature {
 		})
 
 		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expectedEvents))
+		fs.Features = append(fs.Features, *f)
 	}
-
-	return f
 }
 
-func ControlPlaneEventRouting() *feature.Feature {
-	f := feature.NewFeatureNamed("Event Routing Spec")
-
+func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 	for i, tt := range []struct {
 		name     string
 		config   []triggerTestConfig
@@ -516,7 +519,12 @@ func ControlPlaneEventRouting() *feature.Feature {
 			},
 		},
 	}} {
+		// TODO: Each of these creates quite a few resources. We need to figure out a way
+		// to delete the resources for each Feature once the test completes. Today it's
+		// not easy (if at all possible) to do this, since Environment contains the References
+		// to created resources, but it's not granular enough.
 		brokerName := fmt.Sprintf("routing-test-%d", i)
+		f := feature.NewFeatureNamed(fmt.Sprintf("Event Routing Spec - %s", brokerName))
 		f.Setup("Set Broker Name", setBrokerName(brokerName))
 		prober := createBrokerTriggerEventRoutingTopology(f, brokerName, tt.config)
 
@@ -549,9 +557,8 @@ func ControlPlaneEventRouting() *feature.Feature {
 		})
 
 		f.Stable("Conformance").Should(tt.name, assertExpectedRoutedEvents(prober, expectedEvents))
+		fs.Features = append(fs.Features, *f)
 	}
-
-	return f
 }
 
 type EventingClient struct {

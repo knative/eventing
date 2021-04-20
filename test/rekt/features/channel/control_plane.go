@@ -210,10 +210,24 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 }
 
 func readyChannelIsAddressable(ctx context.Context, t feature.T) {
-	channel := getChannelable(ctx, t)
+	var ch *duckv1.Channelable
 
-	if c := channel.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-		if channel.Status.Address.URL == nil {
+	// Poll for a ready channel.
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		ch = getChannelable(ctx, t)
+		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("failed to get a ready channel", err)
+	}
+
+	// Confirm the channel is ready, and addressable.
+	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+		if ch.Status.Address.URL == nil {
 			t.Errorf("channel is not addressable")
 		}
 		// Success!

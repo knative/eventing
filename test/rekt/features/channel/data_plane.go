@@ -41,6 +41,8 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 
 	f.Setup("Set Channel Name", setChannelableName(channelName))
 
+	f.Requirement("Channel is Ready", channel_impl.IsReady(channelName))
+
 	f.Stable("Input").
 		Must("Every Channel MUST expose either an HTTP or HTTPS endpoint.", todo).
 		Must("The endpoint(s) MUST conform to 0.3 or 1.0 CloudEvents specification.",
