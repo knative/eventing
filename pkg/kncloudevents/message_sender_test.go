@@ -39,14 +39,32 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
-// Test The RetryConfigFromDeliverySpec() Functionality
 func TestRetryConfigFromDeliverySpec(t *testing.T) {
+
 	const retry = 5
+
+	// Inline Utility For Creating Http.Response
+	createResponse := func(statusCode int, retryAfter string) *http.Response {
+		var response *http.Response
+		if statusCode > 0 {
+			response = &http.Response{StatusCode: statusCode}
+			if len(retryAfter) > 0 {
+				response.Header = make(map[string][]string)
+				response.Header.Set(RetryAfterHeader, retryAfter)
+			}
+		}
+		return response
+	}
+
+	// Define The Test Cases
 	testcases := []struct {
 		name                     string
+		respectRetryAfter        bool
 		backoffPolicy            duckv1.BackoffPolicyType
 		backoffDelay             string
+		response                 *http.Response
 		expectedBackoffDurations []time.Duration
+		roundExpectedDuration    time.Duration
 		wantErr                  bool
 	}{{
 		name:          "Successful Linear Backoff 2500ms, 5 retries",
@@ -86,10 +104,117 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffPolicy: duckv1.BackoffPolicyLinear,
 		backoffDelay:  "FOO",
 		wantErr:       true,
+	}, {
+		name:              "Nil Response",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          nil,
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
+		},
+	}, {
+		name:              "429 Response Without Retry-After",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          createResponse(http.StatusTooManyRequests, ""),
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
+		},
+	}, {
+		name:              "429 Response With Larger Valid Seconds Retry-After",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          createResponse(http.StatusTooManyRequests, "10"),
+		expectedBackoffDurations: []time.Duration{
+			10 * time.Second,
+			10 * time.Second,
+			10 * time.Second,
+			10 * time.Second,
+			10 * time.Second,
+		},
+	}, {
+		name:              "429 Response With Smaller Valid Seconds Retry-After",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          createResponse(http.StatusTooManyRequests, "1"),
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
+		},
+	}, {
+		name:                  "429 Response With Valid Future Time Retry-After",
+		respectRetryAfter:     true,
+		backoffPolicy:         duckv1.BackoffPolicyLinear,
+		backoffDelay:          "PT2.5S",
+		response:              createResponse(http.StatusTooManyRequests, time.Now().Add(30*time.Second).Format(time.RFC850)),
+		roundExpectedDuration: 5 * time.Second, // Rough rounding time for test to verify against time.Now() in implementation ; )
+		expectedBackoffDurations: []time.Duration{
+			30 * time.Second,
+			30 * time.Second,
+			30 * time.Second,
+			30 * time.Second,
+			30 * time.Second,
+		},
+	}, {
+		name:              "429 Response With Valid Prior Time Retry-After",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          createResponse(http.StatusTooManyRequests, time.Now().Add(-30*time.Second).Format(time.RFC850)),
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
+		},
+	}, {
+		name:              "429 Response With Invalid Retry-After",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          createResponse(http.StatusTooManyRequests, "FOO"),
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
+		},
+	}, {
+		name:              "200 Response With Valid Retry-After",
+		respectRetryAfter: true,
+		backoffPolicy:     duckv1.BackoffPolicyLinear,
+		backoffDelay:      "PT2.5S",
+		response:          createResponse(http.StatusOK, "10"),
+		expectedBackoffDurations: []time.Duration{
+			1 * 2500 * time.Millisecond,
+			2 * 2500 * time.Millisecond,
+			3 * 2500 * time.Millisecond,
+			4 * 2500 * time.Millisecond,
+			5 * 2500 * time.Millisecond,
+		},
 	}}
 
+	// Execute The Individual TestCases
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			// Create The DeliverySpec To Test
 			deliverySpec := duckv1.DeliverySpec{
 				DeadLetterSink: nil,
@@ -99,7 +224,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			}
 
 			// Create the RetryConfig from the deliverySpec
-			retryConfig, err := RetryConfigFromDeliverySpec(deliverySpec)
+			retryConfig, err := RetryConfigFromDeliverySpecWith429(deliverySpec, tc.respectRetryAfter)
 			assert.Equal(t, tc.wantErr, err != nil)
 
 			// If successful then validate the retryConfig (Max & Backoff calculations).
@@ -107,8 +232,12 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 				assert.Equal(t, retry, retryConfig.RetryMax)
 				for i := 1; i < retry; i++ {
 					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
-					actualBackoffDuration := retryConfig.Backoff(i, nil)
-					assert.Equal(t, expectedBackoffDuration, actualBackoffDuration)
+					actualBackoffDuration := retryConfig.Backoff(i, tc.response)
+					if tc.roundExpectedDuration > 0 {
+						assert.Equal(t, expectedBackoffDuration, actualBackoffDuration.Round(tc.roundExpectedDuration)) // Round Time String Cases
+					} else {
+						assert.Equal(t, expectedBackoffDuration, actualBackoffDuration)
+					}
 				}
 			}
 		})
