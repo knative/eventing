@@ -46,6 +46,21 @@ import (
 	"knative.dev/reconciler-test/resources/svc"
 )
 
+// DO NOT SUBMIT
+func ControlPlaneConformanceOneOff(brokerName string) *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name:     "VAIKAS Knative Broker Specification - Control Plane",
+		Features: []feature.Feature{},
+	}
+
+	// Add each feature of event routing and Delivery tests as a new feature
+	addControlPlaneEventRouting(fs)
+	// TODO: This is not a control plane test, or at best it is a blend with data plane.
+	// Must("Events that pass the attributes filter MUST include context or extension attributes that match all key-value pairs exactly.", todo)
+
+	return fs
+}
+
 func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Broker Specification - Control Plane",
@@ -364,9 +379,17 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 				t.Failed()
 			}
 		})
-
 		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expectedEvents))
 		fs.Features = append(fs.Features, *f)
+	}
+}
+
+func deleteFeatureResources() feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		f := feature.FromContext(ctx)
+		for _, ref := range f.References() {
+			t.Logf("WOULD DELETE HERE!! : CLEANING UP for feature %q RESOURCE: %+v", f.Name, ref)
+		}
 	}
 }
 
@@ -557,6 +580,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 		})
 
 		f.Stable("Conformance").Should(tt.name, assertExpectedRoutedEvents(prober, expectedEvents))
+		f.Teardown("DUMP RESOURCES", deleteFeatureResources())
 		fs.Features = append(fs.Features, *f)
 	}
 }

@@ -22,6 +22,8 @@ import (
 	"runtime"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/reconciler-test/pkg/state"
 )
 
@@ -30,6 +32,8 @@ type Feature struct {
 	Name  string
 	Steps []Step
 	State state.Store
+	// Contains all the resources created as part of this Feature.
+	refs []corev1.ObjectReference
 }
 
 // NewFeatureNamed creates a new feature with the provided name
@@ -81,6 +85,16 @@ func (s *Step) TestName() string {
 	default:
 		return s.Name
 	}
+}
+
+// Reference adds references to keep track of for example, for cleaning things
+// after a Feature completes.
+func (f *Feature) Reference(ref ...corev1.ObjectReference) {
+	f.refs = append(f.refs, ref...)
+}
+
+func (f *Feature) References() []corev1.ObjectReference {
+	return f.refs
 }
 
 // Setup adds a step function to the feature set at the Setup timing phase.

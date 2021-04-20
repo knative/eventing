@@ -48,3 +48,5 @@ require (
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+
+replace knative.dev/reconciler-test => github.com/vaikas/reconciler-test v0.0.0-20210420211313-1bd73ea90a76
