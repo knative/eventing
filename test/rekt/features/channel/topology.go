@@ -19,17 +19,17 @@ package channel
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
+
 	"github.com/google/go-cmp/cmp"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"sort"
-	"strconv"
-
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 type subCfg struct {
