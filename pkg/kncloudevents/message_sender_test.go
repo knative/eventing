@@ -233,11 +233,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 				for i := 1; i < retry; i++ {
 					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
 					actualBackoffDuration := retryConfig.Backoff(i, tc.response)
-					if tc.roundExpectedDuration > 0 {
-						assert.Equal(t, expectedBackoffDuration, actualBackoffDuration.Round(tc.roundExpectedDuration)) // Round Time String Cases
-					} else {
-						assert.Equal(t, expectedBackoffDuration, actualBackoffDuration)
-					}
+					assert.Equal(t, expectedBackoffDuration, actualBackoffDuration.Round(tc.roundExpectedDuration)) // Round Time String Cases
 				}
 			}
 		})
