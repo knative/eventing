@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/test/rekt/features/knconf"
@@ -28,6 +29,7 @@ import (
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
@@ -150,7 +152,32 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 
 	patchChannelable(ctx, t, original, ch)
 
-	updated := getChannelableWithStatus(ctx, t)
+	var updated *duckv1.Channelable
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		updated = getChannelable(ctx, t)
+		if updated.Status.ObservedGeneration != updated.Generation {
+			// keep polling.
+			return false, nil
+		}
+		if len(updated.Status.Subscribers) == len(ch.Spec.Subscribers) {
+			for _, got := range updated.Status.Subscribers {
+				// want should be Ready.
+				if got.UID == want.UID {
+					if want := corev1.ConditionTrue; got.Ready == want {
+						// Synced!
+						return true, nil
+					}
+				}
+			}
+		}
+		// keep polling.
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("failed waiting for channel subscribers to sync", err)
+	}
+
 	if len(updated.Spec.Subscribers) <= 0 {
 		t.Errorf("subscriber was not saved")
 	}
@@ -183,10 +210,24 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 }
 
 func readyChannelIsAddressable(ctx context.Context, t feature.T) {
-	channel := getChannelable(ctx, t)
+	var ch *duckv1.Channelable
 
-	if c := channel.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-		if channel.Status.Address.URL == nil {
+	// Poll for a ready channel.
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		ch = getChannelable(ctx, t)
+		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("failed to get a ready channel", err)
+	}
+
+	// Confirm the channel is ready, and addressable.
+	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+		if ch.Status.Address.URL == nil {
 			t.Errorf("channel is not addressable")
 		}
 		// Success!
