@@ -123,18 +123,3 @@ func TestBrokerConformance(t *testing.T) {
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }
-
-// DO NOT CHECK IN
-func TestBrokerConformanceOneOff(t *testing.T) {
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-
-	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
-	env.TestSet(ctx, t, broker.ControlPlaneConformanceOneOff("default"))
-}

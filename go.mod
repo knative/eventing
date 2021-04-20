@@ -44,9 +44,8 @@ require (
 	knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3
 	knative.dev/pkg v0.0.0-20210420053235-1afd04993622
 	knative.dev/reconciler-test v0.0.0-20210420201836-15b4e1222865
+	knative.dev/reconciler-test v0.0.0-20210420215136-4598ca0f0602
 	sigs.k8s.io/yaml v1.2.0
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-
-replace knative.dev/reconciler-test => github.com/vaikas/reconciler-test v0.0.0-20210420211313-1bd73ea90a76

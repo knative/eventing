@@ -35,5 +35,5 @@ func FromContext(ctx context.Context) *Feature {
 	if e, ok := ctx.Value(envKey{}).(*Feature); ok {
 		return e
 	}
-	panic("no Store found in context")
+	panic("no Feature found in context")
 }
