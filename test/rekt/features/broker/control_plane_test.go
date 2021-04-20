@@ -20,9 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
+	"github.com/google/go-cmp/cmp"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"

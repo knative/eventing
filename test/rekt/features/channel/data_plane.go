@@ -18,9 +18,16 @@ package channel
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
 )
@@ -32,6 +39,8 @@ func DataPlaneConformance(channelName string) *feature.FeatureSet {
 			*DataPlaneChannel(channelName),
 		},
 	}
+
+	addControlPlaneDelivery(fs)
 
 	return fs
 }
@@ -77,12 +86,6 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		Must("The events MUST be sent to the subscriberURI field of spec.subscribers.", todo)
 		// Each channel implementation will have its own quality of service guarantees (e.g. at least once, at most once, etc) which SHOULD be documented.
 
-	f.Stable("Retries").
-		Should("Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.", todo).
-		Should("Channels SHOULD support various retry configuration parameters: [the maximum number of retries]", todo).
-		Should("Channels SHOULD support various retry configuration parameters: [the time in-between retries]", todo).
-		Should("Channels SHOULD support various retry configuration parameters: [the backoff rate]", todo)
-
 	f.Stable("Observability").
 		Should("Channels SHOULD expose a variety of metrics: [Number of malformed incoming event queueing events (400 Bad Request responses)]", todo).
 		Should("Channels SHOULD expose a variety of metrics: [Number of accepted incoming event queuing events (202 Accepted responses)]", todo).
@@ -103,4 +106,115 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 	name := state.GetStringOrFail(ctx, t, ChannelableNameKey)
 	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
+}
+
+func addControlPlaneDelivery(fs *feature.FeatureSet) {
+	//Should("Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.", todo).
+	//Should("Channels SHOULD support various retry configuration parameters: [the maximum number of retries]", todo).
+	//Should("Channels SHOULD support various retry configuration parameters: [the time in-between retries]", todo).
+	//Should("Channels SHOULD support various retry configuration parameters: [the backoff rate]", todo)
+
+	for i, tt := range []struct {
+		name string
+		chDS *v1.DeliverySpec
+		subs []subCfg
+	}{{
+		name: "Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.",
+		subs: []subCfg{{
+			prefix:         "sub1",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     false,
+			hasReply:       false,
+			replyFailCount: 0,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}},
+	}, {
+		name: "Channels SHOULD support various retry configuration parameters: [the maximum number of retries]",
+		subs: []subCfg{{
+			prefix:         "sub1",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     false,
+			hasReply:       false,
+			replyFailCount: 0,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}, {
+			prefix:         "sub2",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     true,
+			hasReply:       true,
+			replyFailCount: 0,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}, {
+			prefix:         "sub3",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     true,
+			hasReply:       true,
+			replyFailCount: 1,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}, {
+			prefix:         "sub4",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     true,
+			hasReply:       true,
+			replyFailCount: 2,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}},
+	}} {
+		f := feature.NewFeatureNamed("Delivery Spec " + strconv.Itoa(i))
+
+		chName := fmt.Sprintf("dlq-test-%d", i)
+		f.Setup("Set Broker Name", setChannelableName(chName))
+
+		prober := createChannelTopology(f, chName, tt.chDS, tt.subs)
+
+		// Send an event into the matrix and hope for the best
+		prober.SenderFullEvents(1)
+		f.Setup("install source", prober.SenderInstall("source"))
+		f.Requirement("sender is finished", prober.SenderDone("source"))
+
+		// All events have been sent, time to look at the specs and confirm we got them.
+		expected := createExpectedEventPatterns(tt.chDS, tt.subs)
+
+		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
+			interval, timeout := environment.PollTimingsFromContext(ctx)
+			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+				gtg := true
+				for prefix, want := range expected {
+					events := prober.ReceivedOrRejectedBy(ctx, prefix)
+					if len(events) != len(want.success) {
+						gtg = false
+					}
+				}
+				return gtg, nil
+			})
+			if err != nil {
+				t.Failed()
+			}
+		})
+
+		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expected))
+
+		// Add this feature to the feature set.
+		fs.Features = append(fs.Features, *f)
+	}
 }
