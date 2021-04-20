@@ -30,17 +30,33 @@ import (
 )
 
 type subCfg struct {
-	prefix   string
-	hasSub   bool
-	hasReply bool
-	hasDLQ   bool
-	delivery *v1.DeliverySpec
+	prefix         string
+	hasSub         bool
+	subFailCount   uint
+	subReplies     bool
+	hasReply       bool
+	replyFailCount uint
+	delivery       *v1.DeliverySpec
 }
 
-func (s *subCfg) cuteName(suffix string) string {
+func (s *subCfg) subName() string {
+	suffix := "sub"
 	return fmt.Sprintf("%s%s", s.prefix, suffix)
 }
 
+func (s *subCfg) replyName() string {
+	suffix := "reply"
+	return fmt.Sprintf("%s%s", s.prefix, suffix)
+}
+
+func (s *subCfg) dlqName() string {
+	suffix := "dlq"
+	return fmt.Sprintf("%s%s", s.prefix, suffix)
+}
+
+// createChannelTopology creates a channel and {n} subscriptions with recorders
+// attached to each endpoint.
+//
 //  source --> [channel (chDS)] --+--[sub1 (sub1DS)]--> sub1sub (optional) --> sub1reply (optional)
 //                        |       |            |
 //                        |       |            +-->sub1dlq (optional)
@@ -72,17 +88,20 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 	for i, sub := range subs {
 		var opts []manifest.CfgFn
 		if sub.hasSub {
-			f.Setup("install subscription"+strconv.Itoa(i)+" subscriber", prober.ReceiverInstall(sub.cuteName("sub")))
-			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.cuteName("sub")), ""))
+			f.Setup("install subscription"+strconv.Itoa(i)+" subscriber",
+				prober.ReceiverInstall(sub.subName(), eventshub.DropFirstN(sub.subFailCount)))
+			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.subName()), ""))
 		}
 		if sub.hasReply {
-			f.Setup("install subscription"+strconv.Itoa(i)+" reply", prober.ReceiverInstall(sub.cuteName("reply")))
-			opts = append(opts, subscription.WithReply(prober.AsKReference(sub.cuteName("reply")), ""))
+			f.Setup("install subscription"+strconv.Itoa(i)+" reply",
+				prober.ReceiverInstall(sub.replyName(), eventshub.DropFirstN(sub.replyFailCount))) // TODO: use subReplies
+			opts = append(opts, subscription.WithReply(prober.AsKReference(sub.replyName()), ""))
 		}
 		if sub.delivery != nil {
-			if sub.hasDLQ {
-				f.Setup("install subscription"+strconv.Itoa(i)+" DLQ", prober.ReceiverInstall(sub.cuteName("dlq")))
-				opts = append(opts, subscription.WithDeadLetterSink(prober.AsKReference(sub.cuteName("dlq")), ""))
+			if sub.delivery.DeadLetterSink != nil {
+				f.Setup("install subscription"+strconv.Itoa(i)+" DLQ",
+					prober.ReceiverInstall(sub.dlqName()))
+				opts = append(opts, subscription.WithDeadLetterSink(prober.AsKReference(sub.dlqName()), ""))
 			}
 			if sub.delivery.Retry != nil {
 				opts = append(opts, subscription.WithRetry(*sub.delivery.Retry, sub.delivery.BackoffPolicy, sub.delivery.BackoffDelay))
@@ -91,9 +110,107 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(sub.prefix, opts...))
 	}
 
-	// Create Channel with delivery spec.
-
-	// f.Setup("install subscription2 DLQ", prober.ReceiverInstall("sub2dlq"))
-
 	return prober
+}
+
+type eventPattern struct {
+	success  []bool
+	interval []uint
+}
+
+func makeEventPattern(attempts, failures uint) eventPattern {
+	p := eventPattern{
+		success:  []bool{},
+		interval: []uint{},
+	}
+	for i := uint(0); i < attempts; i++ {
+		if i >= failures {
+			p.success = append(p.success, true)
+			p.interval = append(p.interval, 0) // TODO: calculate time.
+			return p
+		}
+		p.success = append(p.success, false)
+		p.interval = append(p.interval, 0) // TODO: calculate time.
+	}
+	return p
+}
+
+// createExpectedEventPatterns assumes a single event is sent.
+func createExpectedEventPatterns(chDS *v1.DeliverySpec, subs []subCfg) map[string]eventPattern {
+	// By default, assume that nothing gets anything.
+	p := map[string]eventPattern{
+		"chdlq": {
+			success:  []bool{},
+			interval: []uint{},
+		},
+	}
+
+	chdlq := false
+
+	for _, sub := range subs {
+		p[sub.subName()] = eventPattern{
+			success:  []bool{},
+			interval: []uint{},
+		}
+		p[sub.replyName()] = eventPattern{
+			success:  []bool{},
+			interval: []uint{},
+		}
+		p[sub.dlqName()] = eventPattern{
+			success:  []bool{},
+			interval: []uint{},
+		}
+
+		skipReply := false
+		attempts := deliveryAttempts(sub.delivery, chDS)
+		// For subscriber.
+		if sub.hasSub {
+			p[sub.subName()] = makeEventPattern(attempts, sub.subFailCount)
+			if attempts <= sub.subFailCount {
+				skipReply = true
+				if sub.delivery != nil && sub.delivery.DeadLetterSink != nil {
+					p[sub.dlqName()] = makeEventPattern(1, 0)
+				} else {
+					chdlq = true
+				}
+			}
+			if !sub.subReplies {
+				skipReply = true
+			}
+		}
+		// For reply.
+		if !skipReply && sub.hasReply {
+			p[sub.replyName()] = makeEventPattern(attempts, sub.replyFailCount)
+			if attempts <= sub.replyFailCount {
+				if sub.delivery != nil && sub.delivery.DeadLetterSink != nil {
+					p[sub.dlqName()] = makeEventPattern(1, 0)
+				} else {
+					chdlq = true
+				}
+			}
+		}
+	}
+	if chdlq && chDS != nil && chDS.DeadLetterSink != nil {
+		p["chdlq"] = makeEventPattern(1, 0)
+	}
+
+	return p
+}
+
+func deliveryAttempts(p0, p1 *v1.DeliverySpec) uint {
+	if p0 != nil {
+		if p0.Retry == nil || *p0.Retry == 0 {
+			return 1
+		}
+		return 1 + uint(*p0.Retry)
+	}
+
+	if p1 != nil {
+		if p1.Retry == nil || *p1.Retry == 0 {
+			return 1
+		}
+		return 1 + uint(*p1.Retry)
+	}
+
+	return 1
 }

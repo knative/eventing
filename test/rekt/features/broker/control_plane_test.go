@@ -272,7 +272,7 @@ func TestCreateExpectedEventMap(t *testing.T) {
 	}} {
 		got := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
 		if !reflect.DeepEqual(tt.want, got) {
-			t.Logf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
+			t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}
 	}
 }
