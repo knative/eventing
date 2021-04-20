@@ -163,3 +163,41 @@ func attributesWithSubject(t, s, sub string) map[string]string {
 		"subject": sub,
 	}
 }
+
+func TestAllSupportedAttributeFieldsV1(t *testing.T) {
+	e := cloudevents.NewEvent(cloudevents.VersionV1)
+	e.SetType(eventType)
+	e.SetSource(eventSource)
+	e.SetID("1234")
+	e.SetDataSchema("wow")
+	e.SetSubject("cool")
+	e.SetDataContentType("cheers;mate")
+
+	attributes := map[string]string{
+		"specversion":     e.SpecVersion(),
+		"type":            e.Type(),
+		"source":          e.Source(),
+		"subject":         e.Subject(),
+		"id":              e.ID(),
+		"time":            e.Time().String(),
+		"dataschema":      e.DataSchema(),
+		"schemaurl":       e.DataSchema(),
+		"datacontenttype": e.DataContentType(),
+		"datamediatype":   e.DataMediaType(),
+	}
+	if result := NewAttributesFilter(attributes).Filter(context.TODO(), e); result != eventfilter.PassFilter {
+		t.Errorf("Expected pass, got %v", result)
+	}
+}
+
+func TestV03Event(t *testing.T) {
+	e := cloudevents.NewEvent(cloudevents.VersionV03)
+	e.SetDataContentEncoding("perfect")
+
+	attributes := map[string]string{
+		"datacontentencoding": e.DeprecatedDataContentEncoding(),
+	}
+	if result := NewAttributesFilter(attributes).Filter(context.TODO(), e); result != eventfilter.PassFilter {
+		t.Errorf("Expected pass, got %v", result)
+	}
+}
