@@ -18,10 +18,15 @@ package channel
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
@@ -34,6 +39,8 @@ func DataPlaneConformance(channelName string) *feature.FeatureSet {
 			*DataPlaneChannel(channelName),
 		},
 	}
+
+	addControlPlaneDelivery(fs)
 
 	return fs
 }
@@ -99,11 +106,7 @@ func channelAcceptsCEVersions(ctx context.Context, t feature.T) {
 	knconf.AcceptsCEVersions(ctx, t, channel_impl.GVR(), name)
 }
 
-func ControlPlaneDelivery(chName string) *feature.Feature {
-	f := feature.NewFeatureNamed("Delivery Spec")
-
-	f.Setup("Set Broker Name", setChannelableName(chName))
-
+func addControlPlaneDelivery(fs *feature.FeatureSet) {
 	//Should("Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.", todo).
 	//Should("Channels SHOULD support various retry configuration parameters: [the maximum number of retries]", todo).
 	//Should("Channels SHOULD support various retry configuration parameters: [the time in-between retries]", todo).
@@ -112,48 +115,75 @@ func ControlPlaneDelivery(chName string) *feature.Feature {
 	for i, tt := range []struct {
 		name string
 		chDS *v1.DeliverySpec
-		// Trigger 1 Delivery spec
-		t1DS *v1.DeliverySpec
-		// How many events to fail before succeeding
-		t1FailCount uint
-		// Trigger 2 Delivery spec
-		t2DS *v1.DeliverySpec
-		// How many events to fail before succeeding
-		t2FailCount uint
+		subs []subCfg
 	}{{
-		name: "When `BrokerSpec.Delivery` and `TriggerSpec.Delivery` are both not configured, no delivery spec SHOULD be used.",
-		// TODO: save these for a followup, just trigger spec seems to be having issues. Might be a bug in eventing?
-		//}, {
-		//	name: "When `BrokerSpec.Delivery` is configured, but not the specific `TriggerSpec.Delivery`, then the `BrokerSpec.Delivery` SHOULD be used. (Retry)",
-		//	brokerDS: &v1.DeliverySpec{
-		//		DeadLetterSink: new(duckv1.Destination),
-		//		Retry:          ptr.Int32(3),
-		//	},
-		//	t1FailCount: 3, // Should get event.
-		//	t2FailCount: 4, // Should end up in DLQ.
-		//}, {
-		//	name: "When `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry)",
-		//	t1DS: &v1.DeliverySpec{
-		//		DeadLetterSink: new(duckv1.Destination),
-		//		Retry:          ptr.Int32(3),
-		//	},
-		//	t1FailCount: 3, // Should get event.
-		//	t2FailCount: 1, // Should be dropped.
-		//}, {
-		//	name: "When both `BrokerSpec.Delivery` and `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry)",
-		//	brokerDS: &v1.DeliverySpec{
-		//		DeadLetterSink: new(duckv1.Destination),
-		//		Retry:          ptr.Int32(1),
-		//	},
-		//	t1DS: &v1.DeliverySpec{
-		//		DeadLetterSink: new(duckv1.Destination),
-		//		Retry:          ptr.Int32(3),
-		//	},
-		//	t1FailCount: 3, // Should get event.
-		//	t2FailCount: 2, // Should end up in DLQ.
+		name: "Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.",
+		subs: []subCfg{{
+			prefix:         "sub1",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     false,
+			hasReply:       false,
+			replyFailCount: 0,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}},
+	}, {
+		name: "Channels SHOULD support various retry configuration parameters: [the maximum number of retries]",
+		subs: []subCfg{{
+			prefix:         "sub1",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     false,
+			hasReply:       false,
+			replyFailCount: 0,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}, {
+			prefix:         "sub2",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     true,
+			hasReply:       true,
+			replyFailCount: 0,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}, {
+			prefix:         "sub3",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     true,
+			hasReply:       true,
+			replyFailCount: 1,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}, {
+			prefix:         "sub4",
+			hasSub:         true,
+			subFailCount:   1,
+			subReplies:     true,
+			hasReply:       true,
+			replyFailCount: 2,
+			delivery: &v1.DeliverySpec{
+				DeadLetterSink: new(duckv1.Destination),
+				Retry:          ptr.Int32(1),
+			},
+		}},
 	}} {
-		brokerName := fmt.Sprintf("dlq-test-%d", i)
-		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		f := feature.NewFeatureNamed("Delivery Spec " + strconv.Itoa(i))
+
+		chName := fmt.Sprintf("dlq-test-%d", i)
+		f.Setup("Set Broker Name", setChannelableName(chName))
+
+		prober := createChannelTopology(f, chName, tt.chDS, tt.subs)
 
 		// Send an event into the matrix and hope for the best
 		prober.SenderFullEvents(1)
@@ -161,15 +191,15 @@ func ControlPlaneDelivery(chName string) *feature.Feature {
 		f.Requirement("sender is finished", prober.SenderDone("source"))
 
 		// All events have been sent, time to look at the specs and confirm we got them.
-		expectedEvents := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		expected := createExpectedEventPatterns(tt.chDS, tt.subs)
 
 		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
 			interval, timeout := environment.PollTimingsFromContext(ctx)
 			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 				gtg := true
-				for prefix, want := range expectedEvents {
+				for prefix, want := range expected {
 					events := prober.ReceivedOrRejectedBy(ctx, prefix)
-					if len(events) != len(want.eventSuccess) {
+					if len(events) != len(want.success) {
 						gtg = false
 					}
 				}
@@ -180,8 +210,9 @@ func ControlPlaneDelivery(chName string) *feature.Feature {
 			}
 		})
 
-		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expectedEvents))
-	}
+		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expected))
 
-	return f
+		// Add this feature to the feature set.
+		fs.Features = append(fs.Features, *f)
+	}
 }

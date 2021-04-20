@@ -17,13 +17,16 @@ limitations under the License.
 package channel
 
 import (
+	"context"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/subscription"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"sort"
 	"strconv"
 
 	"knative.dev/reconciler-test/pkg/feature"
@@ -84,30 +87,46 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 	f.Setup("Create Channel Impl", channel_impl.Install(chName, chOpts...))
 	f.Setup("Channel is Ready", channel_impl.IsReady(chName)) // We want to block in the setup phase until the channel is ready to go.
 
+	// Set the prober target.
+	prober.SetTargetResource(channel_impl.GVR(), chName)
+
 	// Install subscriptions.
 	for i, sub := range subs {
+		// Install the expected sinks, they all might not be used.
+
+		subOpts := []eventshub.EventsHubOption{eventshub.DropFirstN(sub.subFailCount)}
+		if sub.subReplies {
+			subOpts = append(subOpts, eventshub.ReplyWithAppendedData(sub.prefix))
+		}
+		f.Setup("install subscription"+strconv.Itoa(i)+" subscriber",
+			prober.ReceiverInstall(sub.subName(), subOpts...))
+
+		f.Setup("install subscription"+strconv.Itoa(i)+" reply",
+			prober.ReceiverInstall(sub.replyName(), eventshub.DropFirstN(sub.replyFailCount)))
+		f.Setup("install subscription"+strconv.Itoa(i)+" DLQ",
+			prober.ReceiverInstall(sub.dlqName()))
+
 		var opts []manifest.CfgFn
 		if sub.hasSub {
-			f.Setup("install subscription"+strconv.Itoa(i)+" subscriber",
-				prober.ReceiverInstall(sub.subName(), eventshub.DropFirstN(sub.subFailCount)))
 			opts = append(opts, subscription.WithSubscriber(prober.AsKReference(sub.subName()), ""))
 		}
+
 		if sub.hasReply {
-			f.Setup("install subscription"+strconv.Itoa(i)+" reply",
-				prober.ReceiverInstall(sub.replyName(), eventshub.DropFirstN(sub.replyFailCount))) // TODO: use subReplies
 			opts = append(opts, subscription.WithReply(prober.AsKReference(sub.replyName()), ""))
 		}
-		if sub.delivery != nil {
-			if sub.delivery.DeadLetterSink != nil {
-				f.Setup("install subscription"+strconv.Itoa(i)+" DLQ",
-					prober.ReceiverInstall(sub.dlqName()))
+
+		if sub.delivery.DeadLetterSink != nil {
+			if sub.delivery != nil {
 				opts = append(opts, subscription.WithDeadLetterSink(prober.AsKReference(sub.dlqName()), ""))
 			}
 			if sub.delivery.Retry != nil {
 				opts = append(opts, subscription.WithRetry(*sub.delivery.Retry, sub.delivery.BackoffPolicy, sub.delivery.BackoffDelay))
 			}
 		}
-		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(sub.prefix, opts...))
+		opts = append(opts, subscription.WithChannel(channel_impl.AsRef(chName)))
+		name := feature.MakeRandomK8sName(sub.prefix)
+		f.Setup("install subscription"+strconv.Itoa(i), subscription.Install(name, opts...))
+		f.Setup("subscription"+strconv.Itoa(i)+" is ready", subscription.IsReady(name))
 	}
 
 	return prober
@@ -213,4 +232,49 @@ func deliveryAttempts(p0, p1 *v1.DeliverySpec) uint {
 	}
 
 	return 1
+}
+
+func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]eventPattern) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		for prefix, want := range expected {
+			got := happened(ctx, prober, prefix)
+
+			t.Logf("Expected Events %s; \n Got: %#v\nWant: %#v", prefix, got, want)
+
+			// Check event acceptance.
+			if len(want.success) != 0 && len(got.success) != 0 {
+				if diff := cmp.Diff(want.success, got.success); diff != "" {
+					t.Error("unexpected event acceptance behaviour (-want, +got) =", diff)
+				}
+			}
+			// Check timing.
+			//if len(want.eventInterval) != 0 && len(got.eventInterval) != 0 {
+			//	if diff := cmp.Diff(want.eventInterval, got.eventInterval); diff != "" {
+			//		t.Error("unexpected event interval behaviour (-want, +got) =", diff)
+			//	}
+			//}
+		}
+	}
+}
+
+// TODO: this function could be moved to the prober directly.
+func happened(ctx context.Context, prober *eventshub.EventProber, prefix string) eventPattern {
+	events := prober.ReceivedOrRejectedBy(ctx, prefix)
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Time.Before(events[j].Time)
+	})
+	got := eventPattern{
+		success:  make([]bool, 0),
+		interval: make([]uint, 0),
+	}
+	for i, event := range events {
+		got.success = append(got.success, event.Kind == eventshub.EventReceived)
+		if i == 0 {
+			got.interval = []uint{0}
+		} else {
+			diff := events[i-1].Time.Unix() - event.Time.Unix()
+			got.interval = append(got.interval, uint(diff))
+		}
+	}
+	return got
 }
