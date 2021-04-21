@@ -1122,8 +1122,8 @@ knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3 h1:F/pVm+rB+WpyVhH9cm
 knative.dev/hack/schema v0.0.0-20210325223819-b6ab329907d3/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
 knative.dev/pkg v0.0.0-20210420053235-1afd04993622 h1:wSyDPp/LuOLeDCpvUHgKXqb4DfmCEPelsaYzC0Fojm0=
 knative.dev/pkg v0.0.0-20210420053235-1afd04993622/go.mod h1:UtcSLHy2XIz5blWoPTA40F87zk4O7erxkCwv+7Tsmws=
-knative.dev/reconciler-test v0.0.0-20210420201836-15b4e1222865 h1:Flf/ZPKa76ynJhHltE1+RpB+0oDum44Wlfz9ednc7l4=
-knative.dev/reconciler-test v0.0.0-20210420201836-15b4e1222865/go.mod h1:yZihS1XoBt7oxU6Jq+U2hMKmUvfKFEaj3vMqOMBt/tI=
+knative.dev/reconciler-test v0.0.0-20210420215136-4598ca0f0602 h1:+EGg+hRVnOdgBPID/ngPjjN2BCOY1xV983BKan+SDhk=
+knative.dev/reconciler-test v0.0.0-20210420215136-4598ca0f0602/go.mod h1:yZihS1XoBt7oxU6Jq+U2hMKmUvfKFEaj3vMqOMBt/tI=
 pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
 pgregory.net/rapid v0.3.3/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

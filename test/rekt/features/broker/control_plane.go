@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -36,7 +37,9 @@ import (
 	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -364,9 +367,28 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 				t.Failed()
 			}
 		})
-
 		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expectedEvents))
+		f.Teardown("Delete feature resources", deleteFeatureResources())
 		fs.Features = append(fs.Features, *f)
+	}
+}
+
+func deleteFeatureResources() feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		dc := dynamicclient.Get(ctx)
+		f := feature.FromContext(ctx)
+		for _, ref := range f.References() {
+			gv, err := schema.ParseGroupVersion(ref.APIVersion)
+			if err != nil {
+				t.Errorf("Could not parse GroupVersion for %+v", ref.APIVersion)
+			} else {
+				resource := apis.KindToResource(gv.WithKind(ref.Kind))
+				t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+				if err := dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *metav1.NewDeleteOptions(0)); err != nil {
+					t.Logf("Failed to delete during cleanup %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+				}
+			}
+		}
 	}
 }
 
@@ -557,6 +579,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 		})
 
 		f.Stable("Conformance").Should(tt.name, assertExpectedRoutedEvents(prober, expectedEvents))
+		f.Teardown("Delete feature resources", deleteFeatureResources())
 		fs.Features = append(fs.Features, *f)
 	}
 }

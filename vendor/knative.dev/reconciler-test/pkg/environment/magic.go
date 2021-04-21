@@ -218,6 +218,7 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 		f.State = &state.KVStore{}
 	}
 	ctx = state.ContextWith(ctx, f.State)
+	ctx = feature.ContextWith(ctx, f)
 
 	steps := categorizeSteps(f.Steps)
 
