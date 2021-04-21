@@ -21,7 +21,7 @@ spec:
   template:
     spec:
       containers:
-        - image: ko://knative.dev/eventing-contrib/cmd/websocketsource
+        - image: ko://knative.dev/eventing/cmd/websocketsource
           name: hue
   sink:
     ref:

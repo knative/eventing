@@ -18,9 +18,9 @@ kind: Service
 metadata:
   name: event-display
   labels:
-    contrib.eventing.knative.dev/release: devel
+    eventing.knative.dev/release: devel
 spec:
   template:
     spec:
       containers:
-      - image: ko://knative.dev/eventing-contrib/cmd/event_display
+      - image: ko://knative.dev/eventing/cmd/event_display

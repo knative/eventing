@@ -16,10 +16,9 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: first
-  namespace: seqtest4
+  name: appender
   labels:
-    contrib.eventing.knative.dev/release: devel
+    eventing.knative.dev/release: devel
 spec:
   template:
     spec:
@@ -27,4 +26,4 @@ spec:
       - env:
         - name: MESSAGE
           value: "...your message goes here..."
-        image: ko://knative.dev/eventing-contrib/cmd/appender
+        image: ko://knative.dev/eventing/cmd/appender
