@@ -60,7 +60,7 @@ func main() {
 		eventSource = source
 	}
 
-	ce, err := cloudevents.NewDefaultClient()
+	ce, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		log.Fatalf("Failed to create a http cloudevent client: %s", err.Error())
 	}

@@ -52,7 +52,7 @@ func display(event cloudevents.Event) {
 }
 
 func main() {
-	c, err := cloudevents.NewDefaultClient()
+	c, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		log.Fatal("Failed to create client, ", err)
 	}
