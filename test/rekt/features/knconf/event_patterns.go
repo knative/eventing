@@ -18,6 +18,8 @@ package knconf
 
 import (
 	"context"
+	"sort"
+
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/types"
@@ -25,7 +27,6 @@ import (
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	"sort"
 )
 
 type EventPattern struct {

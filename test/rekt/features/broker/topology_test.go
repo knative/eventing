@@ -17,13 +17,13 @@ limitations under the License.
 package broker
 
 import (
-	"knative.dev/eventing/test/rekt/features/knconf"
 	"reflect"
 	"testing"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/test/rekt/features/knconf"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
