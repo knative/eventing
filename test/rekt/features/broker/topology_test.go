@@ -50,180 +50,183 @@ func TestCreateExpectedEventPatterns(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		brokerDS    *v1.DeliverySpec
+		t0DS        *v1.DeliverySpec
 		t1DS        *v1.DeliverySpec
-		t2DS        *v1.DeliverySpec
+		t0FailCount uint
 		t1FailCount uint
-		t2FailCount uint
 		want        map[string]knconf.EventPattern
 	}{{
-		name:        "no retries, no failures, both t1 / t2 get it, nothing else",
+		name:        "no retries, no failures, both t0 / t1 get it, nothing else",
 		brokerDS:    nil,
+		t0DS:        nil,
 		t1DS:        nil,
-		t2DS:        nil,
+		t0FailCount: 0,
 		t1FailCount: 0,
-		t2FailCount: 0,
 		want: map[string]knconf.EventPattern{
+			"t0": {
+				Success:  []bool{true},
+				Interval: []uint{0},
+			},
 			"t1": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
-			"t2": {
-				Success:  []bool{true},
-				Interval: []uint{0},
-			},
+			"t0dlq":     noEvents,
 			"t1dlq":     noEvents,
-			"t2dlq":     noEvents,
 			"brokerdlq": noEvents,
 		},
 	}, {
-		name:     "t1, one retry, no failures, both t1 / t2 get it, nothing else",
+		name:     "t0, one retry, no failures, both t0 / t1 get it, nothing else",
 		brokerDS: nil,
-		t1DS: &v1.DeliverySpec{
+		t0DS: &v1.DeliverySpec{
 			Retry: ptr.Int32(1),
 		},
-		t2DS:        nil,
+		t1DS:        nil,
+		t0FailCount: 0,
 		t1FailCount: 0,
-		t2FailCount: 0,
 		want: map[string]knconf.EventPattern{
+			"t0": {
+				Success:  []bool{true},
+				Interval: []uint{0},
+			},
 			"t1": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
-			"t2": {
-				Success:  []bool{true},
-				Interval: []uint{0},
-			},
+			"t0dlq":     noEvents,
 			"t1dlq":     noEvents,
-			"t2dlq":     noEvents,
 			"brokerdlq": noEvents,
 		},
 	}, {
-		name:     "t1, one retry, one failure, both t1 / t2 get it, t1dlq gets it too",
+		name:     "t0, one retry, one failure, both t0 / t1 get it, t0dlq gets it too",
 		brokerDS: nil,
-		t1DS: &v1.DeliverySpec{
+		t0DS: &v1.DeliverySpec{
 			Retry:          ptr.Int32(1),
-			DeadLetterSink: dlqSink,
+			DeadLetterSink: new(pkgduckv1.Destination),
 		},
-		t2DS:        nil,
-		t1FailCount: 2,
-		t2FailCount: 0,
+		t1DS:        nil,
+		t0FailCount: 2,
+		t1FailCount: 0,
 		want: map[string]knconf.EventPattern{
-			"t1": {
+			"t0": {
 				Success:  []bool{false, false},
 				Interval: []uint{0, 0},
 			},
-			"t2": {
+			"t1": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
-			"t1dlq":     oneSuccessfulEvent,
-			"t2dlq":     noEvents,
+			"t0dlq":     oneSuccessfulEvent,
+			"t1dlq":     noEvents,
 			"brokerdlq": noEvents,
 		},
 	}, {
-		name:     "t1, four retries with linear, 5 seconds apart, 3 failures, both t1 / t2 get it, no dlq gets it because succeeds on 4th try",
+		name:     "t0, four retries with linear, 5 seconds apart, 3 failures, both t0 / t1 get it, no dlq gets it because succeeds on 4th try",
 		brokerDS: nil,
-		t1DS: &v1.DeliverySpec{
+		t0DS: &v1.DeliverySpec{
 			Retry:          ptr.Int32(4),
 			DeadLetterSink: dlqSink,
 		},
-		t2DS:        nil,
-		t1FailCount: 3,
-		t2FailCount: 0,
+		t1DS:        nil,
+		t0FailCount: 3,
+		t1FailCount: 0,
 		want: map[string]knconf.EventPattern{
-			"t1": {
+			"t0": {
 				Success:  []bool{false, false, false, true},
 				Interval: []uint{0, 0, 0, 0},
 			},
-			"t2": {
+			"t1": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
+			"t0dlq":     noEvents,
 			"t1dlq":     noEvents,
-			"t2dlq":     noEvents,
 			"brokerdlq": noEvents,
 		},
 	}, {
-		name:     "t1, three retries with linear, 5 seconds apart, 4 failures, both t1 / t2 get it, t1dlq gets it because fails all 4 tries",
+		name:     "t0, three retries with linear, 5 seconds apart, 4 failures, both t0 / t1 get it, t0dlq gets it because fails all 4 tries",
 		brokerDS: nil,
-		t1DS: &v1.DeliverySpec{
+		t0DS: &v1.DeliverySpec{
 			Retry:          ptr.Int32(3),
 			DeadLetterSink: dlqSink,
 		},
-		t2DS:        nil,
-		t1FailCount: 4,
-		t2FailCount: 0,
+		t1DS:        nil,
+		t0FailCount: 4,
+		t1FailCount: 0,
 		want: map[string]knconf.EventPattern{
-			"t1": {
+			"t0": {
 				Success:  []bool{false, false, false, false},
 				Interval: []uint{0, 0, 0, 0},
 			},
-			"t2": {
-				Success:  []bool{true},
-				Interval: []uint{0},
-			},
-			"t1dlq":     oneSuccessfulEvent,
-			"t2dlq":     noEvents,
-			"brokerdlq": noEvents,
-		},
-	}, {
-		name:     "t2, one retry, one failure, both t1 / t2 get it, t2dlq gets it too",
-		brokerDS: nil,
-		t1DS:     nil,
-		t2DS: &v1.DeliverySpec{
-			Retry:          ptr.Int32(1),
-			DeadLetterSink: dlqSink,
-		},
-		t1FailCount: 0,
-		t2FailCount: 1,
-		want: map[string]knconf.EventPattern{
 			"t1": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
-			"t2": {
-				Success:  []bool{false, true},
-				Interval: []uint{0, 0},
-			},
+			"t0dlq":     oneSuccessfulEvent,
 			"t1dlq":     noEvents,
-			"t2dlq":     oneSuccessfulEvent,
 			"brokerdlq": noEvents,
 		},
 	}, {
-		name: "t1, one retry, one failure, both t1 / t2 get it, brokerdlq gets it too",
+		name:     "t1, one retry, one failure, both t0 / t1 get it, t1dlq gets it too",
+		brokerDS: nil,
+		t0DS:     nil,
+		t1DS: &v1.DeliverySpec{
+			Retry:          ptr.Int32(1),
+			DeadLetterSink: dlqSink,
+		},
+		t0FailCount: 0,
+		t1FailCount: 1,
+		want: map[string]knconf.EventPattern{
+			"t0": {
+				Success:  []bool{true},
+				Interval: []uint{0},
+			},
+			"t1": {
+				Success:  []bool{false, true},
+				Interval: []uint{0, 0},
+			},
+			"t0dlq":     noEvents,
+			"t1dlq":     oneSuccessfulEvent,
+			"brokerdlq": noEvents,
+		},
+	}, {
+		name: "t0, one retry, one failure, both t0 / t1 get it",
 		brokerDS: &v1.DeliverySpec{
 			Retry:          ptr.Int32(1),
-			DeadLetterSink: dlqSink,
+			DeadLetterSink: new(pkgduckv1.Destination),
 		},
+		t0DS:        nil,
 		t1DS:        nil,
-		t2DS:        nil,
-		t1FailCount: 1,
-		t2FailCount: 0,
+		t0FailCount: 1,
+		t1FailCount: 0,
 		want: map[string]knconf.EventPattern{
-			"t1": {
+			"t0": {
 				Success:  []bool{false, true},
 				Interval: []uint{0, 0},
 			},
-			"t2": {
+			"t1": {
 				Success:  []bool{true},
 				Interval: []uint{0},
 			},
+			"t0dlq":     noEvents,
 			"t1dlq":     noEvents,
-			"t2dlq":     noEvents,
-			"brokerdlq": oneSuccessfulEvent,
+			"brokerdlq": noEvents,
 		},
 	}} {
-		cfg := []triggerCfg{{
-			delivery:  tt.t1DS,
-			failCount: tt.t1FailCount,
-		}, {
-			delivery:  tt.t2DS,
-			failCount: tt.t2FailCount,
-		}}
-		got := createExpectedEventPatterns(tt.brokerDS, cfg)
-		if !reflect.DeepEqual(tt.want, got) {
-			t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := []triggerCfg{{
+				delivery:  tt.t0DS,
+				failCount: tt.t0FailCount,
+			}, {
+				delivery:  tt.t1DS,
+				failCount: tt.t1FailCount,
+			}}
+			got := createExpectedEventPatterns(tt.brokerDS, cfg)
+			if !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
+			}
+		})
 	}
 }
 
@@ -265,9 +268,12 @@ func TestEventMatchesTrigger(t *testing.T) {
 		},
 		want: false,
 	}} {
-		if got := eventMatchesTrigger(tt.event, tt.filter); got != tt.want {
-			t.Errorf("%q : Event: %+v Trigger: %+v wanted match: %t but got %t", tt.name, tt.event, tt.filter, tt.want, got)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := eventMatchesTrigger(tt.event, tt.filter); got != tt.want {
+				t.Errorf("%q : Event: %+v Trigger: %+v wanted match: %t but got %t", tt.name, tt.event, tt.filter, tt.want, got)
+			}
+		})
 	}
 }
 
@@ -316,7 +322,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 		},
 		want: map[string][]conformanceevent.Event{},
 	}, {
-		name: "Two triggers, incoming matches the second one (t1), not first (t0). Reply from t1 matches t0",
+		name: "Two triggers, incoming matches the second one (t0), not first (t0). Reply from t0 matches t0",
 		inevents: []conformanceevent.Event{
 			{
 				Attributes: conformanceevent.ContextAttributes{
@@ -393,7 +399,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 		},
 		want: map[string][]conformanceevent.Event{},
 	}, {
-		name: "Two triggers, matches the second one (t1), not first (t0)",
+		name: "Two triggers, matches the second one (t0), not first (t0)",
 		inevents: []conformanceevent.Event{
 			{
 				Attributes: conformanceevent.ContextAttributes{
@@ -418,7 +424,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 		want: map[string][]conformanceevent.Event{
-			"t1": {
+			"t0": {
 				{
 					Attributes: conformanceevent.ContextAttributes{
 						Type: "eventtype",
@@ -468,9 +474,12 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 			},
 		},
 	}} {
-		got := createExpectedEventRoutingMap(tt.config, tt.inevents)
-		if !reflect.DeepEqual(tt.want, got) {
-			t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := createExpectedEventRoutingMap(tt.config, tt.inevents)
+			if !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
+			}
+		})
 	}
 }
