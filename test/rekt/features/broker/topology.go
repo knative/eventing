@@ -19,6 +19,8 @@ package broker
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -31,7 +33,6 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
-	"strconv"
 )
 
 type triggerCfg struct {
@@ -78,14 +79,14 @@ func createBrokerTriggerTopology(f *feature.Feature, brokerName string, brokerDS
 		name := fmt.Sprintf("t%d", i)
 		dlqName := fmt.Sprintf("t%ddlq", i)
 
-		subOpts := []eventshub.EventsHubOption{eventshub.DropFirstN(t.failCount)}
+		nameOpts := []eventshub.EventsHubOption{eventshub.DropFirstN(t.failCount)}
 		if t.reply != nil {
-			subOpts = append(subOpts,
+			nameOpts = append(nameOpts,
 				eventshub.ReplyWithTransformedEvent(t.reply.Attributes.Type, t.reply.Attributes.Source, t.reply.Data))
 		}
 
 		// TODO: Optimize these to only install things required. For example, if there's no tn dlq, no point creating a prober for it.
-		f.Setup("install recorder for "+name, prober.ReceiverInstall(name, eventshub.DropFirstN(t.failCount)))
+		f.Setup("install recorder for "+name, prober.ReceiverInstall(name, nameOpts...))
 		f.Setup("install recorder for "+dlqName, prober.ReceiverInstall(dlqName))
 
 		tOpts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference(name), "")}

@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"strings"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -486,6 +486,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 				},
 				reply: func() *conformanceevent.Event {
 					reply := knconf.EventToEvent(&replyEvent)
+					reply.Attributes.DataContentType = "application/json" // EventsHub defaults all data to this.
 					return &reply
 				}(),
 			}, {
@@ -496,7 +497,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 				},
 			},
 		},
-		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent), knconf.EventToEvent(&replyEvent)},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}, {
 		name:     "Two triggers, with no filters, both get the event",
 		config:   []triggerCfg{{}, {}},
