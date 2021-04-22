@@ -84,6 +84,42 @@ func TestValidateAPIFields(t *testing.T) {
 			},
 		},
 		{
+			name:        "disabled nested string flag",
+			featureName: flagName,
+			flags: map[string]bool{
+				flagName: false,
+			},
+			object: eventingv1.TriggerSpec{
+				Broker: "blabla",
+				Subscriber: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						Namespace: "abc",
+					},
+				},
+			},
+			experimentalFields: []string{"Subscriber.Ref.Namespace"},
+			wantErrs: &apis.FieldError{
+				Message: fmt.Sprintf("Disallowed field because the experimental feature '%s' is disabled", flagName),
+				Paths:   []string{"Subscriber.Ref.Namespace"},
+			},
+		},
+		{
+			name:        "enabled nested string flag",
+			featureName: flagName,
+			flags: map[string]bool{
+				flagName: true,
+			},
+			object: eventingv1.TriggerSpec{
+				Broker: "blabla",
+				Subscriber: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						Namespace: "abc",
+					},
+				},
+			},
+			experimentalFields: []string{"Subscriber.Ref.Namespace"},
+		},
+		{
 			name:        "disabled map flag",
 			featureName: flagName,
 			flags: map[string]bool{

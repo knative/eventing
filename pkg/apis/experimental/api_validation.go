@@ -20,12 +20,14 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
 
-// ValidateAPIFields checks that the experimental features fields are disabled if the experimental flag is disabled
+// ValidateAPIFields checks that the experimental features fields are disabled if the experimental flag is disabled.
+// experimentalFields can contain a string with dots, to identify sub-structs, like "Destination.Ref.APIVersion"
 func ValidateAPIFields(ctx context.Context, featureName string, object interface{}, experimentalFields ...string) (errs *apis.FieldError) {
 	obj := reflect.ValueOf(object)
 	obj = reflect.Indirect(obj)
@@ -36,9 +38,9 @@ func ValidateAPIFields(ctx context.Context, featureName string, object interface
 	// If feature not enabled, let's check the field is not used
 	if !FromContext(ctx).IsEnabled(featureName) {
 		for _, fieldName := range experimentalFields {
-			fieldVal := obj.FieldByName(fieldName)
+			fieldVal := walk(obj, strings.Split(fieldName, ".")...)
 
-			if (fieldVal.Kind() == reflect.Ptr || fieldVal.Kind() == reflect.Slice || fieldVal.Kind() == reflect.Map) && !fieldVal.IsNil() {
+			if !fieldVal.IsZero() {
 				errs = errs.Also(&apis.FieldError{
 					Message: fmt.Sprintf("Disallowed field because the experimental feature '%s' is disabled", featureName),
 					Paths:   []string{fmt.Sprintf("%s.%s", obj.Type().Name(), fieldName)},
@@ -65,4 +67,19 @@ func ValidateAnnotations(ctx context.Context, featureName string, object metav1.
 	}
 
 	return errs
+}
+
+func walk(value reflect.Value, paths ...string) reflect.Value {
+	switch value.Kind() {
+	case reflect.Struct:
+		newVal := value.FieldByName(paths[0])
+		if len(paths) == 1 {
+			return newVal
+		}
+		return walk(value.FieldByName(paths[0]), paths[1:]...)
+	case reflect.Ptr:
+		return walk(reflect.Indirect(value), paths...)
+	default:
+		return reflect.Zero(value.Type())
+	}
 }
