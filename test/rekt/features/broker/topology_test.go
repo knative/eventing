@@ -17,25 +17,25 @@ limitations under the License.
 package broker
 
 import (
+	"knative.dev/eventing/test/rekt/features/knconf"
 	"reflect"
 	"testing"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
-	"github.com/google/go-cmp/cmp"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
 
-var noEvents = expectedEvents{
-	eventSuccess:  []bool{},
-	eventInterval: []uint{},
+var noEvents = knconf.EventPattern{
+	Success:  []bool{},
+	Interval: []uint{},
 }
 
-var oneSuccessfulEvent = expectedEvents{
-	eventSuccess:  []bool{true},
-	eventInterval: []uint{0},
+var oneSuccessfulEvent = knconf.EventPattern{
+	Success:  []bool{true},
+	Interval: []uint{0},
 }
 
 var dlqSink = &pkgduckv1.Destination{
@@ -46,65 +46,7 @@ var dlqSink = &pkgduckv1.Destination{
 	},
 }
 
-func TestHelper(t *testing.T) {
-	for _, tt := range []struct {
-		retry    uint
-		failures uint
-		want     expectedEvents
-	}{{
-		retry:    0,
-		failures: 1,
-		want: expectedEvents{
-			eventSuccess:  []bool{false},
-			eventInterval: []uint{0},
-		},
-	}, {
-		retry:    0,
-		failures: 0,
-		want: expectedEvents{
-			eventSuccess:  []bool{true},
-			eventInterval: []uint{0},
-		},
-	}, {
-		retry:    0,
-		failures: 5,
-		want: expectedEvents{
-			eventSuccess:  []bool{false},
-			eventInterval: []uint{0},
-		},
-	}, {
-		retry:    3,
-		failures: 0,
-		want: expectedEvents{
-			eventSuccess:  []bool{true},
-			eventInterval: []uint{0},
-		},
-	}, {
-		retry:    3,
-		failures: 2,
-		want: expectedEvents{
-			eventSuccess:  []bool{false, false, true},
-			eventInterval: []uint{0, 0, 0},
-		},
-	}, {
-		// Test with 3 retries => 4 sends altogether(one initial, plus 3 retries)
-		retry:    3,
-		failures: 4,
-		want: expectedEvents{
-			eventSuccess:  []bool{false, false, false, false},
-			eventInterval: []uint{0, 0, 0, 0},
-		},
-	}} {
-		got := helper(tt.retry, tt.failures, false)
-		if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(expectedEvents{})); diff != "" {
-			t.Error("Unexpected out: ", diff)
-		}
-	}
-}
-
-func TestCreateExpectedEventMap(t *testing.T) {
-	//	two := int32(2)
-
+func TestCreateExpectedEventPatterns(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		brokerDS    *v1.DeliverySpec
@@ -112,7 +54,7 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS        *v1.DeliverySpec
 		t1FailCount uint
 		t2FailCount uint
-		want        map[string]expectedEvents
+		want        map[string]knconf.EventPattern
 	}{{
 		name:        "no retries, no failures, both t1 / t2 get it, nothing else",
 		brokerDS:    nil,
@@ -120,14 +62,14 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS:        nil,
 		t1FailCount: 0,
 		t2FailCount: 0,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t2": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
@@ -142,14 +84,14 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS:        nil,
 		t1FailCount: 0,
 		t2FailCount: 0,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t2": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
@@ -165,14 +107,14 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS:        nil,
 		t1FailCount: 2,
 		t2FailCount: 0,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{false, false},
-				eventInterval: []uint{0, 0},
+				Success:  []bool{false, false},
+				Interval: []uint{0, 0},
 			},
 			"t2": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t1dlq":     oneSuccessfulEvent,
 			"t2dlq":     noEvents,
@@ -188,14 +130,14 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS:        nil,
 		t1FailCount: 3,
 		t2FailCount: 0,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{false, false, false, true},
-				eventInterval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"t2": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
@@ -211,14 +153,14 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS:        nil,
 		t1FailCount: 4,
 		t2FailCount: 0,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{false, false, false, false},
-				eventInterval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, false},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"t2": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t1dlq":     oneSuccessfulEvent,
 			"t2dlq":     noEvents,
@@ -234,14 +176,14 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		},
 		t1FailCount: 0,
 		t2FailCount: 1,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t2": {
-				eventSuccess:  []bool{false, true},
-				eventInterval: []uint{0, 0},
+				Success:  []bool{false, true},
+				Interval: []uint{0, 0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     oneSuccessfulEvent,
@@ -257,21 +199,28 @@ func TestCreateExpectedEventMap(t *testing.T) {
 		t2DS:        nil,
 		t1FailCount: 1,
 		t2FailCount: 0,
-		want: map[string]expectedEvents{
+		want: map[string]knconf.EventPattern{
 			"t1": {
-				eventSuccess:  []bool{false, true},
-				eventInterval: []uint{0, 0},
+				Success:  []bool{false, true},
+				Interval: []uint{0, 0},
 			},
 			"t2": {
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"t1dlq":     noEvents,
 			"t2dlq":     noEvents,
 			"brokerdlq": oneSuccessfulEvent,
 		},
 	}} {
-		got := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		cfg := []triggerCfg{{
+			delivery:  tt.t1DS,
+			failCount: tt.t1FailCount,
+		}, {
+			delivery:  tt.t2DS,
+			failCount: tt.t2FailCount,
+		}}
+		got := createExpectedEventPatterns(tt.brokerDS, cfg)
 		if !reflect.DeepEqual(tt.want, got) {
 			t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
 		}
@@ -326,7 +275,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
 		inevents []conformanceevent.Event
-		config   []triggerTestConfig
+		config   []triggerCfg
 		want     map[string][]conformanceevent.Event
 	}{{
 		name: "nil filter matches everything",
@@ -337,7 +286,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 				},
 			},
 		},
-		config: make([]triggerTestConfig, 1), // One trigger, no filter, no reply
+		config: make([]triggerCfg, 1), // One trigger, no filter, no reply
 		want: map[string][]conformanceevent.Event{
 			"t0": {
 				{
@@ -356,7 +305,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 				},
 			},
 		},
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
@@ -375,7 +324,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 				},
 			},
 		},
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
@@ -421,7 +370,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 				},
 			},
 		},
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
@@ -452,7 +401,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 				},
 			},
 		},
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
@@ -486,7 +435,7 @@ func TestCreateExpectedEventDeliveryMap(t *testing.T) {
 				},
 			},
 		},
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
