@@ -64,7 +64,7 @@ func TestContainerSourceValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "eventing.knative.dev/v1beta1",
+						APIVersion: "eventing.knative.dev/v1",
 						Kind:       "Broker",
 						Name:       "default",
 					},

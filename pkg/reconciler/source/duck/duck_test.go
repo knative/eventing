@@ -60,7 +60,7 @@ var (
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1beta1",
+			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
 

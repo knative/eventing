@@ -583,7 +583,7 @@ func makeTriggerWithDifferentUID(filter *eventingv1.TriggerFilter) *eventingv1.T
 func makeTrigger(filter *eventingv1.TriggerFilter) *eventingv1.Trigger {
 	return &eventingv1.Trigger{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1beta1",
+			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Trigger",
 		},
 		ObjectMeta: metav1.ObjectMeta{
