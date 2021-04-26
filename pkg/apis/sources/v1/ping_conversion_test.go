@@ -14,26 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package v1
 
 import (
 	"context"
-	"errors"
 	"testing"
-
-	"knative.dev/pkg/apis"
 )
-
-// implement apis.Convertible
-type testObject struct{}
-
-func (*testObject) ConvertTo(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
-func (*testObject) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
 
 func TestPingSourceConversionBadType(t *testing.T) {
 	good, bad := &PingSource{}, &testObject{}
