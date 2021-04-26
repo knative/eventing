@@ -244,12 +244,12 @@ function unleash_duck() {
   echo "enable debug logging"
   cat test/config/config-logging.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict ${KO_FLAGS} -f - || return $?
+    ko apply ${KO_FLAGS} -f - || return $?
 
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict ${KO_FLAGS} -f - || return $?
+    ko apply ${KO_FLAGS} -f - || return $?
 }
 
 # Teardown the Knative environment after tests finish.
