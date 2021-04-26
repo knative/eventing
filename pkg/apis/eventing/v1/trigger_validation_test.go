@@ -67,6 +67,20 @@ func TestTriggerValidation(t *testing.T) {
 		t    *Trigger
 		want *apis.FieldError
 	}{{
+		name: "valid injection",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					InjectionAnnotation: validInjectionAnnotation,
+				}},
+			Spec: TriggerSpec{
+				Broker:     "default",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: nil,
+	}, {
 		name: "invalid trigger spec",
 		t:    &Trigger{Spec: TriggerSpec{}},
 		want: func() *apis.FieldError {
