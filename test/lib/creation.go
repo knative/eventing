@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
@@ -583,11 +584,15 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 
 	c.applyAdditionalEnv(&pod.Spec)
 
-	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+	// the following retryable errors are expected when creating a blank Pod:
+	// - update conflicts
+	// - "No API token found for service account %q,
+	//    retry after the token is automatically created and added to the service account"
+	err := reconciler.RetryErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating pod %+v", pod)
 		_, e := c.Kube.CreatePod(context.Background(), pod)
 		return e
-	})
+	}, apierrs.IsConflict, apierrs.IsServerTimeout)
 	if err != nil {
 		c.T.Fatalf("Failed to create pod %q: %v", pod.Name, err)
 	}
