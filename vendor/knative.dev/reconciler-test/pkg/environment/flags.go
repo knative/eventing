@@ -28,6 +28,7 @@ import (
 var (
 	s = new(feature.States)
 	l = new(feature.Levels)
+	f = new(string)
 )
 
 // InitFlags registers the requirement and state filter flags supported by the
@@ -50,6 +51,9 @@ func InitFlags(fs *flag.FlagSet) {
 		fs.Var(levelValue{level, l}, flagName, usage)
 	}
 	fs.Var(levelValue{feature.All, l}, "requirement.all", "toggles all requirement assertions")
+
+	// Feature
+	fs.StringVar(f, "feature", "", "run only Features matching `regexp`")
 }
 
 type stateValue struct {
