@@ -49,7 +49,6 @@ import (
 	"knative.dev/eventing/pkg/apis/sources"
 	pingdefaultconfig "knative.dev/eventing/pkg/apis/sources/config"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
@@ -71,9 +70,6 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	messagingv1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1.Subscription{},
 
 	// For group sources.knative.dev.
-	// v1alpha1
-	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
-	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 	// v1alpha2
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha2.ApiServerSource{},
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
@@ -223,7 +219,6 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
-		sourcesv1alpha1_ = sourcesv1alpha1.SchemeGroupVersion.Version
 		sourcesv1alpha2_ = sourcesv1alpha2.SchemeGroupVersion.Version
 		sourcesv1beta1_  = sourcesv1beta1.SchemeGroupVersion.Version
 		sourcesv1beta2_  = sourcesv1beta2.SchemeGroupVersion.Version
@@ -239,9 +234,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 			// Sources
 			sourcesv1.Kind("ApiServerSource"): {
 				DefinitionName: sources.ApiServerSourceResource.String(),
-				HubVersion:     sourcesv1alpha1_,
+				HubVersion:     sourcesv1alpha2_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
 					sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
 					sourcesv1beta1_:  &sourcesv1beta1.ApiServerSource{},
 					sourcesv1_:       &sourcesv1.ApiServerSource{},
@@ -258,9 +252,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 			},
 			sourcesv1.Kind("SinkBinding"): {
 				DefinitionName: sources.SinkBindingResource.String(),
-				HubVersion:     sourcesv1alpha1_,
+				HubVersion:     sourcesv1alpha2_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
 					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
 					sourcesv1beta1_:  &sourcesv1beta1.SinkBinding{},
 					sourcesv1_:       &sourcesv1.SinkBinding{},
