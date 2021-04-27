@@ -58,6 +58,8 @@ readonly REPLICAS=3
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
 
+readonly SCALE_CHAOSDUCK_TO_ZERO="${SCALE_CHAOSDUCK_TO_ZERO:-0}"
+
 TMP_DIR=$(mktemp -d -t "ci-$(date +%Y-%m-%d-%H-%M-%S)-XXXXXXXXXX")
 readonly TMP_DIR
 readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
@@ -170,6 +172,8 @@ function install_knative_eventing() {
   kubectl replace -f ${TMP_CONFIG_TRACING_CONFIG}
 
   scale_controlplane eventing-webhook eventing-controller
+
+  if (( SCALE_CHAOSDUCK_TO_ZERO )); then kubectl -n "${SYSTEM_NAMESPACE}" scale deployment/chaosduck --replicas=0; fi
 
   wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing did not come up"
 
