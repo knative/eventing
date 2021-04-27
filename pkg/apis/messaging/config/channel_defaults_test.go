@@ -96,7 +96,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 			},
 			ClusterDefault: &ChannelTemplateSpec{
 				TypeMeta: v1.TypeMeta{
-					APIVersion: "messaging.knative.dev/v1beta1",
+					APIVersion: "messaging.knative.dev/v1",
 					Kind:       "InMemoryChannel",
 				},
 			},
@@ -109,7 +109,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 			Data: map[string]string{
 				"default-ch-config": `
       clusterDefault:
-        apiVersion: messaging.knative.dev/v1beta1
+        apiVersion: messaging.knative.dev/v1
         kind: InMemoryChannel
       namespaceDefaults:
         some-namespace:
@@ -149,7 +149,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
 				"some-namespace": {
 					TypeMeta: v1.TypeMeta{
-						APIVersion: "messaging.knative.dev/v1beta1",
+						APIVersion: "messaging.knative.dev/v1",
 						Kind:       "InMemoryChannel",
 					},
 				},
@@ -164,7 +164,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 				"default-ch-config": `
       namespaceDefaults:
         some-namespace:
-          apiVersion: messaging.knative.dev/v1beta1
+          apiVersion: messaging.knative.dev/v1
           kind: InMemoryChannel
 `,
 			},
@@ -176,7 +176,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
 				"some-namespace": {
 					TypeMeta: v1.TypeMeta{
-						APIVersion: "messaging.knative.dev/v1beta1",
+						APIVersion: "messaging.knative.dev/v1",
 						Kind:       "InMemoryChannel",
 					},
 					Spec: &runtime.RawExtension{
@@ -194,7 +194,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 				"default-ch-config": `
       namespaceDefaults:
         some-namespace:
-          apiVersion: messaging.knative.dev/v1beta1
+          apiVersion: messaging.knative.dev/v1
           kind: InMemoryChannel
           spec:
             delivery:
