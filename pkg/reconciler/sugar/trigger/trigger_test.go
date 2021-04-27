@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/reconciler/sugar"
@@ -45,7 +45,7 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1beta1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
 }
 
 func TestEnabledByDefault(t *testing.T) {
@@ -123,7 +123,7 @@ func TestEnabledByDefault(t *testing.T) {
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
 				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
-			&v1beta1.Broker{
+			&v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      resources.DefaultBrokerName,
@@ -216,7 +216,7 @@ func TestDisabledByDefault(t *testing.T) {
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
 				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
-			&v1beta1.Broker{
+			&v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      resources.DefaultBrokerName,

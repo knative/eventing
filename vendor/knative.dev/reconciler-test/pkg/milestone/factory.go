@@ -29,6 +29,7 @@ const (
 	NamespaceDeletedType = "dev.knative.rekt.namespace.deleted.v1"
 	TestStartedType      = "dev.knative.rekt.test.started.v1"
 	TestFinishedType     = "dev.knative.rekt.test.finished.v1"
+	StepsPlannedType     = "dev.knative.rekt.steps.planned.v1"
 	StepStartedType      = "dev.knative.rekt.step.started.v1"
 	StepFinishedType     = "dev.knative.rekt.step.finished.v1"
 	TestSetStartedType   = "dev.knative.rekt.testset.started.v1"
@@ -126,6 +127,29 @@ func (ef *Factory) TestFinished(feature, testName string, skipped, failed bool) 
 		"skipped":  skipped,
 		"failed":   failed,
 		"passed":   !failed && !skipped,
+	})
+
+	return event
+}
+
+func (ef *Factory) StepsPlanned(feature string, steps map[string][]string, testName string) cloudevents.Event {
+	event := ef.baseEvent(StepsPlannedType)
+
+	lparts := strings.Split(testName, "/")
+	if len(lparts) > 0 {
+		event.SetExtension("testparent", lparts[0])
+	}
+
+	event.SetExtension("feature", feature)
+	event.SetExtension("testname", testName)
+
+	// TODO: we can log a whole lot of stuff here but we need a more formal structure to track
+	// where we are in the test to be able to assemble it.
+
+	_ = event.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
+		"feature":  feature,
+		"steps":    steps,
+		"testName": testName,
 	})
 
 	return event

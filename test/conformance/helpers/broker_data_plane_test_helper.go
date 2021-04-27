@@ -23,7 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -38,25 +38,25 @@ var podMeta = metav1.TypeMeta{
 	APIVersion: "v1",
 }
 
-func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, brokerClass string, brokerTestRunner testlib.ComponentsTestRunner) *eventingv1beta1.Broker {
-	var broker *eventingv1beta1.Broker
+func BrokerDataPlaneSetupHelper(ctx context.Context, client *testlib.Client, brokerClass string, brokerTestRunner testlib.ComponentsTestRunner) *eventingv1.Broker {
+	var broker *eventingv1.Broker
 	brokerName := brokerTestRunner.ComponentName
 	brokerNamespace := brokerTestRunner.ComponentNamespace
 	if brokerName == "" || brokerNamespace == "" {
 		brokerName = "br"
 		config := client.CreateBrokerConfigMapOrFail(brokerName, &testlib.DefaultChannel)
 
-		broker = client.CreateBrokerV1Beta1OrFail(
+		broker = client.CreateBrokerOrFail(
 			brokerName,
-			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
-			resources.WithConfigForBrokerV1Beta1(config),
+			resources.WithBrokerClassForBroker(brokerClass),
+			resources.WithConfigForBroker(config),
 		)
 		client.WaitForResourceReadyOrFail(broker.Name, testlib.BrokerTypeMeta)
 	} else {
-		brokers := client.Eventing.EventingV1beta1().Brokers(brokerNamespace)
+		brokers := client.Eventing.EventingV1().Brokers(brokerNamespace)
 		err := client.RetryWebhookErrors(func(attempts int) (err error) {
 			var e error
-			client.T.Logf("Getting v1beta1 broker %s", brokerName)
+			client.T.Logf("Getting v1 broker %s", brokerName)
 			broker, e = brokers.Get(context.Background(), brokerName, metav1.GetOptions{})
 			if e != nil {
 				client.T.Logf("Failed to get broker %q: %v", brokerName, e)
@@ -85,7 +85,7 @@ func BrokerDataPlaneNamespaceSetupOption(ctx context.Context, namespace string) 
 //Respond with 2xx on good CE
 //Respond with 400 on bad CE
 //Reject non-POST requests to publish URI
-func BrokerV1Beta1IngressDataPlaneTestHelper(
+func BrokerIngressDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
@@ -101,11 +101,11 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, loggerName)
 		client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-		trigger := client.CreateTriggerOrFailV1Beta1(
+		trigger := client.CreateTriggerOrFail(
 			triggerName,
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, eventingv1.TriggerAnyFilter, nil),
+			resources.WithSubscriberServiceRefForTrigger(loggerName),
 		)
 
 		client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
@@ -242,7 +242,7 @@ func BrokerV1Beta1IngressDataPlaneTestHelper(
 //Deliveries succeed at least once
 //Replies are accepted and delivered
 //Replies that are unsuccessfully forwarded cause initial message to be redelivered (Very difficult to test, can be ignored)
-func BrokerV1Beta1ConsumerDataPlaneTestHelper(
+func BrokerConsumerDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
@@ -287,34 +287,34 @@ func BrokerV1Beta1ConsumerDataPlaneTestHelper(
 			),
 		)
 
-		trigger := client.CreateTriggerOrFailV1Beta1(
+		trigger := client.CreateTriggerOrFail(
 			triggerName,
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1(eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, eventingv1.TriggerAnyFilter, nil),
+			resources.WithSubscriberServiceRefForTrigger(loggerName),
 		)
 
 		client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
-		secondTrigger := client.CreateTriggerOrFailV1Beta1(
+		secondTrigger := client.CreateTriggerOrFail(
 			secondTriggerName,
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1("filtered-event", eventingv1beta1.TriggerAnyFilter, nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(secondLoggerName),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter("filtered-event", eventingv1.TriggerAnyFilter, nil),
+			resources.WithSubscriberServiceRefForTrigger(secondLoggerName),
 		)
 		client.WaitForResourceReadyOrFail(secondTrigger.Name, testlib.TriggerTypeMeta)
 
-		transformTrigger := client.CreateTriggerOrFailV1Beta1(
+		transformTrigger := client.CreateTriggerOrFail(
 			"transform-trigger",
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1(replySource, baseEvent.Type(), nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(transformerName),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter(replySource, baseEvent.Type(), nil),
+			resources.WithSubscriberServiceRefForTrigger(transformerName),
 		)
 		client.WaitForResourceReadyOrFail(transformTrigger.Name, testlib.TriggerTypeMeta)
-		replyTrigger := client.CreateTriggerOrFailV1Beta1(
+		replyTrigger := client.CreateTriggerOrFail(
 			"reply-trigger",
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1("reply-check-source", "reply-check-type", nil),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerName),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter("reply-check-source", "reply-check-type", nil),
+			resources.WithSubscriberServiceRefForTrigger(loggerName),
 		)
 		client.WaitForResourceReadyOrFail(replyTrigger.Name, testlib.TriggerTypeMeta)
 

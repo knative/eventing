@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	opencensusclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/client"
@@ -131,6 +132,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// run validation for the extracted event
+	validationErr := event.Validate()
+	if validationErr != nil {
+		h.Logger.Warn("failed to validate extractd event", zap.Error(validationErr))
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	brokerNamespace := nsBrokerName[1]
 	brokerName := nsBrokerName[2]
 	brokerNamespacedName := types.NamespacedName{
@@ -148,7 +157,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			tracing.BrokerMessagingDestinationAttribute(brokerNamespacedName),
 			tracing.MessagingMessageIDAttribute(event.ID()),
 		)
-		span.AddAttributes(client.EventTraceAttributes(event)...)
+		span.AddAttributes(opencensusclient.EventTraceAttributes(event)...)
 	}
 
 	reporterArgs := &ReportArgs{

@@ -28,6 +28,7 @@ import (
 
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // CfgFn is the function signature of configuration mutation options.
@@ -36,6 +37,7 @@ type CfgFn func(map[string]interface{})
 func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (Manifest, error) {
 	env := environment.FromContext(ctx)
 	cfg := env.TemplateConfig(base)
+	f := feature.FromContext(ctx)
 
 	yamls, err := ParseTemplates(dir, env.Images(), cfg)
 	if err != nil {
@@ -54,8 +56,9 @@ func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (
 		return manifest, err
 	}
 
-	// Save the refs.
+	// Save the refs to Environment and Feature
 	env.Reference(manifest.References()...)
+	f.Reference(manifest.References()...)
 
 	// Temp
 	refs := manifest.References()

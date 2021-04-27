@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Result leverages go's 1.13 error wrapping.
+// Result leverages go's error wrapping.
 type Result error
 
 // ResultIs reports whether any error in err's chain matches target.

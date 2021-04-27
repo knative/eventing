@@ -52,8 +52,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
-	rtv1beta1 "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	rtv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
@@ -65,7 +64,7 @@ var (
 			Name:       sinkName,
 			Namespace:  testNS,
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1beta1",
+			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
 	sinkDestNoNS = duckv1.Destination{
@@ -73,7 +72,7 @@ var (
 			Name:       sinkName,
 			Namespace:  "",
 			Kind:       "Channel",
-			APIVersion: "messaging.knative.dev/v1beta1",
+			APIVersion: "messaging.knative.dev/v1",
 		},
 	}
 	sinkDNS = "sink.mynamespace.svc." + network.GetClusterDomainName()
@@ -147,7 +146,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
-					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1beta1"}}`),
+					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
 			},
 		}, {
 			Name: "sink ref has no namespace",
@@ -186,7 +185,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SinkNotFound",
-					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1beta1"}}`),
+					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1"}}`),
 			},
 		}, {
 			Name: "error creating deployment",
@@ -203,9 +202,9 @@ func TestAllCases(t *testing.T) {
 					rtv1beta2.WithPingSource(sourceUID),
 					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 				),
-				rtv1beta1.NewChannel(sinkName, testNS,
-					rtv1beta1.WithInitChannelConditions,
-					rtv1beta1.WithChannelAddress(sinkDNS),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
 				),
 			},
 			Key: testNS + "/" + sourceName,
@@ -246,9 +245,9 @@ func TestAllCases(t *testing.T) {
 					rtv1beta2.WithPingSource(sourceUID),
 					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 				),
-				rtv1beta1.NewChannel(sinkName, testNS,
-					rtv1beta1.WithInitChannelConditions,
-					rtv1beta1.WithChannelAddress(sinkDNS),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
 				),
 				makeAvailableMTAdapterWithDifferentEnv(),
 			},
@@ -294,9 +293,9 @@ func TestAllCases(t *testing.T) {
 					rtv1beta2.WithPingSource(sourceUID),
 					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 				),
-				rtv1beta1.NewChannel(sinkName, testNS,
-					rtv1beta1.WithInitChannelConditions,
-					rtv1beta1.WithChannelAddress(sinkDNS),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
 				),
 				makeAvailableMTAdapter(),
 			},
@@ -336,9 +335,9 @@ func TestAllCases(t *testing.T) {
 					rtv1beta2.WithPingSource(sourceUID),
 					rtv1beta2.WithPingSourceObjectMetaGeneration(generation),
 				),
-				rtv1beta1.NewChannel(sinkName, testNS,
-					rtv1beta1.WithInitChannelConditions,
-					rtv1beta1.WithChannelAddress(sinkDNS),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
 				),
 				makeAvailableMTAdapter(),
 			},

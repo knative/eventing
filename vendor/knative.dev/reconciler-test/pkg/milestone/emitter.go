@@ -49,6 +49,7 @@ type Emitter interface {
 	NamespaceDeleted(namespace string)
 	TestStarted(feature string, t feature.T)
 	TestFinished(feature string, t feature.T)
+	StepsPlanned(feature string, steps map[feature.Timing][]feature.Step, t feature.T)
 	StepStarted(feature string, step *feature.Step, t feature.T)
 	StepFinished(feature string, step *feature.Step, t feature.T)
 	TestSetStarted(featureSet string, t feature.T)
@@ -134,6 +135,22 @@ func (n *NilSafeClient) TestFinished(feature string, t feature.T) {
 		return
 	}
 	n.Event(context.Background(), n.Factory.TestFinished(feature, t.Name(), t.Skipped(), t.Failed()))
+}
+
+func (n *NilSafeClient) StepsPlanned(feature string, steps map[feature.Timing][]feature.Step, t feature.T) {
+	if n == nil || n.Client == nil {
+		return
+	}
+
+	sm := make(map[string][]string)
+	for k, v := range steps {
+		sm[k.String()] = make([]string, len(v))
+		for i, step := range v {
+			sm[k.String()][i] = step.Name
+		}
+	}
+
+	n.Event(context.Background(), n.Factory.StepsPlanned(feature, sm, t.Name()))
 }
 
 func (n *NilSafeClient) StepStarted(feature string, step *feature.Step, t feature.T) {

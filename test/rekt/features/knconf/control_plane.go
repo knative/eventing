@@ -43,6 +43,48 @@ func HasReadyInConditions(_ context.Context, t feature.T, status duckv1.Status) 
 	t.Errorf(`does not have "Ready" condition, has: [%s]`, strings.Join(found, ","))
 }
 
+func KResourceHasObservedGeneration(gvr schema.GroupVersionResource, name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		ri := dynamicclient.Get(ctx).Resource(gvr).Namespace(env.Namespace())
+
+		get := func() (*duckv1.KResource, error) {
+			obj, err := ri.Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			kr := new(duckv1.KResource)
+			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, kr); err != nil {
+				return nil, err
+			}
+			return kr, nil
+		}
+
+		var kr *duckv1.KResource
+		var err error
+
+		interval, timeout := environment.PollTimingsFromContext(ctx)
+		err = wait.PollImmediate(interval, timeout, func() (bool, error) {
+			kr, err = get()
+			if err != nil {
+				// break out if not a "not found" error.
+				if !apierrors.IsNotFound(err) {
+					return false, err
+				}
+				// Keep polling
+				return false, nil
+			}
+			if kr.Status.ObservedGeneration != 0 {
+				return true, nil
+			}
+			return false, nil
+		})
+		if err != nil {
+			t.Errorf("unable to get a reconciled resource (status.observedGeneration != 0)")
+		}
+	}
+}
+
 func KResourceHasReadyInConditions(gvr schema.GroupVersionResource, name string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		env := environment.FromContext(ctx)

@@ -44,14 +44,14 @@ func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brok
 	subscriberName := "dumper-empty"
 	recordevents.DeployEventRecordOrFail(context.TODO(), client, subscriberName)
 
-	client.CreateTriggerOrFailV1Beta1("testtrigger",
-		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
-		resources.WithBrokerV1Beta1(brokerName),
+	client.CreateTriggerOrFail("testtrigger",
+		resources.WithSubscriberServiceRefForTrigger(subscriberName),
+		resources.WithBroker(brokerName),
 	)
 
 	// Then make sure the trigger is marked as not ready since there's no broker.
 	err := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
-		trigger, err := client.Eventing.EventingV1beta1().Triggers(client.Namespace).Get(context.Background(), "testtrigger", metav1.GetOptions{})
+		trigger, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(context.Background(), "testtrigger", metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -67,7 +67,7 @@ func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brok
 	}
 
 	// Then create the Broker and just make sure they both come ready.
-	if bn := brokerCreator(client, "v1beta1"); bn != brokerName {
+	if bn := brokerCreator(client, "v1"); bn != brokerName {
 		t.Fatalf("Broker created with unexpected name, wanted %q got %q", brokerName, bn)
 	}
 

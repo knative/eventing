@@ -31,6 +31,7 @@ const (
 	eventSource    = `/mycontext`
 	extensionName  = `myextension`
 	extensionValue = `my-extension-value`
+	subjectValue   = `mysubject`
 )
 
 func TestAttributesFilter_Filter(t *testing.T) {
@@ -72,6 +73,29 @@ func TestAttributesFilter_Filter(t *testing.T) {
 			event:  makeEventWithExtension(extensionName, extensionValue),
 			want:   eventfilter.PassFilter,
 		},
+		"Any Extension with attribs - without Extension in Event": {
+			filter: attributesWithExtension(eventType, eventSource, ""),
+			want:   eventfilter.FailFilter,
+		},
+		"Any Extension with attribs - with Extension in Event": {
+			filter: attributesWithExtension(eventType, eventSource, ""),
+			event:  makeEventWithExtension(extensionName, extensionValue),
+			want:   eventfilter.PassFilter,
+		},
+		"Subject with attribs": {
+			filter: attributesWithSubject(eventType, eventSource, subjectValue),
+			event:  makeEventWithSubject(subjectValue),
+			want:   eventfilter.PassFilter,
+		},
+		"Any Subject with attribs - without Subject in Event": {
+			filter: attributesWithSubject(eventType, eventSource, ""),
+			want:   eventfilter.FailFilter,
+		},
+		"Any Subject with attribs - with Subject in Event": {
+			filter: attributesWithSubject(eventType, eventSource, ""),
+			event:  makeEventWithSubject(subjectValue),
+			want:   eventfilter.PassFilter,
+		},
 		"Any with attribs - Arrival extension": {
 			filter: attributes("", ""),
 			event:  makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
@@ -111,6 +135,12 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 	return e
 }
 
+func makeEventWithSubject(sub string) *cloudevents.Event {
+	e := makeEvent()
+	e.SetSubject(sub)
+	return e
+}
+
 func attributes(t, s string) map[string]string {
 	return map[string]string{
 		"type":   t,
@@ -123,5 +153,51 @@ func attributesWithExtension(t, s, e string) map[string]string {
 		"type":        t,
 		"source":      s,
 		extensionName: e,
+	}
+}
+
+func attributesWithSubject(t, s, sub string) map[string]string {
+	return map[string]string{
+		"type":    t,
+		"source":  s,
+		"subject": sub,
+	}
+}
+
+func TestAllSupportedAttributeFieldsV1(t *testing.T) {
+	e := cloudevents.NewEvent(cloudevents.VersionV1)
+	e.SetType(eventType)
+	e.SetSource(eventSource)
+	e.SetID("1234")
+	e.SetDataSchema("wow")
+	e.SetSubject("cool")
+	e.SetDataContentType("cheers;mate")
+
+	attributes := map[string]string{
+		"specversion":     e.SpecVersion(),
+		"type":            e.Type(),
+		"source":          e.Source(),
+		"subject":         e.Subject(),
+		"id":              e.ID(),
+		"time":            e.Time().String(),
+		"dataschema":      e.DataSchema(),
+		"schemaurl":       e.DataSchema(),
+		"datacontenttype": e.DataContentType(),
+		"datamediatype":   e.DataMediaType(),
+	}
+	if result := NewAttributesFilter(attributes).Filter(context.TODO(), e); result != eventfilter.PassFilter {
+		t.Errorf("Expected pass, got %v", result)
+	}
+}
+
+func TestV03Event(t *testing.T) {
+	e := cloudevents.NewEvent(cloudevents.VersionV03)
+	e.SetDataContentEncoding("perfect")
+
+	attributes := map[string]string{
+		"datacontentencoding": e.DeprecatedDataContentEncoding(),
+	}
+	if result := NewAttributesFilter(attributes).Filter(context.TODO(), e); result != eventfilter.PassFilter {
+		t.Errorf("Expected pass, got %v", result)
 	}
 }

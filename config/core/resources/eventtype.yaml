@@ -21,14 +21,13 @@ metadata:
 spec:
   group: eventing.knative.dev
   versions:
-  - &version
-    name: v1alpha1
-    served: false
-    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
     subresources:
       status: {}
     schema:
-      openAPIV3Schema: &openAPIV3Schema
+      openAPIV3Schema:
         type: object
         description: 'EventType represents a type of event that can be consumed from a Broker.'
         properties:
@@ -135,14 +134,6 @@ spec:
     - name: Reason
       type: string
       jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
-  - << : *version
-    name: v1beta1
-    served: true
-    storage: true
-    # the schema of v1beta1 is exactly the same as v1 schema
-    schema:
-      openAPIV3Schema:
-        << : *openAPIV3Schema
   names:
     kind: EventType
     plural: eventtypes

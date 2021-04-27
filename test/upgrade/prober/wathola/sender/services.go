@@ -106,7 +106,7 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 
 // SendEvent will send cloud event to given url
 func SendEvent(e cloudevents.Event, url string) error {
-	c, err := cloudevents.NewDefaultClient()
+	c, err := cloudevents.NewClientHTTP()
 	if err != nil {
 		return err
 	}

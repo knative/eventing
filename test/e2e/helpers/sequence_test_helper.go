@@ -28,11 +28,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
-	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -71,7 +68,7 @@ func SequenceTestHelper(
 		defer testlib.TearDown(client)
 
 		// construct steps for the sequence
-		steps := make([]v1beta1.SequenceStep, 0)
+		steps := make([]flowsv1.SequenceStep, 0)
 		for _, config := range stepSubscriberConfigs {
 			// create a stepper Pod with Service
 			podName := config.podName
@@ -82,7 +79,7 @@ func SequenceTestHelper(
 			)
 
 			// create a new step
-			step := v1beta1.SequenceStep{
+			step := flowsv1.SequenceStep{
 				Destination: duckv1.Destination{
 					Ref: resources.KnativeRefForService(podName, client.Namespace),
 				}}
@@ -91,7 +88,7 @@ func SequenceTestHelper(
 		}
 
 		// create channelTemplate for the Sequence
-		channelTemplate := &messagingv1beta1.ChannelTemplateSpec{
+		channelTemplate := &messagingv1.ChannelTemplateSpec{
 			TypeMeta: channel,
 		}
 
@@ -230,16 +227,16 @@ func SequenceV1TestHelper(
 		replyRef := &duckv1.KReference{Kind: channel.Kind, APIVersion: channel.APIVersion, Name: channelName, Namespace: client.Namespace}
 
 		// create the sequence object
-		sequence := eventingtestingv1.NewSequence(
+		sequence := eventingtesting.NewSequence(
 			sequenceName,
 			client.Namespace,
-			eventingtestingv1.WithSequenceSteps(steps),
-			eventingtestingv1.WithSequenceChannelTemplateSpec(channelTemplate),
-			eventingtestingv1.WithSequenceReply(&duckv1.Destination{Ref: replyRef}),
+			eventingtesting.WithSequenceSteps(steps),
+			eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
+			eventingtesting.WithSequenceReply(&duckv1.Destination{Ref: replyRef}),
 		)
 
 		// create Sequence or fail the test if there is an error
-		client.CreateFlowsSequenceV1OrFail(sequence)
+		client.CreateFlowsSequenceOrFail(sequence)
 
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail(ctx)

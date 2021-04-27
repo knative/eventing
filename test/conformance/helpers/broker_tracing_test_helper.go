@@ -27,7 +27,7 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -75,9 +75,9 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		// Create a configmap used by the broker.
 		client.CreateBrokerConfigMapOrFail("br", channel)
 
-		broker := client.CreateBrokerV1Beta1OrFail(
+		broker := client.CreateBrokerOrFail(
 			"br",
-			resources.WithBrokerClassForBrokerV1Beta1(brokerClass),
+			resources.WithBrokerClassForBroker(brokerClass),
 			resources.WithConfigMapForBrokerConfig(),
 		)
 
@@ -85,11 +85,11 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		_ = recordevents.DeployEventRecordOrFail(ctx, client, loggerPodName)
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
-		loggerTrigger := client.CreateTriggerOrFailV1Beta1(
+		loggerTrigger := client.CreateTriggerOrFail(
 			"logger",
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1(v1beta1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(loggerPodName),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter(v1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
+			resources.WithSubscriberServiceRefForTrigger(loggerPodName),
 		)
 
 		// Create a transformer Pod (recordevents with transform reply) that replies with the same event as the input,
@@ -106,11 +106,11 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		)
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
-		transformerTrigger := client.CreateTriggerOrFailV1Beta1(
+		transformerTrigger := client.CreateTriggerOrFail(
 			"transformer",
-			resources.WithBrokerV1Beta1(broker.Name),
-			resources.WithAttributesTriggerFilterV1Beta1(v1beta1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
-			resources.WithSubscriberServiceRefForTriggerV1Beta1(eventTransformerPod.Name),
+			resources.WithBroker(broker.Name),
+			resources.WithAttributesTriggerFilter(v1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
+			resources.WithSubscriberServiceRefForTrigger(eventTransformerPod.Name),
 		)
 
 		// Wait for all test resources to be ready, so that we can start sending events.
@@ -213,7 +213,7 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 	}
 }
 
-func ingressSpan(broker *v1beta1.Broker, eventID string) *tracinghelper.SpanMatcher {
+func ingressSpan(broker *v1.Broker, eventID string) *tracinghelper.SpanMatcher {
 	return &tracinghelper.SpanMatcher{
 		Tags: map[string]*regexp.Regexp{
 			"messaging.system":      regexp.MustCompile("^knative$"),
@@ -223,7 +223,7 @@ func ingressSpan(broker *v1beta1.Broker, eventID string) *tracinghelper.SpanMatc
 	}
 }
 
-func triggerSpan(trigger *v1beta1.Trigger, eventID string) *tracinghelper.SpanMatcher {
+func triggerSpan(trigger *v1.Trigger, eventID string) *tracinghelper.SpanMatcher {
 	return &tracinghelper.SpanMatcher{
 		Tags: map[string]*regexp.Regexp{
 			"messaging.system":      regexp.MustCompile("^knative$"),

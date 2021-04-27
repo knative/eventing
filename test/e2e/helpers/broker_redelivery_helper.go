@@ -94,10 +94,10 @@ func brokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 	// Create a Broker.
 	brokerName := creator(client, numRetries)
 
-	client.CreateTriggerV1OrFail(
+	client.CreateTriggerOrFail(
 		triggerName,
-		resources.WithBrokerV1(brokerName),
-		resources.WithSubscriberServiceRefForTriggerV1(eventRecord),
+		resources.WithBroker(brokerName),
+		resources.WithSubscriberServiceRefForTrigger(eventRecord),
 	)
 
 	client.WaitForAllTestResourcesReadyOrFail(ctx)

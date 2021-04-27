@@ -21,6 +21,7 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 	broker "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/kncloudevents"
 	reconcilertestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -125,6 +127,18 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
+			name:       "invalid event",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getInvalidEvent(),
+			statusCode: nethttp.StatusBadRequest,
+			handler:    handler(),
+			reporter:   &mockReporter{},
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
+		},
+		{
 			name:       "no TTL drop event",
 			method:     nethttp.MethodPost,
 			uri:        "/ns/name",
@@ -146,6 +160,31 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			reporter:   &mockReporter{},
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
+			},
+		},
+		{
+			name:       "malformed event",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       strings.NewReader("not an event"),
+			statusCode: nethttp.StatusBadRequest,
+			handler:    handler(),
+			reporter:   &mockReporter{},
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
+		},
+		{
+			name:       "no broker annotations",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getValidEvent(),
+			statusCode: nethttp.StatusInternalServerError,
+			handler:    handler(),
+			reporter:   &mockReporter{StatusCode: nethttp.StatusInternalServerError, EventDispatchTimeReported: true},
+			defaulter:  broker.TTLDefaulter(logger, 100),
+			brokers: []*eventingv1.Broker{
+				withUninitializedAnnotations(makeBroker("name", "ns")),
 			},
 		},
 		{
@@ -203,16 +242,19 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				request.Header.Add(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			}
 
-			annotatedBrokers := make([]runtime.Object, 0, len(tc.brokers))
+			brokers := make([]runtime.Object, 0, len(tc.brokers))
 			for _, b := range tc.brokers {
-				// Write the channel address in the broker status annotation
-				if b.Status.Annotations == nil {
-					b.Status.Annotations = make(map[string]string, 1)
+				// Write the channel address in the broker status annotation unless explicitly set to nil
+				if b.Status.Annotations != nil {
+					if _, set := b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey]; !set {
+						b.Status.Annotations = map[string]string{
+							eventing.BrokerChannelAddressStatusAnnotationKey: s.URL,
+						}
+					}
 				}
-				b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey] = s.URL
-				annotatedBrokers = append(annotatedBrokers, b)
+				brokers = append(brokers, b)
 			}
-			listers := reconcilertestingv1.NewListers(annotatedBrokers)
+			listers := reconcilertestingv1.NewListers(brokers)
 			sender, _ := kncloudevents.NewHTTPMessageSenderWithTarget("")
 			h := &Handler{
 				Sender:       sender,
@@ -285,6 +327,14 @@ func getValidEvent() io.Reader {
 	return bytes.NewBuffer(b)
 }
 
+func getInvalidEvent() io.Reader {
+	e := event.New()
+	e.SetType("type")
+	e.SetID("1234")
+	b, _ := e.MarshalJSON()
+	return bytes.NewBuffer(b)
+}
+
 func makeBroker(name, namespace string) *eventingv1.Broker {
 	return &eventingv1.Broker{
 		TypeMeta: metav1.TypeMeta{
@@ -296,5 +346,15 @@ func makeBroker(name, namespace string) *eventingv1.Broker {
 			Name:      name,
 		},
 		Spec: eventingv1.BrokerSpec{},
+		Status: eventingv1.BrokerStatus{
+			Status: duckv1.Status{
+				Annotations: map[string]string{},
+			},
+		},
 	}
+}
+
+func withUninitializedAnnotations(b *eventingv1.Broker) *eventingv1.Broker {
+	b.Status.Annotations = nil
+	return b
 }

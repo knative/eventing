@@ -28,16 +28,8 @@ type FakeEventingV1beta1 struct {
 	*testing.Fake
 }
 
-func (c *FakeEventingV1beta1) Brokers(namespace string) v1beta1.BrokerInterface {
-	return &FakeBrokers{c, namespace}
-}
-
 func (c *FakeEventingV1beta1) EventTypes(namespace string) v1beta1.EventTypeInterface {
 	return &FakeEventTypes{c, namespace}
-}
-
-func (c *FakeEventingV1beta1) Triggers(namespace string) v1beta1.TriggerInterface {
-	return &FakeTriggers{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

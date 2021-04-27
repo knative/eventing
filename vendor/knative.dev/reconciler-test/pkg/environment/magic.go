@@ -218,12 +218,15 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 		f.State = &state.KVStore{}
 	}
 	ctx = state.ContextWith(ctx, f.State)
+	ctx = feature.ContextWith(ctx, f)
 
 	steps := categorizeSteps(f.Steps)
 
 	skipAssertions := false
 	skipRequirements := false
 	skipReason := ""
+
+	mr.milestones.StepsPlanned(f.Name, steps, originalT)
 
 	for _, s := range steps[feature.Setup] {
 		s := s
@@ -246,13 +249,11 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 			break
 		}
 
-		// Requirement never fails the parent test
-		internalT := mr.executeWithSkippingT(ctx, originalT, f, &s)
+		internalT := mr.executeWithoutWrappingT(ctx, originalT, f, &s)
 
 		if internalT.Failed() {
 			skipAssertions = true
 			skipRequirements = true // No need to test other requirements
-			skipReason = fmt.Sprintf("requirement %q failed", s.Name)
 		}
 	}
 
@@ -284,6 +285,7 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 	}
 }
 
+// TODO: this logic is strange and hard to follow.
 func (mr *MagicEnvironment) shouldFail(s *feature.Step) bool {
 	return !(mr.s&s.S == 0 || mr.l&s.L == 0)
 }

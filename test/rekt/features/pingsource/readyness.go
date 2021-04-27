@@ -18,10 +18,10 @@ package pingsource
 
 import (
 	"knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/eventing/test/rekt/resources/svc"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // PingSourceGoesReady returns a feature testing if a pingsource becomes ready.
@@ -37,10 +37,11 @@ func PingSourceGoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 		APIVersion: "v1",
 	}, ""))
 
-	f.Setup("install a pingsource", pingsource.Install(name, cfg...))
+	f.Setup("install a PingSource", pingsource.Install(name, cfg...))
 
-	f.Stable("pingsource").
-		Must("be ready", pingsource.IsReady(name))
+	f.Requirement("PingSource is ready", pingsource.IsReady(name))
+
+	f.Stable("PingSource")
 
 	return f
 }

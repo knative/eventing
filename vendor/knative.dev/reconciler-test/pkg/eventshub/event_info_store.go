@@ -31,7 +31,6 @@ import (
 
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
-	"knative.dev/reconciler-test/pkg/test_images/eventshub"
 )
 
 const (
@@ -41,18 +40,16 @@ const (
 )
 
 // EventInfoMatcher returns an error if the input event info doesn't match the criteria
-type EventInfoMatcher func(eventshub.EventInfo) error
+type EventInfoMatcher func(EventInfo) error
 
 // Stateful store of events published by eventshub pod it is pointed at.
 // Implements k8s.EventHandler
 type Store struct {
-	t feature.T
-
 	podName      string
 	podNamespace string
 
 	lock      sync.Mutex
-	collected []eventshub.EventInfo
+	collected []EventInfo
 
 	eventsSeen    int
 	eventsNotMine int
@@ -67,7 +64,6 @@ func StoreFromContext(ctx context.Context, name string) *Store {
 
 func registerEventsHubStore(eventListener *k8s.EventListener, t feature.T, podName string, podNamespace string) {
 	store := &Store{
-		t:            t,
 		podName:      podName,
 		podNamespace: podNamespace,
 	}
@@ -80,7 +76,7 @@ func (ei *Store) getDebugInfo() string {
 	return fmt.Sprintf("Pod '%s' in namespace '%s'", ei.podName, ei.podNamespace)
 }
 
-func (ei *Store) getEventInfo() []eventshub.EventInfo {
+func (ei *Store) Collected() []EventInfo {
 	ei.lock.Lock()
 	defer ei.lock.Unlock()
 	return ei.collected
@@ -96,10 +92,10 @@ func (ei *Store) Handle(event *corev1.Event) {
 		return
 	}
 
-	eventInfo := eventshub.EventInfo{}
+	eventInfo := EventInfo{}
 	err := json.Unmarshal([]byte(event.Message), &eventInfo)
 	if err != nil {
-		ei.t.Errorf("Received EventInfo that cannot be unmarshalled! %+v", err)
+		fmt.Printf("[ERROR] Received EventInfo that cannot be unmarshalled! \n----\n%s\n----\n%+v\n", event.Message, err)
 		return
 	}
 
@@ -108,7 +104,7 @@ func (ei *Store) Handle(event *corev1.Event) {
 
 func (ei *Store) isMyEvent(event *corev1.Event) bool {
 	return event.Type == corev1.EventTypeNormal &&
-		event.Reason == eventshub.CloudEventObservedReason &&
+		event.Reason == CloudEventObservedReason &&
 		event.InvolvedObject.Kind == "Pod" &&
 		event.InvolvedObject.Name == ei.podName &&
 		event.InvolvedObject.Namespace == ei.podNamespace
@@ -121,20 +117,20 @@ func (ei *Store) isMyEvent(event *corev1.Event) bool {
 // guaranteed to be called exactly once on each EventInfo from the pod.
 // The error array contains the eventual match errors, while the last return error contains
 // an eventual communication error while trying to get the events from the eventshub pod
-func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, eventshub.SearchedInfo, []error, error) {
+func (ei *Store) Find(matchers ...EventInfoMatcher) ([]EventInfo, SearchedInfo, []error, error) {
 	f := allOf(matchers...)
 	const maxLastEvents = 5
-	allMatch := []eventshub.EventInfo{}
+	allMatch := []EventInfo{}
 	ei.lock.Lock()
-	sInfo := eventshub.SearchedInfo{
+	sInfo := SearchedInfo{
 		StoreEventsSeen:    ei.eventsSeen,
 		StoreEventsNotMine: ei.eventsNotMine,
 	}
 	ei.lock.Unlock()
-	lastEvents := []eventshub.EventInfo{}
+	lastEvents := []EventInfo{}
 	var nonMatchingErrors []error
 
-	allEvents := ei.getEventInfo()
+	allEvents := ei.Collected()
 	for i := range allEvents {
 		if err := f(allEvents[i]); err == nil {
 			allMatch = append(allMatch, allEvents[i])
@@ -155,48 +151,44 @@ func (ei *Store) Find(matchers ...EventInfoMatcher) ([]eventshub.EventInfo, even
 
 // AssertAtLeast assert that there are at least min number of match for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertAtLeast(min int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
+func (ei *Store) AssertAtLeast(t feature.T, min int, matchers ...EventInfoMatcher) []EventInfo {
 	events, err := ei.waitAtLeastNMatch(allOf(matchers...), min)
 	if err != nil {
-		ei.t.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
+		t.Fatalf("Timeout waiting for at least %d matches.\nError: %+v", min, errors.WithStack(err))
 	}
-	ei.t.Logf("Assert passed")
 	return events
 }
 
 // AssertInRange asserts that there are at least min number of matches and at most max number of matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertInRange(min int, max int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
-	events := ei.AssertAtLeast(min, matchers...)
+func (ei *Store) AssertInRange(t feature.T, min int, max int, matchers ...EventInfoMatcher) []EventInfo {
+	events := ei.AssertAtLeast(t, min, matchers...)
 	if max > 0 && len(events) > max {
-		ei.t.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
+		t.Fatalf("Assert in range failed: %+v", errors.WithStack(fmt.Errorf("expected <= %d events, saw %d", max, len(events))))
 	}
-	ei.t.Logf("Assert passed")
 	return events
 }
 
 // AssertNot asserts that there aren't any matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertNot(matchers ...EventInfoMatcher) []eventshub.EventInfo {
+func (ei *Store) AssertNot(t feature.T, matchers ...EventInfoMatcher) []EventInfo {
 	res, recentEvents, _, err := ei.Find(matchers...)
 	if err != nil {
-		ei.t.Fatalf("Unexpected error during find on eventshub '%s': %+v", ei.podName, errors.WithStack(err))
+		t.Fatalf("Unexpected error during find on eventshub '%s': %+v", ei.podName, errors.WithStack(err))
 	}
 
 	if len(res) != 0 {
-		ei.t.Fatalf("Assert not failed: %+v", errors.WithStack(
+		t.Fatalf("Assert not failed: %+v", errors.WithStack(
 			fmt.Errorf("Unexpected matches on eventshub '%s', found: %v. %s", ei.podName, res, &recentEvents)),
 		)
 	}
-	ei.t.Logf("Assert passed")
 	return res
 }
 
 // AssertExact assert that there are exactly n matches for the provided matchers.
 // This method fails the test if the assert is not fulfilled.
-func (ei *Store) AssertExact(n int, matchers ...EventInfoMatcher) []eventshub.EventInfo {
-	events := ei.AssertInRange(n, n, matchers...)
-	ei.t.Logf("Assert passed")
+func (ei *Store) AssertExact(t feature.T, n int, matchers ...EventInfoMatcher) []EventInfo {
+	events := ei.AssertInRange(t, n, n, matchers...)
 	return events
 }
 
@@ -204,8 +196,8 @@ func (ei *Store) AssertExact(n int, matchers ...EventInfoMatcher) []eventshub.Ev
 // five events. The matching events are returned if we find at least n. If the
 // function times out, an error is returned.
 // If you need to perform assert on the result (aka you want to fail if error != nil), then use AssertAtLeast
-func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]eventshub.EventInfo, error) {
-	var matchRet []eventshub.EventInfo
+func (ei *Store) waitAtLeastNMatch(f EventInfoMatcher, min int) ([]EventInfo, error) {
+	var matchRet []EventInfo
 	var internalErr error
 
 	wait.PollImmediate(retryInterval, retryTimeout, func() (bool, error) {
@@ -245,7 +237,7 @@ func formatErrors(errs []error) string {
 
 // We don't need to expose this, since all the signatures already executes this
 func allOf(matchers ...EventInfoMatcher) EventInfoMatcher {
-	return func(have eventshub.EventInfo) error {
+	return func(have EventInfo) error {
 		for _, m := range matchers {
 			if err := m(have); err != nil {
 				return err

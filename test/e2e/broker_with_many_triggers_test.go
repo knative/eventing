@@ -29,7 +29,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 )
 
-var unsupportedChannelVersions = []string{"v1alpha1"}
+var unsupportedChannelVersions = []string{"v1alpha1", "v1beta1"}
 
 func DefaultBrokerCreator(_ *testlib.Client, _ string) string {
 	return sugarresources.DefaultBrokerName

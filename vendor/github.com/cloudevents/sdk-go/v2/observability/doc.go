@@ -1,4 +1,4 @@
 /*
-Package observability holds metrics and tracing recording implementations.
+Package observability holds metrics and tracing common keys.
 */
 package observability

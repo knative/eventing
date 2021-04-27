@@ -88,13 +88,13 @@ type doReconcile func(ctx context.Context, o *v1.Broker) reconciler.Event
 
 // reconcilerImpl implements controller.Reconciler for v1.Broker resources.
 type reconcilerImpl struct {
-	// LeaderAwareFuncs is inlined to help us implement reconciler.LeaderAware
+	// LeaderAwareFuncs is inlined to help us implement reconciler.LeaderAware.
 	reconciler.LeaderAwareFuncs
 
 	// Client is used to write back status updates.
 	Client versioned.Interface
 
-	// Listers index properties about resources
+	// Listers index properties about resources.
 	Lister eventingv1.BrokerLister
 
 	// Recorder is an event recorder for recording Event resources to the
@@ -119,7 +119,7 @@ type reconcilerImpl struct {
 	classValue string
 }
 
-// Check that our Reconciler implements controller.Reconciler
+// Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*reconcilerImpl)(nil)
 
 // Check that our generated Reconciler is always LeaderAware.
@@ -216,8 +216,15 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	original, err := getter.Get(s.name)
 
 	if errors.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
+		// The resource may no longer exist, in which case we stop processing and call
+		// the ObserveDeletion handler if appropriate.
 		logger.Debugf("Resource %q no longer exists", key)
+		if del, ok := r.reconciler.(reconciler.OnDeletionInterface); ok {
+			return del.ObserveDeletion(ctx, types.NamespacedName{
+				Namespace: s.namespace,
+				Name:      s.name,
+			})
+		}
 		return nil
 	} else if err != nil {
 		return err
