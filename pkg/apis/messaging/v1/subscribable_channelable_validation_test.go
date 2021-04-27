@@ -33,7 +33,7 @@ var validationTests = []struct {
 		name: "valid object ref",
 		ref: corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "MyChannel",
 		},
 		want: nil,
@@ -42,7 +42,7 @@ var validationTests = []struct {
 		name: "invalid object ref",
 		ref: corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
-			APIVersion: "messaging.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "",
 		},
 		want: apis.ErrMissingField("kind"),

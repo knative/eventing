@@ -39,7 +39,6 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -96,13 +95,13 @@ var (
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1",
 		Kind:    "Subscriber",
 	}
 
 	nonAddressableGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1",
 		Kind:    "Trigger",
 	}
 
@@ -134,7 +133,7 @@ var (
 func init() {
 	// Add types to scheme
 	_ = eventingv1.AddToScheme(scheme.Scheme)
-	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = duckv1.AddToScheme(scheme.Scheme)
 	_ = apiextensionsv1.AddToScheme(scheme.Scheme)
 	_ = messagingv1.AddToScheme(scheme.Scheme)
 }

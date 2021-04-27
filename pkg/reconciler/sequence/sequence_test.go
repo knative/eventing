@@ -59,7 +59,7 @@ const (
 var (
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1",
 		Kind:    "Subscriber",
 	}
 )
