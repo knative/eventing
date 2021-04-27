@@ -30,6 +30,7 @@ spec:
       status: {}
     schema:
       openAPIV3Schema:
+        description: 'InMemoryChannel is a resource representing an in memory channel'
         type: object
         properties:
           spec:
