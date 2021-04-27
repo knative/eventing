@@ -38,7 +38,6 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
@@ -320,23 +319,6 @@ func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1.Parallel) {
 		c.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)
 	}
 	c.Tracker.AddObj(parallel)
-}
-
-// CreateSinkBindingV1Alpha1OrFail will create a SinkBinding or fail the test if there is an error.
-func (c *Client) CreateSinkBindingV1Alpha1OrFail(sb *sourcesv1alpha1.SinkBinding) {
-	c.T.Logf("Creating sinkbinding %+v", sb)
-	sbInterface := c.Eventing.SourcesV1alpha1().SinkBindings(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := sbInterface.Create(context.Background(), sb, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
-	}
-	c.Tracker.AddObj(sb)
 }
 
 // CreateSinkBindingV1Alpha2OrFail will create a SinkBinding or fail the test if there is an error.

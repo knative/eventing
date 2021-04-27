@@ -23,7 +23,7 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
-// SinkBindingOption enables further configuration of a v1alpha1 SinkBinding.
+// SinkBindingOption enables further configuration of a v1 SinkBinding.
 type SinkBindingOption func(*sourcesv1.SinkBinding)
 
 // NewSinkBinding creates a SinkBinding with SinkBindingOptions
