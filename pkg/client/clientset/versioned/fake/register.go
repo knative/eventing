@@ -29,7 +29,6 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 )
 
@@ -41,7 +40,6 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	eventingv1.AddToScheme,
 	flowsv1.AddToScheme,
 	messagingv1.AddToScheme,
-	sourcesv1beta1.AddToScheme,
 	sourcesv1beta2.AddToScheme,
 	sourcesv1.AddToScheme,
 }

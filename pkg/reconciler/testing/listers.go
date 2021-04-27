@@ -31,10 +31,8 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
-	sourcev1beta1listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 	sourcev1beta2listers "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
@@ -114,16 +112,8 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	return all
 }
 
-func (l *Listers) GetPingSourceV1beta1Lister() sourcev1beta1listers.PingSourceLister {
-	return sourcev1beta1listers.NewPingSourceLister(l.indexerFor(&sourcesv1beta1.PingSource{}))
-}
-
 func (l *Listers) GetPingSourceV1beta2Lister() sourcev1beta2listers.PingSourceLister {
 	return sourcev1beta2listers.NewPingSourceLister(l.indexerFor(&sourcesv1beta2.PingSource{}))
-}
-
-func (l *Listers) GetSinkBindingV1beta1Lister() sourcev1beta1listers.SinkBindingLister {
-	return sourcev1beta1listers.NewSinkBindingLister(l.indexerFor(&sourcesv1beta1.SinkBinding{}))
 }
 
 func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {
