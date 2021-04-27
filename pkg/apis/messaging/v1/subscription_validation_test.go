@@ -27,9 +27,9 @@ import (
 
 const (
 	channelKind       = "MyChannel"
-	channelAPIVersion = "eventing.knative.dev/v1alpha1"
+	channelAPIVersion = "messaging.knative.dev/v1"
 	routeKind         = "Route"
-	routeAPIVersion   = "serving.knative.dev/v1alpha1"
+	routeAPIVersion   = "serving.knative.dev/v1"
 	channelName       = "subscribedChannel"
 	replyChannelName  = "toChannel"
 	subscriberName    = "subscriber"
