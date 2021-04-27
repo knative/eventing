@@ -39,7 +39,7 @@ data:
     channelTemplateSpec: |
       # The api and version of the kind of channel to use inthe broker.
       # This field required.
-      apiVersion: messaging.knative.dev/v1alpha1
+      apiVersion: messaging.knative.dev/v1
 
       # The api and version of the kind of channel to use inthe broker.
       # This field required.

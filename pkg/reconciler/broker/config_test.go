@@ -48,7 +48,7 @@ func TestOurConfig(t *testing.T) {
 		want: &Config{
 			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "messaging.knative.dev/v1alpha1",
+					APIVersion: "messaging.knative.dev/v1",
 					Kind:       "InMemoryChannel",
 				},
 				Spec: &exampleSpec,

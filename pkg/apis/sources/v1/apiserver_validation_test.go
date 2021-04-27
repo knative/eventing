@@ -43,7 +43,7 @@ func TestAPIServerValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1alpha1",
+						APIVersion: "v1",
 						Kind:       "broker",
 						Name:       "default",
 					},
@@ -76,7 +76,7 @@ func TestAPIServerValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1alpha1",
+						APIVersion: "v1",
 						Kind:       "broker",
 						Name:       "default",
 					},
@@ -99,7 +99,7 @@ func TestAPIServerValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1alpha1",
+						APIVersion: "v1",
 						Kind:       "broker",
 						Name:       "default",
 					},
@@ -117,7 +117,7 @@ func TestAPIServerValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1alpha1",
+						APIVersion: "v1",
 						Kind:       "broker",
 						Name:       "default",
 					},
@@ -136,7 +136,7 @@ func TestAPIServerValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1alpha1",
+						APIVersion: "v1",
 						Kind:       "broker",
 						Name:       "default",
 					},
@@ -159,7 +159,7 @@ func TestAPIServerValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1alpha1",
+						APIVersion: "v1",
 						Kind:       "broker",
 						Name:       "default",
 					},

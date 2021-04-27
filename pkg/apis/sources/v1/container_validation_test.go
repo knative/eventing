@@ -38,7 +38,7 @@ func TestContainerSourceValidation(t *testing.T) {
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
-						APIVersion: "v1beta1",
+						APIVersion: "v1",
 						Kind:       "Broker",
 						Name:       "default",
 					},
