@@ -24,19 +24,19 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	v1beta1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 func logF(format string, a ...interface{}) {
 
 }
 
-var src = &v1alpha2.ApiServerSource{
+var src = &v1.ApiServerSource{
 	TypeMeta: metav1.TypeMeta{
-		APIVersion: "v1alpha2",
+		APIVersion: "v1",
 		Kind:       "ApiServerSource",
 	},
 	ObjectMeta: metav1.ObjectMeta{
@@ -44,8 +44,8 @@ var src = &v1alpha2.ApiServerSource{
 		Namespace: "source-namespace",
 		UID:       "1234",
 	},
-	Spec: v1alpha2.ApiServerSourceSpec{
-		Resources: []v1alpha2.APIVersionKindSelector{{
+	Spec: v1.ApiServerSourceSpec{
+		Resources: []v1.APIVersionKindSelector{{
 			APIVersion: "",
 			Kind:       "Namespace",
 		}, {
@@ -58,7 +58,7 @@ var src = &v1alpha2.ApiServerSource{
 				MatchLabels: map[string]string{"test-key1": "test-value1"},
 			},
 		}},
-		ResourceOwner: &v1alpha2.APIVersionKind{
+		ResourceOwner: &v1.APIVersionKind{
 			APIVersion: "custom/v1",
 			Kind:       "Parent",
 		},
@@ -67,14 +67,14 @@ var src = &v1alpha2.ApiServerSource{
 	},
 }
 var mutex = &sync.Mutex{}
-var recordTestSinkResults map[string]*v1beta1.Event = make(map[string]*v1beta1.Event)
+var recordTestSinkResults map[string]*corev1.Event = make(map[string]*corev1.Event)
 
 type fakeSink struct {
 	record.EventSink
 	Name string
 }
 
-func (f fakeSink) Create(event *v1beta1.Event) (*v1beta1.Event, error) {
+func (f fakeSink) Create(event *corev1.Event) (*corev1.Event, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	recordTestSinkResults[f.Name] = event
