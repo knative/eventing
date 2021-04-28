@@ -120,8 +120,8 @@ func AssertEventPatterns(prober *eventshub.EventProber, expected map[string]Even
 
 			t.Logf("Expected Events %s; \n Got: %#v\nWant: %#v", prefix, got, want)
 
-			if len(want.eventSuccess) != len(got.eventSuccess) {
-				t.Errorf("Wanted %d events, got %d", len(want.eventSuccess), len(got.eventSuccess))
+			if len(want.Success) != len(got.Success) {
+				t.Errorf("Wanted %d events, got %d", len(want.Success), len(got.Success))
 			}
 
 			// Check event acceptance.
