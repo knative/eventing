@@ -17,6 +17,7 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -163,7 +164,14 @@ func TestCheckResourceReady(t *testing.T) {
 				Kind:       kind,
 			}
 			metaResource := resources.NewMetaResource(om.Name, om.Namespace, &typeMeta)
-			ready, err := checkResourceReady(dc, metaResource)
+			c := Client{
+				Dynamic: dc,
+				Ctx: func() context.Context {
+					return context.Background()
+				},
+				Log: t,
+			}
+			ready, err := c.checkResourceReady(metaResource)
 			if ready != tc.isReady {
 				t.Errorf("Unexpected readiness. Expected %v, actually %v", tc.isReady, ready)
 			}

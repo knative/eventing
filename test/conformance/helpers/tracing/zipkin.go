@@ -17,7 +17,6 @@ limitations under the License.
 package tracing
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/pkg/system"
@@ -28,5 +27,5 @@ import (
 
 // Setup sets up port forwarding to Zipkin.
 func Setup(t *testing.T, client *testlib.Client) {
-	zipkin.SetupZipkinTracingFromConfigTracingOrFail(context.Background(), t, client.Kube, system.Namespace())
+	zipkin.SetupZipkinTracingFromConfigTracingOrFail(client.Ctx, t, client.Kube, system.Namespace())
 }

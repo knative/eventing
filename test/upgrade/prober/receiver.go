@@ -16,7 +16,6 @@
 package prober
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/wavesoftware/go-ensure"
@@ -34,32 +33,32 @@ var (
 	receiverNodePort int32 = -1
 )
 
-func (p *prober) deployReceiver(ctx context.Context) {
-	p.deployReceiverDeployment(ctx)
-	p.deployReceiverService(ctx)
+func (p *prober) deployReceiver() {
+	p.deployReceiverDeployment()
+	p.deployReceiverService()
 }
 
-func (p *prober) deployReceiverDeployment(ctx context.Context) {
+func (p *prober) deployReceiverDeployment() {
 	p.log.Info("Deploy of receiver deployment: ", receiverName)
 	deployment := p.createReceiverDeployment()
 	_, err := p.client.Kube.AppsV1().
 		Deployments(deployment.Namespace).
-		Create(ctx, deployment, metav1.CreateOptions{})
+		Create(p.client.Ctx, deployment, metav1.CreateOptions{})
 	ensure.NoError(err)
 
 	testlib.WaitFor(fmt.Sprint("receiver deployment be ready: ", receiverName), func() error {
 		return pkgTest.WaitForDeploymentScale(
-			ctx, p.client.Kube, receiverName, p.client.Namespace, 1,
+			p.client.Ctx, p.client.Kube, receiverName, p.client.Namespace, 1,
 		)
 	})
 }
 
-func (p *prober) deployReceiverService(ctx context.Context) {
+func (p *prober) deployReceiverService() {
 	p.log.Infof("Deploy of receiver service: %v", receiverName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      receiverName,
-			Namespace: p.config.Namespace,
+			Namespace: p.client.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -79,8 +78,8 @@ func (p *prober) deployReceiverService(ctx context.Context) {
 			Type: corev1.ServiceTypeNodePort,
 		},
 	}
-	created, err := p.client.Kube.CoreV1().Services(p.config.Namespace).
-		Create(ctx, service, metav1.CreateOptions{})
+	created, err := p.client.Kube.CoreV1().Services(p.client.Namespace).
+		Create(p.client.Ctx, service, metav1.CreateOptions{})
 	ensure.NoError(err)
 	for _, portSpec := range created.Spec.Ports {
 		if portSpec.Port == 80 {
@@ -99,7 +98,7 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      receiverName,
-			Namespace: p.config.Namespace,
+			Namespace: p.client.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,

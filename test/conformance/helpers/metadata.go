@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -37,7 +36,7 @@ func objectHasRequiredLabel(client *testlib.Client, object metav1.TypeMeta, key 
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(context.Background(), crdName, metav1.GetOptions{
+	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(client.Ctx, crdName, metav1.GetOptions{
 		TypeMeta: metav1.TypeMeta{},
 	})
 	if err != nil {
@@ -64,7 +63,7 @@ func objectHasValidAnnotation(client *testlib.Client, object metav1.TypeMeta, ke
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(context.Background(), crdName, metav1.GetOptions{
+	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(client.Ctx, crdName, metav1.GetOptions{
 		TypeMeta: metav1.TypeMeta{},
 	})
 	if err != nil {

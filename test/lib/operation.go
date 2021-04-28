@@ -17,7 +17,6 @@ limitations under the License.
 package lib
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -33,7 +31,7 @@ import (
 // LabelNamespace labels the given namespace with the labels map.
 func (c *Client) LabelNamespace(labels map[string]string) error {
 	namespace := c.Namespace
-	nsSpec, err := c.Kube.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	nsSpec, err := c.Kube.CoreV1().Namespaces().Get(c.Ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -43,7 +41,7 @@ func (c *Client) LabelNamespace(labels map[string]string) error {
 	for k, v := range labels {
 		nsSpec.Labels[k] = v
 	}
-	_, err = c.Kube.CoreV1().Namespaces().Update(context.Background(), nsSpec, metav1.UpdateOptions{})
+	_, err = c.Kube.CoreV1().Namespaces().Update(c.Ctx, nsSpec, metav1.UpdateOptions{})
 	return err
 }
 
@@ -52,7 +50,7 @@ func (c *Client) LabelNamespace(labels map[string]string) error {
 func (c *Client) GetAddressableURI(addressableName string, typeMeta *metav1.TypeMeta) (string, error) {
 	namespace := c.Namespace
 	metaAddressable := resources.NewMetaResource(addressableName, namespace, typeMeta)
-	u, err := duck.GetAddressableURI(c.Dynamic, metaAddressable)
+	u, err := c.Duck.GetAddressableURI(metaAddressable)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -64,8 +62,8 @@ func (c *Client) GetAddressableURI(addressableName string, typeMeta *metav1.Type
 func (c *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMeta) {
 	namespace := c.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, typemeta)
-	if err := duck.WaitForResourceReady(c.Dynamic, metaResource); err != nil {
-		untyped, err := duck.GetGenericObject(c.Dynamic, metaResource, &duckv1beta1.KResource{})
+	if err := c.Duck.WaitForResourceReady(metaResource); err != nil {
+		untyped, err := c.Duck.GetGenericObject(metaResource, &duckv1beta1.KResource{})
 		if err != nil {
 			c.T.Errorf("Failed to get the object %v-%s when dumping error state: %v", *typemeta, name, err)
 		}
@@ -81,13 +79,13 @@ func (c *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMe
 func (c *Client) WaitForResourcesReadyOrFail(typemeta *metav1.TypeMeta) {
 	namespace := c.Namespace
 	metaResourceList := resources.NewMetaResourceList(namespace, typemeta)
-	if err := duck.WaitForResourcesReady(c.Dynamic, metaResourceList); err != nil {
+	if err := c.Duck.WaitForResourcesReady(metaResourceList); err != nil {
 		c.T.Fatalf("Failed to get all %v resources ready: %+v", *typemeta, errors.WithStack(err))
 	}
 }
 
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
-func (c *Client) WaitForAllTestResourcesReady(ctx context.Context) error {
+func (c *Client) WaitForAllTestResourcesReady() error {
 	// wait for all Knative resources created in this test to become ready.
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		e := c.Tracker.WaitForKResourcesReady()
@@ -101,7 +99,7 @@ func (c *Client) WaitForAllTestResourcesReady(ctx context.Context) error {
 	}
 	// Explicitly wait for all pods that were created directly by this test to become ready.
 	for _, n := range c.podsCreated {
-		if err := pkgTest.WaitForPodRunning(ctx, c.Kube, n, c.Namespace); err != nil {
+		if err := pkgTest.WaitForPodRunning(c.Ctx, c.Kube, n, c.Namespace); err != nil {
 			return fmt.Errorf("created Pod %q did not become ready: %+v", n, errors.WithStack(err))
 		}
 	}
@@ -111,15 +109,15 @@ func (c *Client) WaitForAllTestResourcesReady(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) WaitForAllTestResourcesReadyOrFail(ctx context.Context) {
-	if err := c.WaitForAllTestResourcesReady(ctx); err != nil {
+func (c *Client) WaitForAllTestResourcesReadyOrFail() {
+	if err := c.WaitForAllTestResourcesReady(); err != nil {
 		c.T.Fatalf("Failed to get all test resources ready: %+v", errors.WithStack(err))
 	}
 }
 
-func (c *Client) WaitForServiceEndpointsOrFail(ctx context.Context, svcName string, numberOfExpectedEndpoints int) {
+func (c *Client) WaitForServiceEndpointsOrFail(svcName string, numberOfExpectedEndpoints int) {
 	c.T.Logf("Waiting for %d endpoints in service %s", numberOfExpectedEndpoints, svcName)
-	if err := pkgTest.WaitForServiceEndpoints(ctx, c.Kube, svcName, c.Namespace, numberOfExpectedEndpoints); err != nil {
+	if err := pkgTest.WaitForServiceEndpoints(c.Ctx, c.Kube, svcName, c.Namespace, numberOfExpectedEndpoints); err != nil {
 		c.T.Fatalf("Failed while waiting for %d endpoints in service %s: %+v", numberOfExpectedEndpoints, svcName, errors.WithStack(err))
 	}
 }

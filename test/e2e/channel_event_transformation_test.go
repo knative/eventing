@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/eventing/test/e2e/helpers"
@@ -37,5 +36,5 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    -----------> Service(Transformation)
 */
 func TestEventTransformationForSubscriptionV1(t *testing.T) {
-	helpers.EventTransformationForSubscriptionTestHelper(context.Background(), t, helpers.SubscriptionV1, channelTestRunner)
+	helpers.EventTransformationForSubscriptionTestHelper(t, helpers.SubscriptionV1, channelTestRunner)
 }

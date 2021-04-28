@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -29,7 +28,6 @@ import (
 	"knative.dev/eventing/test/lib/recordevents"
 
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
 
@@ -85,8 +83,8 @@ func triggerV1BeforeBrokerHelper(triggerName string, client *testlib.Client) {
 	const etLogger = "logger"
 	const loggerPodName = "logger-pod"
 
-	_ = recordevents.DeployEventRecordOrFail(context.TODO(), client, loggerPodName)
-	client.WaitForAllTestResourcesReadyOrFail(context.Background()) // Can't do this for the trigger because it's not 'ready' yet
+	_ = recordevents.DeployEventRecordOrFail(client, loggerPodName)
+	client.WaitForAllTestResourcesReadyOrFail() // Can't do this for the trigger because it's not 'ready' yet
 	client.CreateTriggerOrFail(triggerName,
 		resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
 		resources.WithSubscriberServiceRefForTrigger(loggerPodName),
@@ -102,7 +100,7 @@ func brokerV1CreatedToReadyHelper(brokerName string, client *testlib.Client, bro
 func readyBrokerV1AvailableHelper(t *testing.T, brokerName string, client *testlib.Client) {
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
 	obj := resources.NewMetaResource(brokerName, client.Namespace, testlib.BrokerTypeMeta)
-	_, err := duck.GetAddressableURI(client.Dynamic, obj)
+	_, err := client.Duck.GetAddressableURI(obj)
 	if err != nil {
 		t.Fatal("Broker is not addressable", err)
 	}
@@ -123,12 +121,12 @@ func triggerV1ReadyBrokerReadyHelper(triggerName, brokerName string, client *tes
 
 func triggerV1CanNotUpdateBroker(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
-		tr, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
+		tr, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(client.Ctx, triggerName, metav1.GetOptions{})
 		if err != nil {
 			t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
 		}
 		tr.Spec.Broker = brokerName
-		_, e := client.Eventing.EventingV1().Triggers(client.Namespace).Update(context.Background(), tr, metav1.UpdateOptions{})
+		_, e := client.Eventing.EventingV1().Triggers(client.Namespace).Update(client.Ctx, tr, metav1.UpdateOptions{})
 		return e
 	})
 	if err == nil {
@@ -147,7 +145,7 @@ func triggerV1ReadyIncludesSubURI(t *testing.T, triggerName string, client *test
 	err := client.RetryWebhookErrors(func(attempts int) (err error) {
 		var e error
 		client.T.Logf("Getting v1 trigger %s", triggerName)
-		tr, e = triggers.Get(context.Background(), triggerName, metav1.GetOptions{})
+		tr, e = triggers.Get(client.Ctx, triggerName, metav1.GetOptions{})
 		if e != nil {
 			client.T.Logf("Failed to get trigger %q: %v", triggerName, e)
 		}

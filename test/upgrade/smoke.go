@@ -17,7 +17,6 @@ limitations under the License.
 package upgrade
 
 import (
-	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -29,7 +28,6 @@ var channelTestRunner lib.ComponentsTestRunner
 
 func runSmokeTest(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
-		context.Background(),
 		t,
 		cloudevents.EncodingBinary,
 		helpers.SubscriptionV1,

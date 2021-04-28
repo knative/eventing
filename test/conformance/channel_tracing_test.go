@@ -19,7 +19,6 @@ limitations under the License.
 package conformance
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
@@ -27,5 +26,5 @@ import (
 )
 
 func TestChannelTracingWithReply(t *testing.T) {
-	helpers.ChannelTracingTestHelperWithChannelTestRunner(context.Background(), t, channelTestRunner, testlib.SetupClientOptionNoop)
+	helpers.ChannelTracingTestHelperWithChannelTestRunner(t, channelTestRunner, testlib.SetupClientOptionNoop)
 }

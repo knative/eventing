@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +33,7 @@ import (
 // TestTriggerNoBroker will create a Trigger with a non-existent broker, then it will ensure
 // the Status is correctly reflected as failed with BrokerDoesNotExist. Then it will create
 // the broker and ensure that Trigger / Broker will get to Ready state.
-func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brokerCreator BrokerCreator) {
+func TestTriggerNoBroker(t *testing.T, channel string, brokerCreator BrokerCreator) {
 	t.Skipf("triggers no longer get status written to them by the generic trigger controller.")
 
 	client := testlib.Setup(t, true)
@@ -42,7 +41,7 @@ func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brok
 	brokerName := strings.ToLower(channel)
 
 	subscriberName := "dumper-empty"
-	recordevents.DeployEventRecordOrFail(context.TODO(), client, subscriberName)
+	recordevents.DeployEventRecordOrFail(client, subscriberName)
 
 	client.CreateTriggerOrFail("testtrigger",
 		resources.WithSubscriberServiceRefForTrigger(subscriberName),
@@ -51,7 +50,7 @@ func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brok
 
 	// Then make sure the trigger is marked as not ready since there's no broker.
 	err := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
-		trigger, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(context.Background(), "testtrigger", metav1.GetOptions{})
+		trigger, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(client.Ctx, "testtrigger", metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -72,5 +71,5 @@ func TestTriggerNoBroker(ctx context.Context, t *testing.T, channel string, brok
 	}
 
 	// Wait for all test resources to become ready before sending the events.
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 }

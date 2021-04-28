@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -44,8 +43,6 @@ import (
 
 func TestChannelNamespaceDefaulting(t *testing.T) {
 
-	ctx := context.Background()
-
 	const (
 		defaultChannelCM        = "default-ch-webhook"
 		defaultChannelConfigKey = "default-ch-config"
@@ -58,7 +55,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		t.Log("Updating defaulting ConfigMap")
 
-		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, defaultChannelCM, metav1.GetOptions{})
+		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(c.Ctx, defaultChannelCM, metav1.GetOptions{})
 		require.Nil(t, err)
 
 		// Preserve existing namespace defaults.
@@ -83,7 +80,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 
 		cm.Data[defaultChannelConfigKey] = string(b)
 
-		cm, err = c.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(ctx, cm, metav1.UpdateOptions{})
+		cm, err = c.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(c.Ctx, cm, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
@@ -133,7 +130,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 		createdObj, err := c.Dynamic.
 			Resource(schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1", Resource: "channels"}).
 			Namespace(c.Namespace).
-			Create(ctx, obj, metav1.CreateOptions{})
+			Create(c.Ctx, obj, metav1.CreateOptions{})
 		require.Nil(t, err)
 
 		channel := &messagingv1.Channel{}
@@ -161,7 +158,7 @@ func TestChannelNamespaceDefaulting(t *testing.T) {
 	require.Nil(t, err)
 
 	err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-		imc, err := c.Eventing.MessagingV1().InMemoryChannels(c.Namespace).Get(ctx, lastName, metav1.GetOptions{})
+		imc, err := c.Eventing.MessagingV1().InMemoryChannels(c.Namespace).Get(c.Ctx, lastName, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

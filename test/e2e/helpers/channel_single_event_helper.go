@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -46,7 +45,6 @@ const (
 // channelVersion == "" means that the version of the channel subscribed to is not
 // modified.
 func SingleEventForChannelTestHelper(
-	ctx context.Context,
 	t *testing.T, encoding cloudevents.Encoding,
 	subscriptionVersion SubscriptionVersion,
 	channelVersion string,
@@ -66,7 +64,7 @@ func SingleEventForChannelTestHelper(
 		client.CreateChannelOrFail(channelName, &channel)
 
 		// create event logger pod and service
-		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, eventRecorder)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
 		// If the caller specified a different version, override it here.
 		if channelVersion != "" {
 			st.Logf("Changing API version from: %q to %q", channel.APIVersion, channelVersion)
@@ -86,7 +84,7 @@ func SingleEventForChannelTestHelper(
 		}
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send CloudEvent to the channel
 		event := cloudevents.NewEvent()
@@ -102,7 +100,6 @@ func SingleEventForChannelTestHelper(
 		}
 
 		client.SendEventToAddressable(
-			ctx,
 			senderName,
 			channelName,
 			&channel,

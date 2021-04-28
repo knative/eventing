@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -38,13 +37,12 @@ import (
 // ChannelTracingTestHelperWithChannelTestRunner runs the Channel tracing tests for all Channels in
 // the ComponentsTestRunner.
 func ChannelTracingTestHelperWithChannelTestRunner(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	setupClient testlib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		tracingTest(ctx, t, setupClient, setupChannelTracingWithReply, channel)
+		tracingTest(t, setupClient, setupChannelTracingWithReply, channel)
 	})
 }
 
@@ -55,7 +53,6 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 // It returns the expected trace tree and a match function that is expected to be sent
 // by the SendEvents Pod and should be present in the RecordEvents list of events.
 func setupChannelTracingWithReply(
-	ctx context.Context,
 	t *testing.T,
 	channel *metav1.TypeMeta,
 	client *testlib.Client,
@@ -71,11 +68,10 @@ func setupChannelTracingWithReply(
 	client.CreateChannelOrFail(replyChannelName, channel)
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
-	recordEventsPod := recordevents.DeployEventRecordOrFail(ctx, client, recordEventsPodName)
+	recordEventsPod := recordevents.DeployEventRecordOrFail(client, recordEventsPodName)
 
 	// Create the subscriber, a Pod that mutates the event.
 	mutatingPod := recordevents.DeployEventRecordOrFail(
-		ctx,
 		client,
 		"mutator",
 		recordevents.ReplyWithTransformedEvent(
@@ -102,7 +98,7 @@ func setupChannelTracingWithReply(
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// Everything is setup to receive an event. Generate a CloudEvent.
 	senderName := "sender"
@@ -118,9 +114,9 @@ func setupChannelTracingWithReply(
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	if senderPublishTrace {
-		client.SendEventToAddressable(ctx, senderName, channelName, channel, event, sender.EnableTracing())
+		client.SendEventToAddressable(senderName, channelName, channel, event, sender.EnableTracing())
 	} else {
-		client.SendEventToAddressable(ctx, senderName, channelName, channel, event)
+		client.SendEventToAddressable(senderName, channelName, channel, event)
 	}
 
 	// We expect the following spans:

@@ -18,7 +18,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +47,6 @@ func TestEventTransformationForTriggerV1BrokerV1(t *testing.T) {
 func runTest(t *testing.T, brokerVersion string, triggerVersion string) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
 		helpers.EventTransformationForTriggerTestHelper(
-			context.Background(),
 			t,
 			brokerVersion,
 			triggerVersion,

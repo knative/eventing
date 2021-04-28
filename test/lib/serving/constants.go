@@ -1,7 +1,5 @@
-// +build e2e
-
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,18 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package serving
 
 import (
-	"testing"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/e2e/helpers"
-	testlib "knative.dev/eventing/test/lib"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestTriggerNoBroker(t *testing.T) {
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		helpers.TestTriggerNoBroker(t, channel.Kind, helpers.ChannelBasedBrokerCreator(channel, brokerClass))
-	})
-}
+// Kind for Knative resources.
+const (
+	KServiceKind = "Service"
+	APIVersion   = "serving.knative.dev/v1"
+)
+
+var (
+	// KServicesGVR is GroupVersionResource for Knative Service
+	KServicesGVR = schema.GroupVersionResource{
+		Group:    "serving.knative.dev",
+		Version:  "v1",
+		Resource: "services",
+	}
+	// KServiceType is type of Knative Service
+	KServiceType = metav1.TypeMeta{
+		Kind:       "Service",
+		APIVersion: KServicesGVR.GroupVersion().String(),
+	}
+)

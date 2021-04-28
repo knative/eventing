@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -52,10 +51,8 @@ func TestContainerSourceV1Beta1(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
-	ctx := context.Background()
-
 	// create event record pod
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
 	// create container source
 	message := fmt.Sprintf("msg %s for TestContainerSource", uuid.NewUUID())
 	// args are the arguments passing to the container, msg is used in the heartbeats image
@@ -94,7 +91,7 @@ func TestContainerSourceV1Beta1(t *testing.T) {
 	client.CreateContainerSourceV1Beta1OrFail(containerSource)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	eventTracker.AssertAtLeast(2, recordevents.MatchEvent(

@@ -1,7 +1,5 @@
-// +build e2e
-
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,18 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package serving
 
-import (
-	"testing"
+import "knative.dev/eventing/test/lib/duck"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/e2e/helpers"
-	testlib "knative.dev/eventing/test/lib"
-)
+// Client is a client for unstructured serving client.
+type Client struct {
+	Duck *duck.Client
+}
 
-func TestTriggerNoBroker(t *testing.T) {
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		helpers.TestTriggerNoBroker(t, channel.Kind, helpers.ChannelBasedBrokerCreator(channel, brokerClass))
-	})
+// KServiceRoute represents ksvc route, so how much traffic is routed to given deployment
+type KServiceRoute struct {
+	TrafficPercent uint8
+	DeploymentName string
 }

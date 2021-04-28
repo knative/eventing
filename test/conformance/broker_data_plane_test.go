@@ -19,16 +19,15 @@ limitations under the License.
 package conformance
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
 )
 
 func TestBrokerDataPlaneIngress(t *testing.T) {
-	helpers.BrokerIngressDataPlaneTestHelper(context.Background(), t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(context.Background(), brokerTestRunner.ComponentNamespace))
+	helpers.BrokerIngressDataPlaneTestHelper(t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(brokerTestRunner.ComponentNamespace))
 }
 
 func TestBrokerDataPlaneConsumer(t *testing.T) {
-	helpers.BrokerConsumerDataPlaneTestHelper(context.Background(), t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(context.Background(), brokerTestRunner.ComponentNamespace))
+	helpers.BrokerConsumerDataPlaneTestHelper(t, brokerClass, brokerTestRunner, helpers.BrokerDataPlaneNamespaceSetupOption(brokerTestRunner.ComponentNamespace))
 }

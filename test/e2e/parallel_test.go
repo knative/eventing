@@ -18,16 +18,15 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/eventing/test/e2e/helpers"
 )
 
 func TestParallel(t *testing.T) {
-	helpers.ParallelTestHelper(context.Background(), t, channelTestRunner)
+	helpers.ParallelTestHelper(t, channelTestRunner)
 }
 
 func TestParallelV1(t *testing.T) {
-	helpers.ParallelV1TestHelper(context.Background(), t, channelTestRunner)
+	helpers.ParallelV1TestHelper(t, channelTestRunner)
 }

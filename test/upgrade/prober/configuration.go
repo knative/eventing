@@ -17,7 +17,6 @@ package prober
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -30,8 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/serving"
 	"knative.dev/pkg/apis"
 )
 
@@ -58,7 +57,6 @@ var eventTypes = []string{"step", "finished"}
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Namespace     string
 	Interval      time.Duration
 	FinishedSleep time.Duration
 	Serving       ServingConfig
@@ -93,9 +91,8 @@ type ServingConfig struct {
 // NewConfig creates a new configuration object with default values filled in.
 // Values can be influenced by kelseyhightower/envconfig with
 // `e2e_upgrade_tests` prefix.
-func NewConfig(namespace string) *Config {
+func NewConfig() *Config {
 	config := &Config{
-		Namespace:     "",
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
@@ -123,7 +120,6 @@ func NewConfig(namespace string) *Config {
 
 	err := envconfig.Process("e2e_upgrade_tests", config)
 	ensure.NoError(err)
-	config.Namespace = namespace
 	return config
 }
 
@@ -138,18 +134,18 @@ func (p *prober) deployBroker() {
 }
 
 func (p *prober) fetchBrokerURL() (*apis.URL, error) {
-	namespace := p.config.Namespace
+	namespace := p.client.Namespace
 	p.log.Debugf("Fetching %s broker URL for ns %s",
 		p.config.BrokerName, namespace)
 	meta := resources.NewMetaResource(
-		p.config.BrokerName, p.config.Namespace, testlib.BrokerTypeMeta,
+		p.config.BrokerName, p.client.Namespace, testlib.BrokerTypeMeta,
 	)
-	err := duck.WaitForResourceReady(p.client.Dynamic, meta)
+	err := p.client.Duck.WaitForResourceReady(meta)
 	if err != nil {
 		return nil, err
 	}
 	broker, err := p.client.Eventing.EventingV1().Brokers(namespace).Get(
-		context.Background(), p.config.BrokerName, metav1.GetOptions{},
+		p.client.Ctx, p.config.BrokerName, metav1.GetOptions{},
 	)
 	if err != nil {
 		return nil, err
@@ -162,11 +158,11 @@ func (p *prober) fetchBrokerURL() (*apis.URL, error) {
 
 func (p *prober) deployConfigMap() {
 	name := p.config.ConfigMapName
-	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
+	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
 	brokerURL, err := p.fetchBrokerURL()
 	ensure.NoError(err)
 	configData := p.compileTemplate(p.config.ConfigTemplate, brokerURL)
-	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{
+	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
@@ -177,7 +173,7 @@ func (p *prober) deployTriggers() {
 		fullType := fmt.Sprintf("%v.%v", p.config.EventsTypePrefix, eventType)
 		subscriberOption := resources.WithSubscriberServiceRefForTrigger(receiverName)
 		if p.config.Serving.Use {
-			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
+			subscriberOption = serving.WithSubscriberKServiceRefForTrigger(forwarderName)
 		}
 		p.client.CreateTriggerOrFail(name,
 			resources.WithBroker(p.config.BrokerName),
@@ -201,9 +197,11 @@ func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) st
 	var buff bytes.Buffer
 	data := struct {
 		*Config
+		Namespace string
 		BrokerURL string
 	}{
 		p.config,
+		p.client.Namespace,
 		brokerURL.String(),
 	}
 	ensure.NoError(tmpl.Execute(&buff, data))

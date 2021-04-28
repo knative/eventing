@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -37,7 +36,6 @@ import (
 	"knative.dev/eventing/pkg/apis/messaging/config"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -54,7 +52,6 @@ const (
 
 // ChannelClusterDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelClusterDefaulterTestHelper(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -69,13 +66,12 @@ func ChannelClusterDefaulterTestHelper(
 			st.Fatal("Failed to update the defaultchannel configmap:", err)
 		}
 
-		defaultChannelTestHelper(ctx, st, client, channel)
+		defaultChannelTestHelper(st, client, channel)
 	})
 }
 
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelNamespaceDefaulterTestHelper(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -91,11 +87,11 @@ func ChannelNamespaceDefaulterTestHelper(
 			st.Fatal("Failed to update the defaultchannel configmap:", err)
 		}
 
-		defaultChannelTestHelper(ctx, st, client, channel)
+		defaultChannelTestHelper(st, client, channel)
 	})
 }
 
-func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib.Client, expectedChannel metav1.TypeMeta) {
+func defaultChannelTestHelper(t *testing.T, client *testlib.Client, expectedChannel metav1.TypeMeta) {
 	channelName := "e2e-defaulter-channel"
 	senderName := "e2e-defaulter-sender"
 	subscriptionName := "e2e-defaulter-subscription"
@@ -105,7 +101,7 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 	client.CreateChannelWithDefaultOrFail(eventingtesting.NewChannel(channelName, client.Namespace))
 
 	// create event logger pod and service as the subscriber
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 	// create subscription to subscribe the channel, and forward the received events to the logger service
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
@@ -115,11 +111,11 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
 	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
-	objs, err := duck.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduckv1.Subscribable{})
+	objs, err := client.Duck.GetGenericObjectList(metaResourceList, &eventingduckv1.Subscribable{})
 	if err != nil {
 		t.Fatal("Failed to list the underlying channels:", err)
 	}
@@ -153,7 +149,7 @@ func defaultChannelTestHelper(ctx context.Context, t *testing.T, client *testlib
 	if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 		t.Fatal("Cannot set the payload of the event:", err.Error())
 	}
-	client.SendEventToAddressable(ctx, senderName, channelName, testlib.ChannelTypeMeta, event)
+	client.SendEventToAddressable(senderName, channelName, testlib.ChannelTypeMeta, event)
 
 	// verify the logger service receives the event
 	eventTracker.AssertAtLeast(1, recordevents.MatchEvent(
@@ -168,7 +164,7 @@ func updateDefaultChannelCM(client *testlib.Client, updateConfig func(config *co
 
 	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// get the defaultchannel configmap
-		configMap, err := cmInterface.Get(context.Background(), configMapName, metav1.GetOptions{})
+		configMap, err := cmInterface.Get(client.Ctx, configMapName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -189,7 +185,7 @@ func updateDefaultChannelCM(client *testlib.Client, updateConfig func(config *co
 		}
 		// update the defaultchannel configmap
 		configMap.Data[channelDefaulterKey] = string(configBytes)
-		_, err = cmInterface.Update(context.Background(), configMap, metav1.UpdateOptions{})
+		_, err = cmInterface.Update(client.Ctx, configMap, metav1.UpdateOptions{})
 		return err
 	})
 	if err != nil {

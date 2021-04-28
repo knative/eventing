@@ -18,7 +18,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -55,8 +54,6 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
-	ctx := context.Background()
-
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
 		t.Fatal("Error annotating namespace:", err)
@@ -65,9 +62,9 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client.WaitForResourceReadyOrFail(defaultBrokerName, testlib.BrokerTypeMeta)
 
 	// Create subscribers.
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, subscriberName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
 	// Wait for subscriber to become ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// Create triggers.
 	client.CreateTriggerOrFail(triggerName,

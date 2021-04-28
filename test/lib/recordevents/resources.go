@@ -17,7 +17,6 @@ limitations under the License.
 package recordevents
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 
@@ -75,7 +74,7 @@ func envOption(key, value string) EventRecordOption {
 }
 
 // EchoEvent is an option to let the recordevents reply with the received event
-var EchoEvent EventRecordOption = envOption("REPLY", "true")
+var EchoEvent = envOption("REPLY", "true")
 
 // ReplyWithTransformedEvent is an option to let the recordevents reply with the transformed event
 func ReplyWithTransformedEvent(replyEventType string, replyEventSource string, replyEventData string) EventRecordOption {
@@ -135,7 +134,7 @@ func serializeHeaders(headers map[string]string) string {
 }
 
 // DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
-func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
+func DeployEventRecordOrFail(client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
 	client.CreateServiceAccountOrFail(name)
 	client.CreateRoleOrFail(resources.Role(name,
 		resources.WithRuleForRole(&rbacv1.PolicyRule{
@@ -159,16 +158,16 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 
 	eventRecordPod := recordEventsPod("recordevents", name, name)
 	client.CreatePodOrFail(eventRecordPod, options...)
-	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
+	err := pkgtest.WaitForPodRunning(client.Ctx, client.Kube, name, client.Namespace)
 	if err != nil {
 		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", name, errors.WithStack(err))
 	}
-	client.WaitForServiceEndpointsOrFail(ctx, name, 1)
+	client.WaitForServiceEndpointsOrFail(name, 1)
 	return eventRecordPod
 }
 
 // DeployEventSenderOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
-func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name string, sink string, options ...EventRecordOption) *corev1.Pod {
+func DeployEventSenderOrFail(client *testlib.Client, name string, sink string, options ...EventRecordOption) *corev1.Pod {
 	client.CreateServiceAccountOrFail(name)
 	client.CreateRoleOrFail(resources.Role(name,
 		resources.WithRuleForRole(&rbacv1.PolicyRule{
@@ -192,7 +191,7 @@ func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name s
 
 	eventRecordPod := recordEventsPod("recordevents", name, name)
 	client.CreatePodOrFail(eventRecordPod, options...)
-	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
+	err := pkgtest.WaitForPodRunning(client.Ctx, client.Kube, name, client.Namespace)
 	if err != nil {
 		client.T.Fatalf("Failed to start the recordevent pod '%s': %v", name, errors.WithStack(err))
 	}

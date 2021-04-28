@@ -42,8 +42,8 @@ const (
 )
 
 // Verify will verify prober state after finished has been sent.
-func (p *prober) Verify(ctx context.Context) (eventErrs []error, eventsSent int, fetchErr error) {
-	report := p.fetchReport(ctx)
+func (p *prober) Verify() (eventErrs []error, eventsSent int, fetchErr error) {
+	report := p.fetchReport(p.client.Ctx)
 	availRate := 0.0
 	if report.TotalRequests != 0 {
 		availRate = float64(report.EventsSent*100) / float64(report.TotalRequests)
@@ -75,8 +75,8 @@ func (p *prober) Verify(ctx context.Context) (eventErrs []error, eventsSent int,
 }
 
 // Finish terminates sender which sends finished event.
-func (p *prober) Finish(ctx context.Context) {
-	p.removeSender(ctx)
+func (p *prober) Finish() {
+	p.removeSender()
 }
 
 func (p *prober) fetchReport(ctx context.Context) *receiver.Report {
@@ -101,7 +101,7 @@ func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
 }
 
 func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
-	ns := p.config.Namespace
+	ns := p.client.Namespace
 	job := p.deployFetcher(ctx)
 	defer p.deleteFetcher(ctx)
 	pod, err := p.findSucceededPod(ctx, job)
@@ -129,7 +129,7 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 
 func (p *prober) deployFetcher(ctx context.Context) *batchv1.Job {
 	p.log.Info("Deploying fetcher job: ", fetcherName)
-	jobs := p.client.Kube.BatchV1().Jobs(p.config.Namespace)
+	jobs := p.client.Kube.BatchV1().Jobs(p.client.Namespace)
 	var replicas int32 = 1
 	fetcherJob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -173,14 +173,14 @@ func (p *prober) deployFetcher(ctx context.Context) *batchv1.Job {
 	created, err := jobs.Create(ctx, fetcherJob, metav1.CreateOptions{})
 	ensure.NoError(err)
 	p.log.Info("Waiting for fetcher job to succeed: ", fetcherName)
-	err = waitForJobToComplete(ctx, p.client.Kube, fetcherName, p.config.Namespace)
+	err = waitForJobToComplete(ctx, p.client.Kube, fetcherName, p.client.Namespace)
 	ensure.NoError(err)
 
 	return created
 }
 
 func (p *prober) deleteFetcher(ctx context.Context) {
-	ns := p.config.Namespace
+	ns := p.client.Namespace
 	jobs := p.client.Kube.BatchV1().Jobs(ns)
 	err := jobs.Delete(ctx, fetcherName, metav1.DeleteOptions{})
 	ensure.NoError(err)

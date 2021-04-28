@@ -18,7 +18,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -50,10 +49,8 @@ func TestPingSourceV1Beta1(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
-	ctx := context.Background()
-
 	// create event logger pod and service
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
 	// create cron job source
 	data := fmt.Sprintf(`{"msg":"TestPingSource %s"}`, uuid.NewUUID())
 	source := rttestingv1beta1.NewPingSource(
@@ -71,7 +68,7 @@ func TestPingSourceV1Beta1(t *testing.T) {
 	client.CreatePingSourceV1Beta1OrFail(source)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event and only once
 	eventTracker.AssertExact(1, recordevents.MatchEvent(
@@ -87,8 +84,6 @@ func TestPingSourceV1Beta1EventTypes(t *testing.T) {
 
 	client := setup(t, true)
 	defer tearDown(client)
-
-	ctx := context.Background()
 
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
@@ -115,10 +110,10 @@ func TestPingSourceV1Beta1EventTypes(t *testing.T) {
 	client.CreatePingSourceV1Beta1OrFail(source)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// Verify that an EventType was created.
-	eventTypes, err := waitForEventTypes(ctx, client, 1)
+	eventTypes, err := waitForEventTypes(client, 1)
 	if err != nil {
 		t.Fatal("Waiting for EventTypes:", err)
 	}

@@ -31,10 +31,10 @@ import (
 )
 
 func (c *Client) ExportLogs(dir string) error {
-	return exportLogs(c.Kube, c.Namespace, dir, c.T.Logf)
+	return exportLogs(c.Kube, c.Ctx, c.Namespace, dir, c.T.Logf)
 }
 
-func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func(format string, args ...interface{})) error {
+func exportLogs(kubeClient *test.KubeClient, ctx context.Context, namespace, dir string, logFunc func(format string, args ...interface{})) error {
 
 	// Create a directory for the namespace.
 	logPath := filepath.Join(dir, namespace)
@@ -42,7 +42,7 @@ func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func
 		return fmt.Errorf("error creating directory %q: %w", namespace, err)
 	}
 
-	pods, err := kubeClient.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	pods, err := kubeClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing pods in namespace %q: %w", namespace, err)
 	}
@@ -56,7 +56,7 @@ func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error creating file %q: %w", fn, err))
 			}
-			log, err := kubeClient.PodLogs(context.Background(), pod.Name, ct.Name, pod.Namespace)
+			log, err := kubeClient.PodLogs(ctx, pod.Name, ct.Name, pod.Namespace)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error getting logs for pod %q container %q: %w", pod.Name, ct.Name, err))
 			}
@@ -83,7 +83,8 @@ func ExportLogs(systemLogsDir, systemNamespace string) {
 		}
 
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), systemLogsDir)
-		if err := exportLogs(kubeClient, systemNamespace, dir, log.Printf); err != nil {
+		ctx := context.Background()
+		if err := exportLogs(kubeClient, ctx, systemNamespace, dir, log.Printf); err != nil {
 			log.Printf("Error in exporting logs: %v", err)
 		}
 	}

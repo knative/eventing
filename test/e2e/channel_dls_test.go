@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/eventing/test/e2e/helpers"
@@ -27,9 +26,9 @@ import (
 
 // TestChannelDeadLetterSink tests DeadLetterSink
 func TestChannelDeadLetterSinkV1(t *testing.T) {
-	helpers.ChannelDeadLetterSinkTestHelper(context.Background(), t, helpers.SubscriptionV1, channelTestRunner)
+	helpers.ChannelDeadLetterSinkTestHelper(t, helpers.SubscriptionV1, channelTestRunner)
 }
 
 func TestChannelDeadLetterSinkDefault(t *testing.T) {
-	helpers.ChannelDeadLetterSinkDefaultTestHelper(context.Background(), t, channelTestRunner)
+	helpers.ChannelDeadLetterSinkDefaultTestHelper(t, channelTestRunner)
 }

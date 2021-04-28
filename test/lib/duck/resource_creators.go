@@ -19,20 +19,15 @@ limitations under the License.
 package duck
 
 import (
-	"context"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
 
 // CreateGenericChannelObject create a generic channel object with the dynamic client and channel's meta data.
-func CreateGenericChannelObject(
-	dynamicClient dynamic.Interface,
+func (c *Client) CreateGenericChannelObject(
 	obj *resources.MetaResource,
 ) ( /*plural*/ schema.GroupVersionResource, error) {
 	// get the resource's gvr
@@ -42,7 +37,7 @@ func CreateGenericChannelObject(
 		return gvr, err
 	}
 
-	channelResourceInterface := dynamicClient.Resource(gvr).Namespace(obj.Namespace)
-	_, err = channelResourceInterface.Create(context.Background(), newChannel, metav1.CreateOptions{})
+	channelResourceInterface := c.Dynamic.Resource(gvr).Namespace(obj.Namespace)
+	_, err = channelResourceInterface.Create(c.Ctx(), newChannel, metav1.CreateOptions{})
 	return gvr, err
 }

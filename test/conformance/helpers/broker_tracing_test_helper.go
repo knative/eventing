@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -38,14 +37,13 @@ import (
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
 // the ComponentsTestRunner.
 func BrokerTracingTestHelperWithChannelTestRunner(
-	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
 	channelTestRunner testlib.ComponentsTestRunner,
 	setupClient testlib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
-		tracingTest(ctx, t, setupClient, setupBrokerTracing(ctx, brokerClass), channel)
+		tracingTest(t, setupClient, setupBrokerTracing(brokerClass), channel)
 	})
 }
 
@@ -56,7 +54,7 @@ func BrokerTracingTestHelperWithChannelTestRunner(
 // 4. Sender Pod which sends a 'foo' event.
 // It returns a string that is expected to be sent by the SendEvents Pod and should be present in
 // the LogEvents Pod logs.
-func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestInfrastructureFunc {
+func setupBrokerTracing(brokerClass string) SetupTracingTestInfrastructureFunc {
 	const (
 		etTransformer = "transformer"
 		etLogger      = "logger"
@@ -65,7 +63,6 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		eventBody     = `{"msg":"TestBrokerTracing event-1"}`
 	)
 	return func(
-		ctx context.Context,
 		t *testing.T,
 		channel *metav1.TypeMeta,
 		client *testlib.Client,
@@ -82,7 +79,7 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		)
 
 		// Create a logger (EventRecord) Pod and a K8s Service that points to it.
-		_ = recordevents.DeployEventRecordOrFail(ctx, client, loggerPodName)
+		_ = recordevents.DeployEventRecordOrFail(client, loggerPodName)
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 		loggerTrigger := client.CreateTriggerOrFail(
@@ -95,7 +92,6 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		// Create a transformer Pod (recordevents with transform reply) that replies with the same event as the input,
 		// except the reply's event's type is changed to bar.
 		eventTransformerPod := recordevents.DeployEventRecordOrFail(
-			ctx,
 			client,
 			"transformer",
 			recordevents.ReplyWithTransformedEvent(
@@ -114,7 +110,7 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 		)
 
 		// Wait for all test resources to be ready, so that we can start sending events.
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// Everything is setup to receive an event. Generate a CloudEvent.
 		event := cloudevents.NewEvent()
@@ -127,9 +123,9 @@ func setupBrokerTracing(_ context.Context, brokerClass string) SetupTracingTestI
 
 		// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 		if senderPublishTrace {
-			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.EnableTracing())
+			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event, sender.EnableTracing())
 		} else {
-			client.SendEventToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, event)
+			client.SendEventToAddressable(senderName, broker.Name, testlib.BrokerTypeMeta, event)
 		}
 
 		// We expect the following spans:

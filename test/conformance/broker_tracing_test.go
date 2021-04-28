@@ -19,7 +19,6 @@ limitations under the License.
 package conformance
 
 import (
-	"context"
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
@@ -27,5 +26,5 @@ import (
 )
 
 func TestBrokerTracing(t *testing.T) {
-	helpers.BrokerTracingTestHelperWithChannelTestRunner(context.Background(), t, brokerClass, channelTestRunner, testlib.SetupClientOptionNoop)
+	helpers.BrokerTracingTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, testlib.SetupClientOptionNoop)
 }

@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"testing"
 
 	"encoding/json"
@@ -99,7 +98,7 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 		}
 
 		err = client.RetryWebhookErrors(func(attempt int) error {
-			_, e := client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(context.Background(), u, metav1.UpdateOptions{})
+			_, e := client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(client.Ctx, u, metav1.UpdateOptions{})
 			if e != nil {
 				client.T.Logf("Failed to update channel spec at attempt %d %q %q: %v", attempt, channel.Kind, channelName, e)
 			}

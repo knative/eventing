@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -44,8 +43,6 @@ import (
 )
 
 func TestBrokerNamespaceDefaulting(t *testing.T) {
-	ctx := context.Background()
-
 	c := testlib.Setup(t, true)
 	defer testlib.TearDown(c)
 
@@ -53,7 +50,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 
 		t.Log("Updating defaulting ConfigMap attempt:", attempt)
 
-		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, config.DefaultsConfigName, metav1.GetOptions{})
+		cm, err := c.Kube.CoreV1().ConfigMaps(system.Namespace()).Get(c.Ctx, config.DefaultsConfigName, metav1.GetOptions{})
 		assert.Nil(t, err)
 
 		// Preserve existing namespace defaults.
@@ -83,7 +80,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 
 		cm.Data[config.BrokerDefaultsKey] = string(b)
 
-		cm, err = c.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(ctx, cm, metav1.UpdateOptions{})
+		cm, err = c.Kube.CoreV1().ConfigMaps(system.Namespace()).Update(c.Ctx, cm, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
@@ -133,7 +130,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 		createdObj, err := c.Dynamic.
 			Resource(schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "brokers"}).
 			Namespace(c.Namespace).
-			Create(ctx, obj, metav1.CreateOptions{})
+			Create(c.Ctx, obj, metav1.CreateOptions{})
 		require.Nil(t, err)
 		n = n + 1
 
@@ -160,7 +157,7 @@ func TestBrokerNamespaceDefaulting(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-		foundBroker, err := c.Eventing.EventingV1().Brokers(c.Namespace).Get(ctx, lastName, metav1.GetOptions{})
+		foundBroker, err := c.Eventing.EventingV1().Brokers(c.Namespace).Get(c.Ctx, lastName, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
