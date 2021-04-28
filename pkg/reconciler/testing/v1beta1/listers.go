@@ -32,11 +32,9 @@ import (
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	sourcev1beta1listers "knative.dev/eventing/pkg/client/listers/sources/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
@@ -124,18 +122,6 @@ func (l *Listers) GetEventTypeLister() eventingv1beta1listers.EventTypeLister {
 
 func (l *Listers) GetPingSourceV1beta1Lister() sourcev1beta1listers.PingSourceLister {
 	return sourcev1beta1listers.NewPingSourceLister(l.indexerFor(&sourcesv1beta1.PingSource{}))
-}
-
-func (l *Listers) GetContainerSourceLister() sourcev1alpha2listers.ContainerSourceLister {
-	return sourcev1alpha2listers.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha2.ContainerSource{}))
-}
-
-func (l *Listers) GetSinkBindingV1alpha2Lister() sourcev1alpha2listers.SinkBindingLister {
-	return sourcev1alpha2listers.NewSinkBindingLister(l.indexerFor(&sourcesv1alpha2.SinkBinding{}))
-}
-
-func (l *Listers) GetApiServerSourceV1alpha2Lister() sourcev1alpha2listers.ApiServerSourceLister {
-	return sourcev1alpha2listers.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha2.ApiServerSource{}))
 }
 
 func (l *Listers) GetApiServerSourceV1beta1Lister() sourcev1beta1listers.ApiServerSourceLister {

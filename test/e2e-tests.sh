@@ -36,7 +36,7 @@ echo "Running E2E tests for: Multi Tenant Channel Based Broker, Channel (v1), In
 go_test_e2e -timeout=30m -parallel=20 ./test/e2e \
   -brokerclass=MTChannelBasedBroker \
   -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel \
-  -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1alpha2:ContainerSource,sources.knative.dev/v1beta1:PingSource,sources.knative.dev/v1beta2:PingSource,sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource \
+  -sources=sources.knative.dev/v1beta1:ApiServerSource,sources.knative.dev/v1beta1:PingSource,sources.knative.dev/v1beta2:PingSource,sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource \
   || fail_test
 
 success
