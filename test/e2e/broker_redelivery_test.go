@@ -44,7 +44,8 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) help
 		backoff := eventingduckv1.BackoffPolicyLinear
 
 		// create a new broker.
-		client.CreateBrokerOrFail(brokerName,
+		client.CreateBrokerOrFail(
+			brokerName,
 			resources.WithBrokerClassForBroker(brokerClass),
 			resources.WithConfigForBroker(config),
 			func(broker *v1.Broker) {

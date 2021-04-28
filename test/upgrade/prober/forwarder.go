@@ -16,7 +16,6 @@
 package prober
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/wavesoftware/go-ensure"
@@ -32,11 +31,11 @@ var (
 	forwarderName = "wathola-forwarder"
 )
 
-func (p *prober) deployForwarder(ctx context.Context) {
+func (p *prober) deployForwarder() {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	service := p.forwarderKService(forwarderName, p.client.Namespace)
-	_, err := serving.Create(context.Background(), service, metav1.CreateOptions{})
+	_, err := serving.Create(p.config.Ctx, service, metav1.CreateOptions{})
 	ensure.NoError(err)
 
 	sc := p.servingClient()
@@ -46,7 +45,7 @@ func (p *prober) deployForwarder(ctx context.Context) {
 
 	if p.config.Serving.ScaleToZero {
 		testlib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
-			return duck.WaitForKServiceScales(ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
+			return duck.WaitForKServiceScales(p.config.Ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
 		})
@@ -56,7 +55,7 @@ func (p *prober) deployForwarder(ctx context.Context) {
 func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	err := serving.Delete(context.Background(), forwarderName, metav1.DeleteOptions{})
+	err := serving.Delete(p.config.Ctx, forwarderName, metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
 

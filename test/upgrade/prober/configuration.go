@@ -27,12 +27,10 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/upgrade/prober/sut"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -40,8 +38,7 @@ const (
 	defaultConfigHomedirPath   = ".config/wathola"
 	defaultHomedir             = "/home/nonroot"
 	defaultConfigFilename      = "config.toml"
-	defaultWatholaEventsPrefix = "com.github.cardil.wathola"
-	defaultBrokerName          = "default"
+	defaultWatholaEventsPrefix = "dev.knative.eventing.wathola"
 	defaultHealthEndpoint      = "/healthz"
 	defaultFinishedSleep       = 5 * time.Second
 
@@ -58,25 +55,24 @@ var eventTypes = []string{"step", "finished"}
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Namespace     string
 	Interval      time.Duration
 	FinishedSleep time.Duration
 	Serving       ServingConfig
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
-	BrokerOpts    []resources.BrokerOption
+	Ctx           context.Context
 }
 
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
-	ConfigMap
+	ConfigToml
+	sut.SystemUnderTest
 	EventsTypePrefix string
 	HealthEndpoint   string
-	BrokerName       string
 }
 
-// ConfigMap represents options of wathola config toml file.
-type ConfigMap struct {
+// ConfigToml represents options of wathola config toml file.
+type ConfigToml struct {
 	// ConfigTemplate is a template file that will be compiled to the configmap
 	ConfigTemplate   string
 	ConfigMapName    string
@@ -95,18 +91,17 @@ type ServingConfig struct {
 // `e2e_upgrade_tests` prefix.
 func NewConfig(namespace string) *Config {
 	config := &Config{
-		Namespace:     "",
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
 		OnDuplicate:   Warn,
-		BrokerOpts:    make([]resources.BrokerOption, 0),
+		Ctx:           context.Background(),
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
 		},
 		Wathola: Wathola{
-			ConfigMap: ConfigMap{
+			ConfigToml: ConfigToml{
 				ConfigTemplate:   defaultConfigFilename,
 				ConfigMapName:    defaultConfigName,
 				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
@@ -114,81 +109,40 @@ func NewConfig(namespace string) *Config {
 			},
 			EventsTypePrefix: defaultWatholaEventsPrefix,
 			HealthEndpoint:   defaultHealthEndpoint,
-			BrokerName:       defaultBrokerName,
+			SystemUnderTest:  sut.NewDefault(namespace, eventTypes),
 		},
 	}
 
-	// FIXME: remove while fixing https://github.com/knative/eventing/issues/2665
-	config.FailOnErrors = false
-
-	err := envconfig.Process("e2e_upgrade_tests", config)
+	err := envconfig.Process("eventing_upgrade_tests", config)
 	ensure.NoError(err)
-	config.Namespace = namespace
 	return config
 }
 
 func (p *prober) deployConfiguration() {
-	p.deployBroker()
-	p.deployConfigMap()
-	p.deployTriggers()
-}
-
-func (p *prober) deployBroker() {
-	p.client.CreateBrokerOrFail(p.config.BrokerName, p.config.BrokerOpts...)
-}
-
-func (p *prober) fetchBrokerURL() (*apis.URL, error) {
-	namespace := p.config.Namespace
-	p.log.Debugf("Fetching %s broker URL for ns %s",
-		p.config.BrokerName, namespace)
-	meta := resources.NewMetaResource(
-		p.config.BrokerName, p.config.Namespace, testlib.BrokerTypeMeta,
-	)
-	err := duck.WaitForResourceReady(p.client.Dynamic, meta)
-	if err != nil {
-		return nil, err
+	sc := sut.Context{
+		Ctx:    p.config.Ctx,
+		Log:    p.log,
+		Client: p.client,
 	}
-	broker, err := p.client.Eventing.EventingV1().Brokers(namespace).Get(
-		context.Background(), p.config.BrokerName, metav1.GetOptions{},
-	)
-	if err != nil {
-		return nil, err
+	ref := resources.KnativeRefForService(receiverName, p.client.Namespace)
+	if p.config.Serving.Use {
+		ref = resources.KnativeRefForKservice(forwarderName, p.client.Namespace)
 	}
-	url := broker.Status.Address.URL
-	p.log.Debugf("%s broker URL for ns %s is %v",
-		p.config.BrokerName, namespace, url)
-	return url, nil
+	dest := duckv1.Destination{Ref: ref}
+	url, err := p.config.SystemUnderTest.Deploy(sc, dest)
+	if err != nil {
+		p.client.T.Fatal(err)
+	}
+	p.deployConfigToml(url)
 }
 
-func (p *prober) deployConfigMap() {
+func (p *prober) deployConfigToml(url *apis.URL) {
 	name := p.config.ConfigMapName
-	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
-	brokerURL, err := p.fetchBrokerURL()
-	ensure.NoError(err)
-	configData := p.compileTemplate(p.config.ConfigTemplate, brokerURL)
-	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{
+	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
+	configData := p.compileTemplate(p.config.ConfigTemplate, url)
+	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
-}
-
-func (p *prober) deployTriggers() {
-	for _, eventType := range eventTypes {
-		name := fmt.Sprintf("wathola-trigger-%v", eventType)
-		fullType := fmt.Sprintf("%v.%v", p.config.EventsTypePrefix, eventType)
-		subscriberOption := resources.WithSubscriberServiceRefForTrigger(receiverName)
-		if p.config.Serving.Use {
-			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
-		}
-		p.client.CreateTriggerOrFail(name,
-			resources.WithBroker(p.config.BrokerName),
-			resources.WithAttributesTriggerFilter(
-				eventingv1.TriggerAnyFilter,
-				fullType,
-				map[string]interface{}{},
-			),
-			subscriberOption,
-		)
-	}
 }
 
 func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) string {
@@ -201,9 +155,11 @@ func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) st
 	var buff bytes.Buffer
 	data := struct {
 		*Config
+		Namespace string
 		BrokerURL string
 	}{
 		p.config,
+		p.client.Namespace,
 		brokerURL.String(),
 	}
 	ensure.NoError(tmpl.Execute(&buff, data))
