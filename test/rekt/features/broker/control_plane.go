@@ -929,6 +929,10 @@ func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]exp
 
 			t.Logf("Expected Events %s; \nGot: %#v\n Want: %#v", prefix, got, want)
 
+			if len(want.eventSuccess) != len(got.eventSuccess) {
+				t.Errorf("Wanted %d events, got %d", len(want.eventSuccess), len(got.eventSuccess))
+			}
+
 			// Check event acceptance.
 			if len(want.eventSuccess) != 0 && len(got.eventSuccess) != 0 {
 				if diff := cmp.Diff(want.eventSuccess, got.eventSuccess); diff != "" {
