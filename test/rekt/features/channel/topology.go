@@ -17,13 +17,11 @@ limitations under the License.
 package channel
 
 import (
-	"context"
 	"fmt"
-	"sort"
 	"strconv"
 
-	"github.com/google/go-cmp/cmp"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -132,63 +130,41 @@ func createChannelTopology(f *feature.Feature, chName string, chDS *v1.DeliveryS
 	return prober
 }
 
-type eventPattern struct {
-	success  []bool
-	interval []uint
-}
-
-func makeEventPattern(attempts, failures uint) eventPattern {
-	p := eventPattern{
-		success:  []bool{},
-		interval: []uint{},
-	}
-	for i := uint(0); i < attempts; i++ {
-		if i >= failures {
-			p.success = append(p.success, true)
-			p.interval = append(p.interval, 0) // TODO: calculate time.
-			return p
-		}
-		p.success = append(p.success, false)
-		p.interval = append(p.interval, 0) // TODO: calculate time.
-	}
-	return p
-}
-
 // createExpectedEventPatterns assumes a single event is sent.
-func createExpectedEventPatterns(chDS *v1.DeliverySpec, subs []subCfg) map[string]eventPattern {
+func createExpectedEventPatterns(chDS *v1.DeliverySpec, subs []subCfg) map[string]knconf.EventPattern {
 	// By default, assume that nothing gets anything.
-	p := map[string]eventPattern{
+	p := map[string]knconf.EventPattern{
 		"chdlq": {
-			success:  []bool{},
-			interval: []uint{},
+			Success:  []bool{},
+			Interval: []uint{},
 		},
 	}
 
 	chdlq := false
 
 	for _, sub := range subs {
-		p[sub.subName()] = eventPattern{
-			success:  []bool{},
-			interval: []uint{},
+		p[sub.subName()] = knconf.EventPattern{
+			Success:  []bool{},
+			Interval: []uint{},
 		}
-		p[sub.replyName()] = eventPattern{
-			success:  []bool{},
-			interval: []uint{},
+		p[sub.replyName()] = knconf.EventPattern{
+			Success:  []bool{},
+			Interval: []uint{},
 		}
-		p[sub.dlqName()] = eventPattern{
-			success:  []bool{},
-			interval: []uint{},
+		p[sub.dlqName()] = knconf.EventPattern{
+			Success:  []bool{},
+			Interval: []uint{},
 		}
 
 		skipReply := false
-		attempts := deliveryAttempts(sub.delivery, chDS)
+		attempts := knconf.DeliveryAttempts(sub.delivery, chDS)
 		// For subscriber.
 		if sub.hasSub {
-			p[sub.subName()] = makeEventPattern(attempts, sub.subFailCount)
+			p[sub.subName()] = knconf.PatternFromEstimates(attempts, sub.subFailCount)
 			if attempts <= sub.subFailCount {
 				skipReply = true
 				if sub.delivery != nil && sub.delivery.DeadLetterSink != nil {
-					p[sub.dlqName()] = makeEventPattern(1, 0)
+					p[sub.dlqName()] = knconf.PatternFromEstimates(1, 0)
 				} else {
 					chdlq = true
 				}
@@ -199,10 +175,10 @@ func createExpectedEventPatterns(chDS *v1.DeliverySpec, subs []subCfg) map[strin
 		}
 		// For reply.
 		if !skipReply && sub.hasReply {
-			p[sub.replyName()] = makeEventPattern(attempts, sub.replyFailCount)
+			p[sub.replyName()] = knconf.PatternFromEstimates(attempts, sub.replyFailCount)
 			if attempts <= sub.replyFailCount {
 				if sub.delivery != nil && sub.delivery.DeadLetterSink != nil {
-					p[sub.dlqName()] = makeEventPattern(1, 0)
+					p[sub.dlqName()] = knconf.PatternFromEstimates(1, 0)
 				} else {
 					chdlq = true
 				}
@@ -210,71 +186,8 @@ func createExpectedEventPatterns(chDS *v1.DeliverySpec, subs []subCfg) map[strin
 		}
 	}
 	if chdlq && chDS != nil && chDS.DeadLetterSink != nil {
-		p["chdlq"] = makeEventPattern(1, 0)
+		p["chdlq"] = knconf.PatternFromEstimates(1, 0)
 	}
 
 	return p
-}
-
-func deliveryAttempts(p0, p1 *v1.DeliverySpec) uint {
-	if p0 != nil {
-		if p0.Retry == nil || *p0.Retry == 0 {
-			return 1
-		}
-		return 1 + uint(*p0.Retry)
-	}
-
-	if p1 != nil {
-		if p1.Retry == nil || *p1.Retry == 0 {
-			return 1
-		}
-		return 1 + uint(*p1.Retry)
-	}
-
-	return 1
-}
-
-func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]eventPattern) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		for prefix, want := range expected {
-			got := happened(ctx, prober, prefix)
-
-			t.Logf("Expected Events %s; \n Got: %#v\nWant: %#v", prefix, got, want)
-
-			// Check event acceptance.
-			if len(want.success) != 0 && len(got.success) != 0 {
-				if diff := cmp.Diff(want.success, got.success); diff != "" {
-					t.Error("unexpected event acceptance behaviour (-want, +got) =", diff)
-				}
-			}
-			// Check timing.
-			//if len(want.eventInterval) != 0 && len(got.eventInterval) != 0 {
-			//	if diff := cmp.Diff(want.eventInterval, got.eventInterval); diff != "" {
-			//		t.Error("unexpected event interval behaviour (-want, +got) =", diff)
-			//	}
-			//}
-		}
-	}
-}
-
-// TODO: this function could be moved to the prober directly.
-func happened(ctx context.Context, prober *eventshub.EventProber, prefix string) eventPattern {
-	events := prober.ReceivedOrRejectedBy(ctx, prefix)
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Time.Before(events[j].Time)
-	})
-	got := eventPattern{
-		success:  make([]bool, 0),
-		interval: make([]uint, 0),
-	}
-	for i, event := range events {
-		got.success = append(got.success, event.Kind == eventshub.EventReceived)
-		if i == 0 {
-			got.interval = []uint{0}
-		} else {
-			diff := events[i-1].Time.Unix() - event.Time.Unix()
-			got.interval = append(got.interval, uint(diff))
-		}
-	}
-	return got
 }

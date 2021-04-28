@@ -201,7 +201,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 				gtg := true
 				for prefix, want := range expected {
 					events := prober.ReceivedOrRejectedBy(ctx, prefix)
-					if len(events) != len(want.success) {
+					if len(events) != len(want.Success) {
 						gtg = false
 					}
 				}
@@ -212,7 +212,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 			}
 		})
 
-		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expected))
+		f.Stable("Conformance").Should(tt.name, knconf.AssertEventPatterns(prober, expected))
 
 		// Add this feature to the feature set.
 		fs.Features = append(fs.Features, *f)

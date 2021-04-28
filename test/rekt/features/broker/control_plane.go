@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 
 	conformanceevent "github.com/cloudevents/conformance/pkg/event"
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,16 +35,13 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/delivery"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/ptr"
 	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/state"
 	"knative.dev/reconciler-test/resources/svc"
 )
@@ -292,7 +289,6 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 }
 
 func addControlPlaneDelivery(fs *feature.FeatureSet) {
-
 	for i, tt := range []struct {
 		name     string
 		brokerDS *v1.DeliverySpec
@@ -341,7 +337,14 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		// to created resources, but it's not granular enough.
 		brokerName := fmt.Sprintf("dlq-test-%d", i)
 		f := feature.NewFeatureNamed(fmt.Sprintf("Delivery Spec - %s", brokerName))
-		prober := createBrokerTriggerDeliveryTopology(f, brokerName, tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		cfg := []triggerCfg{{
+			delivery:  tt.t1DS,
+			failCount: tt.t1FailCount,
+		}, {
+			delivery:  tt.t2DS,
+			failCount: tt.t2FailCount,
+		}}
+		prober := createBrokerTriggerTopology(f, brokerName, tt.brokerDS, cfg)
 
 		// Send an event into the matrix and hope for the best
 		prober.SenderFullEvents(1)
@@ -349,7 +352,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		f.Requirement("sender is finished", prober.SenderDone("source"))
 
 		// All events have been sent, time to look at the specs and confirm we got them.
-		expectedEvents := createExpectedEventMap(tt.brokerDS, tt.t1DS, tt.t2DS, tt.t1FailCount, tt.t2FailCount)
+		expectedEvents := createExpectedEventPatterns(tt.brokerDS, cfg)
 
 		f.Requirement("wait until done", func(ctx context.Context, t feature.T) {
 			interval, timeout := environment.PollTimingsFromContext(ctx)
@@ -357,7 +360,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 				gtg := true
 				for prefix, want := range expectedEvents {
 					events := prober.ReceivedOrRejectedBy(ctx, prefix)
-					if len(events) != len(want.eventSuccess) {
+					if len(events) != len(want.Success) {
 						gtg = false
 					}
 				}
@@ -367,7 +370,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 				t.Failed()
 			}
 		})
-		f.Stable("Conformance").Should(tt.name, assertExpectedEvents(prober, expectedEvents))
+		f.Stable("Conformance").Should(tt.name, knconf.AssertEventPatterns(prober, expectedEvents))
 		f.Teardown("Delete feature resources", deleteFeatureResources())
 		fs.Features = append(fs.Features, *f)
 	}
@@ -393,23 +396,22 @@ func deleteFeatureResources() feature.StepFn {
 }
 
 func addControlPlaneEventRouting(fs *feature.FeatureSet) {
+
+	fullEvent := cetest.FullEvent()
+	replyEvent := cetest.FullEvent()
+	replyEvent.SetType("com.example.ReplyEvent")
+
 	for i, tt := range []struct {
 		name     string
-		config   []triggerTestConfig
+		config   []triggerCfg
 		inEvents []conformanceevent.Event
 	}{{
-		name:   "One trigger, no filter, gets event",
-		config: []triggerTestConfig{{}},
-		inEvents: []conformanceevent.Event{
-			{
-				Attributes: conformanceevent.ContextAttributes{
-					Type: "com.example.FullEvent",
-				},
-			},
-		},
+		name:     "One trigger, no filter, gets event",
+		config:   []triggerCfg{{}},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}, {
 		name: "One trigger, with filter, does not get event",
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
@@ -427,94 +429,67 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 		},
 	}, {
 		name: "One trigger, with filter, gets the event",
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "com.example.FullEvent",
-						//						"type": "mytype",
 					},
 				},
 			},
 		},
-		inEvents: []conformanceevent.Event{
-			{
-				Attributes: conformanceevent.ContextAttributes{
-					Type: "mytype",
-				},
-			},
-		},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}, {
 		// name: "Two triggers, with filter, both get the event",
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "com.example.FullEvent",
-						//						"type": "mytype",
 					},
 				},
-			},
-			{
+			}, {
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "com.example.FullEvent",
-						//						"type": "mytype",
 					},
 				},
 			},
 		},
-		inEvents: []conformanceevent.Event{
-			{
-				Attributes: conformanceevent.ContextAttributes{
-					//					Type: "mytype",
-					Type: "com.example.FullEvent",
-				},
-			},
-		},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}, {
 		name: "Two triggers, with filter, only matching one gets the event",
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "notmytype",
 					},
 				},
-			},
-			{
+			}, {
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "com.example.FullEvent",
-						//						"type": "mytype",
 					},
 				},
 			},
 		},
-		inEvents: []conformanceevent.Event{
-			{
-				Attributes: conformanceevent.ContextAttributes{
-					//					Type: "mytype",
-					Type: "com.example.FullEvent",
-				},
-			},
-		},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}, {
 		name: "Two triggers, with filter, first one matches incoming event, creates reply, which matches the second one",
-		config: []triggerTestConfig{
+		config: []triggerCfg{
 			{
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "com.example.FullEvent",
 					},
 				},
-				reply: &conformanceevent.Event{
-					Attributes: conformanceevent.ContextAttributes{
-						Type: "com.example.ReplyEvent",
-					},
-				},
-			},
-			{
+				reply: func() *conformanceevent.Event {
+					reply := knconf.EventToEvent(&replyEvent)
+					reply.Attributes.DataContentType = "application/json" // EventsHub defaults all data to this.
+					return &reply
+				}(),
+			}, {
 				filter: &eventingv1.TriggerFilter{
 					Attributes: eventingv1.TriggerFilterAttributes{
 						"type": "com.example.ReplyEvent",
@@ -522,33 +497,16 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 				},
 			},
 		},
-		inEvents: []conformanceevent.Event{
-			{
-				Attributes: conformanceevent.ContextAttributes{
-					Type: "com.example.FullEvent",
-				},
-			},
-		},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}, {
-		name:   "Two triggers, with no filters, both get the event",
-		config: []triggerTestConfig{{}, {}},
-		inEvents: []conformanceevent.Event{
-			{
-				Attributes: conformanceevent.ContextAttributes{
-					//					"type": "com.example.FullEvent",
-					Type: "com.example.FullEvent",
-				},
-			},
-		},
+		name:     "Two triggers, with no filters, both get the event",
+		config:   []triggerCfg{{}, {}},
+		inEvents: []conformanceevent.Event{knconf.EventToEvent(&fullEvent)},
 	}} {
-		// TODO: Each of these creates quite a few resources. We need to figure out a way
-		// to delete the resources for each Feature once the test completes. Today it's
-		// not easy (if at all possible) to do this, since Environment contains the References
-		// to created resources, but it's not granular enough.
 		brokerName := fmt.Sprintf("routing-test-%d", i)
 		f := feature.NewFeatureNamed(fmt.Sprintf("Event Routing Spec - %s", brokerName))
 		f.Setup("Set Broker Name", setBrokerName(brokerName))
-		prober := createBrokerTriggerEventRoutingTopology(f, brokerName, tt.config)
+		prober := createBrokerTriggerTopology(f, brokerName, nil, tt.config)
 
 		// Send an event into the matrix and hope for the best
 		// TODO: We need to do some work to get the event types into the Prober.
@@ -719,407 +677,4 @@ func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
 	} else {
 		t.Errorf("Trigger spec.broker is mutable")
 	}
-}
-
-//
-// createBrokerTriggerDeliveryTopology creates a topology that allows us to test the various
-// delivery configurations.
-//
-// source ---> [broker (brokerDS)] --+--[trigger1 (t1ds)]--> "t1"
-//                         |         |              |
-//                         |         |              +--> "t1dlq" (optional)
-//                         |         |
-//                         |         +-[trigger2 (t2ds)]--> "t2"
-//                         |                       |
-//                         |                       +--> "t2dlq" (optional)
-//                         |
-//                         +--[DLQ]--> "dlq" (optional)
-//
-func createBrokerTriggerDeliveryTopology(f *feature.Feature, brokerName string, brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) *eventshub.EventProber {
-	prober := eventshub.NewProber()
-
-	// TODO: Optimize these to only install things required. For example, if there's no t2 dlq, no point creating a prober for it.
-	f.Setup("install recorder for t1", prober.ReceiverInstall("t1", eventshub.DropFirstN(t1FailCount)))
-	f.Setup("install recorder for t1dlq", prober.ReceiverInstall("t1dlq"))
-	f.Setup("install recorder for t2", prober.ReceiverInstall("t2", eventshub.DropFirstN(t2FailCount)))
-	f.Setup("install recorder for t2dlq", prober.ReceiverInstall("t2dlq"))
-	f.Setup("install recorder for broker dlq", prober.ReceiverInstall("brokerdlq"))
-
-	brokerOpts := brokerresources.WithEnvConfig()
-
-	if brokerDS != nil {
-		if brokerDS.DeadLetterSink != nil {
-			brokerOpts = append(brokerOpts, delivery.WithDeadLetterSink(prober.AsKReference("brokerdlq"), ""))
-		}
-		if brokerDS.Retry != nil {
-			brokerOpts = append(brokerOpts, delivery.WithRetry(*brokerDS.Retry, brokerDS.BackoffPolicy, brokerDS.BackoffDelay))
-		}
-	}
-	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
-	f.Setup("Broker is Ready", brokerresources.IsReady(brokerName)) // We want to block until broker is ready to go.
-
-	prober.SetTargetResource(brokerresources.GVR(), brokerName)
-	t1Opts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference("t1"), "")}
-
-	if t1DS != nil {
-		if t1DS.DeadLetterSink != nil {
-			t1Opts = append(t1Opts, delivery.WithDeadLetterSink(prober.AsKReference("t1dlq"), ""))
-		}
-		if t1DS.Retry != nil {
-			t1Opts = append(t1Opts, delivery.WithRetry(*t1DS.Retry, t1DS.BackoffPolicy, t1DS.BackoffDelay))
-		}
-	}
-	f.Setup("Create Trigger1 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t1"), brokerName, t1Opts...))
-
-	t2Opts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference("t2"), "")}
-	if t2DS != nil {
-		if t2DS.DeadLetterSink != nil {
-			t2Opts = append(t2Opts, delivery.WithDeadLetterSink(prober.AsKReference("t2dlq"), ""))
-		}
-		if t2DS.Retry != nil {
-			t2Opts = append(t2Opts, delivery.WithRetry(*t2DS.Retry, t2DS.BackoffPolicy, t2DS.BackoffDelay))
-		}
-	}
-	f.Setup("Create Trigger2 with recorder", triggerresources.Install(feature.MakeRandomK8sName("t2"), brokerName, t2Opts...))
-	return prober
-}
-
-type expectedEvents struct {
-	eventSuccess []bool // events and their outcomes (succeeded or failed) in order received by the Receiver
-	// What is the minimum time between events above. If there's only one entry, it's irrelevant and will be useless. If there's, say
-	// two entries, the second entry is the time between the first and second event. And yeah, there should be 2 events in the above array.
-	eventInterval []uint
-}
-
-func retryCount(r *int32) uint {
-	if r == nil {
-		return 0
-	}
-	return uint(*r)
-}
-
-// createExpectedEventMap creates a datastructure for a given test topology created by `createBrokerTriggerDeliveryTopology` function.
-// Things we know from the DeliverySpecs passed in are where failed events from both t1 and t2 should land in.
-// We also know how many events (incoming as well as how many failures the trigger subscriber is supposed to see).
-// Note there are lot of baked assumptions and very tight coupling between this and `createBrokerTriggerDeliveryTopology` function.
-func createExpectedEventMap(brokerDS, t1DS, t2DS *v1.DeliverySpec, t1FailCount, t2FailCount uint) map[string]expectedEvents {
-	// By default, assume that nothing gets anything.
-	r := map[string]expectedEvents{
-		"t1": {
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		},
-		"t2": {
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		},
-		"t1dlq": {
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		},
-		"t2dlq": {
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		},
-		"brokerdlq": {
-			eventSuccess:  []bool{},
-			eventInterval: []uint{},
-		},
-	}
-
-	// For now we assume that there is only one incoming event that will then get retried at respective triggers according
-	// to their Delivery policy. Also depending on how the Delivery is configured, it may be delivered to triggers DLQ or
-	// the Broker DLQ.
-	if t1DS != nil && t1DS.DeadLetterSink != nil {
-		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
-		retryCount := retryCount(t1DS.Retry)
-		if t1FailCount >= retryCount {
-			// Ok, so we should have more failures than retries => one event in the t1dlq
-			r["t1dlq"] = expectedEvents{
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
-			}
-		}
-	}
-
-	if t2DS != nil && t2DS.DeadLetterSink != nil {
-		// There's a dead letter sink specified. Events can end up here if t1FailCount is greater than retry count
-		retryCount := retryCount(t2DS.Retry)
-		if t2FailCount >= retryCount {
-			// Ok, so we should have more failures than retries => one event in the t1dlq
-			r["t2dlq"] = expectedEvents{
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
-			}
-		}
-	}
-
-	if brokerDS != nil && brokerDS.DeadLetterSink != nil {
-		// There's a dead letter sink specified. Events can end up here if t1FailCount or t2FailCount is greater than retry count
-		retryCount := retryCount(brokerDS.Retry)
-		if t2FailCount >= retryCount || t1FailCount >= retryCount {
-			// Ok, so we should have more failures than retries => one event in the t1dlq
-			r["brokerdlq"] = expectedEvents{
-				eventSuccess:  []bool{true},
-				eventInterval: []uint{0},
-			}
-		}
-	}
-
-	// Ok, so that basically hopefully took care of if any of the DLQs should get events.
-
-	// Default is that there are no retries (they will get constructed below if there are), so assume
-	// no retries and failure or success based on the t1FailCount
-	r["t1"] = expectedEvents{
-		eventSuccess:  []bool{t1FailCount == 0},
-		eventInterval: []uint{0},
-	}
-
-	if t1DS != nil || brokerDS != nil {
-		// Check to see which DeliverySpec applies to Trigger
-		effectiveT1DS := t1DS
-		if t1DS == nil {
-			effectiveT1DS = brokerDS
-		}
-		r["t1"] = helper(retryCount(effectiveT1DS.Retry), t1FailCount, true)
-	}
-	r["t2"] = expectedEvents{
-		eventSuccess:  []bool{t2FailCount == 0},
-		eventInterval: []uint{0},
-	}
-	if t2DS != nil || brokerDS != nil {
-		// Check to see which DeliverySpec applies to Trigger
-		effectiveT2DS := t2DS
-		if t2DS == nil {
-			effectiveT2DS = brokerDS
-		}
-		r["t2"] = helper(retryCount(effectiveT2DS.Retry), t2FailCount, true)
-	}
-	return r
-}
-
-func helper(retry, failures uint, isLinear bool) expectedEvents {
-	if retry == 0 {
-		return expectedEvents{
-			eventSuccess:  []bool{failures == 0},
-			eventInterval: []uint{0},
-		}
-
-	}
-	r := expectedEvents{
-		eventSuccess:  make([]bool, 0),
-		eventInterval: make([]uint, 0),
-	}
-	for i := uint(0); i <= retry; i++ {
-		if failures == i {
-			r.eventSuccess = append(r.eventSuccess, true)
-			r.eventInterval = append(r.eventInterval, 0)
-			break
-		}
-		r.eventSuccess = append(r.eventSuccess, false)
-		r.eventInterval = append(r.eventInterval, 0)
-	}
-	return r
-}
-
-func assertExpectedEvents(prober *eventshub.EventProber, expected map[string]expectedEvents) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		for prefix, want := range expected {
-			got := happened(ctx, prober, prefix)
-
-			t.Logf("Expected Events %s; \nGot: %#v\n Want: %#v", prefix, got, want)
-
-			// Check event acceptance.
-			if len(want.eventSuccess) != 0 && len(got.eventSuccess) != 0 {
-				if diff := cmp.Diff(want.eventSuccess, got.eventSuccess); diff != "" {
-					t.Error("unexpected event acceptance behaviour (-want, +got) =", diff)
-				}
-			}
-			// TODO: Check timing.
-			//if len(want.eventInterval) != 0 && len(got.eventInterval) != 0 {
-			//	if diff := cmp.Diff(want.eventInterval, got.eventInterval); diff != "" {
-			//		t.Error("unexpected event interval behaviour (-want, +got) =", diff)
-			//	}
-			//}
-		}
-	}
-}
-
-func assertExpectedRoutedEvents(prober *eventshub.EventProber, expected map[string][]conformanceevent.Event) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		for prefix, want := range expected {
-			got := happenedFullEvent(ctx, prober, prefix)
-
-			t.Logf("Expected Events %s; \nGot: %#v\n Want: %#v", prefix, got, want)
-			if len(want) != len(got) {
-				t.Errorf("Wanted %d events, got %d", len(want), len(got))
-			}
-
-			// Check event acceptance.
-			if len(want) != 0 && len(got) != 0 {
-				if diff := cmp.Diff(want, got); diff != "" {
-					t.Error("unexpected event routing behaviour (-want, +got) =", diff)
-				}
-			}
-		}
-	}
-}
-
-// TODO: this function could be moved to the prober directly.
-func happened(ctx context.Context, prober *eventshub.EventProber, prefix string) expectedEvents {
-	events := prober.ReceivedOrRejectedBy(ctx, prefix)
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Time.Before(events[j].Time)
-	})
-	got := expectedEvents{
-		eventSuccess:  make([]bool, 0),
-		eventInterval: make([]uint, 0),
-	}
-	for i, event := range events {
-		got.eventSuccess = append(got.eventSuccess, event.Kind == eventshub.EventReceived)
-		if i == 0 {
-			got.eventInterval = []uint{0}
-		} else {
-			diff := events[i-1].Time.Unix() - event.Time.Unix()
-			got.eventInterval = append(got.eventInterval, uint(diff))
-		}
-	}
-	return got
-}
-
-// TODO: this function could be moved to the prober directly.
-func happenedFullEvent(ctx context.Context, prober *eventshub.EventProber, prefix string) []conformanceevent.Event {
-	events := prober.ReceivedOrRejectedBy(ctx, prefix)
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Time.Before(events[j].Time)
-	})
-	ret := make([]conformanceevent.Event, len(events))
-	for i, e := range events {
-		// TODO: yeah, like full event please...
-		ret[i] = conformanceevent.Event{
-			Attributes: conformanceevent.ContextAttributes{
-				Type: e.Event.Type(),
-			}}
-	}
-	return ret
-
-}
-
-// triggerTestConfig is used to define each Trigger behaviour used to construct the test topology by
-// createBrokerTriggerEventRoutingTopology
-type triggerTestConfig struct {
-	filter *eventingv1.TriggerFilter
-	reply  *conformanceevent.Event
-}
-
-//
-// createBrokerTriggerEventRoutingTopology creates a topology that allows us to test the various
-// trigger filter configurations. For each triggerConfig a Trigger will be created with an optional
-// filter as well as a reply that it will generate in response to any event that it receives.
-// For each entry in the triggerConfigs ("i"th entry will be ti in the picture below). If there's
-// a filter specified trigger is configured with it. If there's a reply, then the "t0" will be configured
-// to reply with that event. **REPLY FUNCTIONALITY DOES NOT WORK YET**
-// TODO: Fix the reply.
-//
-// source ---> [broker] --+--[t0 (optional filter)]--> "t0" (optional reply)
-//                        |
-//                        +--[t1 (optional filter)]--> "t1" (optional reply)
-//                        ...
-//                        +--[tN (optional filter)]--> "tN" (optional reply)
-//
-func createBrokerTriggerEventRoutingTopology(f *feature.Feature, brokerName string, triggerConfigs []triggerTestConfig) *eventshub.EventProber {
-	prober := eventshub.NewProber()
-
-	// Install the receivers for all the triggers
-	for i, config := range triggerConfigs {
-		triggerName := fmt.Sprintf("t%d", i)
-		var proberOpts []eventshub.EventsHubOption
-		if config.reply != nil {
-			proberOpts = append(proberOpts, eventshub.ReplyWithTransformedEvent(config.reply.Attributes.Type, config.reply.Attributes.Source, config.reply.Data))
-		}
-		f.Setup(fmt.Sprintf("install recorder for %s", triggerName), prober.ReceiverInstall(triggerName, proberOpts...))
-	}
-
-	brokerOpts := brokerresources.WithEnvConfig()
-
-	f.Setup("Create Broker", brokerresources.Install(brokerName, brokerOpts...))
-	f.Setup("Broker is Ready", brokerresources.IsReady(brokerName)) // We want to block until broker is ready to go.
-
-	prober.SetTargetResource(brokerresources.GVR(), brokerName)
-
-	for i, config := range triggerConfigs {
-		triggerName := fmt.Sprintf("t%d", i)
-		tOpts := []manifest.CfgFn{triggerresources.WithSubscriber(prober.AsKReference(triggerName), "")}
-		if config.filter != nil {
-			tOpts = append(tOpts, triggerresources.WithFilter(config.filter.Attributes))
-		}
-		f.Setup(fmt.Sprintf("Create %s with recorder", triggerName), triggerresources.Install(feature.MakeRandomK8sName(triggerName), brokerName, tOpts...))
-	}
-	return prober
-}
-
-// createExpectedEventRoutingMap takes in an array of trigger configurations as well as incoming events and
-// constructs a map of where the events should land. Any replies in trigger configurations will be treated
-// as matchable events (since they are going to be sent back to the Broker).
-// TODO: This function only handles replies generated to incoming events properly and it's fine for our
-// tests for now. But if you wanted to test calling filter T0 which would generated EReply which would
-// match filter T1 which would generate EReplyTwo, then that won't work.
-func createExpectedEventRoutingMap(triggerConfigs []triggerTestConfig, inEvents []conformanceevent.Event) map[string][]conformanceevent.Event {
-	ret := make(map[string][]conformanceevent.Event, len(triggerConfigs))
-
-	repliesGenerated := make([]conformanceevent.Event, 0)
-
-	// For each of the events (both incoming and newly created (replies)) check each trigger filter and append
-	// to the expected events if it matches.
-	for _, e := range inEvents {
-		for i, config := range triggerConfigs {
-			triggerName := fmt.Sprintf("t%d", i)
-			if eventMatchesTrigger(e, config.filter) {
-				ret[triggerName] = append(ret[triggerName], e)
-				// Ok, so if there is a reply, and this trigger was tickled, add as "generated reply" event that's
-				// used below.
-				if config.reply != nil {
-					repliesGenerated = append(repliesGenerated, *config.reply)
-				}
-			}
-		}
-	}
-
-	for _, e := range repliesGenerated {
-		for i, config := range triggerConfigs {
-			triggerName := fmt.Sprintf("t%d", i)
-			if eventMatchesTrigger(e, config.filter) {
-				ret[triggerName] = append(ret[triggerName], e)
-			}
-		}
-	}
-	return ret
-}
-
-// eventNMatchesTrigger checks an event and returns True if the event matches the event.
-// nil filter means everything matches, so it's safe to pass nil in here.
-func eventMatchesTrigger(event conformanceevent.Event, filter *eventingv1.TriggerFilter) bool {
-	// With no filter, everything matches
-	if filter == nil {
-		return true
-	}
-	for attribute, value := range filter.Attributes {
-		switch attribute {
-		case "type":
-			return event.Attributes.Type == value
-		case "source":
-			return event.Attributes.Source == value
-		case "subject":
-			return event.Attributes.Subject == value
-		}
-		// Not a well known attribute, check extensions.
-		filterAttribute, ok := event.Attributes.Extensions[attribute]
-		if !ok {
-			// We want an attribute on the event, but it's not there, so no soup for you.
-			return false
-		}
-		return filterAttribute == attribute
-	}
-	// TODO: Do more matching here as necessary.
-	return false
 }
