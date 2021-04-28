@@ -210,7 +210,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, seq *v1.Sequence,
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
 	if err := r.channelableTracker.TrackInNamespace(ctx, seq)(ref); err != nil {
-		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to channel %+v : %v", ref, err)
+		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to channel %+v : %w", ref, err)
 	}
 	chLister, err := r.channelableTracker.ListerFor(ref)
 	if err != nil {
