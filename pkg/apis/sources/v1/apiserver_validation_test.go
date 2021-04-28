@@ -21,6 +21,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -170,6 +172,38 @@ func TestAPIServerValidation(t *testing.T) {
 			},
 		},
 		want: errors.New("missing field(s): owner.kind"),
+	}, {
+		name: "empty resources",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: []APIVersionKindSelector{},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+		},
+		want: errors.New("missing field(s): resources"),
+	}, {
+		name: "nil resources",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: nil,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+		},
+		want: errors.New("missing field(s): resources"),
 	}}
 
 	for _, test := range tests {
@@ -184,4 +218,25 @@ func TestAPIServerValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAPIServerValidationCallsSpecValidation(t *testing.T) {
+	source := ApiServerSource{
+		Spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: nil,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+		},
+	}
+
+	err := source.Validate(context.TODO())
+	assert.EqualError(t, err, "missing field(s): spec.resources", "Spec is not validated!")
 }
