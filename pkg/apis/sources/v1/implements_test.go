@@ -31,6 +31,9 @@ func TestTypesImplements(t *testing.T) {
 		// ApiServerSource
 		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
 		{instance: &ApiServerSource{}, iface: &duckv1.Source{}},
+		// PingSourceSource
+		{instance: &PingSource{}, iface: &duckv1.Conditions{}},
+		{instance: &PingSource{}, iface: &duckv1.Source{}},
 		// SinkBinding
 		{instance: &SinkBinding{}, iface: &duckv1.Conditions{}},
 		{instance: &SinkBinding{}, iface: &duckv1.Source{}},

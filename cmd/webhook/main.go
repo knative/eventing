@@ -72,6 +72,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1beta2.SchemeGroupVersion.WithKind("PingSource"): &sourcesv1beta2.PingSource{},
 	// v1
 	sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1.ApiServerSource{},
+	sourcesv1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1.PingSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
 	sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1.ContainerSource{},
 
@@ -225,11 +226,12 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					sourcesv1_: &sourcesv1.ApiServerSource{},
 				},
 			},
-			sourcesv1beta2.Kind("PingSource"): {
+			sourcesv1.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
 				HubVersion:     sourcesv1beta2_,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1beta2_: &sourcesv1beta2.PingSource{},
+					sourcesv1_:      &sourcesv1.PingSource{},
 				},
 			},
 			sourcesv1.Kind("SinkBinding"): {

@@ -34,6 +34,14 @@ type ContainerSourceListerExpansion interface{}
 // ContainerSourceNamespaceLister.
 type ContainerSourceNamespaceListerExpansion interface{}
 
+// PingSourceListerExpansion allows custom methods to be added to
+// PingSourceLister.
+type PingSourceListerExpansion interface{}
+
+// PingSourceNamespaceListerExpansion allows custom methods to be added to
+// PingSourceNamespaceLister.
+type PingSourceNamespaceListerExpansion interface{}
+
 // SinkBindingListerExpansion allows custom methods to be added to
 // SinkBindingLister.
 type SinkBindingListerExpansion interface{}
