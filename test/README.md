@@ -61,8 +61,8 @@ If you have set up a running environment that meets
 with
 `test/e2e-tests.sh --run-tests --skip-knative-setup --gcp-project-id=$PROJECT_ID`.
 
-If you want to turn off the [`chaosduck`](config/chaosduck/chaosduck.yaml) during the test,
-you can set `$SCALE_CHAOSDUCK_TO_ZERO` to 1.
+If you want to turn off the [`chaosduck`](config/chaosduck/chaosduck.yaml)
+during the test, you can set `$SCALE_CHAOSDUCK_TO_ZERO` to 1.
 
 ## Running tests with `go test` command
 
