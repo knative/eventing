@@ -25,37 +25,11 @@ metadata:
 spec:
   group: sources.knative.dev
   versions:
-    - &version
-      name: v1beta1
-      served: true
-      storage: false
-      subresources:
-        status: {}
-      schema:
-        openAPIV3Schema:
-          type: object
-          # this is a work around so we don't need to flush out the
-          # schema for each version at this time
-          #
-          # see issue: https://github.com/knative/serving/issues/912
-          x-kubernetes-preserve-unknown-fields: true
-      additionalPrinterColumns:
-        - name: Sink
-          type: string
-          jsonPath: ".status.sinkUri"
-        - name: Age
-          type: date
-          jsonPath: .metadata.creationTimestamp
-        - name: Ready
-          type: string
-          jsonPath: ".status.conditions[?(@.type=='Ready')].status"
-        - name: Reason
-          type: string
-          jsonPath: ".status.conditions[?(@.type=='Ready')].reason"
-    - <<: *version
-      name: v1
+    - name: v1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -241,6 +215,19 @@ spec:
                     description: 'SinkURI is the current active sink URI that has been
                         configured for the Source.'
                     type: string
+      additionalPrinterColumns:
+        - name: Sink
+          type: string
+          jsonPath: ".status.sinkUri"
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Ready
+          type: string
+          jsonPath: ".status.conditions[?(@.type=='Ready')].status"
+        - name: Reason
+          type: string
+          jsonPath: ".status.conditions[?(@.type=='Ready')].reason"
   names:
     categories:
       - all

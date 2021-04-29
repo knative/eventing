@@ -36,14 +36,13 @@ metadata:
 spec:
   group: sources.knative.dev
   versions:
-  - &version
-    name: v1beta1
+  - name: v1
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
     schema:
-      openAPIV3Schema: &openAPIV3Schema
+      openAPIV3Schema:
         type: object
         description: 'ApiServerSource is an event source that brings Kubernetes API server events into Knative.'
         properties:
@@ -261,14 +260,6 @@ spec:
     - name: Reason
       type: string
       jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
-  - <<: *version
-    name: v1
-    served: true
-    storage: true
-    # the schema of v1 is exactly the same as v1beta1 schema
-    schema:
-      openAPIV3Schema:
-        <<: *openAPIV3Schema
   names:
     categories:
      - all
