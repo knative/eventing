@@ -23,6 +23,7 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
@@ -64,6 +65,9 @@ func eventMode() feature.StepFn {
 			if err != nil {
 				t.Errorf("expected ApiServerResource to accept the allowed eventMode %q. Err: %e", mode, err.Error())
 			}
+
+			// wait until the ApiServerSource is ready or fail
+			apiserversource.IsReady(apiServerSource.Name)(ctx, t)
 		}
 	}
 }
