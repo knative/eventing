@@ -42,7 +42,7 @@ func TestApiServerSourceConformance(t *testing.T) {
 
 	sourceName := "myapiserversource"
 
-	// Install and wait for a Ready Channel.
+	// Install and wait for a Ready ApiServerSource.
 	env.Prerequisite(ctx, t, apiserversource.GoesReady(sourceName))
 
 	env.TestSet(ctx, t, apiserversource.ControlPlaneConformance(sourceName))
