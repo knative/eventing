@@ -16,40 +16,15 @@ limitations under the License.
 
 package resources
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-)
-
 // API versions for the resources.
 const (
 	CoreAPIVersion        = "v1"
 	EventingAPIVersion    = "eventing.knative.dev/v1"
 	MessagingAPIVersion   = "messaging.knative.dev/v1"
 	FlowsAPIVersion       = "flows.knative.dev/v1"
-	ServingAPIVersion     = "serving.knative.dev/v1"
 	SourcesV1A2APIVersion = "sources.knative.dev/v1alpha2"
 	SourcesV1B1APIVersion = "sources.knative.dev/v1beta1"
 	SourcesV1APIVersion   = "sources.knative.dev/v1"
-)
-
-// Kind for Knative resources.
-const (
-	KServiceKind string = "Service"
-)
-
-var (
-	// KServicesGVR is GroupVersionResource for Knative Service
-	KServicesGVR = schema.GroupVersionResource{
-		Group:    "serving.knative.dev",
-		Version:  "v1",
-		Resource: "services",
-	}
-	// KServiceType is type of Knative Service
-	KServiceType = metav1.TypeMeta{
-		Kind:       "Service",
-		APIVersion: KServicesGVR.GroupVersion().String(),
-	}
 )
 
 // Kind for core Kubernetes resources.
@@ -80,7 +55,7 @@ const (
 	FlowsParallelKind string = "Parallel"
 )
 
-//Kind for sources resources that exist in Eventing core
+// Kind for sources resources that exist in Eventing core
 const (
 	ApiServerSourceKind string = "ApiServerSource"
 	PingSourceKind      string = "PingSource"

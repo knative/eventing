@@ -16,14 +16,13 @@
 package prober
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/serving"
 )
 
 var (
@@ -35,35 +34,35 @@ var (
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
-	Verify(ctx context.Context) ([]error, int, error)
+	Verify() ([]error, int, error)
 
 	// Finish send finished event
-	Finish(ctx context.Context)
+	Finish()
 
 	// ReportErrors will reports found errors in proper way
 	ReportErrors(t *testing.T, errors []error)
 
 	// deploy a prober to a cluster
-	deploy(ctx context.Context)
+	deploy()
 	// remove a prober from cluster
 	remove()
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
+func RunEventProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
 	pm := newProber(log, client, config)
-	pm.deploy(ctx)
+	pm.deploy()
 	return pm
 }
 
 // AssertEventProber will send finish event and then verify if all events propagated well
-func AssertEventProber(ctx context.Context, t *testing.T, prober Prober) {
-	prober.Finish(ctx)
+func AssertEventProber(t *testing.T, prober Prober) {
+	prober.Finish()
 	defer prober.remove()
 
 	waitAfterFinished(prober)
 
-	eventErrs, eventCount, err := prober.Verify(ctx)
+	eventErrs, eventCount, err := prober.Verify()
 	if err != nil {
 		t.Fatal("fetch error:", err)
 	}
@@ -82,11 +81,12 @@ type prober struct {
 	config *Config
 }
 
-func (p *prober) servingClient() resources.ServingClient {
-	return resources.ServingClient{
-		Kube:    p.client.Kube,
-		Dynamic: p.client.Dynamic,
-	}
+func (p *prober) t() *testing.T {
+	return p.client.T
+}
+
+func (p prober) servingClient() *serving.Client {
+	return &serving.Client{Duck: p.client.Duck}
 }
 
 func (p *prober) ReportErrors(t *testing.T, errors []error) {
@@ -105,16 +105,16 @@ func (p *prober) ReportErrors(t *testing.T, errors []error) {
 	}
 }
 
-func (p *prober) deploy(ctx context.Context) {
+func (p *prober) deploy() {
 	p.log.Infof("Using namespace for probe testing: %v", p.client.Namespace)
 	p.deployConfiguration()
-	p.deployReceiver(ctx)
+	p.deployReceiver()
 	if p.config.Serving.Use {
-		p.deployForwarder(ctx)
+		p.deployForwarder()
 	}
-	p.client.WaitForAllTestResourcesReadyOrFail(ctx)
+	p.client.WaitForAllTestResourcesReadyOrFail()
 
-	p.deploySender(ctx)
+	p.deploySender()
 	ensure.NoError(testlib.AwaitForAll(p.log))
 	// allow sender to send at least some events, 2 sec wait
 	time.Sleep(2 * time.Second)

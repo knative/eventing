@@ -19,15 +19,12 @@ limitations under the License.
 package duck
 
 import (
-	"context"
-	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/apis/duck"
 
@@ -55,8 +52,7 @@ func RetryWebhookErrors(updater func(int) error) error {
 
 // GetGenericObject returns a generic object representing a Kubernetes resource.
 // Callers can cast this returned object to other objects that implement the corresponding duck-type.
-func GetGenericObject(
-	dynamicClient dynamic.Interface,
+func (c *Client) GetGenericObject(
 	obj *resources.MetaResource,
 	rtype runtime.Object,
 ) (runtime.Object, error) {
@@ -65,10 +61,10 @@ func GetGenericObject(
 	var u *unstructured.Unstructured
 	err := RetryWebhookErrors(func(attempts int) (err error) {
 		var e error
-		u, e = dynamicClient.Resource(gvr).Namespace(obj.Namespace).Get(context.Background(), obj.Name, metav1.GetOptions{})
+		u, e = c.Dynamic.Resource(gvr).Namespace(obj.Namespace).
+			Get(c.Ctx(), obj.Name, metav1.GetOptions{})
 		if e != nil {
-			// TODO: Plumb some sort of logging here
-			fmt.Printf("Failed to get %s/%s: %v\n", obj.Namespace, obj.Name, e)
+			c.Log.Errorf("Failed to get %s/%s: %v\n", obj.Namespace, obj.Name, e)
 		}
 		return e
 	})
@@ -86,14 +82,14 @@ func GetGenericObject(
 }
 
 // GetGenericObjectList returns a generic object list representing a list of Kubernetes resource.
-func GetGenericObjectList(
-	dynamicClient dynamic.Interface,
+func (c *Client) GetGenericObjectList(
 	objList *resources.MetaResourceList,
 	rtype runtime.Object,
 ) ([]runtime.Object, error) {
 	// get the resource's namespace and gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(objList.GroupVersionKind())
-	ul, err := dynamicClient.Resource(gvr).Namespace(objList.Namespace).List(context.Background(), metav1.ListOptions{})
+	ul, err := c.Dynamic.Resource(gvr).Namespace(objList.Namespace).
+		List(c.Ctx(), metav1.ListOptions{})
 
 	if err != nil {
 		return nil, err

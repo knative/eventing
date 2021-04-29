@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 
@@ -48,12 +49,14 @@ type Client struct {
 	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
 	Dynamic       dynamic.Interface
 	Config        *rest.Config
+	Duck          *duck.Client
 
 	EventListener *EventListener
 
 	Namespace string
 	T         *testing.T
 	Tracker   *Tracker
+	Ctx       context.Context
 
 	podsCreated []string
 
@@ -69,6 +72,10 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	var err error
 
 	client := &Client{}
+	client.Namespace = namespace
+	client.T = t
+	client.Ctx = context.Background()
+
 	client.Config, err = test.BuildClientConfig(configPath, clusterName)
 	if err != nil {
 		return nil, err
@@ -93,9 +100,16 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
-	client.Namespace = namespace
-	client.T = t
-	client.Tracker = NewTracker(t, client.Dynamic)
+	client.Duck = &duck.Client{
+		Kube:    client.Kube,
+		Dynamic: client.Dynamic,
+		Log:     t,
+		Ctx: func() context.Context {
+			return client.Ctx
+		},
+	}
+
+	client.Tracker = NewTracker(t, client.Duck)
 
 	// Start informer
 	client.EventListener = NewEventListener(client.Kube, client.Namespace, client.T.Logf)

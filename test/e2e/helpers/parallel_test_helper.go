@@ -16,7 +16,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -41,7 +40,6 @@ type branchConfig struct {
 }
 
 func ParallelTestHelper(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -72,15 +70,14 @@ func ParallelTestHelper(
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
 				if cse.filter {
-					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName)
+					recordevents.DeployEventRecordOrFail(client, filterPodName)
 				} else {
-					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName, recordevents.EchoEvent)
+					recordevents.DeployEventRecordOrFail(client, filterPodName, recordevents.EchoEvent)
 				}
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 				recordevents.DeployEventRecordOrFail(
-					ctx,
 					client,
 					subPodName,
 					recordevents.ReplyWithAppendedData(subPodName),
@@ -102,7 +99,7 @@ func ParallelTestHelper(
 
 			// create event logger pod and service
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, eventRecorder)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
 
 			// create channel as reply of the Parallel
 			// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -124,7 +121,7 @@ func ParallelTestHelper(
 
 			client.CreateFlowsParallelOrFail(parallel)
 
-			client.WaitForAllTestResourcesReadyOrFail(ctx)
+			client.WaitForAllTestResourcesReadyOrFail()
 
 			// send CloudEvent to the Parallel
 			event := cloudevents.NewEvent()
@@ -140,7 +137,6 @@ func ParallelTestHelper(
 			}
 
 			client.SendEventToAddressable(
-				ctx,
 				senderPodName,
 				tc.name,
 				testlib.FlowsParallelTypeMeta,
@@ -157,7 +153,6 @@ func ParallelTestHelper(
 }
 
 func ParallelV1TestHelper(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -188,15 +183,14 @@ func ParallelV1TestHelper(
 				// construct filter services
 				filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
 				if cse.filter {
-					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName)
+					recordevents.DeployEventRecordOrFail(client, filterPodName)
 				} else {
-					recordevents.DeployEventRecordOrFail(ctx, client, filterPodName, recordevents.EchoEvent)
+					recordevents.DeployEventRecordOrFail(client, filterPodName, recordevents.EchoEvent)
 				}
 
 				// construct branch subscriber
 				subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 				recordevents.DeployEventRecordOrFail(
-					ctx,
 					client,
 					subPodName,
 					recordevents.ReplyWithAppendedData(subPodName),
@@ -218,7 +212,7 @@ func ParallelV1TestHelper(
 
 			// create event logger pod and service
 			eventRecorder := fmt.Sprintf("%s-event-record-pod", tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, eventRecorder)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(client, eventRecorder)
 
 			// create channel as reply of the Parallel
 			// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -240,7 +234,7 @@ func ParallelV1TestHelper(
 
 			client.CreateFlowsParallelOrFail(parallel)
 
-			client.WaitForAllTestResourcesReadyOrFail(ctx)
+			client.WaitForAllTestResourcesReadyOrFail()
 
 			// send CloudEvent to the Parallel
 			event := cloudevents.NewEvent()
@@ -256,7 +250,6 @@ func ParallelV1TestHelper(
 			}
 
 			client.SendEventToAddressable(
-				ctx,
 				senderPodName,
 				tc.name,
 				testlib.FlowsParallelTypeMeta,

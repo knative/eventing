@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"testing"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -33,7 +32,6 @@ import (
 // ChannelStatusSubscriberTestHelperWithChannelTestRunner runs the tests of
 // subscriber field of status for all Channels in the ComponentsTestRunner.
 func ChannelStatusSubscriberTestHelperWithChannelTestRunner(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
@@ -44,12 +42,12 @@ func ChannelStatusSubscriberTestHelperWithChannelTestRunner(
 		defer testlib.TearDown(client)
 
 		t.Run("Channel has required status subscriber fields", func(t *testing.T) {
-			channelHasRequiredSubscriberStatus(ctx, st, client, channel, options...)
+			channelHasRequiredSubscriberStatus(st, client, channel, options...)
 		})
 	})
 }
 
-func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
+func channelHasRequiredSubscriberStatus(st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
 	st.Logf("Running channel subscriber status conformance test with channel %q", channel)
 
 	channelName := "channel-req-status-subscriber"
@@ -59,7 +57,7 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	client.CreateChannelOrFail(channelName, &channel)
 	client.WaitForResourceReadyOrFail(channelName, &channel)
 
-	_ = recordevents.DeployEventRecordOrFail(context.TODO(), client, subscriberServiceName+"-pod")
+	_ = recordevents.DeployEventRecordOrFail(client, subscriberServiceName+"-pod")
 
 	subscription := client.CreateSubscriptionOrFail(
 		subscriberServiceName,
@@ -69,7 +67,7 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	dtsv, err := getChannelDuckTypeSupportVersion(channelName, client, &channel)
 	if err != nil {

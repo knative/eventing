@@ -45,7 +45,7 @@ type Tracker struct {
 	resourcesToCheckStatus []resources.MetaResource
 	resourcesToClean       []ResourceDeleter
 	tc                     *testing.T
-	dynamicClient          dynamic.Interface
+	duckClient             *duck.Client
 }
 
 // ResourceDeleter holds the resource interface and name of resource to be cleaned
@@ -55,12 +55,12 @@ type ResourceDeleter struct {
 }
 
 // NewTracker creates a new Tracker
-func NewTracker(t *testing.T, client dynamic.Interface) *Tracker {
+func NewTracker(t *testing.T, duckClient *duck.Client) *Tracker {
 	tracker := &Tracker{
 		resourcesToCheckStatus: make([]resources.MetaResource, 0),
 		resourcesToClean:       make([]ResourceDeleter, 0),
 		tc:                     t,
-		dynamicClient:          client,
+		duckClient:             duckClient,
 	}
 	return tracker
 }
@@ -81,9 +81,9 @@ func (t *Tracker) Add(group string, version string, resource string, namespace s
 	}
 	var unstructured dynamic.ResourceInterface
 	if namespace != "" {
-		unstructured = t.dynamicClient.Resource(gvr).Namespace(namespace)
+		unstructured = t.duckClient.Dynamic.Resource(gvr).Namespace(namespace)
 	} else {
-		unstructured = t.dynamicClient.Resource(gvr)
+		unstructured = t.duckClient.Dynamic.Resource(gvr)
 	}
 	res := ResourceDeleter{
 		Resource: unstructured,
@@ -119,7 +119,7 @@ func (t *Tracker) AddObj(obj kmeta.OwnerRefable) {
 func (t *Tracker) Clean(awaitDeletion bool) error {
 	logf := t.tc.Logf
 	for _, deleter := range t.resourcesToClean {
-		r, err := deleter.Resource.Get(context.Background(), deleter.Name, metav1.GetOptions{})
+		r, err := deleter.Resource.Get(t.ctx(), deleter.Name, metav1.GetOptions{})
 		if err != nil {
 			logf("Failed to get to-be cleaned resource %q : %v", deleter.Name, err)
 		} else {
@@ -131,12 +131,12 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 				logf("Cleaning resource: %q", deleter.Name)
 			}
 		}
-		if err := deleter.Resource.Delete(context.Background(), deleter.Name, metav1.DeleteOptions{}); err != nil {
+		if err := deleter.Resource.Delete(t.ctx(), deleter.Name, metav1.DeleteOptions{}); err != nil {
 			logf("Failed to clean the resource %q : %v", deleter.Name, err)
 		} else if awaitDeletion {
 			logf("Waiting for %s to be deleted", deleter.Name)
 			if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-				if _, err := deleter.Resource.Get(context.Background(), deleter.Name, metav1.GetOptions{}); err != nil {
+				if _, err := deleter.Resource.Get(t.ctx(), deleter.Name, metav1.GetOptions{}); err != nil {
 					return true, nil
 				}
 				return false, nil
@@ -152,9 +152,13 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 func (t *Tracker) WaitForKResourcesReady() error {
 	t.tc.Logf("Waiting for all KResources to become ready")
 	for _, metaResource := range t.resourcesToCheckStatus {
-		if err := duck.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
+		if err := t.duckClient.WaitForResourceReady(&metaResource); err != nil {
 			return fmt.Errorf("failed waiting for %+v to become ready: %v", metaResource, err)
 		}
 	}
 	return nil
+}
+
+func (t *Tracker) ctx() context.Context {
+	return t.duckClient.Ctx()
 }

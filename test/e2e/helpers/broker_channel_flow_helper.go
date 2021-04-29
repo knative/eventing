@@ -16,7 +16,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -51,7 +50,6 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func BrokerChannelFlowWithTransformation(
-	ctx context.Context,
 	t *testing.T,
 	brokerClass string,
 	brokerVersion string,
@@ -104,7 +102,6 @@ func BrokerChannelFlowWithTransformation(
 
 		// create the transformation service for trigger1
 		recordevents.DeployEventRecordOrFail(
-			ctx,
 			client,
 			transformationPodName,
 			recordevents.ReplyWithTransformedEvent(
@@ -122,7 +119,7 @@ func BrokerChannelFlowWithTransformation(
 			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
 		)
 		// create event tracker that should receive all sent events
-		allEventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, allEventsRecorderPodName)
+		allEventTracker, _ := recordevents.StartEventRecordOrFail(client, allEventsRecorderPodName)
 
 		// create trigger to receive all the events
 		client.CreateTriggerOrFail(
@@ -148,7 +145,7 @@ func BrokerChannelFlowWithTransformation(
 		)
 
 		// create event tracker that should receive only transformed events
-		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, transformedEventsRecorderPodName)
+		transformedEventTracker, _ := recordevents.StartEventRecordOrFail(client, transformedEventsRecorderPodName)
 
 		// create subscription
 		client.CreateSubscriptionOrFail(
@@ -159,10 +156,10 @@ func BrokerChannelFlowWithTransformation(
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send CloudEvent to the broker
-		client.SendEventToAddressable(ctx, senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
+		client.SendEventToAddressable(senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 		// Assert the results on the event trackers
 		originalEventMatcher := recordevents.MatchEvent(AllOf(

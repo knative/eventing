@@ -17,7 +17,6 @@ limitations under the License.
 package recordevents
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -40,8 +39,8 @@ const (
 )
 
 // Deploys a new recordevents pod and start the associated EventInfoStore
-func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {
-	eventRecordPod := DeployEventRecordOrFail(ctx, client, podName, options...)
+func StartEventRecordOrFail(client *testlib.Client, podName string, options ...EventRecordOption) (*EventInfoStore, *corev1.Pod) {
+	eventRecordPod := DeployEventRecordOrFail(client, podName, options...)
 
 	eventTracker, err := NewEventInfoStore(client, podName, client.Namespace)
 	if err != nil {

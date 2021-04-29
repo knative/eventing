@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,39 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
-
-// This file contains functions that construct Serving resources.
+package serving
 
 import (
-	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 )
 
-// ServingClient holds clients required to get serving resources
-type ServingClient struct {
-	Kube    *pkgTest.KubeClient
-	Dynamic dynamic.Interface
-}
-
-// KServiceRoute represents ksvc route, so how much traffic is routed to given deployment
-type KServiceRoute struct {
-	TrafficPercent uint8
-	DeploymentName string
-}
-
 // WithSubscriberKServiceRefForTrigger returns an option that adds a Subscriber
 // Knative Service Ref for the given Trigger.
-func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
+func WithSubscriberKServiceRefForTrigger(name string) resources.TriggerOption {
 	return func(t *eventingv1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = duckv1.Destination{
@@ -60,7 +45,7 @@ func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
 func KnativeRefForKservice(name, namespace string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       KServiceKind,
-		APIVersion: ServingAPIVersion,
+		APIVersion: APIVersion,
 		Name:       name,
 		Namespace:  namespace,
 	}
@@ -68,14 +53,14 @@ func KnativeRefForKservice(name, namespace string) *duckv1.KReference {
 
 // KServiceRef returns a Knative Service ObjectReference for a given Service name.
 func KServiceRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference(KServiceKind, ServingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference(KServiceKind, APIVersion, name)
 }
 
 // KServiceRoutes gets routes of given ksvc.
 // If ksvc isn't ready yet second return value will be false.
-func KServiceRoutes(client ServingClient, name, namespace string) ([]KServiceRoute, bool, error) {
-	serving := client.Dynamic.Resource(KServicesGVR).Namespace(namespace)
-	unstruct, err := serving.Get(context.Background(), name, metav1.GetOptions{})
+func (c *Client) KServiceRoutes(name, namespace string) ([]KServiceRoute, bool, error) {
+	serving := c.Duck.Dynamic.Resource(KServicesGVR).Namespace(namespace)
+	unstruct, err := serving.Get(c.Duck.Ctx(), name, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
 		// We swallow the error to keep on polling.
@@ -93,8 +78,8 @@ func KServiceRoutes(client ServingClient, name, namespace string) ([]KServiceRou
 // KServiceDeploymentName returns a name of deployment of Knative Service that
 // receives 100% of traffic.
 // If ksvc isn't ready yet second return value will be false.
-func KServiceDeploymentName(client ServingClient, name, namespace string) (string, bool, error) {
-	routes, ready, err := KServiceRoutes(client, name, namespace)
+func (c *Client) KServiceDeploymentName(name, namespace string) (string, bool, error) {
+	routes, ready, err := c.KServiceRoutes(name, namespace)
 	if ready {
 		if len(routes) > 1 {
 			return "", false, fmt.Errorf("traffic shouldn't be split to more then 1 revision: %v", routes)

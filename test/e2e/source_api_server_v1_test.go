@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -127,8 +126,6 @@ func TestApiServerSourceV1(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
-
 	for _, tc := range table {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
@@ -154,7 +151,7 @@ func TestApiServerSourceV1(t *testing.T) {
 
 			// create event record
 			recordEventPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
@@ -167,7 +164,7 @@ func TestApiServerSourceV1(t *testing.T) {
 			client.CreateApiServerSourceV1OrFail(apiServerSource)
 
 			// wait for all test resources to be ready
-			client.WaitForAllTestResourcesReadyOrFail(ctx)
+			client.WaitForAllTestResourcesReadyOrFail()
 
 			helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
 			client.CreatePodOrFail(helloworldPod)
@@ -198,8 +195,6 @@ func TestApiServerSourceV1EventTypes(t *testing.T) {
 
 	client := setup(t, true)
 	defer tearDown(client)
-
-	ctx := context.Background()
 
 	// creates ServiceAccount and RoleBinding with a role for reading pods and events
 	r := resources.Role(roleName,
@@ -245,9 +240,9 @@ func TestApiServerSourceV1EventTypes(t *testing.T) {
 	client.CreateApiServerSourceV1OrFail(apiServerSource)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
-	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventReferenceModeTypes))
+	eventTypes, err := waitForEventTypes(client, len(sources.ApiServerSourceEventReferenceModeTypes))
 	if err != nil {
 		t.Fatalf("Waiting for EventTypes: %v", err)
 	}
@@ -260,12 +255,12 @@ func TestApiServerSourceV1EventTypes(t *testing.T) {
 }
 
 // waitForEventTypes waits for the expected number of EventTypes to exist in client.Namespace.
-func waitForEventTypes(ctx context.Context, client *testlib.Client, expectedNumEventTypes int) ([]v1beta1.EventType, error) {
+func waitForEventTypes(client *testlib.Client, expectedNumEventTypes int) ([]v1beta1.EventType, error) {
 	eventTypes := &v1beta1.EventTypeList{}
 	// Interval and timeout were chosen arbitrarily.
 	err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
 		var err error
-		eventTypes, err = client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(ctx, metav1.ListOptions{})
+		eventTypes, err = client.Eventing.EventingV1beta1().EventTypes(client.Namespace).List(client.Ctx, metav1.ListOptions{})
 		if err != nil {
 			return false, fmt.Errorf("error listing EventTypes: %w", err)
 		}

@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/dynamic"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -41,17 +40,16 @@ const (
 // WaitForResourceReady polls the status of the MetaResource from client
 // every interval until isResourceReady returns `true` indicating
 // it is done, returns an error or timeout.
-func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
+func (c *Client) WaitForResourceReady(obj *resources.MetaResource) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		return checkResourceReady(dynamicClient, obj)
+		return c.checkResourceReady(obj)
 	})
 }
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
-func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
+func (c *Client) WaitForResourcesReady(objList *resources.MetaResourceList) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		return checkResourcesReady(dynamicClient, objList)
-
+		return c.checkResourcesReady(objList)
 	})
 }
 
@@ -62,15 +60,15 @@ func getGenericResource(tm metav1.TypeMeta) runtime.Object {
 	return &duckv1beta1.KResource{}
 }
 
-func checkResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) (bool, error) {
+func (c *Client) checkResourceReady(obj *resources.MetaResource) (bool, error) {
 	gr := getGenericResource(obj.TypeMeta)
-	untyped, err := GetGenericObject(dynamicClient, obj, gr)
+	untyped, err := c.GetGenericObject(obj, gr)
 	return isResourceReady(untyped, err)
 }
 
-func checkResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) (bool, error) {
+func (c *Client) checkResourcesReady(objList *resources.MetaResourceList) (bool, error) {
 	gr := getGenericResource(objList.TypeMeta)
-	untypeds, err := GetGenericObjectList(dynamicClient, objList, gr)
+	untypeds, err := c.GetGenericObjectList(objList, gr)
 	for _, untyped := range untypeds {
 		if isReady, err := isResourceReady(untyped, err); !isReady || err != nil {
 			return isReady, err

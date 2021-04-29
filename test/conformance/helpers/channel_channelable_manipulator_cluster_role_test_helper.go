@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"testing"
 
 	"fmt"
@@ -31,7 +30,6 @@ import (
 
 // Deprecated
 func TestChannelChannelableManipulatorClusterRoleTestRunner(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
@@ -53,7 +51,7 @@ func TestChannelChannelableManipulatorClusterRoleTestRunner(
 			aggregationClusterRoleName,
 			saName+"-cluster-role-binding",
 		)
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// From spec: (...) ClusterRole MUST include permissions to create, get, list, watch, patch,
 		// and update the CRD's custom objects and their status.

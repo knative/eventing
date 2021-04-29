@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -39,7 +38,6 @@ import (
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
 func ChannelDeadLetterSinkTestHelper(
-	ctx context.Context,
 	t *testing.T,
 	subscriptionVersion SubscriptionVersion,
 	channelTestRunner testlib.ComponentsTestRunner,
@@ -61,7 +59,7 @@ func ChannelDeadLetterSinkTestHelper(
 		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create event logger pod and service as the subscriber
-		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		// create subscriptions that subscribe to a service that does not exist
 		switch subscriptionVersion {
 		case SubscriptionV1:
@@ -77,7 +75,7 @@ func ChannelDeadLetterSinkTestHelper(
 		}
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send CloudEvent to the first channel
 		event := cloudevents.NewEvent()
@@ -89,7 +87,7 @@ func ChannelDeadLetterSinkTestHelper(
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
-		client.SendEventToAddressable(ctx, senderName, channelNames[0], &channel, event)
+		client.SendEventToAddressable(senderName, channelNames[0], &channel, event)
 
 		// check if the logging service receives the correct number of event messages
 		eventTracker.AssertAtLeast(len(subscriptionNames), recordevents.MatchEvent(
@@ -101,7 +99,6 @@ func ChannelDeadLetterSinkTestHelper(
 
 // ChannelDeadLetterDefaultSinkTestHelper is the helper function for channel_deadlettersink_test, but setting the delivery from the channel spec
 func ChannelDeadLetterSinkDefaultTestHelper(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
@@ -147,7 +144,7 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create event logger pod and service as the subscriber
-		eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
+		eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventsPodName)
 		// create subscriptions that subscribe to a service that does not exist
 		client.CreateSubscriptionsOrFail(
 			subscriptionNames,
@@ -157,7 +154,7 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReadyOrFail(ctx)
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send CloudEvent to the first channel
 		event := cloudevents.NewEvent()
@@ -169,7 +166,7 @@ func ChannelDeadLetterSinkDefaultTestHelper(
 		if err := event.SetData(cloudevents.ApplicationJSON, []byte(body)); err != nil {
 			t.Fatal("Cannot set the payload of the event:", err.Error())
 		}
-		client.SendEventToAddressable(ctx, senderName, channelName, &channel, event)
+		client.SendEventToAddressable(senderName, channelName, &channel, event)
 
 		// check if the logging service receives the correct number of event messages
 		eventTracker.AssertAtLeast(len(subscriptionNames), recordevents.MatchEvent(

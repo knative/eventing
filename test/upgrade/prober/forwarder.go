@@ -16,15 +16,14 @@
 package prober
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
-	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/lib/serving"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -32,21 +31,20 @@ var (
 	forwarderName = "wathola-forwarder"
 )
 
-func (p *prober) deployForwarder(ctx context.Context) {
+func (p *prober) deployForwarder() {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
-	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
+	kservices := p.client.Dynamic.Resource(serving.KServicesGVR).Namespace(p.client.Namespace)
 	service := p.forwarderKService(forwarderName, p.client.Namespace)
-	_, err := serving.Create(context.Background(), service, metav1.CreateOptions{})
-	ensure.NoError(err)
+	_, err := kservices.Create(p.client.Ctx, service, metav1.CreateOptions{})
+	assert.NoError(p.t(), err)
 
-	sc := p.servingClient()
 	testlib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
-		return duck.WaitForKServiceReady(sc, forwarderName, p.client.Namespace)
+		return p.servingClient().WaitForKServiceReady(forwarderName, p.client.Namespace)
 	})
 
 	if p.config.Serving.ScaleToZero {
 		testlib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
-			return duck.WaitForKServiceScales(ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
+			return p.servingClient().WaitForKServiceScales(forwarderName, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
 		})
@@ -55,15 +53,15 @@ func (p *prober) deployForwarder(ctx context.Context) {
 
 func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
-	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	err := serving.Delete(context.Background(), forwarderName, metav1.DeleteOptions{})
+	kservices := p.client.Dynamic.Resource(serving.KServicesGVR).Namespace(p.client.Namespace)
+	err := kservices.Delete(p.client.Ctx, forwarderName, metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
 
 func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstructured {
 	obj := map[string]interface{}{
-		"apiVersion": resources.KServiceType.APIVersion,
-		"kind":       resources.KServiceType.Kind,
+		"apiVersion": serving.KServiceType.APIVersion,
+		"kind":       serving.KServiceType.Kind,
 		"metadata": map[string]interface{}{
 			"name":      name,
 			"namespace": namespace,

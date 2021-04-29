@@ -19,7 +19,6 @@
 package e2e
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -66,6 +65,6 @@ func TestBrokerRedelivery(t *testing.T) {
 
 		brokerCreator := ChannelBasedBrokerCreator(component, brokerClass)
 
-		helpers.BrokerRedelivery(context.Background(), t, brokerCreator)
+		helpers.BrokerRedelivery(t, brokerCreator)
 	})
 }

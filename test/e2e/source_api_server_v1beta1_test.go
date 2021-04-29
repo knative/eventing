@@ -18,7 +18,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -123,8 +122,6 @@ func TestApiServerSourceV1Beta1(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
-
 	for _, tc := range table {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
@@ -150,7 +147,7 @@ func TestApiServerSourceV1Beta1(t *testing.T) {
 
 			// create event record
 			recordEventPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recordEventPodName)
+			eventTracker, _ := recordevents.StartEventRecordOrFail(client, recordEventPodName)
 			spec := tc.spec
 			spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventPodName)}
 
@@ -163,7 +160,7 @@ func TestApiServerSourceV1Beta1(t *testing.T) {
 			client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
 
 			// wait for all test resources to be ready
-			client.WaitForAllTestResourcesReadyOrFail(ctx)
+			client.WaitForAllTestResourcesReadyOrFail()
 
 			helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
 			client.CreatePodOrFail(helloworldPod)
@@ -194,8 +191,6 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 
 	client := setup(t, true)
 	defer tearDown(client)
-
-	ctx := context.Background()
 
 	// creates ServiceAccount and RoleBinding with a role for reading pods and events
 	r := resources.Role(roleName,
@@ -241,9 +236,9 @@ func TestApiServerSourceV1Beta1EventTypes(t *testing.T) {
 	client.CreateApiServerSourceV1Beta1OrFail(apiServerSource)
 
 	// wait for all test resources to be ready
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
-	eventTypes, err := waitForEventTypes(ctx, client, len(sources.ApiServerSourceEventReferenceModeTypes))
+	eventTypes, err := waitForEventTypes(client, len(sources.ApiServerSourceEventReferenceModeTypes))
 	if err != nil {
 		t.Fatal("Waiting for EventTypes:", err)
 	}

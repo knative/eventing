@@ -48,12 +48,12 @@ func TestNewConfig(t *testing.T) {
 
 			if s.panics {
 				assert.Panics(t, func() {
-					prober.NewConfig("test-ns")
+					prober.NewConfig()
 				})
 				return
 			}
 
-			config := prober.NewConfig("test-ns")
+			config := prober.NewConfig()
 
 			assert.Equal(t, s.servingUse, config.Serving.Use)
 			assert.True(t, config.Serving.ScaleToZero)

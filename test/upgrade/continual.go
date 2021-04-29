@@ -17,28 +17,25 @@ limitations under the License.
 package upgrade
 
 import (
-	"context"
-
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/prober"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 func ContinualTest() pkgupgrade.BackgroundOperation {
-	ctx := context.Background()
 	var client *testlib.Client
 	var probe prober.Prober
 	return pkgupgrade.NewBackgroundVerification("EventingContinualTest",
 		func(c pkgupgrade.Context) {
 			// setup
 			client = testlib.Setup(c.T, false)
-			config := prober.NewConfig(client.Namespace)
-			probe = prober.RunEventProber(ctx, c.Log, client, config)
+			config := prober.NewConfig()
+			probe = prober.RunEventProber(c.Log, client, config)
 		},
 		func(c pkgupgrade.Context) {
 			// verify
 			defer testlib.TearDown(client)
-			prober.AssertEventProber(ctx, c.T, probe)
+			prober.AssertEventProber(c.T, probe)
 		},
 	)
 }

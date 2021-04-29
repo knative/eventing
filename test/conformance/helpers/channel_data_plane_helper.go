@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -36,7 +35,6 @@ import (
 
 // ChannelDataPlaneSuccessTestRunner tests the support of the channel ingress for different spec versions and message modes
 func ChannelDataPlaneSuccessTestRunner(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
@@ -61,14 +59,14 @@ func ChannelDataPlaneSuccessTestRunner(
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		for _, tc := range testCases {
 			t.Run(tc.event.ID()+"_encoding_"+tc.encoding.String()+"_version_"+tc.version, func(t *testing.T) {
-				channelDataPlaneSuccessTest(ctx, t, channel, tc.event, tc.encoding, tc.version, options...)
+				channelDataPlaneSuccessTest(t, channel, tc.event, tc.encoding, tc.version, options...)
 			})
 		}
 	})
 }
 
 // Sender -> Channel -> Subscriber -> Record Events
-func channelDataPlaneSuccessTest(ctx context.Context, t *testing.T, channel metav1.TypeMeta, event cloudevents.Event, encoding cloudevents.Encoding, version string, options ...testlib.SetupClientOption) {
+func channelDataPlaneSuccessTest(t *testing.T, channel metav1.TypeMeta, event cloudevents.Event, encoding cloudevents.Encoding, version string, options ...testlib.SetupClientOption) {
 	client := testlib.Setup(t, true, options...)
 	defer testlib.TearDown(client)
 
@@ -78,7 +76,7 @@ func channelDataPlaneSuccessTest(ctx context.Context, t *testing.T, channel meta
 	client.CreateChannelOrFail(channelName, &channel)
 
 	subscriberName := resourcesNamePrefix + "-recordevents"
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, subscriberName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
 
 	client.CreateSubscriptionOrFail(
 		resourcesNamePrefix+"-sub",
@@ -87,7 +85,7 @@ func channelDataPlaneSuccessTest(ctx context.Context, t *testing.T, channel meta
 		resources.WithSubscriberForSubscription(subscriberName),
 	)
 
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	switch version {
 	case cloudevents.VersionV1:
@@ -97,7 +95,6 @@ func channelDataPlaneSuccessTest(ctx context.Context, t *testing.T, channel meta
 	}
 
 	client.SendEventToAddressable(
-		ctx,
 		resourcesNamePrefix+"-sender",
 		channelName,
 		&channel,
@@ -128,7 +125,6 @@ func channelDataPlaneSuccessTest(ctx context.Context, t *testing.T, channel meta
 
 // ChannelDataPlaneFailureTestRunner tests some status codes from the spec
 func ChannelDataPlaneFailureTestRunner(
-	ctx context.Context,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption,
@@ -140,48 +136,31 @@ func ChannelDataPlaneFailureTestRunner(
 	}{{
 		statusCode: http.StatusMethodNotAllowed,
 		senderFn: func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string) {
-			c.SendRequestToAddressable(
-				ctx,
-				senderName,
-				channelName,
-				&channel,
-				map[string]string{
-					"ce-specversion": "1.0",
-					"ce-type":        "example",
-					"ce-source":      "http://localhost",
-					"ce-id":          eventId,
-					"content-type":   "application/json",
-				},
-				"{}",
-				sender.WithMethod("PUT"),
-				sender.WithResponseSink(responseSink),
-			)
+			c.SendRequestToAddressable(senderName, channelName, &channel, map[string]string{
+				"ce-specversion": "1.0",
+				"ce-type":        "example",
+				"ce-source":      "http://localhost",
+				"ce-id":          eventId,
+				"content-type":   "application/json",
+			}, "{}", sender.WithMethod("PUT"), sender.WithResponseSink(responseSink))
 		},
 	}, {
 		statusCode: http.StatusBadRequest,
 		senderFn: func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string) {
-			c.SendRequestToAddressable(
-				ctx,
-				senderName,
-				channelName,
-				&channel,
-				map[string]string{
-					"ce-specversion": "10.0", // <-- Spec version not existing
-					"ce-type":        "example",
-					"ce-source":      "http://localhost",
-					"ce-id":          eventId,
-					"content-type":   "application/json",
-				},
-				"{}",
-				sender.WithResponseSink(responseSink),
-			)
+			c.SendRequestToAddressable(senderName, channelName, &channel, map[string]string{
+				"ce-specversion": "10.0", // <-- Spec version not existing
+				"ce-type":        "example",
+				"ce-source":      "http://localhost",
+				"ce-id":          eventId,
+				"content-type":   "application/json",
+			}, "{}", sender.WithResponseSink(responseSink))
 		},
 	}}
 
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		for _, tc := range testCases {
 			t.Run("expecting-"+strconv.Itoa(tc.statusCode), func(t *testing.T) {
-				channelDataPlaneFailureTest(ctx, t, channel, tc.senderFn, tc.statusCode, options...)
+				channelDataPlaneFailureTest(t, channel, tc.senderFn, tc.statusCode, options...)
 			})
 		}
 	})
@@ -189,7 +168,6 @@ func ChannelDataPlaneFailureTestRunner(
 
 // (Request) Sender -> Channel -> Subscriber -> Record Events
 func channelDataPlaneFailureTest(
-	ctx context.Context,
 	t *testing.T,
 	channel metav1.TypeMeta,
 	senderFn func(c *testlib.Client, senderName string, channelName string, channel metav1.TypeMeta, eventId string, responseSink string),
@@ -205,7 +183,7 @@ func channelDataPlaneFailureTest(
 	client.CreateChannelOrFail(channelName, &channel)
 
 	subscriberName := resourcesNamePrefix + "-recordevents"
-	eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, subscriberName)
+	eventTracker, _ := recordevents.StartEventRecordOrFail(client, subscriberName)
 
 	client.CreateSubscriptionOrFail(
 		resourcesNamePrefix+"-sub",
@@ -214,7 +192,7 @@ func channelDataPlaneFailureTest(
 		resources.WithSubscriberForSubscription(subscriberName),
 	)
 
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	eventId := "xyz"
 	senderFn(client, resourcesNamePrefix+"-sender", channelName, channel, eventId, "http://"+client.GetServiceHost(subscriberName))

@@ -19,7 +19,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -36,7 +35,7 @@ func DefaultBrokerCreator(_ *testlib.Client, _ string) string {
 }
 
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	helpers.TestBrokerWithManyTriggers(context.Background(), t, DefaultBrokerCreator, true)
+	helpers.TestBrokerWithManyTriggers(t, DefaultBrokerCreator, true)
 }
 
 func TestChannelBasedBrokerWithManyTriggers(t *testing.T) {
@@ -49,6 +48,6 @@ func TestChannelBasedBrokerWithManyTriggers(t *testing.T) {
 
 		brokerCreator := helpers.ChannelBasedBrokerCreator(channel, brokerClass)
 
-		helpers.TestBrokerWithManyTriggers(context.Background(), t, brokerCreator, false)
+		helpers.TestBrokerWithManyTriggers(t, brokerCreator, false)
 	})
 }

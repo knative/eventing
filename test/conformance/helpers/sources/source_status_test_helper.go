@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -105,7 +104,7 @@ func getSourceAsV1Beta1Source(client *testlib.Client,
 	srcName := strings.ToLower(source.Kind)
 	metaResource := resources.NewMetaResource(srcName, client.Namespace,
 		&source)
-	obj, err := duck.GetGenericObject(client.Dynamic, metaResource,
+	obj, err := client.Duck.GetGenericObject(metaResource,
 		&duckv1beta1.Source{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the source as v1beta1 "+

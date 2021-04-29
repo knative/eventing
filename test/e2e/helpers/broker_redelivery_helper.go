@@ -17,7 +17,6 @@
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -35,12 +34,12 @@ import (
 // BrokerCreator creates a broker and returns its broker name.
 type BrokerCreatorWithRetries func(client *testlib.Client, numRetries int32) string
 
-func BrokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWithRetries) {
+func BrokerRedelivery(t *testing.T, creator BrokerCreatorWithRetries) {
 
 	numRetries := int32(5)
 
 	t.Run(dropevents.Fibonacci, func(t *testing.T) {
-		brokerRedelivery(ctx, t, creator, numRetries, func(pod *corev1.Pod, client *testlib.Client) error {
+		brokerRedelivery(t, creator, numRetries, func(pod *corev1.Pod, client *testlib.Client) error {
 			pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env,
 				corev1.EnvVar{
 					Name:  dropevents.SkipAlgorithmKey,
@@ -52,7 +51,7 @@ func BrokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 	})
 
 	t.Run(dropevents.Sequence, func(t *testing.T) {
-		brokerRedelivery(ctx, t, creator, numRetries, func(pod *corev1.Pod, client *testlib.Client) error {
+		brokerRedelivery(t, creator, numRetries, func(pod *corev1.Pod, client *testlib.Client) error {
 			pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env,
 				corev1.EnvVar{
 					Name:  dropevents.SkipAlgorithmKey,
@@ -68,7 +67,7 @@ func BrokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 	})
 }
 
-func brokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWithRetries, numRetries int32, options ...recordevents.EventRecordOption) {
+func brokerRedelivery(t *testing.T, creator BrokerCreatorWithRetries, numRetries int32, options ...recordevents.EventRecordOption) {
 
 	const (
 		triggerName = "trigger"
@@ -85,7 +84,6 @@ func brokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 
 	// Create event tracker that should receive all events.
 	allEventTracker, _ := recordevents.StartEventRecordOrFail(
-		ctx,
 		client,
 		eventRecord,
 		options...,
@@ -100,7 +98,7 @@ func brokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 		resources.WithSubscriberServiceRefForTrigger(eventRecord),
 	)
 
-	client.WaitForAllTestResourcesReadyOrFail(ctx)
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// send CloudEvent to the broker
 
@@ -112,7 +110,7 @@ func brokerRedelivery(ctx context.Context, t *testing.T, creator BrokerCreatorWi
 		t.Fatal("Cannot set the payload of the event:", err.Error())
 	}
 
-	client.SendEventToAddressable(ctx, senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
+	client.SendEventToAddressable(senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
 
 	allEventTracker.AssertAtLeast(1, recordevents.MatchKind(recordevents.EventReceived), recordevents.MatchEvent(AllOf(
 		HasSource(eventSource),

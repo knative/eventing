@@ -17,7 +17,6 @@ limitations under the License.
 package sources
 
 import (
-	"context"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -91,7 +90,7 @@ func getSourcePluralName(client *testlib.Client, object metav1.TypeMeta) string 
 	gvr, _ := meta.UnsafeGuessKindToResource(object.GroupVersionKind())
 	crdName := gvr.Resource + "." + gvr.Group
 
-	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(context.Background(), crdName, metav1.GetOptions{
+	crd, err := client.Apiextensions.CustomResourceDefinitions().Get(client.Ctx, crdName, metav1.GetOptions{
 		TypeMeta: metav1.TypeMeta{},
 	})
 	if err != nil {
@@ -101,7 +100,7 @@ func getSourcePluralName(client *testlib.Client, object metav1.TypeMeta) string 
 }
 
 func clusterRoleMeetsSpecs(client *testlib.Client, labelSelector *metav1.LabelSelector, crdSourceName string) bool {
-	crs, err := client.Kube.RbacV1().ClusterRoles().List(context.Background(), metav1.ListOptions{
+	crs, err := client.Kube.RbacV1().ClusterRoles().List(client.Ctx, metav1.ListOptions{
 		LabelSelector: labels.Set(labelSelector.MatchLabels).String(), //Cluster Role with duck.knative.dev/source: "true" label
 	})
 	if err != nil {

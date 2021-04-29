@@ -19,7 +19,6 @@ limitations under the License.
 package conformance
 
 import (
-	"context"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -30,7 +29,6 @@ import (
 // The Channel MUST pass through all tracing information
 func TestChannelForwardHeadersPrependedWithKnative(t *testing.T) {
 	helpers.SingleEventWithKnativeHeaderHelperForChannelTestHelper(
-		context.Background(),
 		t,
 		cloudevents.EncodingBinary,
 		channelTestRunner,
