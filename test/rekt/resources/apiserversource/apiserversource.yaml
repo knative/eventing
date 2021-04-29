@@ -36,7 +36,7 @@ spec:
     {{ if .sink.ref }}
     ref:
       kind: {{ .sink.ref.kind }}
-      namespace: {{ .namespace }}
+      namespace: {{ .sink.ref.namespace }}
       name: {{ .sink.ref.name }}
       apiVersion: {{ .sink.ref.apiVersion }}
     {{ end }}
