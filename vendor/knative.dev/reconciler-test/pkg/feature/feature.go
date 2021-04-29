@@ -23,6 +23,10 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 
 	"knative.dev/reconciler-test/pkg/state"
 )
@@ -93,8 +97,29 @@ func (f *Feature) Reference(ref ...corev1.ObjectReference) {
 	f.refs = append(f.refs, ref...)
 }
 
+// References returns all known resources to the Feature registered via
+// `Reference`.
 func (f *Feature) References() []corev1.ObjectReference {
 	return f.refs
+}
+
+// DeleteResourcesFn delete all known resources to the Feature registered
+// via `Reference`. Expected to be used as a StepFn.
+func (f *Feature) DeleteResources(ctx context.Context, t T) {
+	dc := dynamicclient.Get(ctx)
+	for _, ref := range f.References() {
+		gv, err := schema.ParseGroupVersion(ref.APIVersion)
+		if err != nil {
+			t.Errorf("Could not parse GroupVersion for %+v", ref.APIVersion)
+		} else {
+			resource := apis.KindToResource(gv.WithKind(ref.Kind))
+			t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+			if err := dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *metav1.NewDeleteOptions(0)); err != nil {
+				t.Logf("Warning, failed to delete %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+			}
+		}
+	}
+	f.refs = []corev1.ObjectReference(nil)
 }
 
 // Setup adds a step function to the feature set at the Setup timing phase.
