@@ -62,7 +62,7 @@ func eventMode() feature.StepFn {
 
 			_, err := Client(ctx).ApiServerSources.Update(ctx, apiServerSource, metav1.UpdateOptions{})
 			if err != nil {
-				t.Errorf("expected ApiServerResource to accept the allowed eventMode %q.", mode)
+				t.Errorf("expected ApiServerResource to accept the allowed eventMode %q. Err: %e", mode, err.Error())
 			}
 		}
 	}
