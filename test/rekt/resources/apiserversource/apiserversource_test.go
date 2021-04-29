@@ -19,6 +19,11 @@ package apiserversource_test
 import (
 	"os"
 
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+
+	"knative.dev/eventing/test/rekt/resources/apiserversource"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
@@ -28,9 +33,8 @@ import (
 func Example_min() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{
-		"name":       "foo",
-		"namespace":  "bar",
-		"brokerName": "baz",
+		"name":      "foo",
+		"namespace": "bar",
 	}
 
 	files, err := manifest.ExecuteLocalYAML(images, cfg)
@@ -48,30 +52,14 @@ func Example_min() {
 	// spec:
 }
 
-func Example_full() {
+func Example_withServiceAccountName() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{
-		"name":               "foo",
-		"namespace":          "bar",
-		"serviceAccountName": "src-sa",
-		"mode":               "src-mode",
-		"resources": []map[string]interface{}{{
-			"apiVersion": "res1apiVersion",
-			"kind":       "res1kind",
-		}, {
-			"apiVersion": "res2apiVersion",
-			"kind":       "res2kind",
-		}},
-		"sink": map[string]interface{}{
-			"ref": map[string]string{
-				"kind":       "sinkkind",
-				"namespace":  "sinknamespace",
-				"name":       "sinkname",
-				"apiVersion": "sinkversion",
-			},
-			"uri": "uri/parts",
-		},
+		"name":      "foo",
+		"namespace": "bar",
 	}
+
+	apiserversource.WithServiceAccountName("src-sa")(cfg)
 
 	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
@@ -87,7 +75,157 @@ func Example_full() {
 	//   namespace: bar
 	// spec:
 	//   serviceAccountName: src-sa
-	//   mode: src-mode
+}
+
+func Example_withEventMode() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	apiserversource.WithEventMode(v1.ReferenceMode)(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ApiServerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   mode: Reference
+}
+
+func Example_withSink() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	sinkRef := &duckv1.KReference{
+		Kind:       "sinkkind",
+		Namespace:  "sinknamespace",
+		Name:       "sinkname",
+		APIVersion: "sinkversion",
+	}
+	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ApiServerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   sink:
+	//     ref:
+	//       kind: sinkkind
+	//       namespace: bar
+	//       name: sinkname
+	//       apiVersion: sinkversion
+	//     uri: uri/parts
+}
+
+func Example_withResources() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	res1 := v1.APIVersionKindSelector{
+		APIVersion:    "res1apiVersion",
+		Kind:          "res1kind",
+		LabelSelector: nil,
+	}
+
+	res2 := v1.APIVersionKindSelector{
+		APIVersion:    "res2apiVersion",
+		Kind:          "res2kind",
+		LabelSelector: nil,
+	}
+
+	apiserversource.WithResources(res1, res2)(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ApiServerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   resources:
+	//     - apiVersion: res1apiVersion
+	//       kind: res1kind
+	//     - apiVersion: res2apiVersion
+	//       kind: res2kind
+}
+
+func Example_full() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	sinkRef := &duckv1.KReference{
+		Kind:       "sinkkind",
+		Namespace:  "sinknamespace",
+		Name:       "sinkname",
+		APIVersion: "sinkversion",
+	}
+
+	res1 := v1.APIVersionKindSelector{
+		APIVersion:    "res1apiVersion",
+		Kind:          "res1kind",
+		LabelSelector: nil,
+	}
+
+	res2 := v1.APIVersionKindSelector{
+		APIVersion:    "res2apiVersion",
+		Kind:          "res2kind",
+		LabelSelector: nil,
+	}
+
+	apiserversource.WithServiceAccountName("src-sa")(cfg)
+	apiserversource.WithEventMode(v1.ReferenceMode)(cfg)
+	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
+	apiserversource.WithResources(res1, res2)(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: sources.knative.dev/v1
+	// kind: ApiServerSource
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   serviceAccountName: src-sa
+	//   mode: Reference
 	//   resources:
 	//     - apiVersion: res1apiVersion
 	//       kind: res1kind
