@@ -66,7 +66,9 @@ func eventMode() feature.StepFn {
 				t.Errorf("expected ApiServerResource to accept the allowed eventMode %q. Err: %e", mode, err.Error())
 			}
 
-			// wait until the ApiServerSource is ready or fail
+			// wait until the ApiServerSource is ready or fail.
+			// otherwise, some race happens and Kubernetes tells us to refetch the object as it was updated, although
+			// we just refetched the object a couple of lines above.
 			apiserversource.IsReady(apiServerSource.Name)(ctx, t)
 		}
 	}
