@@ -19,6 +19,7 @@ package account_role_test
 import (
 	"os"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -194,5 +195,78 @@ func Example_addressableResolver() {
 	// roleRef:
 	//   kind: ClusterRole
 	//   name: addressable-resolver-collector-foo
+	//   apiGroup: rbac.authorization.k8s.io
+}
+
+func Example_withRoleAndRules() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+
+	rule1 := rbacv1.PolicyRule{
+		APIGroups: []string{"rule1ApiGroupA", "rule1ApiGroupB"},
+		Resources: []string{"rule1ResourceA", "rule1ResourceB"},
+		Verbs:     []string{"rule1VerbA", "rule1VerbB"},
+	}
+
+	rule2 := rbacv1.PolicyRule{
+		APIGroups: []string{"rule2ApiGroupA", "rule2ApiGroupB"},
+		Resources: []string{"rule2ResourceA", "rule2ResourceB"},
+		Verbs:     []string{"rule2VerbA", "rule2VerbB"},
+	}
+
+	account_role.WithRole("baz")(cfg)
+	account_role.WithRules(rule1, rule2)(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: v1
+	// kind: ServiceAccount
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// ---
+	// apiVersion: rbac.authorization.k8s.io/v1
+	// kind: ClusterRole
+	// metadata:
+	//   name: baz
+	// rules:
+	//   - apiGroups:
+	//       - rule1ApiGroupA
+	//       - rule1ApiGroupB
+	//     resources:
+	//       - rule1ResourceA
+	//       - rule1ResourceB
+	//     verbs:
+	//       - rule1VerbA
+	//       - rule1VerbB
+	//   - apiGroups:
+	//       - rule2ApiGroupA
+	//       - rule2ApiGroupB
+	//     resources:
+	//       - rule2ResourceA
+	//       - rule2ResourceB
+	//     verbs:
+	//       - rule2VerbA
+	//       - rule2VerbB
+	// ---
+	// apiVersion: rbac.authorization.k8s.io/v1
+	// kind: ClusterRoleBinding
+	// metadata:
+	//   name: foo
+	// subjects:
+	//   - kind: ServiceAccount
+	//     name: foo
+	//     namespace: bar
+	// roleRef:
+	//   kind: ClusterRole
+	//   name: baz
 	//   apiGroup: rbac.authorization.k8s.io
 }
