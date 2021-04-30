@@ -173,8 +173,6 @@ function install_knative_eventing() {
 
   scale_controlplane eventing-webhook eventing-controller
 
-  if (( SCALE_CHAOSDUCK_TO_ZERO )); then kubectl -n "${SYSTEM_NAMESPACE}" scale deployment/chaosduck --replicas=0; fi
-
   wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing did not come up"
 
   echo "check the config map"
@@ -254,6 +252,7 @@ function unleash_duck() {
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
     ko apply ${KO_FLAGS} -f - || return $?
+    if (( SCALE_CHAOSDUCK_TO_ZERO )); then kubectl -n "${SYSTEM_NAMESPACE}" scale deployment/chaosduck --replicas=0; fi
 }
 
 # Teardown the Knative environment after tests finish.
