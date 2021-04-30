@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// This is a verbatim copy from messaging/v1beta1/channel_template_types.go
+// This is a verbatim copy from messaging/v1/channel_template_types.go
 // but we can not import v1beta1 since we use this there as well, so
 // replicate it here.
 
