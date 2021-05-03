@@ -31,9 +31,9 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-// TestApiServerValidationWebhookConfigurationOnCreate tests if the webhook
+// TestApiServerSourceValidationWebhookConfigurationOnCreate tests if the webhook
 // is configured correctly for ApiServerSource validation on resource creation.
-func TestApiServerValidationWebhookConfigurationOnCreate(t *testing.T) {
+func TestApiServerSourceValidationWebhookConfigurationOnCreate(t *testing.T) {
 	t.Parallel()
 
 	srcname := feature.MakeRandomK8sName("apiserversource")
@@ -49,9 +49,9 @@ func TestApiServerValidationWebhookConfigurationOnCreate(t *testing.T) {
 	env.Test(ctx, t, f)
 }
 
-// TestApiServerValidationWebhookConfigurationOnUpdate tests if the webhook
+// TestApiServerSourceValidationWebhookConfigurationOnUpdate tests if the webhook
 // is configured correctly for ApiServerSource validation on resource update.
-func TestApiServerValidationWebhookConfigurationOnUpdate(t *testing.T) {
+func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 	t.Parallel()
 
 	srcname := feature.MakeRandomK8sName("apiserversource")
