@@ -36,7 +36,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	f.Setup("install containersource", containersource.Install(source, pingsource.WithSink(svc.AsKReference(sink), "")))
-	f.Setup("containersource goes ready", containersource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
 		Must("delivers events",
@@ -59,7 +59,7 @@ func SendsEventsWithSinkURI() *feature.Feature {
 		}
 		containersource.Install(source, pingsource.WithSink(nil, uri.String()))(ctx, t)
 	})
-	f.Setup("containersource goes ready", containersource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
 		Must("delivers events",
@@ -82,7 +82,7 @@ func SendsEventsWithCloudEventOverrides() *feature.Feature {
 		pingsource.WithSink(svc.AsKReference(sink), ""),
 		containersource.WithExtensions(extensions),
 	))
-	f.Setup("containersource goes ready", containersource.IsReady(source))
+	f.Requirement("containersource goes ready", containersource.IsReady(source))
 
 	f.Stable("containersource as event source").
 		Must("delivers events", assert.OnStore(sink).MatchEvent(
