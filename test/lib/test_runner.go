@@ -18,10 +18,13 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,10 +32,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apiserver/pkg/storage/names"
-
 	pkgTest "knative.dev/pkg/test"
-	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/prow"
 
 	"knative.dev/eventing/pkg/utils"
@@ -47,6 +47,15 @@ import (
 const (
 	podLogsDir         = "pod-logs"
 	testPullSecretName = "kn-eventing-test-pull-secret"
+	MaxNamespaces      = 20
+	MaxRetries         = 10
+	RetrySleepDuration = 5 * time.Second
+)
+
+var (
+	nsMutex sync.Mutex
+	serviceCount int
+	namespaceCount int
 )
 
 // ComponentsTestRunner is used to run tests against different eventing components.
@@ -148,19 +157,12 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, set the test case to run in parallel, etc.
 func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
-	// Create a new namespace to run this test case.
-	namespace := makeK8sNamespace(t.Name())
-	t.Logf("namespace is : %q", namespace)
-	client, err := NewClient(
-		pkgTest.Flags.Kubeconfig,
-		pkgTest.Flags.Cluster,
-		namespace,
-		t)
+	client, err := CreateNamespacedClient(t)
 	if err != nil {
 		t.Fatal("Couldn't initialize clients:", err)
 	}
 
-	CreateNamespaceIfNeeded(t, client, namespace)
+	SetupServiceAccountInClientNamespace(t, client)
 
 	// Run the test case in parallel if needed.
 	if runInParallel {
@@ -178,9 +180,72 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 	return client
 }
 
-func makeK8sNamespace(baseFuncName string) string {
-	base := helpers.MakeK8sNamePrefix(baseFuncName)
-	return names.SimpleNameGenerator.GenerateName(base + "-")
+func CreateNamespacedClient(t *testing.T) (*Client, error) {
+	ns := ""
+	// Try namespaces from pre-defined range before giving up.
+	for i := 0; i < MaxNamespaces; i++ {
+		ns = NextNamespace()
+		client, err := NewClient(
+				pkgTest.Flags.Kubeconfig,
+				pkgTest.Flags.Cluster,
+				ns,
+				t)
+		if err != nil {
+			return nil, err
+		}
+		if err := CreateNamespace(client, ns); err != nil {
+			if apierrs.IsAlreadyExists(err) {
+				continue
+			}
+			return nil, err
+		}
+		return client, nil
+	}
+	return nil, errors.New("unable to find available namespace in predefined range")
+}
+
+// NextNamespace returns the next unique namespace.
+func NextNamespace() string {
+	ns := os.Getenv("EVENTING_E2E_NAMESPACE")
+	if ns == "" {
+		ns = "eventing-e2e"
+	}
+	return fmt.Sprintf("%s%d", ns, GetNextNamespaceId())
+}
+
+// GetNextNamespaceId return the next unique ID for the next namespace.
+func GetNextNamespaceId() int {
+	nsMutex.Lock()
+	defer nsMutex.Unlock()
+	current := namespaceCount
+	namespaceCount++
+	return current
+}
+
+// CreateNamespace creates the given namespace.
+func CreateNamespace(client *Client, namespace string) error {
+	err := createNamespaceWithRetry(client, namespace)
+	if err != nil {
+		return fmt.Errorf("could not create namespace %s: %w", namespace, err)
+	}
+	return nil
+}
+
+func createNamespaceWithRetry(client *Client, namespace string) error {
+	var (
+		retries int
+		err     error
+	)
+	for retries < MaxRetries {
+		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+		if _, err = client.Kube.CoreV1().Namespaces().
+			Create(context.Background(), nsSpec, metav1.CreateOptions{}); err == nil {
+			return nil
+		}
+		retries++
+		time.Sleep(RetrySleepDuration)
+	}
+	return err
 }
 
 // TearDown will delete created names using clients.
@@ -253,33 +318,22 @@ func formatEvent(e *corev1.Event) string {
 	}, "\n")
 }
 
-// CreateNamespaceIfNeeded creates a new namespace if it does not exist.
-func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
-	_, err := client.Kube.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+// SetupServiceAccountInClientNamespace creates a new namespace if it does not exist.
+func SetupServiceAccountInClientNamespace(t *testing.T, client *Client) {
+	// https://github.com/kubernetes/kubernetes/issues/66689
+	// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
+	err := waitForServiceAccountExists(client, "default", client.Namespace)
+	if err != nil {
+		t.Fatal("The default ServiceAccount was not created for the Namespace:", client.Namespace)
+	}
 
-	if err != nil && apierrs.IsNotFound(err) {
-		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		_, err = client.Kube.CoreV1().Namespaces().Create(context.Background(), nsSpec, metav1.CreateOptions{})
-
-		if err != nil {
-			t.Fatalf("Failed to create Namespace: %s; %v", namespace, err)
-		}
-
-		// https://github.com/kubernetes/kubernetes/issues/66689
-		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
-		err = waitForServiceAccountExists(client, "default", namespace)
-		if err != nil {
-			t.Fatal("The default ServiceAccount was not created for the Namespace:", namespace)
-		}
-
-		// If the "default" Namespace has a secret called
-		// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
-		// on the "default" ServiceAccount in this new Namespace.
-		// This is needed for cases where the images are in a private registry.
-		_, err := utils.CopySecret(client.Kube.CoreV1(), "default", testPullSecretName, namespace, "default")
-		if err != nil && !apierrs.IsNotFound(err) {
-			t.Fatalf("error copying the secret into ns %q: %s", namespace, err)
-		}
+	// If the "default" Namespace has a secret called
+	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
+	// on the "default" ServiceAccount in this new Namespace.
+	// This is needed for cases where the images are in a private registry.
+	_, err = utils.CopySecret(client.Kube.CoreV1(), "default", testPullSecretName, client.Namespace, "default")
+	if err != nil && !apierrs.IsNotFound(err) {
+		t.Fatalf("error copying the secret into ns %q: %s", client.Namespace, err)
 	}
 }
 
