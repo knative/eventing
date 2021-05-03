@@ -23,12 +23,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	sourcesclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	_ "knative.dev/pkg/system/testing"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/pkg/state"
 )
 
 // TestApiServerSourceValidationWebhookConfigurationOnCreate tests if the webhook
@@ -44,7 +51,7 @@ func TestApiServerSourceValidationWebhookConfigurationOnCreate(t *testing.T) {
 	f := feature.NewFeatureNamed("ApiServerSource webhook is configured correctly.")
 
 	f.Stable("ApiServerSource webhook").
-		Must("reject invalid spec on resource creation", applyApiServerSourceWithInvalidSpec(srcname))
+		Must("reject invalid spec on resource creation", createApiServerSourceWithInvalidSpec(srcname))
 
 	env.Test(ctx, t, f)
 }
@@ -61,15 +68,17 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 
 	f := feature.NewFeatureNamed("ApiServerSource webhook is configured correctly.")
 
-	f.Setup("Create valid ApiServerSource", applyApiServerSourceWithValidSpec(srcname))
+	f.Setup("Set ApiServerSource Name", setApiServerSourceName(srcname))
+
+	f.Setup("Create valid ApiServerSource", createApiServerSourceWithValidSpec(srcname))
 
 	f.Stable("ApiServerSource webhook").
-		Must("reject invalid spec", applyApiServerSourceWithInvalidSpec(srcname))
+		Must("reject invalid spec", updateApiServerSourceWithInvalidSpec())
 
 	env.Test(ctx, t, f)
 }
 
-func applyApiServerSourceWithValidSpec(name string) func(ctx context.Context, t feature.T) {
+func createApiServerSourceWithValidSpec(name string) func(ctx context.Context, t feature.T) {
 	return func(ctx context.Context, t feature.T) {
 		_, err := apiserversource.InstallLocalYaml(ctx, name, apiServerSourceWithValidSpec())
 
@@ -81,7 +90,7 @@ func applyApiServerSourceWithValidSpec(name string) func(ctx context.Context, t 
 	}
 }
 
-func applyApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, t feature.T) {
+func createApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, t feature.T) {
 	return func(ctx context.Context, t feature.T) {
 		// generate a valid spec, then change the event mode with an invalid value, then
 		// try actually applying the resource
@@ -90,7 +99,24 @@ func applyApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, 
 
 		if err != nil {
 			// all good, error is expected
-			assert.Error(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
+			assert.EqualError(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
+		} else {
+			t.Error("expected ApiServerResource to reject invalid spec.")
+		}
+	}
+}
+
+func updateApiServerSourceWithInvalidSpec() func(ctx context.Context, t feature.T) {
+	return func(ctx context.Context, t feature.T) {
+		apiServerSource := getApiServerSource(ctx, t)
+
+		apiServerSource.Spec.EventMode = "Unknown"
+
+		_, err := Client(ctx).ApiServerSources.Update(ctx, apiServerSource, metav1.UpdateOptions{})
+
+		if err != nil {
+			// all good, error is expected
+			assert.EqualError(t, err, `admission webhook "validation.webhook.eventing.knative.dev" denied the request: validation failed: invalid value: Unknown: spec.mode`)
 		} else {
 			t.Error("expected ApiServerResource to reject invalid spec.")
 		}
@@ -117,5 +143,39 @@ func apiServerSourceWithValidSpec() manifest.CfgFn {
 		withResources(cfg)
 		withServiceAccountName(cfg)
 		withEventMode(cfg)
+	}
+}
+
+type SourcesClient struct {
+	ApiServerSources sourcesclientsetv1.ApiServerSourceInterface
+}
+
+func Client(ctx context.Context) *SourcesClient {
+	sc := eventingclient.Get(ctx).SourcesV1()
+	env := environment.FromContext(ctx)
+
+	return &SourcesClient{
+		ApiServerSources: sc.ApiServerSources(env.Namespace()),
+	}
+}
+
+const (
+	ApiServerSourceNameKey = "apiServerSourceName"
+)
+
+func getApiServerSource(ctx context.Context, t feature.T) *sourcesv1.ApiServerSource {
+	c := Client(ctx)
+	name := state.GetStringOrFail(ctx, t, ApiServerSourceNameKey)
+
+	src, err := c.ApiServerSources.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("failed to get ApiServerSource, %v", err)
+	}
+	return src
+}
+
+func setApiServerSourceName(name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		state.SetOrFail(ctx, t, ApiServerSourceNameKey, name)
 	}
 }
