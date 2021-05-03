@@ -74,6 +74,12 @@ func setBrokerName(name string) feature.StepFn {
 	}
 }
 
+func SetTriggerName(name string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		state.SetOrFail(ctx, t, TriggerNameKey, name)
+	}
+}
+
 func ControlPlaneBroker(brokerName string) *feature.Feature {
 	f := feature.NewFeatureNamed("Broker")
 
@@ -103,9 +109,7 @@ func ControlPlaneTrigger_GivenBroker(brokerName string) *feature.Feature {
 		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
-	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
-		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
-	})
+	f.Setup("Set Trigger Name", SetTriggerName(triggerName))
 
 	f.Stable("Conformance").
 		Should("Triggers SHOULD include a Ready condition in their status.",
@@ -132,9 +136,7 @@ func ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName string) *feature.Fea
 		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
-	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
-		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
-	})
+	f.Setup("Set Trigger Name", SetTriggerName(triggerName))
 
 	f.Requirement("The Trigger is Ready", triggerresources.IsReady(triggerName))
 
@@ -158,9 +160,7 @@ func ControlPlaneTrigger_WithBrokerLifecycle() *feature.Feature {
 		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
-	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
-		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
-	})
+	f.Setup("Set Trigger Name", SetTriggerName(triggerName))
 
 	f.Stable("Conformance").
 		May("A Trigger MAY be created before its assigned Broker exists.",
@@ -202,15 +202,13 @@ func ControlPlaneTrigger_WithValidFilters(brokerName string) *feature.Feature {
 		triggerresources.WithFilter(filters),
 	))
 
-	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
-		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
-	})
+	f.Setup("Set Trigger Name", SetTriggerName(triggerName))
 
 	f.Stable("Conformance").
 		Must("The attributes filter specifying a list of key-value pairs MUST be supported by Trigger.",
 			// Compare the passed filters with what is found on the control plane.
 			func(ctx context.Context, t feature.T) {
-				trigger := getTrigger(ctx, t)
+				trigger := GetTrigger(ctx, t)
 				got := make(map[string]string)
 				for k, v := range trigger.Spec.Filter.Attributes {
 					got[k] = v
@@ -252,9 +250,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 		triggerresources.WithSubscriber(svc.AsKReference(subscriberName), ""),
 	))
 
-	f.Setup("Set Trigger Name", func(ctx context.Context, t feature.T) {
-		state.SetOrFail(ctx, t, TriggerNameKey, triggerName)
-	})
+	f.Setup("Set Trigger Name", SetTriggerName(triggerName))
 
 	asserter := f.Stable("Conformance - Negatives - The attributes filter specifying a list of key-value pairs MUST be supported by Trigger.")
 
@@ -264,7 +260,7 @@ func ControlPlaneTrigger_WithInvalidFilters(brokerName string) *feature.Feature 
 		asserter.Must("Reject invalid filter - "+k+" - "+v,
 			// Compare the passed filters with what is found on the control plane.
 			func(ctx context.Context, t feature.T) {
-				trigger := getTrigger(ctx, t)
+				trigger := GetTrigger(ctx, t)
 
 				if trigger.Spec.Filter == nil {
 					trigger.Spec.Filter = &eventingv1.TriggerFilter{
@@ -573,7 +569,7 @@ func getBroker(ctx context.Context, t feature.T) *eventingv1.Broker {
 	return broker
 }
 
-func getTrigger(ctx context.Context, t feature.T) *eventingv1.Trigger {
+func GetTrigger(ctx context.Context, t feature.T) *eventingv1.Trigger {
 	c := Client(ctx)
 	name := state.GetStringOrFail(ctx, t, TriggerNameKey)
 
@@ -623,7 +619,7 @@ func triggerHasReadyInConditions(ctx context.Context, t feature.T) {
 
 	interval, timeout := environment.PollTimingsFromContext(ctx)
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		trigger = getTrigger(ctx, t)
+		trigger = GetTrigger(ctx, t)
 		if trigger.Status.ObservedGeneration != 0 {
 			return true, nil
 		}
@@ -637,13 +633,13 @@ func triggerHasReadyInConditions(ctx context.Context, t feature.T) {
 }
 
 func readyTriggerCanDeliver(ctx context.Context, t feature.T) {
-	trigger := getTrigger(ctx, t)
+	trigger := GetTrigger(ctx, t)
 	_ = trigger
 	// TODO: I am not sure how to test this from the outside.
 }
 
 func readyTriggerHasSubscriberURI(ctx context.Context, t feature.T) {
-	trigger := getTrigger(ctx, t)
+	trigger := GetTrigger(ctx, t)
 	if trigger.Status.IsReady() {
 		if trigger.Status.SubscriberURI == nil {
 			t.Errorf("trigger did not have subscriber uri in status")
@@ -656,7 +652,7 @@ func readyTriggerHasSubscriberURI(ctx context.Context, t feature.T) {
 }
 
 func triggerHasOneBroker(ctx context.Context, t feature.T) {
-	trigger := getTrigger(ctx, t)
+	trigger := GetTrigger(ctx, t)
 	if trigger.Spec.Broker == "" {
 		t.Error("broker is empty")
 	}
@@ -666,7 +662,7 @@ func triggerHasOneBroker(ctx context.Context, t feature.T) {
 }
 
 func triggerSpecBrokerIsImmutable(ctx context.Context, t feature.T) {
-	trigger := getTrigger(ctx, t)
+	trigger := GetTrigger(ctx, t)
 
 	// Update spec.broker
 	trigger.Spec.Broker = "Rekt.BrokerImmutable"
