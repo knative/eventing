@@ -55,3 +55,23 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 		}
 	}
 }
+
+// WithExtensions adds the ceOverrides related config to a ContainerSource spec.
+func WithExtensions(extensions map[string]interface{}) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["ceOverrides"]; !set {
+			cfg["ceOverrides"] = map[string]interface{}{}
+		}
+		ceOverrides := cfg["ceOverrides"].(map[string]interface{})
+
+		if extensions != nil {
+			if _, set := ceOverrides["extensions"]; !set {
+				ceOverrides["extensions"] = map[string]interface{}{}
+			}
+			ceExt := ceOverrides["extensions"].(map[string]interface{})
+			for k, v := range extensions {
+				ceExt[k] = v
+			}
+		}
+	}
+}

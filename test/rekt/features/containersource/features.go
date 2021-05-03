@@ -17,6 +17,8 @@ limitations under the License.
 package containersource
 
 import (
+	"context"
+
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
@@ -39,6 +41,54 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	f.Stable("containersource as event source").
 		Must("delivers events",
 			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
+
+	return f
+}
+
+func SendsEventsWithSinkURI() *feature.Feature {
+	source := feature.MakeRandomK8sName("containersource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Setup("install containersource", func(ctx context.Context, t feature.T) {
+		uri, err := svc.Address(ctx, sink)
+		if err != nil {
+			t.Error("failed to get address of sink", err)
+		}
+		containersource.Install(source, pingsource.WithSink(nil, uri.String()))(ctx, t)
+	})
+	f.Setup("containersource goes ready", containersource.IsReady(source))
+
+	f.Stable("containersource as event source").
+		Must("delivers events",
+			assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
+
+	return f
+}
+
+func SendsEventsWithCloudEventOverrides() *feature.Feature {
+	source := feature.MakeRandomK8sName("containersource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+	extensions := map[string]interface{}{
+		"wow": "so extended",
+	}
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	f.Setup("install containersource", containersource.Install(source,
+		pingsource.WithSink(svc.AsKReference(sink), ""),
+		containersource.WithExtensions(extensions),
+	))
+	f.Setup("containersource goes ready", containersource.IsReady(source))
+
+	f.Stable("containersource as event source").
+		Must("delivers events", assert.OnStore(sink).MatchEvent(
+			test.HasType("dev.knative.eventing.samples.heartbeat"),
+			test.HasExtensions(extensions),
+		).AtLeast(1))
 
 	return f
 }

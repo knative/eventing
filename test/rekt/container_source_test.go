@@ -28,7 +28,6 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 )
 
-// TestContainerSourceWithSinkRef
 func TestContainerSourceWithSinkRef(t *testing.T) {
 	t.Parallel()
 
@@ -42,4 +41,34 @@ func TestContainerSourceWithSinkRef(t *testing.T) {
 	t.Cleanup(env.Finish)
 
 	env.Test(ctx, t, containersource.SendsEventsWithSinkRef())
+}
+
+func TestContainerSourceWithSinkURI(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+	t.Cleanup(env.Finish)
+
+	env.Test(ctx, t, containersource.SendsEventsWithSinkURI())
+}
+
+func TestContainerSourceWithCloudEventOverrides(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+	t.Cleanup(env.Finish)
+
+	env.Test(ctx, t, containersource.SendsEventsWithCloudEventOverrides())
 }
