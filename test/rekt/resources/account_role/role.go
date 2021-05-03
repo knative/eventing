@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
@@ -43,6 +45,26 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 func WithRole(role string) manifest.CfgFn {
 	return func(cfg map[string]interface{}) {
 		cfg["role"] = role
+	}
+}
+
+func WithRules(rules ...rbacv1.PolicyRule) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["rules"]; !set {
+			cfg["rules"] = []map[string]interface{}{}
+		}
+
+		for _, resource := range rules {
+			elem := map[string]interface{}{
+				"apiGroups": resource.APIGroups,
+				"resources": resource.Resources,
+				"verbs":     resource.Verbs,
+				// TODO: skip for now
+				//"resourceNames":   resource.ResourceNames,
+				//"nonResourceURLs": resource.NonResourceURLs,
+			}
+			cfg["rules"] = append(cfg["rules"].([]map[string]interface{}), elem)
+		}
 	}
 }
 
