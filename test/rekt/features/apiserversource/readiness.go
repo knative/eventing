@@ -27,9 +27,20 @@ import (
 	"knative.dev/reconciler-test/resources/svc"
 )
 
-// GoesReady returns a feature creating an ApiServerSource and then testing if an ApiServerSource becomes ready.
-func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
+// GoesReady returns a feature testing if an ApiServerSource becomes ready.
+func GoesReady(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("ApiServerSource goes ready.")
+
+	f.Setup("wait until ApiServerSource is ready", apiserversource.IsReady(name))
+
+	f.Stable("ApiServerSource")
+
+	return f
+}
+
+// Install returns a feature creating an ApiServerSource
+func Install(name string, cfg ...manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("ApiServerSource is installed.")
 
 	sink := feature.MakeRandomK8sName("sink")
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
@@ -59,9 +70,7 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 		}),
 	)
 
-	f.Setup("install a ApiServerSource", apiserversource.Install(name, cfg...))
-
-	f.Requirement("ApiServerSource is ready", apiserversource.IsReady(name))
+	f.Setup("install an ApiServerSource", apiserversource.Install(name, cfg...))
 
 	f.Stable("ApiServerSource")
 
