@@ -61,7 +61,7 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 
 	f := feature.NewFeatureNamed("ApiServerSource webhook is configured correctly.")
 
-	f.Setup("Create valid ApiServerSource", createApiServerSourceWithValidSpec(srcname))
+	f.Setup("Create valid ApiServerSource", applyApiServerSourceWithValidSpec(srcname))
 
 	f.Stable("ApiServerSource webhook").
 		Must("reject invalid spec", applyApiServerSourceWithInvalidSpec(srcname))
@@ -69,24 +69,24 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 	env.Test(ctx, t, f)
 }
 
-func createApiServerSourceWithValidSpec(name string) func(ctx context.Context, t feature.T) {
+func applyApiServerSourceWithValidSpec(name string) func(ctx context.Context, t feature.T) {
 	return func(ctx context.Context, t feature.T) {
-		_, err := apiserversource.InstallLocalYaml(ctx, name, withValidSpec())
+		_, err := apiserversource.InstallLocalYaml(ctx, name, apiServerSourceWithValidSpec())
 
 		// we don't care if the resource gets ready or not as we only concerned about the webhook
 
 		if err != nil {
-			t.Error("ApiServerResource with valid spec cannot be created", err)
+			t.Error("ApiServerResource with valid spec cannot be applied", err)
 		}
 	}
 }
 
 func applyApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, t feature.T) {
 	return func(ctx context.Context, t feature.T) {
-		// generate a valid spec, then update the event mode with an invalid value, then
-		// try actually creating the resource
+		// generate a valid spec, then change the event mode with an invalid value, then
+		// try actually applying the resource
 		_, err := apiserversource.InstallLocalYaml(ctx, name,
-			withValidSpec(), apiserversource.WithEventMode("Unknown"))
+			apiServerSourceWithValidSpec(), apiserversource.WithEventMode("Unknown"))
 
 		if err != nil {
 			// all good, error is expected
@@ -97,7 +97,7 @@ func applyApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, 
 	}
 }
 
-func withValidSpec() manifest.CfgFn {
+func apiServerSourceWithValidSpec() manifest.CfgFn {
 	withSink := apiserversource.WithSink(&duckv1.KReference{
 		Kind:       "Service",
 		Name:       "foo-svc",
