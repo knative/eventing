@@ -23,6 +23,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"knative.dev/eventing/test/rekt/resources/account_role"
+	"knative.dev/pkg/system"
+	"knative.dev/reconciler-test/pkg/k8s"
+	"knative.dev/reconciler-test/pkg/knative"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -36,6 +41,7 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/pkg/state"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // TestApiServerSourceValidationWebhookConfigurationOnCreate tests if the webhook
@@ -45,8 +51,7 @@ func TestApiServerSourceValidationWebhookConfigurationOnCreate(t *testing.T) {
 
 	srcname := feature.MakeRandomK8sName("apiserversource")
 
-	ctx, env := global.Environment()
-	t.Cleanup(env.Finish)
+	ctx, env := global.Environment(environment.Managed(t))
 
 	f := feature.NewFeatureNamed("ApiServerSource webhook is configured correctly.")
 
@@ -63,14 +68,20 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 
 	srcname := feature.MakeRandomK8sName("apiserversource")
 
-	ctx, env := global.Environment()
-	t.Cleanup(env.Finish)
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
 
 	f := feature.NewFeatureNamed("ApiServerSource webhook is configured correctly.")
 
 	f.Setup("Set ApiServerSource Name", setApiServerSourceName(srcname))
 
-	f.Setup("Create valid ApiServerSource", createApiServerSourceWithValidSpec(srcname))
+	env.Prerequisite(ctx, t, installApiServerSource(srcname))
+	env.Prerequisite(ctx, t, apiServerSourceGoesReady(srcname))
 
 	f.Stable("ApiServerSource webhook").
 		Must("reject invalid spec", updateApiServerSourceWithInvalidSpec())
@@ -78,16 +89,53 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 	env.Test(ctx, t, f)
 }
 
-func createApiServerSourceWithValidSpec(name string) func(ctx context.Context, t feature.T) {
-	return func(ctx context.Context, t feature.T) {
-		_, err := apiserversource.InstallLocalYaml(ctx, name, apiServerSourceWithValidSpec())
+func apiServerSourceGoesReady(name string) *feature.Feature {
+	f := feature.NewFeatureNamed("ApiServerSource goes ready.")
 
-		// we don't care if the resource gets ready or not as we only concerned about the webhook
+	f.Setup("wait until ApiServerSource is ready", apiserversource.IsReady(name))
 
-		if err != nil {
-			t.Error("ApiServerResource with valid spec cannot be applied", err)
-		}
-	}
+	f.Stable("ApiServerSource")
+
+	return f
+}
+
+// installApiServerSource returns a feature creating an ApiServerSource
+func installApiServerSource(name string, cfg ...manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("ApiServerSource is installed.")
+
+	sink := feature.MakeRandomK8sName("sink")
+	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource",
+		account_role.Install(sacmName,
+			account_role.WithRole(sacmName+"-clusterrole"),
+			account_role.WithRules(rbacv1.PolicyRule{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"get", "list", "watch"},
+			}),
+		))
+
+	cfg = append(cfg,
+		apiserversource.WithServiceAccountName(sacmName),
+		apiserversource.WithEventMode(v1.ResourceMode),
+		apiserversource.WithSink(&duckv1.KReference{
+			Kind:       "Service",
+			Name:       sink,
+			APIVersion: "v1",
+		}, ""),
+		apiserversource.WithResources(v1.APIVersionKindSelector{
+			APIVersion: "v1",
+			Kind:       "Event",
+		}),
+	)
+
+	f.Setup("install an ApiServerSource", apiserversource.Install(name, cfg...))
+
+	f.Stable("ApiServerSource")
+
+	return f
 }
 
 func createApiServerSourceWithInvalidSpec(name string) func(ctx context.Context, t feature.T) {

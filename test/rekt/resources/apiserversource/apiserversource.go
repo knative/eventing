@@ -18,12 +18,34 @@ package apiserversource
 
 import (
 	"context"
+	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+func Gvr() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "apiserversources"}
+}
+
+// IsReady tests to see if an ApiServerSource becomes ready within the time given.
+func IsReady(name string, timings ...time.Duration) feature.StepFn {
+	return k8s.IsReady(Gvr(), name, timings...)
+}
+
+// Install returns a step function which creates an ApiServerSource resource, augmented with the config fn options.
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		if _, err := InstallLocalYaml(ctx, name, opts...); err != nil {
+			t.Error(err)
+		}
+	}
+}
 
 // InstallLocalYaml will create a ApiServerSource resource, augmented with the config fn options.
 func InstallLocalYaml(ctx context.Context, name string, opts ...manifest.CfgFn) (manifest.Manifest, error) {
