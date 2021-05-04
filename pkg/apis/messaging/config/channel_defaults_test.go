@@ -83,6 +83,20 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 			Data: map[string]string{},
 		},
 	}, {
+		name:    "broken default-ch-config",
+		wantErr: true,
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      ChannelDefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-ch-config": `
+      broken YAML
+`,
+			},
+		},
+	}, {
 		name:    "all specified values",
 		wantErr: false,
 		wantChannelDefaults: &ChannelDefaults{

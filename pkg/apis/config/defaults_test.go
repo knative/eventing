@@ -133,6 +133,20 @@ func TestDefaultsConfiguration(t *testing.T) {
 			Data: map[string]string{},
 		},
 	}, {
+		name:    "corrupt default-br-config",
+		wantErr: true,
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      DefaultsConfigName,
+			},
+			Data: map[string]string{
+				"default-br-config": `
+      broken YAML
+`,
+			},
+		},
+	}, {
 		name:    "all specified values",
 		wantErr: false,
 		wantDefaults: &Defaults{
