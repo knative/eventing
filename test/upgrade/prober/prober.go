@@ -54,7 +54,7 @@ type ProbeRunner interface {
 	Verify(ctx pkgupgrade.Context)
 }
 
-// CreateProbeRunner will create a runner compatibile with
+// CreateProbeRunner will create a runner compatible with
 // pkgupgrade.BackgroundVerification interface.
 func CreateProbeRunner(
 	config *Config,
