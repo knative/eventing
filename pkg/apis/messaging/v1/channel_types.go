@@ -66,6 +66,7 @@ var (
 type ChannelSpec struct {
 	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
 	// This is immutable after creation. Normally this is set by the Channel defaulter, not directly by the user.
+	// +optional
 	ChannelTemplate *ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Channel conforms to ChannelableSpec
@@ -78,6 +79,7 @@ type ChannelStatus struct {
 	eventingduckv1.ChannelableStatus `json:",inline"`
 
 	// Channel is an KReference to the Channel CRD backing this Channel.
+	// +optional
 	Channel *duckv1.KReference `json:"channel,omitempty"`
 }
 

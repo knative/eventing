@@ -90,6 +90,7 @@ type BrokerStatus struct {
 
 	// Broker is Addressable. It exposes the endpoint as an URI to get events
 	// delivered into the Broker mesh.
+	// +optional
 	Address duckv1.Addressable `json:"address,omitempty"`
 }
 
