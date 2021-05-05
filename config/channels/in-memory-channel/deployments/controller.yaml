@@ -25,7 +25,6 @@ spec:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
       messaging.knative.dev/role: controller
-      role: inmemorychannel-webhook
   template:
     metadata:
       labels: *labels
@@ -91,7 +90,6 @@ kind: Service
 metadata:
   labels:
     eventing.knative.dev/release: devel
-    role: inmemorychannel-webhook
   name: inmemorychannel-webhook
   namespace: knative-eventing
 spec:
@@ -100,4 +98,5 @@ spec:
       port: 443
       targetPort: 8443
   selector:
-    role: inmemorychannel-webhook
+    messaging.knative.dev/channel: in-memory-channel
+    messaging.knative.dev/role: controller
