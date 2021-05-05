@@ -34,7 +34,6 @@ initialize $@ --skip-istio-addon
 
 echo "Running Conformance tests for: Multi Tenant Channel Based Broker (v1), Channel (v1), InMemoryChannel (v1) , ApiServerSource (v1), ContainerSource (v1) and PingSource (v1beta2)"
 go_test_e2e -timeout=30m -parallel=12 ./test/conformance \
-  -brokers=eventing.knative.dev/v1:MTChannelBasedBroker \
   -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel \
   -sources=sources.knative.dev/v1beta2:PingSource,sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource \
   || fail_test
