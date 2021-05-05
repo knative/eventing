@@ -29,6 +29,8 @@ const (
 	defaulEventsPrefix = "dev.knative.eventing.prober.sut"
 )
 
+var eventTypes = []string{"step", "finished"}
+
 // SystemUnderTest (SUT) represents a system that we'd like to test with
 // continual prober.
 type SystemUnderTest interface {

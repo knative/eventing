@@ -50,8 +50,6 @@ const (
 // DuplicateAction is the action to take in case of duplicated events
 type DuplicateAction string
 
-var eventTypes = []string{"step", "finished"}
-
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
@@ -66,7 +64,7 @@ type Config struct {
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
 	ConfigToml
-	sut.SystemUnderTest
+	SystemUnderTest  func(namespace string) sut.SystemUnderTest
 	EventsTypePrefix string
 	HealthEndpoint   string
 }
@@ -88,8 +86,8 @@ type ServingConfig struct {
 
 // NewConfig creates a new configuration object with default values filled in.
 // Values can be influenced by kelseyhightower/envconfig with
-// `e2e_upgrade_tests` prefix.
-func NewConfig(namespace string) *Config {
+// `eventing_upgrade_tests` prefix.
+func NewConfig() *Config {
 	config := &Config{
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
@@ -109,7 +107,7 @@ func NewConfig(namespace string) *Config {
 			},
 			EventsTypePrefix: defaultWatholaEventsPrefix,
 			HealthEndpoint:   defaultHealthEndpoint,
-			SystemUnderTest:  sut.NewDefault(namespace, eventTypes),
+			SystemUnderTest:  sut.NewDefault,
 		},
 	}
 
@@ -129,7 +127,8 @@ func (p *prober) deployConfiguration() {
 		ref = resources.KnativeRefForKservice(forwarderName, p.client.Namespace)
 	}
 	dest := duckv1.Destination{Ref: ref}
-	url, err := p.config.SystemUnderTest.Deploy(sc, dest)
+	s := p.config.SystemUnderTest(p.client.Namespace)
+	url, err := s.Deploy(sc, dest)
 	if err != nil {
 		p.client.T.Fatal(err)
 	}

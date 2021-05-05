@@ -42,7 +42,7 @@ const (
 )
 
 // Verify will verify prober state after finished has been sent.
-func (p *prober) Verify() (eventErrs []error, eventsSent int, fetchErr error) {
+func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	report := p.fetchReport()
 	availRate := 0.0
 	if report.TotalRequests != 0 {
@@ -53,7 +53,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int, fetchErr error) {
 	p.log.Infof("Availability: %.3f%%, Requests sent: %d.",
 		availRate, report.TotalRequests)
 	if report.State == "active" {
-		return nil, report.EventsSent, errors.New("report fetched too early, receiver is in active state")
+		p.client.T.Fatal("report fetched too early, receiver is in active state")
 	}
 	for _, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
@@ -71,7 +71,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int, fetchErr error) {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
 	}
-	return eventErrs, report.EventsSent, nil
+	return eventErrs, report.EventsSent
 }
 
 // Finish terminates sender which sends finished event.

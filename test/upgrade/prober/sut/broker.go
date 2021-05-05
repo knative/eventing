@@ -55,7 +55,7 @@ type Triggers struct {
 	TypePrefix string
 }
 
-func newBrokerAndTriggers(namespace string, eventTypes []string) SystemUnderTest {
+func newBrokerAndTriggers(namespace string) SystemUnderTest {
 	return &BrokerAndTriggers{
 		Namespace: namespace,
 		Broker: Broker{

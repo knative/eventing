@@ -16,13 +16,16 @@
 package prober
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/prometheus/common/log"
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
+	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 var (
@@ -33,45 +36,102 @@ var (
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
-	Verify() ([]error, int, error)
+	Verify() ([]error, int)
 
 	// Finish send finished event
 	Finish()
 
 	// ReportErrors will reports found errors in proper way
-	ReportErrors(t *testing.T, errors []error)
+	ReportErrors(errors []error)
+}
 
-	// deploy a prober to a cluster
-	deploy()
-	// remove a prober from cluster
-	remove()
+// ProbeRunner will run continual verification with provided configuration.
+type ProbeRunner interface {
+	// Setup will start a continual prober in background.
+	Setup(ctx pkgupgrade.Context)
+
+	// Verify will verify that all sent events propagated at least once.
+	Verify(ctx pkgupgrade.Context)
+}
+
+// CreateProbeRunner will create a runner compatibile with
+// pkgupgrade.BackgroundVerification interface.
+func CreateProbeRunner(
+	config *Config,
+	options ...testlib.SetupClientOption,
+) ProbeRunner {
+	return &probeRunner{
+		prober: &prober{
+			config: config,
+		},
+		options: options,
+	}
+}
+
+type probeRunner struct {
+	*prober
+	options []testlib.SetupClientOption
+}
+
+func (p *probeRunner) Setup(ctx pkgupgrade.Context) {
+	p.log = ctx.Log
+	p.client = testlib.Setup(ctx.T, false, p.options...)
+	p.deploy()
+}
+
+func (p *probeRunner) Verify(ctx pkgupgrade.Context) {
+	if p.client == nil {
+		ctx.T.Fatal("prober isn't initiated (client is nil)")
+		return
+	}
+	// use T from new test
+	p.client.T = ctx.T
+	t := ctx.T
+	defer testlib.TearDown(p.client)
+	defer p.remove()
+	p.Finish()
+	waitAfterFinished(p.prober)
+
+	errors, events := p.prober.Verify()
+	if len(errors) == 0 {
+		t.Logf("All %d events propagated well", events)
+	} else {
+		t.Logf("There were %d events propagated, but %d errors occurred. "+
+			"Listing them below.", events, len(errors))
+	}
+
+	p.ReportErrors(errors)
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
-	pm := newProber(log, client, config)
-	pm.deploy()
-	return pm
+// Deprecated: use CreateProbeRunner func instead.
+func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
+	log.Warn("prober.RunEventProber is deprecated. Use CreateProbeRunner instead.")
+	config.Ctx = ctx
+	p := &prober{
+		log:    log,
+		client: client,
+		config: config,
+	}
+	p.deploy()
+	return p
 }
 
 // AssertEventProber will send finish event and then verify if all events propagated well
-func AssertEventProber(t *testing.T, prober Prober) {
-	prober.Finish()
-	defer prober.remove()
-
-	waitAfterFinished(prober)
-
-	eventErrs, eventCount, err := prober.Verify()
-	if err != nil {
-		t.Fatal("fetch error:", err)
+// Deprecated: use CreateProbeRunner func instead.
+func AssertEventProber(ctx context.Context, t *testing.T, probe Prober) {
+	log.Warn("prober.AssertEventProber is deprecated. Use CreateProbeRunner instead.")
+	p := probe.(*prober)
+	p.client.T = t
+	p.config.Ctx = ctx
+	pr := &probeRunner{
+		prober:  p,
+		options: nil,
 	}
-	if len(eventErrs) == 0 {
-		t.Logf("All %d events propagated well", eventCount)
-	} else {
-		t.Logf("There were %d events propagated, but %d errors occurred. "+
-			"Listing them below.", eventCount, len(eventErrs))
-	}
-	prober.ReportErrors(t, eventErrs)
+	pr.Verify(pkgupgrade.Context{
+		T:   t,
+		Log: p.log,
+	})
 }
 
 type prober struct {
@@ -87,7 +147,8 @@ func (p *prober) servingClient() resources.ServingClient {
 	}
 }
 
-func (p *prober) ReportErrors(t *testing.T, errors []error) {
+func (p *prober) ReportErrors(errors []error) {
+	t := p.client.T
 	for _, err := range errors {
 		if p.config.FailOnErrors {
 			t.Error(err)
@@ -127,17 +188,7 @@ func (p *prober) remove() {
 	ensure.NoError(p.client.Tracker.Clean(true))
 }
 
-func newProber(log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
-	return &prober{
-		log:    log,
-		client: client,
-		config: config,
-	}
-}
-
-func waitAfterFinished(p Prober) {
-	s := p.(*prober)
-	cfg := s.config
-	s.log.Infof("Waiting %v after sender finished...", cfg.FinishedSleep)
-	time.Sleep(cfg.FinishedSleep)
+func waitAfterFinished(p *prober) {
+	p.log.Infof("Waiting %v after sender finished...", p.config.FinishedSleep)
+	time.Sleep(p.config.FinishedSleep)
 }

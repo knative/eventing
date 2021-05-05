@@ -17,6 +17,6 @@ limitations under the License.
 package sut
 
 // NewDefault will return a default SUT for this repo.
-func NewDefault(namespace string, eventTypes []string) SystemUnderTest {
-	return newBrokerAndTriggers(namespace, eventTypes)
+func NewDefault(namespace string) SystemUnderTest {
+	return newBrokerAndTriggers(namespace)
 }
