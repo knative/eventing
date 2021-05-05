@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	defaulEventsPrefix = "dev.knative.eventing.prober.sut"
+	defaulEventsPrefix = "dev.knative.eventing.wathola"
 )
 
 var eventTypes = []string{"step", "finished"}
@@ -36,10 +36,10 @@ var eventTypes = []string{"step", "finished"}
 type SystemUnderTest interface {
 	// Deploy is responsible for deploying SUT and returning a URL to feed
 	// events into.
-	Deploy(ctx Context, destination duckv1.Destination) (*apis.URL, error)
+	Deploy(ctx Context, destination duckv1.Destination) *apis.URL
 
 	// Teardown will remove all deployed SUT resources.
-	Teardown(ctx Context) error
+	Teardown(ctx Context)
 }
 
 // Context represents a context of system under test that we'd

@@ -139,10 +139,10 @@ func (p *prober) deployConfiguration() {
 	}
 	dest := duckv1.Destination{Ref: ref}
 	s := p.config.SystemUnderTest(p.client.Namespace)
-	url, err := s.Deploy(sc, dest)
-	if err != nil {
-		p.client.T.Fatal(err)
-	}
+	url := s.Deploy(sc, dest)
+	p.client.Cleanup(func() {
+		s.Teardown(sc)
+	})
 	p.deployConfigToml(url)
 }
 

@@ -60,7 +60,7 @@ type Runner interface {
 
 // CreateRunner will create a runner compatible with
 // pkgupgrade.NewBackgroundVerification func.
-func CreateRunner(config *Config,	options ...testlib.SetupClientOption) Runner {
+func CreateRunner(config *Config, options ...testlib.SetupClientOption) Runner {
 	return &probeRunner{
 		prober:  &prober{config: config},
 		options: options,

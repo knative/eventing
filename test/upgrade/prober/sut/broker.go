@@ -76,56 +76,55 @@ func newBrokerAndTriggers(namespace string) SystemUnderTest {
 	}
 }
 
-func (b *BrokerAndTriggers) Deploy(ctx Context, dest duckv1.Destination) (*apis.URL, error) {
+func (b *BrokerAndTriggers) Deploy(ctx Context, dest duckv1.Destination) *apis.URL {
 	b.deployBroker(ctx)
-	url, err := b.fetchURL(ctx)
-	if err != nil {
-		return nil, err
-	}
+	url := b.fetchURL(ctx)
 	b.deployTriggers(ctx, dest)
-	return url, nil
+	return url
 }
 
-func (b *BrokerAndTriggers) Teardown(ctx Context) error {
+func (b *BrokerAndTriggers) Teardown(ctx Context) {
 	ctx.Log.Debug("BrokerAndTriggers SUT should automatically teardown")
-	return nil
 }
 
 func (b *BrokerAndTriggers) deployBroker(ctx Context) {
 	ctx.Client.CreateBrokerOrFail(b.Name, b.Broker.Opts...)
 }
 
-func (b *BrokerAndTriggers) fetchURL(ctx Context) (*apis.URL, error) {
+func (b *BrokerAndTriggers) fetchURL(ctx Context) *apis.URL {
 	namespace := b.Namespace
-	ctx.Log.Debugf("Fetching %s broker URL for ns %s",
+	ctx.Log.Debugf("Fetching \"%s\" broker URL for ns %s",
 		b.Name, namespace)
 	meta := resources.NewMetaResource(
 		b.Name, b.Namespace, testlib.BrokerTypeMeta,
 	)
 	err := duck.WaitForResourceReady(ctx.Client.Dynamic, meta)
 	if err != nil {
-		return nil, err
+		ctx.T.Fatal(err)
 	}
 	broker, err := ctx.Client.Eventing.EventingV1().Brokers(namespace).Get(
 		ctx.Ctx, b.Name, metav1.GetOptions{},
 	)
 	if err != nil {
-		return nil, err
+		ctx.T.Fatal(err)
 	}
 	url := broker.Status.Address.URL
-	ctx.Log.Debugf("%s broker URL for ns %s is %v", b.Name, namespace, url)
-	return url, nil
+	ctx.Log.Debugf("\"%s\" broker URL for ns %s is %v",
+		b.Name, namespace, url)
+	return url
 }
 
 func (b *BrokerAndTriggers) deployTriggers(ctx Context, dest duckv1.Destination) {
+	triggers := make([]*eventingv1.Trigger, 0, len(b.Triggers.Types))
 	for _, eventType := range b.Triggers.Types {
 		name := fmt.Sprintf("%s-%s", b.Name, eventType)
 		fullType := fmt.Sprintf("%s.%s", b.Triggers.TypePrefix, eventType)
 		subscriberOption := resources.WithSubscriberDestination(func(t *eventingv1.Trigger) duckv1.Destination {
 			return dest
 		})
-		ctx.Log.Debugf("Creating trigger %s for type %s to route to %#v", name, eventType, dest)
-		ctx.Client.CreateTriggerOrFail(
+		ctx.Log.Debugf("Creating trigger \"%s\" for type %s to route to %#v",
+			name, eventType, dest)
+		trgr := ctx.Client.CreateTriggerOrFail(
 			name,
 			resources.WithBroker(b.Name),
 			resources.WithAttributesTriggerFilter(
@@ -135,5 +134,15 @@ func (b *BrokerAndTriggers) deployTriggers(ctx Context, dest duckv1.Destination)
 			),
 			subscriberOption,
 		)
+		triggers = append(triggers, trgr)
+	}
+	for _, trgr := range triggers {
+		meta := resources.NewMetaResource(
+			trgr.Name, trgr.Namespace, testlib.TriggerTypeMeta,
+		)
+		err := duck.WaitForResourceReady(ctx.Client.Dynamic, meta)
+		if err != nil {
+			ctx.T.Fatal(err)
+		}
 	}
 }
