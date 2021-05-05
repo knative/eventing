@@ -24,14 +24,21 @@ import (
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 // schema is a tool to dump the schema for Eventing resources.
 func main() {
+	// Eventing
 	registry.Register(&eventingv1.Broker{})
 	registry.Register(&eventingv1.Trigger{})
+
+	// Messaging
 	registry.Register(&messagingv1.Channel{})
 	registry.Register(&messagingv1.InMemoryChannel{})
+
+	// Sources
+	registry.Register(&sourcesv1.SinkBinding{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)
