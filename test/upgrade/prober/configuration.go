@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"path"
 	"runtime"
+	"strings"
 	"text/template"
 	"time"
 
@@ -59,6 +60,13 @@ type Config struct {
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
 	Ctx           context.Context
+	// BrokerOpts holds opts for broker.
+	// Deprecated: use Wathola.SystemUnderTest instead.
+	BrokerOpts []resources.BrokerOption
+	// Namespace holds namespace in which test is about to be executed.
+	// Deprecated: namespace is about to be taken from testlib.Client created by
+	// CreateRunner
+	Namespace string
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -87,7 +95,7 @@ type ServingConfig struct {
 // NewConfig creates a new configuration object with default values filled in.
 // Values can be influenced by kelseyhightower/envconfig with
 // `eventing_upgrade_tests` prefix.
-func NewConfig() *Config {
+func NewConfig(namespace ...string) *Config {
 	config := &Config{
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
@@ -113,6 +121,9 @@ func NewConfig() *Config {
 
 	err := envconfig.Process("eventing_upgrade_tests", config)
 	ensure.NoError(err)
+	if len(namespace) > 0 {
+		config.Namespace = strings.Join(namespace, ",")
+	}
 	return config
 }
 

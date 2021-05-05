@@ -17,6 +17,7 @@ package prober
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/eventing/test/upgrade/prober/sut"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
@@ -33,7 +35,9 @@ var (
 	Interval = 10 * time.Millisecond
 )
 
-// Prober is the interface for a prober, which checks the result of the probes when stopped.
+// Prober is the interface for a prober, which checks the result of the probes
+// when stopped.
+// Deprecated: use Runner instead, create it with CreateRunner func.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
 	Verify() ([]error, int)
@@ -45,8 +49,8 @@ type Prober interface {
 	ReportErrors(errors []error)
 }
 
-// ProbeRunner will run continual verification with provided configuration.
-type ProbeRunner interface {
+// Runner will run continual verification with provided configuration.
+type Runner interface {
 	// Setup will start a continual prober in background.
 	Setup(ctx pkgupgrade.Context)
 
@@ -54,16 +58,11 @@ type ProbeRunner interface {
 	Verify(ctx pkgupgrade.Context)
 }
 
-// CreateProbeRunner will create a runner compatible with
-// pkgupgrade.BackgroundVerification interface.
-func CreateProbeRunner(
-	config *Config,
-	options ...testlib.SetupClientOption,
-) ProbeRunner {
+// CreateRunner will create a runner compatible with
+// pkgupgrade.NewBackgroundVerification func.
+func CreateRunner(config *Config,	options ...testlib.SetupClientOption) Runner {
 	return &probeRunner{
-		prober: &prober{
-			config: config,
-		},
+		prober:  &prober{config: config},
 		options: options,
 	}
 }
@@ -74,6 +73,7 @@ type probeRunner struct {
 }
 
 func (p *probeRunner) Setup(ctx pkgupgrade.Context) {
+	p.validate(ctx)
 	p.log = ctx.Log
 	p.client = testlib.Setup(ctx.T, false, p.options...)
 	p.deploy()
@@ -103,10 +103,33 @@ func (p *probeRunner) Verify(ctx pkgupgrade.Context) {
 	p.ReportErrors(errors)
 }
 
+func (p *probeRunner) validate(ctx pkgupgrade.Context) {
+	if p.client.Namespace != "" {
+		ctx.Log.Warnf(
+			"DEPRECATED: namespace set in Config: %s. Ignoring it.",
+			p.client.Namespace)
+	}
+	if len(p.config.BrokerOpts) > 0 {
+		ctx.Log.Warn(
+			"DEPRECATED: BrokerOpts set in Config. Use custom SystemUnderTest")
+		if reflect.ValueOf(p.config.Wathola.SystemUnderTest) == reflect.ValueOf(sut.NewDefault) {
+			p.config.Wathola.SystemUnderTest = func(namespace string) sut.SystemUnderTest {
+				s := sut.NewDefault(namespace)
+				bt := s.(*sut.BrokerAndTriggers)
+				bt.Opts = append(bt.Opts, p.config.BrokerOpts...)
+				return bt
+			}
+		} else {
+			ctx.T.Fatal("Can't use given BrokerOpts, as custom SUT is used as " +
+				"well. Drop using BrokerOpts in favor of custom SUT.")
+		}
+	}
+}
+
 // RunEventProber starts a single Prober of the given domain.
-// Deprecated: use CreateProbeRunner func instead.
+// Deprecated: use CreateRunner func instead.
 func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
-	log.Warn("prober.RunEventProber is deprecated. Use CreateProbeRunner instead.")
+	log.Warn("prober.RunEventProber is deprecated. Use CreateRunner instead.")
 	config.Ctx = ctx
 	p := &prober{
 		log:    log,
@@ -118,9 +141,9 @@ func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib
 }
 
 // AssertEventProber will send finish event and then verify if all events propagated well
-// Deprecated: use CreateProbeRunner func instead.
+// Deprecated: use CreateRunner func instead.
 func AssertEventProber(ctx context.Context, t *testing.T, probe Prober) {
-	log.Warn("prober.AssertEventProber is deprecated. Use CreateProbeRunner instead.")
+	log.Warn("prober.AssertEventProber is deprecated. Use CreateRunner instead.")
 	p := probe.(*prober)
 	p.client.T = t
 	p.config.Ctx = ctx

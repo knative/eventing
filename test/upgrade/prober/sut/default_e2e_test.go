@@ -20,8 +20,11 @@ package sut_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
@@ -40,7 +43,7 @@ func TestNewDefaultE2E(t *testing.T) {
 		Client: client,
 	}
 	// create event logger pod and service as the subscriber
-	pod := recordevents.DeployEventRecordOrFail(ctx.Ctx, client, "record")
+	eis, pod := recordevents.StartEventRecordOrFail(ctx.Ctx, client, "record")
 	url, err := s.Deploy(ctx, duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Kind:       pod.Kind,
@@ -55,6 +58,26 @@ func TestNewDefaultE2E(t *testing.T) {
 	}()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, url)
+	ceClient, err := cloudevents.NewClientHTTP()
+	assert.NoError(t, err)
+	id := uuid.NewString()
+	event := cloudevents.NewEvent()
+	event.SetID(id)
+	err = ceClient.Send(ctx.Ctx, event)
+	assert.NoError(t, err)
+	eis.AssertExact(1, hasID(id))
+}
+
+func hasID(id string) recordevents.EventInfoMatcher {
+	return func(info recordevents.EventInfo) error {
+		if id != info.Event.ID() {
+			return fmt.Errorf(
+				"event ID don't match. Expected: %#v, Actual: %#v",
+				id, info.Event.ID(),
+			)
+		}
+		return nil
+	}
 }
 
 func log(t *testing.T) *zap.SugaredLogger {
