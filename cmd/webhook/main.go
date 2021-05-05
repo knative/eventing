@@ -63,9 +63,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 
 	// For group messaging.knative.dev.
 	// v1
-	messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1.InMemoryChannel{},
-	messagingv1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1.Channel{},
-	messagingv1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1.Subscription{},
+	messagingv1.SchemeGroupVersion.WithKind("Channel"):      &messagingv1.Channel{},
+	messagingv1.SchemeGroupVersion.WithKind("Subscription"): &messagingv1.Subscription{},
 
 	// For group sources.knative.dev.
 	// v1beta2

@@ -100,7 +100,7 @@ ko resolve ${KO_YAML_FLAGS} -f config/sugar/ | "${LABEL_YAML_CMD[@]}" > "${EVENT
 ko resolve ${KO_YAML_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_MT_CHANNEL_BROKER_YAML}"
 
 # Create in memory channel yaml
-ko resolve ${KO_YAML_FLAGS} -f config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
+ko resolve ${KO_YAML_FLAGS} -Rf config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
 # Create the tools
 ko resolve ${KO_YAML_FLAGS} -f config/tools/appender/ | "${LABEL_YAML_CMD[@]}" > "${APPENDER_YAML}"
