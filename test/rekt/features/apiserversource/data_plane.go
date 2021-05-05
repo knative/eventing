@@ -30,6 +30,15 @@ import (
 	"knative.dev/reconciler-test/resources/svc"
 )
 
+func DataPlane() *feature.FeatureSet {
+	return &feature.FeatureSet{
+		Name: "Knative ApiServerSource - Data Plane",
+		Features: []feature.Feature{
+			*SendsEventsWithSinkRef(),
+		},
+	}
+}
+
 func SendsEventsWithSinkRef() *feature.Feature {
 	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
