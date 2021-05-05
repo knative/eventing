@@ -45,6 +45,15 @@ var FuzzerFuncs = fuzzer.MergeFuzzerFuncs(
 				source.Status.InitializeConditions()
 				pkgfuzzer.FuzzConditions(&source.Status, c)
 			},
+			func(source *PingSource, c fuzz.Continue) {
+				c.FuzzNoCustom(source) // fuzz the source
+				// Clear the random fuzzed condition
+				source.Status.SetConditions(nil)
+
+				// Fuzz the known conditions except their type value
+				source.Status.InitializeConditions()
+				pkgfuzzer.FuzzConditions(&source.Status, c)
+			},
 			func(source *ContainerSource, c fuzz.Continue) {
 				c.FuzzNoCustom(source) // fuzz the source
 				// Clear the random fuzzed condition

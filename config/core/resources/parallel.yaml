@@ -29,6 +29,7 @@ spec:
       status: {}
     schema:
       openAPIV3Schema:
+        description: 'Parallel defines conditional branches that will be wired in series through Channels and Subscriptions.'
         type: object
         properties:
           spec:

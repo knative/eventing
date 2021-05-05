@@ -27,9 +27,9 @@ import (
 
 const (
 	channelKind       = "MyChannel"
-	channelAPIVersion = "eventing.knative.dev/v1alpha1"
+	channelAPIVersion = "messaging.knative.dev/v1"
 	routeKind         = "Route"
-	routeAPIVersion   = "serving.knative.dev/v1alpha1"
+	routeAPIVersion   = "serving.knative.dev/v1"
 	channelName       = "subscribedChannel"
 	replyChannelName  = "toChannel"
 	subscriberName    = "subscriber"
@@ -217,6 +217,21 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: apis.ErrMissingField("subscriber.ref.name"),
+	}, {
+		name: "missing name in Subscriber.Ref",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Name:       "",
+					Kind:       channelKind,
+					APIVersion: channelAPIVersion,
+				},
+			},
+		},
+		want: apis.ErrMissingField("reply.ref.name"),
 	}}
 
 	for _, test := range tests {

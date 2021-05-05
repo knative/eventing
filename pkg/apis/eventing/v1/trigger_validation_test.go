@@ -41,14 +41,14 @@ var (
 			Namespace:  "namespace",
 			Name:       "subscriber_test",
 			Kind:       "Service",
-			APIVersion: "serving.knative.dev/v1alpha1",
+			APIVersion: "serving.knative.dev/v1",
 		},
 	}
 	invalidSubscriber = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Namespace:  "namespace",
 			Kind:       "Service",
-			APIVersion: "serving.knative.dev/v1alpha1",
+			APIVersion: "serving.knative.dev/v1",
 		},
 	}
 	// Dependency annotation
@@ -67,6 +67,20 @@ func TestTriggerValidation(t *testing.T) {
 		t    *Trigger
 		want *apis.FieldError
 	}{{
+		name: "valid injection",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					InjectionAnnotation: validInjectionAnnotation,
+				}},
+			Spec: TriggerSpec{
+				Broker:     "default",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			}},
+		want: nil,
+	}, {
 		name: "invalid trigger spec",
 		t:    &Trigger{Spec: TriggerSpec{}},
 		want: func() *apis.FieldError {
@@ -100,7 +114,7 @@ func TestTriggerValidation(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: "test-ns-1",
 				Annotations: map[string]string{
-					DependencyAnnotation: `{"kind":"PingSource","namespace":"test-ns-2", "name":"test-ping-source","apiVersion":"sources.knative.dev/v1alpha1"}`,
+					DependencyAnnotation: `{"kind":"PingSource","namespace":"test-ns-2", "name":"test-ping-source","apiVersion":"sources.knative.dev/v1beta2"}`,
 				}},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
@@ -118,7 +132,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: `{"name":"test-ping-source","apiVersion":"sources.knative.dev/v1alpha1"}`,
+						DependencyAnnotation: `{"name":"test-ping-source","apiVersion":"sources.knative.dev/v1beta2"}`,
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
@@ -135,7 +149,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: `{"kind":"PingSource","apiVersion":"sources.knative.dev/v1alpha1"}`,
+						DependencyAnnotation: `{"kind":"PingSource","apiVersion":"sources.knative.dev/v1"}`,
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",

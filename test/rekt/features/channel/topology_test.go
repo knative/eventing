@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/features/knconf"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
@@ -33,17 +34,17 @@ func Test_createExpectedEventPattern(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want map[string]eventPattern
+		want map[string]knconf.EventPattern
 	}{{
 		name: "no sub",
 		args: args{
 			chDS: nil,
 			subs: nil,
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -60,22 +61,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1reply": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -92,22 +93,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1reply": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -124,22 +125,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false},
-				interval: []uint{0},
+				Success:  []bool{false},
+				Interval: []uint{0},
 			},
 			"sub1reply": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -156,22 +157,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1reply": {
-				success:  []bool{false},
-				interval: []uint{0},
+				Success:  []bool{false},
+				Interval: []uint{0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -191,22 +192,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false, false, false, true},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1reply": {
-				success:  []bool{false, false, false, true},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -226,22 +227,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false, false, false, false},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, false},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1reply": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 		},
 	}, {
@@ -261,22 +262,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false, false, false, true},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1reply": {
-				success:  []bool{false, false, false, false},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, false},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 		},
 	}, {
@@ -296,22 +297,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				},
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false, false, false, true},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1reply": {
-				success:  []bool{false, false, false, false},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, false},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1dlq": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -331,22 +332,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false, false, false, true},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1reply": {
-				success:  []bool{false, false, false, false},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, false},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 		},
 	}, {
@@ -369,22 +370,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				},
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{false, false, false, true},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, true},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1reply": {
-				success:  []bool{false, false, false, false},
-				interval: []uint{0, 0, 0, 0},
+				Success:  []bool{false, false, false, false},
+				Interval: []uint{0, 0, 0, 0},
 			},
 			"sub1dlq": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -399,22 +400,22 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"sub1reply": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}, {
@@ -439,34 +440,34 @@ func Test_createExpectedEventPattern(t *testing.T) {
 				delivery:       nil,
 			}},
 		},
-		want: map[string]eventPattern{
+		want: map[string]knconf.EventPattern{
 			"sub1sub": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1reply": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub1dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"sub2sub": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub2reply": {
-				success:  []bool{true},
-				interval: []uint{0},
+				Success:  []bool{true},
+				Interval: []uint{0},
 			},
 			"sub2dlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 			"chdlq": {
-				success:  []bool{},
-				interval: []uint{},
+				Success:  []bool{},
+				Interval: []uint{},
 			},
 		},
 	}}
@@ -475,84 +476,6 @@ func Test_createExpectedEventPattern(t *testing.T) {
 			got := createExpectedEventPatterns(tt.args.chDS, tt.args.subs)
 			if !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("%s: Maps unequal: want:\n%+v\ngot:\n%+v", tt.name, tt.want, got)
-			}
-		})
-	}
-}
-
-func Test_deliveryAttempts(t *testing.T) {
-	type args struct {
-		p0 *v1.DeliverySpec
-		p1 *v1.DeliverySpec
-	}
-	tests := []struct {
-		name string
-		args args
-		want uint
-	}{{
-		name: "none",
-		args: args{
-			p0: nil,
-			p1: nil,
-		},
-		want: 1,
-	}, {
-		name: "just p0",
-		args: args{
-			p0: &v1.DeliverySpec{
-				Retry: ptr.Int32(3),
-			},
-			p1: nil,
-		},
-		want: 4,
-	}, {
-		name: "just p1",
-		args: args{
-			p0: nil,
-			p1: &v1.DeliverySpec{
-				Retry: ptr.Int32(3),
-			},
-		},
-		want: 4,
-	}, {
-		name: "both",
-		args: args{
-			p0: &v1.DeliverySpec{
-				Retry: ptr.Int32(2),
-			},
-			p1: &v1.DeliverySpec{
-				Retry: ptr.Int32(3),
-			},
-		},
-		want: 3,
-	}, {
-		name: "just p0, no retry",
-		args: args{
-			p0: &v1.DeliverySpec{},
-			p1: nil,
-		},
-		want: 1,
-	}, {
-		name: "just p1, no retry",
-		args: args{
-			p0: nil,
-			p1: &v1.DeliverySpec{},
-		},
-		want: 1,
-	}, {
-		name: "both, p1 retry",
-		args: args{
-			p0: &v1.DeliverySpec{},
-			p1: &v1.DeliverySpec{
-				Retry: ptr.Int32(3),
-			},
-		},
-		want: 1,
-	}}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := deliveryAttempts(tt.args.p0, tt.args.p1); got != tt.want {
-				t.Errorf("deliveryAttempts() = %v, want %v", got, tt.want)
 			}
 		})
 	}

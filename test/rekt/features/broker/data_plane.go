@@ -22,20 +22,25 @@ import (
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/pkg/apis"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/state"
 )
 
 func DataPlaneConformance(brokerName string) *feature.FeatureSet {
-	return &feature.FeatureSet{
+	fs := &feature.FeatureSet{
 		Name: "Knative Broker Specification - Data Plane",
 		Features: []feature.Feature{
 			*DataPlaneIngress(brokerName),
-			*DataPlaneDelivery(brokerName),
 			*DataPlaneObservability(brokerName),
+			*DataPlaneAddressability(brokerName),
 		},
 	}
+
+	addDataPlaneDelivery(brokerName, fs)
+
+	return fs
 }
 
 func DataPlaneIngress(brokerName string) *feature.Feature {
@@ -46,8 +51,6 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 	})
 
 	f.Stable("Conformance").
-		Should("A Broker SHOULD expose either an HTTP or HTTPS endpoint as ingress. It MAY expose both.",
-			todo).
 		Must("The ingress endpoint(s) MUST conform to at least one of the following versions of the specification: 0.3, 1.0",
 			brokerAcceptsCEVersions).
 		May("Other versions MAY be rejected.",
@@ -55,10 +58,6 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 		ShouldNot("The Broker SHOULD NOT perform an upgrade of the produced event's CloudEvents version.",
 			brokerEventVersionNotUpgraded).
 		Should("It SHOULD support both Binary Content Mode and Structured Content Mode of the HTTP Protocol Binding for CloudEvents.",
-			todo).
-		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.",
-			todo).
-		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.",
 			todo).
 		Must("Brokers MUST reject all HTTP produce requests with a method other than POST responding with HTTP status code `405 Method Not Supported`.",
 			brokerRejectsGetRequest).
@@ -69,7 +68,34 @@ func DataPlaneIngress(brokerName string) *feature.Feature {
 	return f
 }
 
-func DataPlaneDelivery(brokerName string) *feature.Feature {
+func DataPlaneAddressability(brokerName string) *feature.Feature {
+	f := feature.NewFeatureNamed("Broker Addressability")
+
+	f.Setup("Set Broker Name", func(ctx context.Context, t feature.T) {
+		state.SetOrFail(ctx, t, "brokerName", brokerName)
+	})
+
+	f.Requirement("Broker is Ready", broker.IsAddressable(brokerName))
+
+	f.Stable("Conformance").Should("A Broker SHOULD expose either an HTTP or HTTPS endpoint as ingress. It MAY expose both.",
+		func(ctx context.Context, t feature.T) {
+			b := getBroker(ctx, t)
+			addr := b.Status.Address.URL
+			if addr == nil {
+				addr = new(apis.URL)
+			}
+			if addr.Scheme != "http" && addr.Scheme != "https" {
+				t.Fatalf("expected broker scheme to be HTTP or HTTPS, found: %s", addr.Scheme)
+			}
+		}).
+		May("The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.",
+			icebox).
+		May("Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion.",
+			icebox)
+	return f
+}
+
+func addDataPlaneDelivery(brokerName string, fs *feature.FeatureSet) {
 	f := feature.NewFeatureNamed("Delivery")
 
 	f.Setup("Set Broker Name", func(ctx context.Context, t feature.T) {
@@ -94,11 +120,11 @@ func DataPlaneDelivery(brokerName string) *feature.Feature {
 		May("Events MAY be enqueued or delayed between acceptance from a producer and delivery to a subscriber.",
 			todo).
 		May("The Broker MAY choose not to deliver an event due to persistent unavailability of a subscriber or limitations such as storage capacity.",
-			todo).
+			icebox).
 		Should("The Broker SHOULD attempt to notify the operator in this case.",
-			todo).
+			icebox).
 		May("The Broker MAY forward these events to an alternate endpoint or storage mechanism such as a dead letter queue.",
-			todo).
+			icebox).
 		May("If no ready Trigger would match an accepted event, the Broker MAY drop that event without notifying the producer.",
 			todo).
 		May("If multiple Triggers reference the same subscriber, the subscriber MAY be expected to acknowledge successful delivery of an event multiple times.",
@@ -112,7 +138,8 @@ func DataPlaneDelivery(brokerName string) *feature.Feature {
 		Should("If the reply event was not accepted, the initial event SHOULD be redelivered to the subscriber.",
 			todo)
 
-	return f
+	fs.Features = append(fs.Features, *f)
+
 }
 
 func DataPlaneObservability(brokerName string) *feature.Feature {
@@ -148,8 +175,12 @@ func DataPlaneObservability(brokerName string) *feature.Feature {
 	return f
 }
 
-func todo(ctx context.Context, t feature.T) {
+func todo(_ context.Context, t feature.T) {
 	t.Log("TODO, Implement this.")
+}
+
+func icebox(_ context.Context, t feature.T) {
+	t.Skip("[IceBox], It is not clear how to make a conformance test for this spec assertion.")
 }
 
 func brokerAcceptsCEVersions(ctx context.Context, t feature.T) {

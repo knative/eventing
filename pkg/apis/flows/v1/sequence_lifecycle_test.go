@@ -45,7 +45,7 @@ func TestSequenceGetConditionSet(t *testing.T) {
 func getSubscription(name string, ready bool) *messagingv1.Subscription {
 	s := messagingv1.Subscription{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "Subscription",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -217,7 +217,7 @@ func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 		name: "empty status",
 		subs: []*messagingv1.Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{

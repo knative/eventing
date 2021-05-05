@@ -1,0 +1,116 @@
+/*
+Copyright 2021 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package apiserversource
+
+import (
+	"context"
+	"time"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/k8s"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/manifest"
+)
+
+func Gvr() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "apiserversources"}
+}
+
+// IsReady tests to see if an ApiServerSource becomes ready within the time given.
+func IsReady(name string, timings ...time.Duration) feature.StepFn {
+	return k8s.IsReady(Gvr(), name, timings...)
+}
+
+// Install returns a step function which creates an ApiServerSource resource, augmented with the config fn options.
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		if _, err := InstallLocalYaml(ctx, name, opts...); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+// InstallLocalYaml will create a ApiServerSource resource, augmented with the config fn options.
+func InstallLocalYaml(ctx context.Context, name string, opts ...manifest.CfgFn) (manifest.Manifest, error) {
+	cfg := map[string]interface{}{
+		"name": name,
+	}
+	for _, fn := range opts {
+		fn(cfg)
+	}
+	return manifest.InstallLocalYaml(ctx, cfg)
+}
+
+// WithServiceAccountName sets the service account name on the ApiServerSource spec.
+func WithServiceAccountName(serviceAccountName string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["serviceAccountName"] = serviceAccountName
+	}
+}
+
+// WithEventMode sets the event mode on the ApiServerSource spec.
+func WithEventMode(eventMode string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		cfg["mode"] = eventMode
+	}
+}
+
+// WithSink adds the sink related config to a ApiServerSource spec.
+func WithSink(ref *duckv1.KReference, uri string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["sink"]; !set {
+			cfg["sink"] = map[string]interface{}{}
+		}
+		sink := cfg["sink"].(map[string]interface{})
+
+		if uri != "" {
+			sink["uri"] = uri
+		}
+		if ref != nil {
+			if _, set := sink["ref"]; !set {
+				sink["ref"] = map[string]interface{}{}
+			}
+			sref := sink["ref"].(map[string]interface{})
+			sref["apiVersion"] = ref.APIVersion
+			sref["kind"] = ref.Kind
+			sref["namespace"] = ref.Namespace
+			sref["name"] = ref.Name
+		}
+	}
+}
+
+// WithResources adds the resources related config to a ApiServerSource spec.
+func WithResources(resources ...v1.APIVersionKindSelector) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["resources"]; !set {
+			cfg["resources"] = []map[string]interface{}{}
+		}
+
+		for _, resource := range resources {
+			elem := map[string]interface{}{
+				"apiVersion": resource.APIVersion,
+				"kind":       resource.Kind,
+				// skipped until it is actually used somewhere
+				//"selector":   resource.LabelSelector,
+			}
+			cfg["resources"] = append(cfg["resources"].([]map[string]interface{}), elem)
+		}
+	}
+}

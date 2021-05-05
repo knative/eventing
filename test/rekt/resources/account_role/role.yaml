@@ -18,19 +18,44 @@ metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
 
-{{ if .matchLabel }}
+{{- /* only print the ClusterRole if there are any rules or a matchLabel */ -}}
+{{ if or .matchLabel .rules }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ .role }}
+
+{{ if .matchLabel }}
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         {{ .matchLabel }}: "true"
+{{ end }}
+
+{{ if .rules }}
+rules:
+  {{ range $_, $rule := .rules }}
+  - apiGroups:
+    {{ range $_, $apiGroup := $rule.apiGroups }}
+      - {{ $apiGroup }}
+    {{ end }}
+    resources:
+    {{ range $_, $resource := $rule.resources }}
+      - {{ $resource }}
+    {{ end }}
+    verbs:
+    {{ range $_, $verb := $rule.verbs }}
+      - {{ $verb }}
+    {{ end }}
+{{ end }}
+
+{{- /* If no rules defined, print empty rules array */ -}}
+{{ else }}
 rules: []
 {{ end }}
 
+{{ end }}
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1

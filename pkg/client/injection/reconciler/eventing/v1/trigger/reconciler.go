@@ -22,7 +22,6 @@ import (
 	context "context"
 	json "encoding/json"
 	fmt "fmt"
-	reflect "reflect"
 
 	zap "go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -297,7 +296,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 		var event *reconciler.ReconcilerEvent
 		if reconciler.EventAs(reconcileEvent, &event) {
 			logger.Infow("Returned an event", zap.Any("event", reconcileEvent))
-			r.Recorder.Eventf(resource, event.EventType, event.Reason, event.Format, event.Args...)
+			r.Recorder.Event(resource, event.EventType, event.Reason, event.Error())
 
 			// the event was wrapped inside an error, consider the reconciliation as failed
 			if _, isEvent := reconcileEvent.(*reconciler.ReconcilerEvent); !isEvent {
@@ -329,7 +328,7 @@ func (r *reconcilerImpl) updateStatus(ctx context.Context, existing *v1.Trigger,
 		}
 
 		// If there's nothing to update, just return.
-		if reflect.DeepEqual(existing.Status, desired.Status) {
+		if equality.Semantic.DeepEqual(existing.Status, desired.Status) {
 			return nil
 		}
 
