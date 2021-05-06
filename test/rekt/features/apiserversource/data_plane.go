@@ -17,11 +17,11 @@ limitations under the License.
 package apiserversource
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	rbacv1 "k8s.io/api/rbac/v1"
-
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
@@ -37,8 +37,8 @@ func DataPlane() *feature.FeatureSet {
 	return &feature.FeatureSet{
 		Name: "Knative ApiServerSource - Data Plane",
 		Features: []feature.Feature{
-			// TODO: get rid of following one
 			*SendsEventsWithSinkRef(),
+			*SendsEventsWithSinkUri(),
 
 			// TODO: things to test:
 			// - payload: ObjectReference vs ResourceEvent
@@ -82,7 +82,52 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource as event source").
-		Must("delivers events",
+		Must("delivers events on sink with ref",
+			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.add")).AtLeast(1))
+
+	return f
+}
+
+func SendsEventsWithSinkUri() *feature.Feature {
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+	f := feature.NewFeature()
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource",
+		account_role.Install(sacmName,
+			account_role.WithRole(sacmName+"-clusterrole"),
+			account_role.WithRules(rbacv1.PolicyRule{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"get", "list", "watch"},
+			}),
+		))
+
+	f.Setup("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		sinkuri, err := svc.Address(ctx, sink)
+		if err != nil || sinkuri == nil {
+			t.Error("failed to get the address of the sink service", sink, err)
+		}
+
+		cfg := []manifest.CfgFn{
+			apiserversource.WithServiceAccountName(sacmName),
+			apiserversource.WithEventMode(v1.ResourceMode),
+			apiserversource.WithSink(nil, sinkuri.String()),
+			apiserversource.WithResources(v1.APIVersionKindSelector{
+				APIVersion: "v1",
+				Kind:       "Event",
+			}),
+		}
+
+		apiserversource.Install(source, cfg...)(ctx, t)
+	})
+	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events on sink with URI",
 			eventasssert.OnStore(sink).MatchEvent(test.HasType("dev.knative.apiserver.resource.add")).AtLeast(1))
 
 	return f
