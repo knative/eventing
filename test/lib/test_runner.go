@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"knative.dev/eventing/test"
 	"os"
 	"path/filepath"
 	"sort"
@@ -47,7 +48,7 @@ import (
 const (
 	podLogsDir         = "pod-logs"
 	testPullSecretName = "kn-eventing-test-pull-secret"
-	MaxNamespaces      = 20
+	MaxNamespaceSkip   = 20
 	MaxRetries         = 10
 	RetrySleepDuration = 5 * time.Second
 )
@@ -161,8 +162,11 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 	if err != nil {
 		t.Fatal("Couldn't initialize clients:", err)
 	}
-
-	SetupServiceAccountInClientNamespace(t, client)
+	SetupServiceAccount(t, client)
+	// If namespaces are re-used the pull-secret is supposed to be created in advance.
+	if !test.EventingFlags.ReuseNamespace {
+		SetupPullSecret(t, client)
+	}
 
 	// Run the test case in parallel if needed.
 	if runInParallel {
@@ -182,8 +186,9 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 
 func CreateNamespacedClient(t *testing.T) (*Client, error) {
 	ns := ""
-	// Try namespaces from pre-defined range before giving up.
-	for i := 0; i < MaxNamespaces; i++ {
+	// Try next MaxNamespaceSkip namespaces before giving up. This should address the issue with
+	// development cycles when namespaces from previous runs were not cleaned properly.
+	for i := 0; i < MaxNamespaceSkip; i++ {
 		ns = NextNamespace()
 		client, err := NewClient(
 				pkgTest.Flags.Kubeconfig,
@@ -193,15 +198,23 @@ func CreateNamespacedClient(t *testing.T) (*Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := CreateNamespace(client, ns); err != nil {
-			if apierrs.IsAlreadyExists(err) {
-				continue
+		if test.EventingFlags.ReuseNamespace {
+			// Re-using existing namespace, no need to create it.
+			// The namespace is supposed to be created in advance.
+			return client, nil
+		} else {
+			// The test is supposed to create a new test namespace for itself.
+			// Keep trying until we find a namespace that doesn't exist yet.
+			if err := CreateNamespace(client, ns); err != nil {
+				if apierrs.IsAlreadyExists(err) {
+					continue
+				}
+				return nil, err
 			}
-			return nil, err
 		}
 		return client, nil
 	}
-	return nil, errors.New("unable to find available namespace in predefined range")
+	return nil, errors.New("unable to find available namespace")
 }
 
 // NextNamespace returns the next unique namespace.
@@ -318,20 +331,23 @@ func formatEvent(e *corev1.Event) string {
 	}, "\n")
 }
 
-// SetupServiceAccountInClientNamespace creates a new namespace if it does not exist.
-func SetupServiceAccountInClientNamespace(t *testing.T, client *Client) {
+// SetupServiceAccount creates a new namespace if it does not exist.
+func SetupServiceAccount(t *testing.T, client *Client) {
 	// https://github.com/kubernetes/kubernetes/issues/66689
 	// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
 	err := waitForServiceAccountExists(client, "default", client.Namespace)
 	if err != nil {
 		t.Fatal("The default ServiceAccount was not created for the Namespace:", client.Namespace)
 	}
+}
 
+// SetupPullSecret sets up kn-eventing-test-pull-secret on the client namespace.
+func SetupPullSecret(t *testing.T, client *Client) {
 	// If the "default" Namespace has a secret called
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the "default" ServiceAccount in this new Namespace.
 	// This is needed for cases where the images are in a private registry.
-	_, err = utils.CopySecret(client.Kube.CoreV1(), "default", testPullSecretName, client.Namespace, "default")
+	_, err := utils.CopySecret(client.Kube.CoreV1(), "default", testPullSecretName, client.Namespace, "default")
 	if err != nil && !apierrs.IsNotFound(err) {
 		t.Fatalf("error copying the secret into ns %q: %s", client.Namespace, err)
 	}
