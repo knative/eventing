@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -107,10 +109,33 @@ func WithResources(resources ...v1.APIVersionKindSelector) manifest.CfgFn {
 			elem := map[string]interface{}{
 				"apiVersion": resource.APIVersion,
 				"kind":       resource.Kind,
-				// skipped until it is actually used somewhere
-				//"selector":   resource.LabelSelector,
+				"selector":   labelSelectorToStringMap(resource.LabelSelector),
 			}
 			cfg["resources"] = append(cfg["resources"].([]map[string]interface{}), elem)
 		}
 	}
+}
+
+func labelSelectorToStringMap(selector *metav1.LabelSelector) map[string]interface{} {
+	if selector == nil {
+		return nil
+	}
+
+	r := map[string]interface{}{}
+
+	r["matchLabels"] = selector.MatchLabels
+
+	if selector.MatchExpressions != nil {
+		me := []map[string]interface{}{}
+		for _, ml := range selector.MatchExpressions {
+			me = append(me, map[string]interface{}{
+				"key":      ml.Key,
+				"operator": ml.Operator,
+				"values":   ml.Values,
+			})
+		}
+		r["matchExpressions"] = me
+	}
+
+	return r
 }
