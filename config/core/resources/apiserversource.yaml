@@ -188,6 +188,19 @@ spec:
               sinkUri:
                 description: SinkURI is the current active sink URI that has been configured for the Source.
                 type: string
+    additionalPrinterColumns:
+    - name: Sink
+      type: string
+      jsonPath: ".status.sinkUri"
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    - name: Ready
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      jsonPath: ".status.conditions[?(@.type==\"Ready\")].reason"
   names:
     categories:
      - all
