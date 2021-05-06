@@ -72,7 +72,6 @@ func TestApiServerSourceDataPlane(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
-	t.Cleanup(env.Finish)
 
 	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane())
 }
