@@ -104,7 +104,7 @@ func (p *probeRunner) Verify(ctx pkgupgrade.Context) {
 }
 
 func (p *probeRunner) validate(ctx pkgupgrade.Context) {
-	if p.client.Namespace != "" {
+	if p.config.Namespace != "" {
 		ctx.Log.Warnf(
 			"DEPRECATED: namespace set in Config: %s. Ignoring it.",
 			p.client.Namespace)

@@ -1,4 +1,4 @@
-// +build e2e
+// +build upgrade
 
 /*
 Copyright 2021 The Knative Authors
@@ -40,7 +40,7 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
-func TestNewDefaultE2E(t *testing.T) {
+func TestSUTNewDefaultE2E(t *testing.T) {
 	ctx := signals.NewContext()
 	client := testlib.Setup(t, false)
 	defer testlib.TearDown(client)
