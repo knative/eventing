@@ -207,3 +207,7 @@ func (l *Listers) GetConfigMapLister() corev1listers.ConfigMapLister {
 func (l *Listers) GetCustomResourceDefinitionLister() apiextensionsv1listers.CustomResourceDefinitionLister {
 	return apiextensionsv1listers.NewCustomResourceDefinitionLister(l.indexerFor(&apiextensionsv1.CustomResourceDefinition{}))
 }
+
+func (l *Listers) GetNodeLister() corev1listers.NodeLister {
+	return corev1listers.NewNodeLister(l.indexerFor(&corev1.Node{}))
+}
