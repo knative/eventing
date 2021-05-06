@@ -107,8 +107,7 @@ func ChannelBasedBrokerCreator(channel metav1.TypeMeta, brokerClass string) Brok
 
 		switch version {
 		case "v1":
-			client.CreateBrokerOrFail(
-				brokerName,
+			client.CreateBrokerOrFail(brokerName,
 				resources.WithBrokerClassForBroker(brokerClass),
 				resources.WithConfigForBroker(config),
 			)

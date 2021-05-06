@@ -37,7 +37,8 @@ var (
 
 // Prober is the interface for a prober, which checks the result of the probes
 // when stopped.
-// Deprecated: use Runner instead, create it with CreateRunner func.
+// TODO(ksuszyns): Remove this interface in next release
+// Deprecated: use Runner instead, create it with NewRunner func.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
 	Verify() ([]error, int)
@@ -58,9 +59,9 @@ type Runner interface {
 	Verify(ctx pkgupgrade.Context)
 }
 
-// CreateRunner will create a runner compatible with
-// pkgupgrade.NewBackgroundVerification func.
-func CreateRunner(config *Config, options ...testlib.SetupClientOption) Runner {
+// NewRunner will create a runner compatible with NewContinualVerification
+// func.
+func NewRunner(config *Config, options ...testlib.SetupClientOption) Runner {
 	return &probeRunner{
 		prober:  &prober{config: config},
 		options: options,
@@ -127,9 +128,10 @@ func (p *probeRunner) validate(ctx pkgupgrade.Context) {
 }
 
 // RunEventProber starts a single Prober of the given domain.
-// Deprecated: use CreateRunner func instead.
+// TODO(ksuszyns): Remove this func in next release
+// Deprecated: use NewRunner func instead.
 func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib.Client, config *Config) Prober {
-	log.Warn("prober.RunEventProber is deprecated. Use CreateRunner instead.")
+	log.Warn("prober.RunEventProber is deprecated. Use NewRunner instead.")
 	config.Ctx = ctx
 	p := &prober{
 		log:    log,
@@ -140,10 +142,12 @@ func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib
 	return p
 }
 
-// AssertEventProber will send finish event and then verify if all events propagated well
-// Deprecated: use CreateRunner func instead.
+// AssertEventProber will send finish event and then verify if all events
+// propagated well.
+// TODO(ksuszyns): Remove this func in next release
+// Deprecated: use NewRunner func instead.
 func AssertEventProber(ctx context.Context, t *testing.T, probe Prober) {
-	log.Warn("prober.AssertEventProber is deprecated. Use CreateRunner instead.")
+	log.Warn("prober.AssertEventProber is deprecated. Use NewRunner instead.")
 	p := probe.(*prober)
 	p.client.T = t
 	p.config.Ctx = ctx

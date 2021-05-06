@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"runtime"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 const (
@@ -46,6 +48,12 @@ const (
 	Silence DuplicateAction = "silence"
 	Warn    DuplicateAction = "warn"
 	Error   DuplicateAction = "error"
+
+	prefix = "eventing_upgrade_tests"
+
+	// TODO(ksuszyns): Remove this val in next release
+	// Deprecated: use 'eventing_upgrade_tests' prefix instead
+	deprecatedPrefix = "e2e_upgrade_tests"
 )
 
 // DuplicateAction is the action to take in case of duplicated events
@@ -61,11 +69,13 @@ type Config struct {
 	OnDuplicate   DuplicateAction
 	Ctx           context.Context
 	// BrokerOpts holds opts for broker.
+	// TODO(ksuszyns): Remove this opt in next release
 	// Deprecated: use Wathola.SystemUnderTest instead.
 	BrokerOpts []resources.BrokerOption
 	// Namespace holds namespace in which test is about to be executed.
+	// TODO(ksuszyns): Remove this opt in next release
 	// Deprecated: namespace is about to be taken from testlib.Client created by
-	// CreateRunner
+	// NewRunner
 	Namespace string
 }
 
@@ -92,10 +102,38 @@ type ServingConfig struct {
 	ScaleToZero bool
 }
 
+// NewConfigOrFail will create a prober.Config or fail trying.
+func NewConfigOrFail(c pkgupgrade.Context) *Config {
+	errSink := func(err error) {
+		c.T.Fatal(err)
+	}
+	warnf := c.Log.Warnf
+	return newConfig(errSink, warnf)
+}
+
 // NewConfig creates a new configuration object with default values filled in.
 // Values can be influenced by kelseyhightower/envconfig with
 // `eventing_upgrade_tests` prefix.
+// TODO(ksuszyns): Remove this func in next release
+// Deprecated: use NewContinualVerification or NewConfigOrFail
 func NewConfig(namespace ...string) *Config {
+	errSink := func(err error) {
+		ensure.NoError(err)
+	}
+	warnf := func(template string, args ...interface{}) {
+		_, err := fmt.Fprintf(os.Stderr, template, args)
+		ensure.NoError(err)
+	}
+	config := newConfig(errSink, warnf)
+	if len(namespace) > 0 {
+		config.Namespace = strings.Join(namespace, ",")
+	}
+	return config
+}
+
+func newConfig(
+	errSink func(err error), warnf func(template string, args ...interface{}),
+) *Config {
 	config := &Config{
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
@@ -119,10 +157,21 @@ func NewConfig(namespace ...string) *Config {
 		},
 	}
 
-	err := envconfig.Process("eventing_upgrade_tests", config)
-	ensure.NoError(err)
-	if len(namespace) > 0 {
-		config.Namespace = strings.Join(namespace, ",")
+	if err := envconfig.Process(prefix, config); err != nil {
+		errSink(err)
+	}
+
+	// TODO(ksuszyns): Remove this block in next release
+	for _, enventry := range os.Environ() {
+		if strings.HasPrefix(strings.ToLower(enventry), deprecatedPrefix) {
+			warnf(
+				"DEPRECATED: using deprecated '%s' prefix. Use '%s' instead.",
+				deprecatedPrefix, prefix)
+			if err := envconfig.Process(deprecatedPrefix, config); err != nil {
+				errSink(err)
+			}
+			break
+		}
 	}
 	return config
 }

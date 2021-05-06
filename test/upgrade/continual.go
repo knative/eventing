@@ -23,11 +23,6 @@ import (
 
 // ContinualTest will perform a continual validation of Eventing SUT.
 func ContinualTest() pkgupgrade.BackgroundOperation {
-	config := prober.NewConfig()
-	pr := prober.CreateRunner(config)
-	return pkgupgrade.NewBackgroundVerification(
-		"EventingContinualTest",
-		pr.Setup,
-		pr.Verify,
-	)
+	return prober.NewContinualVerification("EventingContinualTest",
+		prober.ContinualVerificationOptions{})
 }
