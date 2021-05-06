@@ -20,13 +20,88 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"knative.dev/pkg/injection/sharedmain"
+	"context"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/signals"
+	"knative.dev/pkg/webhook"
+	"knative.dev/pkg/webhook/certificates"
+	"knative.dev/pkg/webhook/resourcesemantics"
+	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
+	"knative.dev/pkg/webhook/resourcesemantics/validation"
+
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	inmemorychannel "knative.dev/eventing/pkg/reconciler/inmemorychannel/controller"
 )
 
+var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+	// For group messaging.knative.dev.
+	// v1
+	messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1.InMemoryChannel{},
+}
+
+var callbacks = map[schema.GroupVersionKind]validation.Callback{}
+
+func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	return defaulting.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"inmemorychannel.eventing.knative.dev",
+
+		// The path on which to serve the webhook.
+		"/defaulting",
+
+		// The resources to default.
+		ourTypes,
+
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		nil,
+
+		// Whether to disallow unknown fields.
+		true,
+	)
+}
+
+func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	return validation.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"validation.inmemorychannel.eventing.knative.dev",
+
+		// The path on which to serve the webhook.
+		"/resource-validation",
+
+		// The resources to validate.
+		ourTypes,
+
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		nil,
+
+		// Whether to disallow unknown fields.
+		true,
+
+		// Extra validating callbacks to be applied to resources.
+		callbacks,
+	)
+}
+
 func main() {
-	sharedmain.Main("inmemorychannel-controller",
+	// Set up a signal context with our webhook options
+	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
+		ServiceName: webhook.NameFromEnv(),
+		Port:        webhook.PortFromEnv(8443),
+		// SecretName must match the name of the Secret created in the configuration.
+		SecretName: "inmemorychannel-webhook-certs",
+	})
+
+	sharedmain.MainWithContext(ctx, webhook.NameFromEnv(),
+		certificates.NewController,
+		NewValidationAdmissionController,
+		NewDefaultingAdmissionController,
+
 		inmemorychannel.NewController,
 	)
 }

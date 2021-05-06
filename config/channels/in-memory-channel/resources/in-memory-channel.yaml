@@ -148,6 +148,9 @@ spec:
                 type: array
                 items:
                   type: object
+                  required:
+                    - type
+                    - status
                   properties:
                     lastTransitionTime:
                       description: LastTransitionTime is the last time the condition transitioned from one status to another. We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic differences (all other things held constant).
@@ -206,7 +209,6 @@ spec:
                     uid:
                       description: UID is used to understand the origin of the subscriber.
                       type: string
-
     additionalPrinterColumns:
     - name: URL
       type: string
@@ -232,11 +234,3 @@ spec:
     shortNames:
     - imc
   scope: Namespaced
-  conversion:
-    strategy: Webhook
-    webhook:
-      conversionReviewVersions: ["v1", "v1beta1"]
-      clientConfig:
-        service:
-          name: eventing-webhook
-          namespace: knative-eventing
