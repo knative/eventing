@@ -52,6 +52,8 @@ func NewContinualVerification(
 		runner = NewRunner(config, opts.ClientOptions...)
 		runner.Setup(c)
 	}
-	verify := runner.Verify
+	verify := func(c pkgupgrade.Context) {
+		runner.Verify(c)
+	}
 	return pkgupgrade.NewBackgroundVerification(name, setup, verify)
 }
