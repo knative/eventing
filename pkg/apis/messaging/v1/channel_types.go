@@ -29,7 +29,8 @@ import (
 // +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel represents a generic Channel. It is normally used when we want a Channel, but don't need a specific Channel implementation.
+// Channel represents a generic Channel. It is normally used when we want a
+// Channel, but do not need a specific Channel implementation.
 type Channel struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -38,8 +39,8 @@ type Channel struct {
 	// Spec defines the desired state of the Channel.
 	Spec ChannelSpec `json:"spec,omitempty"`
 
-	// Status represents the current state of the Channel. This data may be out of
-	// date.
+	// Status represents the current state of the Channel. This data may be out
+	// of date.
 	// +optional
 	Status ChannelStatus `json:"status,omitempty"`
 }
@@ -61,12 +62,15 @@ var (
 	_ duckv1.KRShaped = (*Channel)(nil)
 )
 
-// ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel.
-// It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
+// ChannelSpec defines which subscribers have expressed interest in receiving
+// events from this Channel. It also defines the ChannelTemplate to use in
+// order to create the CRD Channel backing this Channel.
 type ChannelSpec struct {
-	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
-	// This is immutable after creation. Normally this is set by the Channel defaulter, not directly by the user.
-	ChannelTemplate *ChannelTemplateSpec `json:"channelTemplate"`
+	// ChannelTemplate specifies which Channel CRD to use to create the CRD
+	// Channel backing this Channel. This is immutable after creation.
+	// Normally this is set by the Channel defaulter, not directly by the user.
+	// +optional
+	ChannelTemplate *ChannelTemplateSpec `json:"channelTemplate,omitempty"`
 
 	// Channel conforms to ChannelableSpec
 	eventingduckv1.ChannelableSpec `json:",inline"`
@@ -78,6 +82,7 @@ type ChannelStatus struct {
 	eventingduckv1.ChannelableStatus `json:",inline"`
 
 	// Channel is an KReference to the Channel CRD backing this Channel.
+	// +optional
 	Channel *duckv1.KReference `json:"channel,omitempty"`
 }
 
@@ -91,7 +96,8 @@ type ChannelList struct {
 	Items           []Channel `json:"items"`
 }
 
-// GetStatus retrieves the status of the Channel. Implements the KRShaped interface.
+// GetStatus retrieves the status of the Channel. Implements the KRShaped
+// interface.
 func (t *Channel) GetStatus() *duckv1.Status {
 	return &t.Status.Status
 }
