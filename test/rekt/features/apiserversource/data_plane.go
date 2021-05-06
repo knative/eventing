@@ -55,6 +55,9 @@ func DataPlane() *feature.FeatureSet {
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
+
+			// TODO: create small functions for reusable code
+			// TODO: create constants for image, etc
 		},
 	}
 
