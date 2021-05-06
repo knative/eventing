@@ -1,6 +1,6 @@
 module knative.dev/eventing
 
-go 1.15
+go 1.16
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
