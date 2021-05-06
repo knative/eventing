@@ -34,6 +34,7 @@ func main() {
 	registry.Register(&eventingv1.Trigger{})
 
 	// Messaging
+	registry.Register(&messagingv1.Subscription{})
 	registry.Register(&messagingv1.Channel{})
 	registry.Register(&messagingv1.InMemoryChannel{})
 
