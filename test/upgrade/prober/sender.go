@@ -18,7 +18,6 @@ package prober
 import (
 	"fmt"
 
-	"github.com/wavesoftware/go-ensure"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,7 +76,7 @@ func (p *prober) deploySender() {
 	_, err := p.client.Kube.AppsV1().
 		Deployments(p.client.Namespace).
 		Create(p.config.Ctx, deployment, metav1.CreateOptions{})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 
 	testlib.WaitFor(fmt.Sprint("sender deployment be ready: ", senderName), func() error {
 		return pkgTest.WaitForDeploymentScale(
@@ -92,5 +91,5 @@ func (p *prober) removeSender() {
 	err := p.client.Kube.AppsV1().
 		Deployments(p.client.Namespace).
 		Delete(p.config.Ctx, senderName, metav1.DeleteOptions{})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 }

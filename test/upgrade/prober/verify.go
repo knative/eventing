@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -105,9 +104,9 @@ func (p *prober) fetchExecution() *fetcher.Execution {
 	job := p.deployFetcher()
 	defer p.deleteFetcher()
 	pod, err := p.findSucceededPod(job)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	bytes, err := pkgTest.PodLogs(p.config.Ctx, p.client.Kube, pod.Name, fetcherName, ns)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
@@ -123,7 +122,7 @@ func (p *prober) fetchExecution() *fetcher.Execution {
 		},
 	}
 	err = json.Unmarshal(bytes, ex)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	return ex
 }
 
@@ -171,10 +170,10 @@ func (p *prober) deployFetcher() *batchv1.Job {
 		},
 	}
 	created, err := jobs.Create(p.config.Ctx, fetcherJob, metav1.CreateOptions{})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	p.log.Info("Waiting for fetcher job to succeed: ", fetcherName)
 	err = waitForJobToComplete(p.config.Ctx, p.client.Kube, fetcherName, p.client.Namespace)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 
 	return created
 }
@@ -183,7 +182,7 @@ func (p *prober) deleteFetcher() {
 	ns := p.client.Namespace
 	jobs := p.client.Kube.BatchV1().Jobs(ns)
 	err := jobs.Delete(p.config.Ctx, fetcherName, metav1.DeleteOptions{})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 }
 
 func (p *prober) findSucceededPod(job *batchv1.Job) (*corev1.Pod, error) {
@@ -191,7 +190,7 @@ func (p *prober) findSucceededPod(job *batchv1.Job) (*corev1.Pod, error) {
 	podList, err := pods.List(p.config.Ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprint("job-name=", job.Name),
 	})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	for _, pod := range podList.Items {
 		if pod.Status.Phase == corev1.PodSucceeded {
 			return &pod, nil

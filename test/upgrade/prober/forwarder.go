@@ -18,7 +18,6 @@ package prober
 import (
 	"fmt"
 
-	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	testlib "knative.dev/eventing/test/lib"
@@ -35,8 +34,9 @@ func (p *prober) deployForwarder() {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	service := p.forwarderKService(forwarderName, p.client.Namespace)
-	_, err := serving.Create(p.config.Ctx, service, metav1.CreateOptions{})
-	ensure.NoError(err)
+	if _, err := serving.Create(p.config.Ctx, service, metav1.CreateOptions{}); err != nil {
+		p.client.T.Fatal(err)
+	}
 
 	sc := p.servingClient()
 	testlib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
@@ -56,7 +56,7 @@ func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	err := serving.Delete(p.config.Ctx, forwarderName, metav1.DeleteOptions{})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 }
 
 func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstructured {

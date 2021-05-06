@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/prometheus/common/log"
-	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -201,7 +200,7 @@ func (p *prober) deploy() {
 	p.client.WaitForAllTestResourcesReadyOrFail(p.config.Ctx)
 
 	p.deploySender()
-	ensure.NoError(testlib.AwaitForAll(p.log))
+	p.ensureNoError(testlib.AwaitForAll(p.log))
 	// allow sender to send at least some events, 2 sec wait
 	time.Sleep(2 * time.Second)
 	p.log.Infof("Prober is now sending events with interval of %v in "+
@@ -212,7 +211,7 @@ func (p *prober) remove() {
 	if p.config.Serving.Use {
 		p.removeForwarder()
 	}
-	ensure.NoError(p.client.Tracker.Clean(true))
+	p.ensureNoError(p.client.Tracker.Clean(true))
 }
 
 func waitAfterFinished(p *prober) {

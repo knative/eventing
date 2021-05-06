@@ -18,7 +18,6 @@ package prober
 import (
 	"fmt"
 
-	"github.com/wavesoftware/go-ensure"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,8 +28,7 @@ import (
 )
 
 var (
-	receiverName           = "wathola-receiver"
-	receiverNodePort int32 = -1
+	receiverName = "wathola-receiver"
 )
 
 func (p *prober) deployReceiver() {
@@ -41,10 +39,7 @@ func (p *prober) deployReceiver() {
 func (p *prober) deployReceiverDeployment() {
 	p.log.Info("Deploy of receiver deployment: ", receiverName)
 	deployment := p.createReceiverDeployment()
-	_, err := p.client.Kube.AppsV1().
-		Deployments(deployment.Namespace).
-		Create(p.config.Ctx, deployment, metav1.CreateOptions{})
-	ensure.NoError(err)
+	p.client.CreateDeploymentOrFail(deployment)
 
 	testlib.WaitFor(fmt.Sprint("receiver deployment be ready: ", receiverName), func() error {
 		return pkgTest.WaitForDeploymentScale(
@@ -75,22 +70,10 @@ func (p *prober) deployReceiverService() {
 			Selector: map[string]string{
 				"app": receiverName,
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
-	created, err := p.client.Kube.CoreV1().Services(p.client.Namespace).
-		Create(p.config.Ctx, service, metav1.CreateOptions{})
-	ensure.NoError(err)
-	for _, portSpec := range created.Spec.Ports {
-		if portSpec.Port == 80 {
-			receiverNodePort = portSpec.NodePort
-		}
-	}
-	if receiverNodePort == -1 {
-		panic(fmt.Errorf("couldn't find a node port for service: %v", receiverName))
-	} else {
-		p.log.Debugf("Node port for service: %v is %v", receiverName, receiverNodePort)
-	}
+	p.client.CreateServiceOrFail(service)
 }
 
 func (p *prober) createReceiverDeployment() *appsv1.Deployment {

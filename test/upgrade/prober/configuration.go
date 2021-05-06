@@ -208,9 +208,9 @@ func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) st
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	var buff bytes.Buffer
 	data := struct {
 		*Config
@@ -221,6 +221,6 @@ func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) st
 		p.client.Namespace,
 		brokerURL.String(),
 	}
-	ensure.NoError(tmpl.Execute(&buff, data))
+	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()
 }
