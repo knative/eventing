@@ -97,7 +97,7 @@ func main() {
 		SecretName: "inmemorychannel-webhook-certs",
 	})
 
-	sharedmain.WebhookMainWithContext(ctx, webhook.NameFromEnv(),
+	sharedmain.MainWithContext(ctx, webhook.NameFromEnv(),
 		certificates.NewController,
 		NewValidationAdmissionController,
 		NewDefaultingAdmissionController,
