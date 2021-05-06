@@ -1,35 +1,12 @@
 # Approvers in this repo should also be added to the eventing-contrib
 # approvers list.
 approvers:
-- toc
-- grantr
-- vaikas
-- n3wscott
-- matzew
-- lionelvillard
-- slinkydeveloper
-- lberk
-- pierDipi
-- aliok
-- zhongduo
+- technical-oversight-committee
+- eventing-writers
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
 # copy the approvers to the reviewers list too.
 reviewers:
-- grantr
-- vaikas
-- n3wscott
-- matzew
-- lionelvillard
-- slinkydeveloper
-- lberk
-- pierDipi
-- aliok
-- zhongduo
-
-# Add reviewers below
-- aslom
-- nlopezgi
-- tommyreddad
-- tayarani
+- eventing-writers
+- eventing-reviewers
