@@ -218,33 +218,12 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			// Sources
-			sourcesv1.Kind("ApiServerSource"): {
-				DefinitionName: sources.ApiServerSourceResource.String(),
-				HubVersion:     sourcesv1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1_: &sourcesv1.ApiServerSource{},
-				},
-			},
 			sourcesv1.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
 				HubVersion:     sourcesv1beta2_,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					sourcesv1beta2_: &sourcesv1beta2.PingSource{},
 					sourcesv1_:      &sourcesv1.PingSource{},
-				},
-			},
-			sourcesv1.Kind("SinkBinding"): {
-				DefinitionName: sources.SinkBindingResource.String(),
-				HubVersion:     sourcesv1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1_: &sourcesv1.SinkBinding{},
-				},
-			},
-			sourcesv1.Kind("ContainerSource"): {
-				DefinitionName: sources.ContainerSourceResource.String(),
-				HubVersion:     sourcesv1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1_: &sourcesv1.ContainerSource{},
 				},
 			},
 		},

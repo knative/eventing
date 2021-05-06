@@ -249,11 +249,3 @@ spec:
     shortNames:
       - ch
   scope: Namespaced
-  conversion:
-    strategy: Webhook
-    webhook:
-      conversionReviewVersions: ["v1", "v1beta1"]
-      clientConfig:
-        service:
-          name: eventing-webhook
-          namespace: knative-eventing
