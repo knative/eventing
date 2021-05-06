@@ -39,6 +39,7 @@ func main() {
 
 	// Sources
 	registry.Register(&sourcesv1.SinkBinding{})
+	registry.Register(&sourcesv1.ContainerSource{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)
