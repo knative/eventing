@@ -65,14 +65,14 @@ func DataPlane() *feature.FeatureSet {
 }
 
 func SendsEventsWithSinkRef() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events to sink ref")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -103,14 +103,14 @@ func SendsEventsWithSinkRef() *feature.Feature {
 }
 
 func SendsEventsWithSinkUri() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events to sink uri")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -148,14 +148,14 @@ func SendsEventsWithSinkUri() *feature.Feature {
 }
 
 func SendsEventsWithObjectReferencePayload() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Send events with object reference payload")
+	f := feature.NewFeatureNamed("Send events with ObjectReference payload")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -199,14 +199,14 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 }
 
 func SendsEventsWithResourceEventPayload() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Send events with object reference payload")
+	f := feature.NewFeatureNamed("Send events with ResourceEvent payload")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -250,14 +250,14 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 }
 
 func SendsEventsForAllResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Send events with object reference payload")
+	f := feature.NewFeatureNamed("Send events for all resources")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -301,14 +301,14 @@ func SendsEventsForAllResources() *feature.Feature {
 }
 
 func SendsEventsForLabelMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Send events with object reference payload")
+	f := feature.NewFeatureNamed("Send events for label-matching resources")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -355,14 +355,14 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 }
 
 func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Send events with object reference payload")
+	f := feature.NewFeatureNamed("Does not send events for label-unmatching resources")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
@@ -411,14 +411,14 @@ func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
 }
 
 func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
+	source := feature.MakeRandomK8sName("example")
 	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Send events with object reference payload")
+	f := feature.NewFeatureNamed("Send events for label-expression-matching resources")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource",
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
 		account_role.Install(sacmName,
 			account_role.WithRole(sacmName+"-clusterrole"),
 			account_role.WithRules(rbacv1.PolicyRule{
