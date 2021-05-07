@@ -39,6 +39,7 @@ func main() {
 	registry.Register(&messagingv1.InMemoryChannel{})
 
 	// Sources
+	registry.Register(&sourcesv1.ApiServerSource{})
 	registry.Register(&sourcesv1.SinkBinding{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
