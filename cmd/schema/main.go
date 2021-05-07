@@ -17,13 +17,13 @@ limitations under the License.
 package main
 
 import (
-	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"log"
 
 	"knative.dev/hack/schema/commands"
 	"knative.dev/hack/schema/registry"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
