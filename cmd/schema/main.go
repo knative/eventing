@@ -41,6 +41,7 @@ func main() {
 	// Sources
 	registry.Register(&sourcesv1.ApiServerSource{})
 	registry.Register(&sourcesv1.SinkBinding{})
+	registry.Register(&sourcesv1.ContainerSource{}) // WARNING: THIS DOES NOT WORK OUT OF THE BOX: See https://github.com/knative/eventing/issues/5353.
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)
