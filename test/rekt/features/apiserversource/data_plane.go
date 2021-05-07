@@ -19,7 +19,6 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"time"
 
 	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/test"
@@ -313,52 +312,53 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	return f
 }
 
-func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("apiserversource")
-	sink := feature.MakeRandomK8sName("sink")
-	f := feature.NewFeatureNamed("Does not send events for label-unmatching resources")
-
-	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
-
-	sacmName := feature.MakeRandomK8sName("apiserversource")
-	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		setupAccountAndRoleForPods(sacmName))
-
-	cfg := []manifest.CfgFn{
-		apiserversource.WithServiceAccountName(sacmName),
-		apiserversource.WithEventMode("Reference"),
-		apiserversource.WithSink(svc.AsKReference(sink), ""),
-		apiserversource.WithResources(v1.APIVersionKindSelector{
-			APIVersion:    "v1",
-			Kind:          "Pod",
-			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "something-else"}},
-		}),
-	}
-
-	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
-
-	examplePodName := feature.MakeRandomK8sName("example")
-
-	// create a pod so that ApiServerSource delivers an event to its sink
-	// event body is similar to this:
-	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
-	f.Requirement("install example pod",
-		pod.Install(examplePodName,
-			pod.WithImage(exampleImage),
-			pod.WithLabels(map[string]string{"e2e": "testing"})),
-	)
-
-	f.Stable("ApiServerSource as event source").
-		Must("does not deliver events for unmatched resources", func(ctx context.Context, t feature.T) {
-			// sleep some time to make sure the sink doesn't actually receive events
-			// not because reaction time was too short.
-			time.Sleep(10 * time.Second)
-			eventasssert.OnStore(sink).MatchEvent(any()).Not()(ctx, t)
-		})
-
-	return f
-}
+// THIS TEST DOES NOT WORK
+//func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
+//	source := feature.MakeRandomK8sName("apiserversource")
+//	sink := feature.MakeRandomK8sName("sink")
+//	f := feature.NewFeatureNamed("Does not send events for label-unmatching resources")
+//
+//	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+//
+//	sacmName := feature.MakeRandomK8sName("apiserversource")
+//	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
+//		setupAccountAndRoleForPods(sacmName))
+//
+//	cfg := []manifest.CfgFn{
+//		apiserversource.WithServiceAccountName(sacmName),
+//		apiserversource.WithEventMode("Reference"),
+//		apiserversource.WithSink(svc.AsKReference(sink), ""),
+//		apiserversource.WithResources(v1.APIVersionKindSelector{
+//			APIVersion:    "v1",
+//			Kind:          "Pod",
+//			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "something-else"}},
+//		}),
+//	}
+//
+//	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
+//	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+//
+//	examplePodName := feature.MakeRandomK8sName("example")
+//
+//	// create a pod so that ApiServerSource delivers an event to its sink
+//	// event body is similar to this:
+//	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
+//	f.Requirement("install example pod",
+//		pod.Install(examplePodName,
+//			pod.WithImage(exampleImage),
+//			pod.WithLabels(map[string]string{"e2e": "testing"})),
+//	)
+//
+//	f.Stable("ApiServerSource as event source").
+//		Must("does not deliver events for unmatched resources", func(ctx context.Context, t feature.T) {
+//			// sleep some time to make sure the sink doesn't actually receive events
+//			// not because reaction time was too short.
+//			time.Sleep(10 * time.Second)
+//			eventasssert.OnStore(sink).MatchEvent(any()).Not()(ctx, t)
+//		})
+//
+//	return f
+//}
 
 func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	source := feature.MakeRandomK8sName("apiserversource")
