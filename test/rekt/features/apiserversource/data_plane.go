@@ -397,15 +397,13 @@ func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 
-	// sleep some time to make sure the sink doesn't actually receive events
-	// not because reaction time was too short.
-	f.Requirement("sleep some time", func(ctx context.Context, t feature.T) {
-		time.Sleep(10 * time.Second)
-	})
-
 	f.Stable("ApiServerSource as event source").
-		Must("does not deliver events for unmatched resources",
-			eventasssert.OnStore(sink).MatchEvent(any()).Not())
+		Must("does not deliver events for unmatched resources", func(ctx context.Context, t feature.T) {
+			// sleep some time to make sure the sink doesn't actually receive events
+			// not because reaction time was too short.
+			time.Sleep(10 * time.Second)
+			eventasssert.OnStore(sink).MatchEvent(any()).Not()(ctx, t)
+		})
 
 	return f
 }
