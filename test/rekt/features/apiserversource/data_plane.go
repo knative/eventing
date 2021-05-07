@@ -38,6 +38,10 @@ import (
 	"knative.dev/reconciler-test/resources/svc"
 )
 
+const (
+	exampleImage = "ko://knative.dev/eventing/test/test_images/print"
+)
+
 func DataPlane() *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative ApiServerSource - Data Plane",
@@ -163,7 +167,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
-		pod.Install(examplePodName, pod.WithImage("ko://knative.dev/eventing/test/test_images/print")),
+		pod.Install(examplePodName, pod.WithImage(exampleImage)),
 	)
 
 	f.Stable("ApiServerSource as event source").
@@ -207,7 +211,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
-		pod.Install(examplePodName, pod.WithImage("ko://knative.dev/eventing/test/test_images/print")),
+		pod.Install(examplePodName, pod.WithImage(exampleImage)),
 	)
 
 	f.Stable("ApiServerSource as event source").
@@ -251,7 +255,7 @@ func SendsEventsForAllResources() *feature.Feature {
 	// event body is similar to this:
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
-		pod.Install(examplePodName, pod.WithImage("ko://knative.dev/eventing/test/test_images/print")),
+		pod.Install(examplePodName, pod.WithImage(exampleImage)),
 	)
 
 	f.Stable("ApiServerSource as event source").
@@ -297,7 +301,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
 		pod.Install(examplePodName,
-			pod.WithImage("ko://knative.dev/eventing/test/test_images/print"),
+			pod.WithImage(exampleImage),
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 
@@ -344,7 +348,7 @@ func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
 		pod.Install(examplePodName,
-			pod.WithImage("ko://knative.dev/eventing/test/test_images/print"),
+			pod.WithImage(exampleImage),
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 
@@ -391,7 +395,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
 	f.Requirement("install example pod",
 		pod.Install(examplePodName,
-			pod.WithImage("ko://knative.dev/eventing/test/test_images/print"),
+			pod.WithImage(exampleImage),
 			pod.WithLabels(map[string]string{"e2e": "testing"})),
 	)
 
