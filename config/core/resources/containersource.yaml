@@ -76,6 +76,7 @@ spec:
                     # And properties were trimmed to those used for creation.
                     metadata:
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                       properties:
                         annotations:
                           description: 'Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations'
@@ -99,7 +100,6 @@ spec:
                         namespace:
                           description: 'Namespace defines the space within which each name must be unique. An empty namespace is equivalent to the "default" namespace, but "default" is the canonical representation. Not all objects are required to be scoped to a namespace - the value of this field for those objects will be empty.  Must be a DNS_LABEL. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/namespaces'
                           type: string
-                        x-kubernetes-preserve-unknown-fields: true
                     spec:
                       description: 'Specification of the desired behavior of the pod. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status'
                       type: object
