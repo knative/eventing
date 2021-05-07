@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/test"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -41,16 +40,40 @@ const (
 	exampleImage = "ko://knative.dev/eventing/test/test_images/print"
 )
 
-func DataPlane() *feature.FeatureSet {
+func DataPlane_SinkTypes() *feature.FeatureSet {
 	fs := &feature.FeatureSet{
-		Name: "Knative ApiServerSource - Data Plane",
+		Name: "Knative ApiServerSource - Data Plane - Sink Types",
 		Features: []feature.Feature{
 			*SendsEventsWithSinkRef(),
 			*SendsEventsWithSinkUri(),
 
+			// TODO: things to test:
+			// - check if we actually receive add, update and delete events
+		},
+	}
+
+	return fs
+}
+
+func DataPlane_EventModes() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative ApiServerSource - Data Plane - Event Modes",
+		Features: []feature.Feature{
 			*SendsEventsWithObjectReferencePayload(),
 			*SendsEventsWithResourceEventPayload(),
 
+			// TODO: things to test:
+			// - check if we actually receive add, update and delete events
+		},
+	}
+
+	return fs
+}
+
+func DataPlane_ResourceMatching() *feature.FeatureSet {
+	fs := &feature.FeatureSet{
+		Name: "Knative ApiServerSource - Data Plane - Resource Matching",
+		Features: []feature.Feature{
 			*SendsEventsForAllResources(),
 			*SendsEventsForLabelMatchingResources(),
 			//*DoesNotSendEventsForNonLabelMatchingResources(),
@@ -73,7 +96,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-		setupAccountAndRoleForEvents(sacmName))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -86,7 +109,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with ref",
@@ -104,7 +127,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-		setupAccountAndRoleForEvents(sacmName))
+		setupAccountAndRoleForPods(sacmName))
 
 	f.Setup("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		sinkuri, err := svc.Address(ctx, sink)
@@ -124,7 +147,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 
 		apiserversource.Install(source, cfg...)(ctx, t)
 	})
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events on sink with URI",
@@ -155,7 +178,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -199,7 +222,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -243,7 +266,7 @@ func SendsEventsForAllResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -288,7 +311,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -336,7 +359,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 //	}
 //
 //	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-//	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+//	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 //
 //	examplePodName := feature.MakeRandomK8sName("example")
 //
@@ -383,7 +406,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	}
 
 	f.Setup("install ApiServerSource", apiserversource.Install(source, cfg...))
-	f.Requirement("ApiServerSource goes ready", apiserversource.IsReady(source))
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
 
 	examplePodName := feature.MakeRandomK8sName("example")
 
@@ -407,31 +430,20 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 	return f
 }
 
-func setupAccountAndRoleForEvents(sacmName string) feature.StepFn {
-	return account_role.Install(sacmName,
-		account_role.WithRole(sacmName+"-clusterrole"),
-		account_role.WithRules(rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{"get", "list", "watch"},
-		}),
-	)
-}
-
 func setupAccountAndRoleForPods(sacmName string) feature.StepFn {
 	return account_role.Install(sacmName,
 		account_role.WithRole(sacmName+"-clusterrole"),
 		account_role.WithRules(rbacv1.PolicyRule{
 			APIGroups: []string{""},
-			Resources: []string{"pods"},
+			Resources: []string{"events", "pods"},
 			Verbs:     []string{"get", "list", "watch"},
 		}),
 	)
 }
 
-// any matches any event
-func any() test.EventMatcher {
-	return func(have cloudevent.Event) error {
-		return nil
-	}
-}
+//// any matches any event
+//func any() test.EventMatcher {
+//	return func(have cloudevent.Event) error {
+//		return nil
+//	}
+//}
