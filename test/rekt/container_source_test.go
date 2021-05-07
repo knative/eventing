@@ -53,7 +53,6 @@ func TestContainerSourceWithSinkURI(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
-	t.Cleanup(env.Finish)
 
 	env.Test(ctx, t, containersource.SendsEventsWithSinkURI())
 }
@@ -68,7 +67,6 @@ func TestContainerSourceWithCloudEventOverrides(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
-	t.Cleanup(env.Finish)
 
 	env.Test(ctx, t, containersource.SendsEventsWithCloudEventOverrides())
 }
