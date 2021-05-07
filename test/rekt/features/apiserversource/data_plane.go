@@ -59,9 +59,6 @@ func DataPlane() *feature.FeatureSet {
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
-
-			// TODO: create small functions for reusable code
-			// TODO: create constants for image, etc
 		},
 	}
 
@@ -69,7 +66,7 @@ func DataPlane() *feature.FeatureSet {
 }
 
 func SendsEventsWithSinkRef() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events to sink ref")
 
@@ -100,7 +97,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 }
 
 func SendsEventsWithSinkUri() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events to sink uri")
 
@@ -138,7 +135,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 }
 
 func SendsEventsWithObjectReferencePayload() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events with ObjectReference payload")
 
@@ -182,7 +179,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 }
 
 func SendsEventsWithResourceEventPayload() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events with ResourceEvent payload")
 
@@ -226,7 +223,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 }
 
 func SendsEventsForAllResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events for all resources")
 
@@ -270,7 +267,7 @@ func SendsEventsForAllResources() *feature.Feature {
 }
 
 func SendsEventsForLabelMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events for label-matching resources")
 
@@ -317,7 +314,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 }
 
 func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Does not send events for label-unmatching resources")
 
@@ -364,7 +361,7 @@ func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
 }
 
 func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
-	source := feature.MakeRandomK8sName("example")
+	source := feature.MakeRandomK8sName("apiserversource")
 	sink := feature.MakeRandomK8sName("sink")
 	f := feature.NewFeatureNamed("Send events for label-expression-matching resources")
 
