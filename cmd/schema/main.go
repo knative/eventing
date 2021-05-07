@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"log"
 
 	"knative.dev/hack/schema/commands"
@@ -41,6 +42,10 @@ func main() {
 	// Sources
 	registry.Register(&sourcesv1.ApiServerSource{})
 	registry.Register(&sourcesv1.SinkBinding{})
+
+	// Flows
+	registry.Register(&flowsv1.Sequence{})
+	registry.Register(&flowsv1.Parallel{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)
