@@ -73,14 +73,7 @@ func SendsEventsWithSinkRef() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForEvents(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -111,14 +104,7 @@ func SendsEventsWithSinkUri() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Event resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForEvents(sacmName))
 
 	f.Setup("install ApiServerSource", func(ctx context.Context, t feature.T) {
 		sinkuri, err := svc.Address(ctx, sink)
@@ -156,14 +142,7 @@ func SendsEventsWithObjectReferencePayload() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -207,14 +186,7 @@ func SendsEventsWithResourceEventPayload() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -258,14 +230,7 @@ func SendsEventsForAllResources() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -309,14 +274,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -363,14 +321,7 @@ func DoesNotSendEventsForNonLabelMatchingResources() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -417,14 +368,7 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 
 	sacmName := feature.MakeRandomK8sName("apiserversource")
 	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
-		account_role.Install(sacmName,
-			account_role.WithRole(sacmName+"-clusterrole"),
-			account_role.WithRules(rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			}),
-		))
+		setupAccountAndRoleForPods(sacmName))
 
 	cfg := []manifest.CfgFn{
 		apiserversource.WithServiceAccountName(sacmName),
@@ -460,6 +404,28 @@ func SendEventsForLabelExpressionMatchingResources() *feature.Feature {
 			).AtLeast(1))
 
 	return f
+}
+
+func setupAccountAndRoleForEvents(sacmName string) feature.StepFn {
+	return account_role.Install(sacmName,
+		account_role.WithRole(sacmName+"-clusterrole"),
+		account_role.WithRules(rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"get", "list", "watch"},
+		}),
+	)
+}
+
+func setupAccountAndRoleForPods(sacmName string) feature.StepFn {
+	return account_role.Install(sacmName,
+		account_role.WithRole(sacmName+"-clusterrole"),
+		account_role.WithRules(rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list", "watch"},
+		}),
+	)
 }
 
 // any matches any event
