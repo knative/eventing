@@ -50,7 +50,7 @@ func DataPlane() *feature.FeatureSet {
 
 			*SendsEventsForAllResources(),
 			*SendsEventsForLabelMatchingResources(),
-			*DoesNotSendEventsForNonLabelMatchingResources(),
+			//*DoesNotSendEventsForNonLabelMatchingResources(),
 			*SendEventsForLabelExpressionMatchingResources(),
 
 			// TODO: things to test:
