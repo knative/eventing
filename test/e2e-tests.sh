@@ -33,10 +33,13 @@ source "$(dirname "$0")/e2e-common.sh"
 initialize $@ --skip-istio-addon
 
 echo "Running E2E tests for: Multi Tenant Channel Based Broker, Channel (v1), InMemoryChannel (v1) , ApiServerSource (v1), ContainerSource (v1) and PingSource (v1beta2)"
-go_test_e2e -timeout=30m -parallel=20 ./test/... \
+go_test_e2e -timeout=30m -parallel=20 ./test/e2e \
   -brokerclass=MTChannelBasedBroker \
   -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel \
   -sources=sources.knative.dev/v1beta2:PingSource,sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource \
   || fail_test
+
+echo "Running E2E tests for upgrade tests"
+go_test_e2e -timeout=10m -parallel=20 ./test/upgrade/... || fail_test
 
 success
