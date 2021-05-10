@@ -43,7 +43,7 @@ var (
 )
 
 func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	if(responseCode != 0) {
+	if responseCode != 0 {
 		r.eventCount++
 	}
 	return nil
@@ -166,7 +166,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 			got.ceClient = innerClient
 
 			if tc.event != nil {
-				if(n == "not a http result") {
+				if n == "not a http result" {
 					tc.event.SetType("unit.wantErr")
 				}
 				err := got.Send(context.TODO(), *tc.event)
@@ -175,7 +175,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				if(n == "not a http result") {
+				if n == "not a http result" {
 					validateMetric(t, got.reporter, 0, tc.event.Type())
 				} else {
 					validateMetric(t, got.reporter, 1, tc.event.Type())
@@ -238,7 +238,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 					//handle err
 					t.Fatal(err)
 				}
-				validateSent(t, innerClient, tc.event.Type()) 
+				validateSent(t, innerClient, tc.event.Type())
 				validateMetric(t, got.reporter, 1, tc.event.Type())
 			} else {
 				validateNotSent(t, innerClient)

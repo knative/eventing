@@ -39,6 +39,7 @@ import (
 func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (cloudevents.Client, error) {
 	return newCloudEventsClientCRStatus(nil, target, ceOverrides, reporter, nil)
 }
+
 // NewCloudEventsClientCRStatus returns a client CR status
 func NewCloudEventsClientCRStatus(env EnvConfigAccessor, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (cloudevents.Client, error) {
 	return newCloudEventsClientCRStatus(env, "", nil, reporter, crStatusEventClient)
