@@ -91,6 +91,7 @@ func TestApiServerSourceDataPlane_EventModes(t *testing.T) {
 }
 
 func TestApiServerSourceDataPlane_ResourceMatching(t *testing.T) {
+	t.Skip("flaky test, see https://github.com/knative/eventing/issues/5375")
 	t.Parallel()
 
 	ctx, env := global.Environment(
