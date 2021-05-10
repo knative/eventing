@@ -70,7 +70,13 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 			event: demoEvent(),
 		},
 		"send with retries": {
-			event: demoEvent(),
+			event: func() *cloudevents.Event {
+				event := cloudevents.NewEvent()
+				event.SetID("abc-123")
+				event.SetSource("unit/test")
+				event.SetType("unit.retries")
+				return &event
+			}(),
 		},
 		"send with ceOverrides": {
 			event: demoEvent(),
@@ -199,7 +205,13 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 			event: demoEvent(),
 		},
 		"send with retries": {
-			event: demoEvent(),
+			event: func() *cloudevents.Event {
+				event := cloudevents.NewEvent()
+				event.SetID("abc-123")
+				event.SetSource("unit/test")
+				event.SetType("unit.retries")
+				return &event
+			}(),
 		},
 		"send with ceOverrides": {
 			event: demoEvent(),
