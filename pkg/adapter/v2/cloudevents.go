@@ -160,7 +160,6 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 
 	if cloudevents.IsACK(result) {
 		var res *http.Result
-
 		if !cloudevents.ResultAs(result, &res) {
 			c.reportError(reportArgs, result)
 		}
@@ -172,17 +171,16 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 		var res *http.Result
 		if !cloudevents.ResultAs(result, &res) {
 			c.reportError(reportArgs, result)
-		}
-
-		c.reporter.ReportEventCount(reportArgs, res.StatusCode)
-
-		if len(rres.Attempts) > 0 {
-			for _, retryResult := range rres.Attempts {
-				var res *http.Result
-				if !cloudevents.ResultAs(retryResult, &res) {
-					c.reportError(reportArgs, result)
+		} else {
+			c.reporter.ReportEventCount(reportArgs, res.StatusCode)
+			if len(rres.Attempts) > 0 {
+				for _, retryResult := range rres.Attempts {
+					var res *http.Result
+					if !cloudevents.ResultAs(retryResult, &res) {
+						c.reportError(reportArgs, result)
+					}
+					c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode)
 				}
-				c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode)
 			}
 		}
 	}

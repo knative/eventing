@@ -18,6 +18,7 @@ package test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -81,6 +82,8 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 		var attempts []protocol.Result
 		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
 		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
+	} else if eventData.Type == "unit.wantErr" {
+		return errors.New("totally not an http result")
 	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
 }

@@ -43,7 +43,9 @@ var (
 )
 
 func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount++
+	if(responseCode != 0) {
+		r.eventCount++
+	}
 	return nil
 }
 
@@ -164,13 +166,20 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 			got.ceClient = innerClient
 
 			if tc.event != nil {
+				if(n == "not a http result") {
+					tc.event.SetType("unit.wantErr")
+				}
 				err := got.Send(context.TODO(), *tc.event)
-				if !cloudevents.IsACK(err) && tc.event.Type() != "unit.retries" {
+				if !cloudevents.IsACK(err) && tc.event.Type() == "unit.type" {
 					//handle err
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1, tc.event.Type())
+				if(n == "not a http result") {
+					validateMetric(t, got.reporter, 0, tc.event.Type())
+				} else {
+					validateMetric(t, got.reporter, 1, tc.event.Type())
+				}
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -229,7 +238,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 					//handle err
 					t.Fatal(err)
 				}
-				validateSent(t, innerClient, tc.event.Type())
+				validateSent(t, innerClient, tc.event.Type()) 
 				validateMetric(t, got.reporter, 1, tc.event.Type())
 			} else {
 				validateNotSent(t, innerClient)
