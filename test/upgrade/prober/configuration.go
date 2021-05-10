@@ -31,7 +31,6 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
@@ -195,31 +194,34 @@ func (p *prober) deployConfiguration() {
 	p.deployConfigToml(url)
 }
 
-func (p *prober) deployConfigToml(url *apis.URL) {
+func (p *prober) deployConfigToml(sutUrl fmt.Stringer) {
 	name := p.config.ConfigMapName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
-	configData := p.compileTemplate(p.config.ConfigTemplate, url)
+	configData := p.compileTemplate(p.config.ConfigTemplate, sutUrl)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) string {
+func (p *prober) compileTemplate(templateName string, sutUrl fmt.Stringer) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
 	p.ensureNoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
 	p.ensureNoError(err)
+	u := sutUrl.String()
 	var buff bytes.Buffer
 	data := struct {
 		*Config
 		Namespace string
+		// Deprecated: use SutURL
 		BrokerURL string
+		SutURL    string
 	}{
 		p.config,
 		p.client.Namespace,
-		brokerURL.String(),
+		u, u,
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()
