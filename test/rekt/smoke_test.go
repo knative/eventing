@@ -28,6 +28,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/containersource"
+	"knative.dev/eventing/test/rekt/features/inmemorychannel"
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
@@ -146,5 +147,24 @@ func TestSmoke_ApiServerSource(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, apiserversource.Install(name))
 		env.Test(ctx, t, apiserversource.GoesReady(name))
+	}
+}
+
+// TestSmoke_InMemoryChannel
+func TestSmoke_InMemoryChannel(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-01234567890123456789012345678901234567890123456789012345",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, inmemorychannel.GoesReady(name))
 	}
 }
