@@ -40,7 +40,6 @@ var (
 type BrokerAndTriggers struct {
 	Broker
 	Triggers
-	Namespace string
 }
 
 // Broker will hold settings for broker itself
@@ -55,9 +54,8 @@ type Triggers struct {
 	TypePrefix string
 }
 
-func newBrokerAndTriggers(namespace string) SystemUnderTest {
+func newBrokerAndTriggers() SystemUnderTest {
 	return &BrokerAndTriggers{
-		Namespace: namespace,
 		Broker: Broker{
 			Name: "sut",
 			Opts: []resources.BrokerOption{
@@ -92,11 +90,11 @@ func (b *BrokerAndTriggers) deployBroker(ctx Context) {
 }
 
 func (b *BrokerAndTriggers) fetchURL(ctx Context) *apis.URL {
-	namespace := b.Namespace
+	namespace := ctx.Client.Namespace
 	ctx.Log.Debugf("Fetching \"%s\" broker URL for ns %s",
 		b.Name, namespace)
 	meta := resources.NewMetaResource(
-		b.Name, b.Namespace, testlib.BrokerTypeMeta,
+		b.Name, namespace, testlib.BrokerTypeMeta,
 	)
 	err := duck.WaitForResourceReady(ctx.Client.Dynamic, meta)
 	if err != nil {

@@ -81,7 +81,7 @@ type Config struct {
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
 	ConfigToml
-	SystemUnderTest  func(namespace string) sut.SystemUnderTest
+	SystemUnderTest  sut.SystemUnderTest
 	EventsTypePrefix string
 	HealthEndpoint   string
 }
@@ -152,7 +152,7 @@ func newConfig(
 			},
 			EventsTypePrefix: defaultWatholaEventsPrefix,
 			HealthEndpoint:   defaultHealthEndpoint,
-			SystemUnderTest:  sut.NewDefault,
+			SystemUnderTest:  sut.NewDefault(),
 		},
 	}
 
@@ -186,7 +186,7 @@ func (p *prober) deployConfiguration() {
 		ref = resources.KnativeRefForKservice(forwarderName, p.client.Namespace)
 	}
 	dest := duckv1.Destination{Ref: ref}
-	s := p.config.SystemUnderTest(p.client.Namespace)
+	s := p.config.SystemUnderTest
 	url := s.Deploy(sc, dest)
 	p.client.Cleanup(func() {
 		s.Teardown(sc)

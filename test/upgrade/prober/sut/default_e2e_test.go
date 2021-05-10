@@ -44,7 +44,7 @@ func TestSUTNewDefaultE2E(t *testing.T) {
 	ctx := signals.NewContext()
 	client := testlib.Setup(t, false)
 	defer testlib.TearDown(client)
-	s := sut.NewDefault(client.Namespace)
+	s := sut.NewDefault()
 	sutCtx := sut.Context{
 		Ctx:    ctx,
 		Log:    log(t),
