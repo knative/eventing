@@ -174,7 +174,7 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 			c.reportError(reportArgs, result)
 		} else {
 			c.reporter.ReportEventCount(reportArgs, res.StatusCode)
-			if len(rres.Attempts) > 0 {
+			if rres != nil && len(rres.Attempts) > 0 {
 				for _, retryResult := range rres.Attempts {
 					var res *http.Result
 					if !cloudevents.ResultAs(retryResult, &res) {

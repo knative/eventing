@@ -84,6 +84,8 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
 	} else if eventData.Type == "unit.wantErr" {
 		return errors.New("totally not an http result")
+	} else if eventData.Type == "unit.sendFail" {
+		return http.NewResult(400, "%w", protocol.ResultNACK)
 	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
 }
@@ -106,6 +108,10 @@ func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*
 		var attempts []protocol.Result
 		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
 		return nil, http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
+	} else if eventData.Type == "unit.wantErr" {
+		return nil, errors.New("totally not an http result")
+	} else if eventData.Type == "unit.sendFail" {
+		return nil, http.NewResult(400, "%w", protocol.ResultNACK)
 	}
 	return nil, http.NewResult(200, "%w", protocol.ResultACK)
 }
