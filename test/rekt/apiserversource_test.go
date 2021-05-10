@@ -61,3 +61,45 @@ func TestApiServerSourceValidationWebhookConfigurationOnUpdate(t *testing.T) {
 
 	env.Test(ctx, t, apiserversourcefeatures.UpdateWithInvalidSpec(srcname))
 }
+
+func TestApiServerSourceDataPlane_SinkTypes(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_SinkTypes())
+}
+
+func TestApiServerSourceDataPlane_EventModes(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_EventModes())
+}
+
+func TestApiServerSourceDataPlane_ResourceMatching(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.TestSet(ctx, t, apiserversourcefeatures.DataPlane_ResourceMatching())
+}

@@ -14,25 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deployment
+package pod
 
 import (
 	"context"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/tracker"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
-// Install will create a Deployment with defaults that can be overwritten by
+// Install will create a Pod with defaults that can be overwritten by
 // the With* methods.
-func Install(name string) feature.StepFn {
+func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
-		"name":      name,
-		"selectors": map[string]string{"app": name},         // default
-		"image":     "gcr.io/knative-samples/helloworld-go", // default
-		"port":      8080,                                   // default
+		"name":   name,
+		"labels": map[string]string{"app": name},         // default
+		"image":  "gcr.io/knative-samples/helloworld-go", // default
+		"port":   8080,                                   // default
+	}
+
+	for _, fn := range opts {
+		fn(cfg)
 	}
 
 	return func(ctx context.Context, t feature.T) {
@@ -42,19 +44,20 @@ func Install(name string) feature.StepFn {
 	}
 }
 
-// AsRef returns a KRef for a Deployment without namespace.
-func AsRef(name string) *duckv1.KReference {
-	return &duckv1.KReference{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-		Name:       name,
+// WithLabels sets the given labels on the Pod.
+func WithLabels(labels map[string]string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if labels != nil {
+			cfg["labels"] = labels
+		}
 	}
 }
 
-func AsTrackerReference(name string) *tracker.Reference {
-	return &tracker.Reference{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-		Name:       name,
+// WithImage sets the given image on the Pod spec.
+func WithImage(image string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if image != "" {
+			cfg["image"] = image
+		}
 	}
 }

@@ -29,6 +29,26 @@ spec:
     {{ range $_, $resource := .resources }}
     - apiVersion: {{ $resource.apiVersion }}
       kind: {{ $resource.kind }}
+      {{ if $resource.selector }}
+      selector:
+        {{ if $resource.selector.matchLabels }}
+        matchLabels:
+          {{ range $key, $value := $resource.selector.matchLabels }}
+          {{ $key }}: {{ $value }}
+          {{ end }}
+        {{ end }}
+        {{ if $resource.selector.matchExpressions }}
+        matchExpressions:
+          {{ range $_, $expr := $resource.selector.matchExpressions }}
+          - key: {{ $expr.key }}
+            operator: {{ $expr.operator }}
+            values:
+              {{ range $_, $exprValue := $expr.values }}
+              - {{ $exprValue }}
+              {{ end }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
     {{ end }}
   {{ end }}
   {{if .sink }}
