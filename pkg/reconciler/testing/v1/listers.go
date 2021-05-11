@@ -211,3 +211,7 @@ func (l *Listers) GetCustomResourceDefinitionLister() apiextensionsv1listers.Cus
 func (l *Listers) GetNodeLister() corev1listers.NodeLister {
 	return corev1listers.NewNodeLister(l.indexerFor(&corev1.Node{}))
 }
+
+func (l *Listers) GetPodLister() corev1listers.PodLister {
+	return corev1listers.NewPodLister(l.indexerFor(&corev1.Pod{}))
+}
