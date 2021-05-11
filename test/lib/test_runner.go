@@ -57,6 +57,7 @@ var (
 	nsMutex sync.Mutex
 	serviceCount int
 	namespaceCount int
+	ReuseNamespace bool
 )
 
 // ComponentsTestRunner is used to run tests against different eventing components.
@@ -162,9 +163,10 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 	if err != nil {
 		t.Fatal("Couldn't initialize clients:", err)
 	}
-	SetupServiceAccount(t, client)
+
 	// If namespaces are re-used the pull-secret is supposed to be created in advance.
-	if !test.EventingFlags.ReuseNamespace {
+	if !ReuseNamespace {
+		SetupServiceAccount(t, client)
 		SetupPullSecret(t, client)
 	}
 
