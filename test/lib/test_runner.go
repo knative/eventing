@@ -54,7 +54,6 @@ const (
 
 var (
 	nsMutex        sync.Mutex
-	serviceCount   int
 	namespaceCount int
 	ReuseNamespace bool
 )
