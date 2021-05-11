@@ -196,10 +196,7 @@ func (c *client) reportError(reportArgs *source.ReportArgs, result protocol.Resu
 	if result != nil {
 		reportArgs.Error = result.Error()
 	}
-
-	if rErr := c.reporter.ReportEventCount(reportArgs, 0); rErr != nil {
-		fmt.Print("%w\nmetrics reporter error: ", result, rErr)
-	}
+	c.reporter.ReportEventCount(reportArgs, 0)
 }
 
 // MetricTag context

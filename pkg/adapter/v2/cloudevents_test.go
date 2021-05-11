@@ -59,10 +59,11 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 		return &event
 	}
 	testCases := map[string]struct {
-		ceOverrides *duckv1.CloudEventOverrides
-		event       *cloudevents.Event
-		timeout     int
-		wantErr     bool
+		ceOverrides    *duckv1.CloudEventOverrides
+		event          *cloudevents.Event
+		timeout        int
+		wantErr        bool
+		wantRetryCount bool
 	}{
 		"timeout": {timeout: 13},
 		"none":    {},
@@ -77,6 +78,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				event.SetType("unit.retries")
 				return &event
 			}(),
+			wantRetryCount: true,
 		},
 		"send with ceOverrides": {
 			event: demoEvent(),
@@ -177,7 +179,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1, tc.event.Type())
+				validateMetric(t, got.reporter, 1, tc.wantRetryCount)
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -194,10 +196,11 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 		return &event
 	}
 	testCases := map[string]struct {
-		ceOverrides *duckv1.CloudEventOverrides
-		event       *cloudevents.Event
-		timeout     int
-		wantErr     bool
+		ceOverrides    *duckv1.CloudEventOverrides
+		event          *cloudevents.Event
+		timeout        int
+		wantErr        bool
+		wantRetryCount bool
 	}{
 		"timeout": {timeout: 13},
 		"none":    {},
@@ -212,6 +215,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 				event.SetType("unit.retries")
 				return &event
 			}(),
+			wantRetryCount: true,
 		},
 		"send with ceOverrides": {
 			event: demoEvent(),
@@ -260,7 +264,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1, tc.event.Type())
+				validateMetric(t, got.reporter, 1, tc.wantRetryCount)
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -284,12 +288,12 @@ func validateNotSent(t *testing.T, ce *test.TestCloudEventsClient) {
 	}
 }
 
-func validateMetric(t *testing.T, reporter source.StatsReporter, want int, wantRetryCount string) {
+func validateMetric(t *testing.T, reporter source.StatsReporter, want int, wantRetryCount bool) {
 	if mockReporter, ok := reporter.(*mockReporter); !ok {
 		t.Errorf("Reporter is not a mockReporter")
 	} else if mockReporter.eventCount != want {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
-	} else if mockReporter.retryEventCount != want && wantRetryCount == "unit.retries" {
+	} else if mockReporter.retryEventCount != want && wantRetryCount {
 		t.Errorf("Expected %d for metric, got %d", want, mockReporter.retryEventCount)
 	}
 }
