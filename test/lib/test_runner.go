@@ -28,8 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/test"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -201,7 +199,7 @@ func CreateNamespacedClient(t *testing.T) (*Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		if test.EventingFlags.ReuseNamespace {
+		if ReuseNamespace {
 			// Re-using existing namespace, no need to create it.
 			// The namespace is supposed to be created in advance.
 			return client, nil
