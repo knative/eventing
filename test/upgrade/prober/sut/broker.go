@@ -69,20 +69,16 @@ func newBrokerAndTriggers() SystemUnderTest {
 		},
 		Triggers: Triggers{
 			Types:      eventTypes,
-			TypePrefix: defaulEventsPrefix,
+			TypePrefix: defaultEventsPrefix,
 		},
 	}
 }
 
-func (b *BrokerAndTriggers) Deploy(ctx Context, dest duckv1.Destination) *apis.URL {
+func (b *BrokerAndTriggers) Deploy(ctx Context, dest duckv1.Destination) interface{} {
 	b.deployBroker(ctx)
 	url := b.fetchURL(ctx)
 	b.deployTriggers(ctx, dest)
 	return url
-}
-
-func (b *BrokerAndTriggers) Teardown(ctx Context) {
-	ctx.Log.Debug("BrokerAndTriggers SUT should automatically teardown")
 }
 
 func (b *BrokerAndTriggers) deployBroker(ctx Context) {

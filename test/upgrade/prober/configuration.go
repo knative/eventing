@@ -187,41 +187,44 @@ func (p *prober) deployConfiguration() {
 	}
 	dest := duckv1.Destination{Ref: ref}
 	s := p.config.SystemUnderTest
-	url := s.Deploy(sc, dest)
+	endpoint := s.Deploy(sc, dest)
 	p.client.Cleanup(func() {
-		s.Teardown(sc)
+		if tr, ok := s.(sut.HasManualTeardown); ok {
+
+			tr.Teardown(sc)
+		}
 	})
-	p.deployConfigToml(url)
+	p.deployConfigToml(endpoint)
 }
 
-func (p *prober) deployConfigToml(sutUrl fmt.Stringer) {
+func (p *prober) deployConfigToml(endpoint interface{}) {
 	name := p.config.ConfigMapName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
-	configData := p.compileTemplate(p.config.ConfigTemplate, sutUrl)
+	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateName string, sutUrl fmt.Stringer) string {
+func (p *prober) compileTemplate(templateName string, endpoint interface{}) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
 	p.ensureNoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
 	p.ensureNoError(err)
-	u := sutUrl.String()
 	var buff bytes.Buffer
 	data := struct {
 		*Config
 		Namespace string
-		// Deprecated: use SutURL
+		// Deprecated: use Endpoint
 		BrokerURL string
-		SutURL    string
+		Endpoint  interface{}
 	}{
 		p.config,
 		p.client.Namespace,
-		u, u,
+		fmt.Sprintf("%v", endpoint),
+		endpoint,
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()

@@ -56,7 +56,7 @@ func TestSUTNewDefaultE2E(t *testing.T) {
 
 	ref := pkgTest.CoreV1ObjectReference(
 		resources.ServiceKind, resources.CoreAPIVersion, receiverName)
-	url := s.Deploy(sutCtx, duckv1.Destination{
+	endpoint := s.Deploy(sutCtx, duckv1.Destination{
 		Ref: &duckv1.KReference{
 			APIVersion: ref.APIVersion,
 			Kind:       ref.Kind,
@@ -64,8 +64,10 @@ func TestSUTNewDefaultE2E(t *testing.T) {
 			Name:       pod.Name,
 		},
 	})
-	defer s.Teardown(sutCtx)
-	assert.NotEmpty(t, url)
+	if tr, ok := s.(sut.HasManualTeardown); ok {
+		defer tr.Teardown(sutCtx)
+	}
+	assert.NotEmpty(t, endpoint)
 	step1 := watholasender.NewCloudEvent(watholaevent.Step{Number: 1},
 		watholaevent.StepType)
 	step2 := watholasender.NewCloudEvent(watholaevent.Step{Number: 2},
@@ -73,7 +75,7 @@ func TestSUTNewDefaultE2E(t *testing.T) {
 	finished := watholasender.NewCloudEvent(watholaevent.Finished{EventsSent: 2},
 		watholaevent.FinishedType)
 
-	sender := testingSender{t: t, ctx: ctx, client: client, url: url}
+	sender := testingSender{t: t, ctx: ctx, client: client, url: endpoint.(*apis.URL)}
 	sender.send(step1)
 	sender.send(step2)
 	sender.send(finished)

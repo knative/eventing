@@ -21,23 +21,29 @@ import (
 
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/pkg/apis"
+	watholaevent "knative.dev/eventing/test/upgrade/prober/wathola/event"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
-	defaulEventsPrefix = "dev.knative.eventing.wathola"
+	defaultEventsPrefix = "dev.knative.eventing.wathola"
 )
 
-var eventTypes = []string{"step", "finished"}
+var eventTypes = []string{
+	watholaevent.Step{}.Type(),
+	watholaevent.Finished{}.Type(),
+}
 
 // SystemUnderTest (SUT) represents a system that we'd like to test with
 // continual prober.
 type SystemUnderTest interface {
 	// Deploy is responsible for deploying SUT and returning a URL to feed
 	// events into.
-	Deploy(ctx Context, destination duckv1.Destination) *apis.URL
+	Deploy(ctx Context, destination duckv1.Destination) interface{}
+}
 
+// HasManualTeardown indicates that SystemUnderTest supports manual teardown.
+type HasManualTeardown interface {
 	// Teardown will remove all deployed SUT resources.
 	Teardown(ctx Context)
 }
