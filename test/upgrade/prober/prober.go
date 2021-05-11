@@ -113,12 +113,9 @@ func (p *probeRunner) validate(ctx pkgupgrade.Context) {
 		ctx.Log.Warn(
 			"DEPRECATED: BrokerOpts set in Config. Use custom SystemUnderTest")
 		if reflect.ValueOf(p.config.Wathola.SystemUnderTest) == reflect.ValueOf(sut.NewDefault) {
-			p.config.Wathola.SystemUnderTest = func(namespace string) sut.SystemUnderTest {
-				s := sut.NewDefault(namespace)
-				bt := s.(*sut.BrokerAndTriggers)
-				bt.Opts = append(bt.Opts, p.config.BrokerOpts...)
-				return bt
-			}
+			bt := sut.NewDefault().(*sut.BrokerAndTriggers)
+			bt.Opts = append(bt.Opts, p.config.BrokerOpts...)
+			p.config.Wathola.SystemUnderTest = bt
 		} else {
 			ctx.T.Fatal("Can't use given BrokerOpts, as custom SUT is used as " +
 				"well. Drop using BrokerOpts in favor of custom SUT.")
