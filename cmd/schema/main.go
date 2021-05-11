@@ -23,6 +23,7 @@ import (
 	"knative.dev/hack/schema/registry"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
@@ -42,6 +43,10 @@ func main() {
 	registry.Register(&sourcesv1.ApiServerSource{})
 	registry.Register(&sourcesv1.SinkBinding{})
 	registry.Register(&sourcesv1.ContainerSource{}) // WARNING: THIS DOES NOT WORK OUT OF THE BOX: See https://github.com/knative/eventing/issues/5353.
+
+	// Flows
+	registry.Register(&flowsv1.Sequence{})
+	registry.Register(&flowsv1.Parallel{})
 
 	if err := commands.New("knative.dev/eventing").Execute(); err != nil {
 		log.Fatal("Error during command execution: ", err)

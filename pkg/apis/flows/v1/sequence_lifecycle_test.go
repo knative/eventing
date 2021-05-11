@@ -78,7 +78,16 @@ func getChannelable(ready bool) *eventingduckv1.Channelable {
 	}
 
 	if ready {
+		c.Status.SetConditions([]apis.Condition{{
+			Type:   apis.ConditionReady,
+			Status: corev1.ConditionTrue,
+		}})
 		c.Status.Address = &duckv1.Addressable{URL: URL}
+	} else {
+		c.Status.SetConditions([]apis.Condition{{
+			Type:   apis.ConditionReady,
+			Status: corev1.ConditionUnknown,
+		}})
 	}
 
 	return &c
@@ -212,7 +221,7 @@ func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 	}{{
 		name: "empty",
 		subs: []*messagingv1.Subscription{},
-		want: corev1.ConditionFalse,
+		want: corev1.ConditionUnknown,
 	}, {
 		name: "empty status",
 		subs: []*messagingv1.Subscription{{
@@ -227,11 +236,11 @@ func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 			Status: messagingv1.SubscriptionStatus{},
 		},
 		},
-		want: corev1.ConditionFalse,
+		want: corev1.ConditionUnknown,
 	}, {
 		name: "one subscription not ready",
 		subs: []*messagingv1.Subscription{getSubscription("sub0", false)},
-		want: corev1.ConditionFalse,
+		want: corev1.ConditionUnknown,
 	}, {
 		name: "one subscription ready",
 		subs: []*messagingv1.Subscription{getSubscription("sub0", true)},
@@ -239,7 +248,7 @@ func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 	}, {
 		name: "one subscription ready, one not",
 		subs: []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
-		want: corev1.ConditionFalse,
+		want: corev1.ConditionUnknown,
 	}, {
 		name: "two subscriptions ready",
 		subs: []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
@@ -267,11 +276,11 @@ func TestSequencePropagateChannelStatuses(t *testing.T) {
 	}{{
 		name:     "empty",
 		channels: []*eventingduckv1.Channelable{},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "one channelable not ready",
 		channels: []*eventingduckv1.Channelable{getChannelable(false)},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "one channelable ready",
 		channels: []*eventingduckv1.Channelable{getChannelable(true)},
@@ -279,7 +288,7 @@ func TestSequencePropagateChannelStatuses(t *testing.T) {
 	}, {
 		name:     "one channelable ready, one not",
 		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "two channelables ready",
 		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(true)},
@@ -293,7 +302,7 @@ func TestSequencePropagateChannelStatuses(t *testing.T) {
 			got := ps.GetCondition(SequenceConditionChannelsReady).Status
 			want := test.want
 			if want != got {
-				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
+				t.Errorf("unexpected conditions: want=%q, got=%q", want, got)
 			}
 		})
 	}
@@ -358,44 +367,80 @@ func TestSequenceReady(t *testing.T) {
 
 func TestSequencePropagateSetAddress(t *testing.T) {
 	URL := apis.HTTP("example.com")
+	URL2 := apis.HTTP("another.example.com")
 	tests := []struct {
-		name       string
-		address    *duckv1.Addressable
-		want       *duckv1.Addressable
-		wantStatus corev1.ConditionStatus
+		name        string
+		status      SequenceStatus
+		address     *duckv1.Addressable
+		want        duckv1.Addressable
+		wantStatus  corev1.ConditionStatus
+		wantAddress string
 	}{{
 		name:       "nil",
+		status:     SequenceStatus{},
 		address:    nil,
-		want:       nil,
-		wantStatus: corev1.ConditionFalse,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}, {
 		name:       "empty",
+		status:     SequenceStatus{},
 		address:    &duckv1.Addressable{},
-		want:       nil,
-		wantStatus: corev1.ConditionFalse,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}, {
-		name:       "URL",
-		address:    &duckv1.Addressable{URL: URL},
-		want:       &duckv1.Addressable{URL: URL},
-		wantStatus: corev1.ConditionTrue,
+		name:        "URL",
+		status:      SequenceStatus{},
+		address:     &duckv1.Addressable{URL: URL},
+		want:        duckv1.Addressable{URL: URL},
+		wantStatus:  corev1.ConditionTrue,
+		wantAddress: "http://example.com",
+	}, {
+		name: "New URL",
+		status: SequenceStatus{
+			Address: duckv1.Addressable{
+				URL: URL2,
+			},
+		},
+		address:     &duckv1.Addressable{URL: URL},
+		want:        duckv1.Addressable{URL: URL},
+		wantStatus:  corev1.ConditionTrue,
+		wantAddress: "http://example.com",
+	}, {
+		name: "Clear URL",
+		status: SequenceStatus{
+			Address: duckv1.Addressable{
+				URL: URL,
+			},
+		},
+		address:    nil,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}, {
 		name:       "nil",
+		status:     SequenceStatus{},
 		address:    &duckv1.Addressable{URL: nil},
-		want:       nil,
-		wantStatus: corev1.ConditionFalse,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ps := SequenceStatus{}
-			ps.setAddress(test.address)
-			got := ps.Address
-			if diff := cmp.Diff(test.want, got, ignoreAllButTypeAndStatus); diff != "" {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			tt.status.setAddress(tt.address)
+			got := tt.status.Address
+			if diff := cmp.Diff(tt.want, got, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected address (-want, +got) =", diff)
 			}
-			gotStatus := ps.GetCondition(SequenceConditionAddressable).Status
-			if test.wantStatus != gotStatus {
-				t.Errorf("unexpected conditions (-want, +got) = %v %v", test.wantStatus, gotStatus)
+			gotStatus := tt.status.GetCondition(SequenceConditionAddressable).Status
+			if tt.wantStatus != gotStatus {
+				t.Errorf("unexpected conditions (-want, +got) = %v %v", tt.wantStatus, gotStatus)
+			}
+			gotAddress := ""
+			if got.URL != nil {
+				gotAddress = got.URL.String()
+			}
+			if diff := cmp.Diff(tt.wantAddress, gotAddress); diff != "" {
+				t.Error("unexpected address.url (-want, +got) =", diff)
 			}
 		})
 	}

@@ -37,34 +37,84 @@ spec:
             type: object
             properties:
               channelTemplate:
-                description: ChannelTemplate specifies which Channel CRD to use. If
-                    left unspecified, it is set to the default Channel CRD for the
-                    namespace (or cluster, in case there are no defaults for the namespace).
+                description: ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD for the namespace (or cluster, in case there are no defaults for the namespace).
                 type: object
                 properties:
                   apiVersion:
-                    description: 'APIVersion defines the versioned schema of this
-                        representation of an object. Servers should convert recognized
-                        schemas to the latest internal value, and may reject unrecognized
-                        values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                     type: string
                   kind:
-                    description: 'Kind is a string value representing the REST
-                        resource this object represents. Servers may infer this
-                        from the endpoint the client submits requests to. Cannot
-                        be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
                   spec:
-                    description: Spec defines the Spec to use for each channel
-                        created. Passed in verbatim to the Channel CRD as Spec
-                        section.
-                    type: object
-                    x-kubernetes-preserve-unknown-fields: true
+                    description: Spec defines the Spec to use for each channel created. Passed in verbatim to the Channel CRD as Spec section.
+                    type: string
               reply:
-                description: Reply is a Reference to where the result of the last
-                    Subscriber gets sent to.
+                description: Reply is a Reference to where the result of the last Subscriber gets sent to.
                 type: object
-                properties: &addressableProperties
+                properties:
+                  ref:
+                    description: Ref points to an Addressable.
+                    type: object
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      kind:
+                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        type: string
+                      namespace:
+                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
+                        type: string
+                  uri:
+                    description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
+                    type: string
+              steps:
+                description: Steps is the list of Destinations (processors / functions) that will be called in the order provided. Each step has its own delivery options
+                type: array
+                items:
+                  type: object
+                  properties:
+                    delivery:
+                      description: Delivery is the delivery specification for events to the subscriber This includes things like retries, DLQ, etc.
+                      type: object
+                      properties:
+                        backoffDelay:
+                          description: 'BackoffDelay is the delay before retrying. More information on Duration format: - https://www.iso.org/iso-8601-date-and-time-format.html - https://en.wikipedia.org/wiki/ISO_8601  For linear policy, backoff delay is backoffDelay*<numberOfRetries>. For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.'
+                          type: string
+                        backoffPolicy:
+                          description: BackoffPolicy is the retry backoff policy (linear, exponential).
+                          type: string
+                        deadLetterSink:
+                          description: DeadLetterSink is the sink receiving event that could not be sent to a destination.
+                          type: object
+                          properties:
+                            ref:
+                              description: Ref points to an Addressable.
+                              type: object
+                              properties:
+                                apiVersion:
+                                  description: API version of the referent.
+                                  type: string
+                                kind:
+                                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                  type: string
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                                namespace:
+                                  description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
+                                  type: string
+                            uri:
+                              description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
+                              type: string
+                        retry:
+                          description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
+                          type: integer
+                          format: int32
                     ref:
                       description: Ref points to an Addressable.
                       type: object
@@ -79,183 +129,169 @@ spec:
                           description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                           type: string
                         namespace:
-                          description: 'Namespace of the referent. More info:
-                              https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                              This is optional field, it gets defaulted to the
-                              object holding it if left out.'
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
                           type: string
                     uri:
-                      description: URI can be an absolute URL(non-empty scheme and
-                          non-empty host) pointing to the target or a relative URI.
-                          Relative URIs will be resolved using the base URI retrieved
-                          from Ref.
+                      description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
                       type: string
-              steps:
-                description: Steps is the list of Destinations (processors / functions)
-                    that will be called in the order provided. Each step has its own
-                    delivery options
-                type: array
-                items:
-                  type: object
-                  properties:
-                    << : *addressableProperties
-                    delivery:
-                      description: Delivery is the delivery specification for
-                          events to the subscriber This includes things like
-                          retries, DLQ, etc.
-                      type: object
-                      properties:
-                        backoffDelay:
-                          description: 'BackoffDelay is the delay before
-                              retrying. More information on Duration format:
-                              - https://www.iso.org/iso-8601-date-and-time-format.html
-                              - https://en.wikipedia.org/wiki/ISO_8601  For
-                              linear policy, backoff delay is backoffDelay*<numberOfRetries>.
-                              For exponential policy, backoff delay is
-                              backoffDelay*2^<numberOfRetries>.'
-                          type: string
-                        backoffPolicy:
-                          description: BackoffPolicy is the retry backoff
-                              policy (linear, exponential).
-                          type: string
-                        deadLetterSink:
-                          description: DeadLetterSink is the sink receiving
-                              event that could not be sent to a destination.
-                          type: object
-                          properties:
-                            << : *addressableProperties
-                        retry:
-                          description: Retry is the minimum number of retries
-                              the sender should attempt when sending an
-                              event before moving it to the dead letter
-                              sink.
-                          type: integer
-                          format: int32
           status:
-            description: Status represents the current state of the Sequence. This data
-                may be out of date.
+            description: Status represents the current state of the Sequence. This data may be out of date.
             type: object
             properties:
               address:
                 type: object
+                required:
+                  - url
                 properties:
-                    url:
-                        type: string
+                  url:
+                    type: string
               annotations:
-                description: Annotations is additional Status fields for the Resource
-                    to save some additional State as well as convey more information
-                    to the user. This is roughly akin to Annotations on any k8s resource,
-                    just the reconciler conveying richer information outwards.
+                description: Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
                 type: object
+                x-kubernetes-preserve-unknown-fields: true
               channelStatuses:
-                description: ChannelStatuses is an array of corresponding Channel
-                    statuses. Matches the Spec.Steps array in the order.
+                description: ChannelStatuses is an array of corresponding Channel statuses. Matches the Spec.Steps array in the order.
                 type: array
                 items:
                   type: object
                   properties:
                     channel:
-                      description: Channel is the reference to the underlying
-                          channel.
+                      description: Channel is the reference to the underlying channel.
                       type: object
-                      properties: &referentProperties
+                      properties:
                         apiVersion:
                           description: API version of the referent.
                           type: string
                         fieldPath:
-                          description: 'If referring to a piece of an object
-                              instead of an entire object, this string should
-                              contain a valid JSON/Go field access statement,
-                              such as desiredState.manifest.containers[2].
-                              For example, if the object reference is to
-                              a container within a pod, this would take
-                              on a value like: "spec.containers{name}" (where
-                              "name" refers to the name of the container
-                              that triggered the event) or if no container
-                              name is specified "spec.containers[2]" (container
-                              with index 2 in this pod). This syntax is
-                              chosen only to have some well-defined way
-                              of referencing a part of an object.'
+                          description: 'If referring to a piece of an object instead of an entire object, this string should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2]. For example, if the object reference is to a container within a pod, this would take on a value like: "spec.containers{name}" (where "name" refers to the name of the container that triggered the event) or if no container name is specified "spec.containers[2]" (container with index 2 in this pod). This syntax is chosen only to have some well-defined way of referencing a part of an object.'
                           type: string
                         kind:
-                          description: 'Kind of the referent. More info:
-                              https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                           type: string
                         name:
-                          description: 'Name of the referent. More info:
-                              https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                           type: string
                         namespace:
-                          description: 'Namespace of the referent. More
-                              info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
                           type: string
                         resourceVersion:
-                          description: 'Specific resourceVersion to which
-                              this reference is made, if any. More info:
-                              https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                          description: 'Specific resourceVersion to which this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
                           type: string
                         uid:
-                          description: 'UID of the referent. More info:
-                              https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                          description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                           type: string
                     ready:
-                      description: ReadyCondition indicates whether the Channel
-                          is ready or not.
+                      description: ReadyCondition indicates whether the Channel is ready or not.
                       type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                      properties: &readyConditionProperties
+                      required:
+                        - type
+                        - status
+                      properties:
+                        lastTransitionTime:
+                          description: LastTransitionTime is the last time the condition transitioned from one status to another. We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic differences (all other things held constant).
+                          type: string
                         message:
-                          description: A human readable message indicating
-                              details about the transition.
+                          description: A human readable message indicating details about the transition.
                           type: string
                         reason:
-                          description: The reason for the condition's last
-                              transition.
+                          description: The reason for the condition's last transition.
                           type: string
                         severity:
-                          description: Severity with which to treat failures
-                              of this type of condition. When this is not
-                              specified, it defaults to Error.
+                          description: Severity with which to treat failures of this type of condition. When this is not specified, it defaults to Error.
                           type: string
                         status:
-                          description: Status of the condition, one of True,
-                              False, Unknown.
+                          description: Status of the condition, one of True, False, Unknown.
                           type: string
                         type:
                           description: Type of condition.
                           type: string
               conditions:
-                description: Conditions the latest available observations of a resource's
-                    current state.
+                description: Conditions the latest available observations of a resource's current state.
                 type: array
                 items:
                   type: object
+                  required:
+                    - type
+                    - status
                   properties:
-                    <<: *readyConditionProperties
+                    lastTransitionTime:
+                      description: LastTransitionTime is the last time the condition transitioned from one status to another. We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic differences (all other things held constant).
+                      type: string
+                    message:
+                      description: A human readable message indicating details about the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    severity:
+                      description: Severity with which to treat failures of this type of condition. When this is not specified, it defaults to Error.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition.
+                      type: string
               observedGeneration:
-                description: ObservedGeneration is the 'Generation' of the Service
-                    that was last processed by the controller.
+                description: ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
                 type: integer
                 format: int64
               subscriptionStatuses:
-                description: SubscriptionStatuses is an array of corresponding Subscription
-                    statuses. Matches the Spec.Steps array in the order.
+                description: SubscriptionStatuses is an array of corresponding Subscription statuses. Matches the Spec.Steps array in the order.
                 type: array
                 items:
                   type: object
                   properties:
                     ready:
-                      description: ReadyCondition indicates whether the Subscription
-                          is ready or not.
+                      description: ReadyCondition indicates whether the Subscription is ready or not.
                       type: object
+                      required:
+                        - type
+                        - status
                       properties:
-                        <<: *readyConditionProperties
+                        lastTransitionTime:
+                          description: LastTransitionTime is the last time the condition transitioned from one status to another. We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic differences (all other things held constant).
+                          type: string
+                        message:
+                          description: A human readable message indicating details about the transition.
+                          type: string
+                        reason:
+                          description: The reason for the condition's last transition.
+                          type: string
+                        severity:
+                          description: Severity with which to treat failures of this type of condition. When this is not specified, it defaults to Error.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition.
+                          type: string
                     subscription:
-                      description: Subscription is the reference to the underlying
-                          Subscription.
+                      description: Subscription is the reference to the underlying Subscription.
                       type: object
                       properties:
-                        <<: *referentProperties
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        fieldPath:
+                          description: 'If referring to a piece of an object instead of an entire object, this string should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2]. For example, if the object reference is to a container within a pod, this would take on a value like: "spec.containers{name}" (where "name" refers to the name of the container that triggered the event) or if no container name is specified "spec.containers[2]" (container with index 2 in this pod). This syntax is chosen only to have some well-defined way of referencing a part of an object.'
+                          type: string
+                        kind:
+                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                        namespace:
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                          type: string
+                        resourceVersion:
+                          description: 'Specific resourceVersion to which this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                          type: string
+                        uid:
+                          description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                          type: string
     additionalPrinterColumns:
     - name: URL
       type: string
