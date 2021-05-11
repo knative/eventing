@@ -202,7 +202,7 @@ func (in *ParallelStatus) DeepCopyInto(out *ParallelStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
+	in.Address.DeepCopyInto(&out.Address)
 	return
 }
 

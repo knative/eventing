@@ -102,7 +102,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ParallelConditionChannelsReady,
-					Status: corev1.ConditionFalse,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -113,7 +113,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   ParallelConditionChannelsReady,
-					Status: corev1.ConditionFalse,
+					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   ParallelConditionReady,
 					Status: corev1.ConditionUnknown,
@@ -172,7 +172,7 @@ func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 		name:  "empty",
 		fsubs: []*messagingv1.Subscription{},
 		subs:  []*messagingv1.Subscription{},
-		want:  corev1.ConditionFalse,
+		want:  corev1.ConditionUnknown,
 	}, {
 		name: "empty status",
 		fsubs: []*messagingv1.Subscription{{
@@ -196,12 +196,12 @@ func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 			},
 			Status: messagingv1.SubscriptionStatus{},
 		}},
-		want: corev1.ConditionFalse,
+		want: corev1.ConditionUnknown,
 	}, {
 		name:  "one filter and subscriber subscription not ready",
 		fsubs: []*messagingv1.Subscription{getSubscription("fsub0", false)},
 		subs:  []*messagingv1.Subscription{getSubscription("sub0", false)},
-		want:  corev1.ConditionFalse,
+		want:  corev1.ConditionUnknown,
 	}, {
 		name:  "one filter and one subscription ready",
 		fsubs: []*messagingv1.Subscription{getSubscription("fsub0", true)},
@@ -211,12 +211,12 @@ func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 		name:  "one filter subscription not ready and one subscription ready",
 		fsubs: []*messagingv1.Subscription{getSubscription("fsub0", false)},
 		subs:  []*messagingv1.Subscription{getSubscription("sub0", true)},
-		want:  corev1.ConditionFalse,
+		want:  corev1.ConditionUnknown,
 	}, {
 		name:  "one subscription ready, one not",
 		fsubs: []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
 		subs:  []*messagingv1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
-		want:  corev1.ConditionFalse,
+		want:  corev1.ConditionUnknown,
 	}, {
 		name:  "two subscriptions ready",
 		fsubs: []*messagingv1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
@@ -247,22 +247,22 @@ func TestParallelPropagateChannelStatuses(t *testing.T) {
 		name:     "ingress false, empty",
 		ichannel: getChannelable(false),
 		channels: []*eventingduckv1.Channelable{},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "ingress false, one channelable not ready",
 		ichannel: getChannelable(false),
 		channels: []*eventingduckv1.Channelable{getChannelable(false)},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "ingress true, one channelable not ready",
 		ichannel: getChannelable(true),
 		channels: []*eventingduckv1.Channelable{getChannelable(false)},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "ingress false, one channelable ready",
 		ichannel: getChannelable(false),
 		channels: []*eventingduckv1.Channelable{getChannelable(true)},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "ingress true, one channelable ready",
 		ichannel: getChannelable(true),
@@ -272,7 +272,7 @@ func TestParallelPropagateChannelStatuses(t *testing.T) {
 		name:     "ingress true, one channelable ready, one not",
 		ichannel: getChannelable(true),
 		channels: []*eventingduckv1.Channelable{getChannelable(true), getChannelable(false)},
-		want:     corev1.ConditionFalse,
+		want:     corev1.ConditionUnknown,
 	}, {
 		name:     "ingress true, two channelables ready",
 		ichannel: getChannelable(true),
@@ -420,44 +420,80 @@ func TestParallelReady(t *testing.T) {
 
 func TestParallelPropagateSetAddress(t *testing.T) {
 	URL := apis.HTTP("example.com")
+	URL2 := apis.HTTP("another.example.com")
 	tests := []struct {
-		name       string
-		address    *duckv1.Addressable
-		want       *duckv1.Addressable
-		wantStatus corev1.ConditionStatus
+		name        string
+		status      ParallelStatus
+		address     *duckv1.Addressable
+		want        duckv1.Addressable
+		wantStatus  corev1.ConditionStatus
+		wantAddress string
 	}{{
 		name:       "nil",
+		status:     ParallelStatus{},
 		address:    nil,
-		want:       nil,
-		wantStatus: corev1.ConditionFalse,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}, {
 		name:       "empty",
+		status:     ParallelStatus{},
 		address:    &duckv1.Addressable{},
-		want:       &duckv1.Addressable{},
-		wantStatus: corev1.ConditionTrue,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}, {
-		name:       "URL",
-		address:    &duckv1.Addressable{URL: URL},
-		want:       &duckv1.Addressable{URL: URL},
-		wantStatus: corev1.ConditionTrue,
+		name:        "URL",
+		status:      ParallelStatus{},
+		address:     &duckv1.Addressable{URL: URL},
+		want:        duckv1.Addressable{URL: URL},
+		wantStatus:  corev1.ConditionTrue,
+		wantAddress: "http://example.com",
+	}, {
+		name: "New URL",
+		status: ParallelStatus{
+			Address: duckv1.Addressable{
+				URL: URL2,
+			},
+		},
+		address:     &duckv1.Addressable{URL: URL},
+		want:        duckv1.Addressable{URL: URL},
+		wantStatus:  corev1.ConditionTrue,
+		wantAddress: "http://example.com",
+	}, {
+		name: "Clear URL",
+		status: ParallelStatus{
+			Address: duckv1.Addressable{
+				URL: URL,
+			},
+		},
+		address:    nil,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}, {
 		name:       "nil",
+		status:     ParallelStatus{},
 		address:    &duckv1.Addressable{URL: nil},
-		want:       &duckv1.Addressable{},
-		wantStatus: corev1.ConditionTrue,
+		want:       duckv1.Addressable{},
+		wantStatus: corev1.ConditionUnknown,
 	}}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ps := ParallelStatus{}
-			ps.setAddress(test.address)
-			got := ps.Address
-			if diff := cmp.Diff(test.want, got, ignoreAllButTypeAndStatus); diff != "" {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			tt.status.setAddress(tt.address)
+			got := tt.status.Address
+			if diff := cmp.Diff(tt.want, got, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected address (-want, +got) =", diff)
 			}
-			gotStatus := ps.GetCondition(ParallelConditionAddressable).Status
-			if test.wantStatus != gotStatus {
-				t.Errorf("unexpected conditions (-want, +got) = %v %v", test.wantStatus, gotStatus)
+			gotStatus := tt.status.GetCondition(ParallelConditionAddressable).Status
+			if tt.wantStatus != gotStatus {
+				t.Errorf("unexpected conditions (-want, +got) = %v %v", tt.wantStatus, gotStatus)
+			}
+			gotAddress := ""
+			if got.URL != nil {
+				gotAddress = got.URL.String()
+			}
+			if diff := cmp.Diff(tt.wantAddress, gotAddress); diff != "" {
+				t.Error("unexpected address.url (-want, +got) =", diff)
 			}
 		})
 	}
