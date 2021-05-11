@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"knative.dev/eventing/test"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,6 +27,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"knative.dev/eventing/test"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
