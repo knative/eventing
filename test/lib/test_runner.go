@@ -54,8 +54,8 @@ const (
 )
 
 var (
-	nsMutex sync.Mutex
-	serviceCount int
+	nsMutex        sync.Mutex
+	serviceCount   int
 	namespaceCount int
 	ReuseNamespace bool
 )
@@ -193,10 +193,10 @@ func CreateNamespacedClient(t *testing.T) (*Client, error) {
 	for i := 0; i < MaxNamespaceSkip; i++ {
 		ns = NextNamespace()
 		client, err := NewClient(
-				pkgTest.Flags.Kubeconfig,
-				pkgTest.Flags.Cluster,
-				ns,
-				t)
+			pkgTest.Flags.Kubeconfig,
+			pkgTest.Flags.Cluster,
+			ns,
+			t)
 		if err != nil {
 			return nil, err
 		}
