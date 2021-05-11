@@ -109,7 +109,8 @@ type ParallelStatus struct {
 	duckv1.Status `json:",inline"`
 
 	// IngressChannelStatus corresponds to the ingress channel status.
-	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus"`
+	// +optional
+	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus,omitempty"`
 
 	// BranchStatuses is an array of corresponding to branch statuses.
 	// Matches the Spec.Branches array in the order.
