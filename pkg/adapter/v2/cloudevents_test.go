@@ -174,7 +174,9 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 
 			if tc.event != nil {
 				err := got.Send(context.TODO(), *tc.event)
-				if !cloudevents.IsACK(err) && tc.event.Type() == "unit.type" {
+				if !tc.wantErr && cloudevents.IsUndelivered(err) {
+					t.Fatal(err)
+				} else if tc.wantErr && cloudevents.IsACK(err) {
 					//handle err
 					t.Fatal(err)
 				}
@@ -259,7 +261,9 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 
 			if tc.event != nil {
 				_, err := got.Request(context.TODO(), *tc.event)
-				if !cloudevents.IsACK(err) && tc.event.Type() == "unit.type" {
+				if !tc.wantErr && cloudevents.IsUndelivered(err) {
+					t.Fatal(err)
+				} else if tc.wantErr && cloudevents.IsACK(err) {
 					//handle err
 					t.Fatal(err)
 				}
