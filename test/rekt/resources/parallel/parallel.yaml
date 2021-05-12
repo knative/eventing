@@ -1,0 +1,89 @@
+# Copyright 2021 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# TODO: add spec.branches[x].delivery
+
+apiVersion: flows.knative.dev/v1
+kind: Parallel
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+spec:
+  {{ if .channelTemplate }}
+  channelTemplate:
+    apiVersion: {{ .channelTemplate.apiVersion }}
+    kind: {{ .channelTemplate.kind }}
+    {{ if .channelTemplate.spec }}
+    spec:
+      {{ range $key, $value := .channelTemplate.spec }}
+      {{ $key }}: {{ $value }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+  branches:
+  {{ range .branches }}
+    -
+      {{ if .filter }}
+      filter:
+        {{ if .filter.ref }}
+        ref:
+          kind: {{ .filter.ref.kind }}
+          namespace: {{ .filter.ref.namespace }}
+          name: {{ .filter.ref.name }}
+          apiVersion: {{ .filter.ref.apiVersion }}
+        {{ end }}
+        {{ if .filter.uri }}
+        uri: {{ .filter.uri }}
+        {{ end }}
+      {{ end }}
+      {{ if .subscriber }}
+      subscriber:
+        {{ if .subscriber.ref }}
+        ref:
+          kind: {{ .subscriber.ref.kind }}
+          namespace: {{ .subscriber.ref.namespace }}
+          name: {{ .subscriber.ref.name }}
+          apiVersion: {{ .subscriber.ref.apiVersion }}
+        {{ end }}
+        {{ if .subscriber.uri }}
+        uri: {{ .subscriber.uri }}
+        {{ end }}
+      {{ end }}
+      {{ if .reply }}
+      reply:
+        {{ if .reply.ref }}
+        ref:
+          kind: {{ .reply.ref.kind }}
+          namespace: {{ .reply.ref.namespace }}
+          name: {{ .reply.ref.name }}
+          apiVersion: {{ .reply.ref.apiVersion }}
+        {{ end }}
+        {{ if .reply.uri }}
+        uri: {{ .reply.uri }}
+        {{ end }}
+      {{ end }}
+  {{ end }}
+  {{ if .reply }}
+  reply:
+    {{ if .reply.ref }}
+    ref:
+      kind: {{ .reply.ref.kind }}
+      namespace: {{ .namespace }}
+      name: {{ .reply.ref.name }}
+      apiVersion: {{ .reply.ref.apiVersion }}
+    {{ end }}
+    {{ if .reply.uri }}
+    uri: {{ .reply.uri }}
+    {{ end }}
+  {{ end }}

@@ -19,6 +19,7 @@ limitations under the License.
 package rekt
 
 import (
+	containersource "knative.dev/eventing/test/rekt/features/parallel"
 	"strconv"
 	"testing"
 
@@ -27,7 +28,6 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
-	"knative.dev/eventing/test/rekt/features/containersource"
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
@@ -146,5 +146,25 @@ func TestSmoke_ApiServerSource(t *testing.T) {
 	for _, name := range names {
 		env.Test(ctx, t, apiserversource.Install(name))
 		env.Test(ctx, t, apiserversource.GoesReady(name))
+	}
+}
+
+// TestSmoke_Parallel
+func TestSmoke_Parallel(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	for _, name := range names {
+
+		env.Test(ctx, t, containersource.GoesReady(name))
 	}
 }
