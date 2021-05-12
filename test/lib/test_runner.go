@@ -205,7 +205,7 @@ func CreateNamespacedClient(t *testing.T) (*Client, error) {
 		} else {
 			// The test is supposed to create a new test namespace for itself.
 			// Keep trying until we find a namespace that doesn't exist yet.
-			if err := CreateNamespace(client, ns); err != nil {
+			if err := CreateNamespaceWithRetry(client, ns); err != nil {
 				if apierrs.IsAlreadyExists(err) {
 					continue
 				}
@@ -235,16 +235,8 @@ func GetNextNamespaceId() int {
 	return current
 }
 
-// CreateNamespace creates the given namespace.
-func CreateNamespace(client *Client, namespace string) error {
-	err := createNamespaceWithRetry(client, namespace)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func createNamespaceWithRetry(client *Client, namespace string) error {
+// CreateNamespaceWithRetry creates the given namespace with retries.
+func CreateNamespaceWithRetry(client *Client, namespace string) error {
 	var (
 		retries int
 		err     error
