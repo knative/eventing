@@ -48,8 +48,8 @@ const (
 	podLogsDir         = "pod-logs"
 	testPullSecretName = "kn-eventing-test-pull-secret"
 	MaxNamespaceSkip   = 20
-	MaxRetries         = 10
-	RetrySleepDuration = 5 * time.Second
+	MaxRetries         = 5
+	RetrySleepDuration = 2 * time.Second
 )
 
 var (
@@ -239,7 +239,7 @@ func GetNextNamespaceId() int {
 func CreateNamespace(client *Client, namespace string) error {
 	err := createNamespaceWithRetry(client, namespace)
 	if err != nil {
-		return fmt.Errorf("could not create namespace %s: %w", namespace, err)
+		return err
 	}
 	return nil
 }
