@@ -17,10 +17,10 @@ limitations under the License.
 package parallel_test
 
 import (
-	"knative.dev/eventing/test/rekt/resources/parallel"
-	v1 "knative.dev/pkg/apis/duck/v1"
 	"os"
 
+	"knative.dev/eventing/test/rekt/resources/parallel"
+	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
