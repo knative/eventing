@@ -305,8 +305,11 @@ func TearDown(client *Client) {
 	}
 
 	client.Tracker.Clean(true)
-	if err := DeleteNameSpace(client); err != nil {
-		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
+	// If we're reusing existing namespaces leave the deletion to the creator.
+	if !ReuseNamespace {
+		if err := DeleteNameSpace(client); err != nil {
+			client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
+		}
 	}
 }
 
