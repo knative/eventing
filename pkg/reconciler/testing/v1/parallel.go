@@ -92,7 +92,7 @@ func WithFlowsParallelBranchStatuses(branchStatuses []flowsv1.ParallelBranchStat
 
 func WithFlowsParallelIngressChannelStatus(status flowsv1.ParallelChannelStatus) FlowsParallelOption {
 	return func(p *flowsv1.Parallel) {
-		p.Status.IngressChannelStatus = status
+		p.Status.IngressChannelStatus = &status
 	}
 }
 

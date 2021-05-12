@@ -194,7 +194,11 @@ func (in *ParallelSpec) DeepCopy() *ParallelSpec {
 func (in *ParallelStatus) DeepCopyInto(out *ParallelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	in.IngressChannelStatus.DeepCopyInto(&out.IngressChannelStatus)
+	if in.IngressChannelStatus != nil {
+		in, out := &in.IngressChannelStatus, &out.IngressChannelStatus
+		*out = new(ParallelChannelStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.BranchStatuses != nil {
 		in, out := &in.BranchStatuses, &out.BranchStatuses
 		*out = make([]ParallelBranchStatus, len(*in))

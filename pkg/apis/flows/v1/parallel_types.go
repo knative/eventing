@@ -110,7 +110,7 @@ type ParallelStatus struct {
 
 	// IngressChannelStatus corresponds to the ingress channel status.
 	// +optional
-	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus,omitempty"`
+	IngressChannelStatus *ParallelChannelStatus `json:"ingressChannelStatus,omitempty"`
 
 	// BranchStatuses is an array of corresponding to branch statuses.
 	// Matches the Spec.Branches array in the order.
