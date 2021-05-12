@@ -17,6 +17,9 @@ package test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -38,7 +41,13 @@ type TestCloudEventsClient struct {
 	}
 }
 
+type EventData struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}
+
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
+var eventData EventData
 
 // Send_AppendResult will enqueue a response for the following Send call.
 // For testing.
@@ -62,11 +71,21 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
+	bytes, _ := json.Marshal(out)
+	if err := json.Unmarshal(bytes, &eventData); err != nil {
+		fmt.Printf("json unmarshal error %s:", err)
+	}
 	c.sent = append(c.sent, out)
-	if len(c.resultSend) != 0 {
-		resp := c.resultSend[0]
-		c.resultSend = c.resultSend[1:]
-		return resp
+	if eventData.Type == "unit.type" {
+		return http.NewResult(200, "%w", protocol.ResultACK)
+	} else if eventData.Type == "unit.retries" {
+		var attempts []protocol.Result
+		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
+		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultACK), 1, time.Now(), attempts)
+	} else if eventData.Type == "unit.wantErr" {
+		return errors.New("totally not an http result")
+	} else if eventData.Type == "unit.sendFail" {
+		return http.NewResult(400, "%w", protocol.ResultNACK)
 	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
 }
@@ -78,7 +97,22 @@ func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
+	bytes, _ := json.Marshal(out)
+	if err := json.Unmarshal(bytes, &eventData); err != nil {
+		fmt.Printf("json unmarshal error %s:", err)
+	}
 	c.sent = append(c.sent, out)
+	if eventData.Type == "unit.type" {
+		return nil, http.NewResult(200, "%w", protocol.ResultACK)
+	} else if eventData.Type == "unit.retries" {
+		var attempts []protocol.Result
+		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
+		return nil, http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultACK), 1, time.Now(), attempts)
+	} else if eventData.Type == "unit.wantErr" {
+		return nil, errors.New("totally not an http result")
+	} else if eventData.Type == "unit.sendFail" {
+		return nil, http.NewResult(400, "%w", protocol.ResultNACK)
+	}
 	return nil, http.NewResult(200, "%w", protocol.ResultACK)
 }
 
