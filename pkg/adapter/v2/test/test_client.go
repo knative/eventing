@@ -81,7 +81,7 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	} else if eventData.Type == "unit.retries" {
 		var attempts []protocol.Result
 		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
-		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
+		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultACK), 1, time.Now(), attempts)
 	} else if eventData.Type == "unit.wantErr" {
 		return errors.New("totally not an http result")
 	} else if eventData.Type == "unit.sendFail" {
@@ -107,7 +107,7 @@ func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*
 	} else if eventData.Type == "unit.retries" {
 		var attempts []protocol.Result
 		attempts = append(attempts, http.NewResult(500, "%w", protocol.ResultACK))
-		return nil, http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultNACK), 1, time.Now(), attempts)
+		return nil, http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultACK), 1, time.Now(), attempts)
 	} else if eventData.Type == "unit.wantErr" {
 		return nil, errors.New("totally not an http result")
 	} else if eventData.Type == "unit.sendFail" {
