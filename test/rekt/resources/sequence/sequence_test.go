@@ -142,15 +142,15 @@ func Example_withStep() {
 	}
 
 	sequence.WithStep(&v1.KReference{
-		Kind:       "step0kind",
-		APIVersion: "step0version",
+		Kind:       "step0-kind",
+		APIVersion: "step0-api",
 		Namespace:  "bar",
 		Name:       "step0name",
 	}, "/extra/path")(cfg)
 
 	sequence.WithStep(&v1.KReference{
-		Kind:       "step1kind",
-		APIVersion: "step1version",
+		Kind:       "step1-kind",
+		APIVersion: "step1-api",
 		Namespace:  "bar",
 		Name:       "step1name",
 	}, "")(cfg)
@@ -175,14 +175,14 @@ func Example_withStep() {
 	//       ref:
 	//         kind: step0-kind
 	//         namespace: bar
-	//         name: step0
+	//         name: step0name
 	//         apiVersion: step0-api
 	//       uri: /extra/path
 	//     -
 	//       ref:
 	//         kind: step1-kind
 	//         namespace: bar
-	//         name: step1
+	//         name: step1name
 	//         apiVersion: step1-api
 	//     -
 	//       uri: http://full/path
