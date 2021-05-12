@@ -17,9 +17,9 @@ limitations under the License.
 package sequence
 
 import (
-	"knative.dev/eventing/test/rekt/resources/sequence"
 	"strconv"
 
+	"knative.dev/eventing/test/rekt/resources/sequence"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
