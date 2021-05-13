@@ -27,7 +27,6 @@ import (
 )
 
 var (
-	sink   string
 	source string
 
 	// CloudEvents specific parameters
@@ -36,7 +35,6 @@ var (
 )
 
 func init() {
-	flag.StringVar(&sink, "sink", "", "the host url to send messages to")
 	flag.StringVar(&source, "source", "", "the url to get messages from")
 	flag.StringVar(&eventType, "eventType", "websocket-event", "the event-type (CloudEvents)")
 	flag.StringVar(&eventSource, "eventSource", "", "the event-source (CloudEvents)")
@@ -45,9 +43,9 @@ func init() {
 func main() {
 	flag.Parse()
 
-	k_sink := os.Getenv("K_SINK")
-	if k_sink != "" {
-		sink = k_sink
+	sink := os.Getenv("K_SINK")
+	if sink != "" {
+		log.Fatal("A valid sink url must be defined.")
 	}
 
 	// "source" flag must not be empty for operation.
