@@ -26,11 +26,7 @@ import (
 HACK HACK HACK
 
 the pkg package "knative.dev/pkg/injection" fixes a workaround for working with
-Knative injection and testing issues with
-
-$ go test -vet=off -tags "${tags}" --count=1 -run=^$ ./...
-
-But we need to test with the the hackhackhack tag, which is collected by
-searching the repo for files that have tags. This file enables the pkg
-file to work.
+Knative injection and testing issues with using go test to test compiling. But
+we need to test with the the hackhackhack tag, which is collected by searching
+the repo for files that have tags. This file enables the pkg file to work.
 */
