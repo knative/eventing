@@ -76,7 +76,7 @@ Certificate:
 ...
 */
 
-const config = `
+const fakeConfig = `
 apiVersion: v1
 clusters:
 - cluster:
@@ -94,8 +94,8 @@ preferences: {}
 users:
 - name: default
   user:
-	password: fakefakefake
-	username: admin
+    password: fakefakefake
+    username: admin
 `
 
 func init() {
@@ -106,7 +106,7 @@ func init() {
 
 	log.Println("Created fake kubeconfig file: " + tmpFile.Name())
 
-	if _, err = tmpFile.Write([]byte(config)); err != nil {
+	if _, err = tmpFile.Write([]byte(fakeConfig)); err != nil {
 		log.Fatal("Failed to write to temporary file", err)
 	}
 
