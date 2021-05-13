@@ -88,7 +88,6 @@ NON_ROSTER=$(grep -v -e '^$' support/NON_ROSTER)
 echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | uniq | sort -R
 ```
 
-- [grantr](https://github.com/grantr)
 - [antoineco](https://github.com/antoineco)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)

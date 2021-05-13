@@ -19,6 +19,8 @@ package apiserversource_test
 import (
 	"os"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
@@ -153,12 +155,28 @@ func Example_withResources() {
 	}
 
 	res2 := v1.APIVersionKindSelector{
-		APIVersion:    "res2apiVersion",
-		Kind:          "res2kind",
-		LabelSelector: nil,
+		APIVersion: "res2apiVersion",
+		Kind:       "res2kind",
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels:      map[string]string{"foo": "bar"},
+			MatchExpressions: nil,
+		},
 	}
 
-	apiserversource.WithResources(res1, res2)(cfg)
+	res3 := v1.APIVersionKindSelector{
+		APIVersion: "res3apiVersion",
+		Kind:       "res3kind",
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"foo": "bar"},
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "daf",
+				Operator: "uk",
+				Values:   []string{"a", "b"},
+			}},
+		},
+	}
+
+	apiserversource.WithResources(res1, res2, res3)(cfg)
 
 	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
@@ -178,6 +196,20 @@ func Example_withResources() {
 	//       kind: res1kind
 	//     - apiVersion: res2apiVersion
 	//       kind: res2kind
+	//       selector:
+	//         matchLabels:
+	//           foo: bar
+	//     - apiVersion: res3apiVersion
+	//       kind: res3kind
+	//       selector:
+	//         matchLabels:
+	//           foo: bar
+	//         matchExpressions:
+	//           - key: daf
+	//             operator: uk
+	//             values:
+	//               - a
+	//               - b
 }
 
 func Example_full() {
@@ -201,15 +233,31 @@ func Example_full() {
 	}
 
 	res2 := v1.APIVersionKindSelector{
-		APIVersion:    "res2apiVersion",
-		Kind:          "res2kind",
-		LabelSelector: nil,
+		APIVersion: "res2apiVersion",
+		Kind:       "res2kind",
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels:      map[string]string{"foo": "bar"},
+			MatchExpressions: nil,
+		},
+	}
+
+	res3 := v1.APIVersionKindSelector{
+		APIVersion: "res3apiVersion",
+		Kind:       "res3kind",
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"foo": "bar"},
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "daf",
+				Operator: "uk",
+				Values:   []string{"a", "b"},
+			}},
+		},
 	}
 
 	apiserversource.WithServiceAccountName("src-sa")(cfg)
 	apiserversource.WithEventMode(v1.ReferenceMode)(cfg)
 	apiserversource.WithSink(sinkRef, "uri/parts")(cfg)
-	apiserversource.WithResources(res1, res2)(cfg)
+	apiserversource.WithResources(res1, res2, res3)(cfg)
 
 	files, err := manifest.ExecuteLocalYAML(images, cfg)
 	if err != nil {
@@ -231,6 +279,20 @@ func Example_full() {
 	//       kind: res1kind
 	//     - apiVersion: res2apiVersion
 	//       kind: res2kind
+	//       selector:
+	//         matchLabels:
+	//           foo: bar
+	//     - apiVersion: res3apiVersion
+	//       kind: res3kind
+	//       selector:
+	//         matchLabels:
+	//           foo: bar
+	//         matchExpressions:
+	//           - key: daf
+	//             operator: uk
+	//             values:
+	//               - a
+	//               - b
 	//   sink:
 	//     ref:
 	//       kind: sinkkind

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/assert"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/test/rekt/resources/apiserversource"
