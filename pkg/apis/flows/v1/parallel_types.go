@@ -109,16 +109,18 @@ type ParallelStatus struct {
 	duckv1.Status `json:",inline"`
 
 	// IngressChannelStatus corresponds to the ingress channel status.
-	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus"`
+	// +optional
+	IngressChannelStatus *ParallelChannelStatus `json:"ingressChannelStatus,omitempty"`
 
 	// BranchStatuses is an array of corresponding to branch statuses.
 	// Matches the Spec.Branches array in the order.
 	BranchStatuses []ParallelBranchStatus `json:"branchStatuses"`
 
-	// AddressStatus is the starting point to this Parallel. Sending to this
+	// Address is the starting point to this Parallel. Sending to this
 	// will target the first subscriber.
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	duckv1.AddressStatus `json:",inline"`
+	// +optional
+	Address duckv1.Addressable `json:"address,omitempty"`
 }
 
 // ParallelBranchStatus represents the current state of a Parallel branch

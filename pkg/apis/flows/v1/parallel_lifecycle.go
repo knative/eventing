@@ -152,7 +152,7 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1.Channe
 	if address != nil {
 		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
 	} else {
-		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
+		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionUnknown, Reason: "NotAddressable", Message: "Channel is not addressable"}
 		allReady = false
 	}
 	ps.setAddress(address)
@@ -166,13 +166,14 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1.Channe
 				Namespace:  c.Namespace,
 			},
 		}
-		// TODO: Once the addressable has a real status to dig through, use that here instead of
-		// addressable, because it might be addressable but not ready.
-		address := c.Status.AddressStatus.Address
-		if address != nil {
-			ps.BranchStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
+
+		if ready := c.Status.GetCondition(apis.ConditionReady); ready != nil {
+			ps.BranchStatuses[i].FilterChannelStatus.ReadyCondition = *ready
+			if !ready.IsTrue() {
+				allReady = false
+			}
 		} else {
-			ps.BranchStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
+			ps.BranchStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionUnknown, Reason: "NoReady", Message: "Channel does not have Ready condition"}
 			allReady = false
 		}
 	}
@@ -184,22 +185,23 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1.Channe
 }
 
 func (ps *ParallelStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(ParallelConditionChannelsReady, reason, messageFormat, messageA...)
+	pCondSet.Manage(ps).MarkUnknown(ParallelConditionChannelsReady, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(ParallelConditionSubscriptionsReady, reason, messageFormat, messageA...)
+	pCondSet.Manage(ps).MarkUnknown(ParallelConditionSubscriptionsReady, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, reason, messageFormat, messageA...)
+	pCondSet.Manage(ps).MarkUnknown(ParallelConditionAddressable, reason, messageFormat, messageA...)
 }
 
 func (ps *ParallelStatus) setAddress(address *pkgduckv1.Addressable) {
-	ps.Address = address
-	if address == nil {
-		pCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyAddress", "addressable is nil")
+	if address == nil || address.URL == nil {
+		ps.Address = pkgduckv1.Addressable{}
+		sCondSet.Manage(ps).MarkUnknown(ParallelConditionAddressable, "emptyAddress", "addressable is nil")
 	} else {
-		pCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
+		ps.Address = pkgduckv1.Addressable{URL: address.URL}
+		sCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
 	}
 }
