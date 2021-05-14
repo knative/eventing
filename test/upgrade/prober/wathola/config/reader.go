@@ -17,7 +17,7 @@ package config
 
 import (
 	"github.com/mitchellh/go-homedir"
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/wavesoftware/go-ensure"
 
 	"os"
