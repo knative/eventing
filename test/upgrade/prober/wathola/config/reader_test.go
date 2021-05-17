@@ -26,6 +26,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestReadIfPresent(t *testing.T) {
@@ -33,17 +34,20 @@ func TestReadIfPresent(t *testing.T) {
 	contents := `[sender]
 address = 'http://default-broker.event-example.svc.cluster.local/'
 `
-	withConfigContents(t, contents, func() {
-		// when
-		ReadIfPresent()
+	errors := withErrorsCaptured(t, func() {
+		withConfigContents(t, contents, func() {
+			// when
+			ReadIfPresent()
 
-		// then
-		assert.Equal(t,
-			"http://default-broker.event-example.svc.cluster.local/",
-			Instance.Sender.Address)
-		assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
-		assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+			// then
+			assert.Equal(t,
+				"http://default-broker.event-example.svc.cluster.local/",
+				Instance.Sender.Address)
+			assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
+			assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+		})
 	})
+	assert.Empty(t, errors)
 }
 
 func TestReadIfPresentAndInvalid(t *testing.T) {
@@ -68,7 +72,9 @@ func TestReadIfNotPresent(t *testing.T) {
 	defer func() { assert.NoError(t, os.RemoveAll(configFile)) }()
 
 	// when
-	ReadIfPresent()
+	errors := withErrorsCaptured(t, func() {
+		ReadIfPresent()
+	})
 
 	// then
 	assert.Equal(t,
@@ -76,6 +82,7 @@ func TestReadIfNotPresent(t *testing.T) {
 		Instance.Sender.Address)
 	assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
 	assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+	assert.Empty(t, errors)
 }
 
 func TestReadingOfCompositeAddress(t *testing.T) {
@@ -86,21 +93,48 @@ interval = 10000000
   bootstrapServers = 'my-cluster-kafka-bootstrap.kafka.svc:9092'
   topicName = 'my-topic'
 `
-	withConfigContents(t, contents, func() {
-		// when
-		ReadIfPresent()
+	errors := withErrorsCaptured(t, func() {
+		withConfigContents(t, contents, func() {
+			// when
+			ReadIfPresent()
 
-		// then
-		address := Instance.Sender.Address.(map[string]interface{})
-		assert.Equal(t,
-			"my-cluster-kafka-bootstrap.kafka.svc:9092",
-			address["bootstrapServers"])
-		assert.Equal(t,
-			"my-topic",
-			address["topicName"])
-		assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
-		assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+			// then
+			address := Instance.Sender.Address.(map[string]interface{})
+			assert.Equal(t,
+				"my-cluster-kafka-bootstrap.kafka.svc:9092",
+				address["bootstrapServers"])
+			assert.Equal(t,
+				"my-topic",
+				address["topicName"])
+			assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
+			assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+			assert.Equal(t,
+				zapcore.InfoLevel.String(),
+				Instance.LogLevel,
+			)
+		})
 	})
+	assert.Empty(t, errors)
+}
+
+func TestChangingLogLevel(t *testing.T) {
+	// given
+	contents := `logLevel = 'DEBUG'
+`
+	errors := withErrorsCaptured(t, func() {
+		withConfigContents(t, contents, func() {
+			// when
+			ReadIfPresent()
+
+			// then
+			assert.Equal(t,
+				zapcore.DebugLevel.String(),
+				Instance.LogLevel,
+			)
+		})
+	})
+
+	assert.Empty(t, errors)
 }
 
 func withConfigContents(t *testing.T, content string, fn func()) {

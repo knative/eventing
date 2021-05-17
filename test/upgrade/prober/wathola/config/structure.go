@@ -18,8 +18,6 @@ package config
 
 import (
 	"time"
-
-	"go.uber.org/zap/zapcore"
 )
 
 // ReceiverTeardownConfig holds config receiver teardown
@@ -71,5 +69,5 @@ type Config struct {
 	Forwarder ForwarderConfig
 	Receiver  ReceiverConfig
 	Readiness ReadinessConfig
-	LogLevel  zapcore.Level
+	LogLevel  string
 }
