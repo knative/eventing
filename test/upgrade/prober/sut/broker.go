@@ -50,8 +50,7 @@ type Broker struct {
 
 // Triggers will hold settings for triggers
 type Triggers struct {
-	Types      []string
-	TypePrefix string
+	Types []string
 }
 
 func newBrokerAndTriggers() SystemUnderTest {
@@ -68,8 +67,7 @@ func newBrokerAndTriggers() SystemUnderTest {
 			},
 		},
 		Triggers: Triggers{
-			Types:      eventTypes,
-			TypePrefix: defaultEventsPrefix,
+			Types: eventTypes,
 		},
 	}
 }
@@ -112,7 +110,6 @@ func (b *BrokerAndTriggers) deployTriggers(ctx Context, dest duckv1.Destination)
 	triggers := make([]*eventingv1.Trigger, 0, len(b.Triggers.Types))
 	for _, eventType := range b.Triggers.Types {
 		name := fmt.Sprintf("%s-%s", b.Name, eventType)
-		fullType := fmt.Sprintf("%s.%s", b.Triggers.TypePrefix, eventType)
 		subscriberOption := resources.WithSubscriberDestination(func(t *eventingv1.Trigger) duckv1.Destination {
 			return dest
 		})
@@ -123,7 +120,7 @@ func (b *BrokerAndTriggers) deployTriggers(ctx Context, dest duckv1.Destination)
 			resources.WithBroker(b.Name),
 			resources.WithAttributesTriggerFilter(
 				eventingv1.TriggerAnyFilter,
-				fullType,
+				eventType,
 				map[string]interface{}{},
 			),
 			subscriberOption,
