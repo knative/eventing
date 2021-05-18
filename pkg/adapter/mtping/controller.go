@@ -22,9 +22,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
@@ -35,10 +35,10 @@ import (
 // MTAdapter is the interface the multi-tenant PingSource adapter must implement
 type MTAdapter interface {
 	// Update is called when the source is ready and when the specification and/or status has changed.
-	Update(ctx context.Context, source *v1beta2.PingSource)
+	Update(ctx context.Context, source *sourcesv1.PingSource)
 
 	// Remove is called when the source has been deleted.
-	Remove(source *v1beta2.PingSource)
+	Remove(source *sourcesv1.PingSource)
 
 	// RemoveAll is called when the adapter stopped leading
 	RemoveAll(ctx context.Context)
