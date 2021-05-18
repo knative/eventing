@@ -25,10 +25,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-const (
-	defaultEventsPrefix = "dev.knative.eventing.wathola"
-)
-
 var eventTypes = []string{
 	watholaevent.Step{}.Type(),
 	watholaevent.Finished{}.Type(),
