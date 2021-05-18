@@ -29,7 +29,7 @@ import (
 )
 
 func Gvr() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1beta2", Resource: "pingsources"}
+	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "pingsources"}
 }
 
 // Install will create a Broker resource, augmented with the config fn options.

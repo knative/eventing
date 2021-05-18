@@ -40,7 +40,7 @@ func Example_min() {
 
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
+	// apiVersion: sources.knative.dev/v1
 	// kind: PingSource
 	// metadata:
 	//   name: foo
@@ -74,7 +74,7 @@ func Example_full() {
 
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
+	// apiVersion: sources.knative.dev/v1
 	// kind: PingSource
 	// metadata:
 	//   name: foo
@@ -118,7 +118,7 @@ func Example_fullbase64() {
 
 	manifest.OutputYAML(os.Stdout, files)
 	// Output:
-	// apiVersion: sources.knative.dev/v1beta2
+	// apiVersion: sources.knative.dev/v1
 	// kind: PingSource
 	// metadata:
 	//   name: foo

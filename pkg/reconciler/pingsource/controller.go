@@ -35,8 +35,8 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/v2"
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource"
-	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 

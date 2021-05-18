@@ -33,7 +33,7 @@ spec:
   - &version
     name: v1beta2
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
     schema:
@@ -196,7 +196,7 @@ spec:
   - <<: *version
     name: v1
     served: true
-    storage: false
+    storage: true
     # v1 schema is identical to the v1beta2 schema
   names:
     categories:
