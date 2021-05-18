@@ -24,15 +24,14 @@ depend on the features themselves.
 
 Experimental features might consist in:
 
-- Behavioural/Semantic additions/changes, without affecting the APIs (CRDs).
+- Behavioral/Semantic additions/changes, without affecting the APIs (CRDs).
   E.g. [#4560](https://github.com/knative/eventing/pull/4560)
-- Additive changes to the APIs, adding new behaviours. E.g.
+- Additive changes to the APIs, adding new behaviors. E.g.
   [#5148](https://github.com/knative/eventing/issues/5148)
 
 This process MUST be followed in all the situations above explained for changes
-affecting the https://github.com/knative/eventing repository. It's heavily
-recommended, but not required, for all the Eventing subprojects to follow this
-process too.
+affecting the https://github.com/knative/eventing repository. Eventing subprojects SHOULD 
+follow this process too.
 
 Breaking changes to the APIs, like modifying the API object structure, or
 complete new CRDs, are _not covered_ by this document and should be introduced
@@ -50,7 +49,7 @@ When the feature is implemented, we provide a Golang API to check if the feature
 is enabled or not, like `experimental.FromContext(ctx).IsEnabled(featureName)`.
 
 The user can easily enable the features modifying a config map/environment
-variable of her/his knative setup.
+variable of their knative setup.
 
 <!-- TODO add more details when the pr is merged-->
 
@@ -67,7 +66,7 @@ features:
   used instead. Then, in the webhook, you can reject resources with fields
   related to experimental features when validating the input CR using
   [experimental.ValidateAPIFields()](https://github.com/knative/eventing/blob/917f57f0e68abbd0256c5fa4bff1ce2e83ffe78b/pkg/apis/experimental/api_validation.go#L13)
-- Alternative to the above approach, If the feature affects a whole Resource,
+- Alternative to the above approach, if the feature affects a whole resource,
   and the API is a single value, that is not an object or an array of values,
   use an annotation. Then, in the webhook, you can reject resources with
   annotations related to experimental features when validating the input CR
@@ -78,7 +77,7 @@ features:
   where an annotation is more suited as the feature API. For example:
   [Eventing Kafka Broker - Configuring the order of delivered events](https://github.com/knative/docs/blob/main/docs/eventing/broker/kafka-broker.md#configuring-the-order-of-delivered-events)
 - If a feature is supposed to be opt-in even after its graduation to stable, for
-  example an optional behaviour for a specific component/set of components, make
+  example an optional behavior for a specific component/set of components, make
   sure to have a flag to enable it in the place wherever is more appropriate for
   that flag to exist. E.g. a flag to enable the broker to send an additional
   header, when dispatching events, should be placed in the ConfigMap that
