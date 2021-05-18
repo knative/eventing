@@ -63,7 +63,7 @@ To achieve that
 a [wathola tool](https://pkg.go.dev/knative.dev/eventing/test/upgrade/prober/wathola)
 was prepared. It consists of 4 components: _sender_, _forwarder_, _receiver_,
 and _fetcher_. _Sender_ is the usual Kubernetes deployment that publishes events
-to the System under Tests (SUT). By default, SUT is a default `broker`
+to the System Under Tests (SUT). By default, SUT is a default `broker`
 with two triggers for each type of events being sent. _Sender_ will send events
 with given interval. When it terminates (by either `SIGTERM`, or
 `SIGINT`), a `finished` event is generated. _Forwarder_ is a knative serving

@@ -38,8 +38,9 @@ type SystemUnderTest interface {
 	Deploy(ctx Context, destination duckv1.Destination) interface{}
 }
 
-// HasManualTeardown indicates that SystemUnderTest supports manual teardown.
-type HasManualTeardown interface {
+// HasTeardown indicates that SystemUnderTest supports custom teardown that
+// exceeds regular teardown via usage of testlib.Tracker.
+type HasTeardown interface {
 	// Teardown will remove all deployed SUT resources.
 	Teardown(ctx Context)
 }

@@ -189,8 +189,7 @@ func (p *prober) deployConfiguration() {
 	s := p.config.SystemUnderTest
 	endpoint := s.Deploy(sc, dest)
 	p.client.Cleanup(func() {
-		if tr, ok := s.(sut.HasManualTeardown); ok {
-
+		if tr, ok := s.(sut.HasTeardown); ok {
 			tr.Teardown(sc)
 		}
 	})

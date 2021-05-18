@@ -64,7 +64,7 @@ func TestSUTNewDefaultE2E(t *testing.T) {
 			Name:       pod.Name,
 		},
 	})
-	if tr, ok := s.(sut.HasManualTeardown); ok {
+	if tr, ok := s.(sut.HasTeardown); ok {
 		defer tr.Teardown(sutCtx)
 	}
 	assert.NotEmpty(t, endpoint)
