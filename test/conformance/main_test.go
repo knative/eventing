@@ -68,9 +68,13 @@ func TestMain(m *testing.M) {
 		// place that cleans it up. If an individual test calls this instead, then it will break other
 		// tests that need the tracing in place.
 		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
-		defer testlib.ExportLogs(testlib.SystemLogsDir, system.Namespace())
 
-		return m.Run()
+		exit := m.Run()
+		// Collect logs only when test failed.
+		if exit != 0 {
+			testlib.ExportLogs(testlib.SystemLogsDir, system.Namespace())
+		}
+		return exit
 	}())
 }
 

@@ -4,21 +4,26 @@ Fixes #
 
 ## Proposed Changes
 
--
--
--
-
-<!--
-If this change has user-visible impact, follow the instructions below.
-Examples include:
-
+<!-- Please categorize your changes:
 - :gift: Add new feature
 - :bug: Fix bug
 - :broom: Update or clean up current behavior
 - :wastebasket: Remove feature or internal logic
-
-Otherwise delete the rest of this template.
 -->
+
+-
+-
+-
+
+### Pre-review Checklist
+
+<!-- If these boxes are not checked, you will be asked to complete these requirements or explain why they do not apply to your PR. -->
+
+- [ ] **At least 80% unit test coverage**
+- [ ] **E2E tests** for any new behavior
+- [ ] **Docs PR** for any user-facing impact
+- [ ] **Spec PR** for any new API feature
+- [ ] **Conformance test** for any change to the spec
 
 **Release Note**
 
@@ -28,12 +33,13 @@ below. Include the string "action required" if additional action is required of
 users switching to the new release, for example in case of a breaking change.
 
 Write as if you are speaking to users, not other Knative contributors. If this
-change has no user-visible impact, no release-note is needed.
+change has no user-visible impact, no release note is needed.
 -->
 
 ```release-note
 
 ```
+
 
 **Docs**
 
@@ -41,3 +47,4 @@ change has no user-visible impact, no release-note is needed.
 :book: If this change has user-visible impact, link to an issue or PR in
 https://github.com/knative/docs.
 -->
+

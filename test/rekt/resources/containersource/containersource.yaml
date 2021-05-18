@@ -1,0 +1,52 @@
+# Copyright 2021 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: sources.knative.dev/v1
+kind: ContainerSource
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+spec:
+  {{ if .ceOverrides }}
+  ceOverrides:
+    {{ if .ceOverrides.extensions }}
+    extensions:
+      {{ range $key, $value := .ceOverrides.extensions }}
+      {{ $key }}: {{ $value }}
+      {{ end}}
+    {{ end }}
+  {{ end }}
+  sink:
+    {{ if .sink.ref }}
+    ref:
+      kind: {{ .sink.ref.kind }}
+      namespace: {{ .namespace }}
+      name: {{ .sink.ref.name }}
+      apiVersion: {{ .sink.ref.apiVersion }}
+    {{ end }}
+    {{ if .sink.uri }}
+    uri: {{ .sink.uri }}
+    {{ end }}
+  template:
+    spec:
+      containers:
+      - name: heartbeats
+        image: ko://knative.dev/eventing/test/test_images/heartbeats
+        args:
+        - --period=1
+        env:
+        - name: POD_NAME
+          value: heartbeats
+        - name: POD_NAMESPACE
+          value: {{ .namespace }}

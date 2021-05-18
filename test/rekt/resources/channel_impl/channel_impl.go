@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
@@ -98,3 +99,6 @@ func AsRef(name string) *duckv1.KReference {
 		Name:       name,
 	}
 }
+
+// WithDeadLetterSink adds the dead letter sink related config to a Subscription spec.
+var WithDeadLetterSink = delivery.WithDeadLetterSink

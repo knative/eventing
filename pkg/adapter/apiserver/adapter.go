@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 type envConfig struct {
@@ -66,7 +66,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		ce:     a.ce,
 		source: a.source,
 		logger: a.logger,
-		ref:    a.config.EventMode == v1alpha2.ReferenceMode,
+		ref:    a.config.EventMode == v1.ReferenceMode,
 	}
 
 	if a.config.ResourceOwner != nil {

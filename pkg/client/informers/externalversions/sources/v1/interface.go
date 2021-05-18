@@ -28,6 +28,8 @@ type Interface interface {
 	ApiServerSources() ApiServerSourceInformer
 	// ContainerSources returns a ContainerSourceInformer.
 	ContainerSources() ContainerSourceInformer
+	// PingSources returns a PingSourceInformer.
+	PingSources() PingSourceInformer
 	// SinkBindings returns a SinkBindingInformer.
 	SinkBindings() SinkBindingInformer
 }
@@ -51,6 +53,11 @@ func (v *version) ApiServerSources() ApiServerSourceInformer {
 // ContainerSources returns a ContainerSourceInformer.
 func (v *version) ContainerSources() ContainerSourceInformer {
 	return &containerSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// PingSources returns a PingSourceInformer.
+func (v *version) PingSources() PingSourceInformer {
+	return &pingSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // SinkBindings returns a SinkBindingInformer.

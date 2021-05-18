@@ -19,11 +19,13 @@ package trigger_test
 import (
 	"os"
 
-	"knative.dev/reconciler-test/pkg/manifest"
-
-	v1 "knative.dev/pkg/apis/duck/v1"
-
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
+	v1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/ptr"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -205,4 +207,69 @@ func ExampleWithFilter() {
 	//     attributes:
 	//       type: "z"
 	//       x: "y"
+}
+
+func ExampleWithDeadLetterSink() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":       "foo",
+		"namespace":  "bar",
+		"brokerName": "baz",
+	}
+
+	delivery.WithDeadLetterSink(svc.AsKReference("targetdlq"), "/uri/here")(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Trigger
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   broker: baz
+	//   delivery:
+	//     deadLetterSink:
+	//       ref:
+	//         kind: Service
+	//         namespace: bar
+	//         name: targetdlq
+	//         apiVersion: v1
+	//       uri: /uri/here
+}
+
+func ExampleWithRetry() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":       "foo",
+		"namespace":  "bar",
+		"brokerName": "baz",
+	}
+
+	exp := duckv1.BackoffPolicyExponential
+	delivery.WithRetry(3, &exp, ptr.String("T0"))(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Trigger
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   broker: baz
+	//   delivery:
+	//     retry: 3
+	//     backoffPolicy: exponential
+	//     backoffDelay: "T0"
 }

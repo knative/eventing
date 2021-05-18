@@ -58,10 +58,6 @@ var (
 	v1ChannelGVK = v1.SchemeGroupVersion.WithKind("Channel")
 )
 
-func newChannelWarnEvent(messageFmt string, args ...interface{}) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeWarning, channelReferenceFailed, messageFmt, args...)
-}
-
 type Reconciler struct {
 	// DynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
@@ -89,7 +85,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscri
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
 		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel or backing channel: %s", err)
-		return newChannelWarnEvent("Failed to get Spec.Channel or backing channel: %s", err)
+		return pkgreconciler.NewEvent(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel or backing channel: %w", err)
 	}
 
 	// Make sure all the URI's that are suppose to be in status are up to date.
@@ -134,7 +130,7 @@ func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, chann
 	if err != nil {
 		logging.FromContext(ctx).Warnw("Failed to get subscription status.", zap.Error(err))
 		sub.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
-		return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
+		return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %w", err)
 	}
 
 	switch ss.Ready {
@@ -155,7 +151,7 @@ func (r Reconciler) syncChannel(ctx context.Context, channel *eventingduckv1.Cha
 	if patched, err := r.syncPhysicalChannel(ctx, sub, channel, false); err != nil {
 		logging.FromContext(ctx).Warnw("Failed to sync physical Channel", zap.Error(err))
 		sub.Status.MarkNotAddedToChannel(physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
-		return pkgreconciler.NewEvent(corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to synchronize to channel %q: %v", channel.Name, err)
+		return pkgreconciler.NewEvent(corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to synchronize to channel %q: %w", channel.Name, err)
 	} else if patched {
 		if sub.DeletionTimestamp.IsZero() {
 			sub.Status.MarkAddedToChannel()
@@ -211,7 +207,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 				zap.Error(err),
 				zap.Any("subscriber", subscriber))
 			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
-			return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
+			return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %w", err)
 		}
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.SubscriberURI == nil || subscription.Status.PhysicalSubscription.SubscriberURI.String() != subscriberURI.String() {
@@ -238,7 +234,7 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 				zap.Error(err),
 				zap.Any("reply", reply))
 			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
-			return pkgreconciler.NewEvent(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %v", err)
+			return pkgreconciler.NewEvent(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %w", err)
 		}
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.ReplyURI == nil || subscription.Status.PhysicalSubscription.ReplyURI.String() != replyURI.String() {
@@ -265,7 +261,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, deadLetterSink *
 				zap.Error(err),
 				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
 			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
-			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %w", err)
 		}
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.DeadLetterSinkURI == nil || subscription.Status.PhysicalSubscription.DeadLetterSinkURI.String() != deadLetterSink.String() {
@@ -299,7 +295,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscript
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
 	if err := r.channelableTracker.TrackInNamespace(ctx, sub)(ref); err != nil {
-		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to spec.channel: %v", err)
+		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to spec.channel: %w", err)
 	}
 	chLister, err := r.channelableTracker.ListerFor(ref)
 	if err != nil {

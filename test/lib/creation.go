@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
@@ -37,9 +38,6 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
@@ -321,57 +319,6 @@ func (c *Client) CreateFlowsParallelOrFail(parallel *flowsv1.Parallel) {
 	c.Tracker.AddObj(parallel)
 }
 
-// CreateSinkBindingV1Alpha1OrFail will create a SinkBinding or fail the test if there is an error.
-func (c *Client) CreateSinkBindingV1Alpha1OrFail(sb *sourcesv1alpha1.SinkBinding) {
-	c.T.Logf("Creating sinkbinding %+v", sb)
-	sbInterface := c.Eventing.SourcesV1alpha1().SinkBindings(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := sbInterface.Create(context.Background(), sb, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
-	}
-	c.Tracker.AddObj(sb)
-}
-
-// CreateSinkBindingV1Alpha2OrFail will create a SinkBinding or fail the test if there is an error.
-func (c *Client) CreateSinkBindingV1Alpha2OrFail(sb *sourcesv1alpha2.SinkBinding) {
-	c.T.Logf("Creating sinkbinding %+v", sb)
-	sbInterface := c.Eventing.SourcesV1alpha2().SinkBindings(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := sbInterface.Create(context.Background(), sb, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
-	}
-	c.Tracker.AddObj(sb)
-}
-
-// CreateSinkBindingV1Beta1OrFail will create a SinkBinding or fail the test if there is an error.
-func (c *Client) CreateSinkBindingV1Beta1OrFail(sb *sourcesv1beta1.SinkBinding) {
-	c.T.Logf("Creating sinkbinding %+v", sb)
-	sbInterface := c.Eventing.SourcesV1beta1().SinkBindings(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := sbInterface.Create(context.Background(), sb, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create sinkbinding %q: %v", sb.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
-	}
-	c.Tracker.AddObj(sb)
-}
-
 // CreateSinkBindingV1OrFail will create a SinkBinding or fail the test if there is an error.
 func (c *Client) CreateSinkBindingV1OrFail(sb *sourcesv1.SinkBinding) {
 	c.T.Logf("Creating sinkbinding %+v", sb)
@@ -387,40 +334,6 @@ func (c *Client) CreateSinkBindingV1OrFail(sb *sourcesv1.SinkBinding) {
 		c.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
 	}
 	c.Tracker.AddObj(sb)
-}
-
-// CreateApiServerSourceV1Alpha2OrFail will create an v1alpha2 ApiServerSource
-func (c *Client) CreateApiServerSourceV1Alpha2OrFail(apiServerSource *sourcesv1alpha2.ApiServerSource) {
-	c.T.Logf("Creating apiserversource %+v", apiServerSource)
-	apiServerInterface := c.Eventing.SourcesV1alpha2().ApiServerSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := apiServerInterface.Create(context.Background(), apiServerSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
-	}
-	c.Tracker.AddObj(apiServerSource)
-}
-
-// CreateApiServerSourceV1Beta1OrFail will create an v1beta1 ApiServerSource
-func (c *Client) CreateApiServerSourceV1Beta1OrFail(apiServerSource *sourcesv1beta1.ApiServerSource) {
-	c.T.Logf("Creating apiserversource %+v", apiServerSource)
-	apiServerInterface := c.Eventing.SourcesV1beta1().ApiServerSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := apiServerInterface.Create(context.Background(), apiServerSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create apiserversource %q: %v", apiServerSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
-	}
-	c.Tracker.AddObj(apiServerSource)
 }
 
 // CreateApiServerSourceV1OrFail will create an v1 ApiServerSource
@@ -440,40 +353,6 @@ func (c *Client) CreateApiServerSourceV1OrFail(apiServerSource *sourcesv1.ApiSer
 	c.Tracker.AddObj(apiServerSource)
 }
 
-// CreateContainerSourceV1Alpha2OrFail will create a v1alpha2 ContainerSource.
-func (c *Client) CreateContainerSourceV1Alpha2OrFail(containerSource *sourcesv1alpha2.ContainerSource) {
-	c.T.Logf("Creating containersource %+v", containerSource)
-	containerInterface := c.Eventing.SourcesV1alpha2().ContainerSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := containerInterface.Create(context.Background(), containerSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create containersource %q: %v", containerSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
-	}
-	c.Tracker.AddObj(containerSource)
-}
-
-// CreateContainerSourceV1Beta1OrFail will create a v1beta1 ContainerSource.
-func (c *Client) CreateContainerSourceV1Beta1OrFail(containerSource *sourcesv1beta1.ContainerSource) {
-	c.T.Logf("Creating containersource %+v", containerSource)
-	containerInterface := c.Eventing.SourcesV1beta1().ContainerSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := containerInterface.Create(context.Background(), containerSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create containersource %q: %v", containerSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
-	}
-	c.Tracker.AddObj(containerSource)
-}
-
 // CreateContainerSourceV1OrFail will create a v1 ContainerSource.
 func (c *Client) CreateContainerSourceV1OrFail(containerSource *sourcesv1.ContainerSource) {
 	c.T.Logf("Creating containersource %+v", containerSource)
@@ -491,44 +370,27 @@ func (c *Client) CreateContainerSourceV1OrFail(containerSource *sourcesv1.Contai
 	c.Tracker.AddObj(containerSource)
 }
 
-// CreatePingSourceV1Alpha2OrFail will create a PingSource
-func (c *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.PingSource) {
-	c.T.Logf("Creating pingsource %+v", pingSource)
-	pingInterface := c.Eventing.SourcesV1alpha2().PingSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
-	}
-	c.Tracker.AddObj(pingSource)
-}
-
-// CreatePingSourceV1Beta1OrFail will create a PingSource
-func (c *Client) CreatePingSourceV1Beta1OrFail(pingSource *sourcesv1beta1.PingSource) {
-	c.T.Logf("Creating pingsource %+v", pingSource)
-	pingInterface := c.Eventing.SourcesV1beta1().PingSources(c.Namespace)
-	err := c.RetryWebhookErrors(func(attempts int) (err error) {
-		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
-		if e != nil {
-			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
-		}
-		return e
-	})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
-	}
-	c.Tracker.AddObj(pingSource)
-}
-
 // CreatePingSourceV1Beta2OrFail will create a PingSource
 func (c *Client) CreatePingSourceV1Beta2OrFail(pingSource *sourcesv1beta2.PingSource) {
 	c.T.Logf("Creating pingsource %+v", pingSource)
 	pingInterface := c.Eventing.SourcesV1beta2().PingSources(c.Namespace)
+	err := c.RetryWebhookErrors(func(attempts int) (err error) {
+		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
+		if e != nil {
+			c.T.Logf("Failed to create pingsource %q: %v", pingSource.Name, e)
+		}
+		return e
+	})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		c.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
+	}
+	c.Tracker.AddObj(pingSource)
+}
+
+// CreatePingSourceV1OrFail will create a PingSource
+func (c *Client) CreatePingSourceV1OrFail(pingSource *sourcesv1.PingSource) {
+	c.T.Logf("Creating pingsource %+v", pingSource)
+	pingInterface := c.Eventing.SourcesV1().PingSources(c.Namespace)
 	err := c.RetryWebhookErrors(func(attempts int) (err error) {
 		_, e := pingInterface.Create(context.Background(), pingSource, metav1.CreateOptions{})
 		if e != nil {
@@ -583,11 +445,15 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 
 	c.applyAdditionalEnv(&pod.Spec)
 
-	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+	// the following retryable errors are expected when creating a blank Pod:
+	// - update conflicts
+	// - "No API token found for service account %q,
+	//    retry after the token is automatically created and added to the service account"
+	err := reconciler.RetryErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating pod %+v", pod)
 		_, e := c.Kube.CreatePod(context.Background(), pod)
 		return e
-	})
+	}, apierrs.IsConflict, apierrs.IsServerTimeout)
 	if err != nil {
 		c.T.Fatalf("Failed to create pod %q: %v", pod.Name, err)
 	}

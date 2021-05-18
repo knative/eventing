@@ -38,6 +38,7 @@ import (
 )
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
+// Deprecated, use reconciler-test based tests.
 func ChannelDeadLetterSinkTestHelper(
 	ctx context.Context,
 	t *testing.T,
@@ -100,6 +101,7 @@ func ChannelDeadLetterSinkTestHelper(
 }
 
 // ChannelDeadLetterDefaultSinkTestHelper is the helper function for channel_deadlettersink_test, but setting the delivery from the channel spec
+// Deprecated, use reconciler-test based tests.
 func ChannelDeadLetterSinkDefaultTestHelper(
 	ctx context.Context,
 	t *testing.T,

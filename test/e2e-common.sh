@@ -58,6 +58,8 @@ readonly REPLICAS=3
 # Should deploy a Knative Monitoring as well
 readonly DEPLOY_KNATIVE_MONITORING="${DEPLOY_KNATIVE_MONITORING:-1}"
 
+readonly SCALE_CHAOSDUCK_TO_ZERO="${SCALE_CHAOSDUCK_TO_ZERO:-0}"
+
 TMP_DIR=$(mktemp -d -t "ci-$(date +%Y-%m-%d-%H-%M-%S)-XXXXXXXXXX")
 readonly TMP_DIR
 readonly KNATIVE_DEFAULT_NAMESPACE="knative-eventing"
@@ -200,9 +202,15 @@ function install_head {
 function install_latest_release() {
   header ">> Installing Knative Eventing latest public release"
 
+  # Delete InMemoryController Webhook for downgrade 0.22 from 0.23.
+  kubectl delete ValidatingWebhookConfiguration validation.inmemorychannel.eventing.knative.dev || true
+  kubectl delete MutatingWebhookConfiguration inmemorychannel.eventing.knative.dev || true
+
   install_knative_eventing \
     "latest-release" || \
     fail_test "Knative latest release installation failed"
+
+
 }
 
 function install_mt_broker() {
@@ -244,12 +252,13 @@ function unleash_duck() {
   echo "enable debug logging"
   cat test/config/config-logging.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict ${KO_FLAGS} -f - || return $?
+    ko apply ${KO_FLAGS} -f - || return $?
 
   echo "unleash the duck"
   cat test/config/chaosduck.yaml | \
     sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
-    ko apply --strict ${KO_FLAGS} -f - || return $?
+    ko apply ${KO_FLAGS} -f - || return $?
+    if (( SCALE_CHAOSDUCK_TO_ZERO )); then kubectl -n "${SYSTEM_NAMESPACE}" scale deployment/chaosduck --replicas=0; fi
 }
 
 # Teardown the Knative environment after tests finish.

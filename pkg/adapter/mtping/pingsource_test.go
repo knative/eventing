@@ -24,11 +24,10 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1beta2/pingsource"
-	. "knative.dev/eventing/pkg/reconciler/testing"
-	rttestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
+	rtv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
@@ -72,8 +71,8 @@ func TestAllCases(t *testing.T) {
 			Name: "valid schedule",
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
-				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+				rtv1.NewPingSource(pingSourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -82,10 +81,10 @@ func TestAllCases(t *testing.T) {
 							CloudEventOverrides: nil,
 						},
 					}),
-					rttestingv1beta2.WithInitPingSourceConditions,
-					rttestingv1beta2.WithPingSourceDeployed,
-					rttestingv1beta2.WithPingSourceSink(sinkURI),
-					rttestingv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
 			WantErr: false,
@@ -93,18 +92,18 @@ func TestAllCases(t *testing.T) {
 			Name: "valid schedule without contentType, data and dataBase64",
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
-				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+				rtv1.NewPingSource(pingSourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 						Schedule: testSchedule,
 						SourceSpec: duckv1.SourceSpec{
 							Sink:                sinkDest,
 							CloudEventOverrides: nil,
 						},
 					}),
-					rttestingv1beta2.WithInitPingSourceConditions,
-					rttestingv1beta2.WithPingSourceDeployed,
-					rttestingv1beta2.WithPingSourceSink(sinkURI),
-					rttestingv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
 			WantErr: false,
@@ -112,8 +111,8 @@ func TestAllCases(t *testing.T) {
 			Name: "valid schedule with dataBase64",
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
-				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+				rtv1.NewPingSource(pingSourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						DataBase64:  testDataBase64,
@@ -122,10 +121,10 @@ func TestAllCases(t *testing.T) {
 							CloudEventOverrides: nil,
 						},
 					}),
-					rttestingv1beta2.WithInitPingSourceConditions,
-					rttestingv1beta2.WithPingSourceDeployed,
-					rttestingv1beta2.WithPingSourceSink(sinkURI),
-					rttestingv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
 			WantErr: false,
@@ -133,8 +132,8 @@ func TestAllCases(t *testing.T) {
 			Name: "valid schedule, with finalizer",
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
-				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+				rtv1.NewPingSource(pingSourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -143,10 +142,10 @@ func TestAllCases(t *testing.T) {
 							CloudEventOverrides: nil,
 						},
 					}),
-					rttestingv1beta2.WithInitPingSourceConditions,
-					rttestingv1beta2.WithPingSourceDeployed,
-					rttestingv1beta2.WithPingSourceSink(sinkURI),
-					rttestingv1beta2.WithPingSourceCloudEventAttributes,
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
 				),
 			},
 			WantErr: false,
@@ -154,8 +153,8 @@ func TestAllCases(t *testing.T) {
 			Name: "valid schedule, deleted with finalizer",
 			Key:  pingsourceKey,
 			Objects: []runtime.Object{
-				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+				rtv1.NewPingSource(pingSourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -164,11 +163,11 @@ func TestAllCases(t *testing.T) {
 							CloudEventOverrides: nil,
 						},
 					}),
-					rttestingv1beta2.WithInitPingSourceConditions,
-					rttestingv1beta2.WithPingSourceDeployed,
-					rttestingv1beta2.WithPingSourceSink(sinkURI),
-					rttestingv1beta2.WithPingSourceCloudEventAttributes,
-					rttestingv1beta2.WithPingSourceDeleted,
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
+					rtv1.WithPingSourceDeleted,
 				),
 			},
 			WantErr: false,
@@ -176,8 +175,8 @@ func TestAllCases(t *testing.T) {
 			Name: "valid schedule, deleted without finalizer",
 			Key:  "a/a",
 			Objects: []runtime.Object{
-				rttestingv1beta2.NewPingSource(pingSourceName, testNS,
-					rttestingv1beta2.WithPingSourceSpec(v1beta2.PingSourceSpec{
+				rtv1.NewPingSource(pingSourceName, testNS,
+					rtv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
 						Schedule:    testSchedule,
 						ContentType: testContentType,
 						Data:        testData,
@@ -186,11 +185,11 @@ func TestAllCases(t *testing.T) {
 							CloudEventOverrides: nil,
 						},
 					}),
-					rttestingv1beta2.WithInitPingSourceConditions,
-					rttestingv1beta2.WithPingSourceDeployed,
-					rttestingv1beta2.WithPingSourceSink(sinkURI),
-					rttestingv1beta2.WithPingSourceCloudEventAttributes,
-					rttestingv1beta2.WithPingSourceDeleted,
+					rtv1.WithInitPingSourceConditions,
+					rtv1.WithPingSourceDeployed,
+					rtv1.WithPingSourceSink(sinkURI),
+					rtv1.WithPingSourceCloudEventAttributes,
+					rtv1.WithPingSourceDeleted,
 				),
 			},
 			WantErr: false,
@@ -199,10 +198,10 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 
-	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+	table.Test(t, rtv1.MakeFactory(func(ctx context.Context, listers *rtv1.Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{mtadapter: testAdapter{}}
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
-			fakeeventingclient.Get(ctx), listers.GetPingSourceV1beta2Lister(),
+			fakeeventingclient.Get(ctx), listers.GetPingSourceLister(),
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 
@@ -211,7 +210,7 @@ func TestAllCases(t *testing.T) {
 func TestReconciler_deleteFunc(t *testing.T) {
 	pingsourceKey := testNS + "/" + pingSourceName
 	adapter := &testAdapter{}
-	p := rttestingv1beta2.NewPingSource(pingSourceName, testNS)
+	p := rtv1.NewPingSource(pingSourceName, testNS)
 	r := &Reconciler{mtadapter: adapter}
 	r.deleteFunc(p)
 	if _, ok := removePingsource[pingsourceKey]; !ok {

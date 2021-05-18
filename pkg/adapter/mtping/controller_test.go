@@ -26,9 +26,9 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/v2"
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1beta2/pingsource/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource/fake"
 
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 var removePingsource map[string]bool
@@ -37,10 +37,10 @@ type testAdapter struct {
 	adapter.Adapter
 }
 
-func (testAdapter) Update(context.Context, *v1beta2.PingSource) {
+func (testAdapter) Update(context.Context, *sourcesv1.PingSource) {
 }
 
-func (testAdapter) Remove(p *v1beta2.PingSource) {
+func (testAdapter) Remove(p *sourcesv1.PingSource) {
 	if removePingsource == nil {
 		removePingsource = make(map[string]bool)
 	}

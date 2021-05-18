@@ -32,6 +32,7 @@ import (
 )
 
 // ChannelChainTestHelper is the helper function for channel_chain_test
+// Deprecated, use reconciler-test based tests.
 func ChannelChainTestHelper(
 	ctx context.Context,
 	t *testing.T,

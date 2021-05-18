@@ -59,6 +59,7 @@ type ChannelableStatus struct {
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1.Status `json:",inline"`
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
+	// +optional
 	duckv1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	SubscribableStatus `json:",inline"`
