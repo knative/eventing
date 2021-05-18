@@ -40,6 +40,9 @@ func ReadIfPresent() {
 	} else {
 		Log.Infof("Define config file to be taken into account: %v", configFile)
 	}
+	if err = setLogLevel(); err != nil {
+		logFatal(err)
+	}
 }
 
 // Read a config file and update configuration object
@@ -51,13 +54,15 @@ func Read(configFile string) error {
 	d := toml.NewDecoder(r)
 	d.SetStrict(true)
 	err = d.Decode(Instance)
+	return err
+}
+
+func setLogLevel() error {
+	err := logConfig.Level.UnmarshalText([]byte(Instance.LogLevel))
 	if err == nil {
-		err = logConfig.Level.UnmarshalText([]byte(Instance.LogLevel))
-		if err == nil {
-			Instance.LogLevel = logConfig.Level.String()
-		} else {
-			Instance.LogLevel = defaultValues().LogLevel
-		}
+		Instance.LogLevel = logConfig.Level.String()
+	} else {
+		Instance.LogLevel = defaultValues().LogLevel
 	}
 	return err
 }

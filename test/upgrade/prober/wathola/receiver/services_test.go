@@ -21,6 +21,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/util/wait"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
@@ -37,6 +38,7 @@ func TestReceiverReceive(t *testing.T) {
 	e1 := sender.NewCloudEvent(event.Step{Number: 42}, event.StepType)
 	e2 := sender.NewCloudEvent(event.Step{Number: 43}, event.StepType)
 	f := sender.NewCloudEvent(event.Finished{EventsSent: 2}, event.FinishedType)
+	config.Instance.LogLevel = zapcore.DebugLevel.String()
 
 	instance := New()
 	port := freeport.GetPort()
