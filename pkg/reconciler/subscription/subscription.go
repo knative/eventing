@@ -22,6 +22,8 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1lister "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,6 +63,9 @@ var (
 type Reconciler struct {
 	// DynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	// crdLister is used to resolve the ref version
+	crdLister apiextensionsv1lister.CustomResourceDefinitionLister
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
@@ -201,6 +206,19 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
+
+		// Resolve the group
+		if subscriber.Ref != nil && true /* feature enabled */ {
+			err := subscriber.Ref.ResolveGroup(r.crdLister)
+			if err != nil {
+				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
+					zap.Error(err),
+					zap.Any("subscriber", subscriber))
+				subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %v", err)
+				return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %w", err)
+			}
+		}
+
 		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve Subscriber",

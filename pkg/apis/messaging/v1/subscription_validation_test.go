@@ -243,6 +243,195 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	}
 }
 
+func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		c    *SubscriptionSpec
+		want *apis.FieldError
+	}{{
+		name: "valid",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}, {
+		name: "valid with reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply:      getValidReply(),
+		},
+		want: nil,
+	}, {
+		name: "empty Channel",
+		c: &SubscriptionSpec{
+			Channel: corev1.ObjectReference{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("channel")
+			fe.Details = "the Subscription must reference a channel"
+			return fe
+		}(),
+	}, {
+		name: "missing name in Channel",
+		c: &SubscriptionSpec{
+			Channel: corev1.ObjectReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+			Subscriber: getValidDestination(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("channel.name")
+			return fe
+		}(),
+	}, {
+		name: "missing Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      &duckv1.Destination{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			return fe
+		}(),
+	}, {
+		name: "missing Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}, {
+		name: "empty Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply:      &duckv1.Destination{},
+		},
+		want: nil,
+	}, {
+		name: "missing Subscriber",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Reply:   getValidReply(),
+		},
+		want: nil,
+	}, {
+		name: "empty Subscriber",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      getValidReply(),
+		},
+		want: nil,
+	}, {
+		name: "missing name in channel, and missing subscriber, reply",
+		c: &SubscriptionSpec{
+			Channel: corev1.ObjectReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			return apis.ErrMissingField("channel.name").Also(fe)
+		}(),
+	}, {
+		name: "empty",
+		c:    &SubscriptionSpec{},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("channel")
+			fe.Details = "the Subscription must reference a channel"
+			return fe
+		}(),
+	}, {
+		name: "missing name in Subscriber.Ref",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Subscriber: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Kind:       channelKind,
+					APIVersion: channelAPIVersion,
+				},
+			},
+		},
+		want: apis.ErrMissingField("subscriber.ref.name"),
+	}, {
+		name: "missing name in Subscriber.Ref",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Name:       "",
+					Kind:       channelKind,
+					APIVersion: channelAPIVersion,
+				},
+			},
+		},
+		want: apis.ErrMissingField("reply.ref.name"),
+	}, {
+		name: "both api version and group are empty",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Name:       "abc",
+					Kind:       channelKind,
+				},
+			},
+		},
+		want: apis.ErrMissingField("reply.ref.apiVersion").Also(apis.ErrMissingField("reply.ref.group")),
+	}, {
+		name: "both api version and group are there",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
+					Name:       "abc",
+					Kind:       channelKind,
+					Group: "myGroup",
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: "both apiVersion and group are specified",
+			Paths:   []string{"reply.ref.apiVersion", "reply.ref.group"},
+			Details: "Only one of them must be specified",
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.c.Validate(context.TODO())
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: validateChannel (-want, +got) = %v", test.name, diff)
+			}
+		})
+	}
+}
+
 func TestSubscriptionImmutable(t *testing.T) {
 	newChannel := getValidChannelRef()
 	newChannel.Name = "newChannel"
