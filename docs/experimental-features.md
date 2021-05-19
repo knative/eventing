@@ -24,19 +24,24 @@ depend on the features themselves.
 
 Experimental features might consist in:
 
-- Behavioral/Semantic additions/changes, without affecting the APIs (CRDs).
-  E.g. [#4560](https://github.com/knative/eventing/pull/4560)
+- Behavioral/Semantic additions/changes, without affecting the APIs (CRDs). E.g.
+  [#4560](https://github.com/knative/eventing/pull/4560)
 - Additive changes to the APIs, adding new behaviors. E.g.
   [#5148](https://github.com/knative/eventing/issues/5148)
 
 This process MUST be followed in all the situations above explained for changes
-affecting the https://github.com/knative/eventing repository. Eventing subprojects SHOULD 
-follow this process too.
+affecting the https://github.com/knative/eventing repository. Eventing
+subprojects SHOULD follow this process too.
 
 Breaking changes to the APIs, like modifying the API object structure, or
 complete new CRDs, are _not covered_ by this document and should be introduced
 using the usual API versioning, e.g. bumping from _v1_ to _v2alpha1_ or adding a
 new CRD as _v1alpha1_.
+
+This process covers both normative and non-normative features. The only
+difference is that, at the end of the process, in the former case vendors are
+required to implement the feature in order to remain compliant, while in the
+latter case supporting the feature is optional.
 
 ## Runtime feature gate
 
@@ -98,8 +103,8 @@ consistency and aligned user experience.
 A feature can be in Alpha, Beta or GA stage. An Alpha feature means:
 
 - Disabled by default.
-- No vendor is required to implement the new feature at this point, but it’s
-  encouraged to.
+- The feature is not normative at this point of the process, that is no vendor
+  is required to implement it, although this is encouraged to provide feedback.
 - Might be buggy. Enabling the feature may expose bugs.
 - Support for the feature may be dropped at any time without notice.
 - The API may change in incompatible ways in a later software release without
@@ -110,8 +115,8 @@ A feature can be in Alpha, Beta or GA stage. An Alpha feature means:
 A Beta feature means:
 
 - Enabled by default.
-- No vendor is required to implement the new feature at this point, but it’s
-  encouraged to.
+- The feature is not normative at this point of the process, that is no vendor
+  is required to implement it, although this is encouraged to provide feedback.
 - The feature is well tested. Enabling the feature is considered safe.
 - Support for the overall feature will not be dropped, though details may
   change.
@@ -130,8 +135,8 @@ means:
 - The feature is always enabled; you cannot disable it.
 - The corresponding experimental feature gate is no longer needed.
 - New API is properly documented in the
-  [knative/specs](https://github.com/knative/specs/) repository. Vendors should
-  go and implement this feature.
+  [knative/specs](https://github.com/knative/specs/) repository, and it must be
+  specified if it's normative or not.
 - Stable versions of features will appear in released software for many
   subsequent versions, following the requirements described in the
   [Stable maturity level](https://github.com/knative/community/blob/main/mechanics/MATURITY-LEVELS.md#stable).
