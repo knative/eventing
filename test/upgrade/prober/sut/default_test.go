@@ -14,9 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sut
+package sut_test
 
-// NewDefault will return a default SUT for this repo.
-func NewDefault() SystemUnderTest {
-	return NewBrokerAndTriggers()
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"knative.dev/eventing/test/upgrade/prober/sut"
+)
+
+func TestNewDefault(t *testing.T) {
+	s := sut.NewDefault()
+	assert.Condition(t, func() bool {
+		_, ok := s.(*sut.BrokerAndTriggers)
+		return ok
+	})
 }

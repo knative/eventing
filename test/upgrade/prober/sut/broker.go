@@ -53,7 +53,9 @@ type Triggers struct {
 	Types []string
 }
 
-func newBrokerAndTriggers() SystemUnderTest {
+// NewBrokerAndTriggers will create default configuration for BrokerAndTriggers
+// based SUT.
+func NewBrokerAndTriggers() SystemUnderTest {
 	return &BrokerAndTriggers{
 		Broker: Broker{
 			Name: "sut",

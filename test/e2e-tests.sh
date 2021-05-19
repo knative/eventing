@@ -39,7 +39,4 @@ go_test_e2e -timeout=30m -parallel=20 ./test/e2e \
   -sources=sources.knative.dev/v1beta2:PingSource,sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource \
   || fail_test
 
-echo "Running E2E tests for upgrade tests"
-go_test_e2e -timeout=10m -parallel=20 ./test/upgrade/... || fail_test
-
 success

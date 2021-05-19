@@ -40,11 +40,14 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
-func TestSUTNewDefaultE2E(t *testing.T) {
+// TestBrokerAndTriggers isn't executed by regular E2E tests as it's actually
+// executed as part of the upgrade tests. This test here is to make it easy to
+// create other SUTs for Eventing and quickly verify them act properly.
+func TestBrokerAndTriggers(t *testing.T) {
 	ctx := signals.NewContext()
 	client := testlib.Setup(t, false)
 	defer testlib.TearDown(client)
-	s := sut.NewDefault()
+	s := sut.NewBrokerAndTriggers()
 	sutCtx := sut.Context{
 		Ctx:    ctx,
 		Log:    log(t),
