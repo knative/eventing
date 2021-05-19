@@ -46,9 +46,9 @@ type DeliveryOption func(*eventingduckv1beta1.DeliverySpec)
 // channelRef returns an ObjectReference for a given Channel name.
 func channelRef(name string, typemeta *metav1.TypeMeta) duckv1.KReference {
 	return duckv1.KReference{
-		Kind: typemeta.Kind,
+		Kind:       typemeta.Kind,
 		APIVersion: typemeta.APIVersion,
-		Name: name,
+		Name:       name,
 	}
 }
 

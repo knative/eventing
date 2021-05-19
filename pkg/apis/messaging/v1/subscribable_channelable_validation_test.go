@@ -54,7 +54,7 @@ var validationTests = []struct {
 			Name:       "boaty-mcboatface",
 			APIVersion: "messaging.knative.dev/v1",
 			Kind:       "MyChannel",
-			Namespace: "my-namespace",
+			Namespace:  "my-namespace",
 		},
 		want: apis.ErrDisallowedFields("namespace"),
 	},

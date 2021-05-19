@@ -34,7 +34,9 @@ func isValidChannel(ctx context.Context, f duckv1.KReference) *apis.FieldError {
 
 	// Namespace field is disallowed
 	if f.Namespace != "" {
-		errs = errs.Also(apis.ErrDisallowedFields("namespace"))
+		fe := apis.ErrDisallowedFields("namespace")
+		fe.Details = "only name, apiVersion and kind are supported fields"
+		errs = errs.Also(fe)
 	}
 
 	return errs

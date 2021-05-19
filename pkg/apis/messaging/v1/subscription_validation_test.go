@@ -420,7 +420,7 @@ func TestValidChannel(t *testing.T) {
 			Namespace:  "secretnamespace",
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("Namespace")
+			fe := apis.ErrDisallowedFields("namespace")
 			fe.Details = "only name, apiVersion and kind are supported fields"
 			return fe
 		}(),
