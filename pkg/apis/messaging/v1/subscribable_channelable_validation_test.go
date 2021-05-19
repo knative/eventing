@@ -56,7 +56,11 @@ var validationTests = []struct {
 			Kind:       "MyChannel",
 			Namespace:  "my-namespace",
 		},
-		want: apis.ErrDisallowedFields("namespace"),
+		want: func() *apis.FieldError {
+			fe := apis.ErrDisallowedFields("namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields"
+			return fe
+		}(),
 	},
 }
 
