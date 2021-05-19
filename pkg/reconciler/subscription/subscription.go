@@ -22,7 +22,6 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1lister "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -208,7 +207,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		}
 
 		// Resolve the group
-		if subscriber.Ref != nil && true /* feature enabled */ {
+		if subscriber.Ref != nil && true /* TODO feature enabled */ {
 			err := subscriber.Ref.ResolveGroup(r.crdLister)
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
