@@ -29,7 +29,7 @@ At a high level, we want to do this:
 
 To achieve that, we created an upgrade framework (knative.dev/pkg/test/upgrade).
 This framework will enforce running upgrade tests in specific order and supports
-continual verification of system under test. In case of Eventing Kafka it is:
+continual verification of system under test. In case of Eventing it is:
 
 1. Install the latest release from GitHub.
 1. Run the `preupgrade` smoke tests.
@@ -81,21 +81,23 @@ Diagram below describe the setup:
 ```
                    K8s cluster                            |     Test machine
                                                           |
- (deploym.)         (ksvc)            (deploym.)          |
+(deployment)        (ksvc)           (deployment)         |
 +--------+       +-----------+       +----------+         |    +------------+
 |        |       |           ++      |          |         |    |            |
 | Sender |   +-->| Forwarder ||----->+ Receiver |         |    + TestProber |
 |        |   |   |           ||      |          |<---+    |    |            |
 +---+----+   |   +------------|      +----------+    |    |    +------------+
     |        |    +-----------+                      |    |
-    |        |                                       |    |
-    |        |                              +---------+   |
-    |     +--+-----+       +---------+      |         |   |
-    +----->        |       |         +-+    + Fetcher |   |
-          | Broker | < - > | Trigger | |    |         |   |
-          |        |       |         | |    +---------+   |
-          +--------+       +---------+ |       (job)      |
-           (default)        +----------+                  |
+    | ```````|`````````````````````````````          |    |
+    | `      |                            ` +---------+   |
+    | `   +--+-----+       +---------+    ` |         |   |
+    +----->        |       |         +-+  ` | Fetcher |   |
+      `   | Broker | < - > | Trigger | |  ` |         |   |
+      `   |        |       |         | |  ` +---------+   |
+      `   +--------+       +---------+ |  `    (job)      |
+      `    (default)        +----------+  `               |
+      `              (SUT)                `
+      `````````````````````````````````````
 ```
 
 #### Probe test configuration
