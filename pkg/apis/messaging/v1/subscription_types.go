@@ -17,7 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -89,7 +88,7 @@ type SubscriptionSpec struct {
 	// channel, giving the user more control over what semantics should
 	// be used (drain the channel first, possibly have events dropped,
 	// etc.)
-	Channel corev1.ObjectReference `json:"channel"`
+	Channel duckv1.KReference `json:"channel"`
 
 	// Subscriber is reference to (optional) function for processing events.
 	// Events from the Channel will be delivered here and replies are

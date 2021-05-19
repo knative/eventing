@@ -44,7 +44,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("channel")
 		fe.Details = "the Subscription must reference a channel"
 		return fe
-	} else if fe := isValidChannel(ss.Channel); fe != nil {
+	} else if fe := isValidChannel(ctx, ss.Channel); fe != nil {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
