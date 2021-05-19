@@ -199,13 +199,14 @@ In detail:
       graduation phases are expected. This is just a vague indication to the
       community of the timeline for the feature from its inception to the
       stability, and it’s not meant to be followed rigorously throughout the
-      process. This may also include some expected criterias, in addition to the
-      quality criterias described below. For example, let’s assume the feature
-      owner is proposing to add resource fields conforming to a new spec from
-      CNCF (e.g. like [#5204](https://github.com/knative/eventing/issues/5204)),
-      a reasonable roadmap could be: _Inception is expected in 0.23, graduation
-      to beta in 0.25 to give time to vendors to implement the new fields,
-      graduation to GA as soon as the referred CNCF spec is considered stable_
+      process. This may also include some expected criteria, in addition to the
+      quality requirements described below. For example, let’s assume the
+      feature owner is proposing to add resource fields conforming to a new spec
+      from CNCF (e.g. like
+      [#5204](https://github.com/knative/eventing/issues/5204)), a reasonable
+      roadmap could be: _Inception is expected in 0.23, graduation to beta in
+      0.25 to give time to vendors to implement the new fields, graduation to GA
+      as soon as the referred CNCF spec is considered stable_
    1. Which WGs are affected and should watch out for the feature graduation
       process. They can be more than one.
 1. Spread the Github issue throughout all Knative channels: Slack, WG meetings,
