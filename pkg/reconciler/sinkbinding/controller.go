@@ -47,7 +47,8 @@ const (
 )
 
 type SinkBindingSubResourcesReconciler struct {
-	res *resolver.URIResolver
+	res     *resolver.URIResolver
+	tracker tracker.Interface
 }
 
 // NewController returns a new SinkBinding reconciler.
@@ -94,14 +95,16 @@ func NewController(
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	sbResolver := resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	tracker := tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
-		res: sbResolver,
+		res:     sbResolver,
+		tracker: tracker,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		return v1.WithURIResolver(ctx, sbResolver), nil
 	}
-	c.Tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	c.Tracker = tracker
 	c.Factory = &duck.CachedInformerFactory{
 		Delegate: &duck.EnqueueInformerFactory{
 			Delegate:     psInformerFactory,
@@ -147,6 +150,14 @@ func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psb
 		logging.FromContext(ctx).Errorf("%w", err)
 		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
 		return err
+	}
+	if sb.Spec.Sink.Ref != nil {
+		s.tracker.TrackReference(tracker.Reference{
+			APIVersion: sb.Spec.Sink.Ref.APIVersion,
+			Kind:       sb.Spec.Sink.Ref.Kind,
+			Namespace:  sb.Spec.Sink.Ref.Namespace,
+			Name:       sb.Spec.Sink.Ref.Name,
+		}, b)
 	}
 	uri, err := s.res.URIFromDestinationV1(ctx, sb.Spec.Sink, sb)
 	if err != nil {
