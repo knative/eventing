@@ -1,6 +1,6 @@
 # Experimental features process
 
-# Introduction
+## Introduction
 
 In Knative Eventing we want to keep the innovation alive, experimenting and
 delivering new features without affecting the stability of the project.
@@ -42,6 +42,8 @@ This process covers both normative and non-normative features. The only
 difference is that, at the end of the process, in the former case vendors are
 required to implement the feature in order to remain compliant, while in the
 latter case supporting the feature is optional.
+
+### Technical overview
 
 ## Runtime feature gate
 
