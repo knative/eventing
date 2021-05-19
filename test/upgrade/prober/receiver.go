@@ -127,7 +127,7 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 					}},
 					Containers: []corev1.Container{{
 						Name:  "receiver",
-						Image: p.config.ContainerImageResolver(receiverName),
+						Image: p.config.ImageResolver(receiverName),
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      p.config.ConfigMapName,
 							ReadOnly:  true,

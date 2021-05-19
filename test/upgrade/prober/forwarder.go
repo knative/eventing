@@ -75,7 +75,7 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 				"spec": map[string]interface{}{
 					"containers": []map[string]interface{}{{
 						"name":  forwarderName,
-						"image": p.config.ContainerImageResolver(forwarderName),
+						"image": p.config.ImageResolver(forwarderName),
 						"volumeMounts": []map[string]interface{}{{
 							"name":      p.config.ConfigMapName,
 							"mountPath": p.config.ConfigMountPoint,

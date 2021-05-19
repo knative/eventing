@@ -27,6 +27,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/test/upgrade/prober/wathola/client"
 	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 )
@@ -74,20 +75,19 @@ func TestUnsupportedEventSender(t *testing.T) {
 }
 
 func waitForPort(t *testing.T, port int) {
-	i := 0
-	for {
-		conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
-		if conn != nil {
-			assert.NoError(t, conn.Close())
-			return
+	if err := wait.PollImmediate(time.Millisecond, 10*time.Second, func() (bool, error) {
+		conn, conErr := net.Dial("tcp", fmt.Sprintf(":%d", port))
+		defer func() {
+			if conn != nil {
+				assert.NoError(t, conn.Close())
+			}
+		}()
+		if conErr != nil {
+			return false, nil
 		}
-		if err != nil {
-			time.Sleep(time.Millisecond)
-			i++
-		}
-		if i > 10_000 {
-			t.Fatal("timeout waiting for port to open: ", port)
-		}
+		return true, nil
+	}); err != nil {
+		t.Fatalf("%v: port %d to be open", err, port)
 	}
 }
 

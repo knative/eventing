@@ -159,7 +159,7 @@ func (p *prober) deployFetcher(ctx context.Context) *batchv1.Job {
 					}},
 					Containers: []corev1.Container{{
 						Name:  fetcherName,
-						Image: p.config.ContainerImageResolver(fetcherName),
+						Image: p.config.ImageResolver(fetcherName),
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      p.config.ConfigMapName,
 							ReadOnly:  true,
