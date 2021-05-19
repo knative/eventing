@@ -73,11 +73,11 @@ var (
 // channel --> reply
 type SubscriptionSpec struct {
 	// Reference to a channel that will be used to create the subscription
-	// You can specify only the following fields of the ObjectReference:
+	// You can specify only the following fields of the KReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	//  The resource pointed by this ObjectReference must meet the
+	// The resource pointed by this KReference must meet the
 	// contract to the ChannelableSpec duck type. If the resource does not
 	// meet this contract it will be reflected in the Subscription's status.
 	//
