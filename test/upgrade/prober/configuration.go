@@ -36,13 +36,12 @@ import (
 )
 
 const (
-	defaultConfigName          = "wathola-config"
-	defaultConfigHomedirPath   = ".config/wathola"
-	defaultHomedir             = "/home/nonroot"
-	defaultConfigFilename      = "config.toml"
-	defaultWatholaEventsPrefix = "dev.knative.eventing.wathola"
-	defaultHealthEndpoint      = "/healthz"
-	defaultFinishedSleep       = 5 * time.Second
+	defaultConfigName        = "wathola-config"
+	defaultConfigHomedirPath = ".config/wathola"
+	defaultHomedir           = "/home/nonroot"
+	defaultConfigFilename    = "config.toml"
+	defaultHealthEndpoint    = "/healthz"
+	defaultFinishedSleep     = 5 * time.Second
 
 	Silence DuplicateAction = "silence"
 	Warn    DuplicateAction = "warn"
@@ -81,9 +80,8 @@ type Config struct {
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
 	ConfigToml
-	SystemUnderTest  sut.SystemUnderTest
-	EventsTypePrefix string
-	HealthEndpoint   string
+	SystemUnderTest sut.SystemUnderTest
+	HealthEndpoint  string
 }
 
 // ConfigToml represents options of wathola config toml file.
@@ -150,9 +148,8 @@ func newConfig(
 				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
 				ConfigFilename:   defaultConfigFilename,
 			},
-			EventsTypePrefix: defaultWatholaEventsPrefix,
-			HealthEndpoint:   defaultHealthEndpoint,
-			SystemUnderTest:  sut.NewDefault(),
+			HealthEndpoint:  defaultHealthEndpoint,
+			SystemUnderTest: sut.NewDefault(),
 		},
 	}
 
