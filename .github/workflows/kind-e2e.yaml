@@ -29,6 +29,7 @@ jobs:
         - ./test/rekt/...
         - ./test/e2e
         - ./test/conformance
+        - ./test/experimental
 
         # Map between K8s and KinD versions.
         # This is attempting to make it a bit clearer what's being tested.
@@ -55,6 +56,8 @@ jobs:
             -brokers=eventing.knative.dev/v1:MTChannelBasedBroker
             -channels=messaging.knative.dev/v1:Channel,messaging.knative.dev/v1:InMemoryChannel
             -sources=sources.knative.dev/v1:ApiServerSource,sources.knative.dev/v1:ContainerSource,sources.knative.dev/v1beta2:PingSource
+        - test-suite: ./test/experimental
+          extra-test-flags: -tags=e2e_experimental
     env:
       GOPATH: ${{ github.workspace }}
       GO111MODULE: off
