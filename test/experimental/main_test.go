@@ -1,4 +1,4 @@
-// +build e2e_experimental
+// +build e2e
 
 /*
 Copyright 2021 The Knative Authors
@@ -24,11 +24,12 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/pkg/system"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/reconciler-test/pkg/knative"
-
 	"knative.dev/pkg/injection"
 	_ "knative.dev/pkg/system/testing"
 
@@ -65,8 +66,8 @@ func TestMain(m *testing.M) {
 	// -- Setup the experimental features CM --
 	experimentalFeaturesCm, err := kubeclient.Get(ctx).
 		CoreV1().
-		ConfigMaps(knative.KnativeNamespaceFromContext(ctx)).
-		Get(ctx, "config-experimental-features", metav1.GetOptions{})
+		ConfigMaps(system.Namespace()).
+		Get(ctx, experimental.FlagsConfigName, metav1.GetOptions{})
 	if err != nil {
 		panic("Cannot retrieve the experimental features config map")
 	}
@@ -74,7 +75,7 @@ func TestMain(m *testing.M) {
 	// Enable the experimental features to test
 	_, err = kubeclient.Get(ctx).
 		CoreV1().
-		ConfigMaps(knative.KnativeNamespaceFromContext(ctx)).
+		ConfigMaps(system.Namespace()).
 		Update(ctx, experimentalFeaturesCm, metav1.UpdateOptions{})
 	if err != nil {
 		panic("Cannot update the experimental features config map")
