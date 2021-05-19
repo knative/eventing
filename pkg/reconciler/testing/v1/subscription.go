@@ -23,7 +23,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -118,7 +117,7 @@ func WithSubscriptionLabels(labels map[string]string) SubscriptionOption {
 
 func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1.Subscription) {
-		s.Spec.Channel = corev1.ObjectReference{
+		s.Spec.Channel = duckv1.KReference{
 			APIVersion: apiVersion(gvk),
 			Kind:       gvk.Kind,
 			Name:       name,

@@ -21,7 +21,6 @@ import (
 
 	"knative.dev/pkg/kmeta"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -47,7 +46,7 @@ func NewSubscription(stepNumber int, s *v1.Sequence) *messagingv1.Subscription {
 			},
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				APIVersion: s.Spec.ChannelTemplate.APIVersion,
 				Kind:       s.Spec.ChannelTemplate.Kind,
 				Name:       SequenceChannelName(s.Name, stepNumber),

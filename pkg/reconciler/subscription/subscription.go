@@ -289,15 +289,15 @@ func (r *Reconciler) getSubStatus(subscription *v1.Subscription, channel *eventi
 	return eventingduckv1.SubscriberStatus{}, fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
 
-func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscription, ref corev1.ObjectReference) (runtime.Object, pkgreconciler.Event) {
+func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscription, ref duckv1.KReference) (runtime.Object, pkgreconciler.Event) {
 	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	if err := r.channelableTracker.TrackInNamespace(ctx, sub)(ref); err != nil {
+	if err := r.channelableTracker.TrackInNamespaceKReference(ctx, sub)(ref); err != nil {
 		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to spec.channel: %w", err)
 	}
-	chLister, err := r.channelableTracker.ListerFor(ref)
+	chLister, err := r.channelableTracker.ListerForKReference(ref)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
@@ -366,7 +366,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1.Subscription) (*eve
 			return nil, fmt.Errorf("channel is not ready.")
 		}
 
-		statCh := corev1.ObjectReference{Name: channel.Status.Channel.Name, Namespace: sub.Namespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
+		statCh := duckv1.KReference{Name: channel.Status.Channel.Name, Namespace: sub.Namespace, Kind: channel.Status.Channel.Kind, APIVersion: channel.Status.Channel.APIVersion}
 		obj, err = r.trackAndFetchChannel(ctx, sub, statCh)
 		if err != nil {
 			return nil, err

@@ -44,7 +44,7 @@ func NewSubscription(t *eventingv1.Trigger, brokerTrigger, brokerRef *corev1.Obj
 			Labels: SubscriptionLabels(t),
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				APIVersion: brokerTrigger.APIVersion,
 				Kind:       brokerTrigger.Kind,
 				Name:       brokerTrigger.Name,
