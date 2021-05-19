@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/common/log"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -143,7 +142,8 @@ func RunEventProber(ctx context.Context, log *zap.SugaredLogger, client *testlib
 // TODO(ksuszyns): Remove this func in next release
 // Deprecated: use NewRunner func instead.
 func AssertEventProber(ctx context.Context, t *testing.T, probe Prober) {
-	log.Warn("prober.AssertEventProber is deprecated. Use NewRunner instead.")
+	t.Log("WARN: prober.AssertEventProber is deprecated. " +
+		"Use NewRunner instead.")
 	p := probe.(*prober)
 	p.client.T = t
 	p.config.Ctx = ctx
