@@ -78,8 +78,10 @@ spec:
         image: ko://knative.dev/pkg/leaderelection/chaosduck
 
         args: [
-          # TODO(https://github.com/knative/eventing/issues/3590): Enable once IMC chaos issues are fixed.
-          "-disable=imc-controller", "-disable=imc-dispatcher",
+          # TODO(https://github.com/knative/eventing/issues/3590,
+          # https://github.com/knative/pkg/issues/1509): Enable once chaos
+          # issues are fixed.
+          "-disable=imc-controller", "-disable=imc-dispatcher", "-disable=eventing-webhook",
         ]
 
         env:
