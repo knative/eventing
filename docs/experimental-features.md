@@ -43,9 +43,9 @@ difference is that, at the end of the process, in the former case vendors are
 required to implement the feature in order to remain compliant, while in the
 latter case supporting the feature is optional.
 
-### Technical overview
+## Technical overview
 
-## Runtime feature gate
+### Runtime feature gate
 
 We store in a `ConfigMap` a map of enabled/disabled features. These are very
 similar to
@@ -60,7 +60,7 @@ variable of their knative setup.
 
 <!-- TODO add more details when the pr is merged-->
 
-## Strategies to add new APIs for experimental features
+### Strategies to add new APIs for experimental features
 
 There are three main **recommended** strategies to implement APIs for new
 features:
