@@ -387,39 +387,6 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			},
 		},
 		want: apis.ErrMissingField("reply.ref.name"),
-	}, {
-		name: "both api version and group are empty",
-		c: &SubscriptionSpec{
-			Channel:    getValidChannelRef(),
-			Subscriber: getValidDestination(),
-			Reply: &duckv1.Destination{
-				Ref: &duckv1.KReference{
-					Namespace:  namespace,
-					Name:       "abc",
-					Kind:       channelKind,
-				},
-			},
-		},
-		want: apis.ErrMissingField("reply.ref.apiVersion").Also(apis.ErrMissingField("reply.ref.group")),
-	}, {
-		name: "both api version and group are there",
-		c: &SubscriptionSpec{
-			Channel:    getValidChannelRef(),
-			Subscriber: getValidDestination(),
-			Reply: &duckv1.Destination{
-				Ref: &duckv1.KReference{
-					Namespace:  namespace,
-					Name:       "abc",
-					Kind:       channelKind,
-					Group: "myGroup",
-				},
-			},
-		},
-		want: &apis.FieldError{
-			Message: "both apiVersion and group are specified",
-			Paths:   []string{"reply.ref.apiVersion", "reply.ref.group"},
-			Details: "Only one of them must be specified",
-		},
 	}}
 
 	for _, test := range tests {

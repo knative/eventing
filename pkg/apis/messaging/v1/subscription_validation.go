@@ -18,7 +18,6 @@ package v1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -58,16 +57,12 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingSubscriber {
+		ctx := ctx
 		if true /* experimental feature enable */ {
-			// Special validation to enable the experimental feature.
-			// This logic is going to be moved back to Destination.Validate once the experimentation is done
-			if fe := validateDestinationWithGroupExperimentalFeatureEnabled(ctx, ss.Subscriber); fe != nil {
-				errs = errs.Also(fe.ViaField("subscriber"))
-			}
-		} else {
-			if fe := ss.Subscriber.Validate(ctx); fe != nil {
-				errs = errs.Also(fe.ViaField("subscriber"))
-			}
+			ctx = duckv1.KReferenceGroupAllowed(ctx)
+		}
+		if fe := ss.Subscriber.Validate(ctx); fe != nil {
+			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
 
@@ -105,68 +100,4 @@ func (s *Subscription) CheckImmutableFields(ctx context.Context, original *Subsc
 		}
 	}
 	return nil
-}
-
-func validateDestinationWithGroupExperimentalFeatureEnabled(ctx context.Context, dest *duckv1.Destination) *apis.FieldError {
-	ref := dest.Ref
-	uri := dest.URI
-	if ref == nil && uri == nil {
-		return apis.ErrGeneric("expected at least one, got none", "ref", "uri")
-	}
-
-	if ref != nil && uri != nil && uri.URL().IsAbs() {
-		return apis.ErrGeneric("Absolute URI is not allowed when Ref or [apiVersion, kind, name] is present", "[apiVersion, kind, name]", "ref", "uri")
-	}
-	// IsAbs() check whether the URL has a non-empty scheme. Besides the non-empty scheme, we also require uri has a non-empty host
-	if ref == nil && uri != nil && (!uri.URL().IsAbs() || uri.Host == "") {
-		return apis.ErrInvalidValue("Relative URI is not allowed when Ref and [apiVersion, kind, name] is absent", "uri")
-	}
-	if ref != nil && uri == nil {
-		return ref.Validate(ctx).ViaField("ref")
-	}
-	return nil
-}
-
-func validateKReferenceWithGroupExperimentalFeatureEnabled(ctx context.Context, kr *duckv1.KReference) *apis.FieldError {
-	var errs *apis.FieldError
-	if kr == nil {
-		return errs.Also(apis.ErrMissingField("name")).
-			Also(apis.ErrMissingField("apiVersion")).
-			Also(apis.ErrMissingField("kind"))
-	}
-	if kr.Name == "" {
-		errs = errs.Also(apis.ErrMissingField("name"))
-	}
-	if kr.APIVersion == "" && kr.Group == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion")).
-			Also(apis.ErrMissingField("group"))
-	}
-	if kr.APIVersion != "" && kr.Group != "" {
-		errs = errs.Also(&apis.FieldError{
-			Message: "both apiVersion and group are specified",
-			Paths:   []string{"apiVersion", "group"},
-			Details: "Only one of them must be specified",
-		})
-	}
-	if kr.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-	// Only if namespace is empty validate it. This is to deal with legacy
-	// objects in the storage that may now have the namespace filled in.
-	// Because things get defaulted in other cases, moving forward the
-	// kr.Namespace will not be empty.
-	if kr.Namespace != "" {
-		if !apis.IsDifferentNamespaceAllowed(ctx) {
-			parentNS := apis.ParentMeta(ctx).Namespace
-			if parentNS != "" && kr.Namespace != parentNS {
-				errs = errs.Also(&apis.FieldError{
-					Message: "mismatched namespaces",
-					Paths:   []string{"namespace"},
-					Details: fmt.Sprintf("parent namespace: %q does not match ref: %q", parentNS, kr.Namespace),
-				})
-			}
-		}
-	}
-
-	return errs
 }
