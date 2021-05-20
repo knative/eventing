@@ -179,3 +179,28 @@ func TestChannelDeadLetterSink(t *testing.T) {
 
 	env.Test(ctx, t, channel.DeadLetterSink())
 }
+
+/*
+TestEventTransformationForSubscription tests the following scenario:
+
+             1            2                 5            6                  7
+EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> Service(Logger)
+                                   |  ^
+                                 3 |  | 4
+                                   |  |
+                                   |  ---------
+                                   -----------> Service(Transformation)
+*/
+func TestEventTransformationForSubscriptionV1(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, channel.EventTransformation())
+}

@@ -17,12 +17,14 @@ limitations under the License.
 package channel
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
+	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
@@ -91,5 +93,56 @@ func DeadLetterSink() *feature.Feature {
 
 	f.Assert("dls receives events", assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
 
+	return f
+}
+
+func EventTransformation() *feature.Feature {
+	f := feature.NewFeature()
+	lib := feature.MakeRandomK8sName("lib")
+	channel1 := feature.MakeRandomK8sName("channel 1")
+	channel2 := feature.MakeRandomK8sName("channel 2")
+	prober := eventshub.NewProber()
+	prober.SetTargetResource(channel_impl.GVR(), channel1)
+
+	f.Setup("install events", eventlibrary.Install(lib))
+	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
+	f.Setup("register event expectation", func(ctx context.Context, t feature.T) {
+		if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
+			t.Fatalf("can not find event files: %v", err)
+		}
+	})
+
+	f.Setup("install sink", prober.ReceiverInstall("sink"))
+	f.Setup("install transform service", prober.ReceiverInstall("transform", eventshub.ReplyWithTransformedEvent("transformed", "transformer", "")))
+	f.Setup("install channel 1", channel_impl.Install(channel1))
+	f.Setup("install channel 2", channel_impl.Install(channel2))
+	f.Setup("install subscription 1", subscription.Install(feature.MakeRandomK8sName("subscription 1"),
+		subscription.WithChannel(channel_impl.AsRef(channel1)),
+		subscription.WithSubscriber(prober.AsKReference("transform"), ""),
+		subscription.WithReply(channel_impl.AsRef(channel2), ""),
+	))
+	f.Setup("install subscription 2", subscription.Install(feature.MakeRandomK8sName("subscription 2"),
+		subscription.WithChannel(channel_impl.AsRef(channel2)),
+		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
+	))
+	f.Setup("install source", prober.SenderInstall("source"))
+
+	f.Requirement("event library is ready", eventlibrary.IsReady(lib))
+	f.Requirement("channel 1 is ready", channel_impl.IsReady(channel1))
+	f.Requirement("channel 2 is ready", channel_impl.IsReady(channel2))
+	f.Requirement("sender is finished", prober.SenderDone("source"))
+
+	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
+	f.Assert("events have passed through transform service", func(ctx context.Context, t feature.T) {
+		events := prober.ReceivedBy(ctx, "sink")
+		if len(events) != 3 {
+			t.Errorf("expected 3 events, got %d", len(events))
+		}
+		for _, e := range events {
+			if e.Event.Type() != "transformed" {
+				t.Errorf(`expected event type to be "transformed", got %q`, e.Event.Type())
+			}
+		}
+	})
 	return f
 }
