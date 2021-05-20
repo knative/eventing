@@ -61,7 +61,7 @@ func (p *prober) deploySender() {
 					}},
 					Containers: []corev1.Container{{
 						Name:  "sender",
-						Image: pkgTest.ImagePath(senderName),
+						Image: p.config.ImageResolver(senderName),
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      p.config.ConfigMapName,
 							ReadOnly:  true,

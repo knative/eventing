@@ -23,14 +23,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
-
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // BrokerOption enables further configuration of a v1 Broker.
@@ -46,8 +44,12 @@ type SubscriptionOption func(*messagingv1.Subscription)
 type DeliveryOption func(*eventingduckv1beta1.DeliverySpec)
 
 // channelRef returns an ObjectReference for a given Channel name.
-func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
+func channelRef(name string, typemeta *metav1.TypeMeta) duckv1.KReference {
+	return duckv1.KReference{
+		Kind:       typemeta.Kind,
+		APIVersion: typemeta.APIVersion,
+		Name:       name,
+	}
 }
 
 func KnativeRefForService(name, namespace string) *duckv1.KReference {
@@ -124,7 +126,7 @@ func Subscription(
 			Name: name,
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: *channelRef(channelName, channelTypeMeta),
+			Channel: channelRef(channelName, channelTypeMeta),
 		},
 	}
 	for _, option := range options {

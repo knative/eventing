@@ -79,6 +79,6 @@ func defaultValues() *Config {
 			Message: "OK",
 			Status:  nethttp.StatusOK,
 		},
-		LogLevel: zap.InfoLevel,
+		LogLevel: zap.InfoLevel.String(),
 	}
 }

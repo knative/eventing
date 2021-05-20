@@ -17,69 +17,27 @@ limitations under the License.
 package v1
 
 import (
-	"reflect"
+	"context"
 
-	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-func isChannelEmpty(f corev1.ObjectReference) bool {
-	return equality.Semantic.DeepEqual(f, corev1.ObjectReference{})
+func isChannelEmpty(f duckv1.KReference) bool {
+	return equality.Semantic.DeepEqual(f, duckv1.KReference{})
 }
 
 // Valid if it is a valid object reference.
-func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
-	return IsValidObjectReference(f)
-}
+func isValidChannel(ctx context.Context, f duckv1.KReference) *apis.FieldError {
+	errs := f.Validate(ctx)
 
-func IsValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
-	return checkRequiredObjectReferenceFields(f).
-		Also(checkDisallowedObjectReferenceFields(f))
-}
-
-// Check the corev1.ObjectReference to make sure it has the required fields. They
-// are not checked for anything more except that they are set.
-func checkRequiredObjectReferenceFields(f corev1.ObjectReference) *apis.FieldError {
-	var errs *apis.FieldError
-	if f.Name == "" {
-		errs = errs.Also(apis.ErrMissingField("name"))
-	}
-	if f.APIVersion == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-	}
-	if f.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-	return errs
-}
-
-// Check the corev1.ObjectReference to make sure it only has the following fields set:
-// Name, Kind, APIVersion
-// If any other fields are set and is not the Zero value, returns an apis.FieldError
-// with the fieldpaths for all those fields.
-func checkDisallowedObjectReferenceFields(f corev1.ObjectReference) *apis.FieldError {
-	disallowedFields := []string{}
-	// See if there are any fields that have been set that should not be.
-	// TODO: Hoist this kind of stuff into pkg repository.
-	s := reflect.ValueOf(f)
-	typeOf := s.Type()
-	for i := 0; i < s.NumField(); i++ {
-		field := s.Field(i)
-		fieldName := typeOf.Field(i).Name
-		if fieldName == "Name" || fieldName == "Kind" || fieldName == "APIVersion" {
-			continue
-		}
-		if !cmp.Equal(field.Interface(), reflect.Zero(field.Type()).Interface()) {
-			disallowedFields = append(disallowedFields, fieldName)
-		}
-	}
-	if len(disallowedFields) > 0 {
-		fe := apis.ErrDisallowedFields(disallowedFields...)
+	// Namespace field is disallowed
+	if f.Namespace != "" {
+		fe := apis.ErrDisallowedFields("namespace")
 		fe.Details = "only name, apiVersion and kind are supported fields"
-		return fe
+		errs = errs.Also(fe)
 	}
-	return nil
 
+	return errs
 }

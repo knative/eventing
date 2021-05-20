@@ -18,13 +18,13 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/openzipkin/zipkin-go v0.2.5
-	github.com/pelletier/go-toml v1.8.0
+	github.com/pelletier/go-toml/v2 v2.0.0-beta.2
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
 	github.com/rickb777/date v1.13.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/fastuuid v1.2.0
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tsenart/vegeta/v12 v12.8.4
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.23.0
@@ -43,8 +43,8 @@ require (
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 	knative.dev/hack v0.0.0-20210428122153-93ad9129c268
 	knative.dev/hack/schema v0.0.0-20210428122153-93ad9129c268
-	knative.dev/pkg v0.0.0-20210510175900-4564797bf3b7
-	knative.dev/reconciler-test v0.0.0-20210512062647-d5adf72546be
+	knative.dev/pkg v0.0.0-20210518131015-67897f4ec290
+	knative.dev/reconciler-test v0.0.0-20210514214942-8d70771450f1
 	sigs.k8s.io/yaml v1.2.0
 )
 

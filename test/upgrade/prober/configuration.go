@@ -32,6 +32,7 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
@@ -80,9 +81,13 @@ type Config struct {
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
 	ConfigToml
+	ImageResolver
 	SystemUnderTest sut.SystemUnderTest
 	HealthEndpoint  string
 }
+
+// ImageResolver will resolve the container image for given component.
+type ImageResolver func(component string) string
 
 // ConfigToml represents options of wathola config toml file.
 type ConfigToml struct {
@@ -142,6 +147,7 @@ func newConfig(
 			ScaleToZero: true,
 		},
 		Wathola: Wathola{
+			ImageResolver: pkgTest.ImagePath,
 			ConfigToml: ConfigToml{
 				ConfigTemplate:   defaultConfigFilename,
 				ConfigMapName:    defaultConfigName,
