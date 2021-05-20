@@ -33,6 +33,7 @@ import (
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
+	pkgTest "knative.dev/pkg/test"
 )
 
 const (
@@ -70,10 +71,14 @@ type Config struct {
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
 	ConfigMap
+	ImageResolver
 	EventsTypePrefix string
 	HealthEndpoint   string
 	BrokerName       string
 }
+
+// ImageResolver will resolve the container image for given component.
+type ImageResolver func(component string) string
 
 // ConfigMap represents options of wathola config toml file.
 type ConfigMap struct {
@@ -106,6 +111,7 @@ func NewConfig(namespace string) *Config {
 			ScaleToZero: true,
 		},
 		Wathola: Wathola{
+			ImageResolver: pkgTest.ImagePath,
 			ConfigMap: ConfigMap{
 				ConfigTemplate:   defaultConfigFilename,
 				ConfigMapName:    defaultConfigName,

@@ -30,7 +30,7 @@ import (
 
 func TestReceiverMain(t *testing.T) {
 	port := freeport.GetPort()
-	config.Instance.LogLevel = zapcore.DebugLevel
+	config.Instance.LogLevel = zapcore.DebugLevel.String()
 	config.Instance.Receiver.Port = port
 	go main()
 	time.Sleep(time.Millisecond)
