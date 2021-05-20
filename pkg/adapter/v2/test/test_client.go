@@ -86,6 +86,10 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 		return errors.New("totally not an http result")
 	} else if eventData.Type == "unit.sendFail" {
 		return http.NewResult(400, "%w", protocol.ResultNACK)
+	} else if eventData.Type == "unit.nonHttpRetry" {
+		var attempts []protocol.Result
+		attempts = append(attempts, errors.New("totally not an http result"))
+		return http.NewRetriesResult(http.NewResult(200, "%w", protocol.ResultACK), 1, time.Now(), attempts)
 	}
 	return http.NewResult(200, "%w", protocol.ResultACK)
 }

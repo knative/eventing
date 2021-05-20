@@ -64,11 +64,13 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 		timeout        int
 		wantErr        bool
 		wantRetryCount bool
+		wantEventCount int
 	}{
 		"timeout": {timeout: 13},
 		"none":    {},
 		"send": {
-			event: demoEvent(),
+			event:          demoEvent(),
+			wantEventCount: 1,
 		},
 		"send with retries": {
 			event: func() *cloudevents.Event {
@@ -79,12 +81,14 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				return &event
 			}(),
 			wantRetryCount: true,
+			wantEventCount: 1,
 		},
 		"send with ceOverrides": {
 			event: demoEvent(),
 			ceOverrides: &duckv1.CloudEventOverrides{Extensions: map[string]string{
 				"foo": "bar",
 			}},
+			wantEventCount: 1,
 		},
 		"send fails": {
 			event: func() *cloudevents.Event {
@@ -94,7 +98,8 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				event.SetType("unit.sendFail")
 				return &event
 			}(),
-			wantErr: true,
+			wantErr:        true,
+			wantEventCount: 1,
 		},
 		"not a http result": {
 			event: func() *cloudevents.Event {
@@ -104,7 +109,19 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				event.SetType("unit.wantErr")
 				return &event
 			}(),
-			wantErr: true,
+			wantErr:        true,
+			wantEventCount: 1,
+		},
+		"retry that is not a http result": {
+			event: func() *cloudevents.Event {
+				event := cloudevents.NewEvent()
+				event.SetID("abc-123")
+				event.SetSource("unit/test")
+				event.SetType("unit.nonHttpRetry")
+				return &event
+			}(),
+			wantErr:        false,
+			wantEventCount: 2,
 		},
 	}
 
@@ -181,7 +198,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, got.reporter, 1, tc.wantRetryCount)
+				validateMetric(t, got.reporter, tc.wantEventCount, tc.wantRetryCount)
 			} else {
 				validateNotSent(t, innerClient)
 			}
