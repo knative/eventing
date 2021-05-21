@@ -202,6 +202,7 @@ func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudeve
 
 	request, err := h.Sender.NewCloudEventRequestWithTarget(ctx, target)
 	if err != nil {
+		h.Logger.Error("failed to create event request.", zap.Error(err))
 		return http.StatusInternalServerError, noDuration
 	}
 
@@ -211,6 +212,7 @@ func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudeve
 	additionalHeaders := utils.PassThroughHeaders(headers)
 	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, request, additionalHeaders)
 	if err != nil {
+		h.Logger.Error("failed to write request additionalHeaders.", zap.Error(err))
 		return http.StatusInternalServerError, noDuration
 	}
 
@@ -219,6 +221,7 @@ func (h *Handler) send(ctx context.Context, headers http.Header, event *cloudeve
 		defer resp.Body.Close()
 	}
 	if err != nil {
+		h.Logger.Error("failed to dispatch event", zap.Error(err))
 		return http.StatusInternalServerError, dispatchTime
 	}
 
