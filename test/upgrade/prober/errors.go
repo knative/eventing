@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package upgrade
+package prober
 
-import (
-	"knative.dev/eventing/test/upgrade/prober"
-	pkgupgrade "knative.dev/pkg/test/upgrade"
-)
-
-// ContinualTest will perform a continual validation of Eventing SUT.
-func ContinualTest() pkgupgrade.BackgroundOperation {
-	return prober.NewContinualVerification("EventingContinualTest",
-		prober.ContinualVerificationOptions{})
+func (p *prober) ensureNoError(err error) {
+	if err != nil {
+		p.client.T.Fatal(err)
+	}
 }

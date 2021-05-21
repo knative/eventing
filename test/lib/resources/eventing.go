@@ -242,21 +242,30 @@ func WithDependencyAnnotationTrigger(dependencyAnnotation string) TriggerOption 
 
 // WithSubscriberServiceRefForTrigger returns an option that adds a Subscriber Knative Service Ref for the given v1 Trigger.
 func WithSubscriberServiceRefForTrigger(name string) TriggerOption {
-	return func(t *eventingv1.Trigger) {
-		if name != "" {
-			t.Spec.Subscriber = duckv1.Destination{
-				Ref: KnativeRefForService(name, t.Namespace),
-			}
+	return WithSubscriberDestination(func(t *eventingv1.Trigger) duckv1.Destination {
+		return duckv1.Destination{
+			Ref: KnativeRefForService(name, t.Namespace),
 		}
-	}
+	})
 }
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given v1 Trigger.
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
-	apisURI, _ := apis.ParseURL(uri)
-	return func(t *eventingv1.Trigger) {
-		t.Spec.Subscriber = duckv1.Destination{
+	return WithSubscriberDestination(func(t *eventingv1.Trigger) duckv1.Destination {
+		apisURI, _ := apis.ParseURL(uri)
+		return duckv1.Destination{
 			URI: apisURI,
+		}
+	})
+}
+
+// WithSubscriberDestination returns an option that adds a Subscriber for given
+// duckv1.Destination.
+func WithSubscriberDestination(destFactory func(t *eventingv1.Trigger) duckv1.Destination) TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		dest := destFactory(t)
+		if dest.Ref != nil || dest.URI != nil {
+			t.Spec.Subscriber = dest
 		}
 	}
 }

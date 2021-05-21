@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,8 +41,8 @@ const (
 )
 
 // Verify will verify prober state after finished has been sent.
-func (p *prober) Verify(ctx context.Context) (eventErrs []error, eventsSent int, fetchErr error) {
-	report := p.fetchReport(ctx)
+func (p *prober) Verify() (eventErrs []error, eventsSent int) {
+	report := p.fetchReport()
 	availRate := 0.0
 	if report.TotalRequests != 0 {
 		availRate = float64(report.EventsSent*100) / float64(report.TotalRequests)
@@ -53,7 +52,7 @@ func (p *prober) Verify(ctx context.Context) (eventErrs []error, eventsSent int,
 	p.log.Infof("Availability: %.3f%%, Requests sent: %d.",
 		availRate, report.TotalRequests)
 	if report.State == "active" {
-		return nil, report.EventsSent, errors.New("report fetched too early, receiver is in active state")
+		p.client.T.Fatal("report fetched too early, receiver is in active state")
 	}
 	for _, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
@@ -71,16 +70,16 @@ func (p *prober) Verify(ctx context.Context) (eventErrs []error, eventsSent int,
 			eventErrs = append(eventErrs, errors.New(t))
 		}
 	}
-	return eventErrs, report.EventsSent, nil
+	return eventErrs, report.EventsSent
 }
 
 // Finish terminates sender which sends finished event.
-func (p *prober) Finish(ctx context.Context) {
-	p.removeSender(ctx)
+func (p *prober) Finish() {
+	p.removeSender()
 }
 
-func (p *prober) fetchReport(ctx context.Context) *receiver.Report {
-	exec := p.fetchExecution(ctx)
+func (p *prober) fetchReport() *receiver.Report {
+	exec := p.fetchExecution()
 	replayLogs(p.log, exec)
 	return exec.Report
 }
@@ -100,14 +99,14 @@ func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
 	}
 }
 
-func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
-	ns := p.config.Namespace
-	job := p.deployFetcher(ctx)
-	defer p.deleteFetcher(ctx)
-	pod, err := p.findSucceededPod(ctx, job)
-	ensure.NoError(err)
-	bytes, err := pkgTest.PodLogs(ctx, p.client.Kube, pod.Name, fetcherName, ns)
-	ensure.NoError(err)
+func (p *prober) fetchExecution() *fetcher.Execution {
+	ns := p.client.Namespace
+	job := p.deployFetcher()
+	defer p.deleteFetcher()
+	pod, err := p.findSucceededPod(job)
+	p.ensureNoError(err)
+	bytes, err := pkgTest.PodLogs(p.config.Ctx, p.client.Kube, pod.Name, fetcherName, ns)
+	p.ensureNoError(err)
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
@@ -123,13 +122,13 @@ func (p *prober) fetchExecution(ctx context.Context) *fetcher.Execution {
 		},
 	}
 	err = json.Unmarshal(bytes, ex)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	return ex
 }
 
-func (p *prober) deployFetcher(ctx context.Context) *batchv1.Job {
+func (p *prober) deployFetcher() *batchv1.Job {
 	p.log.Info("Deploying fetcher job: ", fetcherName)
-	jobs := p.client.Kube.BatchV1().Jobs(p.config.Namespace)
+	jobs := p.client.Kube.BatchV1().Jobs(p.client.Namespace)
 	var replicas int32 = 1
 	fetcherJob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -170,28 +169,28 @@ func (p *prober) deployFetcher(ctx context.Context) *batchv1.Job {
 			},
 		},
 	}
-	created, err := jobs.Create(ctx, fetcherJob, metav1.CreateOptions{})
-	ensure.NoError(err)
+	created, err := jobs.Create(p.config.Ctx, fetcherJob, metav1.CreateOptions{})
+	p.ensureNoError(err)
 	p.log.Info("Waiting for fetcher job to succeed: ", fetcherName)
-	err = waitForJobToComplete(ctx, p.client.Kube, fetcherName, p.config.Namespace)
-	ensure.NoError(err)
+	err = waitForJobToComplete(p.config.Ctx, p.client.Kube, fetcherName, p.client.Namespace)
+	p.ensureNoError(err)
 
 	return created
 }
 
-func (p *prober) deleteFetcher(ctx context.Context) {
-	ns := p.config.Namespace
+func (p *prober) deleteFetcher() {
+	ns := p.client.Namespace
 	jobs := p.client.Kube.BatchV1().Jobs(ns)
-	err := jobs.Delete(ctx, fetcherName, metav1.DeleteOptions{})
-	ensure.NoError(err)
+	err := jobs.Delete(p.config.Ctx, fetcherName, metav1.DeleteOptions{})
+	p.ensureNoError(err)
 }
 
-func (p *prober) findSucceededPod(ctx context.Context, job *batchv1.Job) (*corev1.Pod, error) {
+func (p *prober) findSucceededPod(job *batchv1.Job) (*corev1.Pod, error) {
 	pods := p.client.Kube.CoreV1().Pods(job.Namespace)
-	podList, err := pods.List(ctx, metav1.ListOptions{
+	podList, err := pods.List(p.config.Ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprint("job-name=", job.Name),
 	})
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	for _, pod := range podList.Items {
 		if pod.Status.Phase == corev1.PodSucceeded {
 			return &pod, nil

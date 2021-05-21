@@ -20,68 +20,77 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"runtime"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/pkg/apis"
+	"knative.dev/eventing/test/upgrade/prober/sut"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
+	pkgupgrade "knative.dev/pkg/test/upgrade"
 )
 
 const (
-	defaultConfigName          = "wathola-config"
-	defaultConfigHomedirPath   = ".config/wathola"
-	defaultHomedir             = "/home/nonroot"
-	defaultConfigFilename      = "config.toml"
-	defaultWatholaEventsPrefix = "com.github.cardil.wathola"
-	defaultBrokerName          = "default"
-	defaultHealthEndpoint      = "/healthz"
-	defaultFinishedSleep       = 5 * time.Second
+	defaultConfigName        = "wathola-config"
+	defaultConfigHomedirPath = ".config/wathola"
+	defaultHomedir           = "/home/nonroot"
+	defaultConfigFilename    = "config.toml"
+	defaultHealthEndpoint    = "/healthz"
+	defaultFinishedSleep     = 5 * time.Second
 
 	Silence DuplicateAction = "silence"
 	Warn    DuplicateAction = "warn"
 	Error   DuplicateAction = "error"
+
+	prefix = "eventing_upgrade_tests"
+
+	// TODO(ksuszyns): Remove this val in next release
+	// Deprecated: use 'eventing_upgrade_tests' prefix instead
+	deprecatedPrefix = "e2e_upgrade_tests"
 )
 
 // DuplicateAction is the action to take in case of duplicated events
 type DuplicateAction string
 
-var eventTypes = []string{"step", "finished"}
-
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Namespace     string
 	Interval      time.Duration
 	FinishedSleep time.Duration
 	Serving       ServingConfig
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
-	BrokerOpts    []resources.BrokerOption
+	Ctx           context.Context
+	// BrokerOpts holds opts for broker.
+	// TODO(ksuszyns): Remove this opt in next release
+	// Deprecated: use Wathola.SystemUnderTest instead.
+	BrokerOpts []resources.BrokerOption
+	// Namespace holds namespace in which test is about to be executed.
+	// TODO(ksuszyns): Remove this opt in next release
+	// Deprecated: namespace is about to be taken from testlib.Client created by
+	// NewRunner
+	Namespace string
 }
 
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
-	ConfigMap
+	ConfigToml
 	ImageResolver
-	EventsTypePrefix string
-	HealthEndpoint   string
-	BrokerName       string
+	SystemUnderTest sut.SystemUnderTest
+	HealthEndpoint  string
 }
 
 // ImageResolver will resolve the container image for given component.
 type ImageResolver func(component string) string
 
-// ConfigMap represents options of wathola config toml file.
-type ConfigMap struct {
+// ConfigToml represents options of wathola config toml file.
+type ConfigToml struct {
 	// ConfigTemplate is a template file that will be compiled to the configmap
 	ConfigTemplate   string
 	ConfigMapName    string
@@ -95,123 +104,130 @@ type ServingConfig struct {
 	ScaleToZero bool
 }
 
+// NewConfigOrFail will create a prober.Config or fail trying.
+func NewConfigOrFail(c pkgupgrade.Context) *Config {
+	errSink := func(err error) {
+		c.T.Fatal(err)
+	}
+	warnf := c.Log.Warnf
+	return newConfig(errSink, warnf)
+}
+
 // NewConfig creates a new configuration object with default values filled in.
 // Values can be influenced by kelseyhightower/envconfig with
-// `e2e_upgrade_tests` prefix.
-func NewConfig(namespace string) *Config {
+// `eventing_upgrade_tests` prefix.
+// TODO(ksuszyns): Remove this func in next release
+// Deprecated: use NewContinualVerification or NewConfigOrFail
+func NewConfig(namespace ...string) *Config {
+	errSink := func(err error) {
+		ensure.NoError(err)
+	}
+	warnf := func(template string, args ...interface{}) {
+		_, err := fmt.Fprintf(os.Stderr, template, args)
+		ensure.NoError(err)
+	}
+	config := newConfig(errSink, warnf)
+	if len(namespace) > 0 {
+		config.Namespace = strings.Join(namespace, ",")
+	}
+	return config
+}
+
+func newConfig(
+	errSink func(err error), warnf func(template string, args ...interface{}),
+) *Config {
 	config := &Config{
-		Namespace:     "",
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
 		OnDuplicate:   Warn,
-		BrokerOpts:    make([]resources.BrokerOption, 0),
+		Ctx:           context.Background(),
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,
 		},
 		Wathola: Wathola{
 			ImageResolver: pkgTest.ImagePath,
-			ConfigMap: ConfigMap{
+			ConfigToml: ConfigToml{
 				ConfigTemplate:   defaultConfigFilename,
 				ConfigMapName:    defaultConfigName,
 				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
 				ConfigFilename:   defaultConfigFilename,
 			},
-			EventsTypePrefix: defaultWatholaEventsPrefix,
-			HealthEndpoint:   defaultHealthEndpoint,
-			BrokerName:       defaultBrokerName,
+			HealthEndpoint:  defaultHealthEndpoint,
+			SystemUnderTest: sut.NewDefault(),
 		},
 	}
 
-	// FIXME: remove while fixing https://github.com/knative/eventing/issues/2665
-	config.FailOnErrors = false
+	if err := envconfig.Process(prefix, config); err != nil {
+		errSink(err)
+	}
 
-	err := envconfig.Process("e2e_upgrade_tests", config)
-	ensure.NoError(err)
-	config.Namespace = namespace
+	// TODO(ksuszyns): Remove this block in next release
+	for _, enventry := range os.Environ() {
+		if strings.HasPrefix(strings.ToLower(enventry), deprecatedPrefix) {
+			warnf(
+				"DEPRECATED: using deprecated '%s' prefix. Use '%s' instead.",
+				deprecatedPrefix, prefix)
+			if err := envconfig.Process(deprecatedPrefix, config); err != nil {
+				errSink(err)
+			}
+			break
+		}
+	}
 	return config
 }
 
 func (p *prober) deployConfiguration() {
-	p.deployBroker()
-	p.deployConfigMap()
-	p.deployTriggers()
-}
-
-func (p *prober) deployBroker() {
-	p.client.CreateBrokerOrFail(p.config.BrokerName, p.config.BrokerOpts...)
-}
-
-func (p *prober) fetchBrokerURL() (*apis.URL, error) {
-	namespace := p.config.Namespace
-	p.log.Debugf("Fetching %s broker URL for ns %s",
-		p.config.BrokerName, namespace)
-	meta := resources.NewMetaResource(
-		p.config.BrokerName, p.config.Namespace, testlib.BrokerTypeMeta,
-	)
-	err := duck.WaitForResourceReady(p.client.Dynamic, meta)
-	if err != nil {
-		return nil, err
+	sc := sut.Context{
+		Ctx:    p.config.Ctx,
+		Log:    p.log,
+		Client: p.client,
 	}
-	broker, err := p.client.Eventing.EventingV1().Brokers(namespace).Get(
-		context.Background(), p.config.BrokerName, metav1.GetOptions{},
-	)
-	if err != nil {
-		return nil, err
+	ref := resources.KnativeRefForService(receiverName, p.client.Namespace)
+	if p.config.Serving.Use {
+		ref = resources.KnativeRefForKservice(forwarderName, p.client.Namespace)
 	}
-	url := broker.Status.Address.URL
-	p.log.Debugf("%s broker URL for ns %s is %v",
-		p.config.BrokerName, namespace, url)
-	return url, nil
+	dest := duckv1.Destination{Ref: ref}
+	s := p.config.SystemUnderTest
+	endpoint := s.Deploy(sc, dest)
+	p.client.Cleanup(func() {
+		if tr, ok := s.(sut.HasTeardown); ok {
+			tr.Teardown(sc)
+		}
+	})
+	p.deployConfigToml(endpoint)
 }
 
-func (p *prober) deployConfigMap() {
+func (p *prober) deployConfigToml(endpoint interface{}) {
 	name := p.config.ConfigMapName
-	p.log.Infof("Deploying config map: \"%s/%s\"", p.config.Namespace, name)
-	brokerURL, err := p.fetchBrokerURL()
-	ensure.NoError(err)
-	configData := p.compileTemplate(p.config.ConfigTemplate, brokerURL)
-	p.client.CreateConfigMapOrFail(name, p.config.Namespace, map[string]string{
+	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
+	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint)
+	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
 
-func (p *prober) deployTriggers() {
-	for _, eventType := range eventTypes {
-		name := fmt.Sprintf("wathola-trigger-%v", eventType)
-		fullType := fmt.Sprintf("%v.%v", p.config.EventsTypePrefix, eventType)
-		subscriberOption := resources.WithSubscriberServiceRefForTrigger(receiverName)
-		if p.config.Serving.Use {
-			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
-		}
-		p.client.CreateTriggerOrFail(name,
-			resources.WithBroker(p.config.BrokerName),
-			resources.WithAttributesTriggerFilter(
-				eventingv1.TriggerAnyFilter,
-				fullType,
-				map[string]interface{}{},
-			),
-			subscriberOption,
-		)
-	}
-}
-
-func (p *prober) compileTemplate(templateName string, brokerURL fmt.Stringer) string {
+func (p *prober) compileTemplate(templateName string, endpoint interface{}) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
-	ensure.NoError(err)
+	p.ensureNoError(err)
 	var buff bytes.Buffer
 	data := struct {
 		*Config
+		Namespace string
+		// Deprecated: use Endpoint
 		BrokerURL string
+		Endpoint  interface{}
 	}{
 		p.config,
-		brokerURL.String(),
+		p.client.Namespace,
+		fmt.Sprintf("%v", endpoint),
+		endpoint,
 	}
-	ensure.NoError(tmpl.Execute(&buff, data))
+	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()
 }

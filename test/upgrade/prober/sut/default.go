@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package upgrade
+package sut
 
-import (
-	"knative.dev/eventing/test/upgrade/prober"
-	pkgupgrade "knative.dev/pkg/test/upgrade"
-)
-
-// ContinualTest will perform a continual validation of Eventing SUT.
-func ContinualTest() pkgupgrade.BackgroundOperation {
-	return prober.NewContinualVerification("EventingContinualTest",
-		prober.ContinualVerificationOptions{})
+// NewDefault will return a default SUT for this repo.
+func NewDefault() SystemUnderTest {
+	return NewBrokerAndTriggers()
 }
