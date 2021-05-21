@@ -181,8 +181,9 @@ func (c *client) reportMetrics(ctx context.Context, event cloudevents.Event, res
 			var res *http.Result
 			if !cloudevents.ResultAs(retryResult, &res) {
 				c.reportError(reportArgs, result)
+			} else {
+				c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode)
 			}
-			c.reporter.ReportRetryEventCount(reportArgs, res.StatusCode)
 		}
 	}
 }
