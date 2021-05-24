@@ -19,12 +19,18 @@ package kreference_group
 import (
 	"context"
 
+	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/resources/channel"
+	"knative.dev/eventing/test/rekt/resources/subscription"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
@@ -33,12 +39,19 @@ import (
 func ChannelToChannel() *feature.Feature {
 	f := feature.NewFeature()
 
+	imcGVK := (&messagingv1.InMemoryChannel{}).GetGroupVersionKind()
+	imcGVR, _ := meta.UnsafeGuessKindToResource(imcGVK)
+	imcGroup := imcGVK.GroupKind().Group
+	imcAPIVersion, imcKind := imcGVK.ToAPIVersionAndKind()
+
 	channelAName := feature.MakeRandomK8sName("channel-a")
 	channelBName := feature.MakeRandomK8sName("channel-b")
 	subAToBName := feature.MakeRandomK8sName("sub-a-b")
 	subBToSinkName := feature.MakeRandomK8sName("sub-b-sink")
 	sinkName := feature.MakeRandomK8sName("sink")
 	sourceName := feature.MakeRandomK8sName("source")
+
+	ev := cetest.FullEvent()
 
 	f.Setup("install sink", eventshub.Install(
 		sinkName,
@@ -47,7 +60,7 @@ func ChannelToChannel() *feature.Feature {
 
 	f.Setup("Install channel A", installInMemoryChannel(channelAName))
 	f.Setup("Install channel B", installInMemoryChannel(channelBName))
-	f.Setup("Install channel B -> sink subscription", func(ctx context.Context, t feature.T) {
+	f.Setup("Install channel A -> channel B subscription", func(ctx context.Context, t feature.T) {
 		namespace := environment.FromContext(ctx).Namespace()
 		_, err := eventingclient.Get(ctx).MessagingV1().Subscriptions(namespace).Create(ctx,
 			&messagingv1.Subscription{
@@ -56,11 +69,66 @@ func ChannelToChannel() *feature.Feature {
 					Namespace: namespace,
 				},
 				Spec: messagingv1.SubscriptionSpec{
-					Channel:
+					Channel: duckv1.KReference{
+						APIVersion: imcAPIVersion,
+						Kind: imcKind,
+						Namespace: namespace,
+						Name: channelAName,
+					},
+					Subscriber: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Group: imcGroup,
+							Kind: imcKind,
+							Namespace: namespace,
+							Name: channelBName,
+						},
+					},
 				},
 			}, metav1.CreateOptions{})
 		require.NoError(t, err)
 	})
+	f.Setup("Install channel B -> sink subscription", func(ctx context.Context, t feature.T) {
+		namespace := environment.FromContext(ctx).Namespace()
+		_, err := eventingclient.Get(ctx).MessagingV1().Subscriptions(namespace).Create(ctx,
+			&messagingv1.Subscription{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: subBToSinkName,
+					Namespace: namespace,
+				},
+				Spec: messagingv1.SubscriptionSpec{
+					Channel: duckv1.KReference{
+						APIVersion: imcAPIVersion,
+						Kind: imcKind,
+						Namespace: namespace,
+						Name: channelBName,
+					},
+					Subscriber: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1",
+							Kind: "Service",
+							Namespace: namespace,
+							Name: sinkName,
+						},
+					},
+				},
+			}, metav1.CreateOptions{})
+		require.NoError(t, err)
+	})
+
+	f.Setup("channel A is ready", channel.IsReady(channelAName))
+	f.Setup("channel B is ready", channel.IsReady(channelBName))
+	f.Setup("subscription A -> B is ready", subscription.IsReady(subAToBName))
+	f.Setup("subscription B -> Sink is ready", subscription.IsReady(subBToSinkName))
+
+	f.Setup("install source", eventshub.Install(
+		sourceName,
+		eventshub.StartSenderToResource(imcGVR, channelAName),
+		eventshub.InputEvent(ev),
+	))
+
+	f.Assert("receive event", assert.OnStore(sinkName).MatchEvent(cetest.IsEqualTo(ev)).Exact(1))
+
+	return f
 }
 
 func installInMemoryChannel(channelName string) feature.StepFn {
