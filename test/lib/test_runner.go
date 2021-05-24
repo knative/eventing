@@ -214,7 +214,7 @@ func TearDown(client *Client) {
 
 	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
 	// which will then be uploaded to GCS after the test job finishes.
-	if prow.IsCI() {
+	if prow.IsCI() && client.T.Failed() {
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), podLogsDir)
 		client.T.Logf("Export logs in %q to %q", client.Namespace, dir)
 		if err := client.ExportLogs(dir); err != nil {
