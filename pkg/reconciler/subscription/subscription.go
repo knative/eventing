@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/pkg/apis/experimental"
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -207,7 +208,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		}
 
 		// Resolve the group
-		if subscriber.Ref != nil && true /* TODO feature enabled */ {
+		if subscriber.Ref != nil && experimental.FromContext(ctx).IsEnabled(experimental.KReferenceGroup) {
 			err := subscriber.Ref.ResolveGroup(r.crdLister)
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
