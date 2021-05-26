@@ -53,12 +53,21 @@ similar to
 and
 [Knative Serving feature flags](https://github.com/knative/serving/blob/master/pkg/apis/config/features.go).
 When the feature is implemented, we provide a Golang API to check if the feature
-is enabled or not, like `experimental.FromContext(ctx).IsEnabled(featureName)`.
+is enabled or not: [`experimental.FromContext(ctx).IsEnabled(featureName)`](../pkg/apis/experimental).
 
 The user can easily enable the features modifying a config map/environment
-variable of their knative setup.
+variable of their knative setup:
 
-<!-- TODO add more details when the pr is merged-->
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-experimental-features
+  namespace: knative-eventing
+data:
+  my-fancy-feature: false
+  another-cool-feature: true
+```
 
 ### Strategies to add new APIs for experimental features
 
@@ -72,13 +81,13 @@ features:
   should not be specified, and `x-kubernetes-preserve-unknown-fields` should be
   used instead. Then, in the webhook, you can reject resources with fields
   related to experimental features when validating the input CR using
-  [experimental.ValidateAPIFields()](https://github.com/knative/eventing/blob/917f57f0e68abbd0256c5fa4bff1ce2e83ffe78b/pkg/apis/experimental/api_validation.go#L13)
+  [`experimental.ValidateAPIFields()`](../pkg/apis/experimental/api_validation.go)
 - Alternative to the above approach, if the feature affects a whole resource,
   and the API is a single value, that is not an object or an array of values,
   use an annotation. Then, in the webhook, you can reject resources with
   annotations related to experimental features when validating the input CR
   using
-  [experimental.ValidateAnnotations()](https://github.com/knative/eventing/blob/917f57f0e68abbd0256c5fa4bff1ce2e83ffe78b/pkg/apis/experimental/api_validation.go#L38).
+  [`experimental.ValidateAnnotations()`](../pkg/apis/experimental/api_validation.go).
   This approach is not suggested in case adding an API field is doable as
   described above, but there might be some situations when this is not possible,
   where an annotation is more suited as the feature API. For example:
