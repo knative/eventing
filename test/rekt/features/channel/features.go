@@ -101,6 +101,8 @@ func EventTransformation() *feature.Feature {
 	lib := feature.MakeRandomK8sName("lib")
 	channel1 := feature.MakeRandomK8sName("channel 1")
 	channel2 := feature.MakeRandomK8sName("channel 2")
+	subscription1 := feature.MakeRandomK8sName("subscription 1")
+	subscription2 := feature.MakeRandomK8sName("subscription 2")
 	prober := eventshub.NewProber()
 	prober.SetTargetResource(channel_impl.GVR(), channel1)
 
@@ -116,20 +118,22 @@ func EventTransformation() *feature.Feature {
 	f.Setup("install transform service", prober.ReceiverInstall("transform", eventshub.ReplyWithTransformedEvent("transformed", "transformer", "")))
 	f.Setup("install channel 1", channel_impl.Install(channel1))
 	f.Setup("install channel 2", channel_impl.Install(channel2))
-	f.Setup("install subscription 1", subscription.Install(feature.MakeRandomK8sName("subscription 1"),
+	f.Setup("install subscription 1", subscription.Install(subscription1,
 		subscription.WithChannel(channel_impl.AsRef(channel1)),
 		subscription.WithSubscriber(prober.AsKReference("transform"), ""),
 		subscription.WithReply(channel_impl.AsRef(channel2), ""),
 	))
-	f.Setup("install subscription 2", subscription.Install(feature.MakeRandomK8sName("subscription 2"),
+	f.Setup("install subscription 2", subscription.Install(subscription2,
 		subscription.WithChannel(channel_impl.AsRef(channel2)),
 		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
 	))
+	f.Setup("subscription 1 is ready", subscription.IsReady(subscription1))
+	f.Setup("subscription 2 is ready", subscription.IsReady(subscription2))
+	f.Setup("channel 1 is ready", channel_impl.IsReady(channel1))
+	f.Setup("channel 2 is ready", channel_impl.IsReady(channel2))
 	f.Setup("install source", prober.SenderInstall("source"))
+	f.Setup("event library is ready", eventlibrary.IsReady(lib))
 
-	f.Requirement("event library is ready", eventlibrary.IsReady(lib))
-	f.Requirement("channel 1 is ready", channel_impl.IsReady(channel1))
-	f.Requirement("channel 2 is ready", channel_impl.IsReady(channel2))
 	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
