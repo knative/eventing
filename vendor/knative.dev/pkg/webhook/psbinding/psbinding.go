@@ -47,7 +47,7 @@ import (
 	certresources "knative.dev/pkg/webhook/certificates/resources"
 )
 
-// ReconcilerOptions is a function to modify the Reconciler.
+// ReconcilerOption is a function to modify the Reconciler.
 type ReconcilerOption func(*Reconciler)
 
 // WithSelector specifies the selector for the webhook.
