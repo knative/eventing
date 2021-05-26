@@ -29,6 +29,7 @@ jobs:
         - ./test/rekt/...
         - ./test/e2e
         - ./test/conformance
+        - ./test/experimental
 
         # Map between K8s and KinD versions.
         # This is attempting to make it a bit clearer what's being tested.
