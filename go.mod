@@ -8,7 +8,7 @@ require (
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
 	github.com/cloudevents/sdk-go/v2 v2.4.1
 	github.com/golang/protobuf v1.5.2
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/google/gofuzz v1.2.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
 	github.com/google/uuid v1.2.0
@@ -33,7 +33,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 	k8s.io/api v0.19.7
 	k8s.io/apiextensions-apiserver v0.19.7
@@ -43,8 +43,8 @@ require (
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 	knative.dev/hack v0.0.0-20210428122153-93ad9129c268
 	knative.dev/hack/schema v0.0.0-20210428122153-93ad9129c268
-	knative.dev/pkg v0.0.0-20210518131015-67897f4ec290
-	knative.dev/reconciler-test v0.0.0-20210514214942-8d70771450f1
+	knative.dev/pkg v0.0.0-20210525142738-ea766de6bdd1
+	knative.dev/reconciler-test v0.0.0-20210520170117-ffe49e0e092f
 	sigs.k8s.io/yaml v1.2.0
 )
 
