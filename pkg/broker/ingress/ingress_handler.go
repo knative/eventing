@@ -135,7 +135,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	// run validation for the extracted event
 	validationErr := event.Validate()
 	if validationErr != nil {
-		h.Logger.Warn("failed to validate extractd event", zap.Error(validationErr))
+		h.Logger.Warn("failed to validate extracted event", zap.Error(validationErr))
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}

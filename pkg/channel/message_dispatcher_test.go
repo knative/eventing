@@ -626,6 +626,73 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			lastReceiver: "deadLetter",
 		},
+		"invalid characters in failed response body": {
+			sendToDestination: true,
+			hasDeadLetterSink: true,
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"traceparent":    {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			expectedDeadLetterRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":        {"id123"},
+					"knative-1":           {"knative-1-value"},
+					"knative-2":           {"knative-2-value"},
+					"traceparent":         {"ignored-value-header"},
+					"ce-abc":              {`"ce-abc-value"`},
+					"ce-knativeerrorcode": {strconv.Itoa(http.StatusBadRequest)},
+					"ce-knativeerrordata": {"destination multi-line response"},
+					"ce-id":               {"ignored-value-header"},
+					"ce-time":             {"2002-10-02T15:00:00Z"},
+					"ce-source":           {testCeSource},
+					"ce-type":             {testCeType},
+					"ce-specversion":      {cloudevents.VersionV1},
+				},
+				Body: `"destination"`,
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination\n multi-line\n response")),
+			},
+			fakeDeadLetterResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {`"new-ce-abc-value"`},
+					"ce-id":              {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
+					"ce-source":          {testCeSource},
+					"ce-type":            {testCeType},
+					"ce-specversion":     {cloudevents.VersionV1},
+				},
+				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+			},
+			lastReceiver: "deadLetter",
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -699,19 +766,19 @@ func TestDispatchMessage(t *testing.T) {
 				case "destination":
 					if tc.fakeResponse != nil {
 						if tc.fakeResponse.StatusCode != info.ResponseCode {
-							t.Errorf("Unexpected response code inf DispatchResultInfo. Expected %v. Actual: %v", tc.fakeResponse.StatusCode, info.ResponseCode)
+							t.Errorf("Unexpected response code in DispatchResultInfo. Expected %v. Actual: %v", tc.fakeResponse.StatusCode, info.ResponseCode)
 						}
 					}
 				case "deadLetter":
 					if tc.fakeDeadLetterResponse != nil {
 						if tc.fakeDeadLetterResponse.StatusCode != info.ResponseCode {
-							t.Errorf("Unexpected response code inf DispatchResultInfo. Expected %v. Actual: %v", tc.fakeDeadLetterResponse.StatusCode, info.ResponseCode)
+							t.Errorf("Unexpected response code in DispatchResultInfo. Expected %v. Actual: %v", tc.fakeDeadLetterResponse.StatusCode, info.ResponseCode)
 						}
 					}
 				case "reply":
 					if tc.fakeReplyResponse != nil {
 						if tc.fakeReplyResponse.StatusCode != info.ResponseCode {
-							t.Errorf("Unexpected response code inf DispatchResultInfo. Expected %v. Actual: %v", tc.fakeReplyResponse.StatusCode, info.ResponseCode)
+							t.Errorf("Unexpected response code in DispatchResultInfo. Expected %v. Actual: %v", tc.fakeReplyResponse.StatusCode, info.ResponseCode)
 						}
 					}
 				}
