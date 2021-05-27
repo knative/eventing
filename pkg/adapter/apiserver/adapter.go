@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -118,8 +119,17 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		}
 	}
 
+	srv := &http.Server{
+		Addr: ":8080",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+	}
+	go srv.ListenAndServe()
+
 	<-stopCh
 	stop <- struct{}{}
+	srv.Shutdown(ctx)
 	return nil
 }
 
