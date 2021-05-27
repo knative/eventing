@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/eventing/pkg/reconciler/source"
@@ -117,6 +118,9 @@ func TestMakeReceiveAdapters(t *testing.T) {
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
+							}, {
+								Name:          "health",
+								ContainerPort: 8080,
 							}},
 							Env: []corev1.EnvVar{
 								{
@@ -150,6 +154,13 @@ func TestMakeReceiveAdapters(t *testing.T) {
 								}, {
 									Name:  source.EnvTracingCfg,
 									Value: "",
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Port: intstr.FromString("health"),
+									},
 								},
 							},
 						},

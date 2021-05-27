@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	v1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -88,7 +89,17 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
+							}, {
+								Name:          "health",
+								ContainerPort: 8080,
 							}},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Port: intstr.FromString("health"),
+									},
+								},
+							},
 						},
 					},
 				},
