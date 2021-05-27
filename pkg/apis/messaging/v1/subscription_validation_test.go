@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/eventing/pkg/apis/experimental"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -266,7 +267,7 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 	}, {
 		name: "empty Channel",
 		c: &SubscriptionSpec{
-			Channel: corev1.ObjectReference{},
+			Channel: duckv1.KReference{},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channel")
@@ -276,7 +277,7 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 	}, {
 		name: "missing name in Channel",
 		c: &SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
@@ -341,7 +342,7 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 	}, {
 		name: "missing name in channel, and missing subscriber, reply",
 		c: &SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
@@ -391,7 +392,10 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.c.Validate(context.TODO())
+			ctx := experimental.ToContext(context.TODO(), experimental.Flags{
+				experimental.KReferenceGroup: true,
+			})
+			got := test.c.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: validateChannel (-want, +got) = %v", test.name, diff)
 			}

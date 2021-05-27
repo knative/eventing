@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/messaging"
+	"knative.dev/eventing/pkg/apis/experimental"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/network"
 
@@ -209,7 +209,9 @@ func TestAllCases(t *testing.T) {
 			}},
 		}, {
 			Name: "subscription goes ready without api version",
-			Ctx:  context.TODO(), // TODO add context
+			Ctx: experimental.ToContext(context.TODO(), experimental.Flags{
+				experimental.KReferenceGroup: true,
+			}),
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
@@ -258,7 +260,7 @@ func TestAllCases(t *testing.T) {
 					}}),
 				),
 				// IMC CRD
-				eventingtesting.NewCustomResourceDefinition(messaging.InMemoryChannelsResource.String(),
+				eventingtesting.NewCustomResourceDefinition("subscribers.messaging.knative.dev",
 					eventingtesting.WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
 						Name:    "v1beta1",
 						Storage: false,
@@ -274,7 +276,7 @@ func TestAllCases(t *testing.T) {
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionSubscriberRefUsingGroup(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
