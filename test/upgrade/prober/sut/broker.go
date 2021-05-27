@@ -129,13 +129,4 @@ func (b *BrokerAndTriggers) deployTriggers(ctx Context, dest duckv1.Destination)
 		)
 		triggers = append(triggers, trgr)
 	}
-	for _, trgr := range triggers {
-		meta := resources.NewMetaResource(
-			trgr.Name, trgr.Namespace, testlib.TriggerTypeMeta,
-		)
-		err := duck.WaitForResourceReady(ctx.Client.Dynamic, meta)
-		if err != nil {
-			ctx.T.Fatal(err)
-		}
-	}
 }
