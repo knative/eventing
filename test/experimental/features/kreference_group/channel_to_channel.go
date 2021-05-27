@@ -21,7 +21,6 @@ import (
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -39,10 +38,10 @@ import (
 func ChannelToChannel() *feature.Feature {
 	f := feature.NewFeature()
 
-	imcGVK := (&messagingv1.InMemoryChannel{}).GetGroupVersionKind()
-	imcGVR, _ := meta.UnsafeGuessKindToResource(imcGVK)
-	imcGroup := imcGVK.GroupKind().Group
-	imcAPIVersion, imcKind := imcGVK.ToAPIVersionAndKind()
+	channelGVK := channel.GVK()
+	channelGVR := channel.GVR()
+	channelGroup := channelGVK.GroupKind().Group
+	channelAPIVersion, imcKind := channelGVK.ToAPIVersionAndKind()
 
 	channelAName := feature.MakeRandomK8sName("channel-a")
 	channelBName := feature.MakeRandomK8sName("channel-b")
@@ -58,29 +57,30 @@ func ChannelToChannel() *feature.Feature {
 		eventshub.StartReceiver,
 	))
 
-	f.Setup("Install channel A", installInMemoryChannel(channelAName))
-	f.Setup("Install channel B", installInMemoryChannel(channelBName))
+	f.Setup("Install channel A", channel.Install(channelAName))
+	f.Setup("Install channel B", channel.Install(channelBName))
+	f.Setup("channel A is ready", channel.IsReady(channelAName))
+	f.Setup("channel B is ready", channel.IsReady(channelBName))
+
 	f.Setup("Install channel A -> channel B subscription", func(ctx context.Context, t feature.T) {
 		namespace := environment.FromContext(ctx).Namespace()
 		_, err := eventingclient.Get(ctx).MessagingV1().Subscriptions(namespace).Create(ctx,
 			&messagingv1.Subscription{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: subAToBName,
+					Name:      subAToBName,
 					Namespace: namespace,
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
-						APIVersion: imcAPIVersion,
-						Kind: imcKind,
-						Namespace: namespace,
-						Name: channelAName,
+						APIVersion: channelAPIVersion,
+						Kind:       imcKind,
+						Name:       channelAName,
 					},
 					Subscriber: &duckv1.Destination{
 						Ref: &duckv1.KReference{
-							Group: imcGroup,
-							Kind: imcKind,
-							Namespace: namespace,
-							Name: channelBName,
+							Group: channelGroup,
+							Kind:  imcKind,
+							Name:  channelBName,
 						},
 					},
 				},
@@ -92,22 +92,20 @@ func ChannelToChannel() *feature.Feature {
 		_, err := eventingclient.Get(ctx).MessagingV1().Subscriptions(namespace).Create(ctx,
 			&messagingv1.Subscription{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: subBToSinkName,
+					Name:      subBToSinkName,
 					Namespace: namespace,
 				},
 				Spec: messagingv1.SubscriptionSpec{
 					Channel: duckv1.KReference{
-						APIVersion: imcAPIVersion,
-						Kind: imcKind,
-						Namespace: namespace,
-						Name: channelBName,
+						APIVersion: channelAPIVersion,
+						Kind:       imcKind,
+						Name:       channelBName,
 					},
 					Subscriber: &duckv1.Destination{
 						Ref: &duckv1.KReference{
 							APIVersion: "v1",
-							Kind: "Service",
-							Namespace: namespace,
-							Name: sinkName,
+							Kind:       "Service",
+							Name:       sinkName,
 						},
 					},
 				},
@@ -115,32 +113,16 @@ func ChannelToChannel() *feature.Feature {
 		require.NoError(t, err)
 	})
 
-	f.Setup("channel A is ready", channel.IsReady(channelAName))
-	f.Setup("channel B is ready", channel.IsReady(channelBName))
 	f.Setup("subscription A -> B is ready", subscription.IsReady(subAToBName))
 	f.Setup("subscription B -> Sink is ready", subscription.IsReady(subBToSinkName))
 
 	f.Setup("install source", eventshub.Install(
 		sourceName,
-		eventshub.StartSenderToResource(imcGVR, channelAName),
+		eventshub.StartSenderToResource(channelGVR, channelAName),
 		eventshub.InputEvent(ev),
 	))
 
-	f.Assert("receive event", assert.OnStore(sinkName).MatchEvent(cetest.IsEqualTo(ev)).Exact(1))
+	f.Assert("receive event", assert.OnStore(sinkName).MatchEvent(cetest.HasId(ev.ID())).Exact(1))
 
 	return f
-}
-
-func installInMemoryChannel(channelName string) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		namespace := environment.FromContext(ctx).Namespace()
-		_, err := eventingclient.Get(ctx).MessagingV1().InMemoryChannels(namespace).Create(ctx,
-			&messagingv1.InMemoryChannel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: channelName,
-					Namespace: namespace,
-				},
-			}, metav1.CreateOptions{})
-		require.NoError(t, err)
-	}
 }

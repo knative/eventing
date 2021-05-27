@@ -73,6 +73,8 @@ type Reconciler struct {
 	channelableTracker  eventingduck.ListableTracker
 	destinationResolver *resolver.URIResolver
 	tracker             tracker.Interface
+
+	experimentalFlagsStore *experimental.Store
 }
 
 // Check that our Reconciler implements Interface
@@ -83,6 +85,9 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
+	// Populate this context with experimental flags
+	ctx = r.experimentalFlagsStore.ToContext(ctx)
+
 	// Find the channel for this subscription.
 	channel, err := r.getChannel(ctx, subscription)
 	if err != nil {
@@ -217,6 +222,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 				subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %v", err)
 				return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %w", err)
 			}
+			logging.FromContext(ctx).Debugw("Group resolved", zap.Any("spec.subscriber.ref", subscriber.Ref))
 		}
 
 		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscriber, subscription)

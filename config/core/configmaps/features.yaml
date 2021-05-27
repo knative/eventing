@@ -22,3 +22,5 @@ metadata:
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
 data:
+  # ALPHA feature: The kreference-group allows you to use the Group field in KReferences.
+  kreference-group: "false"
