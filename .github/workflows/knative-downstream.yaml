@@ -30,8 +30,6 @@ jobs:
             org: knative-sandbox
           - repo: eventing-awssqs
             org: knative-sandbox
-          - repo: eventing-camel
-            org: knative-sandbox
           - repo: eventing-ceph
             org: knative-sandbox
           - repo: eventing-couchdb
