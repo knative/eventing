@@ -31,7 +31,6 @@ import (
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -75,7 +74,7 @@ func main() {
 	// Report stats on Go memory usage every 30 seconds.
 	metrics.MemStatsOrDie(ctx)
 
-	cfg := sharedmain.ParseAndGetConfigOrDie()
+	cfg := injection.ParseAndGetRESTConfigOrDie()
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {

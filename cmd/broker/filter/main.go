@@ -42,7 +42,6 @@ import (
 
 	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
-	"knative.dev/pkg/injection/sharedmain"
 )
 
 const (
@@ -64,7 +63,7 @@ func main() {
 	// Report stats on Go memory usage every 30 seconds.
 	metrics.MemStatsOrDie(ctx)
 
-	cfg := sharedmain.ParseAndGetConfigOrDie()
+	cfg := injection.ParseAndGetRESTConfigOrDie()
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
