@@ -49,3 +49,5 @@ require (
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+
+replace knative.dev/pkg => github.com/dprotaso/pkg v0.0.0-20210528181229-14682b09cc1e
