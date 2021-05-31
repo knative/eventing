@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 
@@ -133,6 +134,7 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 		ResourceGroup: resourceGroup,
 	}
 	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
+	ctx = cloudevents.ContextWithRetriesExponentialBackoff(ctx, 50*time.Millisecond, 5)
 
 	return ctx, event, nil
 }

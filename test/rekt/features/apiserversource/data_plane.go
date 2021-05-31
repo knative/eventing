@@ -447,3 +447,66 @@ func setupAccountAndRoleForPods(sacmName string) feature.StepFn {
 //		return nil
 //	}
 //}
+
+func SendsEventsWithRetries() *feature.Feature {
+	source := feature.MakeRandomK8sName("apiserversource")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f := feature.NewFeatureNamed("Send events with retries")
+
+	// drop first event to see the retry feature works or not
+	f.Setup("install sink",
+		eventshub.Install(sink,
+			eventshub.StartReceiver,
+			eventshub.DropFirstN(1),
+			eventshub.DropEventsResponseCode(429),
+		),
+	)
+
+	sacmName := feature.MakeRandomK8sName("apiserversource")
+	f.Setup("Create Service Account for ApiServerSource with RBAC for v1.Pod resources",
+		setupAccountAndRoleForPods(sacmName))
+
+	f.Setup("install ApiServerSource", func(ctx context.Context, t feature.T) {
+		sinkuri, err := svc.Address(ctx, sink)
+		if err != nil || sinkuri == nil {
+			t.Fatal("failed to get the address of the sink service", sink, err)
+		}
+
+		cfg := []manifest.CfgFn{
+			apiserversource.WithServiceAccountName(sacmName),
+			apiserversource.WithEventMode(v1.ReferenceMode),
+			apiserversource.WithSink(nil, sinkuri.String()),
+			apiserversource.WithResources(v1.APIVersionKindSelector{
+				APIVersion:    "v1",
+				Kind:          "Pod",
+				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+			}),
+		}
+		apiserversource.Install(source, cfg...)(ctx, t)
+	})
+	f.Setup("ApiServerSource goes ready", apiserversource.IsReady(source))
+
+	examplePodName := feature.MakeRandomK8sName("example")
+
+	// create a pod so that ApiServerSource delivers an event to its sink
+	// event body is similar to this:
+	// {"kind":"Pod","namespace":"test-wmbcixlv","name":"example-axvlzbvc","apiVersion":"v1"}
+	f.Requirement("install example pod",
+		pod.Install(examplePodName,
+			pod.WithImage(exampleImage),
+			pod.WithLabels(map[string]string{"e2e": "testing"})),
+	)
+
+	f.Stable("ApiServerSource as event source").
+		Must("delivers events",
+			eventasssert.OnStore(sink).Match(
+				eventasssert.MatchKind(eventasssert.EventReceived),
+				eventasssert.MatchEvent(
+					test.HasType("dev.knative.apiserver.ref.add"),
+					test.DataContains(`"kind":"Pod"`),
+					test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
+				),
+			).AtLeast(1))
+	return f
+}
