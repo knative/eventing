@@ -75,9 +75,9 @@ func DataPlane_ResourceMatching() *feature.FeatureSet {
 		Name: "Knative ApiServerSource - Data Plane - Resource Matching",
 		Features: []feature.Feature{
 			*SendsEventsForAllResources(),
-			*SendsEventsForLabelMatchingResources(),
+			//*SendsEventsForLabelMatchingResources(),
 			//*DoesNotSendEventsForNonLabelMatchingResources(),
-			*SendEventsForLabelExpressionMatchingResources(),
+			//*SendEventsForLabelExpressionMatchingResources(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
