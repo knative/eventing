@@ -91,7 +91,7 @@ features:
   This approach is not suggested in case adding an API field is doable as
   described above, but there might be some situations when this is not possible,
   where an annotation is more suited as the feature API. For example:
-  [Eventing Kafka Broker - Configuring the order of delivered events](https://github.com/knative/docs/blob/main/docs/eventing/broker/kafka-broker.md#configuring-the-order-of-delivered-events)
+  [Eventing Kafka Broker - Configuring the order of delivered events](https://knative.dev/docs/eventing/broker/kafka-broker/#configuring-the-order-of-delivered-events)
 - If a feature is supposed to be opt-in even after its graduation to stable, for
   example an optional behavior for a specific component/set of components, make
   sure to have a flag to enable it in the place wherever is more appropriate for
