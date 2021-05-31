@@ -17,6 +17,10 @@ kind: Trigger
 metadata:
   name: {{ .name }}
   namespace: {{ .namespace }}
+  annotations:
+  {{ range $key, $value := .annotations }}
+    {{ $key }}: "{{ $value }}"
+  {{ end }}
 spec:
   {{ if .brokerName }}
   broker: {{ .brokerName }}
