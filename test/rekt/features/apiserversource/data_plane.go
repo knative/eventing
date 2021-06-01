@@ -77,7 +77,7 @@ func DataPlane_ResourceMatching() *feature.FeatureSet {
 			*SendsEventsForAllResources(),
 			*SendsEventsForLabelMatchingResources(),
 			//*DoesNotSendEventsForNonLabelMatchingResources(),
-			//*SendEventsForLabelExpressionMatchingResources(),
+			*SendEventsForLabelExpressionMatchingResources(),
 
 			// TODO: things to test:
 			// - check if we actually receive add, update and delete events
