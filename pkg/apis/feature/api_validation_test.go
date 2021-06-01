@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package feature_test
 
 import (
 	"context"
@@ -27,6 +27,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+
+	. "knative.dev/eventing/pkg/apis/feature"
 )
 
 const flagName = "my-flag"

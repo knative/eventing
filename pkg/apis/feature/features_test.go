@@ -14,14 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package feature_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	. "knative.dev/pkg/configmap/testing"
 	_ "knative.dev/pkg/system/testing"
+
+	. "knative.dev/eventing/pkg/apis/feature"
+	. "knative.dev/pkg/configmap/testing"
 )
 
 func TestFlags_IsEnabled_NilMap(t *testing.T) {

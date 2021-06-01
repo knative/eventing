@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package feature_test
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	logtesting "knative.dev/pkg/logging/testing"
 
+	. "knative.dev/eventing/pkg/apis/feature"
 	. "knative.dev/pkg/configmap/testing"
 )
 
