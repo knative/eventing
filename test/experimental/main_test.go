@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/experimental"
+	experimental "knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/system"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).

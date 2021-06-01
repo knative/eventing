@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package feature
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 
 const (
 	// FlagsConfigName is the name of config map containing the experimental features flags
-	FlagsConfigName = "config-experimental-features"
+	FlagsConfigName = "config-features"
 )
 
 type cfgKey struct{}
@@ -63,7 +63,7 @@ type Store struct {
 func NewStore(logger configmap.Logger, onAfterStore ...func(name string, value interface{})) *Store {
 	store := &Store{
 		UntypedStore: configmap.NewUntypedStore(
-			"experimental-flags",
+			"feature-flags",
 			logger,
 			configmap.Constructors{
 				FlagsConfigName: NewFlagsConfigFromConfigMap,
@@ -83,6 +83,11 @@ func (s *Store) ToContext(ctx context.Context) context.Context {
 // IsEnabled is a shortcut for Load().IsEnabled(featureName)
 func (s *Store) IsEnabled(featureName string) bool {
 	return s.Load().IsEnabled(featureName)
+}
+
+// IsAllowed is a shortcut for Load().IsAllowed(featureName)
+func (s *Store) IsAllowed(featureName string) bool {
+	return s.Load().IsAllowed(featureName)
 }
 
 // Load creates a Config from the current config state of the Store.
