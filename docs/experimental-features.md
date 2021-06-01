@@ -55,6 +55,12 @@ and
 When the feature is implemented, we provide a Golang API to check if the feature
 is enabled or not: [`experimental.FromContext(ctx).IsEnabled(featureName)`](../pkg/apis/experimental).
 
+There are 3 feature states:
+
+* Enabled: the feature is enabled.
+* Allowed: the feature may be enabled (e.g. using an annotation or looser validation).
+* Disabled: the feature cannot be enabled.
+
 The user can easily enable the features modifying a config map/environment
 variable of their knative setup:
 
@@ -65,8 +71,9 @@ metadata:
   name: config-experimental-features
   namespace: knative-eventing
 data:
-  my-fancy-feature: false
-  another-cool-feature: true
+  my-fancy-feature: enabled
+  another-cool-feature: disabled
+  yet-another-feature: allowed
 ```
 
 ### Strategies to add new APIs for experimental features
