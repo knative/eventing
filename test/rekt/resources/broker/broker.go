@@ -71,6 +71,17 @@ func WithBrokerTemplateFiles(dir string) manifest.CfgFn {
 	}
 }
 
+// WithConfig adds the specified config map to the Broker spec.
+func WithConfig(name string) manifest.CfgFn {
+	return func(templateData map[string]interface{}) {
+		cfg := make(map[string]interface{})
+		cfg["kind"] = "ConfigMap"
+		cfg["apiVersion"] = "v1"
+		cfg["name"] = name
+		templateData["config"] = cfg
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
