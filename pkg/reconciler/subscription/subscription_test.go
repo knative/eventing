@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/network"
 
@@ -209,8 +209,8 @@ func TestAllCases(t *testing.T) {
 			}},
 		}, {
 			Name: "subscription goes ready without api version",
-			Ctx: experimental.ToContext(context.TODO(), experimental.Flags{
-				experimental.KReferenceGroup: true,
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.KReferenceGroup: feature.Allowed,
 			}),
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,

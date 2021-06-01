@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -392,8 +392,8 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx := experimental.ToContext(context.TODO(), experimental.Flags{
-				experimental.KReferenceGroup: true,
+			ctx := feature.ToContext(context.TODO(), feature.Flags{
+				feature.KReferenceGroup: feature.Allowed,
 			})
 			got := test.c.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {

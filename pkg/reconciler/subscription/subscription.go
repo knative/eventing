@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -74,7 +74,7 @@ type Reconciler struct {
 	destinationResolver *resolver.URIResolver
 	tracker             tracker.Interface
 
-	experimentalFlagsStore *experimental.Store
+	featureFlagsStore *feature.Store
 }
 
 // Check that our Reconciler implements Interface
@@ -86,7 +86,7 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
 	// Populate this context with experimental flags
-	ctx = r.experimentalFlagsStore.ToContext(ctx)
+	ctx = r.featureFlagsStore.ToContext(ctx)
 
 	// Find the channel for this subscription.
 	channel, err := r.getChannel(ctx, subscription)
@@ -213,7 +213,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		}
 
 		// Resolve the group
-		if subscriber.Ref != nil && experimental.FromContext(ctx).IsEnabled(experimental.KReferenceGroup) {
+		if subscriber.Ref != nil && feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
 			err := subscriber.Ref.ResolveGroup(r.crdLister)
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",

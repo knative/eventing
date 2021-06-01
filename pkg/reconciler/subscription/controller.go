@@ -19,7 +19,7 @@ package subscription
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -46,15 +46,15 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
 
-	experimentalStore := experimental.NewStore(logging.FromContext(ctx).Named("experimental-config-store"))
-	experimentalStore.WatchConfigs(cmw)
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
 
 	r := &Reconciler{
-		dynamicClientSet:       dynamicclient.Get(ctx),
-		crdLister:              customresourcedefinition.Get(ctx).Lister(),
-		subscriptionLister:     subscriptionInformer.Lister(),
-		channelLister:          channelInformer.Lister(),
-		experimentalFlagsStore: experimentalStore,
+		dynamicClientSet:   dynamicclient.Get(ctx),
+		crdLister:          customresourcedefinition.Get(ctx).Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
+		featureFlagsStore:  featureStore,
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r)
 

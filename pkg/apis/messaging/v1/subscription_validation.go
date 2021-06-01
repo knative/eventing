@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
@@ -59,7 +59,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if !missingSubscriber {
 		ctx := ctx
-		if experimental.FromContext(ctx).IsEnabled(experimental.KReferenceGroup) {
+		if feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
 			ctx = duckv1.KReferenceGroupAllowed(ctx)
 		}
 		if fe := ss.Subscriber.Validate(ctx); fe != nil {

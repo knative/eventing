@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/apis/experimental"
+	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -92,12 +92,12 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
 	channelStore.WatchConfigs(cmw)
 
-	experimentalStore := experimental.NewStore(logging.FromContext(ctx).Named("experimental-config-store"))
-	experimentalStore.WatchConfigs(cmw)
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return experimentalStore.ToContext(channelStore.ToContext(store.ToContext(ctx)))
+		return featureStore.ToContext(channelStore.ToContext(store.ToContext(ctx)))
 	}
 
 	return defaulting.NewAdmissionController(ctx,
@@ -130,12 +130,12 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	pingstore := pingdefaultconfig.NewStore(logging.FromContext(ctx).Named("ping-config-store"))
 	pingstore.WatchConfigs(cmw)
 
-	experimentalStore := experimental.NewStore(logging.FromContext(ctx).Named("experimental-config-store"))
-	experimentalStore.WatchConfigs(cmw)
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return experimentalStore.ToContext(channelStore.ToContext(pingstore.ToContext(store.ToContext(ctx))))
+		return featureStore.ToContext(channelStore.ToContext(pingstore.ToContext(store.ToContext(ctx))))
 	}
 
 	return validation.NewAdmissionController(ctx,
@@ -209,12 +209,12 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
 	channelStore.WatchConfigs(cmw)
 
-	experimentalStore := experimental.NewStore(logging.FromContext(ctx).Named("experimental-config-store"))
-	experimentalStore.WatchConfigs(cmw)
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return experimentalStore.ToContext(channelStore.ToContext(store.ToContext(ctx)))
+		return featureStore.ToContext(channelStore.ToContext(store.ToContext(ctx)))
 	}
 
 	var (
