@@ -34,10 +34,10 @@ func TestFlags_IsEnabled_EmptyMap(t *testing.T) {
 
 func TestFlags_IsEnabled_ContainingFlag(t *testing.T) {
 	require.True(t, Flags{
-		"myflag": true,
+		"myflag": Enabled,
 	}.IsEnabled("myflag"))
 	require.False(t, Flags{
-		"myflag": false,
+		"myflag": Disabled,
 	}.IsEnabled("myflag"))
 }
 
@@ -46,7 +46,11 @@ func TestGetFlags(t *testing.T) {
 	flags, err := NewFlagsConfigFromConfigMap(example)
 	require.NoError(t, err)
 
-	require.True(t, flags.IsEnabled("my-true-flag"))
-	require.False(t, flags.IsEnabled("my-false-flag"))
-	require.False(t, flags.IsEnabled("non-existing-flag"))
+	require.True(t, flags.IsEnabled("my-enabled-flag"))
+	require.False(t, flags.IsEnabled("my-allowed-flag"))
+	require.False(t, flags.IsEnabled("non-disabled-flag"))
+
+	require.True(t, flags.IsAllowed("my-enabled-flag"))
+	require.True(t, flags.IsAllowed("my-allowed-flag"))
+	require.False(t, flags.IsAllowed("non-disabled-flag"))
 }
