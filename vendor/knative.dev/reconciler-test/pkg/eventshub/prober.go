@@ -264,6 +264,11 @@ func (p *EventProber) ExpectYAMLEvents(path string) error {
 	return nil
 }
 
+// ExpectEvents registers event IDs into the prober.
+func (p *EventProber) ExpectEvents(ids []string) {
+	p.ids = append(p.ids, ids...)
+}
+
 // SenderEventsFromURI configures a sender to send a url/yaml based events.
 func (p *EventProber) SenderEventsFromURI(uri string) {
 	p.senderOptions = append(p.senderOptions, InputYAML(uri))
