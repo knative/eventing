@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -99,7 +100,7 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 
 	if dir, ok := cfg["__brokerTemplateDir"]; ok {
 		return func(ctx context.Context, t feature.T) {
-			if _, err := manifest.InstallYaml(ctx, dir.(string), cfg); err != nil {
+			if _, err := manifest.InstallYamlFS(ctx, os.DirFS(dir.(string)), cfg); err != nil {
 				t.Fatal(err)
 			}
 		}
