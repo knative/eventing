@@ -71,18 +71,6 @@ with the developer thinking about fewer resources
 
 **Owner:** Scott Nichols
 
-### Remove v1beta1 API [eventing, flows, messaging]
-
-Removal of v1beta1 APIs as per
-[our deprecation policy](https://knative.dev/community/contributing/mechanics/release-versioning-principles/).
-We guarantee 9 months of support for v1beta1 APIs. This makes the release
-18/05/2021 the earliest release where we can remove v1beta1 API, and we want to
-target that release.
-
-**GitHub Issue:** https://github.com/knative/eventing/issues/4836
-
-**Owner:** Ville Aikas
-
 ## Next 6 Months (Midterm)
 
 ### Protocol negotiation contract
