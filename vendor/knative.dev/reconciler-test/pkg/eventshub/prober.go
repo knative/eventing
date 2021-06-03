@@ -148,7 +148,7 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 			return false, nil
 		})
 		if err != nil {
-			t.Failed()
+			t.Fatalf("timeout while waiting for sender to deliver all expected events: %v", err)
 		}
 	}
 }
@@ -173,7 +173,7 @@ func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 			return false, nil
 		})
 		if err != nil {
-			t.Failed()
+			t.Fatalf("timeout while waiting for receiver to receive all expected events: %v", err)
 		}
 	}
 }
