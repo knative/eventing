@@ -18,6 +18,7 @@ package eventlibrary
 
 import (
 	"context"
+	"embed"
 	"log"
 	"path"
 	"runtime"
@@ -30,8 +31,11 @@ import (
 	"knative.dev/reconciler-test/resources/svc"
 )
 
+//go:embed *.yaml
+var yaml embed.FS
+
 func init() {
-	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
+	environment.RegisterPackage(manifest.ImagesFromFS(yaml)...)
 }
 
 // Install
@@ -41,7 +45,7 @@ func Install(name string) feature.StepFn {
 	}
 
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}

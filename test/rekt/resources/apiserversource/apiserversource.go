@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"context"
+	"embed"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +31,9 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func Gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1", Resource: "apiserversources"}
@@ -57,7 +61,7 @@ func InstallLocalYaml(ctx context.Context, name string, opts ...manifest.CfgFn) 
 	for _, fn := range opts {
 		fn(cfg)
 	}
-	return manifest.InstallLocalYaml(ctx, cfg)
+	return manifest.InstallYamlFS(ctx, yaml, cfg)
 }
 
 // WithServiceAccountName sets the service account name on the ApiServerSource spec.
