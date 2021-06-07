@@ -321,6 +321,18 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		},
 		t1FailCount: 3, // Should get event.
 		t2FailCount: 2, // Should end up in DLQ.
+	}, {
+		name: "When both `BrokerSpec.Delivery` and `TriggerSpec.Delivery` is configured, then `TriggerSpec.Delivery` SHOULD be used. (Retry+DLQ)",
+		brokerDS: &v1.DeliverySpec{
+			DeadLetterSink: new(duckv1.Destination),
+			Retry:          ptr.Int32(1),
+		},
+		t1DS: &v1.DeliverySpec{
+			DeadLetterSink: new(duckv1.Destination),
+			Retry:          ptr.Int32(3),
+		},
+		t1FailCount: 4, // Should end up in Trigger DLQ.
+		t2FailCount: 2, // Should end up in Broker DLQ.
 	}} {
 		// TODO: Each of these creates quite a few resources. We need to figure out a way
 		// to delete the resources for each Feature once the test completes. Today it's
