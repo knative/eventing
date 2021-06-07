@@ -23,11 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
@@ -57,12 +55,6 @@ var (
 		Retry: pointer.Int32Ptr(10),
 	}
 )
-
-func init() {
-	// Add types to scheme
-	_ = messagingv1.AddToScheme(scheme.Scheme)
-	_ = eventingduckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestReconcile(t *testing.T) {
 
@@ -325,7 +317,7 @@ func channelCRD() metav1.TypeMeta {
 func channelCRDBadGvk() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: "",
-		Kind:       "",
+		Kind:       "-BrokenKind",
 	}
 }
 

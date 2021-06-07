@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/pkg/apis"
@@ -75,13 +74,6 @@ var (
 		},
 	}
 )
-
-func init() {
-	// Add types to scheme
-	_ = appsv1.AddToScheme(scheme.Scheme)
-	_ = corev1.AddToScheme(scheme.Scheme)
-	_ = duckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestAllCases(t *testing.T) {
 	table := TableTest{

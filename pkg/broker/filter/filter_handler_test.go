@@ -37,7 +37,6 @@ import (
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	"knative.dev/pkg/apis"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -63,11 +62,6 @@ const (
 var (
 	validPath = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
 )
-
-func init() {
-	// Add types to scheme.
-	_ = eventingv1.AddToScheme(scheme.Scheme)
-}
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
