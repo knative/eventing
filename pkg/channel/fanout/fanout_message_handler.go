@@ -190,7 +190,7 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 				ctx = trace.NewContext(context.Background(), s)
 				// Any returned error is already logged in f.dispatch().
 				dispatchResultForFanout := f.dispatch(ctx, subs, m, h)
-				_ = parseFanoutResultAndReportMetrics(dispatchResultForFanout, *r, *args)
+				_ = ParseDispatchResultAndReportMetrics(dispatchResultForFanout, *r, *args)
 			}(bufferedMessage, additionalHeaders, parentSpan, &f.reporter, &reportArgs)
 			return nil
 		}
@@ -217,7 +217,7 @@ func createMessageReceiverFunction(f *FanoutMessageHandler) func(context.Context
 		reportArgs.EventType = string(te)
 		reportArgs.Ns = ref.Namespace
 		dispatchResultForFanout := f.dispatch(ctx, subs, bufferedMessage, additionalHeaders)
-		return parseFanoutResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
+		return ParseDispatchResultAndReportMetrics(dispatchResultForFanout, f.reporter, reportArgs)
 	}
 }
 
@@ -225,7 +225,8 @@ func (f *FanoutMessageHandler) ServeHTTP(response nethttp.ResponseWriter, reques
 	f.receiver.ServeHTTP(response, request)
 }
 
-func parseFanoutResultAndReportMetrics(result dispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
+// ParseDispatchResultAndReportMetric processes the dispatch result and records the related channel metrics with the appropriate context
+func ParseDispatchResultAndReportMetrics(result dispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
 	if result.info != nil && result.info.Time > channel.NoDuration {
 		if result.info.ResponseCode > channel.NoResponse {
 			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Time)
