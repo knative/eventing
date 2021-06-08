@@ -16,28 +16,26 @@
 package prober
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	pkgTest "knative.dev/pkg/test"
 )
 
 var (
 	forwarderName = "wathola-forwarder"
 )
 
-func (p *prober) deployForwarder(ctx context.Context) {
+func (p *prober) deployForwarder() {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	service := p.forwarderKService(forwarderName, p.client.Namespace)
-	_, err := serving.Create(context.Background(), service, metav1.CreateOptions{})
-	ensure.NoError(err)
+	if _, err := serving.Create(p.config.Ctx, service, metav1.CreateOptions{}); err != nil {
+		p.client.T.Fatal(err)
+	}
 
 	sc := p.servingClient()
 	testlib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
@@ -46,7 +44,7 @@ func (p *prober) deployForwarder(ctx context.Context) {
 
 	if p.config.Serving.ScaleToZero {
 		testlib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
-			return duck.WaitForKServiceScales(ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
+			return duck.WaitForKServiceScales(p.config.Ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
 		})
@@ -56,8 +54,8 @@ func (p *prober) deployForwarder(ctx context.Context) {
 func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	err := serving.Delete(context.Background(), forwarderName, metav1.DeleteOptions{})
-	ensure.NoError(err)
+	err := serving.Delete(p.config.Ctx, forwarderName, metav1.DeleteOptions{})
+	p.ensureNoError(err)
 }
 
 func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstructured {
@@ -68,15 +66,15 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 			"name":      name,
 			"namespace": namespace,
 			"labels": map[string]string{
-				"serving.knative.dev/visibility": "cluster-local",
+				"networking.knative.dev/visibility": "cluster-local",
 			},
 		},
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"containers": []map[string]interface{}{{
-						"name":  "forwarder",
-						"image": pkgTest.ImagePath(forwarderName),
+						"name":  forwarderName,
+						"image": p.config.ImageResolver(forwarderName),
 						"volumeMounts": []map[string]interface{}{{
 							"name":      p.config.ConfigMapName,
 							"mountPath": p.config.ConfigMountPoint,

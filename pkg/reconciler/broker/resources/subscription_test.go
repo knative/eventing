@@ -75,7 +75,7 @@ func TestNewSubscription(t *testing.T) {
 			},
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				Name:       "tc-name",
 				Kind:       "tc-kind",
 				APIVersion: "tc-apiVersion",

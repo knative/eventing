@@ -41,7 +41,10 @@ func TestMain(m *testing.M) {
 
 	exit := m.Run()
 
-	testlib.ExportLogs(testlib.SystemLogsDir, system.Namespace())
+	// Collect logs only when test failed.
+	if exit != 0 {
+		testlib.ExportLogs(testlib.SystemLogsDir, system.Namespace())
+	}
 
 	os.Exit(exit)
 }

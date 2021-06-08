@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -34,13 +35,14 @@ import (
 )
 
 func NewGlobalEnvironment(ctx context.Context) GlobalEnvironment {
-	fmt.Printf("level %s, state %s\n\n", l, s)
+	fmt.Printf("level %s, state %s, feature %s\n\n", l, s, *f)
 
 	return &MagicGlobalEnvironment{
 		c:                ctx,
 		instanceID:       uuid.New().String(),
 		RequirementLevel: *l,
 		FeatureState:     *s,
+		FeatureMatch:     regexp.MustCompile(*f),
 	}
 }
 
@@ -52,12 +54,14 @@ type MagicGlobalEnvironment struct {
 
 	RequirementLevel feature.Levels
 	FeatureState     feature.States
+	FeatureMatch     *regexp.Regexp
 }
 
 type MagicEnvironment struct {
-	c context.Context
-	l feature.Levels
-	s feature.States
+	c            context.Context
+	l            feature.Levels
+	s            feature.States
+	featureMatch *regexp.Regexp
 
 	images           map[string]string
 	namespace        string
@@ -113,9 +117,11 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	namespace := feature.MakeK8sNamePrefix(feature.AppendRandomString("test"))
 
 	env := &MagicEnvironment{
-		c:         mr.c,
-		l:         mr.RequirementLevel,
-		s:         mr.FeatureState,
+		c:            mr.c,
+		l:            mr.RequirementLevel,
+		s:            mr.FeatureState,
+		featureMatch: mr.FeatureMatch,
+
 		images:    images,
 		namespace: namespace,
 	}
@@ -211,6 +217,11 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
 	originalT.Helper() // Helper marks the calling function as a test helper function.
 
+	if !mr.featureMatch.MatchString(f.Name) {
+		originalT.Logf("Skipping feature '%s' assertions because --feature=%s  doesn't match", f.Name, mr.featureMatch.String())
+		return
+	}
+
 	mr.milestones.TestStarted(f.Name, originalT)
 	defer mr.milestones.TestFinished(f.Name, originalT)
 
@@ -218,12 +229,15 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 		f.State = &state.KVStore{}
 	}
 	ctx = state.ContextWith(ctx, f.State)
+	ctx = feature.ContextWith(ctx, f)
 
 	steps := categorizeSteps(f.Steps)
 
 	skipAssertions := false
 	skipRequirements := false
 	skipReason := ""
+
+	mr.milestones.StepsPlanned(f.Name, steps, originalT)
 
 	for _, s := range steps[feature.Setup] {
 		s := s
@@ -246,13 +260,11 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 			break
 		}
 
-		// Requirement never fails the parent test
-		internalT := mr.executeWithSkippingT(ctx, originalT, f, &s)
+		internalT := mr.executeWithoutWrappingT(ctx, originalT, f, &s)
 
 		if internalT.Failed() {
 			skipAssertions = true
 			skipRequirements = true // No need to test other requirements
-			skipReason = fmt.Sprintf("requirement %q failed", s.Name)
 		}
 	}
 
@@ -284,6 +296,7 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 	}
 }
 
+// TODO: this logic is strange and hard to follow.
 func (mr *MagicEnvironment) shouldFail(s *feature.Step) bool {
 	return !(mr.s&s.S == 0 || mr.l&s.L == 0)
 }

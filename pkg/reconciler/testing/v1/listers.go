@@ -37,25 +37,23 @@ import (
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	eventingv1beta1listers "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1"
-	sourcev1beta2listers "knative.dev/eventing/pkg/client/listers/sources/v1beta2"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
 )
 
 var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.eventing.knative.dev", Version: "v1alpha1", Kind: "Subscriber"}, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.eventing.knative.dev", Version: "v1", Kind: "Subscriber"}, &unstructured.Unstructured{})
 	return nil
 }
 
 var sourceAddToScheme = func(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.sources.knative.dev", Version: "v1alpha1", Kind: "TestSource"}, &duckv1.Source{})
+	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.sources.knative.dev", Version: "v1", Kind: "TestSource"}, &duckv1.Source{})
 	return nil
 }
 
@@ -124,8 +122,8 @@ func (l *Listers) GetEventTypeLister() eventingv1beta1listers.EventTypeLister {
 	return eventingv1beta1listers.NewEventTypeLister(l.indexerFor(&eventingv1beta1.EventType{}))
 }
 
-func (l *Listers) GetPingSourceV1beta2Lister() sourcev1beta2listers.PingSourceLister {
-	return sourcev1beta2listers.NewPingSourceLister(l.indexerFor(&sourcesv1beta2.PingSource{}))
+func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
+	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1.PingSource{}))
 }
 
 func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
@@ -206,4 +204,12 @@ func (l *Listers) GetConfigMapLister() corev1listers.ConfigMapLister {
 
 func (l *Listers) GetCustomResourceDefinitionLister() apiextensionsv1listers.CustomResourceDefinitionLister {
 	return apiextensionsv1listers.NewCustomResourceDefinitionLister(l.indexerFor(&apiextensionsv1.CustomResourceDefinition{}))
+}
+
+func (l *Listers) GetNodeLister() corev1listers.NodeLister {
+	return corev1listers.NewNodeLister(l.indexerFor(&corev1.Node{}))
+}
+
+func (l *Listers) GetPodLister() corev1listers.PodLister {
+	return corev1listers.NewPodLister(l.indexerFor(&corev1.Pod{}))
 }

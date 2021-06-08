@@ -62,7 +62,7 @@ func NewEvent(eventtype, reason, messageFmt string, args ...interface{}) Event {
 
 // ReconcilerEvent wraps the fields required for recorders to create a
 // kubernetes recorder Event.
-type ReconcilerEvent struct { //nolint:golint // for backcompat.
+type ReconcilerEvent struct { //nolint:revive // for backcompat.
 	EventType string
 	Reason    string
 	Format    string
@@ -87,8 +87,14 @@ func (e *ReconcilerEvent) Is(target error) bool {
 	return errors.Is(err, target)
 }
 
+// As allows ReconcilerEvents to be treated as regular error types.
+func (e *ReconcilerEvent) As(target interface{}) bool {
+	err := fmt.Errorf(e.Format, e.Args...)
+	return errors.As(err, target)
+}
+
 // Error returns the string that is formed by using the format string with the
 // provided args.
 func (e *ReconcilerEvent) Error() string {
-	return fmt.Sprintf(e.Format, e.Args...)
+	return fmt.Errorf(e.Format, e.Args...).Error()
 }

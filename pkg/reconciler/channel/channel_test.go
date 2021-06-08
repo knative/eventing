@@ -87,6 +87,18 @@ func TestReconcile(t *testing.T) {
 				WithChannelDeleted),
 		},
 	}, {
+		Name: "Backing channel tracking error",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRDBadGvk()),
+				WithInitChannelConditions),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "unable to track changes to the backing Channel: %v:%v", "invalid Reference", "\nAPIVersion: name part must be non-empty\nAPIVersion: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')\nKind: a valid C identifier must start with alphabetic character or '_', followed by a string of alphanumeric characters or '_' (e.g. 'my_name',  or 'MY_NAME',  or 'MyName', regex used for validation is '[A-Za-z_][A-Za-z0-9_]*')"),
+		},
+		WantErr: true,
+	}, {
 		Name: "Backing Channel.Create error",
 		Key:  testKey,
 		Objects: []runtime.Object{
@@ -307,6 +319,13 @@ func channelCRD() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: "messaging.knative.dev/v1",
 		Kind:       "InMemoryChannel",
+	}
+}
+
+func channelCRDBadGvk() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: "",
+		Kind:       "",
 	}
 }
 

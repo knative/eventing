@@ -172,6 +172,34 @@ func ExampleWithDeadLetterSink() {
 	//       uri: /extra/path
 }
 
+func ExampleWithConfig() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+	}
+	broker.WithConfig("my-funky-config")(cfg)
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: eventing.knative.dev/v1
+	// kind: Broker
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   config:
+	//     kind: ConfigMap
+	//     namespace: bar
+	//     name: my-funky-config
+	//     apiVersion: v1
+}
+
 func ExampleWithRetry() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{

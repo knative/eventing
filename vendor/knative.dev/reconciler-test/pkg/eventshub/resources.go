@@ -18,6 +18,7 @@ package eventshub
 
 import (
 	"context"
+	"embed"
 	"strings"
 
 	"knative.dev/reconciler-test/pkg/environment"
@@ -27,8 +28,11 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
+//go:embed *.yaml
+var templates embed.FS
+
 func init() {
-	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
+	environment.RegisterPackage(manifest.ImagesFromFS(templates)...)
 }
 
 // Install starts a new eventshub with the provided name
@@ -54,7 +58,7 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		envs[ConfigTracingEnv] = knative.TracingConfigFromContext(ctx)
 
 		// Deploy
-		if _, err := manifest.InstallLocalYaml(ctx, map[string]interface{}{
+		if _, err := manifest.InstallYamlFS(ctx, templates, map[string]interface{}{
 			"name": name,
 			"envs": envs,
 		}); err != nil {

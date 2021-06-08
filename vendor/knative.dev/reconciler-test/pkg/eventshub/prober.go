@@ -148,7 +148,7 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 			return false, nil
 		})
 		if err != nil {
-			t.Failed()
+			t.Fatalf("timeout while waiting for sender to deliver all expected events: %v", err)
 		}
 	}
 }
@@ -173,7 +173,7 @@ func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 			return false, nil
 		})
 		if err != nil {
-			t.Failed()
+			t.Fatalf("timeout while waiting for receiver to receive all expected events: %v", err)
 		}
 	}
 }
@@ -262,6 +262,11 @@ func (p *EventProber) ExpectYAMLEvents(path string) error {
 		p.ids = append(p.ids, event.Attributes.ID)
 	}
 	return nil
+}
+
+// ExpectEvents registers event IDs into the prober.
+func (p *EventProber) ExpectEvents(ids []string) {
+	p.ids = append(p.ids, ids...)
 }
 
 // SenderEventsFromURI configures a sender to send a url/yaml based events.

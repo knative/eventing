@@ -129,6 +129,27 @@ func TestNewPhysicalChannel(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "no ChannelableSpec",
+			objMeta: metav1.ObjectMeta{
+				Name:      "hello",
+				Namespace: "world",
+			},
+			opts: []PhysicalChannelOption{
+				WithPhysicalChannelSpec(&physicalChannelSpec),
+			},
+			assertFn: assertMyCoolChannelEquality,
+			want: &MyCoolChannel{
+				TypeMeta: imcTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "hello",
+					Namespace: "world",
+				},
+				Spec: MyCoolChannelSpec{
+					MyCoolParameter: "i'm cool",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

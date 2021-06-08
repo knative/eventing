@@ -74,6 +74,16 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	}
 }
 
+// WithAnnotation adds an annotation to the trigger
+func WithAnnotation(key string, value string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["annotations"]; !set {
+			cfg["annotations"] = map[string]interface{}{}
+		}
+		(cfg["annotations"].(map[string]interface{}))[key] = value
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 

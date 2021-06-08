@@ -185,6 +185,120 @@ func TestResourceTrackerForKReference(t *testing.T) {
 	}
 }
 
+func TestResourceListerForKReference(t *testing.T) {
+	testCases := map[string]struct {
+		informerFactoryError error
+		repeatedTracks       int
+		expectedError        error
+	}{
+		"informerFactory error": {
+			informerFactoryError: errTest,
+			expectedError:        errTest,
+		},
+		"Only one informer created per GVR": {
+			repeatedTracks: 1,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			fif := newFakeInformerFactory()
+			if tc.informerFactoryError != nil {
+				fif.err = tc.informerFactoryError
+			}
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
+			ctx = addressable.WithDuck(ctx)
+			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			rt, _ := tr.(*listableTracker)
+			rt.informerFactory = fif
+			track := rt.TrackInNamespaceKReference(
+				context.Background(),
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns,
+						Name:      "svc",
+					},
+				})
+			for i := 0; i <= tc.repeatedTracks; i++ {
+				ref := duckv1.KReference{
+					APIVersion: "v1",
+					Kind:       "Pod",
+					Name:       fmt.Sprintf("ref-%d", i),
+				}
+				err := track(ref)
+				if tc.expectedError != nil {
+					if err != tc.expectedError {
+						t.Fatalf("Incorrect error from returned track function. Expected '%v'. Actual '%v'", tc.expectedError, err)
+					}
+					return
+				}
+
+				_, err = rt.ListerForKReference(ref)
+				if err != nil {
+					t.Fatalf("Expected nil. Actual '%v'", err)
+				}
+			}
+		})
+	}
+}
+
+func TestResourceInformerForKReference(t *testing.T) {
+	testCases := map[string]struct {
+		informerFactoryError error
+		repeatedTracks       int
+		expectedError        error
+	}{
+		"informerFactory error": {
+			informerFactoryError: errTest,
+			expectedError:        errTest,
+		},
+		"Only one informer created per GVR": {
+			repeatedTracks: 1,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			fif := newFakeInformerFactory()
+			if tc.informerFactoryError != nil {
+				fif.err = tc.informerFactoryError
+			}
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
+			ctx = addressable.WithDuck(ctx)
+			tr := NewListableTracker(ctx, addressable.Get, func(types.NamespacedName) {}, time.Minute)
+			rt, _ := tr.(*listableTracker)
+			rt.informerFactory = fif
+			track := rt.TrackInNamespaceKReference(
+				context.Background(),
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns,
+						Name:      "svc",
+					},
+				})
+			for i := 0; i <= tc.repeatedTracks; i++ {
+				ref := duckv1.KReference{
+					APIVersion: "v1",
+					Kind:       "Pod",
+					Name:       fmt.Sprintf("ref-%d", i),
+				}
+				err := track(ref)
+				if tc.expectedError != nil {
+					if err != tc.expectedError {
+						t.Fatalf("Incorrect error from returned track function. Expected '%v'. Actual '%v'", tc.expectedError, err)
+					}
+					return
+				}
+
+				_, err = rt.InformerForKReference(ref)
+				if err != nil {
+					t.Fatalf("Expected nil. Actual '%v'", err)
+				}
+			}
+		})
+	}
+}
+
 type fakeInformer struct {
 	cache.SharedIndexInformer
 	eventHandlerAdded bool

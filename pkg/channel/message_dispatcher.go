@@ -264,7 +264,43 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 
 // dispatchExecutionTransformer returns Transformers based on the specified DispatchExecutionInfo
 func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
-	return attributes.KnativeErrorTransformers(dispatchExecutionInfo.ResponseCode, string(dispatchExecutionInfo.ResponseBody))
+	// Unprintable control characters are not allowed in header values
+	// and cause HTTP requests to fail if not removed.
+	// https://pkg.go.dev/golang.org/x/net/http/httpguts#ValidHeaderFieldValue
+	httpBody := sanitizeHTTPBody(dispatchExecutionInfo.ResponseBody)
+	return attributes.KnativeErrorTransformers(dispatchExecutionInfo.ResponseCode, httpBody)
+}
+
+func sanitizeHTTPBody(body []byte) string {
+	if !hasControlChars(body) {
+		return string(body)
+	}
+
+	sanitizedResponse := make([]byte, 0, len(body))
+	for _, v := range body {
+		if !isControl(v) {
+			sanitizedResponse = append(sanitizedResponse, v)
+		}
+	}
+	return string(sanitizedResponse)
+}
+
+func hasControlChars(data []byte) bool {
+	for _, v := range data {
+		if isControl(v) {
+			return true
+		}
+	}
+	return false
+}
+
+func isControl(c byte) bool {
+	// US ASCII codes range for printable graphic characters and a space.
+	// http://www.columbia.edu/kermit/ascii.html
+	const asciiUnitSeparator = 31
+	const asciiRubout = 127
+
+	return int(c) < asciiUnitSeparator || int(c) > asciiRubout
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.

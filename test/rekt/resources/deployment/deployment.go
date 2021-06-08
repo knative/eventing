@@ -42,7 +42,7 @@ func Install(name string) feature.StepFn {
 	}
 }
 
-// AsRef returns a KRef for a Service without namespace.
+// AsRef returns a KRef for a Deployment without namespace.
 func AsRef(name string) *duckv1.KReference {
 	return &duckv1.KReference{
 		Kind:       "Deployment",

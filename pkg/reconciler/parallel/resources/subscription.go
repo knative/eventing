@@ -22,7 +22,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -51,7 +50,7 @@ func NewFilterSubscription(branchNumber int, p *v1.Parallel) *messagingv1.Subscr
 			},
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelChannelName(p.Name),
@@ -90,7 +89,7 @@ func NewSubscription(branchNumber int, p *v1.Parallel) *messagingv1.Subscription
 			},
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
+			Channel: duckv1.KReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelBranchChannelName(p.Name, branchNumber),

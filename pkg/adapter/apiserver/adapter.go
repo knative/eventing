@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -30,7 +31,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/v2"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
 )
 
 type envConfig struct {
@@ -66,7 +67,7 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		ce:     a.ce,
 		source: a.source,
 		logger: a.logger,
-		ref:    a.config.EventMode == v1alpha2.ReferenceMode,
+		ref:    a.config.EventMode == v1.ReferenceMode,
 	}
 
 	if a.config.ResourceOwner != nil {
@@ -118,8 +119,17 @@ func (a *apiServerAdapter) start(ctx context.Context, stopCh <-chan struct{}) er
 		}
 	}
 
+	srv := &http.Server{
+		Addr: ":8080",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+	}
+	go srv.ListenAndServe()
+
 	<-stopCh
 	stop <- struct{}{}
+	srv.Shutdown(ctx)
 	return nil
 }
 

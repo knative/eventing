@@ -16,11 +16,10 @@
 package config
 
 import (
-	"github.com/mitchellh/go-homedir"
-	"github.com/pelletier/go-toml"
-	"github.com/wavesoftware/go-ensure"
-
 	"os"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/pelletier/go-toml/v2"
 )
 
 var location = "~/.config/wathola/config.toml"
@@ -29,15 +28,20 @@ var logFatal = Log.Fatal
 // ReadIfPresent read a configuration file if it exists
 func ReadIfPresent() {
 	configFile, err := homedir.Expand(location)
-	ensure.NoError(err)
+	if err != nil {
+		logFatal(err)
+	}
 	if fileExists(configFile) {
 		Log.Infof("Reading config file: %v", configFile)
-		err := Read(configFile)
+		err = Read(configFile)
 		if err != nil {
 			logFatal(err)
 		}
 	} else {
 		Log.Infof("Define config file to be taken into account: %v", configFile)
+	}
+	if err = setLogLevel(); err != nil {
+		logFatal(err)
 	}
 }
 
@@ -48,9 +52,17 @@ func Read(configFile string) error {
 		return err
 	}
 	d := toml.NewDecoder(r)
+	d.SetStrict(true)
 	err = d.Decode(Instance)
+	return err
+}
+
+func setLogLevel() error {
+	err := logConfig.Level.UnmarshalText([]byte(Instance.LogLevel))
 	if err == nil {
-		logConfig.Level.SetLevel(Instance.LogLevel)
+		Instance.LogLevel = logConfig.Level.String()
+	} else {
+		Instance.LogLevel = defaultValues().LogLevel
 	}
 	return err
 }

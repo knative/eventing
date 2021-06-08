@@ -32,6 +32,7 @@ import (
 )
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_transformation_test
+// Deprecated, use reconciler-test based tests.
 func EventTransformationForSubscriptionTestHelper(
 	ctx context.Context,
 	t *testing.T,

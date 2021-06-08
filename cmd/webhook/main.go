@@ -49,9 +49,6 @@ import (
 	"knative.dev/eventing/pkg/apis/sources"
 	pingdefaultconfig "knative.dev/eventing/pkg/apis/sources/config"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	sourcesv1beta1 "knative.dev/eventing/pkg/apis/sources/v1beta1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
@@ -66,28 +63,15 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 
 	// For group messaging.knative.dev.
 	// v1
-	messagingv1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1.InMemoryChannel{},
-	messagingv1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1.Channel{},
-	messagingv1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1.Subscription{},
+	messagingv1.SchemeGroupVersion.WithKind("Channel"):      &messagingv1.Channel{},
+	messagingv1.SchemeGroupVersion.WithKind("Subscription"): &messagingv1.Subscription{},
 
 	// For group sources.knative.dev.
-	// v1alpha1
-	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
-	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
-	// v1alpha2
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha2.ApiServerSource{},
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha2.SinkBinding{},
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha2.ContainerSource{},
-	// v1beta1
-	sourcesv1beta1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1beta1.ApiServerSource{},
-	sourcesv1beta1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1beta1.PingSource{},
-	sourcesv1beta1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1beta1.SinkBinding{},
-	sourcesv1beta1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1beta1.ContainerSource{},
 	// v1beta2
 	sourcesv1beta2.SchemeGroupVersion.WithKind("PingSource"): &sourcesv1beta2.PingSource{},
 	// v1
 	sourcesv1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1.ApiServerSource{},
+	sourcesv1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1.PingSource{},
 	sourcesv1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1.SinkBinding{},
 	sourcesv1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1.ContainerSource{},
 
@@ -223,11 +207,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	}
 
 	var (
-		sourcesv1alpha1_ = sourcesv1alpha1.SchemeGroupVersion.Version
-		sourcesv1alpha2_ = sourcesv1alpha2.SchemeGroupVersion.Version
-		sourcesv1beta1_  = sourcesv1beta1.SchemeGroupVersion.Version
-		sourcesv1beta2_  = sourcesv1beta2.SchemeGroupVersion.Version
-		sourcesv1_       = sourcesv1.SchemeGroupVersion.Version
+		sourcesv1beta2_ = sourcesv1beta2.SchemeGroupVersion.Version
+		sourcesv1_      = sourcesv1.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -237,42 +218,12 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			// Sources
-			sourcesv1.Kind("ApiServerSource"): {
-				DefinitionName: sources.ApiServerSourceResource.String(),
-				HubVersion:     sourcesv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
-					sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
-					sourcesv1beta1_:  &sourcesv1beta1.ApiServerSource{},
-					sourcesv1_:       &sourcesv1.ApiServerSource{},
-				},
-			},
-			sourcesv1beta1.Kind("PingSource"): {
+			sourcesv1.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
-				HubVersion:     sourcesv1alpha2_,
+				HubVersion:     sourcesv1beta2_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
-					sourcesv1beta1_:  &sourcesv1beta1.PingSource{},
-					sourcesv1beta2_:  &sourcesv1beta2.PingSource{},
-				},
-			},
-			sourcesv1.Kind("SinkBinding"): {
-				DefinitionName: sources.SinkBindingResource.String(),
-				HubVersion:     sourcesv1alpha1_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
-					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
-					sourcesv1beta1_:  &sourcesv1beta1.SinkBinding{},
-					sourcesv1_:       &sourcesv1.SinkBinding{},
-				},
-			},
-			sourcesv1.Kind("ContainerSource"): {
-				DefinitionName: sources.ContainerSourceResource.String(),
-				HubVersion:     sourcesv1alpha2_,
-				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha2_: &sourcesv1alpha2.ContainerSource{},
-					sourcesv1beta1_:  &sourcesv1beta1.ContainerSource{},
-					sourcesv1_:       &sourcesv1.ContainerSource{},
+					sourcesv1beta2_: &sourcesv1beta2.PingSource{},
+					sourcesv1_:      &sourcesv1.PingSource{},
 				},
 			},
 		},

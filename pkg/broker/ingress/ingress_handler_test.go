@@ -127,6 +127,18 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
+			name:       "invalid event",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getInvalidEvent(),
+			statusCode: nethttp.StatusBadRequest,
+			handler:    handler(),
+			reporter:   &mockReporter{},
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
+		},
+		{
 			name:       "no TTL drop event",
 			method:     nethttp.MethodPost,
 			uri:        "/ns/name",
@@ -310,6 +322,14 @@ func getValidEvent() io.Reader {
 	e := event.New()
 	e.SetType("type")
 	e.SetSource("source")
+	e.SetID("1234")
+	b, _ := e.MarshalJSON()
+	return bytes.NewBuffer(b)
+}
+
+func getInvalidEvent() io.Reader {
+	e := event.New()
+	e.SetType("type")
 	e.SetID("1234")
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)

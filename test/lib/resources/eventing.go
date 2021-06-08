@@ -23,14 +23,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
-
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // BrokerOption enables further configuration of a v1 Broker.
@@ -46,8 +44,12 @@ type SubscriptionOption func(*messagingv1.Subscription)
 type DeliveryOption func(*eventingduckv1beta1.DeliverySpec)
 
 // channelRef returns an ObjectReference for a given Channel name.
-func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
+func channelRef(name string, typemeta *metav1.TypeMeta) duckv1.KReference {
+	return duckv1.KReference{
+		Kind:       typemeta.Kind,
+		APIVersion: typemeta.APIVersion,
+		Name:       name,
+	}
 }
 
 func KnativeRefForService(name, namespace string) *duckv1.KReference {
@@ -124,7 +126,7 @@ func Subscription(
 			Name: name,
 		},
 		Spec: messagingv1.SubscriptionSpec{
-			Channel: *channelRef(channelName, channelTypeMeta),
+			Channel: channelRef(channelName, channelTypeMeta),
 		},
 	}
 	for _, option := range options {
@@ -240,21 +242,30 @@ func WithDependencyAnnotationTrigger(dependencyAnnotation string) TriggerOption 
 
 // WithSubscriberServiceRefForTrigger returns an option that adds a Subscriber Knative Service Ref for the given v1 Trigger.
 func WithSubscriberServiceRefForTrigger(name string) TriggerOption {
-	return func(t *eventingv1.Trigger) {
-		if name != "" {
-			t.Spec.Subscriber = duckv1.Destination{
-				Ref: KnativeRefForService(name, t.Namespace),
-			}
+	return WithSubscriberDestination(func(t *eventingv1.Trigger) duckv1.Destination {
+		return duckv1.Destination{
+			Ref: KnativeRefForService(name, t.Namespace),
 		}
-	}
+	})
 }
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given v1 Trigger.
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
-	apisURI, _ := apis.ParseURL(uri)
-	return func(t *eventingv1.Trigger) {
-		t.Spec.Subscriber = duckv1.Destination{
+	return WithSubscriberDestination(func(t *eventingv1.Trigger) duckv1.Destination {
+		apisURI, _ := apis.ParseURL(uri)
+		return duckv1.Destination{
 			URI: apisURI,
+		}
+	})
+}
+
+// WithSubscriberDestination returns an option that adds a Subscriber for given
+// duckv1.Destination.
+func WithSubscriberDestination(destFactory func(t *eventingv1.Trigger) duckv1.Destination) TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		dest := destFactory(t)
+		if dest.Ref != nil || dest.URI != nil {
+			t.Spec.Subscriber = dest
 		}
 	}
 }

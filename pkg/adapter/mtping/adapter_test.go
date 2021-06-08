@@ -24,7 +24,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	"github.com/robfig/cron/v3"
 
@@ -70,7 +70,7 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 		entryids:  make(map[string]cron.EntryID),
 	}
 
-	adapter.Update(ctx, &v1beta2.PingSource{
+	adapter.Update(ctx, &sourcesv1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-name",
 			Namespace: "test-ns",
@@ -81,7 +81,7 @@ func TestUpdateRemoveAdapter(t *testing.T) {
 		t.Error(`Expected cron entries to contain "test-ns/test-name"`)
 	}
 
-	adapter.Remove(&v1beta2.PingSource{
+	adapter.Remove(&sourcesv1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-name",
 			Namespace: "test-ns",
@@ -96,7 +96,7 @@ type testRunner struct {
 	CronJobRunner
 }
 
-func (*testRunner) AddSchedule(*v1beta2.PingSource) cron.EntryID {
+func (*testRunner) AddSchedule(*sourcesv1.PingSource) cron.EntryID {
 	return cron.EntryID(1)
 }
 func (*testRunner) RemoveSchedule(cron.EntryID) {}

@@ -185,10 +185,6 @@ func makeK8sNamespace(baseFuncName string) string {
 
 // TearDown will delete created names using clients.
 func TearDown(client *Client) {
-	if err := client.runCleanup(); err != nil {
-		client.T.Logf("Cleanup error: %+v", err)
-	}
-
 	// Dump the events in the namespace
 	el, err := client.Kube.CoreV1().Events(client.Namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -218,12 +214,16 @@ func TearDown(client *Client) {
 
 	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
 	// which will then be uploaded to GCS after the test job finishes.
-	if prow.IsCI() {
+	if prow.IsCI() && client.T.Failed() {
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), podLogsDir)
 		client.T.Logf("Export logs in %q to %q", client.Namespace, dir)
 		if err := client.ExportLogs(dir); err != nil {
 			client.T.Logf("Error in exporting logs: %v", err)
 		}
+	}
+
+	if err := client.runCleanup(); err != nil {
+		client.T.Logf("Cleanup error: %+v", err)
 	}
 
 	client.Tracker.Clean(true)
