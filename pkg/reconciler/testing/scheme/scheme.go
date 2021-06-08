@@ -33,7 +33,7 @@ var Serving = runtime.SchemeBuilder{
 }
 
 func SubscriberToScheme(scheme *runtime.Scheme) error {
-	gv := schema.GroupVersion{Group: "testing.eventing.knative.dev", Version: "v1"}
+	gv := schema.GroupVersion{Group: "messaging.knative.dev", Version: "v1"}
 	scheme.AddKnownTypeWithName(gv.WithKind("Subscriber"), &unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(gv.WithKind("SubscriberList"), &unstructured.UnstructuredList{})
 	return nil
