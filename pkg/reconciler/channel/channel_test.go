@@ -317,7 +317,7 @@ func channelCRD() metav1.TypeMeta {
 func channelCRDBadGvk() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: "",
-		Kind:       "-BrokenKind",
+		Kind:       "",
 	}
 }
 
