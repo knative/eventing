@@ -21,11 +21,16 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/utils/pointer"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestDeliverySpecValidation(t *testing.T) {
+	deliveryTimeoutEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
+		feature.DeliveryTimeout: feature.Enabled,
+	})
+
 	invalidString := "invalid time"
 	bop := BackoffPolicyExponential
 	validDuration := "PT2S"
@@ -33,6 +38,7 @@ func TestDeliverySpecValidation(t *testing.T) {
 	tests := []struct {
 		name string
 		spec *DeliverySpec
+		ctx  context.Context
 		want *apis.FieldError
 	}{{
 		name: "nil is valid",
@@ -53,13 +59,19 @@ func TestDeliverySpecValidation(t *testing.T) {
 	}, {
 		name: "valid timeout",
 		spec: &DeliverySpec{Timeout: &validDuration},
+		ctx:  deliveryTimeoutEnabledCtx,
 		want: nil,
 	}, {
 		name: "invalid timeout",
 		spec: &DeliverySpec{Timeout: &invalidDuration},
+		ctx:  deliveryTimeoutEnabledCtx,
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue(invalidDuration, "timeout")
 		}(),
+	}, {
+		name: "disabled timeout",
+		spec: &DeliverySpec{Timeout: &validDuration},
+		want: apis.ErrDisallowedFields("timeout"),
 	}, {
 		name: "valid backoffPolicy",
 		spec: &DeliverySpec{BackoffPolicy: &bop},
@@ -90,7 +102,11 @@ func TestDeliverySpecValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.spec.Validate(context.TODO())
+			ctx := test.ctx
+			if ctx == nil {
+				ctx = context.TODO()
+			}
+			got := test.spec.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Error("DeliverySpec.Validate (-want, +got) =", diff)
 			}
