@@ -227,18 +227,18 @@ func (f *FanoutMessageHandler) ServeHTTP(response nethttp.ResponseWriter, reques
 
 // ParseDispatchResultAndReportMetric processes the dispatch result and records the related channel metrics with the appropriate context
 func ParseDispatchResultAndReportMetrics(result DispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
-	if result.Info != nil && result.Info.Time > channel.NoDuration {
-		if result.Info.ResponseCode > channel.NoResponse {
-			_ = reporter.ReportEventDispatchTime(&reportArgs, result.Info.ResponseCode, result.Info.Time)
+	if result.info != nil && result.info.Time > channel.NoDuration {
+		if result.info.ResponseCode > channel.NoResponse {
+			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Time)
 		} else {
-			_ = reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, result.Info.Time)
+			_ = reporter.ReportEventDispatchTime(&reportArgs, nethttp.StatusInternalServerError, result.info.Time)
 		}
 	}
-	err := result.Err
+	err := result.err
 	if err != nil {
 		channel.ReportEventCountMetricsForDispatchError(err, reporter, &reportArgs)
-	} else if result.Info != nil {
-		_ = reporter.ReportEventCount(&reportArgs, result.Info.ResponseCode)
+	} else if result.info != nil {
+		_ = reporter.ReportEventCount(&reportArgs, result.info.ResponseCode)
 	}
 	return err
 }
@@ -253,13 +253,13 @@ func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription
 	for _, sub := range subs {
 		go func(s Subscription) {
 			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
-			errorCh <- DispatchResult{Err: err, Info: dispatchedResultPerSub}
+			errorCh <- DispatchResult{err: err, info: dispatchedResultPerSub}
 		}(sub)
 	}
 
 	var totalDispatchTimeForFanout time.Duration = channel.NoDuration
 	dispatchResultForFanout := DispatchResult{
-		Info: &channel.DispatchExecutionInfo{
+		info: &channel.DispatchExecutionInfo{
 			Time:         channel.NoDuration,
 			ResponseCode: channel.NoResponse,
 		},
@@ -267,25 +267,25 @@ func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription
 	for range subs {
 		select {
 		case dispatchResult := <-errorCh:
-			if dispatchResult.Info != nil {
-				if dispatchResult.Info.Time > channel.NoDuration {
+			if dispatchResult.info != nil {
+				if dispatchResult.info.Time > channel.NoDuration {
 					if totalDispatchTimeForFanout > channel.NoDuration {
-						totalDispatchTimeForFanout += dispatchResult.Info.Time
+						totalDispatchTimeForFanout += dispatchResult.info.Time
 					} else {
-						totalDispatchTimeForFanout = dispatchResult.Info.Time
+						totalDispatchTimeForFanout = dispatchResult.info.Time
 					}
 				}
-				dispatchResultForFanout.Info.Time = totalDispatchTimeForFanout
-				dispatchResultForFanout.Info.ResponseCode = dispatchResult.Info.ResponseCode
+				dispatchResultForFanout.info.Time = totalDispatchTimeForFanout
+				dispatchResultForFanout.info.ResponseCode = dispatchResult.info.ResponseCode
 			}
-			if dispatchResult.Err != nil {
-				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.Err))
-				dispatchResultForFanout.Err = dispatchResult.Err
+			if dispatchResult.err != nil {
+				f.logger.Error("Fanout had an error", zap.Error(dispatchResult.err))
+				dispatchResultForFanout.err = dispatchResult.err
 				return dispatchResultForFanout
 			}
 		case <-time.After(f.timeout):
 			f.logger.Error("Fanout timed out")
-			dispatchResultForFanout.Err = errors.New("fanout timed out")
+			dispatchResultForFanout.err = errors.New("fanout timed out")
 			return dispatchResultForFanout
 		}
 	}
@@ -308,6 +308,21 @@ func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message bi
 }
 
 type DispatchResult struct {
-	Err  error
-	Info *channel.DispatchExecutionInfo
+	err  error
+	info *channel.DispatchExecutionInfo
+}
+
+func (d DispatchResult) GetDispatchResultError() error {
+	return d.err
+}
+
+func (d DispatchResult) GetDispatchResultInfo() *channel.DispatchExecutionInfo {
+	return d.info
+}
+
+func NewDispatchResult(err error, info *channel.DispatchExecutionInfo) DispatchResult {
+	return DispatchResult{
+		err:  err,
+		info: info,
+	}
 }
