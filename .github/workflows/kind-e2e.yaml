@@ -134,6 +134,12 @@ jobs:
         source ./vendor/knative.dev/hack/infra-library.sh
         wait_until_pods_running ${SYSTEM_NAMESPACE}
 
+    - name: Apply experimental features config
+      if: matrix.test-suite == './test/experimental'
+      run: |
+        kubectl apply -f ./test/experimental/config
+        wait_until_pods_running ${SYSTEM_NAMESPACE}
+
     - name: Run e2e Tests
       run: |
         export GO111MODULE=on
