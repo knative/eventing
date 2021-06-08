@@ -19,6 +19,7 @@ package feature
 import (
 	"context"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
 )
 
@@ -77,7 +78,10 @@ func NewStore(logger configmap.Logger, onAfterStore ...func(name string, value i
 
 // ToContext attaches the current Config state to the provided context.
 func (s *Store) ToContext(ctx context.Context) context.Context {
-	return ToContext(ctx, s.Load())
+	flags := s.Load()
+	ctx = ToContext(ctx, flags)
+	ctx = fillContextWithFeatureSpecificFlags(ctx, flags)
+	return ctx
 }
 
 // IsEnabled is a shortcut for Load().IsEnabled(featureName)
@@ -97,4 +101,11 @@ func (s *Store) Load() Flags {
 		return Flags(nil)
 	}
 	return loaded.(Flags)
+}
+
+func fillContextWithFeatureSpecificFlags(ctx context.Context, flags Flags) context.Context {
+	if flags.IsEnabled(KReferenceGroup) {
+		ctx = duckv1.KReferenceGroupAllowed(ctx)
+	}
+	return ctx
 }
