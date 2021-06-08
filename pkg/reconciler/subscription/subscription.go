@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/pkg/apis/feature"
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -40,6 +39,7 @@ import (
 	"knative.dev/pkg/tracker"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -74,8 +74,6 @@ type Reconciler struct {
 	channelableTracker  eventingduck.ListableTracker
 	destinationResolver *resolver.URIResolver
 	tracker             tracker.Interface
-
-	featureFlagsStore *feature.Store
 }
 
 // Check that our Reconciler implements Interface
@@ -86,9 +84,6 @@ var _ subscriptionreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1.Subscription) pkgreconciler.Event {
-	// Populate this context with experimental flags
-	ctx = r.featureFlagsStore.ToContext(ctx)
-
 	// Find the channel for this subscription.
 	channel, err := r.getChannel(ctx, subscription)
 	if err != nil {

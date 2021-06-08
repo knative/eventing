@@ -54,9 +54,12 @@ func NewController(
 		crdLister:          customresourcedefinition.Get(ctx).Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		channelLister:      channelInformer.Lister(),
-		featureFlagsStore:  featureStore,
 	}
-	impl := subscriptionreconciler.NewImpl(ctx, r)
+	impl := subscriptionreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
