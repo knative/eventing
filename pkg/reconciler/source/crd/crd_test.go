@@ -68,12 +68,6 @@ var crdGVK = schema.GroupVersionKind{
 	Kind:    crdKind,
 }
 
-var crdListGVK = schema.GroupVersionKind{
-	Group:   crdGroup,
-	Version: crdVersionServed,
-	Kind:    crdKind + "List",
-}
-
 func TestAllCases(t *testing.T) {
 	ctx := context.Background()
 	ctx, _ = injection.Fake.SetupInformers(ctx, &rest.Config{})
