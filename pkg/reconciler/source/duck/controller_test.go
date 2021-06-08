@@ -17,7 +17,6 @@ limitations under the License.
 package duck
 
 import (
-	"context"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,6 +25,7 @@ import (
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
 	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition/fake"
+	sourceinformer "knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
@@ -34,10 +34,13 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t, func(ctx context.Context) context.Context {
-		ctx, _ = fakedynamicclient.With(ctx, NewScheme())
-		return ctx
-	})
+	ctx, _ := SetupFakeContext(t)
+
+	// Re-wire some injection so that an informer has a dynamic client
+	// with the correct scheme
+	ctx, _ = fakedynamicclient.With(ctx, NewScheme())
+	ctx, _ = fakedynamicclient.With(ctx, NewScheme())
+	ctx = sourceinformer.WithDuck(ctx)
 
 	gvr := schema.GroupVersionResource{
 		Group:    "testing.sources.knative.dev",
