@@ -312,11 +312,11 @@ type DispatchResult struct {
 	info *channel.DispatchExecutionInfo
 }
 
-func (d DispatchResult) GetDispatchResultError() error {
+func (d DispatchResult) Error() error {
 	return d.err
 }
 
-func (d DispatchResult) GetDispatchResultInfo() *channel.DispatchExecutionInfo {
+func (d DispatchResult) Info() *channel.DispatchExecutionInfo {
 	return d.info
 }
 
