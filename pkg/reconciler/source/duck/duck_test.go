@@ -66,13 +66,13 @@ var (
 
 	gvr = schema.GroupVersionResource{
 		Group:    "testing.sources.knative.dev",
-		Version:  "v1alpha1",
+		Version:  "v1",
 		Resource: "testsources",
 	}
 
 	gvk = schema.GroupVersionKind{
 		Group:   "testing.sources.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1",
 		Kind:    "TestSource",
 	}
 )

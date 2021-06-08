@@ -53,7 +53,7 @@ const (
 	crdGroup         = "testing.sources.knative.dev"
 	crdKind          = "TestSource"
 	crdPlural        = "testsources"
-	crdVersionServed = "v1alpha1"
+	crdVersionServed = "v1"
 )
 
 var crdGVR = schema.GroupVersionResource{
