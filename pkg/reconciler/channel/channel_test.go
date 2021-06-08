@@ -15,6 +15,7 @@ package channel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -23,11 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
@@ -57,12 +56,6 @@ var (
 		Retry: pointer.Int32Ptr(10),
 	}
 )
-
-func init() {
-	// Add types to scheme
-	_ = messagingv1.AddToScheme(scheme.Scheme)
-	_ = eventingduckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestReconcile(t *testing.T) {
 
@@ -95,7 +88,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions),
 		},
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", "unable to track changes to the backing Channel: %v:%v", "invalid Reference", "\nAPIVersion: name part must be non-empty\nAPIVersion: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')\nKind: a valid C identifier must start with alphabetic character or '_', followed by a string of alphanumeric characters or '_' (e.g. 'my_name',  or 'MY_NAME',  or 'MyName', regex used for validation is '[A-Za-z_][A-Za-z0-9_]*')"),
+			Eventf(corev1.EventTypeWarning, "InternalError", "unable to track changes to the backing Channel: failed to track"),
 		},
 		WantErr: true,
 	}, {
@@ -304,7 +297,7 @@ func TestReconcile(t *testing.T) {
 		r := &Reconciler{
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
-			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker: &fakeListableTracker{duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0)},
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),
@@ -313,6 +306,19 @@ func TestReconcile(t *testing.T) {
 		false,
 		logger,
 	))
+}
+
+type fakeListableTracker struct {
+	duck.ListableTracker
+}
+
+func (f *fakeListableTracker) TrackInNamespaceKReference(ctx context.Context, obj metav1.Object) duck.TrackKReference {
+	return func(ref duckv1.KReference) error {
+		if ref.Kind == channelCRDBadGvk().Kind {
+			return errors.New("failed to track")
+		}
+		return f.ListableTracker.TrackInNamespaceKReference(ctx, obj)(ref)
+	}
 }
 
 func channelCRD() metav1.TypeMeta {
@@ -324,8 +330,8 @@ func channelCRD() metav1.TypeMeta {
 
 func channelCRDBadGvk() metav1.TypeMeta {
 	return metav1.TypeMeta{
-		APIVersion: "",
-		Kind:       "",
+		APIVersion: "broken.testing.dev",
+		Kind:       "FailsTrack",
 	}
 }
 

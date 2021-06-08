@@ -24,22 +24,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-
-	"k8s.io/client-go/kubernetes/scheme"
-
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
 	testNS = "testnamespace"
 )
-
-func init() {
-	// Add types to scheme
-	_ = eventingv1.AddToScheme(scheme.Scheme)
-	_ = duckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestDomainToURL(t *testing.T) {
 	d := "default-broker.default.svc.cluster.local"

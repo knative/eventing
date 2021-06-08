@@ -40,6 +40,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
+
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
 	fakeclient "knative.dev/pkg/client/injection/apiextensions/client/fake"
 	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition/fake"
@@ -52,7 +53,7 @@ const (
 	crdGroup         = "testing.sources.knative.dev"
 	crdKind          = "TestSource"
 	crdPlural        = "testsources"
-	crdVersionServed = "v1alpha1"
+	crdVersionServed = "v1"
 )
 
 var crdGVR = schema.GroupVersionResource{

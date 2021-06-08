@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
@@ -100,11 +99,6 @@ var (
 
 	subscribers = []eventingduckv1.SubscriberSpec{subscriber1, subscriber2}
 )
-
-func init() {
-	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
-}
 
 func TestAllCases(t *testing.T) {
 	backoffPolicy := eventingduckv1.BackoffPolicyLinear

@@ -66,11 +66,6 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
 
-		dynamicScheme := runtime.NewScheme()
-		for _, addTo := range clientSetSchemes {
-			addTo(dynamicScheme)
-		}
-
 		// The dynamic client's support for patching is BS.  Implement it
 		// here via PrependReactor (this can be overridden below by the
 		// provided reactors).

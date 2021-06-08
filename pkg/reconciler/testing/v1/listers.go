@@ -23,9 +23,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	fakeapiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	apiextensionsv1listers "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -43,27 +41,19 @@ import (
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1"
+	testscheme "knative.dev/eventing/pkg/reconciler/testing/scheme"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
 )
-
-var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.eventing.knative.dev", Version: "v1", Kind: "Subscriber"}, &unstructured.Unstructured{})
-	return nil
-}
-
-var sourceAddToScheme = func(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.sources.knative.dev", Version: "v1", Kind: "TestSource"}, &duckv1.Source{})
-	return nil
-}
 
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
-	subscriberAddToScheme,
-	sourceAddToScheme,
+	duckv1.AddToScheme,
 	eventingduck.AddToScheme,
+	testscheme.Eventing.AddToScheme,
+	testscheme.Serving.AddToScheme,
 }
 
 type Listers struct {
@@ -108,7 +98,7 @@ func (l *Listers) GetEventingObjects() []runtime.Object {
 }
 
 func (l *Listers) GetSubscriberObjects() []runtime.Object {
-	return l.sorter.ObjectsForSchemeFunc(subscriberAddToScheme)
+	return l.sorter.ObjectsForSchemeFunc(testscheme.SubscriberToScheme)
 }
 
 func (l *Listers) GetAllObjects() []runtime.Object {

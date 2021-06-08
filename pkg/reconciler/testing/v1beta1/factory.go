@@ -67,11 +67,6 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
 
-		dynamicScheme := runtime.NewScheme()
-		for _, addTo := range clientSetSchemes {
-			addTo(dynamicScheme)
-		}
-
 		// The dynamic client's support for patching is BS.  Implement it
 		// here via PrependReactor (this can be overridden below by the
 		// provided reactors).
@@ -121,18 +116,22 @@ func ToUnstructured(t *testing.T, objs []runtime.Object) (us []runtime.Object) {
 	sch := NewScheme()
 	for _, obj := range objs {
 		obj = obj.DeepCopyObject() // Don't mess with the primary copy
-		// Determine and set the TypeMeta for this object based on our test scheme.
-		gvks, _, err := sch.ObjectKinds(obj)
-		if err != nil {
-			t.Fatal("Unable to determine kind for type:", err)
-		}
-		apiv, k := gvks[0].ToAPIVersionAndKind()
+
 		ta, err := meta.TypeAccessor(obj)
 		if err != nil {
 			t.Fatal("Unable to create type accessor:", err)
 		}
-		ta.SetAPIVersion(apiv)
-		ta.SetKind(k)
+
+		if ta.GetAPIVersion() == "" || ta.GetKind() == "" {
+			// Determine and set the TypeMeta for this object based on our test scheme.
+			gvks, _, err := sch.ObjectKinds(obj)
+			if err != nil {
+				t.Fatal("Unable to determine kind for type:", err)
+			}
+			apiv, k := gvks[0].ToAPIVersionAndKind()
+			ta.SetAPIVersion(apiv)
+			ta.SetKind(k)
+		}
 
 		b, err := json.Marshal(obj)
 		if err != nil {
