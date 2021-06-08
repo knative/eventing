@@ -226,7 +226,7 @@ func (f *FanoutMessageHandler) ServeHTTP(response nethttp.ResponseWriter, reques
 }
 
 // ParseDispatchResultAndReportMetric processes the dispatch result and records the related channel metrics with the appropriate context
-func ParseDispatchResultAndReportMetrics(result dispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
+func ParseDispatchResultAndReportMetrics(result DispatchResult, reporter channel.StatsReporter, reportArgs channel.ReportArgs) error {
 	if result.info != nil && result.info.Time > channel.NoDuration {
 		if result.info.ResponseCode > channel.NoResponse {
 			_ = reporter.ReportEventDispatchTime(&reportArgs, result.info.ResponseCode, result.info.Time)
@@ -245,20 +245,20 @@ func ParseDispatchResultAndReportMetrics(result dispatchResult, reporter channel
 
 // dispatch takes the event, fans it out to each subscription in subs. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, bufferedMessage binding.Message, additionalHeaders nethttp.Header) dispatchResult {
+func (f *FanoutMessageHandler) dispatch(ctx context.Context, subs []Subscription, bufferedMessage binding.Message, additionalHeaders nethttp.Header) DispatchResult {
 	// Bind the lifecycle of the buffered message to the number of subs
 	bufferedMessage = buffering.WithAcksBeforeFinish(bufferedMessage, len(subs))
 
-	errorCh := make(chan dispatchResult, len(subs))
+	errorCh := make(chan DispatchResult, len(subs))
 	for _, sub := range subs {
 		go func(s Subscription) {
 			dispatchedResultPerSub, err := f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
-			errorCh <- dispatchResult{err: err, info: dispatchedResultPerSub}
+			errorCh <- DispatchResult{err: err, info: dispatchedResultPerSub}
 		}(sub)
 	}
 
 	var totalDispatchTimeForFanout time.Duration = channel.NoDuration
-	dispatchResultForFanout := dispatchResult{
+	dispatchResultForFanout := DispatchResult{
 		info: &channel.DispatchExecutionInfo{
 			Time:         channel.NoDuration,
 			ResponseCode: channel.NoResponse,
@@ -307,7 +307,22 @@ func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message bi
 	)
 }
 
-type dispatchResult struct {
+type DispatchResult struct {
 	err  error
 	info *channel.DispatchExecutionInfo
+}
+
+func (d DispatchResult) Error() error {
+	return d.err
+}
+
+func (d DispatchResult) Info() *channel.DispatchExecutionInfo {
+	return d.info
+}
+
+func NewDispatchResult(err error, info *channel.DispatchExecutionInfo) DispatchResult {
+	return DispatchResult{
+		err:  err,
+		info: info,
+	}
 }
