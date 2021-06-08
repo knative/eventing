@@ -62,9 +62,6 @@ spec:
                           description: BackoffPolicy is the retry backoff
                               policy (linear, exponential).
                           type: string
-                        timeout:
-                          description: Timeout is the timeout of each single request.
-                          type: string
                         deadLetterSink:
                           description: DeadLetterSink is the sink receiving
                               event that could not be sent to a destination.
@@ -107,6 +104,7 @@ spec:
                               sink.
                           type: integer
                           format: int32
+                      x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature delivery-timeout
                     filter:
                       description: Filter is the expression guarding the branch
                       type: object

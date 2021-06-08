@@ -25,3 +25,6 @@ data:
   # ALPHA feature: The kreference-group allows you to use the Group field in KReferences.
   # For more details: https://github.com/knative/eventing/issues/5086
   kreference-group: "disabled"
+
+  # ALPHA feature: The delivery-timeout allows you to use the Timeout field in DeliverySpec.
+  delivery-timeout: "disabled"
