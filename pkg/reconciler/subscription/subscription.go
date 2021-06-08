@@ -33,6 +33,7 @@ import (
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
@@ -214,7 +215,8 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 
 		// Resolve the group
 		if subscriber.Ref != nil && feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
-			err := subscriber.Ref.ResolveGroup(r.crdLister)
+			var err error
+			subscriber.Ref, err = kref.ResolveGroup(subscriber.Ref, r.crdLister)
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
 					zap.Error(err),
