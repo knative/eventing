@@ -79,10 +79,15 @@ func ExportLogs(systemLogsDir, systemNamespace string) {
 	if prow.IsCI() {
 		config, err := pkgtest.Flags.GetRESTConfig()
 		if err != nil {
-			log.Printf("Failed to create Kube client: %v\n", err)
+			log.Printf("Failed to create REST config: %v\n", err)
+			return
 		}
 
 		kubeClient, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			log.Printf("Failed to create kube client: %v\n", err)
+			return
+		}
 
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), systemLogsDir)
 		if err := exportLogs(kubeClient, systemNamespace, dir, log.Printf); err != nil {
