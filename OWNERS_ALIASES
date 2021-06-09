@@ -44,6 +44,7 @@ aliases:
   - richieescarez
   eventing-reviewers:
   - aslom
+  - nlopezgi
   - tayarani
   - tommyreddad
   eventing-triage:
@@ -106,6 +107,7 @@ aliases:
   - n3wscott
   - nak3
   - navidshaikh
+  - nlopezgi
   - rhuss
   - shashwathi
   - slinkydeveloper
