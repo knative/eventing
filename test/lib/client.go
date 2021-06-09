@@ -43,7 +43,7 @@ import (
 
 // Client holds instances of interfaces for making requests to Knative.
 type Client struct {
-	Kube          *test.KubeClient
+	Kube          kubernetes.Interface
 	Eventing      *eventing.Clientset
 	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
 	Dynamic       dynamic.Interface
@@ -73,7 +73,7 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	if err != nil {
 		return nil, err
 	}
-	client.Kube, err = test.NewKubeClient(configPath, clusterName)
+	client.Kube, err = kubernetes.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}

@@ -33,6 +33,7 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler"
+	pkgtest "knative.dev/pkg/test"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	flowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
@@ -451,7 +452,7 @@ func (c *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *
 	//    retry after the token is automatically created and added to the service account"
 	err := reconciler.RetryErrors(func(attempts int) (err error) {
 		c.T.Logf("Creating pod %+v", pod)
-		_, e := c.Kube.CreatePod(context.Background(), pod)
+		_, e := pkgtest.CreatePod(context.Background(), c.Kube, pod)
 		return e
 	}, apierrs.IsConflict, apierrs.IsServerTimeout)
 	if err != nil {
