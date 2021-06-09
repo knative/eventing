@@ -22,12 +22,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/configmap"
 
+	sourceinformer "knative.dev/pkg/client/injection/ducks/duck/v1/source"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype/fake"
 	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition/fake"
-	sourceinformer "knative.dev/pkg/client/injection/ducks/duck/v1/source"
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
-	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
 	. "knative.dev/eventing/pkg/reconciler/testing/v1beta1"
 	. "knative.dev/pkg/reconciler/testing"
@@ -38,7 +38,6 @@ func TestNew(t *testing.T) {
 
 	// Re-wire some injection so that an informer has a dynamic client
 	// with the correct scheme
-	ctx, _ = fakedynamicclient.With(ctx, NewScheme())
 	ctx, _ = fakedynamicclient.With(ctx, NewScheme())
 	ctx = sourceinformer.WithDuck(ctx)
 
