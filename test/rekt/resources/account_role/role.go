@@ -18,6 +18,7 @@ package account_role
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,6 +26,9 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 // Install will create a channelable-manipulator bound service account,
 // augmented with the config fn options.
@@ -36,7 +40,7 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 		fn(cfg)
 	}
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}

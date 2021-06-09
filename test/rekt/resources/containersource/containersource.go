@@ -18,6 +18,7 @@ package containersource
 
 import (
 	"context"
+	"embed"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,8 +28,11 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
+//go:embed *.yaml
+var yaml embed.FS
+
 func init() {
-	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
+	environment.RegisterPackage(manifest.ImagesFromFS(yaml)...)
 }
 
 func Gvr() schema.GroupVersionResource {
@@ -50,7 +54,7 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 	}
 
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}

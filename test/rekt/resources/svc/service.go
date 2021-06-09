@@ -18,6 +18,7 @@ package svc
 
 import (
 	"context"
+	"embed"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
@@ -28,6 +29,9 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 // Deprecated, use reconciler-test/resources/svc
 func Gvr() schema.GroupVersionResource {
@@ -45,7 +49,7 @@ func Install(name, selectorKey, selectorValue string) feature.StepFn {
 	}
 
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}
