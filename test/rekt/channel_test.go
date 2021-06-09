@@ -21,6 +21,7 @@ package rekt
 import (
 	"testing"
 
+	"github.com/cloudevents/sdk-go/v2/binding"
 	"knative.dev/eventing/test/rekt/features/channel"
 	ch "knative.dev/eventing/test/rekt/resources/channel"
 	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
@@ -203,4 +204,44 @@ func TestEventTransformationForSubscriptionV1(t *testing.T) {
 	)
 
 	env.Test(ctx, t, channel.EventTransformation())
+}
+
+/*
+TestBinaryEventForChannel tests the following scenario:
+
+EventSource (binary-encoded messages) ---> Channel ---> Subscription ---> Service(Logger)
+
+*/
+func TestBinaryEventForChannel(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, channel.SingleEventWithEncoding(binding.EncodingBinary))
+}
+
+/*
+TestStructuredEventForChannel tests the following scenario:
+
+EventSource (structured-encoded messages) ---> Channel ---> Subscription ---> Service(Logger)
+
+*/
+func TestStructuredEventForChannel(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, channel.SingleEventWithEncoding(binding.EncodingStructured))
 }
