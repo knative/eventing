@@ -128,6 +128,11 @@ jobs:
         source ./test/e2e-common.sh
         test_setup
 
+    - name: Apply experimental features config
+      if: matrix.test-suite == './test/experimental'
+      run: |
+        kubectl apply -f ./test/experimental/config
+
     - name: Wait for things to be up
       run: |
         set -e
