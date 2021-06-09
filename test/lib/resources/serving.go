@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
@@ -34,7 +35,7 @@ import (
 
 // ServingClient holds clients required to get serving resources
 type ServingClient struct {
-	Kube    *pkgTest.KubeClient
+	Kube    kubernetes.Interface
 	Dynamic dynamic.Interface
 }
 
