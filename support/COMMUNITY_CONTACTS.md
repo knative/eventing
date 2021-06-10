@@ -100,7 +100,6 @@ echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | u
 - [aslom](https://github.com/aslom)
 - [tayarani](https://github.com/tayarani)
 - [zhongduo](https://github.com/zhongduo)
-- [tommyreddad](https://github.com/tommyreddad)
 - [nlopezgi](https://github.com/nlopezgi)
 - [devguyio](https://github.com/devguyio)
 
