@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	nethttp "net/http"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -28,6 +29,8 @@ import (
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
+
+const RetryAfterHeader = "Retry-After"
 
 var noRetries = RetryConfig{
 	RetryMax: 0,
@@ -126,6 +129,12 @@ func NoRetries() RetryConfig {
 }
 
 func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) {
+	return RetryConfigFromDeliverySpecWith429(spec, false) // Maintain current implementation until exposed in DeliverySpec
+}
+
+// RetryConfigFromDeliverySpecWith429 extension is hoped to be temporary, and can be removed if
+// the respect429RetryAfter could always be true, or is incorporated into the DeliverySpec.
+func RetryConfigFromDeliverySpecWith429(spec duckv1.DeliverySpec, respect429RetryAfter bool) (RetryConfig, error) {
 
 	retryConfig := NoRetries()
 
@@ -137,27 +146,90 @@ func RetryConfigFromDeliverySpec(spec duckv1.DeliverySpec) (RetryConfig, error) 
 	retryConfig.BackoffPolicy = spec.BackoffPolicy
 	retryConfig.BackoffDelay = spec.BackoffDelay
 
-	if spec.BackoffPolicy != nil && spec.BackoffDelay != nil {
-
-		delay, err := period.Parse(*spec.BackoffDelay)
+	if (spec.BackoffPolicy != nil && spec.BackoffDelay != nil) || respect429RetryAfter {
+		backoffFn, err := generateBackoffFn(spec.BackoffPolicy, spec.BackoffDelay, respect429RetryAfter)
 		if err != nil {
-			return retryConfig, fmt.Errorf("failed to parse Spec.BackoffDelay: %w", err)
+			return retryConfig, err
+		}
+		retryConfig.Backoff = backoffFn
+	}
+
+	return retryConfig, nil
+}
+
+// generateBackoffFn returns a valid Backoff function based on the specified criteria.    In order for the respect429RetryAfter
+// value to have any effect the associated RetryConfig.CheckRetry function must have first allowed retry on 429 status codes.
+func generateBackoffFn(backoffPolicy *duckv1.BackoffPolicyType, backoffDelay *string, respect429RetryAfter bool) (Backoff, error) {
+
+	// Calculate Backoff Delay Duration
+	var backoffDelayDuration *time.Duration
+	if backoffDelay != nil {
+		delay, err := period.Parse(*backoffDelay)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Spec.BackoffDelay: %w", err)
+		}
+		duration, _ := delay.Duration()
+		backoffDelayDuration = &duration
+	}
+
+	// Create The Backoff Function
+	backoffFn := func(attemptNum int, resp *nethttp.Response) time.Duration {
+
+		// Parse Any 429 Retry-After Header Durations (Ignore Errors - Assume No Backoff)
+		var retryAfterDuration time.Duration
+		if respect429RetryAfter {
+			retryAfterDuration, _ = parse429RetryAfterDuration(resp)
 		}
 
-		delayDuration, _ := delay.Duration()
-		switch *spec.BackoffPolicy {
-		case duckv1.BackoffPolicyExponential:
-			retryConfig.Backoff = func(attemptNum int, resp *nethttp.Response) time.Duration {
-				return delayDuration * time.Duration(math.Exp2(float64(attemptNum)))
+		// Calculate The Appropriate Backoff Duration
+		var backoffDuration time.Duration
+		if backoffPolicy != nil && backoffDelayDuration != nil {
+			switch *backoffPolicy {
+			case duckv1.BackoffPolicyExponential:
+				backoffDuration = *backoffDelayDuration * time.Duration(math.Exp2(float64(attemptNum)))
+			case duckv1.BackoffPolicyLinear:
+				backoffDuration = *backoffDelayDuration * time.Duration(attemptNum)
 			}
-		case duckv1.BackoffPolicyLinear:
-			retryConfig.Backoff = func(attemptNum int, resp *nethttp.Response) time.Duration {
-				return delayDuration * time.Duration(attemptNum)
+		}
+
+		// Return The Larger Of The Two Backoff Durations
+		if retryAfterDuration > backoffDuration {
+			return retryAfterDuration
+		} else {
+			return backoffDuration
+		}
+	}
+
+	// Return the Backoff Function
+	return backoffFn, nil
+}
+
+// parseRetryAfterDuration returns a Duration expressing the amount of time
+// requested to wait by a 429 Retry-After header, or none if not present or invalid.
+// According to the spec (https://tools.ietf.org/html/rfc7231#section-7.1.3)
+// the Retry-After Header's value can be one of an HTTP-date or delay-seconds,
+// both of which are supported here.
+func parse429RetryAfterDuration(resp *nethttp.Response) (time.Duration, error) {
+
+	var retryAfterDuration time.Duration
+
+	if resp != nil && resp.StatusCode == nethttp.StatusTooManyRequests && resp.Header != nil {
+		retryAfterString := resp.Header.Get(RetryAfterHeader)
+		if len(retryAfterString) > 0 {
+			if retryAfterInt, parseIntErr := strconv.ParseInt(retryAfterString, 10, 64); parseIntErr == nil {
+				retryAfterDuration = time.Duration(retryAfterInt) * time.Second
+			} else {
+				retryAfterTime, parseTimeErr := nethttp.ParseTime(retryAfterString) // Supports http.TimeFormat, time.RFC850 & time.ANSIC
+				if parseTimeErr != nil {
+					fmt.Printf("parseTimeError: %v", parseTimeErr)
+					return retryAfterDuration, fmt.Errorf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v", parseIntErr, parseTimeErr)
+				}
+				retryAfterDuration = time.Until(retryAfterTime)
 			}
 		}
 	}
 
-	return retryConfig, nil
+	return retryAfterDuration, nil
 }
 
 // Simple default implementation
