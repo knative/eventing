@@ -160,6 +160,8 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 
 	// After we have finished sending.
 	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("receiver 1 is finished", prober.ReceiverDone("source", "sink1"))
+	f.Requirement("receiver 2 is finished", prober.ReceiverDone("source", "sink2"))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").

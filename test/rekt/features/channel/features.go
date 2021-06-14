@@ -137,6 +137,7 @@ func EventTransformation() *feature.Feature {
 	f.Setup("event library is ready", eventlibrary.IsReady(lib))
 
 	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
 	f.Assert("events have passed through transform service", func(ctx context.Context, t feature.T) {
@@ -177,6 +178,7 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 	f.Setup("install source", prober.SenderInstall("source", eventshub.InputEventWithEncoding(event, encoding)))
 
 	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("receiver is finished", prober.ReceiverDone("source", "sink"))
 
 	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
 
