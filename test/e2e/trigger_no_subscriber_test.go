@@ -73,8 +73,6 @@ func triggerNotReadyWithoutSubscriberTestCases() []triggerNotReadyWithoutSubscri
 	return []triggerNotReadyWithoutSubscriberTestCase{{
 		name:  "K8s Service",
 		refFn: resources.KnativeRefForService,
-		skipped: "knative/eventing#5442 Regular, non existing, K8s service as " +
-			"subscriber causes trigger to report Ready incorrectly",
 	}, {
 		name:  "Knative Service",
 		refFn: resources.KnativeRefForKservice,
