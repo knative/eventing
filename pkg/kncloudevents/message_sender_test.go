@@ -162,23 +162,22 @@ func TestHTTPMessageSenderSendWithRetriesWithSingleRequestTimeout(t *testing.T) 
 	var n int32
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		newVal := atomic.AddInt32(&n, 1)
-		if newVal == 5 {
+		if newVal >= 5 {
 			writer.WriteHeader(http.StatusOK)
 		} else {
 			// Let's add one more second
-			time.Sleep(timeout + time.Second)
+			time.Sleep(timeout)
 			writer.WriteHeader(http.StatusAccepted)
 		}
 	}))
+	defer server.Close()
 
 	sender := &HTTPMessageSender{
 		Client: getClient(),
 	}
 	config := &RetryConfig{
-		RetryMax: 5,
-		CheckRetry: func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-			return true, nil
-		},
+		RetryMax:   5,
+		CheckRetry: RetryIfGreaterThan300,
 		Backoff: func(attemptNum int, resp *http.Response) time.Duration {
 			return time.Millisecond
 		},
@@ -189,10 +188,10 @@ func TestHTTPMessageSenderSendWithRetriesWithSingleRequestTimeout(t *testing.T) 
 	require.NoError(t, err)
 
 	got, err := sender.SendWithRetries(request, config)
-	require.NoError(t, err)
 
-	require.Equal(t, http.StatusOK, got.StatusCode)
 	require.Equal(t, 5, int(atomic.LoadInt32(&n)))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, got.StatusCode)
 }
 
 func TestRetriesOnNetworkErrors(t *testing.T) {
