@@ -339,6 +339,7 @@ func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
 			Retry:         pointer.Int32Ptr(10),
 			BackoffPolicy: &linear,
 			BackoffDelay:  pointer.StringPtr("PT1S"),
+			Timeout:       pointer.StringPtr("PT10S"),
 		},
 	}, {
 		name: "only retry",
@@ -347,15 +348,21 @@ func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
 			BackoffPolicy: &linear,
 		},
 	}, {
-		name: "not ISO8601",
+		name: "delay not ISO8601",
 		spec: v1.DeliverySpec{
 			Retry:         pointer.Int32Ptr(10),
 			BackoffDelay:  pointer.StringPtr("PP1"),
 			BackoffPolicy: &linear,
 		},
 		wantErr: true,
-	},
-	}
+	}, {
+		name: "timeout not ISO8601",
+		spec: v1.DeliverySpec{
+			Retry:   pointer.Int32Ptr(10),
+			Timeout: pointer.StringPtr("PP1"),
+		},
+		wantErr: true,
+	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
