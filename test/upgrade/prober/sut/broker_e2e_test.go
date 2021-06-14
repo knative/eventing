@@ -71,6 +71,8 @@ func TestBrokerAndTriggers(t *testing.T) {
 		defer tr.Teardown(sutCtx)
 	}
 	assert.NotEmpty(t, endpoint)
+
+	client.WaitForAllTestResourcesReadyOrFail(ctx)
 	step1 := watholasender.NewCloudEvent(watholaevent.Step{Number: 1},
 		watholaevent.StepType)
 	step2 := watholasender.NewCloudEvent(watholaevent.Step{Number: 2},

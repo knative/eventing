@@ -18,7 +18,9 @@ package broker
 
 import (
 	"context"
+	"embed"
 	"log"
+	"os"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -30,6 +32,9 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 var EnvCfg EnvConfig
 
@@ -71,6 +76,17 @@ func WithBrokerTemplateFiles(dir string) manifest.CfgFn {
 	}
 }
 
+// WithConfig adds the specified config map to the Broker spec.
+func WithConfig(name string) manifest.CfgFn {
+	return func(templateData map[string]interface{}) {
+		cfg := make(map[string]interface{})
+		cfg["kind"] = "ConfigMap"
+		cfg["apiVersion"] = "v1"
+		cfg["name"] = name
+		templateData["config"] = cfg
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Broker spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
@@ -88,13 +104,13 @@ func Install(name string, opts ...manifest.CfgFn) feature.StepFn {
 
 	if dir, ok := cfg["__brokerTemplateDir"]; ok {
 		return func(ctx context.Context, t feature.T) {
-			if _, err := manifest.InstallYaml(ctx, dir.(string), cfg); err != nil {
+			if _, err := manifest.InstallYamlFS(ctx, os.DirFS(dir.(string)), cfg); err != nil {
 				t.Fatal(err)
 			}
 		}
 	}
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}

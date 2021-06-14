@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+	"embed"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,6 +28,9 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
 )
+
+//go:embed *.yaml
+var yaml embed.FS
 
 func gvr() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
@@ -74,6 +78,16 @@ func WithSubscriber(ref *duckv1.KReference, uri string) manifest.CfgFn {
 	}
 }
 
+// WithAnnotation adds an annotation to the trigger
+func WithAnnotation(key string, value string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["annotations"]; !set {
+			cfg["annotations"] = map[string]interface{}{}
+		}
+		(cfg["annotations"].(map[string]interface{}))[key] = value
+	}
+}
+
 // WithDeadLetterSink adds the dead letter sink related config to a Trigger spec.
 var WithDeadLetterSink = delivery.WithDeadLetterSink
 
@@ -92,7 +106,7 @@ func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
 		fn(cfg)
 	}
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}

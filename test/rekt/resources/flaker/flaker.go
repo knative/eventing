@@ -18,6 +18,7 @@ package flaker
 
 import (
 	"context"
+	"embed"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/environment"
@@ -25,8 +26,11 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 )
 
+//go:embed *.yaml
+var yaml embed.FS
+
 func init() {
-	environment.RegisterPackage(manifest.ImagesLocalYaml()...)
+	environment.RegisterPackage(manifest.ImagesFromFS(yaml)...)
 }
 
 // Install
@@ -37,7 +41,7 @@ func Install(name, sink string) feature.StepFn {
 	}
 
 	return func(ctx context.Context, t feature.T) {
-		if _, err := manifest.InstallLocalYaml(ctx, cfg); err != nil {
+		if _, err := manifest.InstallYamlFS(ctx, yaml, cfg); err != nil {
 			t.Fatal(err)
 		}
 	}

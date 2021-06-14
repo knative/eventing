@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
 	"knative.dev/pkg/apis"
@@ -91,13 +90,6 @@ const (
 	sinkName   = "testsink"
 	generation = 1
 )
-
-func init() {
-	// Add types to scheme
-	_ = appsv1.AddToScheme(scheme.Scheme)
-	_ = corev1.AddToScheme(scheme.Scheme)
-	_ = duckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestAllCases(t *testing.T) {
 	table := TableTest{

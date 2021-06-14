@@ -37,29 +37,34 @@ import (
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
 // outbound events and report outbound event counts.
 func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (cloudevents.Client, error) {
-	return newCloudEventsClientCRStatus(nil, target, ceOverrides, reporter, nil)
+	opts := make([]http.Option, 0)
+	if len(target) > 0 {
+		opts = append(opts, cloudevents.WithTarget(target))
+	}
+	return newCloudEventsClientCRStatus(nil, ceOverrides, reporter, nil, opts...)
+}
+
+// NewCloudEventsClientWithOptions returns a client created with provided options
+func NewCloudEventsClientWithOptions(ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter, opts ...http.Option) (cloudevents.Client, error) {
+	return newCloudEventsClientCRStatus(nil, ceOverrides, reporter, nil, opts...)
 }
 
 // NewCloudEventsClientCRStatus returns a client CR status
 func NewCloudEventsClientCRStatus(env EnvConfigAccessor, reporter source.StatsReporter, crStatusEventClient *crstatusevent.CRStatusEventClient) (cloudevents.Client, error) {
-	return newCloudEventsClientCRStatus(env, "", nil, reporter, crStatusEventClient)
+	return newCloudEventsClientCRStatus(env, nil, reporter, crStatusEventClient)
 }
-func newCloudEventsClientCRStatus(env EnvConfigAccessor, target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter,
-	crStatusEventClient *crstatusevent.CRStatusEventClient) (cloudevents.Client, error) {
-
-	if target == "" && env != nil {
-		target = env.GetSink()
-	}
+func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter,
+	crStatusEventClient *crstatusevent.CRStatusEventClient, opts ...http.Option) (cloudevents.Client, error) {
 
 	pOpts := make([]http.Option, 0)
-	if len(target) > 0 {
-		pOpts = append(pOpts, cloudevents.WithTarget(target))
-	}
 	pOpts = append(pOpts, cloudevents.WithRoundTripper(&ochttp.Transport{
 		Propagation: tracecontextb3.TraceContextEgress,
 	}))
 
 	if env != nil {
+		if target := env.GetSink(); len(target) > 0 {
+			pOpts = append(pOpts, cloudevents.WithTarget(target))
+		}
 		if sinkWait := env.GetSinktimeout(); sinkWait > 0 {
 			pOpts = append(pOpts, setTimeOut(time.Duration(sinkWait)*time.Second))
 		}
@@ -72,7 +77,10 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, target string, ceOverri
 		}
 	}
 
-	p, err := cloudevents.NewHTTP(pOpts...)
+	// Make sure that explicitly set options have priority
+	opts = append(pOpts, opts...)
+
+	p, err := cloudevents.NewHTTP(opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +141,7 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 
 // StartReceiver implements client.StartReceiver
 func (c *client) StartReceiver(ctx context.Context, fn interface{}) error {
-	return errors.New("not implemented")
+	return c.ceClient.StartReceiver(ctx, fn)
 }
 
 func (c *client) applyOverrides(event *cloudevents.Event) {

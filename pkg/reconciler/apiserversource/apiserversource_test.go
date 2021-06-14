@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -87,13 +86,6 @@ const (
 
 	generation = 1
 )
-
-func init() {
-	// Add types to scheme
-	_ = appsv1.AddToScheme(scheme.Scheme)
-	_ = corev1.AddToScheme(scheme.Scheme)
-	_ = duckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestReconcile(t *testing.T) {
 	table := TableTest{{

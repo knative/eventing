@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/test"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
@@ -148,5 +150,35 @@ func EventTransformation() *feature.Feature {
 			}
 		}
 	})
+	return f
+}
+
+func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
+	f := feature.NewFeature()
+	channel := feature.MakeRandomK8sName("channel")
+	sub := feature.MakeRandomK8sName("subscription")
+	prober := eventshub.NewProber()
+	prober.SetTargetResource(channel_impl.GVR(), channel)
+
+	event := cloudevents.NewEvent()
+	event.SetID(feature.MakeRandomK8sName("test"))
+	event.SetSource("http://sender.svc/")
+	prober.ExpectEvents([]string{event.ID()})
+
+	f.Setup("install sink", prober.ReceiverInstall("sink"))
+	f.Setup("install channel", channel_impl.Install(channel))
+	f.Setup("install subscription", subscription.Install(sub,
+		subscription.WithChannel(channel_impl.AsRef(channel)),
+		subscription.WithSubscriber(prober.AsKReference("sink"), ""),
+	))
+
+	f.Setup("subscription is ready", subscription.IsReady(sub))
+	f.Setup("channel is ready", channel_impl.IsReady(channel))
+	f.Setup("install source", prober.SenderInstall("source", eventshub.InputEventWithEncoding(event, encoding)))
+
+	f.Requirement("sender is finished", prober.SenderDone("source"))
+
+	f.Assert("sink receives events", prober.AssertReceivedAll("source", "sink"))
+
 	return f
 }

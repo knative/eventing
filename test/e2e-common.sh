@@ -154,7 +154,7 @@ function install_knative_eventing() {
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
     # Download the latest release of Knative Eventing.
     local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
-    wget "${url}/eventing.yaml" -O "${EVENTING_RELEASE_YAML}" \
+    wget --retry-on-http-error=502 "${url}/eventing.yaml" -O "${EVENTING_RELEASE_YAML}" \
       || fail_test "Unable to download latest knative/eventing file."
 
     # Replace the default system namespace with the test's system namespace.

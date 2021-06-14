@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/signals"
 	pkgtest "knative.dev/pkg/test"
 
@@ -155,10 +156,15 @@ func testNamespace() string {
 }
 
 func waitForPods(namespace string) error {
-	c, err := pkgtest.NewKubeClient("", "")
+	cfg, err := pkgtest.BuildClientConfig("", "")
 	if err != nil {
 		return err
 	}
 
-	return pkgtest.WaitForAllPodsRunning(context.Background(), c, namespace)
+	kClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	return pkgtest.WaitForAllPodsRunning(context.Background(), kClient, namespace)
 }

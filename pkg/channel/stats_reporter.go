@@ -30,19 +30,19 @@ import (
 )
 
 var (
-	// eventCountM is a counter which records the number of events received
-	// by the in-memory Channel.
+	// eventCountM is a counter which records the number of events dispatched
+	// by the channel.
 	eventCountM = stats.Int64(
 		"event_count",
-		"Number of events dispatched by the in-memory channel",
+		"Number of events dispatched by the channel",
 		stats.UnitDimensionless,
 	)
 
-	// dispatchTimeInMsecM records the Time spent dispatching an event to
-	// a Channel, in milliseconds.
+	// dispatchTimeInMsecM records the time spent by the channel dispatching an event to
+	// to subscribers, in milliseconds.
 	dispatchTimeInMsecM = stats.Float64(
 		"event_dispatch_latencies",
-		"The Time spent dispatching an event from a in-memoryChannel",
+		"The time spent by the channel dispatching an event",
 		stats.UnitMilliseconds,
 	)
 

@@ -31,15 +31,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
-
-func init() {
-	// Add types to scheme
-	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-}
 
 const ns = "test-ns"
 

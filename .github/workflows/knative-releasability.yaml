@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # This file is automagically synced here from github.com/knative-sandbox/.github
-# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
+# repo by knobots: https://github.com/knative-sandbox/knobots and will be overwritten.
 
 name: 'Releasability'
 
@@ -36,8 +36,8 @@ jobs:
     env:
       #########################################
       #   Update this section each release.   #
-      RELEASE: 'v0.23'
-      SLACK_CHANNEL: 'release-23'
+      RELEASE: 'v0.24'
+      SLACK_CHANNEL: 'release-24'
       #########################################
 
     steps:

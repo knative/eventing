@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -65,12 +64,6 @@ var (
 		Kind:    "Subscriber",
 	}
 )
-
-func init() {
-	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
-	_ = duckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestAllBranches(t *testing.T) {
 	pKey := testNS + "/" + parallelName

@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/test"
+	"k8s.io/client-go/kubernetes"
 	pkgtest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/prow"
@@ -34,7 +34,7 @@ func (c *Client) ExportLogs(dir string) error {
 	return exportLogs(c.Kube, c.Namespace, dir, c.T.Logf)
 }
 
-func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func(format string, args ...interface{})) error {
+func exportLogs(kubeClient kubernetes.Interface, namespace, dir string, logFunc func(format string, args ...interface{})) error {
 
 	// Create a directory for the namespace.
 	logPath := filepath.Join(dir, namespace)
@@ -56,7 +56,7 @@ func exportLogs(kubeClient *test.KubeClient, namespace, dir string, logFunc func
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error creating file %q: %w", fn, err))
 			}
-			log, err := kubeClient.PodLogs(context.Background(), pod.Name, ct.Name, pod.Namespace)
+			log, err := pkgtest.PodLogs(context.Background(), kubeClient, pod.Name, ct.Name, pod.Namespace)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("error getting logs for pod %q container %q: %w", pod.Name, ct.Name, err))
 			}
@@ -77,9 +77,16 @@ func ExportLogs(systemLogsDir, systemNamespace string) {
 	// If the test is run by CI, export the pod logs in the namespace to the artifacts directory,
 	// which will then be uploaded to GCS after the test job finishes.
 	if prow.IsCI() {
-		kubeClient, err := pkgtest.NewKubeClient(pkgtest.Flags.Kubeconfig, pkgtest.Flags.Cluster)
+		config, err := pkgtest.Flags.GetRESTConfig()
 		if err != nil {
-			log.Printf("Failed to create Kube client: %v\n", err)
+			log.Printf("Failed to create REST config: %v\n", err)
+			return
+		}
+
+		kubeClient, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			log.Printf("Failed to create kube client: %v\n", err)
+			return
 		}
 
 		dir := filepath.Join(prow.GetLocalArtifactsDir(), systemLogsDir)

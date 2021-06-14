@@ -19,6 +19,7 @@ package manifest
 import (
 	"bytes"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -72,11 +73,63 @@ func ExecuteTemplates(path, suffix string, images map[string]string, data map[st
 	return files, nil
 }
 
+// executeTemplatesFS executes a set of templates in the given filesystem, filtering on
+// suffix. Executed into memory and returned.
+func executeTemplatesFS(fsys fs.FS, suffix string, images map[string]string, data map[string]interface{}) (map[string]string, error) {
+	files := make(map[string]string, 1)
+
+	err := fs.WalkDir(fsys, ".", func(path string, info fs.DirEntry, err error) error {
+		if info == nil || info.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(info.Name(), suffix) {
+			t, err := template.ParseFS(fsys, path)
+			if err != nil {
+				log.Print("parse: ", err)
+				return err
+			}
+			buffer := &bytes.Buffer{}
+
+			// Execute the template and save the result to the buffer.
+			err = t.Execute(buffer, data)
+			if err != nil {
+				log.Print("execute: ", err)
+				return err
+			}
+
+			// Set image.
+			yaml := buffer.String()
+			for key, image := range images {
+				yaml = strings.Replace(yaml, key, image, -1)
+			}
+
+			files[path] = yaml
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
 // ParseTemplates walks through all the template yaml file in the given directory
 // and produces instantiated yaml file in a temporary directory.
-// Return the name of the temporary directory
+// Returns the name of the temporary directory.
+// Deprecated: Use ParseTemplatesFS.
 func ParseTemplates(path string, images map[string]string, cfg map[string]interface{}) (string, error) {
-	files, err := ExecuteTemplates(path, "yaml", images, cfg)
+	return templatesToTmp(ExecuteTemplates(path, "yaml", images, cfg))
+}
+
+// ParseTemplatesFS walks through all the template yaml file in the given FS
+// and produces instantiated yaml file in a temporary directory.
+// Returns the name of the temporary directory.
+func ParseTemplatesFS(fsys fs.FS, images map[string]string, cfg map[string]interface{}) (string, error) {
+	return templatesToTmp(executeTemplatesFS(fsys, "yaml", images, cfg))
+}
+
+func templatesToTmp(files map[string]string, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
@@ -101,8 +154,14 @@ func ParseTemplates(path string, images map[string]string, cfg map[string]interf
 	return tmpDir, nil
 }
 
+// ExecuteYAML process the templates found in files named "*.yaml" and return the f.
+func ExecuteYAML(fsys fs.FS, images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
+	return executeTemplatesFS(fsys, "yaml", images, cfg)
+}
+
 // ExecuteLocalYAML will look in the callers filesystem and process the
 // templates found in files named "*.yaml" and return the f.
+// Deprecated: Use ExecuteYAML instead.
 func ExecuteLocalYAML(images map[string]string, cfg map[string]interface{}) (map[string]string, error) {
 	pwd, _ := os.Getwd()
 	log.Println("PWD: ", pwd)

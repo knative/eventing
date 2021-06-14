@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -139,12 +138,6 @@ var (
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
 )
-
-func init() {
-	// Add types to scheme
-	_ = eventingv1.AddToScheme(scheme.Scheme)
-	_ = duckv1.AddToScheme(scheme.Scheme)
-}
 
 func TestReconcile(t *testing.T) {
 	table := TableTest{

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package experimental
+package feature_test
 
 import (
 	"context"
@@ -27,6 +27,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+
+	. "knative.dev/eventing/pkg/apis/feature"
 )
 
 const flagName = "my-flag"
@@ -43,8 +45,8 @@ func TestValidateAPIFields(t *testing.T) {
 		{
 			name:        "invalid input",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: true,
+			flags: map[string]Flag{
+				flagName: Enabled,
 			},
 			object:             []string{},
 			experimentalFields: []string{"Filter"},
@@ -52,8 +54,8 @@ func TestValidateAPIFields(t *testing.T) {
 		{
 			name:        "enabled flag",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: true,
+			flags: map[string]Flag{
+				flagName: Enabled,
 			},
 			object: eventingv1.TriggerSpec{
 				Broker: "blabla",
@@ -67,8 +69,8 @@ func TestValidateAPIFields(t *testing.T) {
 		{
 			name:        "disabled pointer flag",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: false,
+			flags: map[string]Flag{
+				flagName: Disabled,
 			},
 			object: eventingv1.TriggerSpec{
 				Broker: "blabla",
@@ -86,8 +88,8 @@ func TestValidateAPIFields(t *testing.T) {
 		{
 			name:        "disabled nested string flag",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: false,
+			flags: map[string]Flag{
+				flagName: Disabled,
 			},
 			object: eventingv1.TriggerSpec{
 				Broker: "blabla",
@@ -106,8 +108,8 @@ func TestValidateAPIFields(t *testing.T) {
 		{
 			name:        "enabled nested string flag",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: true,
+			flags: map[string]Flag{
+				flagName: Enabled,
 			},
 			object: eventingv1.TriggerSpec{
 				Broker: "blabla",
@@ -122,8 +124,8 @@ func TestValidateAPIFields(t *testing.T) {
 		{
 			name:        "disabled map flag",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: false,
+			flags: map[string]Flag{
+				flagName: Disabled,
 			},
 			object: &eventingv1.TriggerFilter{
 				Attributes: map[string]string{},
@@ -159,8 +161,8 @@ func TestValidateAnnotations(t *testing.T) {
 	}{{
 		name:        "enabled flag",
 		featureName: flagName,
-		flags: map[string]bool{
-			flagName: true,
+		flags: map[string]Flag{
+			flagName: Enabled,
 		},
 		object: &eventingv1.Broker{
 			ObjectMeta: metav1.ObjectMeta{
@@ -174,8 +176,8 @@ func TestValidateAnnotations(t *testing.T) {
 		{
 			name:        "disabled flag",
 			featureName: flagName,
-			flags: map[string]bool{
-				flagName: false,
+			flags: map[string]Flag{
+				flagName: Disabled,
 			},
 			object: &eventingv1.Broker{
 				ObjectMeta: metav1.ObjectMeta{

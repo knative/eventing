@@ -45,6 +45,7 @@ const (
 // a subscription to its v1alpha1 version by using channelVersion to override it.
 // channelVersion == "" means that the version of the channel subscribed to is not
 // modified.
+// Deprecated, use reconciler-test based tests.
 func SingleEventForChannelTestHelper(
 	ctx context.Context,
 	t *testing.T, encoding cloudevents.Encoding,

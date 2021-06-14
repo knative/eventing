@@ -19,10 +19,10 @@ package manifest
 import (
 	"bufio"
 	"context"
+	"io/fs"
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -34,12 +34,17 @@ import (
 // CfgFn is the function signature of configuration mutation options.
 type CfgFn func(map[string]interface{})
 
+// Deprecated: use InstallYamlFS
 func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (Manifest, error) {
+	return InstallYamlFS(ctx, os.DirFS(dir), base)
+}
+
+func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{}) (Manifest, error) {
 	env := environment.FromContext(ctx)
 	cfg := env.TemplateConfig(base)
 	f := feature.FromContext(ctx)
 
-	yamls, err := ParseTemplates(dir, env.Images(), cfg)
+	yamls, err := ParseTemplatesFS(fsys, env.Images(), cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +72,6 @@ func InstallYaml(ctx context.Context, dir string, base map[string]interface{}) (
 		log.Println(ref)
 	}
 	return manifest, nil
-
 }
 
 func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifest, error) {
@@ -76,23 +80,28 @@ func InstallLocalYaml(ctx context.Context, base map[string]interface{}) (Manifes
 	_, filename, _, _ := runtime.Caller(1)
 	log.Println("FILENAME: ", filename)
 
-	return InstallYaml(ctx, path.Dir(filename), base)
+	return InstallYamlFS(ctx, os.DirFS(path.Dir(filename)), base)
 }
 
+// Deprecated, use ImagesFromFS instead.
 func ImagesLocalYaml() []string {
 	pwd, _ := os.Getwd()
 	log.Println("PWD: ", pwd)
 	_, filename, _, _ := runtime.Caller(1)
 	log.Println("FILENAME: ", filename)
 
+	return ImagesFromFS(os.DirFS(path.Dir(filename)))
+}
+
+func ImagesFromFS(fsys fs.FS) []string {
 	var images []string
 
-	_ = filepath.Walk(path.Dir(filename), func(root string, info os.FileInfo, err error) error {
+	_ = fs.WalkDir(fsys, ".", func(path string, info fs.DirEntry, err error) error {
 		if info == nil || info.IsDir() {
 			return nil
 		}
 		if strings.HasSuffix(info.Name(), "yaml") {
-			file, err := os.Open(root)
+			file, err := fsys.Open(path)
 			if err != nil {
 				log.Fatal(err)
 			}
