@@ -27,4 +27,5 @@ data:
   kreference-group: "disabled"
 
   # ALPHA feature: The delivery-timeout allows you to use the Timeout field in DeliverySpec.
+  # For more details: https://github.com/knative/eventing/issues/5148
   delivery-timeout: "disabled"
