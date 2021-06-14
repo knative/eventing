@@ -154,7 +154,7 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 		return dispatchExecutionInfo, nil
 	}
 
-	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig)
+	ctx, responseResponseMessage, _, dispatchExecutionInfo, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders, retriesConfig, transformers...)
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if deadLetter != nil {
