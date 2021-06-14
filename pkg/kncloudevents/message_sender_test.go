@@ -18,10 +18,10 @@ package kncloudevents
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -31,89 +31,10 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
-
-	"knative.dev/pkg/ptr"
-
-	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
-
-// Test The RetryConfigFromDeliverySpec() Functionality
-func TestRetryConfigFromDeliverySpec(t *testing.T) {
-	const retry = 5
-	testcases := []struct {
-		name                     string
-		backoffPolicy            duckv1.BackoffPolicyType
-		backoffDelay             string
-		expectedBackoffDurations []time.Duration
-		wantErr                  bool
-	}{{
-		name:          "Successful Linear Backoff 2500ms, 5 retries",
-		backoffPolicy: duckv1.BackoffPolicyLinear,
-		backoffDelay:  "PT2.5S",
-		expectedBackoffDurations: []time.Duration{
-			1 * 2500 * time.Millisecond,
-			2 * 2500 * time.Millisecond,
-			3 * 2500 * time.Millisecond,
-			4 * 2500 * time.Millisecond,
-			5 * 2500 * time.Millisecond,
-		},
-	}, {
-		name:          "Successful Exponential Backoff 1500ms, 5 retries",
-		backoffPolicy: duckv1.BackoffPolicyExponential,
-		backoffDelay:  "PT1.5S",
-		expectedBackoffDurations: []time.Duration{
-			3 * time.Second,
-			6 * time.Second,
-			12 * time.Second,
-			24 * time.Second,
-			48 * time.Second,
-		},
-	}, {
-		name:          "Successful Exponential Backoff 500ms, 5 retries",
-		backoffPolicy: duckv1.BackoffPolicyExponential,
-		backoffDelay:  "PT0.5S",
-		expectedBackoffDurations: []time.Duration{
-			1 * time.Second,
-			2 * time.Second,
-			4 * time.Second,
-			8 * time.Second,
-			16 * time.Second,
-		},
-	}, {
-		name:          "Invalid Backoff Delay",
-		backoffPolicy: duckv1.BackoffPolicyLinear,
-		backoffDelay:  "FOO",
-		wantErr:       true,
-	}}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Create The DeliverySpec To Test
-			deliverySpec := duckv1.DeliverySpec{
-				DeadLetterSink: nil,
-				Retry:          ptr.Int32(retry),
-				BackoffPolicy:  &tc.backoffPolicy,
-				BackoffDelay:   &tc.backoffDelay,
-			}
-
-			// Create the RetryConfig from the deliverySpec
-			retryConfig, err := RetryConfigFromDeliverySpec(deliverySpec)
-			assert.Equal(t, tc.wantErr, err != nil)
-
-			// If successful then validate the retryConfig (Max & Backoff calculations).
-			if err == nil {
-				assert.Equal(t, retry, retryConfig.RetryMax)
-				for i := 1; i < retry; i++ {
-					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
-					actualBackoffDuration := retryConfig.Backoff(i, nil)
-					assert.Equal(t, expectedBackoffDuration, actualBackoffDuration)
-				}
-			}
-		})
-	}
-}
 
 func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 	t.Parallel()
@@ -182,84 +103,6 @@ func TestHTTPMessageSenderSendWithRetries(t *testing.T) {
 	}
 }
 
-func TestRetriesOnNetworkErrors(t *testing.T) {
-
-	n := int32(10)
-	linear := duckv1.BackoffPolicyLinear
-	target := "127.0.0.1:63468"
-
-	calls := make(chan struct{})
-	defer close(calls)
-
-	nCalls := int32(0)
-
-	cont := make(chan struct{})
-	defer close(cont)
-
-	go func() {
-		for range calls {
-
-			nCalls++
-			// Simulate that the target service is back up.
-			//
-			// First n/2-1 calls we get connection refused since there is no server running.
-			// Now we start a server that responds with a retryable error, so we expect that
-			// the client continues to retry for a different reason.
-			//
-			// The last time we return 200, so we don't expect a new retry.
-			if n/2 == nCalls {
-
-				l, err := net.Listen("tcp", target)
-				assert.Nil(t, err)
-
-				s := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-					if n-1 != nCalls {
-						writer.WriteHeader(http.StatusServiceUnavailable)
-						return
-					}
-				}))
-				defer s.Close() //nolint // defers in this range loop won't run unless the channel gets closed
-
-				assert.Nil(t, s.Listener.Close())
-
-				s.Listener = l
-
-				s.Start()
-			}
-			cont <- struct{}{}
-		}
-	}()
-
-	r, err := RetryConfigFromDeliverySpec(duckv1.DeliverySpec{
-		Retry:         pointer.Int32Ptr(n),
-		BackoffPolicy: &linear,
-		BackoffDelay:  pointer.StringPtr("PT0.1S"),
-	})
-	assert.Nil(t, err)
-
-	checkRetry := r.CheckRetry
-
-	r.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-		calls <- struct{}{}
-		<-cont
-
-		return checkRetry(ctx, resp, err)
-	}
-
-	req, err := http.NewRequest("POST", "http://"+target, nil)
-	assert.Nil(t, err)
-
-	sender, err := NewHTTPMessageSenderWithTarget("")
-	assert.Nil(t, err)
-
-	_, err = sender.SendWithRetries(req, &r)
-	assert.Nil(t, err)
-
-	// nCalls keeps track of how many times a call to check retry occurs.
-	// Since the number of request are n + 1 and the last one is successful the expected number of calls are n.
-	assert.Equal(t, n, nCalls, "expected %d got %d", n, nCalls)
-}
-
 func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
 	t.Parallel()
 
@@ -311,279 +154,106 @@ func TestHTTPMessageSenderSendWithRetriesWithBufferedMessage(t *testing.T) {
 	}
 }
 
-func TestRetryIfGreaterThan300(t *testing.T) {
+func TestRetriesOnNetworkErrors(t *testing.T) {
 
-	// Define The TestCase Type
-	type TestCase struct {
-		name     string
-		response *http.Response
-		err      error
-		result   bool
+	n := int32(10)
+	linear := v1.BackoffPolicyLinear
+	target := "127.0.0.1:63468"
+
+	calls := make(chan struct{})
+	defer close(calls)
+
+	nCalls := int32(0)
+
+	cont := make(chan struct{})
+	defer close(cont)
+
+	go func() {
+		for range calls {
+
+			nCalls++
+			// Simulate that the target service is back up.
+			//
+			// First n/2-1 calls we get connection refused since there is no server running.
+			// Now we start a server that responds with a retryable error, so we expect that
+			// the client continues to retry for a different reason.
+			//
+			// The last time we return 200, so we don't expect a new retry.
+			if n/2 == nCalls {
+
+				l, err := net.Listen("tcp", target)
+				assert.Nil(t, err)
+
+				s := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+					if n-1 != nCalls {
+						writer.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
+				}))
+				defer s.Close() //nolint // defers in this range loop won't run unless the channel gets closed
+
+				assert.Nil(t, s.Listener.Close())
+
+				s.Listener = l
+
+				s.Start()
+			}
+			cont <- struct{}{}
+		}
+	}()
+
+	r, err := RetryConfigFromDeliverySpec(v1.DeliverySpec{
+		Retry:         pointer.Int32Ptr(n),
+		BackoffPolicy: &linear,
+		BackoffDelay:  pointer.StringPtr("PT0.1S"),
+	})
+	assert.Nil(t, err)
+
+	checkRetry := r.CheckRetry
+
+	r.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		calls <- struct{}{}
+		<-cont
+
+		return checkRetry(ctx, resp, err)
 	}
 
-	// Define The TestCases
-	testCases := []TestCase{
-		{
-			name:   "Nil Response",
-			result: true,
-		},
-		{
-			name:     "Http Error",
-			response: &http.Response{StatusCode: http.StatusOK},
-			err:      errors.New("test error"),
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode -1",
-			response: &http.Response{StatusCode: -1},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 100",
-			response: &http.Response{StatusCode: http.StatusContinue},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 102",
-			response: &http.Response{StatusCode: http.StatusProcessing},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 200",
-			response: &http.Response{StatusCode: http.StatusOK},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 201",
-			response: &http.Response{StatusCode: http.StatusCreated},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 202",
-			response: &http.Response{StatusCode: http.StatusAccepted},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 300",
-			response: &http.Response{StatusCode: http.StatusMultipleChoices},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 301",
-			response: &http.Response{StatusCode: http.StatusMovedPermanently},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 400",
-			response: &http.Response{StatusCode: http.StatusBadRequest},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 401",
-			response: &http.Response{StatusCode: http.StatusUnauthorized},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 403",
-			response: &http.Response{StatusCode: http.StatusForbidden},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 404",
-			response: &http.Response{StatusCode: http.StatusNotFound},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 429",
-			response: &http.Response{StatusCode: http.StatusTooManyRequests},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 500",
-			response: &http.Response{StatusCode: http.StatusInternalServerError},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 501",
-			response: &http.Response{StatusCode: http.StatusNotImplemented},
-			result:   true,
-		},
-	}
+	req, err := http.NewRequest("POST", "http://"+target, nil)
+	assert.Nil(t, err)
 
-	ctx := context.TODO()
+	sender, err := NewHTTPMessageSenderWithTarget("")
+	assert.Nil(t, err)
 
-	// Execute The Individual Test Cases
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			result, _ := RetryIfGreaterThan300(ctx, testCase.response, testCase.err)
-			assert.Equal(t, testCase.result, result)
-		})
-	}
+	_, err = sender.SendWithRetries(req, &r)
+	assert.Nil(t, err)
+
+	// nCalls keeps track of how many times a call to check retry occurs.
+	// Since the number of request are n + 1 and the last one is successful the expected number of calls are n.
+	assert.Equal(t, n, nCalls, "expected %d got %d", n, nCalls)
 }
 
-func TestSelectiveRetry(t *testing.T) {
-
-	// Define The TestCase Type
-	type TestCase struct {
-		name     string
-		response *http.Response
-		err      error
-		result   bool
+func TestHTTPMessageSender_NewCloudEventRequestWithTarget(t *testing.T) {
+	s := &HTTPMessageSender{
+		Client: getClient(),
+		Target: "localhost",
 	}
 
-	// Define The TestCases
-	testCases := []TestCase{
-		{
-			name:   "Nil Response",
-			result: true,
-		},
-		{
-			name:     "Http Error",
-			response: &http.Response{StatusCode: http.StatusOK},
-			err:      errors.New("test error"),
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode -1",
-			response: &http.Response{StatusCode: -1},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 100",
-			response: &http.Response{StatusCode: http.StatusContinue},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 102",
-			response: &http.Response{StatusCode: http.StatusProcessing},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 200",
-			response: &http.Response{StatusCode: http.StatusOK},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 201",
-			response: &http.Response{StatusCode: http.StatusCreated},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 202",
-			response: &http.Response{StatusCode: http.StatusAccepted},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 300",
-			response: &http.Response{StatusCode: http.StatusMultipleChoices},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 301",
-			response: &http.Response{StatusCode: http.StatusMovedPermanently},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 400",
-			response: &http.Response{StatusCode: http.StatusBadRequest},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 401",
-			response: &http.Response{StatusCode: http.StatusUnauthorized},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 403",
-			response: &http.Response{StatusCode: http.StatusForbidden},
-			result:   false,
-		},
-		{
-			name:     "Http StatusCode 404",
-			response: &http.Response{StatusCode: http.StatusNotFound},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 429",
-			response: &http.Response{StatusCode: http.StatusTooManyRequests},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 500",
-			response: &http.Response{StatusCode: http.StatusInternalServerError},
-			result:   true,
-		},
-		{
-			name:     "Http StatusCode 501",
-			response: &http.Response{StatusCode: http.StatusNotImplemented},
-			result:   true,
-		},
-	}
-
-	ctx := context.TODO()
-
-	// Execute The Individual Test Cases
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			result, err := SelectiveRetry(ctx, testCase.response, testCase.err)
-			assert.Equal(t, testCase.result, result)
-			assert.Nil(t, err)
-		})
-	}
+	expectedUrl, err := url.Parse("example.com")
+	require.NoError(t, err)
+	req, err := s.NewCloudEventRequestWithTarget(context.TODO(), "example.com")
+	require.NoError(t, err)
+	require.Equal(t, req.URL, expectedUrl)
 }
 
-func TestRetryConfigFromDeliverySpecCheckRetry(t *testing.T) {
-	const retryMax = 10
-	linear := eventingduck.BackoffPolicyLinear
-	tests := []struct {
-		name    string
-		spec    eventingduck.DeliverySpec
-		wantErr bool
-	}{{
-		name: "full delivery",
-		spec: eventingduck.DeliverySpec{
-			Retry:         pointer.Int32Ptr(10),
-			BackoffPolicy: &linear,
-			BackoffDelay:  pointer.StringPtr("PT1S"),
-		},
-	}, {
-		name: "only retry",
-		spec: eventingduck.DeliverySpec{
-			Retry:         pointer.Int32Ptr(10),
-			BackoffPolicy: &linear,
-		},
-	}, {
-		name: "not ISO8601",
-		spec: eventingduck.DeliverySpec{
-			Retry:         pointer.Int32Ptr(10),
-			BackoffDelay:  pointer.StringPtr("PP1"),
-			BackoffPolicy: &linear,
-		},
-		wantErr: true,
-	},
+func TestHTTPMessageSender_NewCloudEventRequest(t *testing.T) {
+	s := &HTTPMessageSender{
+		Client: getClient(),
+		Target: "localhost",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := RetryConfigFromDeliverySpec(tt.spec)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("RetryConfigFromDeliverySpec() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if err != nil {
-				return
-			}
-
-			if got.CheckRetry == nil {
-				t.Errorf("CheckRetry must not be nil")
-				return
-			}
-			if got.Backoff == nil {
-				t.Errorf("Backoff must not be nil")
-			}
-			if got.RetryMax != retryMax {
-				t.Errorf("RetryMax = %d, want: %d", got.RetryMax, retryMax)
-			}
-		})
-	}
+	expectedUrl, err := url.Parse("localhost")
+	require.NoError(t, err)
+	req, err := s.NewCloudEventRequest(context.TODO())
+	require.NoError(t, err)
+	require.Equal(t, req.URL, expectedUrl)
 }
