@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	cetest "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
@@ -228,4 +230,30 @@ func TestRetriesOnNetworkErrors(t *testing.T) {
 	// nCalls keeps track of how many times a call to check retry occurs.
 	// Since the number of request are n + 1 and the last one is successful the expected number of calls are n.
 	assert.Equal(t, n, nCalls, "expected %d got %d", n, nCalls)
+}
+
+func TestHTTPMessageSender_NewCloudEventRequestWithTarget(t *testing.T) {
+	s := &HTTPMessageSender{
+		Client: getClient(),
+		Target: "localhost",
+	}
+
+	expectedUrl, err := url.Parse("example.com")
+	require.NoError(t, err)
+	req, err := s.NewCloudEventRequestWithTarget(context.TODO(), "example.com")
+	require.NoError(t, err)
+	require.Equal(t, req.URL, expectedUrl)
+}
+
+func TestHTTPMessageSender_NewCloudEventRequest(t *testing.T) {
+	s := &HTTPMessageSender{
+		Client: getClient(),
+		Target: "localhost",
+	}
+
+	expectedUrl, err := url.Parse("localhost")
+	require.NoError(t, err)
+	req, err := s.NewCloudEventRequest(context.TODO())
+	require.NoError(t, err)
+	require.Equal(t, req.URL, expectedUrl)
 }
