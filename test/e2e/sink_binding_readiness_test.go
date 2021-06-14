@@ -100,8 +100,9 @@ func sinkBindingIsntReadyWithNonExistingSubjectCases() []sinkBindingIsntReadyWit
 			Kind:       "Service",
 			Name:       "k8s-service",
 		}}, {
-		name: "k8s-deployment-by-match-labels",
+		// FIXME: #5510 sink binding reports ready even if subject isn't found
 		skippedMsg: "FIXME: #5510 sink binding reports ready even if subject isn't found",
+		name:       "k8s-deployment-by-match-labels",
 		subject: tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
