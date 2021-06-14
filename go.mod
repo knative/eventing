@@ -3,6 +3,7 @@ module knative.dev/eventing
 go 1.16
 
 require (
+	github.com/ahmetb/gen-crd-api-reference-docs v0.3.1-0.20210420163308-c1402a70e2f1
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
