@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/rickb777/date/period"
-	"knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var noRetries = RetryConfig{

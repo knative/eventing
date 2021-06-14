@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
 )
 
