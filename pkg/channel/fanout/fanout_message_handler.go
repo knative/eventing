@@ -304,6 +304,7 @@ func (f *FanoutMessageHandler) makeFanoutRequest(ctx context.Context, message bi
 		sub.Reply,
 		sub.DeadLetter,
 		sub.RetryConfig,
+		nil,
 	)
 }
 
