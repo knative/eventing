@@ -51,7 +51,7 @@ func FromContextOrDefaults(ctx context.Context) Flags {
 // ToContext attaches the provided Flags to the provided context, returning the
 // new context with the Flags attached.
 func ToContext(ctx context.Context, c Flags) context.Context {
-	return context.WithValue(ctx, cfgKey{}, c)
+	return fillContextWithFeatureSpecificFlags(context.WithValue(ctx, cfgKey{}, c), c)
 }
 
 // Store is a typed wrapper around configmap.Untyped store to handle our configmaps.
@@ -78,10 +78,7 @@ func NewStore(logger configmap.Logger, onAfterStore ...func(name string, value i
 
 // ToContext attaches the current Config state to the provided context.
 func (s *Store) ToContext(ctx context.Context) context.Context {
-	flags := s.Load()
-	ctx = ToContext(ctx, flags)
-	ctx = fillContextWithFeatureSpecificFlags(ctx, flags)
-	return ctx
+	return ToContext(ctx, s.Load())
 }
 
 // IsEnabled is a shortcut for Load().IsEnabled(featureName)

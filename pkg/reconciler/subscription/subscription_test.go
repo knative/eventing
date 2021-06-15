@@ -212,7 +212,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "subscription goes ready without api version",
 			Ctx: feature.ToContext(context.TODO(), feature.Flags{
-				feature.KReferenceGroup: feature.Allowed,
+				feature.KReferenceGroup: feature.Enabled,
 			}),
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
