@@ -79,15 +79,17 @@ func ChannelChain(length int) *feature.Feature {
 func DeadLetterSink() *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")
+	failer := feature.MakeK8sNamePrefix("failer")
 	cs := feature.MakeRandomK8sName("containersource")
 	name := feature.MakeRandomK8sName("channel")
 
 	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(1)))
 	f.Setup("install channel", channel_impl.Install(name, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
 	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel_impl.AsRef(name), "")))
 	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
 		subscription.WithChannel(channel_impl.AsRef(name)),
-		subscription.WithReply(svc.AsKReference("does-not-exist"), ""),
+		subscription.WithReply(svc.AsKReference(failer), ""),
 	))
 
 	f.Requirement("channel is ready", channel_impl.IsReady(name))

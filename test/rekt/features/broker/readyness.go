@@ -37,9 +37,7 @@ func TriggerGoesReady(name, brokerName string) *feature.Feature {
 	// The test needs a subscriber.
 	sub := feature.MakeRandomK8sName("sub")
 	f.Setup("install a service", svc.Install(sub, "app", "rekt"))
-
-	// Point the Trigger subscriber to the service installed in setup.
-	cfg = append(cfg, trigger.WithSubscriber(svc.AsKReference(name), ""))
+	cfg = append(cfg, trigger.WithSubscriber(svc.AsKReference(sub), ""))
 
 	// Install the trigger
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))
