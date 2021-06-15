@@ -32,4 +32,8 @@ import (
 
 	// eventshub is a cloudevents sender/receiver utility for e2e testing.
 	_ "knative.dev/reconciler-test/cmd/eventshub"
+
+	// API reference docs generation.
+	_ "github.com/ahmetb/gen-crd-api-reference-docs"
+	_ "github.com/ahmetb/gen-crd-api-reference-docs/template"
 )
