@@ -69,6 +69,13 @@ func TestDeliverySpecValidation(t *testing.T) {
 			return apis.ErrInvalidValue(invalidDuration, "timeout")
 		}(),
 	}, {
+		name: "zero timeout",
+		spec: &DeliverySpec{Timeout: pointer.StringPtr("PT0S")},
+		ctx:  deliveryTimeoutEnabledCtx,
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue("PT0S", "timeout")
+		}(),
+	}, {
 		name: "disabled timeout",
 		spec: &DeliverySpec{Timeout: &validDuration},
 		want: apis.ErrDisallowedFields("timeout"),

@@ -38,7 +38,7 @@ type DeliverySpec struct {
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
 
-	// Timeout is the timeout of each single request.
+	// Timeout is the timeout of each single request. The value must be greater than 0.
 	// More information on Duration format:
 	//  - https://www.iso.org/iso-8601-date-and-time-format.html
 	//  - https://en.wikipedia.org/wiki/ISO_8601
@@ -77,8 +77,8 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ds.Timeout != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryTimeout) {
-			_, te := period.Parse(*ds.Timeout)
-			if te != nil {
+			t, te := period.Parse(*ds.Timeout)
+			if te != nil || t.IsZero() {
 				errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout"))
 			}
 		} else {
