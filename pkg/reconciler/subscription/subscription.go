@@ -22,7 +22,6 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1lister "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +65,7 @@ type Reconciler struct {
 	dynamicClientSet dynamic.Interface
 
 	// crdLister is used to resolve the ref version
-	crdLister apiextensionsv1lister.CustomResourceDefinitionLister
+	kreferenceResolver *kref.KReferenceResolver
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
@@ -211,7 +210,7 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		// Resolve the group
 		if subscriber.Ref != nil && feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
 			var err error
-			subscriber.Ref, err = kref.ResolveGroup(subscriber.Ref, r.crdLister)
+			subscriber.Ref, err = r.kreferenceResolver.ResolveGroup(subscriber.Ref)
 			if err != nil {
 				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
 					zap.Error(err),

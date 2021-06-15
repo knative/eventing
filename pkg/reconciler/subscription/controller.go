@@ -23,6 +23,7 @@ import (
 	"knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
@@ -51,7 +52,7 @@ func NewController(
 
 	r := &Reconciler{
 		dynamicClientSet:   dynamicclient.Get(ctx),
-		crdLister:          customresourcedefinition.Get(ctx).Lister(),
+		kreferenceResolver: kref.NewKReferenceResolver(customresourcedefinition.Get(ctx).Lister()),
 		subscriptionLister: subscriptionInformer.Lister(),
 		channelLister:      channelInformer.Lister(),
 	}

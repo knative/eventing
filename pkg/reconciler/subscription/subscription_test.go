@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"testing"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/utils/pointer"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/network"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -1449,7 +1451,7 @@ func TestAllCases(t *testing.T) {
 			channelLister:       listers.GetMessagingChannelLister(),
 			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
-			crdLister:           listers.GetCustomResourceDefinitionLister(),
+			kreferenceResolver:  kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
 			tracker:             &FakeTracker{},
 		}
 		return subscription.NewReconciler(ctx, logger,
