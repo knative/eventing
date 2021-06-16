@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The Knative Authors
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +20,7 @@ import (
 	"net/url"
 	"time"
 
+	cloudeventsobsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
@@ -80,13 +78,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	// Make sure that explicitly set options have priority
 	opts = append(pOpts, opts...)
 
-	p, err := cloudevents.NewHTTP(opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	ceClient, err := cloudevents.NewClient(p, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
-
+	ceClient, err := cloudeventsobsclient.NewClientHTTP(opts, nil)
 	if crStatusEventClient == nil {
 		crStatusEventClient = crstatusevent.GetDefaultClient()
 	}
