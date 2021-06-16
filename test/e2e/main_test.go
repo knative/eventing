@@ -33,6 +33,7 @@ var brokerClass string
 
 func TestMain(m *testing.M) {
 	test.InitializeEventingFlags()
+	testlib.ReuseNamespace = test.EventingFlags.ReuseNamespace
 	channelTestRunner = testlib.ComponentsTestRunner{
 		ComponentFeatureMap: testlib.ChannelFeatureMap,
 		ComponentsToTest:    test.EventingFlags.Channels,
