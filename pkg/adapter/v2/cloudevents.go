@@ -82,6 +82,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	opts = append(pOpts, opts...)
 
 	ceClient, err := cloudeventsobsclient.NewClientHTTP(opts, nil)
+
 	if crStatusEventClient == nil {
 		crStatusEventClient = crstatusevent.GetDefaultClient()
 	}
