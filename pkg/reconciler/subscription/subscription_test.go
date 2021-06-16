@@ -22,8 +22,11 @@ import (
 	"fmt"
 	"testing"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/utils/pointer"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/network"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
@@ -46,6 +49,7 @@ import (
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 
 	. "knative.dev/pkg/reconciler/testing"
 
@@ -196,6 +200,85 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					// - Status Update -
+					MarkSubscriptionReady,
+				),
+			}},
+		}, {
+			Name: "subscription goes ready without api version",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.KReferenceGroup: feature.Enabled,
+			}),
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRefUsingGroup(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(imcV1GVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				// Reply
+				NewInMemoryChannel(replyName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(replyDNS),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						UID:           subscriptionUID,
+						Generation:    0,
+						SubscriberURI: subscriberURI,
+						ReplyURI:      replyURI,
+					}, {
+						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						Generation:    1,
+						SubscriberURI: apis.HTTP("call2"),
+						ReplyURI:      apis.HTTP("sink2"),
+					}}),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID:                subscriptionUID,
+						ObservedGeneration: 0,
+						Ready:              "True",
+					}, {
+						UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 1,
+						Ready:              "True",
+					}}),
+				),
+				// IMC CRD
+				eventingtesting.NewCustomResourceDefinition("subscribers.messaging.knative.dev",
+					eventingtesting.WithCustomResourceDefinitionVersions([]apiextensionsv1.CustomResourceDefinitionVersion{{
+						Name:    "v1beta1",
+						Storage: false,
+					}, {
+						Name:    "v1",
+						Storage: true,
+					}}),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRefUsingGroup(subscriberGVK, subscriberName, testNS),
 					WithSubscriptionReply(imcV1GVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					WithSubscriptionFinalizers(finalizerName),
@@ -1368,6 +1451,7 @@ func TestAllCases(t *testing.T) {
 			channelLister:       listers.GetMessagingChannelLister(),
 			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			kreferenceResolver:  kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
 			tracker:             &FakeTracker{},
 		}
 		return subscription.NewReconciler(ctx, logger,

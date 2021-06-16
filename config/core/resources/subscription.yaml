@@ -127,6 +127,7 @@ spec:
                       namespace:
                         description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/ This is optional field, it gets defaulted to the object holding it if left out.'
                         type: string
+                    x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature
                   uri:
                     description: URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
                     type: string

@@ -1082,6 +1082,7 @@ knative.dev/pkg/injection/sharedmain
 knative.dev/pkg/kflag
 knative.dev/pkg/kmeta
 knative.dev/pkg/kmp
+knative.dev/pkg/kref
 knative.dev/pkg/leaderelection
 knative.dev/pkg/leaderelection/chaosduck
 knative.dev/pkg/logging

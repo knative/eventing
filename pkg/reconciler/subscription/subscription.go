@@ -31,12 +31,14 @@ import (
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -61,6 +63,9 @@ var (
 type Reconciler struct {
 	// DynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	// crdLister is used to resolve the ref version
+	kreferenceResolver *kref.KReferenceResolver
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
@@ -201,6 +206,21 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
+
+		// Resolve the group
+		if subscriber.Ref != nil && feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
+			var err error
+			subscriber.Ref, err = r.kreferenceResolver.ResolveGroup(subscriber.Ref)
+			if err != nil {
+				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
+					zap.Error(err),
+					zap.Any("subscriber", subscriber))
+				subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %v", err)
+				return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %w", err)
+			}
+			logging.FromContext(ctx).Debugw("Group resolved", zap.Any("spec.subscriber.ref", subscriber.Ref))
+		}
+
 		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve Subscriber",
