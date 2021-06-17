@@ -125,6 +125,16 @@ func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) Subscript
 	}
 }
 
+func WithSubscriptionChannelUsingGroup(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
+	return func(s *v1.Subscription) {
+		s.Spec.Channel = duckv1.KReference{
+			Group: gvk.Group,
+			Kind:  gvk.Kind,
+			Name:  name,
+		}
+	}
+}
+
 func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name, namespace string) SubscriptionOption {
 	return func(s *v1.Subscription) {
 		s.Spec.Subscriber = &duckv1.Destination{

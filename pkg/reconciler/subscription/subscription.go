@@ -310,6 +310,18 @@ func (r *Reconciler) getSubStatus(subscription *v1.Subscription, channel *eventi
 }
 
 func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscription, ref duckv1.KReference) (runtime.Object, pkgreconciler.Event) {
+	// Resolve the group
+	if feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
+		newRef, err := r.kreferenceResolver.ResolveGroup(&ref)
+		if err != nil {
+			logging.FromContext(ctx).Warnw("Failed to resolve Channel reference",
+				zap.Error(err),
+				zap.Any("ref", ref))
+			return nil, err
+		}
+		ref = *newRef
+	}
+
 	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
