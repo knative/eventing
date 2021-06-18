@@ -121,6 +121,26 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			},
 			expected: nethttp.StatusAccepted,
 		},
+		"OPTIONS okay": {
+			method: nethttp.MethodOptions,
+			host:   "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
+				if r.Namespace != "test-namespace" || r.Name != "test-name" {
+					return fmt.Errorf("test receiver func -- bad reference: %v", r)
+				}
+				expectedHeaders := nethttp.Header{
+					"Allow":                  []string{"POST, OPTIONS"},
+					"WebHook-Allowed-Origin": []string{"*"},
+					"WebHook-Allowed-Rate":   []string{"*"},
+					"Content-Length":         []string{"0"},
+				}
+				if diff := cmp.Diff(expectedHeaders, additionalHeaders); diff != "" {
+					return fmt.Errorf("test receiver func -- bad OPTION headers (-want, +got): %s", diff)
+				}
+				return nil
+			},
+			expected: nethttp.StatusOK,
+		},
 	}
 	reporter := NewStatsReporter("testcontainer", "testpod")
 	for n, tc := range testCases {
