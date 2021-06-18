@@ -39,23 +39,23 @@ func ChannelStatusSubscriberTestHelperWithChannelTestRunner(
 	options ...testlib.SetupClientOption,
 ) {
 
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := testlib.Setup(st, true, options...)
-		defer testlib.TearDown(client)
-
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		t.Run("Channel has required status subscriber fields", func(t *testing.T) {
-			channelHasRequiredSubscriberStatus(ctx, st, client, channel, options...)
+			client := testlib.Setup(t, true, options...)
+			defer testlib.TearDown(client)
+
+			channelHasRequiredSubscriberStatus(ctx, t, client, channel, options...)
 		})
 	})
 }
 
-func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
-	st.Logf("Running channel subscriber status conformance test with channel %q", channel)
+func channelHasRequiredSubscriberStatus(ctx context.Context, t *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
+	t.Logf("Running channel subscriber status conformance test with channel %q", channel)
 
 	channelName := "channel-req-status-subscriber"
 	subscriberServiceName := "channel-req-status-subscriber-svc"
 
-	client.T.Logf("Creating channel %+v-%s", channel, channelName)
+	t.Logf("Creating channel %+v-%s", channel, channelName)
 	client.CreateChannelOrFail(channelName, &channel)
 	client.WaitForResourceReadyOrFail(channelName, &channel)
 
@@ -73,29 +73,29 @@ func channelHasRequiredSubscriberStatus(ctx context.Context, st *testing.T, clie
 
 	dtsv, err := getChannelDuckTypeSupportVersion(channelName, client, &channel)
 	if err != nil {
-		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
+		t.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
 	if dtsv != "v1" {
-		st.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
+		t.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
 	}
 
 	channelable, err := getChannelAsChannelable(channelName, client, channel)
 	if err != nil {
-		st.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
+		t.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
 	}
 
 	// SPEC: Each subscription to a channel is added to the channel status.subscribers automatically.
 	if channelable.Status.Subscribers == nil {
-		st.Fatalf("%q does not have status.subscribers", channel)
+		t.Fatalf("%q does not have status.subscribers", channel)
 	}
 	ss := findSubscriberStatusV1(channelable.Status.Subscribers, subscription)
 	if ss == nil {
-		st.Fatalf("No subscription status found for channel %q and subscription %v", channel, subscription)
+		t.Fatalf("No subscription status found for channel %q and subscription %v", channel, subscription)
 	}
 
 	// SPEC: The ready field of the subscriber identified by its uid MUST be set to True when the subscription is ready to be processed.
 	if ss.Ready != corev1.ConditionTrue {
-		st.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
+		t.Fatalf("Subscription not ready found for channel %q and subscription %v", channel, subscription)
 	}
 }
 
