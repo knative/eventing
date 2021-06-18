@@ -39,32 +39,32 @@ func ChannelSpecTestHelperWithChannelTestRunner(
 	options ...testlib.SetupClientOption,
 ) {
 
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := testlib.Setup(st, true, options...)
-		defer testlib.TearDown(client)
-
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		t.Run("Channel spec allows subscribers", func(t *testing.T) {
+			client := testlib.Setup(t, true, options...)
+			defer testlib.TearDown(client)
+
 			if channel == channelv1 {
 				t.Skip("Not running spec.subscribers array test for generic Channel")
 			}
-			channelSpecAllowsSubscribersArray(st, client, channel)
+			channelSpecAllowsSubscribersArray(t, client, channel)
 		})
 	})
 }
 
-func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
-	st.Logf("Running channel spec conformance test with channel %s", channel)
+func channelSpecAllowsSubscribersArray(t *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
+	t.Logf("Running channel spec conformance test with channel %s", channel)
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		dtsv, err := getChannelDuckTypeSupportVersionFromTypeMeta(client, channel)
 		if err != nil {
-			st.Fatalf("Unable to check Channel duck type support version for %s: %s", channel, err)
+			t.Fatalf("Unable to check Channel duck type support version for %s: %s", channel, err)
 		}
 		if dtsv != "v1" {
-			st.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
+			t.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
 		}
 		channelName := names.SimpleNameGenerator.GenerateName("channel-spec-subscribers-")
-		client.T.Logf("Creating channel %+v-%s", channel, channelName)
+		t.Logf("Creating channel %+v-%s", channel, channelName)
 		client.CreateChannelOrFail(channelName, &channel)
 		client.WaitForResourceReadyOrFail(channelName, &channel)
 
@@ -75,7 +75,7 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 
 		channelable, err := getChannelAsChannelable(channelName, client, channel)
 		if err != nil {
-			st.Fatalf("Unable to get channel %s to v1 duck type: %s", channel, err)
+			t.Fatalf("Unable to get channel %s to v1 duck type: %s", channel, err)
 		}
 
 		// SPEC: each channel CRD MUST contain an array of subscribers: spec.subscribers
@@ -90,25 +90,25 @@ func channelSpecAllowsSubscribersArray(st *testing.T, client *testlib.Client, ch
 
 		raw, err := json.Marshal(ch)
 		if err != nil {
-			st.Fatalf("Error marshaling %s: %s", channel, err)
+			t.Fatalf("Error marshaling %s: %s", channel, err)
 		}
 		u := &unstructured.Unstructured{}
 		err = json.Unmarshal(raw, u)
 		if err != nil {
-			st.Fatalf("Error unmarshaling %s: %s", u, err)
+			t.Fatalf("Error unmarshaling %s: %s", u, err)
 		}
 
 		err = client.RetryWebhookErrors(func(attempt int) error {
 			_, e := client.Dynamic.Resource(gvr).Namespace(client.Namespace).Update(context.Background(), u, metav1.UpdateOptions{})
 			if e != nil {
-				client.T.Logf("Failed to update channel spec at attempt %d %q %q: %v", attempt, channel.Kind, channelName, e)
+				t.Logf("Failed to update channel spec at attempt %d %q %q: %v", attempt, channel.Kind, channelName, e)
 			}
 			return e
 		})
 		return err
 	})
 	if err != nil {
-		st.Fatalf("Error updating %s with subscribers in spec: %s", channel, err)
+		t.Fatalf("Error updating %s with subscribers in spec: %s", channel, err)
 	}
 }
 
