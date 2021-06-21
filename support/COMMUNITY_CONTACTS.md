@@ -90,7 +90,6 @@ echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
 - [n3wscott](https://github.com/n3wscott)
-- [slinkydeveloper](https://github.com/slinkydeveloper)
 - [vaikas](https://github.com/vaikas)
 - [lberk](https://github.com/lberk)
 - [pierDipi](https://github.com/pierDipi)
