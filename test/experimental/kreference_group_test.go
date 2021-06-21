@@ -40,4 +40,5 @@ func TestChannelToChannel(t *testing.T) {
 	)
 
 	env.Test(ctx, t, kreference_group.ChannelToChannel())
+	env.Test(ctx, t, kreference_group.SubscriptionWithChannelGroup())
 }

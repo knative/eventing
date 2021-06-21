@@ -47,6 +47,7 @@ spec:
                   name:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                     type: string
+                x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature
               delivery:
                 description: Delivery configuration
                 type: object
