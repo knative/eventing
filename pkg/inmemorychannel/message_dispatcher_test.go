@@ -86,6 +86,7 @@ func TestDispatcher_close(t *testing.T) {
 	}
 
 	dispatcher := NewMessageDispatcher(dispatcherArgs)
+	kncloudevents.WithDrainQuietPeriod(time.Nanosecond)(dispatcher.httpBindingsReceiver)
 
 	serverCtx, cancel := context.WithCancel(context.Background())
 
@@ -254,6 +255,7 @@ func TestDispatcher_dispatch(t *testing.T) {
 			t.Error(err)
 		}
 	}()
+	dispatcher.WaitReady()
 
 	// Ok now everything should be ready to send the event
 	httpsender, err := kncloudevents.NewHTTPMessageSenderWithTarget(channelAProxy.URL)

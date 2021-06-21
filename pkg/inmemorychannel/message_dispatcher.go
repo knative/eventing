@@ -57,6 +57,11 @@ func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 	return d.httpBindingsReceiver.StartListen(kncloudevents.WithShutdownTimeout(ctx, d.writeTimeout), d.handler)
 }
 
+// WaitReady blocks until the dispatcher's server is ready to receive requests.
+func (d *InMemoryMessageDispatcher) WaitReady() {
+	<-d.httpBindingsReceiver.Ready
+}
+
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
 	// TODO set read timeouts?
 	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(args.Port)
