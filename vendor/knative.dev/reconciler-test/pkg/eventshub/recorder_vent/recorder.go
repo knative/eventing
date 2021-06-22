@@ -42,6 +42,14 @@ type recorder struct {
 }
 
 func (r *recorder) Vent(observed eventshub.EventInfo) error {
+	if observed.Event != nil {
+		var event corev1.Event
+		err := json.Unmarshal(observed.Event.DataEncoded, &event)
+		if err == nil && event.Reason == eventshub.CloudEventObservedReason {
+			// prevent event loops from happening with APIServerSources
+			return nil
+		}
+	}
 	b, err := json.Marshal(observed)
 	if err != nil {
 		return err
