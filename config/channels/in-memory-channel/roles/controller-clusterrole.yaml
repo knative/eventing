@@ -129,3 +129,11 @@ rules:
       - "list"
       - "watch"
       - "patch"
+
+  # finalizers are needed for the owner reference of the webhook
+  - apiGroups:
+      - ""
+    resources:
+      - "namespaces/finalizers"
+    verbs:
+      - "update"
