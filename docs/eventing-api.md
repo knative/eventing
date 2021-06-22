@@ -325,6 +325,22 @@ sending an event before moving it to the dead letter sink.</p>
 </tr>
 <tr>
 <td>
+<code>timeout</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Timeout is the timeout of each single request. The value must be greater than 0.
+More information on Duration format:
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
+<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/5148</a></p>
+</td>
+</tr>
+<tr>
+<td>
 <code>backoffPolicy</code><br/>
 <em>
 <a href="#duck.knative.dev/v1.BackoffPolicyType">
@@ -973,6 +989,20 @@ int32
 <em>(Optional)</em>
 <p>Retry is the minimum number of retries the sender should attempt when
 sending an event before moving it to the dead letter sink.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>timeout</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Timeout is the timeout of each single request.
+More information on Duration format:
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 </td>
 </tr>
 <tr>

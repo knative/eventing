@@ -18,4 +18,5 @@ package feature
 
 const (
 	KReferenceGroup = "kreference-group"
+	DeliveryTimeout = "delivery-timeout"
 )

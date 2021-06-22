@@ -146,6 +146,11 @@ func (in *DeliverySpec) DeepCopyInto(out *DeliverySpec) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.Timeout != nil {
+		in, out := &in.Timeout, &out.Timeout
+		*out = new(string)
+		**out = **in
+	}
 	if in.BackoffPolicy != nil {
 		in, out := &in.BackoffPolicy, &out.BackoffPolicy
 		*out = new(BackoffPolicyType)

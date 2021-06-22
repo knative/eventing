@@ -102,6 +102,7 @@ spec:
                     description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
                     type: integer
                     format: int32
+                x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature delivery-timeout
               subscribers:
                 description: This is the list of subscriptions for this subscribable.
                 type: array
