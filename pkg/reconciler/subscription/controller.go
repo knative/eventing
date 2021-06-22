@@ -19,8 +19,11 @@ package subscription
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/feature"
+	"knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
@@ -44,12 +47,20 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	channelInformer := channel.Get(ctx)
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
+
 	r := &Reconciler{
 		dynamicClientSet:   dynamicclient.Get(ctx),
+		kreferenceResolver: kref.NewKReferenceResolver(customresourcedefinition.Get(ctx).Lister()),
 		subscriptionLister: subscriptionInformer.Lister(),
 		channelLister:      channelInformer.Lister(),
 	}
-	impl := subscriptionreconciler.NewImpl(ctx, r)
+	impl := subscriptionreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

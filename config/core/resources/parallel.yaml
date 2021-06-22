@@ -104,6 +104,7 @@ spec:
                               sink.
                           type: integer
                           format: int32
+                      x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature delivery-timeout
                     filter:
                       description: Filter is the expression guarding the branch
                       type: object

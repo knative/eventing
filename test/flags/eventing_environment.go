@@ -26,4 +26,5 @@ type EventingEnvironmentFlags struct {
 	ReadyFile       string
 	BrokerName      string
 	BrokerNamespace string
+	ReuseNamespace  bool
 }

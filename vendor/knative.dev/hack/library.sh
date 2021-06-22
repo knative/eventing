@@ -643,10 +643,6 @@ function update_licenses() {
   shift
   run_go_tool github.com/google/go-licenses go-licenses save "${dir}" --save_path="${dst}" --force || \
     { echo "--- FAIL: go-licenses failed to update licenses"; return 1; }
-  # Hack to make sure directories retain write permissions after save. This
-  # can happen if the directory being copied is a Go module.
-  # See https://github.com/google/go-licenses/issues/11
-  chmod -R +w "${dst}"
 }
 
 # Run go-licenses to check for forbidden licenses.
@@ -773,9 +769,14 @@ function get_latest_knative_yaml_source() {
 function shellcheck_new_files() {
   declare -a array_of_files
   local failed=0
+
+  if [ -z "$SHELLCHECK_IGNORE_FILES" ]; then
+    SHELLCHECK_IGNORE_FILES="^vendor/"
+  fi
+
   readarray -t array_of_files < <(list_changed_files)
   for filename in "${array_of_files[@]}"; do
-    if echo "${filename}" | grep -q "^vendor/"; then
+    if echo "${filename}" | grep -q "$SHELLCHECK_IGNORE_FILES"; then
       continue
     fi
     if file "${filename}" | grep -q "shell script"; then

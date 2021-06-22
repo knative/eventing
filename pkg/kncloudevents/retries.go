@@ -63,6 +63,9 @@ type RetryConfig struct {
 
 	CheckRetry CheckRetry
 	Backoff    Backoff
+
+	// RequestTimeout represents the timeout of the single request
+	RequestTimeout time.Duration
 }
 
 func NoRetries() RetryConfig {

@@ -57,8 +57,18 @@ func (s *HTTPMessageSender) SendWithRetries(req *nethttp.Request, config *RetryC
 		return s.Send(req)
 	}
 
+	client := s.Client
+	if config.RequestTimeout != 0 {
+		client = &nethttp.Client{
+			Transport:     client.Transport,
+			CheckRedirect: client.CheckRedirect,
+			Jar:           client.Jar,
+			Timeout:       config.RequestTimeout,
+		}
+	}
+
 	retryableClient := retryablehttp.Client{
-		HTTPClient:   s.Client,
+		HTTPClient:   client,
 		RetryWaitMin: defaultRetryWaitMin,
 		RetryWaitMax: defaultRetryWaitMax,
 		RetryMax:     config.RetryMax,

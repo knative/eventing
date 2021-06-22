@@ -38,6 +38,13 @@ type DeliverySpec struct {
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
 
+	// Timeout is the timeout of each single request.
+	// More information on Duration format:
+	//  - https://www.iso.org/iso-8601-date-and-time-format.html
+	//  - https://en.wikipedia.org/wiki/ISO_8601
+	//
+	Timeout *string `json:"timeout,omitempty"`
+
 	// BackoffPolicy is the retry backoff policy (linear, exponential).
 	// +optional
 	BackoffPolicy *BackoffPolicyType `json:"backoffPolicy,omitempty"`
@@ -64,6 +71,13 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ds.Retry != nil && *ds.Retry < 0 {
 		errs = errs.Also(apis.ErrInvalidValue(*ds.Retry, "retry"))
+	}
+
+	if ds.Timeout != nil {
+		_, te := period.Parse(*ds.Timeout)
+		if te != nil {
+			errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout"))
+		}
 	}
 
 	if ds.BackoffPolicy != nil {

@@ -21,18 +21,24 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/utils/pointer"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestDeliverySpecValidation(t *testing.T) {
+	deliveryTimeoutEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
+		feature.DeliveryTimeout: feature.Enabled,
+	})
+
 	invalidString := "invalid time"
 	bop := BackoffPolicyExponential
-	validBackoffDelay := "PT2S"
-	invalidBackoffDelay := "1985-04-12T23:20:50.52Z"
+	validDuration := "PT2S"
+	invalidDuration := "1985-04-12T23:20:50.52Z"
 	tests := []struct {
 		name string
 		spec *DeliverySpec
+		ctx  context.Context
 		want *apis.FieldError
 	}{{
 		name: "nil is valid",
@@ -51,24 +57,47 @@ func TestDeliverySpecValidation(t *testing.T) {
 			return apis.ErrGeneric("expected at least one, got none", "ref", "uri").ViaField("deadLetterSink")
 		}(),
 	}, {
+		name: "valid timeout",
+		spec: &DeliverySpec{Timeout: &validDuration},
+		ctx:  deliveryTimeoutEnabledCtx,
+		want: nil,
+	}, {
+		name: "invalid timeout",
+		spec: &DeliverySpec{Timeout: &invalidDuration},
+		ctx:  deliveryTimeoutEnabledCtx,
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue(invalidDuration, "timeout")
+		}(),
+	}, {
+		name: "zero timeout",
+		spec: &DeliverySpec{Timeout: pointer.StringPtr("PT0S")},
+		ctx:  deliveryTimeoutEnabledCtx,
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue("PT0S", "timeout")
+		}(),
+	}, {
+		name: "disabled timeout",
+		spec: &DeliverySpec{Timeout: &validDuration},
+		want: apis.ErrDisallowedFields("timeout"),
+	}, {
 		name: "valid backoffPolicy",
 		spec: &DeliverySpec{BackoffPolicy: &bop},
 		want: nil,
 	}, {
 		name: "valid backoffDelay",
-		spec: &DeliverySpec{BackoffDelay: &validBackoffDelay},
+		spec: &DeliverySpec{BackoffDelay: &validDuration},
 		want: nil,
 	}, {
 		name: "invalid backoffDelay",
-		spec: &DeliverySpec{BackoffDelay: &invalidBackoffDelay},
+		spec: &DeliverySpec{BackoffDelay: &invalidDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrGeneric("invalid value: "+invalidBackoffDelay, "backoffDelay")
+			return apis.ErrInvalidValue(invalidDuration, "backoffDelay")
 		}(),
 	}, {
 		name: "negative retry",
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(-1)},
 		want: func() *apis.FieldError {
-			return apis.ErrGeneric("invalid value: -1", "retry")
+			return apis.ErrInvalidValue("-1", "retry")
 		}(),
 	}, {
 		name: "valid retry 0",
@@ -80,7 +109,11 @@ func TestDeliverySpecValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.spec.Validate(context.TODO())
+			ctx := test.ctx
+			if ctx == nil {
+				ctx = context.TODO()
+			}
+			got := test.spec.Validate(ctx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Error("DeliverySpec.Validate (-want, +got) =", diff)
 			}
