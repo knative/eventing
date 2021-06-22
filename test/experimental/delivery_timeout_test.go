@@ -28,7 +28,7 @@ import (
 	"knative.dev/reconciler-test/pkg/knative"
 )
 
-func TestChannelToChannel(t *testing.T) {
+func TestDeliveryTimeout(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
