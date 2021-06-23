@@ -166,7 +166,7 @@ func TestHTTPMessageSenderSendWithRetriesWithSingleRequestTimeout(t *testing.T) 
 			writer.WriteHeader(http.StatusOK)
 		} else {
 			// Let's add one more second
-			time.Sleep(timeout)
+			time.Sleep(timeout + 1)
 			writer.WriteHeader(http.StatusAccepted)
 		}
 	}))
