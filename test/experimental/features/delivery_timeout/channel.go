@@ -21,6 +21,7 @@ import (
 	"time"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
+	"github.com/rickb777/date/period"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -39,8 +40,10 @@ import (
 func ChannelToSink() *feature.Feature {
 	f := feature.NewFeature()
 
-	timeout := 5 * time.Second
-	timeoutString := "PT5S"
+	timeout := 6 * time.Second
+	// Clocks are funny, let's add 1 second to take in account eventual clock skews
+	timeoutPeriod, _ := period.NewOf(timeout - time.Second)
+	timeoutString := timeoutPeriod.String()
 
 	channelAPIVersion, imcKind := channel.GVK().ToAPIVersionAndKind()
 
@@ -81,17 +84,17 @@ func ChannelToSink() *feature.Feature {
 					},
 					Subscriber: &duckv1.Destination{
 						Ref: &duckv1.KReference{
-							APIVersion: channelAPIVersion,
-							Kind:       imcKind,
+							APIVersion: "v1",
+							Kind:       "Service",
 							Name:       sinkName,
 						},
 					},
 					Delivery: &eventingduckv1.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
-								APIVersion: channelAPIVersion,
-								Kind:       imcKind,
-								Name:       channelName,
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       deadLetterSinkName,
 							},
 						},
 						Timeout: &timeoutString,
