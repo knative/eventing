@@ -53,6 +53,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		additionalHeaders nethttp.Header
 		expected          int
 		receiverFunc      UnbufferedMessageReceiverFunc
+		responseValidator func(r httptest.ResponseRecorder) error
 	}{
 		"non '/' path": {
 			path:     "/something",
@@ -124,22 +125,18 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		"OPTIONS okay": {
 			method: nethttp.MethodOptions,
 			host:   "test-name.test-namespace.svc." + network.GetClusterDomainName(),
-			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.Transformer, additionalHeaders nethttp.Header) error {
-				if r.Namespace != "test-namespace" || r.Name != "test-name" {
-					return fmt.Errorf("test receiver func -- bad reference: %v", r)
-				}
+			expected: nethttp.StatusOK,
+			responseValidator: func(res httptest.ResponseRecorder) error {
 				expectedHeaders := nethttp.Header{
 					"Allow":                  []string{"POST, OPTIONS"},
-					"WebHook-Allowed-Origin": []string{"*"},
-					"WebHook-Allowed-Rate":   []string{"*"},
-					"Content-Length":         []string{"0"},
+					"Webhook-Allowed-Origin": []string{"*"},
+					"Webhook-Allowed-Rate":   []string{"*"},
 				}
-				if diff := cmp.Diff(expectedHeaders, additionalHeaders); diff != "" {
+				if diff := cmp.Diff(expectedHeaders, res.Header()); diff != "" {
 					return fmt.Errorf("test receiver func -- bad OPTION headers (-want, +got): %s", diff)
 				}
 				return nil
 			},
-			expected: nethttp.StatusOK,
 		},
 	}
 	reporter := NewStatsReporter("testcontainer", "testpod")
@@ -191,6 +188,11 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			r.ServeHTTP(&res, req)
 			if res.Code != tc.expected {
 				t.Fatalf("Unexpected status code. Expected %v. Actual %v", tc.expected, res.Code)
+			}
+			if tc.responseValidator != nil {
+				if err := tc.responseValidator(res); err != nil {
+				  t.Errorf("Incorrect response: %v", err);
+				}
 			}
 		})
 	}
