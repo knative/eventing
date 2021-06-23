@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -141,7 +142,7 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			events := p.SentBy(ctx, prefix)
-			fmt.Println(prefix, "has sent", len(events))
+			log.Println(p.shortNameToName[prefix], "has sent", len(events))
 			if len(events) == len(p.ids) {
 				return true, nil
 			}
@@ -159,13 +160,13 @@ func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 			sent := p.SentBy(ctx, from)
-			fmt.Println(from, "has sent", len(sent))
+			log.Println(p.shortNameToName[from], "has sent", len(sent))
 
 			received := p.ReceivedBy(ctx, to)
-			fmt.Println(to, "has received", len(received))
+			log.Println(p.shortNameToName[to], "has received", len(received))
 
 			rejected := p.RejectedBy(ctx, to)
-			fmt.Println(to, "has rejected", len(rejected))
+			log.Println(p.shortNameToName[to], "has rejected", len(rejected))
 
 			if len(sent) == len(received)+len(rejected) {
 				return true, nil
