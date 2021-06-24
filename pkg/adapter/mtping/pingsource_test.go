@@ -18,11 +18,11 @@ package mtping
 
 import (
 	"context"
-
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -88,6 +88,10 @@ func TestAllCases(t *testing.T) {
 				),
 			},
 			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceSynchronized",
+					`PingSource adapter is synchronized`),
+			},
 		}, {
 			Name: "valid schedule without contentType, data and dataBase64",
 			Key:  pingsourceKey,
@@ -107,6 +111,10 @@ func TestAllCases(t *testing.T) {
 				),
 			},
 			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceSynchronized",
+					`PingSource adapter is synchronized`),
+			},
 		}, {
 			Name: "valid schedule with dataBase64",
 			Key:  pingsourceKey,
@@ -128,6 +136,10 @@ func TestAllCases(t *testing.T) {
 				),
 			},
 			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceSynchronized",
+					`PingSource adapter is synchronized`),
+			},
 		}, {
 			Name: "valid schedule, with finalizer",
 			Key:  pingsourceKey,
@@ -149,6 +161,10 @@ func TestAllCases(t *testing.T) {
 				),
 			},
 			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceSynchronized",
+					`PingSource adapter is synchronized`),
+			},
 		}, {
 			Name: "valid schedule, deleted with finalizer",
 			Key:  pingsourceKey,
