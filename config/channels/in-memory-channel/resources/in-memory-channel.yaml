@@ -118,6 +118,7 @@ spec:
                           description: Retry is the minimum number of retries the sender should attempt when sending an event before moving it to the dead letter sink.
                           type: integer
                           format: int32
+                      x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature
                     generation:
                       description: Generation of the origin of the subscriber with uid:UID.
                       type: integer

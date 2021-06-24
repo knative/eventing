@@ -510,13 +510,14 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 				},
 			}
 		}
-		if channel.Spec.Delivery.BackoffDelay != nil || channel.Spec.Delivery.Retry != nil || channel.Spec.Delivery.BackoffPolicy != nil {
+		if channel.Spec.Delivery.BackoffDelay != nil || channel.Spec.Delivery.Retry != nil || channel.Spec.Delivery.BackoffPolicy != nil || channel.Spec.Delivery.Timeout != nil {
 			if delivery == nil {
 				delivery = &eventingduckv1.DeliverySpec{}
 			}
 			delivery.BackoffPolicy = channel.Spec.Delivery.BackoffPolicy
 			delivery.Retry = channel.Spec.Delivery.Retry
 			delivery.BackoffDelay = channel.Spec.Delivery.BackoffDelay
+			delivery.Timeout = channel.Spec.Delivery.Timeout
 		}
 		return
 	}
@@ -530,13 +531,14 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 			},
 		}
 	}
-	if sub.Spec.Delivery != nil && (sub.Spec.Delivery.BackoffDelay != nil || sub.Spec.Delivery.Retry != nil || sub.Spec.Delivery.BackoffPolicy != nil) {
+	if sub.Spec.Delivery != nil && (sub.Spec.Delivery.BackoffDelay != nil || sub.Spec.Delivery.Retry != nil || sub.Spec.Delivery.BackoffPolicy != nil || sub.Spec.Delivery.Timeout != nil) {
 		if delivery == nil {
 			delivery = &eventingduckv1.DeliverySpec{}
 		}
 		delivery.BackoffPolicy = sub.Spec.Delivery.BackoffPolicy
 		delivery.Retry = sub.Spec.Delivery.Retry
 		delivery.BackoffDelay = sub.Spec.Delivery.BackoffDelay
+		delivery.Timeout = sub.Spec.Delivery.Timeout
 	}
 	return
 }

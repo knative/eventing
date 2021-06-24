@@ -104,6 +104,14 @@ func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 		}
 	}
 
+	if spec.Timeout != nil {
+		timeout, err := period.Parse(*spec.Timeout)
+		if err != nil {
+			return retryConfig, fmt.Errorf("failed to parse Spec.Timeout: %w", err)
+		}
+		retryConfig.RequestTimeout, _ = timeout.Duration()
+	}
+
 	return retryConfig, nil
 }
 
