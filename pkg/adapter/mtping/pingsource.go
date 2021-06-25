@@ -18,7 +18,10 @@ package mtping
 
 import (
 	"context"
-	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+
+	pkgreconciler "knative.dev/pkg/reconciler"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
@@ -26,7 +29,17 @@ import (
 	"knative.dev/pkg/reconciler"
 )
 
-// TODO: code generation
+// newPingSourceSkipped makes a new reconciler event with event type Normal, and
+// reason PingSourceNotReady
+func newPingSourceSkipped() pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PingSourceSkipped", "PingSource is not ready")
+}
+
+// newPingSourceNotReady makes a new reconciler event with event type Normal, and
+// reason PingSourceNotReady
+func newPingSourceSynchronized() pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PingSourceSynchronized", "PingSource adapter is synchronized")
+}
 
 // Reconciler reconciles PingSources
 type Reconciler struct {
@@ -38,13 +51,13 @@ var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *sourcesv1.PingSource) reconciler.Event {
 	if !source.Status.IsReady() {
-		return fmt.Errorf("warning: PingSource is not ready")
+		return newPingSourceSkipped()
 	}
 
 	// Update the adapter state
 	r.mtadapter.Update(ctx, source)
 
-	return nil
+	return newPingSourceSynchronized()
 }
 
 func (r *Reconciler) deleteFunc(obj interface{}) {

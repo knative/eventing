@@ -148,7 +148,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *source
 	d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Get(ctx, mtadapterName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			logging.FromContext(ctx).Errorw("pingsource adapter deployment doesn't exist", zap.Error(err))
+			logging.FromContext(ctx).Errorw("PingSource adapter deployment doesn't exist", zap.Error(err))
 			return nil, err
 		}
 		return nil, fmt.Errorf("error getting mt adapter deployment %v", err)
@@ -162,7 +162,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *source
 		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(ctx, d, metav1.UpdateOptions{}); err != nil {
 			return d, err
 		}
-		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "pingsource adapter deployment updated")
+		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "PingSource adapter deployment updated")
 		return d, nil
 	} else {
 		logging.FromContext(ctx).Debugw("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
