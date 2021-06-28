@@ -16,6 +16,7 @@
 package prober_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -46,15 +47,13 @@ func TestNewConfig(t *testing.T) {
 				}
 			}()
 
-			if s.panics {
-				assert.Panics(t, func() {
-					prober.NewConfig()
-				})
+			config, err := prober.NewConfig()
+			if !errors.Is(err, s.err) {
+				t.Fatalf("want err: %v, got err: %v", s.err, err)
+			}
+			if err != nil {
 				return
 			}
-
-			config := prober.NewConfig()
-
 			assert.Equal(t, s.servingUse, config.Serving.Use)
 			assert.True(t, config.Serving.ScaleToZero)
 			assert.Equal(t, s.configFilename, config.ConfigFilename)
@@ -63,10 +62,10 @@ func TestNewConfig(t *testing.T) {
 }
 
 type testCase struct {
-	env            map[string]string
-	panics         bool
 	servingUse     bool
 	configFilename string
+	env            map[string]string
+	err            error
 }
 
 func createTestSuite() []testCase {
@@ -83,7 +82,7 @@ func createTestSuite() []testCase {
 			c.env = map[string]string{
 				servingEnvName: "gibberish",
 			}
-			c.panics = true
+			c.err = prober.ErrInvalidConfig
 		}),
 		createTestCase(func(c *testCase) {
 			c.env = map[string]string{
@@ -96,10 +95,9 @@ func createTestSuite() []testCase {
 
 func createTestCase(overrides func(*testCase)) testCase {
 	c := testCase{
-		map[string]string{},
-		false,
-		false,
-		defaultConfigFilename,
+		servingUse:     false,
+		configFilename: defaultConfigFilename,
+		env:            map[string]string{},
 	}
 	overrides(&c)
 	return c
