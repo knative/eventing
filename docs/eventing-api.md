@@ -1887,6 +1887,20 @@ knative.dev/pkg/apis.URL
 <p>SubscriberURI is the resolved URI of the receiver for this Trigger.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>deadLetterUri</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeadLetterURI is the resolved URI of the dead letter sink for this Trigger.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
