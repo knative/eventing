@@ -19,6 +19,7 @@ package feature
 import (
 	"context"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
 )
 
@@ -50,7 +51,7 @@ func FromContextOrDefaults(ctx context.Context) Flags {
 // ToContext attaches the provided Flags to the provided context, returning the
 // new context with the Flags attached.
 func ToContext(ctx context.Context, c Flags) context.Context {
-	return context.WithValue(ctx, cfgKey{}, c)
+	return fillContextWithFeatureSpecificFlags(context.WithValue(ctx, cfgKey{}, c), c)
 }
 
 // Store is a typed wrapper around configmap.Untyped store to handle our configmaps.
@@ -97,4 +98,11 @@ func (s *Store) Load() Flags {
 		return Flags(nil)
 	}
 	return loaded.(Flags)
+}
+
+func fillContextWithFeatureSpecificFlags(ctx context.Context, flags Flags) context.Context {
+	if flags.IsEnabled(KReferenceGroup) {
+		ctx = duckv1.KReferenceGroupAllowed(ctx)
+	}
+	return ctx
 }

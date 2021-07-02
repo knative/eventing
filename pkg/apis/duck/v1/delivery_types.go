@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/rickb777/date/period"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -36,6 +37,15 @@ type DeliverySpec struct {
 	// sending an event before moving it to the dead letter sink.
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
+
+	// Timeout is the timeout of each single request. The value must be greater than 0.
+	// More information on Duration format:
+	//  - https://www.iso.org/iso-8601-date-and-time-format.html
+	//  - https://en.wikipedia.org/wiki/ISO_8601
+	//
+	// Note: This API is EXPERIMENTAL and might break anytime. For more details: https://github.com/knative/eventing/issues/5148
+	// +optional
+	Timeout *string `json:"timeout,omitempty"`
 
 	// BackoffPolicy is the retry backoff policy (linear, exponential).
 	// +optional
@@ -63,6 +73,17 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ds.Retry != nil && *ds.Retry < 0 {
 		errs = errs.Also(apis.ErrInvalidValue(*ds.Retry, "retry"))
+	}
+
+	if ds.Timeout != nil {
+		if feature.FromContext(ctx).IsEnabled(feature.DeliveryTimeout) {
+			t, te := period.Parse(*ds.Timeout)
+			if te != nil || t.IsZero() {
+				errs = errs.Also(apis.ErrInvalidValue(*ds.Timeout, "timeout"))
+			}
+		} else {
+			errs = errs.Also(apis.ErrDisallowedFields("timeout"))
+		}
 	}
 
 	if ds.BackoffPolicy != nil {

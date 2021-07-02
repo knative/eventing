@@ -31,12 +31,14 @@ import (
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kref"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
@@ -61,6 +63,9 @@ var (
 type Reconciler struct {
 	// DynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	// crdLister is used to resolve the ref version
+	kreferenceResolver *kref.KReferenceResolver
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
@@ -201,6 +206,21 @@ func (r *Reconciler) resolveSubscriber(ctx context.Context, subscription *v1.Sub
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
+
+		// Resolve the group
+		if subscriber.Ref != nil && feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
+			var err error
+			subscriber.Ref, err = r.kreferenceResolver.ResolveGroup(subscriber.Ref)
+			if err != nil {
+				logging.FromContext(ctx).Warnw("Failed to resolve Subscriber.Ref",
+					zap.Error(err),
+					zap.Any("subscriber", subscriber))
+				subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %v", err)
+				return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber.ref: %w", err)
+			}
+			logging.FromContext(ctx).Debugw("Group resolved", zap.Any("spec.subscriber.ref", subscriber.Ref))
+		}
+
 		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warnw("Failed to resolve Subscriber",
@@ -290,6 +310,18 @@ func (r *Reconciler) getSubStatus(subscription *v1.Subscription, channel *eventi
 }
 
 func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1.Subscription, ref duckv1.KReference) (runtime.Object, pkgreconciler.Event) {
+	// Resolve the group
+	if feature.FromContext(ctx).IsEnabled(feature.KReferenceGroup) {
+		newRef, err := r.kreferenceResolver.ResolveGroup(&ref)
+		if err != nil {
+			logging.FromContext(ctx).Warnw("Failed to resolve Channel reference",
+				zap.Error(err),
+				zap.Any("ref", ref))
+			return nil, err
+		}
+		ref = *newRef
+	}
+
 	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
@@ -478,13 +510,14 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 				},
 			}
 		}
-		if channel.Spec.Delivery.BackoffDelay != nil || channel.Spec.Delivery.Retry != nil || channel.Spec.Delivery.BackoffPolicy != nil {
+		if channel.Spec.Delivery.BackoffDelay != nil || channel.Spec.Delivery.Retry != nil || channel.Spec.Delivery.BackoffPolicy != nil || channel.Spec.Delivery.Timeout != nil {
 			if delivery == nil {
 				delivery = &eventingduckv1.DeliverySpec{}
 			}
 			delivery.BackoffPolicy = channel.Spec.Delivery.BackoffPolicy
 			delivery.Retry = channel.Spec.Delivery.Retry
 			delivery.BackoffDelay = channel.Spec.Delivery.BackoffDelay
+			delivery.Timeout = channel.Spec.Delivery.Timeout
 		}
 		return
 	}
@@ -498,13 +531,14 @@ func deliverySpec(sub *v1.Subscription, channel *eventingduckv1.Channelable) (de
 			},
 		}
 	}
-	if sub.Spec.Delivery != nil && (sub.Spec.Delivery.BackoffDelay != nil || sub.Spec.Delivery.Retry != nil || sub.Spec.Delivery.BackoffPolicy != nil) {
+	if sub.Spec.Delivery != nil && (sub.Spec.Delivery.BackoffDelay != nil || sub.Spec.Delivery.Retry != nil || sub.Spec.Delivery.BackoffPolicy != nil || sub.Spec.Delivery.Timeout != nil) {
 		if delivery == nil {
 			delivery = &eventingduckv1.DeliverySpec{}
 		}
 		delivery.BackoffPolicy = sub.Spec.Delivery.BackoffPolicy
 		delivery.Retry = sub.Spec.Delivery.Retry
 		delivery.BackoffDelay = sub.Spec.Delivery.BackoffDelay
+		delivery.Timeout = sub.Spec.Delivery.Timeout
 	}
 	return
 }

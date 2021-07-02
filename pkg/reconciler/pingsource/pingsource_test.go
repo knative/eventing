@@ -245,7 +245,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, pingSourceDeploymentUpdated, `pingsource adapter deployment updated`),
+				Eventf(corev1.EventTypeNormal, pingSourceDeploymentUpdated, `PingSource adapter deployment updated`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: rtv1.NewPingSource(sourceName, testNS,

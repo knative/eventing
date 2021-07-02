@@ -18,17 +18,15 @@ package prober
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"runtime"
-	"strings"
 	"text/template"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/wavesoftware/go-ensure"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -44,15 +42,19 @@ const (
 	defaultHealthEndpoint    = "/healthz"
 	defaultFinishedSleep     = 5 * time.Second
 
+	// Silence will suppress notification about event duplicates.
 	Silence DuplicateAction = "silence"
-	Warn    DuplicateAction = "warn"
-	Error   DuplicateAction = "error"
+	// Warn will issue a warning message in case of a event duplicate.
+	Warn DuplicateAction = "warn"
+	// Error will fail test with an error in case of event duplicate.
+	Error DuplicateAction = "error"
 
 	prefix = "eventing_upgrade_tests"
+)
 
-	// TODO(ksuszyns): Remove this val in next release
-	// Deprecated: use 'eventing_upgrade_tests' prefix instead
-	deprecatedPrefix = "e2e_upgrade_tests"
+var (
+	// ErrInvalidConfig is returned when the configuration is invalid.
+	ErrInvalidConfig = errors.New("invalid config")
 )
 
 // DuplicateAction is the action to take in case of duplicated events
@@ -67,15 +69,6 @@ type Config struct {
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
 	Ctx           context.Context
-	// BrokerOpts holds opts for broker.
-	// TODO(ksuszyns): Remove this opt in next release
-	// Deprecated: use Wathola.SystemUnderTest instead.
-	BrokerOpts []resources.BrokerOption
-	// Namespace holds namespace in which test is about to be executed.
-	// TODO(ksuszyns): Remove this opt in next release
-	// Deprecated: namespace is about to be taken from testlib.Client created by
-	// NewRunner
-	Namespace string
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -106,36 +99,15 @@ type ServingConfig struct {
 
 // NewConfigOrFail will create a prober.Config or fail trying.
 func NewConfigOrFail(c pkgupgrade.Context) *Config {
-	errSink := func(err error) {
+	cfg, err := NewConfig()
+	if err != nil {
 		c.T.Fatal(err)
 	}
-	warnf := c.Log.Warnf
-	return newConfig(errSink, warnf)
+	return cfg
 }
 
-// NewConfig creates a new configuration object with default values filled in.
-// Values can be influenced by kelseyhightower/envconfig with
-// `eventing_upgrade_tests` prefix.
-// TODO(ksuszyns): Remove this func in next release
-// Deprecated: use NewContinualVerification or NewConfigOrFail
-func NewConfig(namespace ...string) *Config {
-	errSink := func(err error) {
-		ensure.NoError(err)
-	}
-	warnf := func(template string, args ...interface{}) {
-		_, err := fmt.Fprintf(os.Stderr, template, args)
-		ensure.NoError(err)
-	}
-	config := newConfig(errSink, warnf)
-	if len(namespace) > 0 {
-		config.Namespace = strings.Join(namespace, ",")
-	}
-	return config
-}
-
-func newConfig(
-	errSink func(err error), warnf func(template string, args ...interface{}),
-) *Config {
+// NewConfig will create a prober.Config or return error.
+func NewConfig() (*Config, error) {
 	config := &Config{
 		Interval:      Interval,
 		FinishedSleep: defaultFinishedSleep,
@@ -160,22 +132,10 @@ func newConfig(
 	}
 
 	if err := envconfig.Process(prefix, config); err != nil {
-		errSink(err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 	}
 
-	// TODO(ksuszyns): Remove this block in next release
-	for _, enventry := range os.Environ() {
-		if strings.HasPrefix(strings.ToLower(enventry), deprecatedPrefix) {
-			warnf(
-				"DEPRECATED: using deprecated '%s' prefix. Use '%s' instead.",
-				deprecatedPrefix, prefix)
-			if err := envconfig.Process(deprecatedPrefix, config); err != nil {
-				errSink(err)
-			}
-			break
-		}
-	}
-	return config
+	return config, nil
 }
 
 func (p *prober) deployConfiguration() {

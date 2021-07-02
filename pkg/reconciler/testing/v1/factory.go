@@ -58,7 +58,12 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList) {
 		ls := NewListers(r.Objects)
 
-		ctx := context.Background()
+		var ctx context.Context
+		if r.Ctx != nil {
+			ctx = r.Ctx
+		} else {
+			ctx = context.Background()
+		}
 		ctx = logging.WithLogger(ctx, logger)
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)

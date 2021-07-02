@@ -32,46 +32,46 @@ func ChannelStatusTestHelperWithChannelTestRunner(
 	options ...testlib.SetupClientOption,
 ) {
 
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := testlib.Setup(st, true, options...)
-		defer testlib.TearDown(client)
-
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
 		t.Run("Channel has required status fields", func(t *testing.T) {
-			channelHasRequiredStatus(st, client, channel, options...)
+			client := testlib.Setup(t, true, options...)
+			defer testlib.TearDown(client)
+
+			channelHasRequiredStatus(t, client, channel, options...)
 		})
 	})
 }
 
-func channelHasRequiredStatus(st *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
-	st.Logf("Running channel status conformance test with channel %q", channel)
+func channelHasRequiredStatus(t *testing.T, client *testlib.Client, channel metav1.TypeMeta, options ...testlib.SetupClientOption) {
+	t.Logf("Running channel status conformance test with channel %q", channel)
 
 	channelName := "channel-req-status"
 
-	client.T.Logf("Creating channel %+v-%s", channel, channelName)
+	t.Logf("Creating channel %+v-%s", channel, channelName)
 	client.CreateChannelOrFail(channelName, &channel)
 	client.WaitForResourceReadyOrFail(channelName, &channel)
 
 	dtsv, err := getChannelDuckTypeSupportVersion(channelName, client, &channel)
 	if err != nil {
-		st.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
+		t.Fatalf("Unable to check Channel duck type support version for %q: %q", channel, err)
 	}
 	if dtsv != "v1" {
-		st.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
+		t.Fatalf("Unexpected duck type version, wanted [v1] got: %s", dtsv)
 	}
 
 	channelable, err := getChannelAsChannelable(channelName, client, channel)
 	if err != nil {
-		st.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
+		t.Fatalf("Unable to get channel %q to v1 duck type: %q", channel, err)
 	}
 
 	// SPEC: Channel CRD MUST have a status subresource which contains address
 	if channelable.Status.AddressStatus.Address == nil {
-		st.Fatalf("%q does not have status.address", channel)
+		t.Fatalf("%q does not have status.address", channel)
 	}
 
 	// SPEC: When the channel instance is ready to receive events status.address.hostname and
 	// status.address.url MUST be populated
 	if channelable.Status.Address.URL.IsEmpty() {
-		st.Fatalf("No hostname found for %q", channel)
+		t.Fatalf("No hostname found for %q", channel)
 	}
 }

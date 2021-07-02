@@ -31,6 +31,7 @@ func (source *DeliverySpec) ConvertTo(ctx context.Context, to apis.Convertible) 
 	case *eventingduckv1.DeliverySpec:
 		sink.Retry = source.Retry
 		sink.BackoffDelay = source.BackoffDelay
+		sink.Timeout = source.Timeout
 		if source.BackoffPolicy != nil {
 			if *source.BackoffPolicy == BackoffPolicyLinear {
 				linear := eventingduckv1.BackoffPolicyLinear
@@ -55,6 +56,7 @@ func (sink *DeliverySpec) ConvertFrom(ctx context.Context, from apis.Convertible
 	case *eventingduckv1.DeliverySpec:
 		sink.Retry = source.Retry
 		sink.BackoffDelay = source.BackoffDelay
+		sink.Timeout = source.Timeout
 		if source.BackoffPolicy != nil {
 			if *source.BackoffPolicy == eventingduckv1.BackoffPolicyLinear {
 				linear := BackoffPolicyLinear

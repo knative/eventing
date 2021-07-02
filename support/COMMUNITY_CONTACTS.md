@@ -82,25 +82,20 @@ The schedule can be regenerated randomly for a new cycle with the command (run
 from the eventing base directory).
 
 ```sh
-VOLUNTEERS=$(grep -hs "" support/VOLUNTEERS)
-OWNERS=$(grep "^- " OWNERS | cut -f2 -d" ")
-NON_ROSTER=$(grep -v -e '^$' support/NON_ROSTER)
-echo ${VOLUNTEERS} ${OWNERS} | sed 's/ /\n/g' | grep -v ${NON_ROSTER} | sort | uniq | sort -R
+ROSTER=$(grep -v -e '^$' support/ROSTER)
+echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 ```
 
 - [antoineco](https://github.com/antoineco)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
 - [n3wscott](https://github.com/n3wscott)
-- [slinkydeveloper](https://github.com/slinkydeveloper)
 - [vaikas](https://github.com/vaikas)
 - [lberk](https://github.com/lberk)
 - [pierDipi](https://github.com/pierDipi)
 - [aliok](https://github.com/aliok)
 - [aslom](https://github.com/aslom)
 - [tayarani](https://github.com/tayarani)
-- [zhongduo](https://github.com/zhongduo)
-- [nlopezgi](https://github.com/nlopezgi)
 - [devguyio](https://github.com/devguyio)
 
 # Schedule

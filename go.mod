@@ -3,6 +3,7 @@ module knative.dev/eventing
 go 1.16
 
 require (
+	github.com/ahmetb/gen-crd-api-reference-docs v0.3.1-0.20210420163308-c1402a70e2f1
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
@@ -29,21 +30,21 @@ require (
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.23.0
 	go.opentelemetry.io/otel v0.16.0
-	go.uber.org/atomic v1.7.0
+	go.uber.org/atomic v1.8.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
-	k8s.io/api v0.19.7
-	k8s.io/apiextensions-apiserver v0.19.7
-	k8s.io/apimachinery v0.19.7
-	k8s.io/apiserver v0.19.7
-	k8s.io/client-go v0.19.7
-	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
-	knative.dev/hack v0.0.0-20210609124042-e35bcb8f21ec
-	knative.dev/hack/schema v0.0.0-20210609124042-e35bcb8f21ec
-	knative.dev/pkg v0.0.0-20210608193741-f19eef192438
-	knative.dev/reconciler-test v0.0.0-20210603210445-0071c48281c7
+	k8s.io/api v0.20.7
+	k8s.io/apiextensions-apiserver v0.20.7
+	k8s.io/apimachinery v0.20.7
+	k8s.io/apiserver v0.20.7
+	k8s.io/client-go v0.20.7
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	knative.dev/hack v0.0.0-20210622141627-e28525d8d260
+	knative.dev/hack/schema v0.0.0-20210622141627-e28525d8d260
+	knative.dev/pkg v0.0.0-20210701025203-30f9568e894e
+	knative.dev/reconciler-test v0.0.0-20210630182710-2a6d91dfee1e
 	sigs.k8s.io/yaml v1.2.0
 )
 

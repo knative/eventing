@@ -62,6 +62,10 @@ ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   "eventing:v1beta1 eventing:v1 messaging:v1 flows:v1 sources:v1beta2 sources:v1 duck:v1beta1 duck:v1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
+group "Generating API reference docs"
+
+${REPO_ROOT_DIR}/hack/update-reference-docs.sh
+
 group "Update deps post-codegen"
 
 # Make sure our dependencies are up-to-date

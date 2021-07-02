@@ -60,6 +60,9 @@ func InitializeEventingFlags() {
 	flag.Var(&EventingFlags.Brokers, "brokers", BrokerUsage)
 	flag.StringVar(&EventingFlags.BrokerName, "brokername", "", BrokerNameUsage)
 	flag.StringVar(&EventingFlags.BrokerNamespace, "brokernamespace", "", BrokerNamespaceUsage)
+	// Might be useful in restricted environments where namespaces need to be
+	// created by a user with increased privileges (admin).
+	flag.BoolVar(&EventingFlags.ReuseNamespace, "reusenamespace", false, "Whether to re-use namespace for a test if it already exists.")
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
