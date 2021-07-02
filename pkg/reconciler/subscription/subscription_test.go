@@ -85,8 +85,8 @@ var (
 	replyDNS = "reply.mynamespace.svc." + network.GetClusterDomainName()
 	replyURI = apis.HTTP(replyDNS)
 
-	serviceDNS         = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
-	serviceURI         = apis.HTTP(serviceDNS)
+	serviceDNS = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
+	serviceURI = apis.HTTP(serviceDNS)
 
 	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
 	dlcURI = apis.HTTP(dlcDNS)
