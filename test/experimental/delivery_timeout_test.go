@@ -21,7 +21,9 @@ package experimental
 import (
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/experimental/features/delivery_timeout"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
@@ -40,4 +42,5 @@ func TestDeliveryTimeout(t *testing.T) {
 	)
 
 	env.Test(ctx, t, delivery_timeout.ChannelToSink())
+	env.Test(ctx, t, delivery_timeout.BrokerToSink(broker.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
 }
