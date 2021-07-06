@@ -35,6 +35,8 @@ import (
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
+var newClientHTTPObserved = cloudeventsobsclient.NewClientHTTP
+
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
 // outbound events and report outbound event counts.
 func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides, reporter source.StatsReporter) (cloudevents.Client, error) {
@@ -81,7 +83,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	// Make sure that explicitly set options have priority
 	opts = append(pOpts, opts...)
 
-	ceClient, err := cloudeventsobsclient.NewClientHTTP(opts, nil)
+	ceClient, err := newClientHTTPObserved(pOpts, nil)
 
 	if crStatusEventClient == nil {
 		crStatusEventClient = crstatusevent.GetDefaultClient()
