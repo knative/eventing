@@ -83,7 +83,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	// Make sure that explicitly set options have priority
 	opts = append(pOpts, opts...)
 
-	ceClient, err := newClientHTTPObserved(pOpts, nil)
+	ceClient, err := newClientHTTPObserved(opts, nil)
 
 	if crStatusEventClient == nil {
 		crStatusEventClient = crstatusevent.GetDefaultClient()
