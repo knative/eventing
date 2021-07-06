@@ -24,6 +24,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	v2client "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
@@ -127,7 +128,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			restoreHTTP := cloudevents.NewHTTP
+			restoreHTTP := newClientHTTPObserved
 			restoreEnv, setEnv := os.LookupEnv("K_SINK_TIMEOUT")
 			if tc.timeout != 0 {
 				if err := os.Setenv("K_SINK_TIMEOUT", strconv.Itoa(tc.timeout)); err != nil {
@@ -135,8 +136,8 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 				}
 			}
 
-			defer func(restoreHTTP func(opts ...http.Option) (*http.Protocol, error), restoreEnv string, setEnv bool) {
-				cloudevents.NewHTTP = restoreHTTP
+			defer func(restoreHTTP func(topt []http.Option, copt []v2client.Option) (v2client.Client, error), restoreEnv string, setEnv bool) {
+				newClientHTTPObserved = restoreHTTP
 				if setEnv {
 					if err := os.Setenv("K_SINK_TIMEOUT", restoreEnv); err != nil {
 						t.Error(err)
@@ -150,8 +151,8 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 			}(restoreHTTP, restoreEnv, setEnv)
 
 			sendOptions := []http.Option{}
-			cloudevents.NewHTTP = func(opts ...http.Option) (*http.Protocol, error) {
-				sendOptions = append(sendOptions, opts...)
+			newClientHTTPObserved = func(topt []http.Option, copt []v2client.Option) (v2client.Client, error) {
+				sendOptions = append(sendOptions, topt...)
 				return nil, nil
 			}
 			envConfigAccessor := ConstructEnvOrDie(func() EnvConfigAccessor {
