@@ -327,7 +327,7 @@ func SendsEventsForLabelMatchingResources() *feature.Feature {
 	f.Stable("ApiServerSource as event source").
 		Must("delivers events",
 			eventasssert.OnStore(sink).MatchEvent(
-				test.HasType("dev.knative.apiserver.ref.add"),
+				test.HasType("dev.knative.apiserver.ref.update"),
 				test.DataContains(`"kind":"Pod"`),
 				test.DataContains(fmt.Sprintf(`"name":"%s"`, examplePodName)),
 			).AtLeast(1))
