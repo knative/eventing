@@ -103,6 +103,11 @@ func (p *EventProber) ReceiversRejectFirstN(n uint) {
 	p.receiverOptions = append(p.receiverOptions, DropFirstN(n))
 }
 
+// ReceiversRejectResponseCode adds DropEventsResponseCode to the default config for new receivers.
+func (p *EventProber) ReceiversRejectResponseCode(code int) {
+	p.receiverOptions = append(p.receiverOptions, DropEventsResponseCode(code))
+}
+
 // ReceiversHaveResponseDelay adds ResponseWaitTime to the default config for
 // new receivers.
 func (p *EventProber) ReceiversHaveResponseDelay(delay time.Duration) {
