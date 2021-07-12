@@ -362,6 +362,51 @@ func TestPingSourceValidation(t *testing.T) {
 				},
 			},
 			want: nil,
+		}, {
+			name: "unsupported @every descriptor",
+			source: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "@every 2h",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrInvalidValue("unsupported descriptor @every", "spec.schedule")
+				errs = errs.Also(fe)
+				return errs
+			}(),
+		}, {
+			name: "unsupported @every descriptor with TZ",
+			source: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "@every 2h",
+					Timezone: "Europe/Paris",
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrInvalidValue("unsupported descriptor @every", "spec.schedule")
+				errs = errs.Also(fe)
+				return errs
+			}(),
 		},
 	}
 
