@@ -23,7 +23,7 @@ import (
 
 	"go.opencensus.io/resource"
 	broker "knative.dev/eventing/pkg/broker"
-	"knative.dev/pkg/metrics/metricskey"
+	"knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/metrics/metricstest"
 	_ "knative.dev/pkg/metrics/testing"
 )
@@ -40,18 +40,18 @@ func TestStatsReporter(t *testing.T) {
 	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metricskey.LabelEventType:         "testeventtype",
-		metricskey.LabelResponseCode:      "202",
-		metricskey.LabelResponseCodeClass: "2xx",
-		broker.LabelUniqueName:            "testpod",
-		broker.LabelContainerName:         "testcontainer",
+		metrics.LabelEventType:         "testeventtype",
+		metrics.LabelResponseCode:      "202",
+		metrics.LabelResponseCodeClass: "2xx",
+		broker.LabelUniqueName:         "testpod",
+		broker.LabelContainerName:      "testcontainer",
 	}
 
 	resource := resource.Resource{
-		Type: metricskey.ResourceTypeKnativeBroker,
+		Type: metrics.ResourceTypeKnativeBroker,
 		Labels: map[string]string{
-			metricskey.LabelNamespaceName: "testns",
-			metricskey.LabelBrokerName:    "testbroker",
+			metrics.LabelNamespaceName: "testns",
+			metrics.LabelBrokerName:    "testbroker",
 		},
 	}
 
