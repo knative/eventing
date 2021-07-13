@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@ limitations under the License.
 
 package source
 
-import "knative.dev/pkg/source"
+const (
+	sourceControllerName = "sources.knative.dev/controller"
+	sourceName           = "sources.knative.dev/name"
+)
 
-type StatsReporter = source.StatsReporter
-type ReportArgs = source.ReportArgs
-
-func NewStatsReporter() (StatsReporter, error) {
-	return source.NewStatsReporter()
+func Labels(name, controllerAgentName string) map[string]string {
+	return map[string]string{
+		sourceControllerName: controllerAgentName,
+		sourceName:           name,
+	}
 }
