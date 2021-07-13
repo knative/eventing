@@ -62,4 +62,10 @@ const (
 
 	// ContainerName is the container for which the metric is reported.
 	LabelContainerName = metricskey.ContainerName
+
+	// LabelResponseError is the label for client error. For HTTP, A non-2xx status code doesn't cause an error.
+	LabelResponseError = metricskey.LabelResponseError
+
+	// LabelResponseTimeout is the label timeout.
+	LabelResponseTimeout = metricskey.LabelResponseTimeout
 )

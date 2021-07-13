@@ -31,6 +31,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/pkg/metrics/source"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -40,7 +41,6 @@ import (
 	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
-	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 )

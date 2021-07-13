@@ -26,10 +26,9 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	v2client "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/source"
-
 	"knative.dev/eventing/pkg/adapter/v2/test"
+	"knative.dev/eventing/pkg/metrics/source"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type mockReporter struct {

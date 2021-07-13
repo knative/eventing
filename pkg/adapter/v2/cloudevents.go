@@ -30,8 +30,8 @@ import (
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	"knative.dev/eventing/pkg/metrics/source"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/source"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
 
