@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -37,8 +38,10 @@ func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
 
 func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-
 	schedule := cs.Schedule
+
+	errs = validateDescriptor(schedule)
+
 	if cs.Timezone != "" {
 		schedule = "CRON_TZ=" + cs.Timezone + " " + schedule
 	}
@@ -97,4 +100,11 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 func validateJSON(str string) error {
 	var objmap map[string]interface{}
 	return json.Unmarshal([]byte(str), &objmap)
+}
+
+func validateDescriptor(spec string) *apis.FieldError {
+	if strings.Contains(spec, "@every") {
+		return apis.ErrInvalidValue(errors.New("unsupported descriptor @every"), "schedule")
+	}
+	return nil
 }
