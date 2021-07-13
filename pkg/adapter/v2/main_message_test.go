@@ -22,12 +22,12 @@ import (
 	"testing"
 
 	"go.opencensus.io/stats/view"
-	_ "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/metrics/source"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/source"
 
-	"knative.dev/eventing/pkg/kncloudevents"
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 )
 
 type myAdapterBindings struct{}
