@@ -31,7 +31,7 @@ require (
 	go.opencensus.io v0.23.0
 	go.opentelemetry.io/otel v0.16.0
 	go.uber.org/atomic v1.8.0
-	go.uber.org/zap v1.17.0
+	go.uber.org/zap v1.18.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
@@ -43,8 +43,8 @@ require (
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	knative.dev/hack v0.0.0-20210622141627-e28525d8d260
 	knative.dev/hack/schema v0.0.0-20210622141627-e28525d8d260
-	knative.dev/pkg v0.0.0-20210706174620-fe90576475ca
-	knative.dev/reconciler-test v0.0.0-20210707164418-32f0df0c7399
+	knative.dev/pkg v0.0.0-20210712150822-e8973c6acbf7
+	knative.dev/reconciler-test v0.0.0-20210712152422-2b7893cc2eb4
 	sigs.k8s.io/yaml v1.2.0
 )
 
