@@ -103,12 +103,7 @@ func validateJSON(str string) error {
 }
 
 func validateDescriptor(spec string) *apis.FieldError {
-	if strings.HasPrefix(spec, "TZ=") || strings.HasPrefix(spec, "CRON_TZ=") {
-		i := strings.Index(spec, " ")
-		spec = strings.TrimSpace(spec[i:])
-	}
-
-	if strings.HasPrefix(spec, "@every") {
+	if strings.Contains(spec, "@every") {
 		return apis.ErrInvalidValue(errors.New("unsupported descriptor @every"), "schedule")
 	}
 	return nil
