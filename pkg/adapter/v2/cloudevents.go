@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"time"
 
+	cloudeventsobsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
@@ -33,6 +34,8 @@ import (
 	"knative.dev/pkg/source"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 )
+
+var newClientHTTPObserved = cloudeventsobsclient.NewClientHTTP
 
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
 // outbound events and report outbound event counts.
@@ -80,12 +83,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 	// Make sure that explicitly set options have priority
 	opts = append(pOpts, opts...)
 
-	p, err := cloudevents.NewHTTP(opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	ceClient, err := cloudevents.NewClient(p, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
+	ceClient, err := newClientHTTPObserved(opts, nil)
 
 	if crStatusEventClient == nil {
 		crStatusEventClient = crstatusevent.GetDefaultClient()
