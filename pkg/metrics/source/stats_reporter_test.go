@@ -78,6 +78,25 @@ func TestStatsReporter(t *testing.T) {
 	metricstest.CheckCountData(t, "retry_event_count", retryWantTags, 2)
 }
 
+func TestBadValues(t *testing.T) {
+	r, err := NewStatsReporter()
+	if err != nil {
+		t.Fatal("Failed to create a new reporter:", err)
+	}
+
+	args := &ReportArgs{
+		Namespace: "😀",
+	}
+
+	if err := r.ReportEventCount(args, 200); err == nil {
+		t.Errorf("expected ReportEventCount to return an error")
+	}
+
+	if err := r.ReportRetryEventCount(args, 200); err == nil {
+		t.Errorf("expected ReportRetryEventCount to return an error")
+	}
+}
+
 func expectSuccess(t *testing.T, f func() error) {
 	t.Helper()
 	if err := f(); err != nil {
