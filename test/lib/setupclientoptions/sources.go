@@ -19,10 +19,10 @@ package setupclientoptions
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/test"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -39,11 +39,13 @@ import (
 // to create a new ApiServerSource. It creates a ServiceAccount, a Role, a
 // RoleBinding, a RecordEvents pod and an ApiServerSource object with the event
 // mode and RecordEvent pod as its sink.
-func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode string, recordEventsPodName string,
-	roleName string, serviceAccountName string) testlib.SetupClientOption {
+func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode string,
+	recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
-		// create needed RBAC SA, Role & RoleBinding
-		createRbacObjects(client, roleName, serviceAccountName)
+		sa := client.Namespace + "-eventwatcher"
+		if !test.EventingFlags.ReuseNamespace {
+			testlib.CreateRBACPodsEventsGetListWatch(client, sa)
+		}
 
 		// create event record
 		recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
@@ -54,7 +56,7 @@ func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode s
 				Kind:       "Event",
 			}},
 			EventMode:          mode,
-			ServiceAccountName: serviceAccountName,
+			ServiceAccountName: sa,
 		}
 		spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventsPodName)}
 
@@ -100,24 +102,4 @@ func PingSourceV1B2ClientSetupOption(ctx context.Context, name string, recordEve
 		// wait for all test resources to be ready
 		client.WaitForAllTestResourcesReadyOrFail(ctx)
 	}
-}
-
-func createRbacObjects(client *testlib.Client, roleName string,
-	serviceAccountName string) {
-	// creates ServiceAccount and RoleBinding with a role for reading pods
-	// and events
-	r := resources.Role(roleName,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events", "pods"},
-			Verbs:     []string{"get", "list", "watch"}}))
-	client.CreateServiceAccountOrFail(serviceAccountName)
-	client.CreateRoleOrFail(r)
-	client.CreateRoleBindingOrFail(
-		serviceAccountName,
-		testlib.RoleKind,
-		roleName,
-		fmt.Sprintf("%s-%s", serviceAccountName, roleName),
-		client.Namespace,
-	)
 }
