@@ -43,7 +43,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 spec:
-  minAvailable: 80%
+  minAvailable: 1
   selector:
     matchLabels:
       app: eventing-webhook
