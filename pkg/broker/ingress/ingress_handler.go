@@ -101,7 +101,14 @@ func (h *Handler) Start(ctx context.Context) error {
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Allow", "POST, OPTIONS")
 	// validate request method
+	if request.Method == http.MethodOptions {
+		writer.Header().Set("WebHook-Allowed-Origin", "*") // Accept from any Origin:
+		writer.Header().Set("WebHook-Allowed-Rate", "*")   // Unlimited requests/minute
+		writer.WriteHeader(http.StatusOK)
+		return
+	}
 	if request.Method != http.MethodPost {
 		h.Logger.Warn("unexpected request method", zap.String("method", request.Method))
 		writer.WriteHeader(http.StatusMethodNotAllowed)

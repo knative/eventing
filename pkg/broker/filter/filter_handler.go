@@ -105,6 +105,7 @@ func (h *Handler) Start(ctx context.Context) error {
 // 5. send event to trigger's subscriber
 // 6. write the response
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Allow", "POST")
 
 	if request.Method != http.MethodPost {
 		writer.WriteHeader(http.StatusMethodNotAllowed)

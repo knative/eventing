@@ -84,7 +84,7 @@ func BrokerDataPlaneNamespaceSetupOption(ctx context.Context, namespace string) 
 //Supports structured or Binary mode
 //Respond with 2xx on good CE
 //Respond with 400 on bad CE
-//Reject non-POST requests to publish URI
+//Reject non-POST, non-OPTIONS requests to publish URI (beyond spec?!)
 func BrokerIngressDataPlaneTestHelper(
 	ctx context.Context,
 	t *testing.T,
@@ -107,6 +107,22 @@ func BrokerIngressDataPlaneTestHelper(
 			resources.WithAttributesTriggerFilter(eventingv1.TriggerAnyFilter, eventingv1.TriggerAnyFilter, nil),
 			resources.WithSubscriberServiceRefForTrigger(loggerName),
 		)
+
+		st.Run("Ingress supports OPTIONS", func(t *testing.T) {
+			// TODO(evana): check "Allow" header and other options.
+			// This may be simpler if the setup requires a local HTTP proxy which can reach into the cluster.
+			method := sender.WithMethod("OPTIONS")
+			responseSink := "http://" + client.GetServiceHost(loggerName)
+			responseForward := sender.WithResponseSink(responseSink)
+			senderName := "options-test-sender"
+			client.SendRequestToAddressable(ctx, senderName, broker.Name, testlib.BrokerTypeMeta, map[string]string{}, "", method, responseForward)
+			client.WaitForResourceReadyOrFail(senderName, &podMeta)
+			eventTracker.AssertAtLeast(1, recordevents.MatchEvent(cetest.AllOf(
+				cetest.AnyOf(
+					sender.MatchStatusCode(200), sender.MatchStatusCode(405)),
+				cetest.HasSource("https://knative.dev/eventing/test/event-sender"),
+			)))
+		})
 
 		client.WaitForResourceReadyOrFail(trigger.Name, testlib.TriggerTypeMeta)
 		st.Run("Ingress Supports CE0.3", func(t *testing.T) {
