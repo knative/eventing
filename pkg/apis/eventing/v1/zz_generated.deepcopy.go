@@ -170,6 +170,61 @@ func (in *TriggerFilter) DeepCopyInto(out *TriggerFilter) {
 			(*out)[key] = val
 		}
 	}
+	if in.All != nil {
+		in, out := &in.All, &out.All
+		*out = make([]TriggerFilter, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Any != nil {
+		in, out := &in.Any, &out.Any
+		*out = make([]TriggerFilter, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Not != nil {
+		in, out := &in.Not, &out.Not
+		*out = new(TriggerFilter)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Exact != nil {
+		in, out := &in.Exact, &out.Exact
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Prefix != nil {
+		in, out := &in.Prefix, &out.Prefix
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Suffix != nil {
+		in, out := &in.Suffix, &out.Suffix
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Extensions != nil {
+		in, out := &in.Extensions, &out.Extensions
+		*out = make(map[string]*runtime.RawExtension, len(*in))
+		for key, val := range *in {
+			var outVal *runtime.RawExtension
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = new(runtime.RawExtension)
+				(*in).DeepCopyInto(*out)
+			}
+			(*out)[key] = outVal
+		}
+	}
 	return
 }
 

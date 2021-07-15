@@ -23,9 +23,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var (
@@ -480,6 +482,254 @@ func TestTriggerSpecValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.ts.Validate(context.TODO())
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFilterSpecValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter *TriggerFilter
+		want   *apis.FieldError
+	}{{
+		name: "missing attributes keys, match all",
+		filter: &TriggerFilter{
+			Attributes: TriggerFilterAttributes{},
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "invalid attribute name, start with number",
+		filter: &TriggerFilter{
+			Attributes: TriggerFilterAttributes{
+				"0invalid": "my-value",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "0invalid"`,
+			Paths:   []string{"filter.attributes"},
+		},
+	}, {
+		name: "invalid attribute name, capital letters",
+		filter: &TriggerFilter{
+			Attributes: TriggerFilterAttributes{
+				"invALID": "my-value",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.attributes"},
+		},
+	}, {
+		name:   "valid empty filter",
+		filter: validEmptyFilter,
+		want:   &apis.FieldError{},
+	}, {
+		name:   "valid SourceAndType filter",
+		filter: validAttributesFilter,
+		want:   &apis.FieldError{},
+	}, {
+		name:   "valid Attributes filter",
+		filter: validAttributesFilter,
+		want:   &apis.FieldError{},
+	}, {
+		name: "exact filter contains more than one attribute",
+		filter: &TriggerFilter{
+			Exact: map[string]string{
+				"myext":      "abc",
+				"anotherext": "xyz",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Exact can have only one key-value`,
+			Paths:   []string{"filter.exact"},
+		},
+	}, {
+		name: "exact filter contains invalid attribute name",
+		filter: &TriggerFilter{
+			Exact: map[string]string{
+				"invALID": "abc",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.exact"},
+		},
+	}, {
+		name: "valid exact filter",
+		filter: &TriggerFilter{
+			Exact: map[string]string{
+				"valid": "abc",
+			},
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "suffix filter contains more than one attribute",
+		filter: &TriggerFilter{
+			Suffix: map[string]string{
+				"myext":      "abc",
+				"anotherext": "xyz",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Suffix can have only one key-value`,
+			Paths:   []string{"filter.suffix"},
+		},
+	}, {
+		name: "suffix filter contains invalid attribute name",
+		filter: &TriggerFilter{
+			Suffix: map[string]string{
+				"invALID": "abc",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.suffix"},
+		},
+	}, {
+		name: "valid suffix filter",
+		filter: &TriggerFilter{
+			Suffix: map[string]string{
+				"valid": "abc",
+			},
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "prefix filter contains more than one attribute",
+		filter: &TriggerFilter{
+			Prefix: map[string]string{
+				"myext":      "abc",
+				"anotherext": "xyz",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Prefix can have only one key-value`,
+			Paths:   []string{"filter.prefix"},
+		},
+	}, {
+		name: "prefix filter contains invalid attribute name",
+		filter: &TriggerFilter{
+			Prefix: map[string]string{
+				"invALID": "abc",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.prefix"},
+		},
+	}, {
+		name: "valid prefix filter",
+		filter: &TriggerFilter{
+			Prefix: map[string]string{
+				"valid": "abc",
+			},
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "not nested expression is valid",
+		filter: &TriggerFilter{
+			Not: validAttributesFilter,
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "not nested expression is invalid",
+		filter: &TriggerFilter{
+			Not: &TriggerFilter{
+				Prefix: map[string]string{
+					"invALID": "abc",
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.not.prefix"},
+		},
+	}, {
+		name: "all filter is empty",
+		filter: &TriggerFilter{
+			All: []TriggerFilter{},
+		},
+		want: &apis.FieldError{
+			Message: `All must contain at least one nested filter`,
+			Paths:   []string{"filter.all"},
+		},
+	}, {
+		name: "all filter is valid",
+		filter: &TriggerFilter{
+			All: []TriggerFilter{
+				*validAttributesFilter,
+				{Exact: map[string]string{"myattr": "myval"}},
+			},
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "all filter sub expression is invalid",
+		filter: &TriggerFilter{
+			All: []TriggerFilter{
+				*validAttributesFilter,
+				{Exact: map[string]string{"myattr": "myval"}},
+				{Prefix: map[string]string{
+					"invALID": "abc",
+				}},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.all.[2].prefix"},
+		},
+	}, {
+		name: "any filter is empty",
+		filter: &TriggerFilter{
+			Any: []TriggerFilter{},
+		},
+		want: &apis.FieldError{
+			Message: `Any must contain at least one nested filter`,
+			Paths:   []string{"filter.any"},
+		},
+	}, {
+		name: "any filter is valid",
+		filter: &TriggerFilter{
+			Any: []TriggerFilter{
+				*validAttributesFilter,
+				{Exact: map[string]string{"myattr": "myval"}},
+			},
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "any filter sub expression is invalid",
+		filter: &TriggerFilter{
+			Any: []TriggerFilter{
+				*validAttributesFilter,
+				{Exact: map[string]string{"myattr": "myval"}},
+				{Prefix: map[string]string{
+					"invALID": "abc",
+				}},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `Invalid attribute name: "invALID"`,
+			Paths:   []string{"filter.any.[2].prefix"},
+		},
+	}, {
+		name: "raw extension expression is valid",
+		filter: &TriggerFilter{
+			Extensions: map[string]*runtime.RawExtension{
+				"juel": {Raw: []byte("\"myExpressionUsingJUEL\"")},
+			},
+		},
+		want: &apis.FieldError{},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ts := &TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     test.filter,
+				Subscriber: validSubscriber,
+			}
+			got := ts.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
 			}
