@@ -20,6 +20,9 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/utils/pointer"
+	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 
@@ -33,16 +36,75 @@ func TestInMemoryChannelSetDefaults(t *testing.T) {
 		expected        InMemoryChannel
 	}{
 		"nil gets annotations": {
-			initial:  InMemoryChannel{},
-			expected: InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1"}}},
+			initial: InMemoryChannel{},
+			expected: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1"}},
+				Spec: InMemoryChannelSpec{
+					ChannelableSpec: duckv1.ChannelableSpec{
+						Delivery: &duckv1.DeliverySpec{
+							Retry:         pointer.Int32Ptr(10),
+							BackoffPolicy: (*duckv1.BackoffPolicyType)(pointer.StringPtr(string(duckv1.BackoffPolicyExponential))),
+							BackoffDelay:  pointer.StringPtr("PT0.1S"),
+						},
+					},
+				},
+			},
 		},
 		"empty gets annotations": {
-			initial:  InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}},
-			expected: InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1"}}},
+			initial: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}},
+			},
+			expected: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1"}},
+				Spec: InMemoryChannelSpec{
+					ChannelableSpec: duckv1.ChannelableSpec{
+						Delivery: &duckv1.DeliverySpec{
+							Retry:         pointer.Int32Ptr(10),
+							BackoffPolicy: (*duckv1.BackoffPolicyType)(pointer.StringPtr(string(duckv1.BackoffPolicyExponential))),
+							BackoffDelay:  pointer.StringPtr("PT0.1S"),
+						},
+					},
+				},
+			},
 		},
 		"non-empty gets added ChannelDefaulter": {
-			initial:  InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"somethingelse": "yup"}}},
-			expected: InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1", "somethingelse": "yup"}}},
+			initial: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"somethingelse": "yup"}},
+			},
+			expected: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1", "somethingelse": "yup"}},
+				Spec: InMemoryChannelSpec{
+					ChannelableSpec: duckv1.ChannelableSpec{
+						Delivery: &duckv1.DeliverySpec{
+							Retry:         pointer.Int32Ptr(10),
+							BackoffPolicy: (*duckv1.BackoffPolicyType)(pointer.StringPtr(string(duckv1.BackoffPolicyExponential))),
+							BackoffDelay:  pointer.StringPtr("PT0.1S"),
+						},
+					},
+				},
+			},
+		},
+		"non empty delivery spec": {
+			initial: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"somethingelse": "yup"}},
+				Spec: InMemoryChannelSpec{
+					ChannelableSpec: duckv1.ChannelableSpec{
+						Delivery: &duckv1.DeliverySpec{
+							Retry: pointer.Int32Ptr(1),
+						},
+					},
+				},
+			},
+			expected: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1", "somethingelse": "yup"}},
+				Spec: InMemoryChannelSpec{
+					ChannelableSpec: duckv1.ChannelableSpec{
+						Delivery: &duckv1.DeliverySpec{
+							Retry: pointer.Int32Ptr(1),
+						},
+					},
+				},
+			},
 		},
 	}
 	for n, tc := range testCases {
