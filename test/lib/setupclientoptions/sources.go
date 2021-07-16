@@ -19,11 +19,10 @@ package setupclientoptions
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/test"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/eventing/test"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
