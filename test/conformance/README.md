@@ -44,13 +44,12 @@ Running the conformance tests then consists of these steps:
     ```shell
     NUM_NAMESPACES=40 ./create-namespace-rbac.sh
     ```
-   Note: There are currently slightly over 30 tests. but the number will grow. So the number of namespaces
-   needs to be adjusted.
+   Note: The number of required namespaces might grow over time.
 1. The project admin runs the test suite with specific flags:
     ```shell
     go test -v -tags=e2e,project_admin -count=1 ./test/conformance \
       -reusenamespace \
       -kubeconfig=$PROJECT_ADMIN_KUBECONFIG
     ```
-   It is expected that the $PROJECT_ADMIN_KUBECONFIG's user is a project admin for all the
+   The $PROJECT_ADMIN_KUBECONFIG's user is expected to be a project admin for all the
    created namespaces.
