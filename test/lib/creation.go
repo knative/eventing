@@ -552,7 +552,7 @@ func (c *Client) CreateRoleOrFail(r *rbacv1.Role) {
 }
 
 const (
-	RoleKind        = "Role"
+	RoleKind = "Role"
 )
 
 // CreateRoleBindingOrFail will create a RoleBinding or fail the test if there is an error.

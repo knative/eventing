@@ -19,8 +19,9 @@ package recordevents
 import (
 	"context"
 	"encoding/json"
-	"knative.dev/eventing/test"
 	"strings"
+
+	"knative.dev/eventing/test"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
