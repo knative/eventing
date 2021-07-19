@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"knative.dev/eventing/test"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -135,9 +133,6 @@ func serializeHeaders(headers map[string]string) string {
 }
 
 // DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
-// By convention, all resources are named according to the client's namespace.
-// This allows creating the namespaces, SAs, Roles, RoleBindings in advance by the
-// admin user.
 func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
 	options = append(
 		options,
@@ -157,10 +152,6 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 
 // DeployEventSenderOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
 func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name string, sink string, options ...EventRecordOption) *corev1.Pod {
-	if !test.EventingFlags.ReuseNamespace {
-		testlib.CreateRBACPodsGetEventsAll(client, client.Namespace)
-	}
-
 	options = append(
 		options,
 		envOption("EVENT_GENERATORS", "sender"),
