@@ -30,6 +30,6 @@ data:
   # For more details: https://github.com/knative/eventing/issues/5148
   delivery-timeout: "disabled"
 
-  # ALPHA feature: The custom-kreference-resolver enables custom kreference resolvers
+  # ALPHA feature: The kreference-custom-resolvers enables custom kreference resolvers
   # For more details: https://github.com/knative/eventing/issues/5593
-  custom-kreference-resolver: "disabled"
+  kreference-custom-resolvers: "disabled"
