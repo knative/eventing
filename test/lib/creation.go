@@ -515,8 +515,8 @@ func (c *Client) CreateServiceAccountOrFail(saName string) {
 	sa := resources.ServiceAccount(saName, namespace)
 	sas := c.Kube.CoreV1().ServiceAccounts(namespace)
 	c.T.Logf("Creating service account %+v", sa)
-	if _, err := sas.Create(context.Background(), sa, metav1.CreateOptions{}); err != nil {
-		c.T.Fatalf("Failed to create service account %q: %v", saName, err)
+	if _, err := sas.Create(context.Background(), sa, metav1.CreateOptions{}); err != nil && !apierrs.IsAlreadyExists(err) {
+	  	c.T.Fatalf("Failed to create service account %q: %v", saName, err)
 	}
 	c.Tracker.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
 
