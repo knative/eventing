@@ -22,8 +22,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test"
-
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
 	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -41,11 +39,6 @@ import (
 func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode string,
 	recordEventsPodName string) testlib.SetupClientOption {
 	return func(client *testlib.Client) {
-		sa := client.Namespace + "-eventwatcher"
-		if !test.EventingFlags.ReuseNamespace {
-			testlib.CreateRBACPodsEventsGetListWatch(client, sa)
-		}
-
 		// create event record
 		recordevents.StartEventRecordOrFail(ctx, client, recordEventsPodName)
 
@@ -55,7 +48,7 @@ func ApiServerSourceV1ClientSetupOption(ctx context.Context, name string, mode s
 				Kind:       "Event",
 			}},
 			EventMode:          mode,
-			ServiceAccountName: sa,
+			ServiceAccountName: client.Namespace + "-eventwatcher",
 		}
 		spec.Sink = duckv1.Destination{Ref: resources.ServiceKRef(recordEventsPodName)}
 

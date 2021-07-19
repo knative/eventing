@@ -139,10 +139,6 @@ func serializeHeaders(headers map[string]string) string {
 // This allows creating the namespaces, SAs, Roles, RoleBindings in advance by the
 // admin user.
 func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
-	if !test.EventingFlags.ReuseNamespace {
-		testlib.CreateRBACPodsGetEventsAll(client, client.Namespace)
-	}
-
 	options = append(
 		options,
 		testlib.WithService(name),
