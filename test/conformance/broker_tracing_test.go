@@ -1,4 +1,5 @@
 // +build e2e
+// +build !project_admin
 
 /*
 Copyright 2019 The Knative Authors
