@@ -69,9 +69,16 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	var err error
 
 	client := &Client{}
-	client.Config, err = test.BuildClientConfig(configPath, clusterName)
-	if err != nil {
-		return nil, err
+	if configPath != "" {
+		client.Config, err = test.BuildClientConfig(configPath, clusterName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client.Config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
 	}
 	client.Kube, err = kubernetes.NewForConfig(client.Config)
 	if err != nil {
