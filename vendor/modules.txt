@@ -939,7 +939,7 @@ knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20210715175632-d9b7180af6f2
+# knative.dev/pkg v0.0.0-20210715175632-d9b7180af6f2 => github.com/benmoss/pkg v0.0.0-20210722142456-f62ea8d0ec08
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1093,3 +1093,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit
 sigs.k8s.io/yaml
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+# knative.dev/pkg => github.com/benmoss/pkg v0.0.0-20210722142456-f62ea8d0ec08
