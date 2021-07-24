@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 )
 
 /*
@@ -52,10 +54,30 @@ func display(event cloudevents.Event) {
 }
 
 func main() {
-	c, err := cloudevents.NewClientHTTP()
+	c, err := cloudevents.NewClientHTTP(
+		cehttp.WithMiddleware(healthzMiddleware()),
+	)
 	if err != nil {
 		log.Fatal("Failed to create client, ", err)
 	}
 
 	log.Fatal(c.StartReceiver(context.Background(), display))
+}
+
+// HTTP path of the health endpoint used for probing the service.
+const healthzPath = "/healthz"
+
+// healthzMiddleware returns a cehttp.Middleware which exposes a health
+// endpoint by registering a handler in the multiplexer of the CloudEvents HTTP
+// client.
+func healthzMiddleware() cehttp.Middleware {
+	return func(next http.Handler) http.Handler {
+		next.(*http.ServeMux).Handle(healthzPath, http.HandlerFunc(handleHealthz))
+		return next
+	}
+}
+
+// handleHealthz is a http.Handler which responds to health requests.
+func handleHealthz(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
