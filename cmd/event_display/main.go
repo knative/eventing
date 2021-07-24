@@ -49,19 +49,26 @@ Data,
   }
 */
 
+// display prints the given Event in a human-readable format.
 func display(event cloudevents.Event) {
-	fmt.Printf("☁️  cloudevents.Event\n%s", event.String())
+	fmt.Printf("☁️  cloudevents.Event\n%s", event)
 }
 
 func main() {
+	run(context.Background())
+}
+
+func run(ctx context.Context) {
 	c, err := cloudevents.NewClientHTTP(
 		cehttp.WithMiddleware(healthzMiddleware()),
 	)
 	if err != nil {
-		log.Fatal("Failed to create client, ", err)
+		log.Fatal("Failed to create client: ", err)
 	}
 
-	log.Fatal(c.StartReceiver(context.Background(), display))
+	if err := c.StartReceiver(ctx, display); err != nil {
+		log.Fatal("Error during receiver's runtime: ", err)
+	}
 }
 
 // HTTP path of the health endpoint used for probing the service.
