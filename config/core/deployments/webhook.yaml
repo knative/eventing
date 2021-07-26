@@ -88,6 +88,8 @@ spec:
 
         securityContext:
           allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
 
         ports:
         - name: https-webhook
