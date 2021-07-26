@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -131,6 +132,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
+	if err := r.resolveDeadLetterSink(ctx, b, t); err != nil {
+		return err
+	}
+
 	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger)
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Unable to Subscribe", zap.Error(err))
@@ -143,6 +148,26 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 		return err
 	}
 
+	return nil
+}
+
+func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger) error {
+	// resolve the trigger's dlq first, fall back to the broker's
+	for _, delivery := range []*eventingduckv1.DeliverySpec{t.Spec.Delivery, b.Spec.Delivery} {
+		if delivery != nil && delivery.DeadLetterSink != nil {
+			dlqURI, err := r.uriResolver.URIFromDestinationV1(ctx, *delivery.DeadLetterSink, b)
+			if err != nil {
+				logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
+				t.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
+				t.Status.DeadLetterURI = nil
+				return err
+			}
+			t.Status.DeadLetterURI = dlqURI
+			t.Status.MarkDeadLetterSinkResolvedSucceeded()
+			return nil
+		}
+	}
+	t.Status.MarkDeadLetterSinkNotConfigured()
 	return nil
 }
 

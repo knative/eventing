@@ -25,8 +25,9 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+
+	eventingmetrics "knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/metrics/metricskey"
 )
 
 var (
@@ -51,10 +52,10 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	namespaceKey         = tag.MustNewKey(metricskey.LabelNamespaceName)
-	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
-	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
-	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
+	namespaceKey         = tag.MustNewKey(eventingmetrics.LabelNamespaceName)
+	eventTypeKey         = tag.MustNewKey(eventingmetrics.LabelEventType)
+	responseCodeKey      = tag.MustNewKey(eventingmetrics.LabelResponseCode)
+	responseCodeClassKey = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {

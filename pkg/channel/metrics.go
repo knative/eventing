@@ -16,14 +16,17 @@ limitations under the License.
 
 package channel
 
-import "go.opencensus.io/tag"
+import (
+	"go.opencensus.io/tag"
+	"knative.dev/eventing/pkg/metrics"
+)
 
 const (
 	// LabelUniqueName is the label for the unique name per stats_reporter instance.
 	LabelUniqueName = "unique_name"
 
 	// LabelContainerName is the label for the immutable name of the container.
-	LabelContainerName = "container_name"
+	LabelContainerName = metrics.LabelContainerName
 )
 
 var (
