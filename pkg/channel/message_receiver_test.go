@@ -123,8 +123,8 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			expected: nethttp.StatusAccepted,
 		},
 		"OPTIONS okay": {
-			method: nethttp.MethodOptions,
-			host:   "test-name.test-namespace.svc." + network.GetClusterDomainName(),
+			method:   nethttp.MethodOptions,
+			host:     "test-name.test-namespace.svc." + network.GetClusterDomainName(),
 			expected: nethttp.StatusOK,
 			responseValidator: func(res httptest.ResponseRecorder) error {
 				expectedHeaders := nethttp.Header{
@@ -191,7 +191,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 			if tc.responseValidator != nil {
 				if err := tc.responseValidator(res); err != nil {
-				  t.Errorf("Incorrect response: %v", err);
+					t.Errorf("Incorrect response: %v", err)
 				}
 			}
 		})
