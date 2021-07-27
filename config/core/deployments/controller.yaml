@@ -53,8 +53,8 @@ spec:
             cpu: 100m
             memory: 100Mi
           limits:
-            cpu: 100m
-            memory: 100Mi
+            cpu: 1000m
+            memory: 1000Mi
 
         env:
           - name: SYSTEM_NAMESPACE
