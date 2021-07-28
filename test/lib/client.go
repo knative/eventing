@@ -34,7 +34,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/pkg/test"
 	configtracing "knative.dev/pkg/tracing/config"
 
@@ -70,20 +69,9 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	var err error
 
 	client := &Client{}
-	if configPath != "" {
-		client.Config, err = test.BuildClientConfig(configPath, clusterName)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		client.Config, err = rest.InClusterConfig()
-		if err != nil {
-			// If no in-cluster config, try the default location in the user's home directory.
-			client.Config, err = test.BuildClientConfig(clientcmd.RecommendedHomeFile, clusterName)
-			if err != nil {
-				return nil, err
-			}
-		}
+	client.Config, err = test.BuildClientConfig(configPath, clusterName)
+	if err != nil {
+		return nil, err
 	}
 	client.Kube, err = kubernetes.NewForConfig(client.Config)
 	if err != nil {
