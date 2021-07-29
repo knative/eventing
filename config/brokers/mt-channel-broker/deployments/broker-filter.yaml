@@ -49,8 +49,8 @@ spec:
           initialDelaySeconds: 5
         resources:
           requests:
-            cpu: 100m
-            memory: 100Mi
+            cpu: 10m
+            memory: 15Mi
         ports:
         - containerPort: 8080
           name: http
