@@ -122,6 +122,8 @@ jobs:
 
         # Be KinD to these tests.
         kubectl scale -n${SYSTEM_NAMESPACE} deployment/chaosduck --replicas=0
+        # scale up the pingsource adapter now to ensure we have enough quota for it
+        kubectl scale -n${SYSTEM_NAMESPACE} deployment/pingsource-mt-adapter --replicas=1
 
     - name: Test Setup
       run: |
