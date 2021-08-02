@@ -24,13 +24,11 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgtest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
 )
 
 type EventRecordOption = func(*corev1.Pod, *testlib.Client) error
@@ -136,28 +134,13 @@ func serializeHeaders(headers map[string]string) string {
 
 // DeployEventRecordOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
 func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name string, options ...EventRecordOption) *corev1.Pod {
-	client.CreateServiceAccountOrFail(name)
-	client.CreateRoleOrFail(resources.Role(name,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"get"},
-		}),
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{rbacv1.VerbAll},
-		}),
-	))
-	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
-
 	options = append(
 		options,
 		testlib.WithService(name),
 		envOption("EVENT_GENERATORS", "receiver"),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, name)
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
@@ -169,28 +152,13 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 
 // DeployEventSenderOrFail deploys the recordevents image with necessary sa, roles, rb to execute the image
 func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name string, sink string, options ...EventRecordOption) *corev1.Pod {
-	client.CreateServiceAccountOrFail(name)
-	client.CreateRoleOrFail(resources.Role(name,
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"get"},
-		}),
-		resources.WithRuleForRole(&rbacv1.PolicyRule{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{rbacv1.VerbAll},
-		}),
-	))
-	client.CreateRoleBindingOrFail(name, "Role", name, name, client.Namespace)
-
 	options = append(
 		options,
 		envOption("EVENT_GENERATORS", "sender"),
 		envOption("SINK", sink),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, name)
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
