@@ -47,7 +47,6 @@ type Receiver struct {
 	replyFunc        func(context.Context, http.ResponseWriter, eventshub.EventInfo)
 	counter          *dropevents.CounterHandler
 	responseWaitTime time.Duration
-	skipResponseCode int
 }
 
 type envConfig struct {
@@ -79,9 +78,6 @@ type envConfig struct {
 	// If events should be dropped according to Linear policy, this controls
 	// how many events are dropped.
 	SkipCounter uint64 `envconfig:"SKIP_COUNTER" default:"0" required:"false"`
-
-	// If events should be dropped, specify the HTTP response code here.
-	SkipResponseCode int `envconfig:"SKIP_RESPONSE_CODE" default:"409" required:"false"`
 }
 
 func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
@@ -125,7 +121,6 @@ func NewFromEnv(ctx context.Context, eventLogs *eventshub.EventLogs) *Receiver {
 		replyFunc:        replyFunc,
 		counter:          counter,
 		responseWaitTime: responseWaitTime,
-		skipResponseCode: env.SkipResponseCode,
 	}
 }
 
@@ -216,7 +211,7 @@ func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 
 	if shouldSkip {
 		// Trigger a redelivery
-		writer.WriteHeader(o.skipResponseCode)
+		writer.WriteHeader(http.StatusConflict)
 	} else {
 		o.replyFunc(o.ctx, writer, eventInfo)
 	}

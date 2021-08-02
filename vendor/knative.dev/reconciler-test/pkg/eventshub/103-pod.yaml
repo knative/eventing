@@ -24,7 +24,7 @@ spec:
   restartPolicy: "Never"
   containers:
     - name: eventshub
-      image: {{ .image }}
+      image: ko://knative.dev/reconciler-test/cmd/eventshub
       imagePullPolicy: "IfNotPresent"
       env:
         - name: "SYSTEM_NAMESPACE"
