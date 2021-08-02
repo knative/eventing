@@ -66,8 +66,6 @@ func (p *probeRunner) Verify(ctx pkgupgrade.Context) {
 	// use T from new test
 	p.client.T = ctx.T
 	t := ctx.T
-	defer testlib.TearDown(p.client)
-	defer p.remove()
 	p.Finish()
 	waitAfterFinished(p.prober)
 
@@ -80,6 +78,10 @@ func (p *probeRunner) Verify(ctx pkgupgrade.Context) {
 	}
 
 	p.ReportErrors(errors)
+	if !ctx.T.Failed() {
+		p.remove()
+		testlib.TearDown(p.client)
+	}
 }
 
 type prober struct {
