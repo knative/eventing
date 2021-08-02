@@ -23,7 +23,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved, TriggerConditionDeadLetterSinkResolved)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
@@ -36,6 +36,8 @@ const (
 	TriggerConditionDependency apis.ConditionType = "DependencyReady"
 
 	TriggerConditionSubscriberResolved apis.ConditionType = "SubscriberResolved"
+
+	TriggerConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
@@ -148,6 +150,18 @@ func (ts *TriggerStatus) MarkSubscriberResolvedFailed(reason, messageFormat stri
 
 func (ts *TriggerStatus) MarkSubscriberResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscriberResolved, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkDeadLetterSinkResolvedSucceeded() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionDeadLetterSinkResolved)
+}
+
+func (ts *TriggerStatus) MarkDeadLetterSinkNotConfigured() {
+	triggerCondSet.Manage(ts).MarkTrueWithReason(TriggerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
+}
+
+func (ts *TriggerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }
 
 func (ts *TriggerStatus) MarkDependencySucceeded() {

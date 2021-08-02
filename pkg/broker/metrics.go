@@ -16,7 +16,10 @@ limitations under the License.
 
 package broker
 
-import "go.opencensus.io/tag"
+import (
+	"go.opencensus.io/tag"
+	"knative.dev/eventing/pkg/metrics"
+)
 
 const (
 	// EventArrivalTime is used to access the metadata stored on a
@@ -29,7 +32,7 @@ const (
 	LabelUniqueName = "unique_name"
 
 	// LabelContainerName is the label for the immutable name of the container.
-	LabelContainerName = "container_name"
+	LabelContainerName = metrics.LabelContainerName
 )
 
 var (

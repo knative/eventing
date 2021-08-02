@@ -44,16 +44,10 @@ func (e *EventLogs) Vent(observed EventInfo) error {
 	return nil
 }
 
-type EventGeneratorType string
-
 const (
-	ReceiverEventGenerator EventGeneratorType = "receiver"
-	SenderEventGenerator   EventGeneratorType = "sender"
-)
+	ReceiverEventGenerator string = "receiver"
+	SenderEventGenerator   string = "sender"
 
-type EventLogType string
-
-const (
-	RecorderEventLog EventLogType = "recorder"
-	LoggerEventLog   EventLogType = "logger"
+	RecorderEventLog string = "recorder"
+	LoggerEventLog   string = "logger"
 )

@@ -189,6 +189,13 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	}
 }
 
+func WithTriggerStatusDeadLetterSinkURI(uri string) TriggerOption {
+	return func(t *v1.Trigger) {
+		u, _ := apis.ParseURL(uri)
+		t.Status.DeadLetterURI = u
+	}
+}
+
 func WithAnnotation(key, value string) TriggerOption {
 	return func(t *v1.Trigger) {
 		if t.Annotations == nil {
@@ -234,6 +241,24 @@ func WithTriggerSubscriberResolvedSucceeded() TriggerOption {
 func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
 	return func(t *v1.Trigger) {
 		t.Status.MarkSubscriberResolvedFailed(reason, message)
+	}
+}
+
+func WithTriggerDeadLetterSinkResolvedFailed(reason, message string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkDeadLetterSinkResolvedFailed(reason, message)
+	}
+}
+
+func WithTriggerDeadLetterSinkResolvedSucceeded() TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkDeadLetterSinkResolvedSucceeded()
+	}
+}
+
+func WithTriggerDeadLetterSinkNotConfigured() TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Status.MarkDeadLetterSinkNotConfigured()
 	}
 }
 

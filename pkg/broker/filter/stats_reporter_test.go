@@ -23,7 +23,7 @@ import (
 
 	"go.opencensus.io/resource"
 	broker "knative.dev/eventing/pkg/broker"
-	"knative.dev/pkg/metrics/metricskey"
+	"knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/metrics/metricstest"
 	_ "knative.dev/pkg/metrics/testing"
 )
@@ -40,24 +40,24 @@ func TestStatsReporter(t *testing.T) {
 	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metricskey.LabelFilterType: "testeventtype",
-		broker.LabelContainerName:  "testcontainer",
-		broker.LabelUniqueName:     "testpod",
+		metrics.LabelFilterType:   "testeventtype",
+		broker.LabelContainerName: "testcontainer",
+		broker.LabelUniqueName:    "testpod",
 	}
 
 	wantAllTags := map[string]string{}
 	for k, v := range wantTags {
 		wantAllTags[k] = v
 	}
-	wantAllTags[metricskey.LabelResponseCode] = "202"
-	wantAllTags[metricskey.LabelResponseCodeClass] = "2xx"
+	wantAllTags[metrics.LabelResponseCode] = "202"
+	wantAllTags[metrics.LabelResponseCodeClass] = "2xx"
 
 	resource := resource.Resource{
-		Type: metricskey.ResourceTypeKnativeTrigger,
+		Type: metrics.ResourceTypeKnativeTrigger,
 		Labels: map[string]string{
-			metricskey.LabelNamespaceName: "testns",
-			metricskey.LabelTriggerName:   "testtrigger",
-			metricskey.LabelBrokerName:    "testbroker",
+			metrics.LabelNamespaceName: "testns",
+			metrics.LabelTriggerName:   "testtrigger",
+			metrics.LabelBrokerName:    "testbroker",
 		},
 	}
 
@@ -105,19 +105,19 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
-		metricskey.LabelFilterType:        anyValue,
-		metricskey.LabelResponseCode:      "202",
-		metricskey.LabelResponseCodeClass: "2xx",
-		broker.LabelContainerName:         "testcontainer",
-		broker.LabelUniqueName:            "testpod",
+		metrics.LabelFilterType:        anyValue,
+		metrics.LabelResponseCode:      "202",
+		metrics.LabelResponseCodeClass: "2xx",
+		broker.LabelContainerName:      "testcontainer",
+		broker.LabelUniqueName:         "testpod",
 	}
 
 	resource := resource.Resource{
-		Type: metricskey.ResourceTypeKnativeTrigger,
+		Type: metrics.ResourceTypeKnativeTrigger,
 		Labels: map[string]string{
-			metricskey.LabelNamespaceName: "testns",
-			metricskey.LabelTriggerName:   "testtrigger",
-			metricskey.LabelBrokerName:    "testbroker",
+			metrics.LabelNamespaceName: "testns",
+			metrics.LabelTriggerName:   "testtrigger",
+			metrics.LabelBrokerName:    "testbroker",
 		},
 	}
 

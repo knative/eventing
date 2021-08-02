@@ -166,6 +166,8 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 	if !ReuseNamespace {
 		SetupServiceAccount(t, client)
 		SetupPullSecret(t, client)
+		CreateRBACPodsGetEventsAll(client, client.Namespace)
+		CreateRBACPodsEventsGetListWatch(client, client.Namespace+"-eventwatcher")
 	}
 
 	// Run the test case in parallel if needed.
