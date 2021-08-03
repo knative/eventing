@@ -148,7 +148,7 @@ func setupChannelTracingWithReply(
 		Children: []tracinghelper.TestSpanTree{
 			{
 				// 3. Channel Dispatcher span
-				Span: channelSpan(eventID, fmt.Sprintf("%s.%s.svc", mutatingPod.Name, client.Namespace), "/"),
+				Span: channelSpan(eventID, fmt.Sprintf("%s.%s.svc", mutatingPod.Name, client.Namespace), ""),
 				Children: []tracinghelper.TestSpanTree{
 					{
 						// 4. Channel sends event to Mutator pod.
@@ -156,7 +156,7 @@ func setupChannelTracingWithReply(
 							model.Client,
 							tracinghelper.WithHTTPHostAndPath(
 								fmt.Sprintf("%s.%s.svc", mutatingPod.Name, client.Namespace),
-								"/",
+								"",
 							),
 						),
 						Children: []tracinghelper.TestSpanTree{
@@ -199,7 +199,7 @@ func setupChannelTracingWithReply(
 										Children: []tracinghelper.TestSpanTree{
 											{
 												// 9. Channel Dispatcher span
-												Span: channelSpan(eventID, fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace), "/"),
+												Span: channelSpan(eventID, fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace), ""),
 												Children: []tracinghelper.TestSpanTree{
 													{
 														// 10. Reply Channel sends event to the logging Pod.
@@ -207,7 +207,7 @@ func setupChannelTracingWithReply(
 															model.Client,
 															tracinghelper.WithHTTPHostAndPath(
 																fmt.Sprintf("%s.%s.svc", recordEventsPod.Name, client.Namespace),
-																"/",
+																"",
 															),
 														),
 														Children: []tracinghelper.TestSpanTree{
