@@ -90,7 +90,7 @@ const (
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
-	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
+	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local"
 	currentGeneration     = 1
 	outdatedGeneration    = 0
 
