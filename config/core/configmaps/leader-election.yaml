@@ -19,6 +19,8 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
   annotations:
     knative.dev/example-checksum: "96896b00"
 data:

@@ -18,6 +18,8 @@ metadata:
   name: eventing-broker-filter
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 rules:
   - apiGroups:
       - ""
@@ -45,6 +47,8 @@ metadata:
   name: eventing-broker-ingress
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 rules:
   - apiGroups:
       - ""
@@ -63,6 +67,8 @@ metadata:
   name: eventing-config-reader
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 rules:
   - apiGroups:
       - ""

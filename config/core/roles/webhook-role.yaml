@@ -19,6 +19,8 @@ metadata:
   name: knative-eventing-webhook
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 rules:
   # For manipulating certs into secrets.
   - apiGroups:

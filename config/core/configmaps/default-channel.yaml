@@ -19,6 +19,8 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 data:
   # Configuration for defaulting channels that do not specify CRD implementations.
   default-ch-config: |
