@@ -136,6 +136,13 @@ func (r *MessageReceiver) Start(ctx context.Context) error {
 }
 
 func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+	response.Header().Set("Allow", "POST, OPTIONS")
+	if request.Method == nethttp.MethodOptions {
+		response.Header().Set("WebHook-Allowed-Origin", "*") // Accept from any Origin:
+		response.Header().Set("WebHook-Allowed-Rate", "*")   // Unlimited requests/minute
+		response.WriteHeader(nethttp.StatusOK)
+		return
+	}
 	if request.Method != nethttp.MethodPost {
 		response.WriteHeader(nethttp.StatusMethodNotAllowed)
 		return
