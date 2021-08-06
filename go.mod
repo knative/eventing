@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/gofuzz v1.2.0
 	github.com/google/mako v0.0.0-20190821191249-122f8dcef9e3
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
@@ -30,11 +30,11 @@ require (
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.23.0
 	go.opentelemetry.io/otel v0.16.0
-	go.uber.org/atomic v1.8.0
+	go.uber.org/atomic v1.9.0
 	go.uber.org/zap v1.18.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/grpc v1.39.0
+	google.golang.org/protobuf v1.27.1
 	k8s.io/api v0.20.7
 	k8s.io/apiextensions-apiserver v0.20.7
 	k8s.io/apimachinery v0.20.7
@@ -43,8 +43,8 @@ require (
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	knative.dev/hack v0.0.0-20210622141627-e28525d8d260
 	knative.dev/hack/schema v0.0.0-20210622141627-e28525d8d260
-	knative.dev/pkg v0.0.0-20210803032247-552bbc106170
-	knative.dev/reconciler-test v0.0.0-20210714231231-91e5b206e1d5
+	knative.dev/pkg v0.0.0-20210803160015-21eb4c167cc5
+	knative.dev/reconciler-test v0.0.0-20210803183715-b61cc77c06f6
 	sigs.k8s.io/yaml v1.2.0
 )
 
