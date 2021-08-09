@@ -73,10 +73,6 @@ spec:
             - containerPort: 9090
               name: metrics
               protocol: TCP
-          securityContext:
-            allowPrivilegeEscalation: false
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 125m
