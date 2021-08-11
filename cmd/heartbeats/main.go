@@ -26,9 +26,14 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/tracing"
+	"knative.dev/pkg/tracing/config"
 
+	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -68,6 +73,9 @@ type envConfig struct {
 
 	// Whether to run continuously or exit.
 	OneShot bool `envconfig:"ONE_SHOT" default:"false"`
+
+	// JSON configuration for tracing
+	TracingConfig string `envconfig:"K_CONFIG_TRACING"`
 }
 
 func main() {
@@ -94,12 +102,14 @@ func main() {
 		ceOverrides = &overrides
 	}
 
-	p, err := cloudevents.NewHTTP(cloudevents.WithTarget(sink))
+	conf, err := config.JSONToTracingConfig(env.TracingConfig)
 	if err != nil {
-		log.Fatalf("failed to create http protocol: %s", err.Error())
+		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
 	}
-
-	c, err := cloudevents.NewClient(p, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
+	if err := tracing.SetupStaticPublishing(zap.L().Sugar(), "", conf); err != nil {
+		log.Fatalf("Failed to initialize tracing: %v", err)
+	}
+	c, err := client.NewClientHTTP([]http.Option{cloudevents.WithTarget(sink)}, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err.Error())
 	}

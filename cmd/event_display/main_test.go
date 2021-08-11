@@ -61,7 +61,7 @@ func TestRun_HealthEndpoint(t *testing.T) {
 // waitForClient sends requests to the local CloudEvents receiver address until
 // a HTTP response is received, or until ctx is cancelled.
 func waitForClient(ctx context.Context) error {
-	httpClient := http.DefaultClient
+	httpClient := http.Client{}
 	var httpErr error
 
 	tick := time.Tick(5 * time.Millisecond)
