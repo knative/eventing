@@ -21,9 +21,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+
+	"go.uber.org/zap"
+	"knative.dev/pkg/tracing"
+	"knative.dev/pkg/tracing/config"
 )
 
 /*
@@ -59,11 +65,18 @@ func main() {
 }
 
 func run(ctx context.Context) {
-	c, err := cloudevents.NewClientHTTP(
-		cehttp.WithMiddleware(healthzMiddleware()),
+	c, err := client.NewClientHTTP(
+		[]cehttp.Option{cehttp.WithMiddleware(healthzMiddleware)}, nil,
 	)
 	if err != nil {
 		log.Fatal("Failed to create client: ", err)
+	}
+	conf, err := config.JSONToTracingConfig(os.Getenv("K_CONFIG_TRACING"))
+	if err != nil {
+		log.Printf("Failed to read tracing config, using the no-op default: %v", err)
+	}
+	if err := tracing.SetupStaticPublishing(zap.L().Sugar(), "", conf); err != nil {
+		log.Fatalf("Failed to initialize tracing: %v", err)
 	}
 
 	if err := c.StartReceiver(ctx, display); err != nil {
@@ -74,17 +87,13 @@ func run(ctx context.Context) {
 // HTTP path of the health endpoint used for probing the service.
 const healthzPath = "/healthz"
 
-// healthzMiddleware returns a cehttp.Middleware which exposes a health
-// endpoint by registering a handler in the multiplexer of the CloudEvents HTTP
-// client.
-func healthzMiddleware() cehttp.Middleware {
-	return func(next http.Handler) http.Handler {
-		next.(*http.ServeMux).Handle(healthzPath, http.HandlerFunc(handleHealthz))
-		return next
-	}
-}
-
-// handleHealthz is a http.Handler which responds to health requests.
-func handleHealthz(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusNoContent)
+// healthzMiddleware is a cehttp.Middleware which exposes a health endpoint.
+func healthzMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.RequestURI == healthzPath {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			next.ServeHTTP(w, req)
+		}
+	})
 }
