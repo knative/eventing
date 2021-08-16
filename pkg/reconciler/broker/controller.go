@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 
+	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -38,6 +39,8 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
 const (
@@ -59,6 +62,10 @@ func NewController(
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 	configmapInformer := configmapinformer.Get(ctx)
+
+	if err := tracing.SetupDynamicPublishing(logger, cmw, "mt-broker-controller", tracingconfig.ConfigName); err != nil {
+		logger.Fatal("Error setting up trace publishing", zap.Error(err))
+	}
 
 	eventingv1.RegisterAlternateBrokerConditionSet(apis.NewLivingConditionSet(
 		BrokerConditionIngress,
