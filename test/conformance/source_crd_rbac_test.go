@@ -1,5 +1,5 @@
-// +build e2e
-// +build !project_admin
+//go:build e2e && !project_admin
+// +build e2e,!project_admin
 
 /*
 Copyright 2021 The Knative Authors
