@@ -1889,7 +1889,7 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
-<code>deadLetterUri</code><br/>
+<code>deadLetterSinkUri</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
 knative.dev/pkg/apis.URL
@@ -1898,7 +1898,7 @@ knative.dev/pkg/apis.URL
 </td>
 <td>
 <em>(Optional)</em>
-<p>DeadLetterURI is the resolved URI of the dead letter sink for this Trigger.</p>
+<p>DeadLetterSinkURI is the resolved URI of the dead letter sink for this Trigger.</p>
 </td>
 </tr>
 </tbody>

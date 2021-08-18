@@ -158,6 +158,9 @@ spec:
                     type:
                       description: 'Type of condition.'
                       type: string
+              deadLetterSinkUri:
+                description: DeadLetterSinkURI is the resolved URI of the dead letter sink for this Trigger.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
                 type: integer
