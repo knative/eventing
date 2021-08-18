@@ -293,7 +293,7 @@ ducktype. Additional data in spec and status is explicitly permitted.
 
 ### duck.Spec
 
-The `spec` field is expected to have the following minimum shape:
+The `spec` field is MUST have the following minimum shape:
 
 ```go
 type SourceSpec struct {
@@ -306,6 +306,11 @@ type SourceSpec struct {
     CloudEventOverrides *CloudEventOverrides `json:"ceOverrides,omitempty"`
 }
 ```
+
+When `spec.ceOverrides.extensions` is specified and non-empty, the event sent to
+the sink is augmented or modified with the specified _extension_ attributes. The
+source controller MUST reject extensions overriding the
+[required Cloud Events attributes](https://github.com/cloudevents/spec/blob/v1.0.1/spec.md#required-attributes).
 
 For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
 see
