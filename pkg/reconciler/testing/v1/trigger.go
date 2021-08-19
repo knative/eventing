@@ -192,7 +192,7 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 func WithTriggerStatusDeadLetterSinkURI(uri string) TriggerOption {
 	return func(t *v1.Trigger) {
 		u, _ := apis.ParseURL(uri)
-		t.Status.DeadLetterURI = u
+		t.Status.DeadLetterSinkURI = u
 	}
 }
 

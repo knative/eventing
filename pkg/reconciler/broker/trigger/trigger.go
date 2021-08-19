@@ -159,10 +159,10 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 			if err != nil {
 				logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
 				t.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
-				t.Status.DeadLetterURI = nil
+				t.Status.DeadLetterSinkURI = nil
 				return err
 			}
-			t.Status.DeadLetterURI = dlqURI
+			t.Status.DeadLetterSinkURI = dlqURI
 			t.Status.MarkDeadLetterSinkResolvedSucceeded()
 			return nil
 		}

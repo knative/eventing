@@ -120,9 +120,9 @@ type TriggerStatus struct {
 	// +optional
 	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 
-	// DeadLetterURI is the resolved URI of the dead letter sink for this Trigger.
+	// DeadLetterSinkURI is the resolved URI of the dead letter sink for this Trigger.
 	// +optional
-	DeadLetterURI *apis.URL `json:"deadLetterUri,omitempty"`
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
