@@ -21,8 +21,15 @@ package filtered
 import (
 	context "context"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	cache "k8s.io/client-go/tools/cache"
+	apiseventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	v1beta1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1beta1"
+	client "knative.dev/eventing/pkg/client/injection/client"
 	filtered "knative.dev/eventing/pkg/client/injection/informers/factory/filtered"
+	eventingv1beta1 "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -30,6 +37,7 @@ import (
 
 func init() {
 	injection.Default.RegisterFilteredInformers(withInformer)
+	injection.Dynamic.RegisterDynamicInformer(withDynamicInformer)
 }
 
 // Key is used for associating the Informer inside the context.Context.
@@ -54,6 +62,20 @@ func withInformer(ctx context.Context) (context.Context, []controller.Informer) 
 	return ctx, infs
 }
 
+func withDynamicInformer(ctx context.Context) context.Context {
+	untyped := ctx.Value(filtered.LabelKey{})
+	if untyped == nil {
+		logging.FromContext(ctx).Panic(
+			"Unable to fetch labelkey from context.")
+	}
+	labelSelectors := untyped.([]string)
+	for _, selector := range labelSelectors {
+		inf := &wrapper{client: client.Get(ctx), selector: selector}
+		ctx = context.WithValue(ctx, Key{Selector: selector}, inf)
+	}
+	return ctx
+}
+
 // Get extracts the typed informer from the context.
 func Get(ctx context.Context, selector string) v1beta1.EventTypeInformer {
 	untyped := ctx.Value(Key{Selector: selector})
@@ -62,4 +84,53 @@ func Get(ctx context.Context, selector string) v1beta1.EventTypeInformer {
 			"Unable to fetch knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1beta1.EventTypeInformer with selector %s from context.", selector)
 	}
 	return untyped.(v1beta1.EventTypeInformer)
+}
+
+type wrapper struct {
+	client versioned.Interface
+
+	namespace string
+
+	selector string
+}
+
+var _ v1beta1.EventTypeInformer = (*wrapper)(nil)
+var _ eventingv1beta1.EventTypeLister = (*wrapper)(nil)
+
+func (w *wrapper) Informer() cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(nil, &apiseventingv1beta1.EventType{}, 0, nil)
+}
+
+func (w *wrapper) Lister() eventingv1beta1.EventTypeLister {
+	return w
+}
+
+func (w *wrapper) EventTypes(namespace string) eventingv1beta1.EventTypeNamespaceLister {
+	return &wrapper{client: w.client, namespace: namespace, selector: w.selector}
+}
+
+func (w *wrapper) List(selector labels.Selector) (ret []*apiseventingv1beta1.EventType, err error) {
+	reqs, err := labels.ParseToRequirements(w.selector)
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(reqs...)
+	lo, err := w.client.EventingV1beta1().EventTypes(w.namespace).List(context.TODO(), v1.ListOptions{
+		LabelSelector: selector.String(),
+		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+	})
+	if err != nil {
+		return nil, err
+	}
+	for idx := range lo.Items {
+		ret = append(ret, &lo.Items[idx])
+	}
+	return ret, nil
+}
+
+func (w *wrapper) Get(name string) (*apiseventingv1beta1.EventType, error) {
+	// TODO(mattmoor): Check that the fetched object matches the selector.
+	return w.client.EventingV1beta1().EventTypes(w.namespace).Get(context.TODO(), name, v1.GetOptions{
+		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+	})
 }
