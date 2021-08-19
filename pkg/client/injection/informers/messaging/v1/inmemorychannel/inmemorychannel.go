@@ -21,8 +21,15 @@ package inmemorychannel
 import (
 	context "context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	cache "k8s.io/client-go/tools/cache"
+	apismessagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1"
+	client "knative.dev/eventing/pkg/client/injection/client"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"
+	messagingv1 "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -30,6 +37,7 @@ import (
 
 func init() {
 	injection.Default.RegisterInformer(withInformer)
+	injection.Dynamic.RegisterDynamicInformer(withDynamicInformer)
 }
 
 // Key is used for associating the Informer inside the context.Context.
@@ -41,6 +49,11 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
+func withDynamicInformer(ctx context.Context) context.Context {
+	inf := &wrapper{client: client.Get(ctx)}
+	return context.WithValue(ctx, Key{}, inf)
+}
+
 // Get extracts the typed informer from the context.
 func Get(ctx context.Context) v1.InMemoryChannelInformer {
 	untyped := ctx.Value(Key{})
@@ -49,4 +62,45 @@ func Get(ctx context.Context) v1.InMemoryChannelInformer {
 			"Unable to fetch knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1.InMemoryChannelInformer from context.")
 	}
 	return untyped.(v1.InMemoryChannelInformer)
+}
+
+type wrapper struct {
+	client versioned.Interface
+
+	namespace string
+}
+
+var _ v1.InMemoryChannelInformer = (*wrapper)(nil)
+var _ messagingv1.InMemoryChannelLister = (*wrapper)(nil)
+
+func (w *wrapper) Informer() cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(nil, &apismessagingv1.InMemoryChannel{}, 0, nil)
+}
+
+func (w *wrapper) Lister() messagingv1.InMemoryChannelLister {
+	return w
+}
+
+func (w *wrapper) InMemoryChannels(namespace string) messagingv1.InMemoryChannelNamespaceLister {
+	return &wrapper{client: w.client, namespace: namespace}
+}
+
+func (w *wrapper) List(selector labels.Selector) (ret []*apismessagingv1.InMemoryChannel, err error) {
+	lo, err := w.client.MessagingV1().InMemoryChannels(w.namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: selector.String(),
+		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+	})
+	if err != nil {
+		return nil, err
+	}
+	for idx := range lo.Items {
+		ret = append(ret, &lo.Items[idx])
+	}
+	return ret, nil
+}
+
+func (w *wrapper) Get(name string) (*apismessagingv1.InMemoryChannel, error) {
+	return w.client.MessagingV1().InMemoryChannels(w.namespace).Get(context.TODO(), name, metav1.GetOptions{
+		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+	})
 }

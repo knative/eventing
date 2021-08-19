@@ -21,8 +21,15 @@ package parallel
 import (
 	context "context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	cache "k8s.io/client-go/tools/cache"
+	apisflowsv1 "knative.dev/eventing/pkg/apis/flows/v1"
+	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	v1 "knative.dev/eventing/pkg/client/informers/externalversions/flows/v1"
+	client "knative.dev/eventing/pkg/client/injection/client"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"
+	flowsv1 "knative.dev/eventing/pkg/client/listers/flows/v1"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -30,6 +37,7 @@ import (
 
 func init() {
 	injection.Default.RegisterInformer(withInformer)
+	injection.Dynamic.RegisterDynamicInformer(withDynamicInformer)
 }
 
 // Key is used for associating the Informer inside the context.Context.
@@ -41,6 +49,11 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
+func withDynamicInformer(ctx context.Context) context.Context {
+	inf := &wrapper{client: client.Get(ctx)}
+	return context.WithValue(ctx, Key{}, inf)
+}
+
 // Get extracts the typed informer from the context.
 func Get(ctx context.Context) v1.ParallelInformer {
 	untyped := ctx.Value(Key{})
@@ -49,4 +62,45 @@ func Get(ctx context.Context) v1.ParallelInformer {
 			"Unable to fetch knative.dev/eventing/pkg/client/informers/externalversions/flows/v1.ParallelInformer from context.")
 	}
 	return untyped.(v1.ParallelInformer)
+}
+
+type wrapper struct {
+	client versioned.Interface
+
+	namespace string
+}
+
+var _ v1.ParallelInformer = (*wrapper)(nil)
+var _ flowsv1.ParallelLister = (*wrapper)(nil)
+
+func (w *wrapper) Informer() cache.SharedIndexInformer {
+	return cache.NewSharedIndexInformer(nil, &apisflowsv1.Parallel{}, 0, nil)
+}
+
+func (w *wrapper) Lister() flowsv1.ParallelLister {
+	return w
+}
+
+func (w *wrapper) Parallels(namespace string) flowsv1.ParallelNamespaceLister {
+	return &wrapper{client: w.client, namespace: namespace}
+}
+
+func (w *wrapper) List(selector labels.Selector) (ret []*apisflowsv1.Parallel, err error) {
+	lo, err := w.client.FlowsV1().Parallels(w.namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: selector.String(),
+		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+	})
+	if err != nil {
+		return nil, err
+	}
+	for idx := range lo.Items {
+		ret = append(ret, &lo.Items[idx])
+	}
+	return ret, nil
+}
+
+func (w *wrapper) Get(name string) (*apisflowsv1.Parallel, error) {
+	return w.client.FlowsV1().Parallels(w.namespace).Get(context.TODO(), name, metav1.GetOptions{
+		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+	})
 }
