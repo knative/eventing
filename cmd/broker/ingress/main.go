@@ -56,7 +56,6 @@ const (
 	// based on what serving is doing. See https://github.com/knative/serving/blob/main/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 1000
-	defaultMetricsPort               = 9092
 	component                        = "mt_broker_ingress"
 )
 
@@ -106,14 +105,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
-	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
-		Component:      component,
-		PrometheusPort: defaultMetricsPort,
-	}, sl)
-	if err != nil {
-		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
-	}
-	configMapWatcher.Watch(metrics.ConfigMapName(), updateFunc)
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.ConfigMapWatcher(ctx, component, nil, sl))
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))

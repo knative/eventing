@@ -55,7 +55,7 @@ spec:
         - containerPort: 8080
           name: http
           protocol: TCP
-        - containerPort: 9092
+        - containerPort: 9090
           name: metrics
           protocol: TCP
         terminationMessagePath: /dev/termination-log
@@ -104,8 +104,8 @@ spec:
       protocol: TCP
       targetPort: 8080
     - name: http-metrics
-      port: 9092
+      port: 9090
       protocol: TCP
-      targetPort: 9092
+      targetPort: 9090
   selector:
     eventing.knative.dev/brokerRole: filter

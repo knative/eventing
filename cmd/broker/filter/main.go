@@ -45,8 +45,7 @@ import (
 )
 
 const (
-	defaultMetricsPort = 9092
-	component          = "mt_broker_filter"
+	component = "mt_broker_filter"
 )
 
 type envConfig struct {
@@ -91,14 +90,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
-	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
-		Component:      component,
-		PrometheusPort: defaultMetricsPort,
-	}, sl)
-	if err != nil {
-		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
-	}
-	configMapWatcher.Watch(metrics.ConfigMapName(), updateFunc)
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.ConfigMapWatcher(ctx, component, nil, sl))
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
