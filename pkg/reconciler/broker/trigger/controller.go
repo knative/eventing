@@ -40,6 +40,7 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -68,7 +69,7 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 
-	r.sourceTracker = duck.NewListableTracker(ctx, source.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.sourceTracker = duck.NewListableTrackerFromTracker(ctx, source.Get, tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx)))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

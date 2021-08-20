@@ -23,6 +23,7 @@ import (
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/parallel"
 
@@ -465,7 +466,7 @@ func TestAllBranches(t *testing.T) {
 		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
 			parallelLister:     listers.GetParallelLister(),
-			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),

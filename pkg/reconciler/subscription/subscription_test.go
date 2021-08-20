@@ -28,6 +28,7 @@ import (
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/kref"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/tracker"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -1701,7 +1702,7 @@ func TestAllCases(t *testing.T) {
 			dynamicClientSet:    dynamicclient.Get(ctx),
 			subscriptionLister:  listers.GetSubscriptionLister(),
 			channelLister:       listers.GetMessagingChannelLister(),
-			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker:  duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 			kreferenceResolver:  kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
 			tracker:             &FakeTracker{},
