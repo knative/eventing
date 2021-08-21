@@ -58,10 +58,16 @@ type Track func(corev1.ObjectReference) error
 type TrackKReference func(duckv1.KReference) error
 
 // NewListableTracker creates a new ListableTracker, backed by a TypedInformerFactory.
+// Deprecated: use NewListableTrackerFromTracker instead.
 func NewListableTracker(ctx context.Context, getter func(context.Context) duck.InformerFactory, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
+	return NewListableTrackerFromTracker(ctx, getter, tracker.New(callback, lease))
+}
+
+// NewListableTrackerFromTracker creates a new ListableTracker, backed by a TypedInformerFactory.
+func NewListableTrackerFromTracker(ctx context.Context, getter func(context.Context) duck.InformerFactory, t tracker.Interface) ListableTracker {
 	return &listableTracker{
 		informerFactory: getter(ctx),
-		tracker:         tracker.New(callback, lease),
+		tracker:         t,
 		concrete:        map[schema.GroupVersionResource]informerListerPair{},
 	}
 }

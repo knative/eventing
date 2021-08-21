@@ -52,6 +52,7 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -945,7 +946,7 @@ func TestReconcile(t *testing.T) {
 
 			brokerLister:    listers.GetBrokerLister(),
 			configmapLister: listers.GetConfigMapLister(),
-			sourceTracker:   duck.NewListableTracker(ctx, source.Get, func(types.NamespacedName) {}, 0),
+			sourceTracker:   duck.NewListableTrackerFromTracker(ctx, source.Get, tracker.New(func(types.NamespacedName) {}, 0)),
 			uriResolver:     resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
 		return trigger.NewReconciler(ctx, logger,

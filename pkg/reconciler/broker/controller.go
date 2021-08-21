@@ -41,6 +41,7 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
+	"knative.dev/pkg/tracker"
 )
 
 const (
@@ -86,7 +87,7 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 
-	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx)))
 
 	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
