@@ -50,6 +50,18 @@ func IsReady(gvr schema.GroupVersionResource, name string, timing ...time.Durati
 	}
 }
 
+// IsNotReady returns a reusable feature.StepFn to assert if a resource is not ready
+// within the time given. Timing is optional but if provided is [interval, timeout].
+func IsNotReady(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		interval, timeout := PollTimings(ctx, timing)
+		env := environment.FromContext(ctx)
+		if err := WaitForResourceNotReady(ctx, env.Namespace(), name, gvr, interval, timeout); err != nil {
+			t.Error(gvr, "did become ready,", err)
+		}
+	}
+}
+
 // IsAddressable tests to see if a resource becomes Addressable within the time
 // given. Timing is optional but if provided is [interval, timeout].
 func IsAddressable(gvr schema.GroupVersionResource, name string, timing ...time.Duration) feature.StepFn {

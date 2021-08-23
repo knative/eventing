@@ -18,6 +18,7 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -93,9 +94,24 @@ func WaitForReadyOrDone(ctx context.Context, ref corev1.ObjectReference, timing 
 // WaitForResourceReady waits until the specified resource in the given namespace are ready.
 // Timing is optional but if provided is [interval, timeout].
 func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schema.GroupVersionResource, timing ...time.Duration) error {
+	return WaitForResourceCondition(ctx, namespace, name, gvr, isReady(name), timing...)
+}
+
+// WaitForResourceNotReady waits until the specified resource in the given namespace is not ready.
+// Only the top level ready condition is considered (internal `happy` condition of knative.dev/pkg).
+// Timing is optional but if provided is [interval, timeout].
+func WaitForResourceNotReady(ctx context.Context, namespace, name string, gvr schema.GroupVersionResource, timing ...time.Duration) error {
+	return WaitForResourceCondition(ctx, namespace, name, gvr, isNotReady(name), timing...)
+}
+
+// ConditionFunc is a function that determines whether a condition on a resource is satisfied.
+type ConditionFunc func(resource duckv1.KResource) bool
+
+// WaitForResourceCondition waits until the specified resource in the given namespace satisfies a given condition.
+// Timing is optional but if provided is [interval, timeout].
+func WaitForResourceCondition(ctx context.Context, namespace, name string, gvr schema.GroupVersionResource, condition ConditionFunc, timing ...time.Duration) error {
 	interval, timeout := PollTimings(ctx, timing)
 
-	lastMsg := ""
 	like := &duckv1.KResource{}
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		client := dynamicclient.Get(ctx)
@@ -111,7 +127,7 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 		}
 		obj := like.DeepCopy()
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(us.Object, obj); err != nil {
-			log.Fatalf("Error DefaultUnstructuree.Dynamiconverter. %v", err)
+			log.Fatalf("Error DefaultUnstructured.Dynamiconverter. %v", err)
 		}
 		obj.ResourceVersion = gvr.Version
 		obj.APIVersion = gvr.GroupVersion().String()
@@ -121,13 +137,15 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 			return false, nil // keep polling
 		}
 
-		// Ready type.
-		ready := obj.Status.GetCondition(apis.ConditionReady)
-		if ready != nil {
-			// Succeeded type.
-			ready = obj.Status.GetCondition(apis.ConditionSucceeded)
-		}
-		// Test Ready or Succeeded.
+		// Verify condition.
+		return condition(*obj), nil
+	})
+}
+
+func isReady(name string) ConditionFunc {
+	lastMsg := ""
+	return func(obj duckv1.KResource) bool {
+		ready := readyCondition(obj)
 		if ready != nil {
 			if !ready.IsTrue() {
 				msg := fmt.Sprintf("%s is not %s, %s: %s", name, ready.Type, ready.Reason, ready.Message)
@@ -138,7 +156,7 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 			}
 
 			log.Printf("%s is %s, %s: %s\n", name, ready.Type, ready.Reason, ready.Message)
-			return ready.IsTrue(), nil
+			return ready.IsTrue()
 		}
 
 		// Last resort, look at all conditions.
@@ -156,8 +174,40 @@ func WaitForResourceReady(ctx context.Context, namespace, name string, gvr schem
 				break
 			}
 		}
-		return allReady, nil
-	})
+		return allReady
+	}
+}
+
+func isNotReady(name string) ConditionFunc {
+	lastMsg := ""
+	return func(obj duckv1.KResource) bool {
+		ready := readyCondition(obj)
+		if ready == nil {
+			msg := fmt.Sprintf("%s hasn't any of %s or %s conditions", name, apis.ConditionReady, apis.ConditionSucceeded)
+			if msg != lastMsg {
+				log.Println(msg)
+				lastMsg = msg
+			}
+			return false
+		}
+		resource, err := json.MarshalIndent(obj, " ", " ")
+		if err != nil {
+			resource = []byte(err.Error())
+		}
+		log.Printf("%s is %s, %s: %s\n\nResource: %s\n", name, ready.Type, ready.Reason, ready.Message, string(resource))
+		return ready.IsFalse()
+	}
+}
+
+// readyCondition returns Ready or Succeeded condition.
+func readyCondition(obj duckv1.KResource) *apis.Condition {
+	// Ready type.
+	ready := obj.Status.GetCondition(apis.ConditionReady)
+	if ready != nil {
+		return ready
+	}
+	// Succeeded type.
+	return obj.Status.GetCondition(apis.ConditionSucceeded)
 }
 
 // WaitForServiceEndpointsOrFail polls the status of the specified Service
