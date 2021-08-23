@@ -89,14 +89,13 @@ echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 - [antoineco](https://github.com/antoineco)
 - [lionelvillard](https://github.com/lionelvillard)
 - [matzew](https://github.com/matzew)
-- [n3wscott](https://github.com/n3wscott)
-- [vaikas](https://github.com/vaikas)
 - [lberk](https://github.com/lberk)
 - [pierDipi](https://github.com/pierDipi)
 - [aliok](https://github.com/aliok)
 - [aslom](https://github.com/aslom)
 - [tayarani](https://github.com/tayarani)
 - [devguyio](https://github.com/devguyio)
+- [benmoss](https://github.com/benmoss)
 
 # Schedule
 
