@@ -286,7 +286,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cs := &InMemoryChannelStatus{}
+			cs := InMemoryChannelStatus{}
 			cs.InitializeConditions()
 			if test.markServiceReady {
 				cs.MarkServiceTrue()
@@ -311,7 +311,8 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 			} else {
 				cs.MarkDispatcherFailed("NotReadyDispatcher", "testing")
 			}
-			got := cs.IsReady()
+			imc := InMemoryChannel{Status: cs}
+			got := imc.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
