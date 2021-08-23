@@ -143,7 +143,7 @@ func NewController(
 			scheme.Scheme, corev1.EventSource{Component: controllerAgentName}),
 	}
 	logger = logger.Named("GithubBindings")
-	impl := controller.NewImpl(c, logger, "GithubBindings")
+	impl := controller.NewContext(ctx, wh, controller.ControllerOptions{WorkQueueName: "GithubBinding", Logger: logger})
 
 	logger.Info("Setting up event handlers")
 
