@@ -18,7 +18,7 @@ package sinkbinding
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
@@ -94,17 +94,16 @@ func NewController(
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	sbResolver := resolver.NewURIResolver(ctx, impl.EnqueueKey)
-	tracker := tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	sbResolver := resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 	c.SubResourcesReconciler = &SinkBindingSubResourcesReconciler{
 		res:     sbResolver,
-		tracker: tracker,
+		tracker: impl.Tracker,
 	}
 
 	c.WithContext = func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		return v1.WithURIResolver(ctx, sbResolver), nil
 	}
-	c.Tracker = tracker
+	c.Tracker = impl.Tracker
 	c.Factory = &duck.CachedInformerFactory{
 		Delegate: &duck.EnqueueInformerFactory{
 			Delegate:     psInformerFactory,
@@ -136,7 +135,7 @@ func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.
 }
 
 func WithContextFactory(ctx context.Context, handler func(types.NamespacedName)) psbinding.BindableContext {
-	r := resolver.NewURIResolver(ctx, handler)
+	r := resolver.NewURIResolverFromTracker(ctx, tracker.New(handler, controller.GetTrackerLease(ctx)))
 
 	return func(ctx context.Context, b psbinding.Bindable) (context.Context, error) {
 		return v1.WithURIResolver(ctx, r), nil
@@ -146,7 +145,7 @@ func WithContextFactory(ctx context.Context, handler func(types.NamespacedName))
 func (s *SinkBindingSubResourcesReconciler) Reconcile(ctx context.Context, b psbinding.Bindable) error {
 	sb := b.(*v1.SinkBinding)
 	if s.res == nil {
-		err := fmt.Errorf("Resolver is nil")
+		err := errors.New("Resolver is nil")
 		logging.FromContext(ctx).Errorf("%w", err)
 		sb.Status.MarkBindingUnavailable("NoResolver", "No Resolver associated with context for sink")
 		return err

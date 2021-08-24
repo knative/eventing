@@ -23,7 +23,6 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/tracker"
 
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
@@ -52,7 +51,7 @@ func NewController(
 
 	// Tracker is used to notify us that a EventType's Broker has changed so that
 	// we can reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.tracker = impl.Tracker
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(
 			r.tracker.OnChanged,
