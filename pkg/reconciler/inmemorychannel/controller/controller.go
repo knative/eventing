@@ -83,7 +83,6 @@ func NewController(
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
-	logger.Info("Setting up event handlers")
 	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Set up watches for dispatcher resources we care about, since any changes to these

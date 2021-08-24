@@ -19,8 +19,6 @@ package eventtype
 import (
 	"context"
 
-	"knative.dev/pkg/logging"
-
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
@@ -46,7 +44,6 @@ func NewController(
 	}
 	impl := eventtypereconciler.NewImpl(ctx, r)
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
 	eventTypeInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that a EventType's Broker has changed so that

@@ -54,7 +54,7 @@ func TestMain_WithController_DisableHA(t *testing.T) {
 
 	ctx = WithController(ctx, func(ctx context.Context, adapter Adapter) *controller.Impl {
 		r := &myAdapter{}
-		return controller.NewImplFull(r, controller.ControllerOptions{
+		return controller.NewContext(ctx, r, controller.ControllerOptions{
 			WorkQueueName: "foo",
 			Logger:        logging.FromContext(ctx),
 		})
@@ -113,7 +113,7 @@ func TestMain_WithControllerHA(t *testing.T) {
 
 	ctx = WithController(ctx, func(ctx context.Context, adapter Adapter) *controller.Impl {
 		r := &myAdapter{}
-		return controller.NewImplFull(r, controller.ControllerOptions{
+		return controller.NewContext(ctx, r, controller.ControllerOptions{
 			WorkQueueName: "foo",
 			Logger:        logging.FromContext(ctx),
 		})

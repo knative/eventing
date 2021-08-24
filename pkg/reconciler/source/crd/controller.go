@@ -24,7 +24,6 @@ import (
 	"knative.dev/eventing/pkg/apis/sources"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1/customresourcedefinition"
@@ -41,7 +40,6 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-	logger := logging.FromContext(ctx)
 	crdInformer := crdinfomer.Get(ctx)
 
 	r := &Reconciler{
@@ -57,7 +55,6 @@ func NewController(
 		}
 	})
 
-	logger.Info("Setting up event handlers")
 	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: filterFunc,
 		Handler:    controller.HandleAll(impl.Enqueue),
