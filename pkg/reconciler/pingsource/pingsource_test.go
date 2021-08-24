@@ -365,7 +365,7 @@ func TestAllCases(t *testing.T) {
 			kubeClientSet: fakekubeclient.Get(ctx),
 			tracker:       tracker.New(func(types.NamespacedName) {}, 0),
 		}
-		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
+		r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
 
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetPingSourceLister(),

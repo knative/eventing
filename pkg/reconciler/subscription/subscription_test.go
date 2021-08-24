@@ -1703,7 +1703,7 @@ func TestAllCases(t *testing.T) {
 			subscriptionLister:  listers.GetSubscriptionLister(),
 			channelLister:       listers.GetMessagingChannelLister(),
 			channelableTracker:  duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
-			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			destinationResolver: resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 			kreferenceResolver:  kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
 			tracker:             &FakeTracker{},
 		}

@@ -19,8 +19,6 @@ package sequence
 import (
 	"context"
 
-	"knative.dev/pkg/logging"
-
 	"k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	"knative.dev/eventing/pkg/duck"
@@ -53,15 +51,13 @@ func NewController(
 	}
 	impl := sequencereconciler.NewImpl(ctx, r)
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
-
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1.Kind("Sequence")),
+		FilterFunc: controller.FilterController(&v1.Sequence{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

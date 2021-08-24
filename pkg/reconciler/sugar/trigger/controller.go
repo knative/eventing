@@ -57,7 +57,6 @@ func NewController(
 		}
 	})
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Watch brokers.

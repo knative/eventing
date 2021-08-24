@@ -25,7 +25,6 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -52,15 +51,13 @@ func NewController(
 	}
 	impl := parallelreconciler.NewImpl(ctx, r)
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
-
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(v1.Kind("Parallel")),
+		FilterFunc: controller.FilterController(&v1.Parallel{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

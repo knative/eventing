@@ -87,9 +87,10 @@ func NewController(
 			scheme.Scheme, corev1.EventSource{Component: controllerAgentName}),
 		NamespaceLister: namespaceInformer.Lister(),
 	}
-	impl := controller.NewImpl(c, logger, "SinkBindings")
-
-	logger.Info("Setting up event handlers")
+	impl := controller.NewContext(ctx, c, controller.ControllerOptions{
+		WorkQueueName: "SinkBindings",
+		Logger:        logger,
+	})
 
 	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

@@ -44,6 +44,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
 	rttesting "knative.dev/eventing/pkg/reconciler/testing"
 	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -663,7 +664,7 @@ func TestReconcile(t *testing.T) {
 			kubeClientSet:       fakekubeclient.Get(ctx),
 			ceSource:            source,
 			receiveAdapterImage: image,
-			sinkResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			sinkResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 			configs:             &reconcilersource.EmptyVarsGenerator{},
 		}
 		return apiserversource.NewReconciler(ctx, logger,
