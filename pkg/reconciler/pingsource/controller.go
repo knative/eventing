@@ -32,7 +32,6 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/adapter/v2"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource"
@@ -73,14 +72,14 @@ func NewController(
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
-	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	logger.Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that the pingsource-mt-adapter Deployment has changed so that
 	// we can reconcile PingSources that depend on it
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.tracker = impl.Tracker
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), mtadapterName),

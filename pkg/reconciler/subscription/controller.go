@@ -26,7 +26,6 @@ import (
 	"knative.dev/pkg/kref"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/tracker"
 
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -67,11 +66,11 @@ func NewController(
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx)))
-	r.destinationResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
+	r.destinationResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	// Track changes to Channels.
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.tracker = impl.Tracker
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(
 		// Call the tracker's OnChanged method, but we've seen the objects
 		// coming through this path missing TypeMeta, so ensure it is properly

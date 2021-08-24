@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/tracker"
 
 	"k8s.io/client-go/tools/cache"
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
@@ -56,7 +55,7 @@ func NewController(
 
 	logging.FromContext(ctx).Info("Setting up event handlers")
 
-	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx)))
+	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Sequence, so that
