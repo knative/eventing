@@ -316,6 +316,12 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
+
+			imc.Generation = 1
+			imc.Status.ObservedGeneration = 2
+			if imc.IsReady() {
+				t.Error("Expected IsReady() to be false when Generation != ObservedGeneration")
+			}
 		})
 	}
 }
