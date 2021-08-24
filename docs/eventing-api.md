@@ -3626,7 +3626,7 @@ ChannelableStatus
 <p>
 (Members of <code>ChannelableStatus</code> are embedded into this type.)
 </p>
-<p>Channel conforms to Duck type Channelable.</p>
+<p>Channel conforms to Duck type ChannelableStatus.</p>
 </td>
 </tr>
 </tbody>
