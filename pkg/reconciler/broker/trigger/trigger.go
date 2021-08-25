@@ -106,7 +106,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 	t.Status.PropagateBrokerCondition(b.Status.GetTopLevelCondition())
 
 	// If Broker is not ready, we're done, but once it becomes ready, we'll get requeued.
-	if !b.Status.IsReady() {
+	if !b.IsReady() {
 		logging.FromContext(ctx).Errorw("Broker is not ready", zap.Any("Broker", b))
 		return nil
 	}
