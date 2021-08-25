@@ -78,7 +78,7 @@ func (imcs *InMemoryChannelStatus) GetCondition(t apis.ConditionType) *apis.Cond
 func (imc *InMemoryChannel) IsReady() bool {
 	imcs := imc.Status
 	return imcs.ObservedGeneration == imc.Generation &&
-		imcCondSet.Manage(&imcs).IsHappy()
+		imc.GetConditionSet().Manage(&imcs).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
