@@ -23,12 +23,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
+	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	testlib "knative.dev/eventing/test/lib"
 )
@@ -54,7 +55,7 @@ func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName
 // This pulls events from the pod during any Find or Wait call, storing them
 // locally and trimming them from the remote pod store.
 type EventInfoStore struct {
-	tb testing.TB
+	tb ginkgo.GinkgoTInterface
 
 	podName      string
 	podNamespace string
@@ -89,6 +90,10 @@ func (ei *EventInfoStore) getEventInfo() []EventInfo {
 	ei.lock.Lock()
 	defer ei.lock.Unlock()
 	return ei.collected
+}
+
+func (ei *EventInfoStore) AsSinkRef() *duckv1.KReference {
+	return &duckv1.KReference{Kind: "Service", Name: ei.podName, APIVersion: "v1"}
 }
 
 func (ei *EventInfoStore) handle(event *corev1.Event) {

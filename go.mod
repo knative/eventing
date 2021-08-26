@@ -18,6 +18,7 @@ require (
 	github.com/influxdata/tdigest v0.0.0-20191024211133-5d87a7585faa // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/onsi/ginkgo v1.14.2
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.2
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
