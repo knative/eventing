@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,7 +75,6 @@ func (tr *ComponentsTestRunner) RunTests(
 	feature Feature,
 	testFunc func(st *testing.T, component metav1.TypeMeta),
 ) {
-	t.Parallel()
 	for _, component := range tr.ComponentsToTest {
 		// If a component is not present in the map, then assume it has all properties. This is so an
 		// unknown component (e.g. a Channel) can be specified via a dedicated flag (e.g. --channels) and have tests run.
@@ -154,9 +154,10 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 	// nothing
 }
 
-// Setup creates the client objects needed in the e2e tests,
-// and does other setups, like creating namespaces, set the test case to run in parallel, etc.
-func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
+// GSetup creates
+// - the client objects needed in the e2e tests,
+// - the namespace hosting all objects needed by the test
+func GSetup(t ginkgo.GinkgoTInterface, options ...SetupClientOption) *Client {
 	client, err := CreateNamespacedClient(t)
 	if err != nil {
 		t.Fatal("Couldn't initialize clients:", err)
@@ -170,14 +171,6 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 		CreateRBACPodsEventsGetListWatch(client, client.Namespace+"-eventwatcher")
 	}
 
-	// Run the test case in parallel if needed.
-	if runInParallel {
-		t.Parallel()
-	}
-
-	// Clean up resources if the test is interrupted in the middle.
-	pkgTest.CleanupOnInterrupt(func() { TearDown(client) }, t.Logf)
-
 	// Run further setups for the client.
 	for _, option := range options {
 		option(client)
@@ -186,7 +179,21 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 	return client
 }
 
-func CreateNamespacedClient(t *testing.T) (*Client, error) {
+// Setup creates
+// - the client objects needed in the e2e tests,
+// - the namespace hosting all objects needed by the test
+func Setup(t ginkgo.GinkgoTInterface, runInParallel bool, options ...SetupClientOption) *Client {
+	client := GSetup(t, options...)
+
+	// Run the test case in parallel if needed.
+	if runInParallel {
+		t.Parallel()
+	}
+
+	return client
+}
+
+func CreateNamespacedClient(t ginkgo.GinkgoTInterface) (*Client, error) {
 	ns := ""
 	// Try next MaxNamespaceSkip namespaces before giving up. This should address the issue with
 	// development cycles when namespaces from previous runs were not cleaned properly.
@@ -246,8 +253,8 @@ func CreateNamespaceWithRetry(client *Client, namespace string) error {
 	for retries < MaxRetries {
 		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 		if _, err = client.Kube.CoreV1().Namespaces().
-			Create(context.Background(), nsSpec, metav1.CreateOptions{}); err == nil {
-			return nil
+			Create(context.Background(), nsSpec, metav1.CreateOptions{}); err == nil || apierrs.IsAlreadyExists(err) {
+			return err
 		}
 		retries++
 		time.Sleep(RetrySleepDuration)
@@ -329,7 +336,7 @@ func formatEvent(e *corev1.Event) string {
 }
 
 // SetupServiceAccount creates a new namespace if it does not exist.
-func SetupServiceAccount(t *testing.T, client *Client) {
+func SetupServiceAccount(t ginkgo.GinkgoTInterface, client *Client) {
 	// https://github.com/kubernetes/kubernetes/issues/66689
 	// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
 	err := waitForServiceAccountExists(client, "default", client.Namespace)
@@ -339,7 +346,7 @@ func SetupServiceAccount(t *testing.T, client *Client) {
 }
 
 // SetupPullSecret sets up kn-eventing-test-pull-secret on the client namespace.
-func SetupPullSecret(t *testing.T, client *Client) {
+func SetupPullSecret(t ginkgo.GinkgoTInterface, client *Client) {
 	// If the "default" Namespace has a secret called
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the "default" ServiceAccount in this new Namespace.

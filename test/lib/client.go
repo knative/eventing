@@ -22,8 +22,8 @@ package lib
 import (
 	"context"
 	"fmt"
-	"testing"
 
+	"github.com/onsi/ginkgo"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 
@@ -52,7 +52,7 @@ type Client struct {
 	EventListener *EventListener
 
 	Namespace string
-	T         *testing.T
+	T         ginkgo.GinkgoTInterface
 	Tracker   *Tracker
 
 	podsCreated []string
@@ -65,7 +65,7 @@ type Client struct {
 
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
-func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
+func NewClient(configPath string, clusterName string, namespace string, t ginkgo.GinkgoTInterface) (*Client, error) {
 	var err error
 
 	client := &Client{}
