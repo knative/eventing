@@ -53,7 +53,7 @@ func TestBrokerImmutableFields(t *testing.T) {
 		"BrokerClassAnnotation mutated": {
 			og: original,
 			wantErr: &apis.FieldError{
-				Message: "Immutable fields changed (-old +new)",
+				Message: "Immutable annotations changed (-old +new)",
 				Paths:   []string{"annotations"},
 				Details: `{string}:
 	-: "original"
