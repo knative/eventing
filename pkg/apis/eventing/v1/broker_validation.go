@@ -69,7 +69,7 @@ func (b *Broker) CheckImmutableFields(ctx context.Context, original *Broker) *ap
 		return nil
 	}
 
-	// Only Subscriber and Reply are mutable.
+	// Only Delivery options are mutable.
 	ignoreArguments := cmpopts.IgnoreFields(BrokerSpec{}, "Delivery")
 	if diff, err := kmp.ShortDiff(original.Spec, b.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
