@@ -49,6 +49,9 @@ spec:
   {{ end }}
   {{ if .delivery }}
   delivery:
+    {{ if .delivery.timeout }}
+    timeout: {{ .delivery.timeout }}
+    {{ end }}
     {{ if .delivery.deadLetterSink }}
     deadLetterSink:
       {{ if .delivery.deadLetterSink.ref }}

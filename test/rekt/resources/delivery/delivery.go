@@ -66,3 +66,15 @@ func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoff
 		}
 	}
 }
+
+// WithTimeout adds the timeout related config to the config.
+func WithTimeout(timeout string) manifest.CfgFn {
+	return func(cfg map[string]interface{}) {
+		if _, set := cfg["delivery"]; !set {
+			cfg["delivery"] = map[string]interface{}{}
+		}
+		delivery := cfg["delivery"].(map[string]interface{})
+
+		delivery["timeout"] = timeout
+	}
+}
