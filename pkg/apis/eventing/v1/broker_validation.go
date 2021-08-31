@@ -19,6 +19,8 @@ package v1
 import (
 	"context"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 )
@@ -67,22 +69,30 @@ func (b *Broker) CheckImmutableFields(ctx context.Context, original *Broker) *ap
 		return nil
 	}
 
-	// Make sure you can't change the class annotation.
-	diff, err := kmp.ShortDiff(original.GetAnnotations()[BrokerClassAnnotationKey], b.GetAnnotations()[BrokerClassAnnotationKey])
-
-	if err != nil {
+	// Only Delivery options are mutable.
+	ignoreArguments := cmpopts.IgnoreFields(BrokerSpec{}, "Delivery")
+	if diff, err := kmp.ShortDiff(original.Spec, b.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
-			Message: "couldn't diff the Broker objects",
+			Message: "Failed to diff Broker",
+			Paths:   []string{"spec"},
 			Details: err.Error(),
+		}
+	} else if diff != "" {
+		return &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec"},
+			Details: diff,
 		}
 	}
 
-	if diff != "" {
+	// Make sure you can't change the class annotation.
+	if diff, _ := kmp.ShortDiff(original.GetAnnotations()[BrokerClassAnnotationKey], b.GetAnnotations()[BrokerClassAnnotationKey]); diff != "" {
 		return &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
+			Message: "Immutable annotations changed (-old +new)",
 			Paths:   []string{"annotations"},
 			Details: diff,
 		}
 	}
+
 	return nil
 }
