@@ -55,7 +55,7 @@ func init() {
 	flag.StringVar(&eventType, "eventType", "dev.knative.eventing.samples.heartbeat", "the event-type (CloudEvents)")
 	flag.StringVar(&sink, "sink", "", "the host url to heartbeat to")
 	flag.StringVar(&label, "label", "", "a special label")
-	flag.StringVar(&periodStr, "period", "5", "the number of seconds between heartbeats")
+	flag.StringVar(&periodStr, "period", "5s", "the duration between heartbeats. Supported formats: Go (https://pkg.go.dev/time#ParseDuration), integers (interpreted as seconds)")
 }
 
 type envConfig struct {
@@ -114,11 +114,16 @@ func main() {
 		log.Fatalf("failed to create client: %s", err.Error())
 	}
 
+	// default to 5s if unset, try to parse as a duration, then as an int
 	var period time.Duration
-	if p, err := strconv.Atoi(periodStr); err != nil {
-		period = time.Duration(5) * time.Second
-	} else {
+	if periodStr == "" {
+		period = 5 * time.Second
+	} else if p, err := time.ParseDuration(periodStr); err == nil {
+		period = p
+	} else if p, err := strconv.Atoi(periodStr); err == nil {
 		period = time.Duration(p) * time.Second
+	} else {
+		log.Fatalf("Invalid period interval provided: %q", periodStr)
 	}
 
 	if eventSource == "" {
