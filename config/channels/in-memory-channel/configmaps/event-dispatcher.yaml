@@ -19,6 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/name: imc-controller
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 data:
   MaxIdleConnections: "1000"
   MaxIdleConnectionsPerHost: "100"
