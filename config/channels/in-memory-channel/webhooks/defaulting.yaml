@@ -18,6 +18,8 @@ metadata:
   name: inmemorychannel.eventing.knative.dev
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 webhooks:
 - admissionReviewVersions: ["v1"]
   clientConfig:

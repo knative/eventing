@@ -19,12 +19,12 @@ metadata:
   name: channelable-manipulator
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
       duck.knative.dev/channelable: "true"
-    app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
 rules: [] # Rules are automatically filled in by the controller manager.
 
 ---
