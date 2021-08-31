@@ -29,3 +29,6 @@ spec:
       port: 80
       protocol: TCP
       targetPort: 8080
+    - name: http-metrics
+      port: 9090
+      targetPort: 9090
