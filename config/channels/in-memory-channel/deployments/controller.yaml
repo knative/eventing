@@ -22,7 +22,7 @@ metadata:
     knative.dev/high-availability: "true"
     app.kubernetes.io/name: imc-controller
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing  
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
     matchLabels: &labels
@@ -34,7 +34,7 @@ spec:
         <<: *labels
         app.kubernetes.io/name: imc-controller
         app.kubernetes.io/version: devel
-        app.kubernetes.io/part-of: knative-eventing  
+        app.kubernetes.io/part-of: knative-eventing
     spec:
       affinity:
         podAntiAffinity:

@@ -22,7 +22,7 @@ metadata:
     knative.dev/high-availability: "true"
     app.kubernetes.io/name: imc-dispatcher
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing 
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
     matchLabels: &labels
@@ -34,7 +34,7 @@ spec:
         <<: *labels
         app.kubernetes.io/name: imc-dispatcher
         app.kubernetes.io/version: devel
-        app.kubernetes.io/part-of: knative-eventing 
+        app.kubernetes.io/part-of: knative-eventing
     spec:
       affinity:
         podAntiAffinity:
@@ -99,26 +99,3 @@ spec:
             protocol: TCP
           - containerPort: 9090
             name: metrics
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    eventing.knative.dev/release: devel
-    app.kubernetes.io/name: imc-dispatcher
-    app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
-  name: imc-dispatcher
-  namespace: knative-eventing
-spec:
-  ports:
-  # Define metrics and profiling for them to be accessible within service meshes.
-  - name: http-metrics
-    port: 9090
-    targetPort: 9090
-  - name: http-profiling
-    port: 8008
-    targetPort: 8008
-  selector:
-    messaging.knative.dev/channel: in-memory-channel
-    messaging.knative.dev/role: dispatcher

@@ -22,7 +22,7 @@ metadata:
     messaging.knative.dev/role: dispatcher
     app.kubernetes.io/name: imc-dispatcher
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing  
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
       messaging.knative.dev/channel: in-memory-channel
