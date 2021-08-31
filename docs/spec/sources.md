@@ -61,7 +61,7 @@ ducktype.
 CRDs that are to be understood as a `source` MUST be labeled:
 
 ```yaml
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   labels:
@@ -213,7 +213,7 @@ Source CRDs SHOULD use a standard annotation to expose the types of events they
 can emit in order to ease discoverability.
 
 ```yaml
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
