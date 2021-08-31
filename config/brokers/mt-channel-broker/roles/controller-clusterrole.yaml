@@ -17,6 +17,8 @@ metadata:
   name: knative-eventing-mt-channel-broker-controller
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 rules:
   # Configs resources and status we care about.
   - apiGroups:

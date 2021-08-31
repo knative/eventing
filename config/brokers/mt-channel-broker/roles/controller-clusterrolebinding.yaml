@@ -18,6 +18,8 @@ metadata:
   name: eventing-mt-channel-broker-controller
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: eventing-controller
