@@ -31,7 +31,7 @@ spec:
       labels:
         app: mt-broker-controller
         eventing.knative.dev/release: devel
-        app.kubernetes.io/name: mt-broker-controller
+        app.kubernetes.io/name: broker-controller
         app.kubernetes.io/version: devel
         app.kubernetes.io/part-of: knative-eventing
     spec:
@@ -107,7 +107,7 @@ kind: Service
 metadata:
   labels:
     serving.knative.dev/release: devel
-    app.kubernetes.io/name: mt-broker-controller
+    app.kubernetes.io/name: broker-controller
     app.kubernetes.io/version: devel
     app.kubernetes.io/part-of: knative-eventing
   name: mt-broker-controller
