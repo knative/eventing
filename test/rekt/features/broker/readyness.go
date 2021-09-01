@@ -29,15 +29,14 @@ import (
 
 // TriggerGoesReady returns a feature that tests after the creation of a
 // Trigger, it becomes ready. This feature assumes the Broker already exists.
-func TriggerGoesReady(name, brokerName string) *feature.Feature {
-	cfg := []manifest.CfgFn(nil)
-
+func TriggerGoesReady(name, brokerName string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
 
 	// The test needs a subscriber.
 	sub := feature.MakeRandomK8sName("sub")
 	f.Setup("install a service", svc.Install(sub, "app", "rekt"))
-	cfg = append(cfg, trigger.WithSubscriber(svc.AsKReference(sub), ""))
+	// Append user-provided cfg to the end, in case they are providing their own subscriber.
+	cfg = append([]manifest.CfgFn{trigger.WithSubscriber(svc.AsKReference(sub), "")}, cfg...)
 
 	// Install the trigger
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))
