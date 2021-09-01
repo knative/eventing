@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	v1 "knative.dev/pkg/apis/duck/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/pkg/reconciler"
@@ -42,9 +44,10 @@ type BrokerCreator func(client *testlib.Client, name string)
 // 1. Trigger can be created before Broker (with attributes filter)
 // 2. Broker can be created and progresses to Ready
 // 3. Ready Broker is Addressable
-// 4. Trigger with Ready broker progresses to Ready
-// 5. Trigger with no broker, updated with broker, updates status to include subscriberURI
-// 6. Ready Trigger includes status.subscriberUri
+// 4. Broker.Spec.Config is immutable
+// 5. Trigger with Ready broker progresses to Ready
+// 6. Trigger with no broker, updated with broker, updates status to include subscriberURI
+// 7. Ready Trigger includes status.subscriberUri
 func BrokerV1ControlPlaneTest(
 	t *testing.T,
 	brokerCreator BrokerCreator,
@@ -66,6 +69,10 @@ func BrokerV1ControlPlaneTest(
 
 	t.Run("Ready Broker V1 is Addressable", func(t *testing.T) {
 		readyBrokerV1AvailableHelper(t, brokerName, client)
+	})
+
+	t.Run("Ready Broker.Spec.Config is immutable", func(t *testing.T) {
+		brokerV1ConfigCanNotBeUpdated(t, brokerName, client)
 	})
 
 	t.Run("Trigger V1 with Ready broker progresses to Ready", func(t *testing.T) {
@@ -105,6 +112,27 @@ func readyBrokerV1AvailableHelper(t *testing.T, brokerName string, client *testl
 	_, err := duck.GetAddressableURI(client.Dynamic, obj)
 	if err != nil {
 		t.Fatal("Broker is not addressable", err)
+	}
+}
+
+func brokerV1ConfigCanNotBeUpdated(t *testing.T, brokerName string, client *testlib.Client) {
+	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
+	broker, err := client.Eventing.EventingV1().Brokers(client.Namespace).Get(context.Background(), brokerName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Error: Could not get broker %s: %v", brokerName, err)
+	}
+	broker.Spec = eventingv1.BrokerSpec{
+		Config: &v1.KReference{
+			Kind:       "kind",
+			Namespace:  "namespace",
+			Name:       "name",
+			APIVersion: "apiversion",
+		},
+	}
+
+	_, err = client.Eventing.EventingV1().Brokers(client.Namespace).Update(context.Background(), broker, metav1.UpdateOptions{})
+	if err == nil {
+		t.Fatalf("Error: Was able to update the broker.Spec.Config %s", brokerName)
 	}
 }
 
