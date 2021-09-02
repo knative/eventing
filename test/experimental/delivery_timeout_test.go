@@ -21,9 +21,14 @@ package experimental
 import (
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/experimental/features/delivery_timeout"
+	"knative.dev/eventing/test/rekt/features/broker"
+	b "knative.dev/eventing/test/rekt/resources/broker"
+	rt "knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/pkg/system"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 )
@@ -40,4 +45,22 @@ func TestDeliveryTimeout(t *testing.T) {
 	)
 
 	env.Test(ctx, t, delivery_timeout.ChannelToSink())
+}
+
+func TestBrokerTriggerWithDeliveryTimeout(t *testing.T) {
+	class := eventing.MTChannelBrokerClassValue
+
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	brokerName := feature.MakeRandomK8sName("broker")
+	triggerName := feature.MakeRandomK8sName("trigger")
+
+	env.Test(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass(class), b.WithTimeout("PT1S")))
+	env.Test(ctx, t, broker.TriggerGoesReady(triggerName, brokerName, rt.WithTimeout("PT10S")))
 }

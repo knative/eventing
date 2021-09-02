@@ -58,6 +58,7 @@ spec:
               delivery:
                 description: Delivery contains the delivery spec for this specific trigger.
                 type: object
+                x-kubernetes-preserve-unknown-fields: true # This is necessary to enable the experimental feature delivery-timeout
                 properties:
                   backoffDelay:
                     description: 'BackoffDelay is the delay before retrying. More information on Duration format: - https://www.iso.org/iso-8601-date-and-time-format.html - https://en.wikipedia.org/wiki/ISO_8601  For linear policy, backoff delay is backoffDelay*<numberOfRetries>. For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.'
