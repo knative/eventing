@@ -101,25 +101,3 @@ spec:
           containerPort: 9090
         - name: profiling
           containerPort: 8008
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    serving.knative.dev/release: devel
-    app.kubernetes.io/name: broker-controller
-    app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
-  name: mt-broker-controller
-  namespace: knative-eventing
-spec:
-  ports:
-  # Define metrics and profiling for them to be accessible within service meshes.
-  - name: http-metrics
-    port: 9090
-    targetPort: 9090
-  - name: http-profiling
-    port: 8008
-    targetPort: 8008
-  selector:
-    app: mt-broker-controller
