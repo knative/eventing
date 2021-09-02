@@ -85,3 +85,23 @@ spec:
               cpu: 1000m
               memory: 2048Mi
       serviceAccountName: pingsource-mt-adapter
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    app.kubernetes.io/name: pingsource-mt-adapter
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
+  name: pingsource-mt-adapter
+  namespace: knative-eventing
+spec:
+  ports:
+  # Define metrics for them to be accessible within service meshes.
+  - name: http-metrics
+    port: 9090
+    targetPort: 9090
+  selector:
+    eventing.knative.dev/source: ping-source-controller
+    sources.knative.dev/role: adapter
