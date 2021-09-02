@@ -94,6 +94,9 @@ var WithDeadLetterSink = delivery.WithDeadLetterSink
 // WithRetry adds the retry related config to a Trigger spec.
 var WithRetry = delivery.WithRetry
 
+// WithTimeout adds the timeout related config to the config.
+var WithTimeout = delivery.WithTimeout
+
 // Install will create a Trigger resource, augmented with the config fn options.
 func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
 	cfg := map[string]interface{}{
