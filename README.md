@@ -36,4 +36,4 @@ If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [Knative working groups](https://knative.dev/community/contributing/working-groups/working-groups/#eventing).
 
 Interested users should join
-[knative-users](https://groups.google.com/forum/#!forum/knative-users),
+[knative-users](https://groups.google.com/forum/#!forum/knative-users).
