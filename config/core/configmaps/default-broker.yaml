@@ -1,4 +1,4 @@
-# Copyright 2020 The Knative Authors
+# Copyright 2021 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 data:
-  # Configuration for defaulting channels that do not specify CRD implementations.
+  # Configuration for defaulting brokers that do not specify a spec.config or broker class.
   default-br-config: |
     clusterDefault:
       brokerClass: MTChannelBasedBroker
