@@ -33,9 +33,6 @@ func TestTriggerNotReadyWithoutSubscriber(t *testing.T) {
 	for _, testCase := range triggerNotReadyWithoutSubscriberTestCases() {
 		refFn := testCase.refFn
 		t.Run(testCase.name, func(t *testing.T) {
-			if testCase.skipped != "" {
-				t.Skip(testCase.skipped)
-			}
 			brokerName := testhelpers.MakeK8sNamePrefix(t.Name())
 			client := testlib.Setup(t, true)
 			defer testlib.TearDown(client)
@@ -80,7 +77,6 @@ func triggerNotReadyWithoutSubscriberTestCases() []triggerNotReadyWithoutSubscri
 }
 
 type triggerNotReadyWithoutSubscriberTestCase struct {
-	name    string
-	refFn   func(name, namespace string) *duckv1.KReference
-	skipped string
+	name  string
+	refFn func(name, namespace string) *duckv1.KReference
 }
