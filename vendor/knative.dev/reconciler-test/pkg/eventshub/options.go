@@ -113,9 +113,16 @@ func DropFirstN(n uint) EventsHubOption {
 	)
 }
 
+// DropEventsResponseCode will cause the receiver to reply with the specific status code to the dropped events
+func DropEventsResponseCode(code int) EventsHubOption {
+	return compose(
+		envOption("SKIP_RESPONSE_CODE", strconv.Itoa(code)),
+	)
+}
+
 // --- Sender options
 
-// InitialSenderDelay defines how much the sender has to wait, when started, before start sending events.
+// InitialSenderDelay defines how much the sender has to wait (in millisecond), when started, before start sending events.
 // Note: this delay is executed before the probe sink.
 func InitialSenderDelay(delay time.Duration) EventsHubOption {
 	return envDuration("DELAY", delay)
@@ -192,7 +199,7 @@ var EnableIncrementalId = envOption("INCREMENTAL_ID", "true")
 // OverrideTime overrides the event time with the time when sending the event.
 var OverrideTime = envOption("OVERRIDE_TIME", "true")
 
-// SendMultipleEvents defines how much events to send and the period between them.
+// SendMultipleEvents defines how much events to send and the period (in millisecond) between them.
 func SendMultipleEvents(numberOfEvents int, period time.Duration) EventsHubOption {
 	return compose(
 		envOption("MAX_MESSAGES", strconv.Itoa(numberOfEvents)),

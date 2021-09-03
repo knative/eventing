@@ -64,6 +64,9 @@ type EventInfo struct {
 	// This is filled with the ID of the sent event (if any) and in the Response also
 	// jot it down so you can correlate which event (ID) as well as sequence to match sent/response 1:1.
 	SentId string `json:"id"`
+
+	// AdditionalInfo can be used by event generator implementations to add more event details
+	AdditionalInfo map[string]interface{} `json:"additionalInfo"`
 }
 
 // Pretty print the event. Meant for debugging.

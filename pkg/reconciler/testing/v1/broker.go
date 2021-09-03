@@ -18,6 +18,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
@@ -190,5 +191,21 @@ func WithChannelNameAnnotation(name string) BrokerOption {
 			b.Status.Annotations = make(map[string]string, 1)
 		}
 		b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = name
+	}
+}
+
+func WithDeadLeaderSink(ref *duckv1.KReference, uri string) BrokerOption {
+	return func(b *v1.Broker) {
+		if b.Spec.Delivery == nil {
+			b.Spec.Delivery = new(eventingv1.DeliverySpec)
+		}
+		var u *apis.URL
+		if uri != "" {
+			u, _ = apis.ParseURL(uri)
+		}
+		b.Spec.Delivery.DeadLetterSink = &duckv1.Destination{
+			Ref: ref,
+			URI: u,
+		}
 	}
 }

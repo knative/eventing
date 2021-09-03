@@ -63,7 +63,6 @@ func NewController(ctx context.Context, adapter adapter.Adapter) *controller.Imp
 		}
 	})
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
 	pingsourceinformer.Get(ctx).Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    impl.Enqueue,

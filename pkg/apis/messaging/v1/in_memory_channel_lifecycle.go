@@ -73,9 +73,12 @@ func (imcs *InMemoryChannelStatus) GetCondition(t apis.ConditionType) *apis.Cond
 	return imcCondSet.Manage(imcs).GetCondition(t)
 }
 
-// IsReady returns true if the resource is ready overall.
-func (imcs *InMemoryChannelStatus) IsReady() bool {
-	return imcCondSet.Manage(imcs).IsHappy()
+// IsReady returns true if the Status condition InMemoryChannelConditionReady
+// is true and the latest spec has been observed.
+func (imc *InMemoryChannel) IsReady() bool {
+	imcs := imc.Status
+	return imcs.ObservedGeneration == imc.Generation &&
+		imc.GetConditionSet().Manage(&imcs).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.

@@ -43,6 +43,7 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/tracker"
 
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	. "knative.dev/pkg/reconciler/testing"
@@ -873,7 +874,7 @@ func TestAllCases(t *testing.T) {
 		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
 			sequenceLister:     listers.GetSequenceLister(),
-			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),

@@ -28,6 +28,7 @@ import (
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/kref"
 	"knative.dev/pkg/network"
+	"knative.dev/pkg/tracker"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -85,9 +86,8 @@ var (
 	replyDNS = "reply.mynamespace.svc." + network.GetClusterDomainName()
 	replyURI = apis.HTTP(replyDNS)
 
-	serviceDNS         = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
-	serviceURI         = apis.HTTP(serviceDNS)
-	serviceURIWithPath = &apis.URL{Scheme: "http", Host: serviceDNS, Path: "/"}
+	serviceDNS = serviceName + "." + testNS + ".svc." + network.GetClusterDomainName()
+	serviceURI = apis.HTTP(serviceDNS)
 
 	dlcDNS = "dlc.mynamespace.svc." + network.GetClusterDomainName()
 	dlcURI = apis.HTTP(dlcDNS)
@@ -1216,12 +1216,12 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURIWithPath},
+					{UID: subscriptionUID, SubscriberURI: serviceURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1240,7 +1240,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1265,12 +1265,12 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURIWithPath},
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
@@ -1294,7 +1294,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1323,13 +1323,13 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURIWithPath, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dlc.mynamespace.svc.cluster.local")}}},
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dlc.mynamespace.svc.cluster.local")}}},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
@@ -1382,7 +1382,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
@@ -1403,7 +1403,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
-						SubscriberURI: serviceURIWithPath,
+						SubscriberURI: serviceURI,
 						Delivery: &eventingduck.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
 								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
@@ -1464,7 +1464,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
 			}},
@@ -1472,7 +1472,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
-						SubscriberURI: serviceURIWithPath,
+						SubscriberURI: serviceURI,
 						Delivery: &eventingduck.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
 								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
@@ -1549,7 +1549,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
 					WithSubscriptionDeliverySpec(&eventingduck.DeliverySpec{
 						DeadLetterSink: &duckv1.Destination{
 							Ref: &duckv1.KReference{
@@ -1570,7 +1570,7 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{
 						UID:           "a-" + subscriptionUID,
-						SubscriberURI: serviceURIWithPath,
+						SubscriberURI: serviceURI,
 						Delivery: &eventingduck.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
 								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
@@ -1702,8 +1702,8 @@ func TestAllCases(t *testing.T) {
 			dynamicClientSet:    dynamicclient.Get(ctx),
 			subscriptionLister:  listers.GetSubscriptionLister(),
 			channelLister:       listers.GetMessagingChannelLister(),
-			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
-			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			channelableTracker:  duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			destinationResolver: resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 			kreferenceResolver:  kref.NewKReferenceResolver(listers.GetCustomResourceDefinitionLister()),
 			tracker:             &FakeTracker{},
 		}

@@ -22,14 +22,14 @@ package lib
 import (
 	"context"
 	"fmt"
-	"testing"
 
+	"github.com/onsi/ginkgo"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -45,14 +45,14 @@ import (
 type Client struct {
 	Kube          kubernetes.Interface
 	Eventing      *eventing.Clientset
-	Apiextensions *apiextensionsv1beta1.ApiextensionsV1beta1Client
+	Apiextensions *apiextensionsv1.ApiextensionsV1Client
 	Dynamic       dynamic.Interface
 	Config        *rest.Config
 
 	EventListener *EventListener
 
 	Namespace string
-	T         *testing.T
+	T         ginkgo.GinkgoTInterface
 	Tracker   *Tracker
 
 	podsCreated []string
@@ -65,7 +65,7 @@ type Client struct {
 
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
-func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
+func NewClient(configPath string, clusterName string, namespace string, t ginkgo.GinkgoTInterface) (*Client, error) {
 	var err error
 
 	client := &Client{}
@@ -83,7 +83,7 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
-	client.Apiextensions, err = apiextensionsv1beta1.NewForConfig(client.Config)
+	client.Apiextensions, err = apiextensionsv1.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}

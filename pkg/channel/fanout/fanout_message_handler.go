@@ -33,7 +33,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/buffering"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
-
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/kncloudevents"

@@ -58,7 +58,10 @@ Update `NewController` as follows:
 ```go
 "knative.dev/pkg/controller"
 ...
-impl := controller.NewImpl(c, logger, "NameOfController")
+impl := controller.NewContext(ctx, c, controller.ControllerOptions{
+	Logger: logger,
+	WorkQueueName: "NameOfController",
+})
 ```
 
 becomes
@@ -139,7 +142,10 @@ func NewController(ctx context.Context, cmw configmap.Watcher) *controller.Impl 
 		ServiceLister: svcInformer.Lister(),
 	}
 	logger = logger.Named("NameOfController")
-	impl := controller.NewImpl(c, logger, "NameOfController")
+	impl := controller.NewContext(ctx, c, controller.ControllerOptions{
+		Logger: logger,
+		WorkQueueName: "NameOfController",
+	})
 
 	// Set up event handlers.
 	svcInformer.Informer().AddEventHandler(...)
@@ -388,6 +394,28 @@ impl := kindreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Op
 })
 ```
 
+### Filtering on controller promotion
+
+The generated controllers implement the
+[LeaderAwareFuncs](https://github.com/knative/pkg/blob/main/reconciler/leader.go#L66-L72)
+interface to support HA controller deployments. When a generated controller is
+promoted, by default it will trigger [a re-reconcile of every resource it
+manages](https://github.com/knative/pkg/blob/main/client/injection/apiextensions/reconciler/apiextensions/v1/customresourcedefinition/controller.go#L68-L81).
+To filter which objects get reconciled, pass a `PromoteFilterFunc` to the
+controller's constructor:
+
+```go
+kindreconciler "knative.dev/<repo>/pkg/client/injection/reconciler/<clientgroup>/<version>/<resource>"
+pkgreconciler "knative.dev/pkg/reconciler"
+...
+impl := kindreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
+	return controller.Options{
+		PromoteFilterFunc: pkgreconciler.LabelFilterFunc("mylabel", "myvalue", false),
+	}
+})
+```
+
+
 ### Artifacts
 
 The artifacts are targeted to the configured `client/injection` directory:
@@ -399,7 +427,7 @@ kindreconciler "knative.dev/<repo>/pkg/client/injection/reconciler/<clientgroup>
 Controller related artifacts:
 
 - `NewImpl` - gets an injection based client and lister for `<kind>`, sets up
-  Kubernetes Event recorders, and delegates to `controller.NewImpl` for queue
+  Kubernetes Event recorders, and delegates to `controller.NewContext` for queue
   management.
 
 ```go

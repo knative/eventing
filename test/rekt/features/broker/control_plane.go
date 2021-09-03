@@ -582,7 +582,7 @@ func readyBrokerHasIngressAvailable(ctx context.Context, t feature.T) {
 func readyBrokerIsAddressable(ctx context.Context, t feature.T) {
 	broker := getBroker(ctx, t)
 
-	if broker.Status.IsReady() {
+	if broker.IsReady() {
 		if broker.Status.Address.URL == nil {
 			t.Errorf("broker is not addressable")
 		}

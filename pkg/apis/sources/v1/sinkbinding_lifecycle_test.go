@@ -479,7 +479,7 @@ func TestSinkBindingDo(t *testing.T) {
 			got := test.in
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, got)
 			ctx = addressable.WithDuck(ctx)
-			r := resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
+			r := resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
 			ctx = WithURIResolver(context.Background(), r)
 
 			sb := &SinkBinding{Spec: SinkBindingSpec{

@@ -52,6 +52,7 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -90,7 +91,7 @@ const (
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
-	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
+	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local"
 	currentGeneration     = 1
 	outdatedGeneration    = 0
 
@@ -235,6 +236,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerBrokerReady(),
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}},
@@ -267,6 +269,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerBrokerReady(),
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}},
@@ -300,7 +303,9 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
-					WithTriggerStatusSubscriberURI(subscriberURI)),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerStatusDeadLetterSinkURI("http://example.com"),
+					WithTriggerDeadLetterSinkResolvedSucceeded()),
 			}},
 		}, {
 			Name: "Subscription Create fails",
@@ -327,6 +332,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberURI(subscriberURI),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
@@ -356,6 +362,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
 			}},
@@ -381,6 +388,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerNotSubscribed("NotSubscribed", `trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}},
@@ -408,6 +416,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady()),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
@@ -442,6 +451,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for delete subscriptions")),
 			}},
@@ -478,6 +488,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
 			}},
@@ -515,6 +526,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -542,6 +554,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -569,6 +582,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -599,6 +613,71 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantErr: true,
 		}, {
+			Name: "Trigger has a dlq ref that doesn't exist",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeSubscriberAddressableAsUnstructured(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerDeadLeaderSink(brokerDestv1.Ref, ""),
+				)}...),
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", `brokers.eventing.knative.dev "testsink" not found`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerDeadLeaderSink(brokerDestv1.Ref, ""),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", `brokers.eventing.knative.dev "testsink" not found`),
+				),
+			}},
+			WantErr: true,
+		}, {
+			Name: "Broker has a dlq ref that doesn't exist",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+				),
+				makeSubscriberAddressableAsUnstructured(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", `brokers.eventing.knative.dev "testsink" not found`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", `brokers.eventing.knative.dev "testsink" not found`),
+				),
+			}},
+			WantErr: true,
+		}, {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
@@ -619,6 +698,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerNotSubscribed("testInducedError", "test induced error"),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -643,6 +723,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -671,6 +752,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyFailed("DependencyDoesNotExist", `Dependency does not exist: pingsources.sources.knative.dev "test-ping-source" not found`),
 				),
 			}},
@@ -699,6 +781,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyFailed("NotFound", ""),
 				),
 			}},
@@ -726,6 +809,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyUnknown("", ""),
 				),
 			}},
@@ -754,6 +838,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", currentGeneration, outdatedGeneration))),
 			}},
 		},
@@ -781,6 +866,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -806,6 +892,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -834,6 +921,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
 					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkNotConfigured(),
 					WithTriggerDependencyReady(),
 				),
 			}},
@@ -858,8 +946,8 @@ func TestReconcile(t *testing.T) {
 
 			brokerLister:    listers.GetBrokerLister(),
 			configmapLister: listers.GetConfigMapLister(),
-			sourceTracker:   duck.NewListableTracker(ctx, source.Get, func(types.NamespacedName) {}, 0),
-			uriResolver:     resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			sourceTracker:   duck.NewListableTrackerFromTracker(ctx, source.Get, tracker.New(func(types.NamespacedName) {}, 0)),
+			uriResolver:     resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return trigger.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),

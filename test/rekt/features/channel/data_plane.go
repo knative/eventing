@@ -80,7 +80,6 @@ func DataPlaneChannel(channelName string) *feature.Feature {
 		Must("The output MUST match the CloudEvent version of the Input.", todo).
 		MustNot("Channels MUST NOT alter an event that goes through them.", todo).
 		Must("All CloudEvent attributes, including the data attribute, MUST be received at the subscriber identical to how they were received by the Channel.", todo).
-		// except:  The extension attribute knativehistory, which the channel MAY modify to append its hostname
 		Should("Every Channel SHOULD support sending events via Binary Content Mode or Structured Content Mode of the HTTP Protocol Binding for CloudEvents.", todo).
 		Must("Channels MUST send events to all subscribers which are marked with a status of ready: True in the channel's status.subscribers.", todo).
 		Must("The events MUST be sent to the subscriberURI field of spec.subscribers.", todo)

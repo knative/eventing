@@ -54,10 +54,7 @@ readonly EVENTING_SUGAR_CONTROLLER_YAML=${YAML_OUTPUT_DIR}/"eventing-sugar-contr
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
 readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
-# Tools
-readonly EVENT_DISPLAY_YAML=${YAML_OUTPUT_DIR}"/event-display.yaml"
-readonly APPENDER_YAML=${YAML_OUTPUT_DIR}"/appender.yaml"
-readonly WEBSOCKET_SOURCE_YAML=${YAML_OUTPUT_DIR}"/websocket-source.yaml"
+readonly TOOLS=(appender event-display websocket-source heartbeats)
 declare -A RELEASES
 RELEASES=(
   [${EVENTING_YAML}]="${EVENTING_CORE_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML}"
@@ -102,12 +99,14 @@ ko resolve ${KO_YAML_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML
 # Create in memory channel yaml
 ko resolve ${KO_YAML_FLAGS} -Rf config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
-# Create the tools
-ko resolve ${KO_YAML_FLAGS} -f config/tools/appender/ | "${LABEL_YAML_CMD[@]}" > "${APPENDER_YAML}"
-ko resolve ${KO_YAML_FLAGS} -f config/tools/event-display/ | "${LABEL_YAML_CMD[@]}" > "${EVENT_DISPLAY_YAML}"
-ko resolve ${KO_YAML_FLAGS} -f config/tools/websocket-source/ | "${LABEL_YAML_CMD[@]}" > "${WEBSOCKET_SOURCE_YAML}"
+all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
 
-all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML} ${APPENDER_YAML} ${EVENT_DISPLAY_YAML} ${WEBSOCKET_SOURCE_YAML})
+# Create the tools
+for tool in ${TOOLS[@]}; do
+  yaml=${YAML_OUTPUT_DIR}/${tool}.yaml
+  ko resolve ${KO_YAML_FLAGS} -f "config/tools/${tool}/" | "${LABEL_YAML_CMD[@]}" > "${yaml}"
+  all_yamls+=("${yaml}")
+done
 
 if [ -d "${YAML_REPO_ROOT}/config/post-install" ]; then
 

@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	broker "knative.dev/eventing/pkg/broker"
+	eventingmetrics "knative.dev/eventing/pkg/metrics"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -53,9 +54,9 @@ var (
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
-	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
-	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
-	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
+	eventTypeKey         = tag.MustNewKey(eventingmetrics.LabelEventType)
+	responseCodeKey      = tag.MustNewKey(eventingmetrics.LabelResponseCode)
+	responseCodeClassKey = tag.MustNewKey(eventingmetrics.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
@@ -142,10 +143,10 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	ctx := metricskey.WithResource(emptyContext, resource.Resource{
-		Type: metricskey.ResourceTypeKnativeBroker,
+		Type: eventingmetrics.ResourceTypeKnativeBroker,
 		Labels: map[string]string{
-			metricskey.LabelNamespaceName: args.ns,
-			metricskey.LabelBrokerName:    args.broker,
+			eventingmetrics.LabelNamespaceName: args.ns,
+			eventingmetrics.LabelBrokerName:    args.broker,
 		},
 	})
 	return tag.New(

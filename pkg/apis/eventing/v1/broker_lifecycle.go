@@ -83,9 +83,11 @@ func (bs *BrokerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return bs.GetConditionSet().Manage(bs).GetCondition(t)
 }
 
-// IsReady returns true if the resource is ready overall.
-func (bs *BrokerStatus) IsReady() bool {
-	return bs.GetConditionSet().Manage(bs).IsHappy()
+// IsReady returns true if the resource is ready overall and the latest spec has been observed.
+func (b *Broker) IsReady() bool {
+	bs := b.Status
+	return bs.ObservedGeneration == b.Generation &&
+		b.GetConditionSet().Manage(&bs).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.

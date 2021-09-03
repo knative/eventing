@@ -123,8 +123,6 @@ func NewController(
 		return controller.Options{SkipStatusUpdates: true, FinalizerName: finalizerName}
 	})
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
-
 	// Watch for inmemory channels.
 	inmemorychannelInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{

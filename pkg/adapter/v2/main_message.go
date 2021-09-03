@@ -26,11 +26,11 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/metrics/source"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/signals"
-	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 )

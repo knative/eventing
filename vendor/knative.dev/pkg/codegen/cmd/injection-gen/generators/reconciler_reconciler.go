@@ -210,6 +210,14 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 			Package: "knative.dev/pkg/reconciler",
 			Name:    "DoObserveFinalizeKind",
 		}),
+		"controllerIsSkipKey": c.Universe.Function(types.Name{
+			Package: "knative.dev/pkg/controller",
+			Name:    "IsSkipKey",
+		}),
+		"controllerIsRequeueKey": c.Universe.Function(types.Name{
+			Package: "knative.dev/pkg/controller",
+			Name:    "IsRequeueKey",
+		}),
 	}
 
 	sw.Do(reconcilerInterfaceFactory, m)
@@ -260,9 +268,13 @@ type ReadOnlyInterface interface {
 // controller finalizing {{.type|raw}} if they want to process tombstoned resources
 // even when they are not the leader.  Due to the nature of how finalizers are handled
 // there are no guarantees that this will be called.
+//
+// Deprecated: Use reconciler.OnDeletionInterface instead.
 type ReadOnlyFinalizer interface {
 	// ObserveFinalizeKind implements custom logic to observe the final state of {{.type|raw}}.
 	// This method should not write to the API.
+	//
+	// Deprecated: Use reconciler.ObserveDeletion instead.
 	ObserveFinalizeKind(ctx {{.contextContext|raw}}, o *{{.type|raw}}) {{.reconcilerEvent|raw}}
 }
 
@@ -324,7 +336,6 @@ func NewReconciler(ctx {{.contextContext|raw}}, logger *{{.zapSugaredLogger|raw}
 	if _, ok := r.({{.reconcilerLeaderAware|raw}}); ok {
 		logger.Fatalf("%T implements the incorrect LeaderAware interface. Promote() should not take an argument as genreconciler handles the enqueuing automatically.", r)
 	}
-	// TODO: Consider validating when folks implement ReadOnlyFinalizer, but not Finalizer.
 
 	rec := &reconcilerImpl{
 		LeaderAwareFuncs: {{.reconcilerLeaderAwareFuncs|raw}}{
@@ -517,8 +528,14 @@ func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) erro
 			return nil
 		}
 
-		logger.Errorw("Returned an error", zap.Error(reconcileEvent))
-		r.Recorder.Event(resource, {{.corev1EventTypeWarning|raw}}, "InternalError", reconcileEvent.Error())
+		if {{ .controllerIsSkipKey|raw }}(reconcileEvent) {
+			// This is a wrapped error, don't emit an event.
+		} else if ok, _ := {{ .controllerIsRequeueKey|raw }}(reconcileEvent); ok {
+			// This is a wrapped error, don't emit an event.
+		} else {
+			logger.Errorw("Returned an error", zap.Error(reconcileEvent))
+			r.Recorder.Event(resource, {{.corev1EventTypeWarning|raw}}, "InternalError", reconcileEvent.Error())
+		}
 		return reconcileEvent
 	}
 

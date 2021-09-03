@@ -32,7 +32,7 @@ import (
 var templates embed.FS
 
 func init() {
-	environment.RegisterPackage(manifest.ImagesFromFS(templates)...)
+	environment.RegisterPackage(thisPackage)
 }
 
 // Install starts a new eventshub with the provided name
@@ -57,10 +57,19 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		envs[ConfigLoggingEnv] = knative.LoggingConfigFromContext(ctx)
 		envs[ConfigTracingEnv] = knative.TracingConfigFromContext(ctx)
 
+		// Register the event info store to assert later the events published by the eventshub
+		registerEventsHubStore(
+			k8s.EventListenerFromContext(ctx),
+			t,
+			name,
+			environment.FromContext(ctx).Namespace(),
+		)
+
 		// Deploy
 		if _, err := manifest.InstallYamlFS(ctx, templates, map[string]interface{}{
-			"name": name,
-			"envs": envs,
+			"name":  name,
+			"envs":  envs,
+			"image": ImageFromContext(ctx),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -71,13 +80,5 @@ func Install(name string, options ...EventsHubOption) feature.StepFn {
 		if strings.Contains(envs["EVENT_GENERATORS"], "receiver") {
 			k8s.WaitForServiceEndpointsOrFail(ctx, t, name, 1)
 		}
-
-		// Register the event info store to assert later the events published by the eventshub
-		registerEventsHubStore(
-			k8s.EventListenerFromContext(ctx),
-			t,
-			name,
-			environment.FromContext(ctx).Namespace(),
-		)
 	}
 }

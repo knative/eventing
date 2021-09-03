@@ -351,7 +351,7 @@ func TestBrokerIsReady(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			bs := &BrokerStatus{}
+			bs := BrokerStatus{}
 			if test.markIngressReady != nil {
 				var ep *corev1.Endpoints
 				if *test.markIngressReady {
@@ -381,11 +381,17 @@ func TestBrokerIsReady(t *testing.T) {
 			}
 			bs.SetAddress(test.address)
 
-			got := bs.IsReady()
+			b := Broker{Status: bs}
+			got := b.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 
+			b.Generation = 1
+			b.Status.ObservedGeneration = 2
+			if b.IsReady() {
+				t.Error("Expected IsReady() to be false when Generation != ObservedGeneration")
+			}
 		})
 	}
 }

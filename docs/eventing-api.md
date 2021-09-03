@@ -1887,6 +1887,20 @@ knative.dev/pkg/apis.URL
 <p>SubscriberURI is the resolved URI of the receiver for this Trigger.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>deadLetterSinkUri</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeadLetterSinkURI is the resolved URI of the dead letter sink for this Trigger.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
@@ -3612,7 +3626,7 @@ ChannelableStatus
 <p>
 (Members of <code>ChannelableStatus</code> are embedded into this type.)
 </p>
-<p>Channel conforms to Duck type Channelable.</p>
+<p>Channel conforms to Duck type ChannelableStatus.</p>
 </td>
 </tr>
 </tbody>
@@ -3626,9 +3640,9 @@ ChannelableStatus
 <p>SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
 for processing those events and where to put the result of the processing. Only
 From (where the events are coming from) is always required. You can optionally
-only Process the events (results in no output events) by leaving out the Result.
+only Process the events (results in no output events) by leaving out the Reply.
 You can also perform an identity transformation on the incoming events by leaving
-out the Subscriber and only specifying Result.</p>
+out the Subscriber and only specifying Reply.</p>
 <p>The following are all valid specifications:
 channel &ndash;[subscriber]&ndash;&gt; reply
 Sink, no outgoing events:

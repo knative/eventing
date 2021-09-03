@@ -274,6 +274,11 @@ func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DeadLetterSinkURI != nil {
+		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

@@ -19,9 +19,6 @@ package main
 import (
 	"context"
 
-	"github.com/kelseyhightower/envconfig"
-	"golang.org/x/sync/errgroup"
-	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 
 	"knative.dev/reconciler-test/pkg/eventshub"
@@ -31,66 +28,23 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub/sender"
 )
 
-type envConfig struct {
-	EventGenerators []string `envconfig:"EVENT_GENERATORS" required:"true"`
-	EventLogs       []string `envconfig:"EVENT_LOGS" required:"true"`
-}
-
 func main() {
-	//nolint // nil ctx is fine here, look at the code of EnableInjectionOrDie
-	ctx, _ := injection.EnableInjectionOrDie(nil, nil)
-	ctx = eventshub.ConfigureLogging(ctx, "eventshub")
-
-	if err := eventshub.ConfigureTracing(logging.FromContext(ctx), ""); err != nil {
-		logging.FromContext(ctx).Fatal("Unable to setup trace publishing", err)
-	}
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logging.FromContext(ctx).Fatal("Failed to process env var", err)
-	}
-	logging.FromContext(ctx).Infof("Events Hub environment configuration: %+v", env)
-
-	eventLogs := createEventLogs(ctx, env.EventLogs)
-	err := startEventGenerators(ctx, env.EventGenerators, eventLogs)
-
-	if err != nil {
-		logging.FromContext(ctx).Fatal("Error during start: ", err)
-	}
-
-	logging.FromContext(ctx).Info("Closing the eventshub process")
-}
-
-func createEventLogs(ctx context.Context, logTypes []string) *eventshub.EventLogs {
-	var l []eventshub.EventLog
-	for _, logType := range logTypes {
-		switch eventshub.EventLogType(logType) {
-		case eventshub.RecorderEventLog:
-			l = append(l, recorder_vent.NewFromEnv(ctx))
-		case eventshub.LoggerEventLog:
-			l = append(l, logger_vent.Logger(logging.FromContext(ctx).Named("event logger").Infof))
-		default:
-			logging.FromContext(ctx).Fatal("Cannot recognize event log type: ", logType)
-		}
-	}
-	return eventshub.NewEventLogs(l...)
-}
-
-func startEventGenerators(ctx context.Context, genTypes []string, eventLogs *eventshub.EventLogs) error {
-	errs, _ := errgroup.WithContext(ctx)
-	for _, genType := range genTypes {
-		switch eventshub.EventGeneratorType(genType) {
-		case eventshub.ReceiverEventGenerator:
-			errs.Go(func() error {
-				return receiver.NewFromEnv(ctx, eventLogs).Start(ctx, eventshub.WithTracing)
-			})
-		case eventshub.SenderEventGenerator:
-			errs.Go(func() error {
-				return sender.Start(ctx, eventLogs)
-			})
-		default:
-			logging.FromContext(ctx).Fatal("Cannot recognize event generator type: ", genType)
-		}
-	}
-	return errs.Wait()
+	eventshub.Start(
+		map[string]eventshub.EventLogFactory{
+			eventshub.RecorderEventLog: func(ctx context.Context) (eventshub.EventLog, error) {
+				return recorder_vent.NewFromEnv(ctx), nil
+			},
+			eventshub.LoggerEventLog: func(ctx context.Context) (eventshub.EventLog, error) {
+				return logger_vent.Logger(logging.FromContext(ctx).Named("event logger").Infof), nil
+			},
+		},
+		map[string]eventshub.EventGeneratorStarter{
+			eventshub.ReceiverEventGenerator: func(ctx context.Context, logs *eventshub.EventLogs) error {
+				return receiver.NewFromEnv(ctx, logs).Start(ctx, eventshub.WithTracing)
+			},
+			eventshub.SenderEventGenerator: func(ctx context.Context, logs *eventshub.EventLogs) error {
+				return sender.Start(ctx, logs)
+			},
+		},
+	)
 }

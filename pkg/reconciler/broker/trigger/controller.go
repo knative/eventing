@@ -66,10 +66,8 @@ func NewController(
 	impl := triggerreconciler.NewImpl(ctx, r)
 	r.impl = impl
 
-	logger.Info("Setting up event handlers")
-
-	r.sourceTracker = duck.NewListableTracker(ctx, source.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
+	r.sourceTracker = duck.NewListableTrackerFromTracker(ctx, source.Get, impl.Tracker)
+	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
@@ -88,7 +86,7 @@ func NewController(
 
 	// Reconcile Trigger when my Subscription changes
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterControllerGK(eventingv1.Kind("Trigger")),
+		FilterFunc: controller.FilterController(&eventingv1.Trigger{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
