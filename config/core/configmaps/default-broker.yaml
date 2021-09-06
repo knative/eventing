@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 data:
-  # Configuration for defaulting brokers that do not specify a spec.config or broker class.
+  # Configures the default for any Broker that does not specify a spec.config or Broker class.
   default-br-config: |
     clusterDefault:
       brokerClass: MTChannelBasedBroker
