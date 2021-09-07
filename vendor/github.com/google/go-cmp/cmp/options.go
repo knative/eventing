@@ -241,7 +241,8 @@ func (validator) apply(s *state, vx, vy reflect.Value) {
 			}
 			name = fmt.Sprintf("%q.(%v)", pkgPath, t.String()) // e.g., "path/to/package".(struct { a int })
 		}
-		panic(fmt.Sprintf("cannot handle unexported field at %#v:\n\t%v\n%s", s.curPath, name, help))
+		fmt.Sprintf("%s%s",help, name)
+		return
 	}
 
 	panic("not reachable")
