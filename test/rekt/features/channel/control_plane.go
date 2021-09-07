@@ -59,7 +59,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 
 	f.Stable("Aggregated Channelable Manipulator ClusterRole").
 		Must("Every CRD MUST create a corresponding ClusterRole, that will be aggregated into the channelable-manipulator ClusterRole."+
-			"This ClusterRole MUST include permissions to create, get, list, watch, patch, and update the CRD's custom objects and their status. "+
+			"This ClusterRole MUST include permissions to create, get, list, watch, patch, update and delete the CRD's custom objects and their status. "+
 			"Each channel MUST have the duck.knative.dev/channelable: \"true\" label on its channelable-manipulator ClusterRole.",
 			serviceAccountIsChannelableManipulator(sacmName))
 
@@ -111,7 +111,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 func serviceAccountIsChannelableManipulator(name string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		gvr := channel_impl.GVR()
-		for _, verb := range []string{"get", "list", "watch", "update", "patch"} {
+		for _, verb := range []string{"get", "list", "watch", "update", "patch", "delete"} {
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "", name, verb)
 			ServiceAccountSubjectAccessReviewAllowedOrFail(ctx, t, gvr, "status", name, verb)
 		}
