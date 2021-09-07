@@ -1603,6 +1603,16 @@ DeliverySpec
 <p>Delivery contains the delivery spec for this specific trigger.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>tags</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1835,6 +1845,16 @@ DeliverySpec
 <td>
 <em>(Optional)</em>
 <p>Delivery contains the delivery spec for this specific trigger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tags</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>

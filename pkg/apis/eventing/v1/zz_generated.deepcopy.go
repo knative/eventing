@@ -252,6 +252,15 @@ func (in *TriggerSpec) DeepCopyInto(out *TriggerSpec) {
 		*out = new(apisduckv1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
+	}
 	return
 }
 

@@ -90,6 +90,8 @@ type TriggerSpec struct {
 	// Delivery contains the delivery spec for this specific trigger.
 	// +optional
 	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
+
+	Tags *[]string `json:"tags,omitempty"`
 }
 
 type TriggerFilter struct {
