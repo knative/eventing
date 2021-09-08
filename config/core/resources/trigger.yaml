@@ -103,6 +103,46 @@ spec:
                     description: 'Attributes filters events by exact match on event context attributes. Each key in the map is compared with the equivalent key in the event context. An event passes the filter if all values are equal to the specified values.  Nested context attributes are not supported as keys. Only string values are supported. '
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              filters:
+                description: 'Filters is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. If not specified, will default to allowing all events. '
+                type: object
+                properties:
+                  exact:
+                    description: 'Exact evaluates to true if the value of the matching CloudEvents attribute is matches exactly the String value specified (case sensitive). Exact must contain exactly one property, where the key is the name of the CloudEvents attribute to be matched, and its value is the String value to use in the comparison. The attribute name and value specified in the filter express cannot be be empty strings.'
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  prefix:
+                    description: 'Prefix evaluates to true if the value of the matching CloudEvents attribute starts with the String value specified (case sensitive). Prefix must contain exactly one property, where the key is the name of the CloudEvents attribute to be matched, and its value is the String value to use in the comparison. The attribute name and value specified in the filter express cannot be be empty strings.'
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  suffix:
+                    description: 'Suffix evaluates to true if the value of the matching CloudEvents attribute ends with the String value specified (case sensitive). | Suffix must contain exactly one property, where the key is the name of the CloudEvents attribute to be matched, and its value is the String value to use in the comparison. he attribute name and value specified in the filter express cannot be be empty strings.'
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  not:
+                    description: 'Not evaluates to true if the nested expression evaluates to false.'
+                    type: object
+                    # Because kube doesn't allow to use $ref, we can't recursively define this schema.
+                    x-kubernetes-preserve-unknown-fields: true
+                  all:
+                    description: 'All evaluates to true if all the nested expressions evaluate to true. All must contain at least one filter expression.'
+                    type: array
+                    items:
+                      # Because kube doesn't allow to use $ref, we can't recursively reference to the filter schema.
+                      type: object
+                      description: "Sub schema"
+                      x-kubernetes-preserve-unknown-fields: true
+                  any:
+                    description: 'Any evaluates to true if at least one of the nested expressions evaluate to true. Any must contain at least one filter expression.'
+                    type: array
+                    items:
+                      # Because kube doesn't allow to use $ref, we can't recursively reference to the filter schema.
+                      type: object
+                      description: "Sub schema"
+                      x-kubernetes-preserve-unknown-fields: true
+                # This allows extension filter dialects
+                additionalProperties: true
+                x-kubernetes-preserve-unknown-fields: true
               subscriber:
                 description: Subscriber is the addressable that receives events from the Broker that pass the Filter. It is required.
                 type: object

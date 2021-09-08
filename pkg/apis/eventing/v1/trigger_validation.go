@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"regexp"
 
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -35,7 +34,7 @@ var (
 
 // Validate the Trigger.
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
-	errs := t.Spec.Validate(ctx).ViaField("spec")
+	errs := t.Spec.Validate(apis.WithinSpec(ctx)).ViaField("spec")
 	errs = t.validateAnnotation(errs, DependencyAnnotation, t.validateDependencyAnnotation)
 	errs = t.validateAnnotation(errs, InjectionAnnotation, t.validateInjectionAnnotation)
 	if apis.IsInUpdate(ctx) {
@@ -46,36 +45,20 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 }
 
 // Validate the TriggerSpec.
-func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
-	var errs *apis.FieldError
+func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 	if ts.Broker == "" {
-		fe := apis.ErrMissingField("broker")
-		errs = errs.Also(fe)
+		errs = errs.Also(apis.ErrMissingField("broker"))
 	}
 
-	if ts.Filter != nil {
-		for attr := range map[string]string(ts.Filter.Attributes) {
-			if !validAttributeName.MatchString(attr) {
-				fe := &apis.FieldError{
-					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
-					Paths:   []string{"filter.attributes"},
-				}
-				errs = errs.Also(fe)
-			}
-		}
-	}
-
-	if fe := ts.Subscriber.Validate(ctx); fe != nil {
-		errs = errs.Also(fe.ViaField("subscriber"))
-	}
-
-	if ts.Delivery != nil {
-		if de := ts.Delivery.Validate(ctx); de != nil {
-			errs = errs.Also(de.ViaField("delivery"))
-		}
-	}
-
-	return errs
+	return errs.Also(
+		ValidateAttributeFilters(ts.Filter).ViaField("filter"),
+	).Also(
+		ValidateSubscriptionAPIFiltersList(ts.Filters, "filters").ViaField("filters"),
+	).Also(
+		ts.Subscriber.Validate(ctx).ViaField("subscriber"),
+	).Also(
+		ts.Delivery.Validate(ctx).ViaField("delivery"),
+	)
 }
 
 // CheckImmutableFields checks that any immutable fields were not changed.
@@ -162,4 +145,73 @@ func (t *Trigger) validateInjectionAnnotation(injectionAnnotation string) *apis.
 		}
 	}
 	return nil
+}
+
+func ValidateAttributeFilters(filter *TriggerFilter) (errs *apis.FieldError) {
+	if filter == nil {
+		return nil
+	}
+	return errs.Also(ValidateAttributesNames(filter.Attributes).ViaField("attributes"))
+}
+
+func ValidateAttributesNames(attrs map[string]string) (errs *apis.FieldError) {
+	if attrs == nil {
+		return nil
+	}
+
+	for attr := range attrs {
+		if !validAttributeName.MatchString(attr) {
+			errs = errs.Also(apis.ErrInvalidKeyName(attr, apis.CurrentField, "Attribute name must start with a letter and can only contain lowercase alphanumeric").ViaKey(attr))
+		}
+	}
+	return errs
+}
+
+func ValidateSingleAttributeMap(expr map[string]string) (errs *apis.FieldError) {
+	if len(expr) == 0 {
+		return nil
+	}
+
+	if len(expr) != 1 {
+		return apis.ErrGeneric("Multiple items found, can have only one key-value", apis.CurrentField)
+	}
+	for attr := range expr {
+		if !validAttributeName.MatchString(attr) {
+			errs = errs.Also(apis.ErrInvalidKeyName(attr, apis.CurrentField, "Attribute name must start with a letter and can only contain lowercase alphanumeric").ViaKey(attr))
+		}
+	}
+	return errs
+}
+
+func ValidateSubscriptionAPIFiltersList(filters []SubscriptionsAPIFilter, field string) (errs *apis.FieldError) {
+	if filters == nil {
+		return nil
+	}
+	if len(filters) == 0 {
+		return apis.ErrGeneric(fmt.Sprintf("%s must contain at least one nested filter", field), apis.CurrentField)
+	}
+
+	for i, f := range filters {
+		f := f
+		errs = errs.Also(ValidateSubscriptionAPIFilter(&f)).ViaIndex(i)
+	}
+	return errs
+}
+
+func ValidateSubscriptionAPIFilter(filter *SubscriptionsAPIFilter) (errs *apis.FieldError) {
+	if filter == nil {
+		return nil
+	}
+	errs = errs.Also(
+		ValidateSingleAttributeMap(filter.Exact).ViaField("exact"),
+	).Also(
+		ValidateSingleAttributeMap(filter.Prefix).ViaField("prefix"),
+	).Also(
+		ValidateSingleAttributeMap(filter.Suffix).ViaField("suffix"),
+	).Also(
+		ValidateSubscriptionAPIFiltersList(filter.All, "all").ViaField("all"),
+	).Also(
+		ValidateSubscriptionAPIFiltersList(filter.Any, "any").ViaField("any"),
+	).Also(ValidateSubscriptionAPIFilter(filter.Not).ViaField("not"))
+	return errs
 }
