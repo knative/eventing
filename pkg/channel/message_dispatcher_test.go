@@ -799,6 +799,11 @@ func TestDispatchMessage(t *testing.T) {
 				assertEquality(t, replyServer.URL, *tc.expectedReplyRequest, rv)
 			}
 			if tc.expectedDeadLetterRequest != nil {
+				if tc.sendToReply {
+					tc.expectedDeadLetterRequest.Headers.Set("ce-knativeerrordest", replyServer.URL+"/")
+				} else if tc.sendToDestination {
+					tc.expectedDeadLetterRequest.Headers.Set("ce-knativeerrordest", destServer.URL+"/")
+				}
 				rv := deadLetterSinkHandler.popRequest(t)
 				assertEquality(t, deadLetterSinkServer.URL, *tc.expectedDeadLetterRequest, rv)
 			}
