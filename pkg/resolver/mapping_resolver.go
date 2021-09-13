@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 )
 
 const (
@@ -38,16 +39,19 @@ const (
 type MappingResolver struct {
 	logger    *zap.SugaredLogger
 	templates map[schema.GroupVersionKind]*template.Template
+	tracker   tracker.Interface
 }
 
 type MappingResolverTemplateValues struct {
 	Name            string
+	Namespace       string
 	SystemNamespace string
 }
 
-func NewMappingResolver(ctx context.Context, cmw configmap.Watcher) *MappingResolver {
+func NewMappingResolver(ctx context.Context, cmw configmap.Watcher, t tracker.Interface) *MappingResolver {
 	resolver := MappingResolver{
-		logger: logging.FromContext(ctx),
+		logger:  logging.FromContext(ctx),
+		tracker: t,
 	}
 	cmw.Watch(ConfigMapName, resolver.updateFromConfigMap)
 
@@ -62,17 +66,30 @@ func (mr *MappingResolver) MappingURIFromObjectReference(ctx context.Context, re
 		return false, nil, nil // not handled.
 	}
 
-	// TODO: track reference.
+	// TODO: needs the parent object.
+	//if err := mr.tracker.TrackReference(tracker.Reference{
+	//	APIVersion: ref.APIVersion,
+	//	Kind:       ref.Kind,
+	//	Namespace:  ref.Namespace,
+	//	Name:       ref.Name,
+	//}, parent); err != nil {
+	//	return nil, apierrs.NewNotFound(gvr.GroupResource(), ref.Name)
+	//}
+
+	if mr.templates == nil {
+		mr.logger.Infow("resolving reference not handled (no mappings)", zap.Any("gvk", ref.GroupVersionKind()))
+		return false, nil, nil
+	}
 
 	tmpl, ok := mr.templates[ref.GroupVersionKind()]
 	if !ok {
-		// Not handled.
 		mr.logger.Infow("resolving reference not handled", zap.Any("gvk", ref.GroupVersionKind()))
 		return false, nil, nil
 	}
 
 	data := MappingResolverTemplateValues{
 		Name:            ref.Name,
+		Namespace:       ref.Namespace,
 		SystemNamespace: system.Namespace(),
 	}
 

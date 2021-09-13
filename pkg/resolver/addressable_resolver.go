@@ -27,7 +27,7 @@ import (
 // NewURIResolver constructs a new URIResolver with context and a callback
 // for a given listableType (Listable) passed to the URIResolver's tracker.
 func NewURIResolver(ctx context.Context, cmw configmap.Watcher, t tracker.Interface) *resolver.URIResolver {
-	mr := NewMappingResolver(ctx, cmw)
+	mr := NewMappingResolver(ctx, cmw, t)
 
 	return resolver.NewURIResolverFromTracker(ctx, t, mr.MappingURIFromObjectReference)
 }
