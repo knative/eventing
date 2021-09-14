@@ -17,6 +17,8 @@ metadata:
   name: imc-dispatcher
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 rules:
   - apiGroups:
       - messaging.knative.dev

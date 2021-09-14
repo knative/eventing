@@ -21,6 +21,8 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 data:
   # Common configuration for all Knative codebase
   zap-logger-config: |

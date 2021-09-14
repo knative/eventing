@@ -19,6 +19,8 @@ metadata:
   name: podspecable-binding
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
@@ -34,6 +36,8 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     duck.knative.dev/podspecable: "true"
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 # Do not use this role directly. These rules will be added to the "podspecable-binding role.
 rules:
 

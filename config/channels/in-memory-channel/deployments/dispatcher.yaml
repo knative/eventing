@@ -20,6 +20,9 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     knative.dev/high-availability: "true"
+    app.kubernetes.io/name: imc-dispatcher
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
     matchLabels: &labels
@@ -27,7 +30,11 @@ spec:
       messaging.knative.dev/role: dispatcher
   template:
     metadata:
-      labels: *labels
+      labels:
+        <<: *labels
+        app.kubernetes.io/name: imc-dispatcher
+        app.kubernetes.io/version: devel
+        app.kubernetes.io/part-of: knative-eventing
     spec:
       affinity:
         podAntiAffinity:

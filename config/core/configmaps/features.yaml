@@ -21,6 +21,8 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 data:
   # ALPHA feature: The kreference-group allows you to use the Group field in KReferences.
   # For more details: https://github.com/knative/eventing/issues/5086

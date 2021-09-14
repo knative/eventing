@@ -20,6 +20,9 @@ metadata:
     eventing.knative.dev/release: devel
     messaging.knative.dev/channel: in-memory-channel
     messaging.knative.dev/role: dispatcher
+    app.kubernetes.io/name: imc-dispatcher
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
       messaging.knative.dev/channel: in-memory-channel
@@ -29,3 +32,6 @@ spec:
       port: 80
       protocol: TCP
       targetPort: 8080
+    - name: http-metrics
+      port: 9090
+      targetPort: 9090

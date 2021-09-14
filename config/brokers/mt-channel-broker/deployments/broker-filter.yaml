@@ -19,6 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/name: broker-filter
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
     matchLabels:
@@ -28,6 +31,9 @@ spec:
       labels:
         eventing.knative.dev/brokerRole: filter
         eventing.knative.dev/release: devel
+        app.kubernetes.io/name: broker-filter
+        app.kubernetes.io/version: devel
+        app.kubernetes.io/part-of: knative-eventing
     spec:
       serviceAccountName: mt-broker-filter
       enableServiceLinks: false
@@ -95,6 +101,9 @@ metadata:
   labels:
     eventing.knative.dev/brokerRole: filter
     eventing.knative.dev/release: devel
+    app.kubernetes.io/name: broker-filter
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
   name: broker-filter
   namespace: knative-eventing
 spec:

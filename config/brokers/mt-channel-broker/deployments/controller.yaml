@@ -19,6 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    app.kubernetes.io/name: mt-broker-controller
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
     matchLabels:
@@ -28,6 +31,9 @@ spec:
       labels:
         app: mt-broker-controller
         eventing.knative.dev/release: devel
+        app.kubernetes.io/name: broker-controller
+        app.kubernetes.io/version: devel
+        app.kubernetes.io/part-of: knative-eventing
     spec:
       # To avoid node becoming SPOF, spread our replicas to different nodes.
       affinity:

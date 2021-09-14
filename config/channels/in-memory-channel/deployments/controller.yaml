@@ -20,6 +20,9 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     knative.dev/high-availability: "true"
+    app.kubernetes.io/name: imc-controller
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
 spec:
   selector:
     matchLabels: &labels
@@ -27,7 +30,11 @@ spec:
       messaging.knative.dev/role: controller
   template:
     metadata:
-      labels: *labels
+      labels:
+        <<: *labels
+        app.kubernetes.io/name: imc-controller
+        app.kubernetes.io/version: devel
+        app.kubernetes.io/part-of: knative-eventing
     spec:
       affinity:
         podAntiAffinity:
@@ -97,6 +104,9 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app.kubernetes.io/name: imc-controller
+    app.kubernetes.io/version: devel
+    app.kubernetes.io/part-of: knative-eventing
     eventing.knative.dev/release: devel
   name: inmemorychannel-webhook
   namespace: knative-eventing
@@ -105,6 +115,12 @@ spec:
     - name: https-webhook
       port: 443
       targetPort: 8443
+    - name: http-metrics
+      port: 9090
+      targetPort: 9090
+    - name: http-profiling
+      port: 8008
+      targetPort: 8008
   selector:
     messaging.knative.dev/channel: in-memory-channel
     messaging.knative.dev/role: controller
