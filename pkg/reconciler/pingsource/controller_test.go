@@ -77,7 +77,7 @@ func TestNew(t *testing.T) {
 			},
 		}, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "config-kref-resolver",
+				Name:      "config-kreference-mapping",
 				Namespace: "knative-eventing",
 			},
 			Data: map[string]string{

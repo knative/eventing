@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	ConfigMapName = "config-kref-resolver"
+	ConfigMapName = "config-kreference-mapping"
 )
 
 type MappingResolver struct {
@@ -59,10 +59,10 @@ func NewMappingResolver(ctx context.Context, cmw configmap.Watcher, t tracker.In
 }
 
 func (mr *MappingResolver) MappingURIFromObjectReference(ctx context.Context, ref *corev1.ObjectReference) (bool, *apis.URL, error) {
-	mr.logger.Infow("resolving reference")
+	mr.logger.Infow("resolving reference", zap.Any("ref", ref))
 
-	if !feature.FromContext(ctx).IsEnabled(feature.KReferenceCustomResolvers) {
-		mr.logger.Infow("resolving reference not enabled")
+	if !feature.FromContext(ctx).IsEnabled(feature.KReferenceMapping) {
+		mr.logger.Infow("kreference mapping feature not enabled")
 		return false, nil, nil // not handled.
 	}
 
@@ -77,13 +77,13 @@ func (mr *MappingResolver) MappingURIFromObjectReference(ctx context.Context, re
 	//}
 
 	if mr.templates == nil {
-		mr.logger.Infow("resolving reference not handled (no mappings)", zap.Any("gvk", ref.GroupVersionKind()))
+		mr.logger.Infow("reference not handled", zap.Any("gvk", ref.GroupVersionKind()))
 		return false, nil, nil
 	}
 
 	tmpl, ok := mr.templates[ref.GroupVersionKind()]
 	if !ok {
-		mr.logger.Infow("resolving reference not handled", zap.Any("gvk", ref.GroupVersionKind()))
+		mr.logger.Infow("reference not handled", zap.Any("gvk", ref.GroupVersionKind()))
 		return false, nil, nil
 	}
 
@@ -112,7 +112,7 @@ func (mr *MappingResolver) updateFromConfigMap(cfg *corev1.ConfigMap) {
 	if cfg == nil {
 		return
 	}
-	mr.logger.Infow("loading kreference resolver configmap")
+	mr.logger.Infow("loading kreference mapping configmap")
 
 	mr.templates = make(map[schema.GroupVersionKind]*template.Template)
 
@@ -128,7 +128,7 @@ func (mr *MappingResolver) updateFromConfigMap(cfg *corev1.ConfigMap) {
 			// Try <kind>.<version> (core k8s API)
 			if gk.Group == "" {
 				// Wrong key format
-				mr.logger.Warnw("failed to parse kreference resolver key. Must be of the form <kind>.<version>(.<group>)?", zap.String("key", key))
+				mr.logger.Warnw("failed to parse kreference mapping key. Must be of the form <kind>.<version>(.<group>)?", zap.String("key", key))
 				continue
 			}
 
@@ -140,11 +140,11 @@ func (mr *MappingResolver) updateFromConfigMap(cfg *corev1.ConfigMap) {
 
 		tmpl, err := template.New(key).Parse(stmpl)
 		if err != nil {
-			mr.logger.Warnw("failed to parse kreference resolver template", zap.String("template", stmpl), zap.Error(err))
+			mr.logger.Warnw("failed to parse kreference mapping template", zap.String("template", stmpl), zap.Error(err))
 			continue
 		}
 
 		mr.templates[*gvk] = tmpl
-		mr.logger.Infow("resolver template loaded", zap.String("template", stmpl), zap.Error(err))
+		mr.logger.Infow("mapping template loaded", zap.String("template", stmpl), zap.Error(err))
 	}
 }

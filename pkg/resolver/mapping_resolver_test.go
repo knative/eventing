@@ -71,7 +71,7 @@ func TestMappingResolver(t *testing.T) {
 			ref:     serviceObjRef(testingNamespace),
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "config-kref-resolver",
+					Name:      "config-kreference-mapping",
 					Namespace: testingNamespace,
 				},
 				Data: map[string]string{
@@ -86,7 +86,7 @@ func TestMappingResolver(t *testing.T) {
 			ref:     serviceObjRef(testingNamespace),
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "config-kref-resolver",
+					Name:      "config-kreference-mapping",
 					Namespace: testingNamespace,
 				},
 				Data: map[string]string{
@@ -101,7 +101,7 @@ func TestMappingResolver(t *testing.T) {
 			ref:     serviceObjRef(testingNamespace),
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "config-kref-resolver",
+					Name:      "config-kreference-mapping",
 					Namespace: testingNamespace,
 				},
 				Data: map[string]string{
@@ -122,7 +122,7 @@ func TestMappingResolver(t *testing.T) {
 			track := tracker.New(func(types.NamespacedName) {}, 0)
 
 			if tc.enabled {
-				ctx = feature.ToContext(ctx, feature.Flags{feature.KReferenceCustomResolvers: feature.Enabled})
+				ctx = feature.ToContext(ctx, feature.Flags{feature.KReferenceMapping: feature.Enabled})
 			}
 
 			resolver := NewMappingResolver(ctx, mw, track)
