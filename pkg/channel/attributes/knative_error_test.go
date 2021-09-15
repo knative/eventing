@@ -19,6 +19,7 @@ package attributes
 import (
 	"context"
 	"math/rand"
+	"net/url"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -30,29 +31,43 @@ import (
 // Test the KnativeErrorTransformers() functionality
 func TestKnativeErrorTransformers(t *testing.T) {
 
+	// Test Data
+	destinationURL, _ := url.Parse("http://foo.bar.svc.cluster.local")
+
 	// Define the test cases
 	testCases := []struct {
 		name string
+		dest url.URL
 		code int
 		data string
 	}{
 		{
+			name: "Destination Empty",
+			dest: url.URL{},
+			code: 500,
+			data: "",
+		},
+		{
 			name: "Data Empty",
+			dest: *destinationURL,
 			code: 500,
 			data: "",
 		},
 		{
 			name: "Data Less Than Max Length",
+			dest: *destinationURL,
 			code: 500,
 			data: randomString(t, KnativeErrorDataExtensionMaxLength-1),
 		},
 		{
 			name: "Data Exactly Max Length",
+			dest: *destinationURL,
 			code: 500,
 			data: randomString(t, KnativeErrorDataExtensionMaxLength),
 		},
 		{
 			name: "Data More Than Max Length",
+			dest: *destinationURL,
 			code: 500,
 			data: randomString(t, KnativeErrorDataExtensionMaxLength+1),
 		},
@@ -65,12 +80,13 @@ func TestKnativeErrorTransformers(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 
 			// Get the KnativeErrorTransformers for the current testCase
-			knativeErrorDataTransformer := KnativeErrorTransformers(testCase.code, testCase.data)
+			knativeErrorDataTransformer := KnativeErrorTransformers(testCase.dest, testCase.code, testCase.data)
 
 			// Create the Transformer Input/Want Events
 			inputEvent := cetest.MinEvent()
 			inputMessage := binding.ToMessage(&inputEvent)
 			wantEvent := inputEvent.Clone()
+			wantEvent.SetExtension(KnativeErrorDestExtensionKey, testCase.dest)
 			wantEvent.SetExtension(KnativeErrorCodeExtensionKey, testCase.code)
 			data := testCase.data
 			if len(data) > KnativeErrorDataExtensionMaxLength {

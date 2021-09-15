@@ -30,6 +30,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+
 	"knative.dev/eventing/pkg/channel/attributes"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
@@ -71,7 +72,7 @@ type DispatchExecutionInfo struct {
 	ResponseBody []byte
 }
 
-// NewMessageDispatcherFromConfig creates a new Message dispatcher based on config.
+// NewMessageDispatcher creates a new Message dispatcher based on config.
 func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
 	sender, err := kncloudevents.NewHTTPMessageSenderWithTarget("")
 	if err != nil {
@@ -80,7 +81,7 @@ func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
 	return NewMessageDispatcherFromSender(logger, sender)
 }
 
-// NewMessageDispatcherFromConfig creates a new event dispatcher.
+// NewMessageDispatcherFromSender creates a new Message dispatcher with specified sender.
 func NewMessageDispatcherFromSender(logger *zap.Logger, sender *kncloudevents.HTTPMessageSender) *MessageDispatcherImpl {
 	return &MessageDispatcherImpl{
 		sender:           sender,
@@ -122,7 +123,7 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 		if err != nil {
 			// If DeadLetter is configured, then send original message with knative error extensions
 			if deadLetter != nil {
-				dispatchTransformers := d.dispatchExecutionInfoTransformers(dispatchExecutionInfo)
+				dispatchTransformers := d.dispatchExecutionInfoTransformers(destination, dispatchExecutionInfo)
 				_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, additionalHeaders, retriesConfig, append(transformers, dispatchTransformers)...)
 				if deadLetterErr != nil {
 					return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
@@ -158,7 +159,7 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	if err != nil {
 		// If DeadLetter is configured, then send original message with knative error extensions
 		if deadLetter != nil {
-			dispatchTransformers := d.dispatchExecutionInfoTransformers(dispatchExecutionInfo)
+			dispatchTransformers := d.dispatchExecutionInfoTransformers(reply, dispatchExecutionInfo)
 			_, deadLetterResponse, _, dispatchExecutionInfo, deadLetterErr := d.executeRequest(ctx, deadLetter, message, responseAdditionalHeaders, retriesConfig, append(transformers, dispatchTransformers)...)
 			if deadLetterErr != nil {
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
@@ -262,13 +263,17 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 	}
 }
 
-// dispatchExecutionTransformer returns Transformers based on the specified DispatchExecutionInfo
-func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
+// dispatchExecutionTransformer returns Transformers based on the specified destination and DispatchExecutionInfo
+func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *url.URL, dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
+	if destination == nil {
+		destination = &url.URL{}
+	}
+	destination = d.sanitizeURL(destination)
 	// Unprintable control characters are not allowed in header values
 	// and cause HTTP requests to fail if not removed.
 	// https://pkg.go.dev/golang.org/x/net/http/httpguts#ValidHeaderFieldValue
 	httpBody := sanitizeHTTPBody(dispatchExecutionInfo.ResponseBody)
-	return attributes.KnativeErrorTransformers(dispatchExecutionInfo.ResponseCode, httpBody)
+	return attributes.KnativeErrorTransformers(*destination, dispatchExecutionInfo.ResponseCode, httpBody)
 }
 
 func sanitizeHTTPBody(body []byte) string {
