@@ -51,7 +51,7 @@ rules:
       - "eventing.knative.dev"
     resources:
       - "brokers"
-      - "eventtype"
+      - "eventtypes"
       - "triggers"
     verbs:
       - "get"
