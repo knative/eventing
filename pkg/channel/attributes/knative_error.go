@@ -30,7 +30,7 @@ const (
 	KnativeErrorDataExtensionMaxLength = 1024
 )
 
-// KnativeErrorTransformers returns Transformers which add the specified error code and data extensions.
+// KnativeErrorTransformers returns Transformers which add the specified destination and error code/data extensions.
 func KnativeErrorTransformers(destination url.URL, code int, data string) binding.Transformers {
 	destTransformer := transformer.AddExtension(KnativeErrorDestExtensionKey, destination)
 	codeTransformer := transformer.AddExtension(KnativeErrorCodeExtensionKey, code)

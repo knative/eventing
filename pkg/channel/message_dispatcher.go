@@ -263,7 +263,7 @@ func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
 	}
 }
 
-// dispatchExecutionTransformer returns Transformers based on the specified DispatchExecutionInfo
+// dispatchExecutionTransformer returns Transformers based on the specified destination and DispatchExecutionInfo
 func (d *MessageDispatcherImpl) dispatchExecutionInfoTransformers(destination *url.URL, dispatchExecutionInfo *DispatchExecutionInfo) binding.Transformers {
 	if destination == nil {
 		destination = &url.URL{}
