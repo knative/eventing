@@ -333,7 +333,7 @@ function install_channel_crds() {
   if [[ -z "${EVENTING_IN_MEMORY_CHANNEL_YAML:-}" ]]; then
     build_knative_from_source
   else
-    echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
+    echo "use existing ${EVENTING_IN_MEMORY_CHANNEL_YAML}"
   fi
   local EVENTING_IN_MEMORY_CHANNEL_NAME=${TMP_DIR}/${EVENTING_IN_MEMORY_CHANNEL_YAML##*/}
   sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_IN_MEMORY_CHANNEL_YAML} > ${EVENTING_IN_MEMORY_CHANNEL_NAME}
