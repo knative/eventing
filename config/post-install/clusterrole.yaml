@@ -35,7 +35,51 @@ rules:
   - apiGroups:
       - "sources.knative.dev"
     resources:
+      - "apiserversources"
+      - "containersources"
       - "pingsources"
+      - "sinkbindings"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers"
+      - "eventtypes"
+      - "triggers"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "channels"
+      - "inmemorychannels"
+      - "subscriptions"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+  - apiGroups:
+      - "flows.knative.dev"
+    resources:
+      - "parallels"
+      - "sequences"
     verbs:
       - "get"
       - "list"
