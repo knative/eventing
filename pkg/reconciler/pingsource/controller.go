@@ -30,13 +30,14 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/adapter/v2"
+	"knative.dev/eventing/pkg/apis/feature"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1/pingsource"
 	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
+	"knative.dev/eventing/pkg/resolver"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -59,6 +60,9 @@ func NewController(
 		logger.Fatalw("Error converting leader election configuration to JSON", zap.Error(err))
 	}
 
+	featureStore := feature.NewStore(logging.FromContext(ctx).Named("feature-config-store"))
+	featureStore.WatchConfigs(cmw)
+
 	// Configure the reconciler
 
 	deploymentInformer := deploymentinformer.Get(ctx)
@@ -70,9 +74,13 @@ func NewController(
 		configAcc:     reconcilersource.WatchConfigurations(ctx, component, cmw),
 	}
 
-	impl := pingsourcereconciler.NewImpl(ctx, r)
+	impl := pingsourcereconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			ConfigStore: featureStore,
+		}
+	})
 
-	r.sinkResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
+	r.sinkResolver = resolver.NewURIResolver(ctx, cmw, impl.Tracker)
 
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

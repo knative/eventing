@@ -14,10 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package feature
+package resolver
 
-const (
-	KReferenceGroup   = "kreference-group"
-	DeliveryTimeout   = "delivery-timeout"
-	KReferenceMapping = "kreference-mapping"
+import (
+	"context"
+
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 )
+
+// NewURIResolver constructs a new URIResolver with context and a callback
+// for a given listableType (Listable) passed to the URIResolver's tracker.
+func NewURIResolver(ctx context.Context, cmw configmap.Watcher, t tracker.Interface) *resolver.URIResolver {
+	mr := NewMappingResolver(ctx, cmw, t)
+
+	return resolver.NewURIResolverFromTracker(ctx, t, mr.MappingURIFromObjectReference)
+}
