@@ -265,7 +265,7 @@ func TestPingSourceValidation(t *testing.T) {
 				return errs
 			}(),
 		}, {
-			name: "invalid DataBase64 is to big ",
+			name: "invalid DataBase64 is to big",
 			source: PingSource{
 				Spec: PingSourceSpec{
 					Schedule:    "*/2 * * * *",
@@ -292,7 +292,7 @@ func TestPingSourceValidation(t *testing.T) {
 				return errs
 			}(),
 		}, {
-			name: "invalid Data is to big ",
+			name: "invalid Data is to big",
 			source: PingSource{
 				Spec: PingSourceSpec{
 					Schedule:    "*/2 * * * *",
@@ -320,7 +320,7 @@ func TestPingSourceValidation(t *testing.T) {
 				return errs
 			}(),
 		}, {
-			name: "big data ok ",
+			name: "big data ok",
 			source: PingSource{
 
 				Spec: PingSourceSpec{
@@ -343,7 +343,7 @@ func TestPingSourceValidation(t *testing.T) {
 			},
 			want: nil,
 		}, {
-			name: "big data still ok ",
+			name: "big data still ok",
 			source: PingSource{
 
 				Spec: PingSourceSpec{

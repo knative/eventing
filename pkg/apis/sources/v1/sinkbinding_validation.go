@@ -33,6 +33,8 @@ func (fb *SinkBinding) Validate(ctx context.Context) *apis.FieldError {
 
 // Validate implements apis.Validatable
 func (fbs *SinkBindingSpec) Validate(ctx context.Context) *apis.FieldError {
-	return fbs.Subject.Validate(ctx).ViaField("subject").Also(
+	err := fbs.Subject.Validate(ctx).ViaField("subject").Also(
 		fbs.Sink.Validate(ctx).ViaField("sink"))
+	err = err.Also(fbs.SourceSpec.Validate(ctx))
+	return err
 }
