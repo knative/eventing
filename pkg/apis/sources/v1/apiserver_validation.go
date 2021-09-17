@@ -72,6 +72,6 @@ func (cs *ApiServerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 			errs = errs.Also(apis.ErrMissingField("kind").ViaField("owner"))
 		}
 	}
-
+	errs = errs.Also(cs.SourceSpec.Validate(ctx))
 	return errs
 }
