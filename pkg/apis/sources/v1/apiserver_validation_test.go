@@ -204,6 +204,32 @@ func TestAPIServerValidation(t *testing.T) {
 			},
 		},
 		want: errors.New("missing field(s): resources"),
+	}, {
+		name: "invalid spec ceOverrides validation",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Foo",
+			}},
+			SourceSpec: duckv1.SourceSpec{
+				CloudEventOverrides: &duckv1.CloudEventOverrides{
+					Extensions: map[string]string{"Invalid_type": "any value"},
+				},
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+		},
+		want: apis.ErrInvalidKeyName(
+			"Invalid_type",
+			"ceOverrides.extensions",
+			"keys are expected to be alphanumeric",
+		),
 	}}
 
 	for _, test := range tests {

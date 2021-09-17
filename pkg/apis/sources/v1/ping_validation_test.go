@@ -265,7 +265,7 @@ func TestPingSourceValidation(t *testing.T) {
 				return errs
 			}(),
 		}, {
-			name: "invalid DataBase64 is to big ",
+			name: "invalid DataBase64 is to big",
 			source: PingSource{
 				Spec: PingSourceSpec{
 					Schedule:    "*/2 * * * *",
@@ -292,7 +292,7 @@ func TestPingSourceValidation(t *testing.T) {
 				return errs
 			}(),
 		}, {
-			name: "invalid Data is to big ",
+			name: "invalid Data is to big",
 			source: PingSource{
 				Spec: PingSourceSpec{
 					Schedule:    "*/2 * * * *",
@@ -320,7 +320,7 @@ func TestPingSourceValidation(t *testing.T) {
 				return errs
 			}(),
 		}, {
-			name: "big data ok ",
+			name: "big data ok",
 			source: PingSource{
 
 				Spec: PingSourceSpec{
@@ -343,7 +343,7 @@ func TestPingSourceValidation(t *testing.T) {
 			},
 			want: nil,
 		}, {
-			name: "big data still ok ",
+			name: "big data still ok",
 			source: PingSource{
 
 				Spec: PingSourceSpec{
@@ -404,6 +404,36 @@ func TestPingSourceValidation(t *testing.T) {
 			want: func() *apis.FieldError {
 				var errs *apis.FieldError
 				fe := apis.ErrInvalidValue("unsupported descriptor @every", "spec.schedule")
+				errs = errs.Also(fe)
+				return errs
+			}(),
+		}, {
+			name: "invalid spec ceOverrides validation",
+			source: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "*/2 * * * *",
+					Timezone: "Europe/Paris",
+					SourceSpec: duckv1.SourceSpec{
+						CloudEventOverrides: &duckv1.CloudEventOverrides{
+							Extensions: map[string]string{"Invalid_type": "any value"},
+						},
+						Sink: duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: "v1",
+								Kind:       "broker",
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			want: func() *apis.FieldError {
+				var errs *apis.FieldError
+				fe := apis.ErrInvalidKeyName(
+					"Invalid_type",
+					"spec.ceOverrides.extensions",
+					"keys are expected to be alphanumeric",
+				)
 				errs = errs.Also(fe)
 				return errs
 			}(),
