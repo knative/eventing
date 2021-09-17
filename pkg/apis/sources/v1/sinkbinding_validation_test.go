@@ -123,7 +123,7 @@ func TestSinkBindingValidation(t *testing.T) {
 						APIVersion: "apps/v1",
 						Kind:       "Deployment",
 						Name:       "jeanne",
-						Namespace:  "default",
+						Namespace:  "test",
 					},
 				},
 				SourceSpec: duckv1.SourceSpec{
@@ -135,7 +135,7 @@ func TestSinkBindingValidation(t *testing.T) {
 							APIVersion: "serving.knative.dev/v1",
 							Kind:       "Service",
 							Name:       "gemma",
-							Namespace:  "default",
+							Namespace:  "test",
 						},
 					},
 				},
