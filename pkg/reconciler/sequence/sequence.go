@@ -252,29 +252,29 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 	}
 
 	for _, c := range exists {
-		channelable, ok := c.(*eventingduckv1.Channelable)
-		if !ok {
-			logging.FromContext(ctx).Errorw("Failed to convert to Channelable Object", zap.Any("channel", c), zap.Error(err))
-			return fmt.Errorf("failed to convert to Channelable Object: %+v", c)
+		ch, err := kmeta.DeletionHandlingAccessor(c)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed to get get channel", zap.Any("channel", c), zap.Error(err))
+			return err
 		}
 
-		if !channelable.GetDeletionTimestamp().IsZero() ||
-			!metav1.IsControlledBy(channelable, seq) {
+		if !ch.GetDeletionTimestamp().IsZero() ||
+			!metav1.IsControlledBy(ch, seq) {
 			continue
 		}
 
 		used := false
-		for _, ch := range wanted {
-			if equality.Semantic.DeepDerivative(ch, channelable) {
+		for _, cw := range wanted {
+			if cw.Name == ch.GetName() {
 				used = true
 				break
 			}
 		}
 
 		if !used {
-			err = channelResourceInterface.Delete(ctx, channelable.Name, metav1.DeleteOptions{})
+			err = channelResourceInterface.Delete(ctx, ch.GetName(), metav1.DeleteOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Errorw("Failed to delete Channel", zap.Any("channel", channelable), zap.Error(err))
+				logging.FromContext(ctx).Errorw("Failed to delete Channel", zap.Any("channel", ch), zap.Error(err))
 				return err
 			}
 		}
@@ -298,8 +298,7 @@ func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Se
 
 		used := false
 		for _, ch := range wanted {
-			if sub.Spec.Channel.APIVersion == ch.APIVersion &&
-				sub.Spec.Channel.Name == ch.Name {
+			if sub.Spec.Channel.Name == ch.Name {
 				used = true
 				break
 			}
