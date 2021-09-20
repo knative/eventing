@@ -273,7 +273,22 @@ knative.dev/pkg/apis/duck/v1.KReference
 <td>
 <em>(Optional)</em>
 <p>DeadLetterChannel is a KReference and is set by the channel when it supports native error handling via a channel
-Failed messages are delivered here.</p>
+Failed messages are delivered here.
+Deprecated, see DeadLetterSinkUri insteam</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>deadLetterSinkUri</code><br/>
+<em>
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeadLetterSinkUri is the resolved URI of the dead letter sink.</p>
 </td>
 </tr>
 </tbody>
@@ -368,36 +383,6 @@ More information on Duration format:
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 <p>For linear policy, backoff delay is backoffDelay*<numberOfRetries>.
 For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus
-</h3>
-<p>
-<p>DeliveryStatus contains the Status of an object supporting delivery options.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>deadLetterChannel</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
-knative.dev/pkg/apis/duck/v1.KReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
-where failed events are sent to.</p>
 </td>
 </tr>
 </tbody>

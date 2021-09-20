@@ -65,8 +65,12 @@ type ChannelableStatus struct {
 	SubscribableStatus `json:",inline"`
 	// DeadLetterChannel is a KReference and is set by the channel when it supports native error handling via a channel
 	// Failed messages are delivered here.
+	// Deprecated, see DeadLetterSinkUri insteam
 	// +optional
 	DeadLetterChannel *duckv1.KReference `json:"deadLetterChannel,omitempty"`
+	// DeadLetterSinkUri is the resolved URI of the dead letter sink.
+	// +optional
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
 }
 
 var (

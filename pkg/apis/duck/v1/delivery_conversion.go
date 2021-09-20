@@ -32,13 +32,3 @@ func (source *DeliverySpec) ConvertTo(ctx context.Context, sink apis.Convertible
 func (sink *DeliverySpec) ConvertFrom(ctx context.Context, source apis.Convertible) error {
 	return fmt.Errorf("v1 is the highest known version, got: %T", source)
 }
-
-// ConvertTo implements apis.Convertible
-func (source *DeliveryStatus) ConvertTo(ctx context.Context, sink apis.Convertible) error {
-	return fmt.Errorf("v1 is the highest known version, got: %T", sink)
-}
-
-// ConvertFrom implements apis.Convertible
-func (sink *DeliveryStatus) ConvertFrom(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1 is the highest known version, got: %T", source)
-}

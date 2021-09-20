@@ -75,25 +75,3 @@ func (sink *DeliverySpec) ConvertFrom(ctx context.Context, from apis.Convertible
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
 }
-
-// ConvertTo implements apis.Convertible
-func (source *DeliveryStatus) ConvertTo(ctx context.Context, to apis.Convertible) error {
-	switch sink := to.(type) {
-	case *eventingduckv1.DeliveryStatus:
-		sink.DeadLetterChannel = source.DeadLetterChannel
-		return nil
-	default:
-		return fmt.Errorf("unknown version, got: %T", sink)
-	}
-}
-
-// ConvertFrom implements apis.Convertible
-func (sink *DeliveryStatus) ConvertFrom(ctx context.Context, from apis.Convertible) error {
-	switch source := from.(type) {
-	case *eventingduckv1.DeliveryStatus:
-		sink.DeadLetterChannel = source.DeadLetterChannel
-		return nil
-	default:
-		return fmt.Errorf("unknown version, got: %T", source)
-	}
-}

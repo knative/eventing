@@ -121,22 +121,6 @@ const (
 Channel, brokers and event sources are not required to support all these
 capabilities and are free to add more delivery options.
 
-### Exposing underlying DLC
-
-Channel implementation supporting dead letter channel should advertise it in
-their status.
-
-```go
-
-// DeliveryStatus contains the Status of an object supporting delivery options.
-type DeliveryStatus struct {
-	// DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
-	// where failed events are sent to.
-	// +optional
-	DeadLetterChannel *duckv1.KReference `json:"deadLetterChannel,omitempty"`
-}
-```
-
 ### Error events
 
 The error event is the original events annotated with various CloudEvents
