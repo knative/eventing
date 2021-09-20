@@ -121,7 +121,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		return err
 	}
 
-	return r.removeUnwantedSubscriptions(ctx, s, channels)
+	return r.removeUnwantedSubscriptions(ctx, s, subs)
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1.Channelable, error) {
@@ -254,7 +254,7 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 	for _, c := range exists {
 		ch, err := kmeta.DeletionHandlingAccessor(c)
 		if err != nil {
-			logging.FromContext(ctx).Errorw("Failed to get get channel", zap.Any("channel", c), zap.Error(err))
+			logging.FromContext(ctx).Errorw("Failed to get channel", zap.Any("channel", c), zap.Error(err))
 			return err
 		}
 
@@ -283,7 +283,7 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 	return nil
 }
 
-func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Sequence, wanted []*eventingduckv1.Channelable) error {
+func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Sequence, wanted []*messagingv1.Subscription) error {
 	subs, err := r.subscriptionLister.Subscriptions(seq.Namespace).List(labels.Everything())
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Error listing Subscriptions", zap.Any("namespace", seq.Namespace), zap.Error(err))
@@ -297,8 +297,8 @@ func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Se
 		}
 
 		used := false
-		for _, ch := range wanted {
-			if sub.Spec.Channel.Name == ch.Name {
+		for _, sw := range wanted {
+			if sub.Name == sw.Name {
 				used = true
 				break
 			}
