@@ -120,11 +120,6 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 		*out = new(duckv1.KReference)
 		**out = **in
 	}
-	if in.DeadLetterSinkURI != nil {
-		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
-		*out = new(apis.URL)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 

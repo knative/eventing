@@ -273,22 +273,7 @@ knative.dev/pkg/apis/duck/v1.KReference
 <td>
 <em>(Optional)</em>
 <p>DeadLetterChannel is a KReference and is set by the channel when it supports native error handling via a channel
-Failed messages are delivered here.
-Deprecated, see DeadLetterSinkUri insteam</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>deadLetterSinkUri</code><br/>
-<em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DeadLetterSinkUri is the resolved URI of the dead letter sink.</p>
+Failed messages are delivered here.</p>
 </td>
 </tr>
 </tbody>
