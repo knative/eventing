@@ -39,6 +39,7 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	}
 	// Default the Subscriber namespace
 	ts.Subscriber.SetDefaults(ctx)
+	ts.Delivery.SetDefaults(ctx)
 }
 
 func setLabels(t *Trigger) {
