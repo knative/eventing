@@ -25,6 +25,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 var (
@@ -76,6 +78,50 @@ func TestTriggerDefaults(t *testing.T) {
 						Ref: &duckv1.KReference{
 							Name:      "foo",
 							Namespace: namespace,
+						},
+					},
+				}},
+		},
+		"deadLetterSink, ns defaulted": {
+			initial: Trigger{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "custom",
+				},
+				Spec: TriggerSpec{
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Name: "foo",
+							},
+						},
+					},
+					Broker: otherBroker,
+					Subscriber: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:      "foo",
+							Namespace: "custom1",
+						},
+					}}},
+			expected: Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "custom",
+					Labels:    map[string]string{brokerLabel: otherBroker},
+				},
+				Spec: TriggerSpec{
+					Broker: otherBroker,
+					Filter: emptyTriggerFilter,
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Name:      "foo",
+								Namespace: "custom",
+							},
+						},
+					},
+					Subscriber: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:      "foo",
+							Namespace: "custom1",
 						},
 					},
 				}},
