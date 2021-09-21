@@ -21,6 +21,9 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging/config"
 
 	"github.com/google/go-cmp/cmp"
@@ -43,6 +46,41 @@ func TestInMemoryChannelSetDefaults(t *testing.T) {
 		"non-empty gets added ChannelDefaulter": {
 			initial:  InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"somethingelse": "yup"}}},
 			expected: InMemoryChannel{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1", "somethingelse": "yup"}}},
+		},
+		"deadLetterSink.ref.namespace gets defaulted": {
+			initial: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "imc",
+					Namespace:   "custom",
+					Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1"},
+				},
+				Spec: InMemoryChannelSpec{eventingduckv1.ChannelableSpec{
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Name: "foo",
+							},
+						},
+					},
+				}},
+			},
+			expected: InMemoryChannel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "imc",
+					Namespace:   "custom",
+					Annotations: map[string]string{"messaging.knative.dev/subscribable": "v1"},
+				},
+				Spec: InMemoryChannelSpec{eventingduckv1.ChannelableSpec{
+					Delivery: &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Name:      "foo",
+								Namespace: "custom",
+							},
+						},
+					},
+				}},
+			},
 		},
 	}
 	for n, tc := range testCases {
