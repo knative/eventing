@@ -263,6 +263,24 @@ SubscribableStatus
 </tr>
 <tr>
 <td>
+<code>DeliveryStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>deadLetterChannel</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
@@ -273,7 +291,8 @@ knative.dev/pkg/apis/duck/v1.KReference
 <td>
 <em>(Optional)</em>
 <p>DeadLetterChannel is a KReference and is set by the channel when it supports native error handling via a channel
-Failed messages are delivered here.</p>
+Failed messages are delivered here.
+Deprecated in favor of DeliveryStatus, to be removed September 2022.</p>
 </td>
 </tr>
 </tbody>
@@ -375,7 +394,10 @@ For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus
 </h3>
 <p>
-<p>DeliveryStatus contains the Status of an object supporting delivery options.</p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.ChannelableStatus">ChannelableStatus</a>, <a href="#eventing.knative.dev/v1.BrokerStatus">BrokerStatus</a>, <a href="#eventing.knative.dev/v1.TriggerStatus">TriggerStatus</a>, <a href="#messaging.knative.dev/v1.SubscriptionStatusPhysicalSubscription">SubscriptionStatusPhysicalSubscription</a>)
+</p>
+<p>
+<p>DeliveryStatus contains the Status of an object supporting delivery options. This type is intended to be embedded into a status struct.</p>
 </p>
 <table>
 <thead>
@@ -387,16 +409,16 @@ For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 <tbody>
 <tr>
 <td>
-<code>deadLetterChannel</code><br/>
+<code>deadLetterSinkUri</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#KReference">
-knative.dev/pkg/apis/duck/v1.KReference
+<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
+knative.dev/pkg/apis.URL
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
+<p>DeadLetterSink is a KReference that is the reference to the native, platform specific channel
 where failed events are sent to.</p>
 </td>
 </tr>
@@ -1721,6 +1743,23 @@ knative.dev/pkg/apis/duck/v1.Addressable
 delivered into the Broker mesh.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>DeliveryStatus</code><br/>
+<em>
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="eventing.knative.dev/v1.TriggerFilter">TriggerFilter
@@ -1889,16 +1928,19 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
-<code>deadLetterSinkUri</code><br/>
+<code>DeliveryStatus</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
 </a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>DeadLetterSinkURI is the resolved URI of the dead letter sink for this Trigger.</p>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
 </td>
 </tr>
 </tbody>
@@ -3828,16 +3870,19 @@ knative.dev/pkg/apis.URL
 </tr>
 <tr>
 <td>
-<code>deadLetterSinkUri</code><br/>
+<code>DeliveryStatus</code><br/>
 <em>
-<a href="https://pkg.go.dev/knative.dev/pkg/apis#URL">
-knative.dev/pkg/apis.URL
+<a href="#duck.knative.dev/v1.DeliveryStatus">
+DeliveryStatus
 </a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.</p>
+<p>
+(Members of <code>DeliveryStatus</code> are embedded into this type.)
+</p>
+<p>DeliveryStatus contains a resolved URL to the dead letter sink address, and any other
+resolved delivery options.</p>
 </td>
 </tr>
 </tbody>

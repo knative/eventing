@@ -381,11 +381,7 @@ func (in *SubscriptionStatusPhysicalSubscription) DeepCopyInto(out *Subscription
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DeadLetterSinkURI != nil {
-		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
-		*out = new(apis.URL)
-		(*in).DeepCopyInto(*out)
-	}
+	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
 	return
 }
 
