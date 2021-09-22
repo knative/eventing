@@ -35,3 +35,4 @@ rules:
       - watch
       - update
       - patch
+      - delete

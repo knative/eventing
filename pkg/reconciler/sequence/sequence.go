@@ -26,6 +26,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"knative.dev/pkg/kmeta"
@@ -42,7 +43,7 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	"knative.dev/eventing/pkg/duck"
-	ducklib "knative.dev/eventing/pkg/duck"
+
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 )
 
@@ -99,6 +100,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		channels = append(channels, channelable)
 		logging.FromContext(ctx).Infof("Reconciled Channel Object: %s/%s %+v", s.Namespace, ingressChannelName, channelable)
 	}
+
 	s.Status.PropagateChannelStatuses(channels)
 
 	subs := make([]*messagingv1.Subscription, 0, len(s.Spec.Steps))
@@ -113,7 +115,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	}
 	s.Status.PropagateSubscriptionStatuses(subs)
 
-	return nil
+	// If a sequence is modified resulting in the number of steps decreasing, there will be
+	// leftover channels and subscriptions that need to be removed.
+	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, s, channels); err != nil {
+		return err
+	}
+
+	return r.removeUnwantedSubscriptions(ctx, s, subs)
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1.Sequence, channelObjRef corev1.ObjectReference) (*eventingduckv1.Channelable, error) {
@@ -121,7 +129,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	c, err := r.trackAndFetchChannel(ctx, s, channelObjRef)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newChannel, err := ducklib.NewPhysicalChannel(
+			newChannel, err := duck.NewPhysicalChannel(
 				s.Spec.ChannelTemplate.TypeMeta,
 				metav1.ObjectMeta{
 					Name:      channelObjRef.Name,
@@ -130,7 +138,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 						*kmeta.NewControllerRef(s),
 					},
 				},
-				ducklib.WithPhysicalChannelSpec(s.Spec.ChannelTemplate.Spec),
+				duck.WithPhysicalChannelSpec(s.Spec.ChannelTemplate.Spec),
 			)
 			logger.Infof("Creating Channel Object: %+v", newChannel)
 			if err != nil {
@@ -148,7 +156,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
 				logger.Errorw("Failed to convert to channelable", zap.Any("channel", created), zap.Error(err))
-				return nil, fmt.Errorf("Failed to convert created channel to channelable: %s", err)
+				return nil, fmt.Errorf("failed to convert created channel to channelable: %s", err)
 			}
 			return channelable, nil
 		}
@@ -159,7 +167,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	channelable, ok := c.(*eventingduckv1.Channelable)
 	if !ok {
 		logger.Errorw("Failed to convert to Channelable Object", zap.Any("channel", c), zap.Error(err))
-		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", c)
+		return nil, fmt.Errorf("failed to convert to Channelable Object: %+v", c)
 	}
 	return channelable, nil
 }
@@ -223,4 +231,87 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, seq *v1.Sequence,
 		return nil, err
 	}
 	return obj, err
+}
+
+func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, seq *v1.Sequence, wanted []*eventingduckv1.Channelable) error {
+	channelObjRef := corev1.ObjectReference{
+		Kind:       seq.Spec.ChannelTemplate.Kind,
+		APIVersion: seq.Spec.ChannelTemplate.APIVersion,
+	}
+
+	l, err := r.channelableTracker.ListerFor(channelObjRef)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channelRef", channelObjRef), zap.Error(err))
+		return err
+	}
+
+	exists, err := l.ByNamespace(seq.GetNamespace()).List(labels.Everything())
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error listing Channels", zap.Any("namespace", seq.Namespace), zap.Any("channelRef", channelObjRef), zap.Error(err))
+		return err
+	}
+
+	for _, c := range exists {
+		ch, err := kmeta.DeletionHandlingAccessor(c)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed to get channel", zap.Any("channel", c), zap.Error(err))
+			return err
+		}
+
+		if !ch.GetDeletionTimestamp().IsZero() ||
+			!metav1.IsControlledBy(ch, seq) {
+			continue
+		}
+
+		used := false
+		for _, cw := range wanted {
+			if cw.Name == ch.GetName() {
+				used = true
+				break
+			}
+		}
+
+		if !used {
+			err = channelResourceInterface.Delete(ctx, ch.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Errorw("Failed to delete Channel", zap.Any("channel", ch), zap.Error(err))
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, seq *v1.Sequence, wanted []*messagingv1.Subscription) error {
+	subs, err := r.subscriptionLister.Subscriptions(seq.Namespace).List(labels.Everything())
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error listing Subscriptions", zap.Any("namespace", seq.Namespace), zap.Error(err))
+		return err
+	}
+
+	for _, sub := range subs {
+		if !sub.GetDeletionTimestamp().IsZero() ||
+			!metav1.IsControlledBy(sub, seq) {
+			continue
+		}
+
+		used := false
+		for _, sw := range wanted {
+			if sub.Name == sw.Name {
+				used = true
+				break
+			}
+		}
+
+		if !used {
+			err = r.eventingClientSet.MessagingV1().Subscriptions(seq.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Infow("Failed to delete Subscription", zap.Any("subscription", sub), zap.Error(err))
+				return err
+			}
+		}
+	}
+
+	return nil
 }

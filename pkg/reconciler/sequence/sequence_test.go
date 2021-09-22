@@ -804,69 +804,406 @@ func TestAllCases(t *testing.T) {
 					},
 				})),
 		}},
-	},
-		{
-			Name: "sequenceupdatesubscription",
-			Key:  pKey,
-			Objects: []runtime.Object{
-				NewSequence(sequenceName, testNS,
-					WithInitSequenceConditions,
-					WithSequenceChannelTemplateSpec(imc),
-					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}})),
-				createChannel(sequenceName, 0),
-				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
-					WithSequenceChannelTemplateSpec(imc),
-					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+	}, {
+		Name: "sequenceupdatesubscription",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}})),
+			createChannel(sequenceName, 0),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}))),
+		},
+		WantErr: false,
+		WantDeletes: []clientgotesting.DeleteActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNS,
+				Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
 			},
-			WantErr: false,
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
+			Name: resources.SequenceChannelName(sequenceName, 0),
+		}},
+		WantCreates: []runtime.Object{
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}}))),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "sequenceupdate-remove-step",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}})),
+			createChannel(sequenceName, 0),
+			createChannel(sequenceName, 1),
+			createChannel(sequenceName, 2),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+			resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+			resources.NewSubscription(2, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+		},
+		WantErr: false,
+		WantDeletes: []clientgotesting.DeleteActionImpl{
+			{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
 					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
 				},
-				Name: resources.SequenceChannelName(sequenceName, 0),
-			}},
-			WantCreates: []runtime.Object{
-				resources.NewSubscription(0, NewSequence(sequenceName, testNS,
-					WithSequenceChannelTemplateSpec(imc),
-					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}}))),
+				Name: resources.SequenceChannelName(sequenceName, 2),
+			}, {
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("inmemorychannels"),
+				},
+				Name: resources.SequenceChannelName(sequenceName, 2),
 			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSequence(sequenceName, testNS,
-					WithInitSequenceConditions,
-					WithSequenceChannelTemplateSpec(imc),
-					WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(1)}}),
-					WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
-					WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1",
-								Kind:       "InMemoryChannel",
-								Name:       resources.SequenceChannelName(sequenceName, 0),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionUnknown,
-								Reason:  "NoReady",
-								Message: "Channel does not have Ready condition",
-							},
-						},
-					}),
-					WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1",
-								Kind:       "Subscription",
-								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
-								Namespace:  testNS,
-							},
-						},
-					})),
-			}},
 		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+					},
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "sequenceupdate-remove-step-subscription-removal-fails",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}})),
+			createChannel(sequenceName, 0),
+			createChannel(sequenceName, 1),
+			createChannel(sequenceName, 2),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+			resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+			resources.NewSubscription(2, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+		},
+		WantErr: true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("delete", "subscriptions"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for delete subscriptions"),
+		},
+
+		WantDeletes: []clientgotesting.DeleteActionImpl{
+			{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: resources.SequenceChannelName(sequenceName, 2),
+			}, {
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("inmemorychannels"),
+				},
+				Name: resources.SequenceChannelName(sequenceName, 2),
+			},
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+					},
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+					},
+				})),
+		}},
+	}, {
+		Name: "sequenceupdate-remove-step-channel-removal-fails",
+		Key:  pKey,
+		Objects: []runtime.Object{
+			NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}})),
+			createChannel(sequenceName, 0),
+			createChannel(sequenceName, 1),
+			createChannel(sequenceName, 2),
+			resources.NewSubscription(0, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+			resources.NewSubscription(1, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+			resources.NewSubscription(2, NewSequence(sequenceName, testNS,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)},
+				}))),
+		},
+		WantErr: true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("delete", "inmemorychannels"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for delete inmemorychannels"),
+		},
+
+		WantDeletes: []clientgotesting.DeleteActionImpl{
+			{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("inmemorychannels"),
+				},
+				Name: resources.SequenceChannelName(sequenceName, 2),
+			},
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewSequence(sequenceName, testNS,
+				WithInitSequenceConditions,
+				WithSequenceChannelTemplateSpec(imc),
+				WithSequenceSteps([]v1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)}}),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+					{
+						Channel: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "InMemoryChannel",
+							Name:       resources.SequenceChannelName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+						ReadyCondition: apis.Condition{
+							Type:    apis.ConditionReady,
+							Status:  corev1.ConditionUnknown,
+							Reason:  "NoReady",
+							Message: "Channel does not have Ready condition",
+						},
+					},
+				}),
+				WithSequenceSubscriptionStatuses([]v1.SequenceSubscriptionStatus{
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+							Namespace:  testNS,
+						},
+					},
+					{
+						Subscription: corev1.ObjectReference{
+							APIVersion: "messaging.knative.dev/v1",
+							Kind:       "Subscription",
+							Name:       resources.SequenceSubscriptionName(sequenceName, 1),
+							Namespace:  testNS,
+						},
+					},
+				})),
+		}},
+	},
 	}
 
 	logger := logtesting.TestLogger(t)
