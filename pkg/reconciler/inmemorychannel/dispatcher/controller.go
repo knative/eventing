@@ -33,8 +33,6 @@ import (
 
 	"knative.dev/pkg/logging"
 
-	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
 	configmapinformer "knative.dev/pkg/configmap/informer"
@@ -48,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
 )
 
@@ -103,12 +102,21 @@ func NewController(
 
 	sh := multichannelfanout.NewMessageHandler(ctx, logger.Desugar(), channel.NewMessageDispatcher(logger.Desugar()), reporter)
 
+	readinessChecker := &DispatcherReadyChecker{
+		chLister:     inmemorychannelinformer.Get(ctx).Lister(),
+		chMsgHandler: sh,
+	}
+
 	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
 		Port:         port,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
 		Logger:       logger.Desugar(),
+
+		HTTPMessageReceiverOptions: []kncloudevents.HTTPMessageReceiverOption{
+			kncloudevents.WithChecker(readinessCheckerHTTPHandler(readinessChecker)),
+		},
 	}
 	inMemoryDispatcher := inmemorychannel.NewMessageDispatcher(args)
 

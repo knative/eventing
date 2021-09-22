@@ -559,3 +559,7 @@ func (f *fakeMultiChannelHandler) DeleteChannelHandler(host string) {
 func (f *fakeMultiChannelHandler) GetChannelHandler(host string) fanout.MessageHandler {
 	return f.handlers[host]
 }
+
+func (f *fakeMultiChannelHandler) CountChannelHandlers() int {
+	return len(f.handlers)
+}
