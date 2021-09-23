@@ -123,7 +123,7 @@ capabilities and are free to add more delivery options.
 
 ### Exposing underlying DLC
 
-Channel implementation supporting dead letter channel should advertise it in
+Channel implementation supporting dead letter channel should resolve it to a URI in
 their status.
 
 ```go
@@ -133,7 +133,7 @@ type DeliveryStatus struct {
 	// DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
 	// where failed events are sent to.
 	// +optional
-	DeadLetterChannel *duckv1.KReference `json:"deadLetterChannel,omitempty"`
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
 }
 ```
 

@@ -119,6 +119,7 @@ func (in *BrokerStatus) DeepCopyInto(out *BrokerStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.Address.DeepCopyInto(&out.Address)
+	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
 	return
 }
 
@@ -274,11 +275,7 @@ func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DeadLetterSinkURI != nil {
-		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
-		*out = new(apis.URL)
-		(*in).DeepCopyInto(*out)
-	}
+	in.DeliveryStatus.DeepCopyInto(&out.DeliveryStatus)
 	return
 }
 
