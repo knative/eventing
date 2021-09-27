@@ -54,7 +54,7 @@ readonly EVENTING_SUGAR_CONTROLLER_YAML=${YAML_OUTPUT_DIR}/"eventing-sugar-contr
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
 readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
-readonly TOOLS=(appender event-display websocket-source heartbeats)
+readonly TOOLS=(appender event-display websocket-source heartbeats recordevents)
 declare -A RELEASES
 RELEASES=(
   [${EVENTING_YAML}]="${EVENTING_CORE_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML}"
