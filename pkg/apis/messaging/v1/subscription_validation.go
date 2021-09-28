@@ -51,7 +51,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
 
 	if missingSubscriber {
-		fe := apis.ErrMissingField( "subscriber")
+		fe := apis.ErrMissingField("subscriber")
 		fe.Details = "the Subscription must reference a subscriber"
 		errs = errs.Also(fe)
 	}

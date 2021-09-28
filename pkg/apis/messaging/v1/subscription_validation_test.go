@@ -137,7 +137,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Channel: getValidChannelRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField( "subscriber")
+			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
@@ -149,7 +149,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Reply:      &duckv1.Destination{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField( "subscriber")
+			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
@@ -175,7 +175,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Reply:   getValidReply(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField( "subscriber")
+			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
@@ -200,7 +200,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField( "subscriber")
+			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
 			return apis.ErrMissingField("channel.name").Also(fe)
 		}(),
@@ -301,7 +301,7 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			Channel: getValidChannelRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField( "subscriber")
+			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
@@ -313,7 +313,7 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			Reply:      &duckv1.Destination{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField( "subscriber")
+			fe := apis.ErrMissingField("subscriber")
 			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
