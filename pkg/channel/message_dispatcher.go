@@ -114,12 +114,19 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 	var responseMessage cloudevents.Message
 	var responseAdditionalHeaders nethttp.Header
 	var dispatchExecutionInfo *DispatchExecutionInfo
+
 	if destination != nil {
 		var err error
 		// Try to send to destination
 		messagesToFinish = append(messagesToFinish, message)
 
-		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeaders, retriesConfig, transformers...)
+		// Add Prefer: reply header if a reply destination is provided
+		additionalHeadersForDestination := additionalHeaders.Clone()
+		if reply != nil {
+			additionalHeadersForDestination.Add("Prefer", "reply")
+		}
+
+		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeadersForDestination, retriesConfig, transformers...)
 		if err != nil {
 			// If DeadLetter is configured, then send original message with knative error extensions
 			if deadLetter != nil {
