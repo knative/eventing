@@ -137,8 +137,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Channel: getValidChannelRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			fe := apis.ErrMissingField( "subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
 	}, {
@@ -149,8 +149,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Reply:      &duckv1.Destination{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			fe := apis.ErrMissingField( "subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
 	}, {
@@ -174,7 +174,11 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Channel: getValidChannelRef(),
 			Reply:   getValidReply(),
 		},
-		want: nil,
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField( "subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
 	}, {
 		name: "empty Subscriber",
 		c: &SubscriptionSpec{
@@ -182,7 +186,11 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			Subscriber: &duckv1.Destination{},
 			Reply:      getValidReply(),
 		},
-		want: nil,
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
 	}, {
 		name: "missing name in channel, and missing subscriber, reply",
 		c: &SubscriptionSpec{
@@ -192,8 +200,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			fe := apis.ErrMissingField( "subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
 			return apis.ErrMissingField("channel.name").Also(fe)
 		}(),
 	}, {
@@ -293,8 +301,8 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			Channel: getValidChannelRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			fe := apis.ErrMissingField( "subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
 	}, {
@@ -305,8 +313,8 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			Reply:      &duckv1.Destination{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			fe := apis.ErrMissingField( "subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
 			return fe
 		}(),
 	}, {
@@ -330,7 +338,11 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			Channel: getValidChannelRef(),
 			Reply:   getValidReply(),
 		},
-		want: nil,
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
 	}, {
 		name: "empty Subscriber",
 		c: &SubscriptionSpec{
@@ -338,7 +350,11 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			Subscriber: &duckv1.Destination{},
 			Reply:      getValidReply(),
 		},
-		want: nil,
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
 	}, {
 		name: "missing name in channel, and missing subscriber, reply",
 		c: &SubscriptionSpec{
@@ -348,8 +364,8 @@ func TestSubscriptionSpecValidationWithKRefGroupFeatureEnabled(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
 			return apis.ErrMissingField("channel.name").Also(fe)
 		}(),
 	}, {
@@ -455,36 +471,6 @@ func TestSubscriptionImmutable(t *testing.T) {
 			Spec: SubscriptionSpec{
 				Channel:    getValidChannelRef(),
 				Subscriber: newSubscriber,
-			},
-		},
-		want: nil,
-	}, {
-		name: "valid, new Reply",
-		c: &Subscription{
-			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Reply:   getValidReply(),
-			},
-		},
-		og: &Subscription{
-			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Reply:   newReply,
-			},
-		},
-		want: nil,
-	}, {
-		name: "valid, have Reply, remove and replace with Subscriber",
-		c: &Subscription{
-			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Reply:   getValidReply(),
-			},
-		},
-		og: &Subscription{
-			Spec: SubscriptionSpec{
-				Channel:    getValidChannelRef(),
-				Subscriber: getValidDestination(),
 			},
 		},
 		want: nil,

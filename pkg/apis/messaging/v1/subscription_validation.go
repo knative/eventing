@@ -49,10 +49,10 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
-	missingReply := isDestinationNilOrEmpty(ss.Reply)
-	if missingSubscriber && missingReply {
-		fe := apis.ErrMissingField("reply", "subscriber")
-		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
+
+	if missingSubscriber {
+		fe := apis.ErrMissingField( "subscriber")
+		fe.Details = "the Subscription must reference a subscriber"
 		errs = errs.Also(fe)
 	}
 
@@ -62,6 +62,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
+	missingReply := isDestinationNilOrEmpty(ss.Reply)
 	if !missingReply {
 		if fe := ss.Reply.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("reply"))
