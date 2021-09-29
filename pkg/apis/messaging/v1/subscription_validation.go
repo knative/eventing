@@ -62,8 +62,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	missingReply := isDestinationNilOrEmpty(ss.Reply)
-	if !missingReply {
+	if missingReply := isDestinationNilOrEmpty(ss.Reply); !missingReply {
 		if fe := ss.Reply.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("reply"))
 		}
