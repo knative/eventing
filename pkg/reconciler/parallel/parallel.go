@@ -26,11 +26,12 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
@@ -41,7 +42,6 @@ import (
 	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/parallel"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
-	"knative.dev/eventing/pkg/duck"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 )
@@ -49,7 +49,7 @@ import (
 type Reconciler struct {
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
-	channelableTracker duck.ListableTracker
+	channelableTracker ducklib.ListableTracker
 	subscriptionLister messaginglisters.SubscriptionLister
 
 	// eventingClientSet allows us to configure Eventing objects
@@ -70,10 +70,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	//     2.2 create a Subscription to the filter Channel, subscribe the subscriber and send reply to
 	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each branch in the list
-	if p.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
 
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(p.Namespace)
@@ -126,7 +122,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	}
 	p.Status.PropagateSubscriptionStatuses(filterSubs, subs)
 
-	return nil
+	// If a parallel instance is modified resulting in the number of steps decreasing, there will be
+	// leftover channels and subscriptions that need to be removed.
+	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, p, append(channels, ingressChannel)); err != nil {
+		return err
+	}
+
+	return r.removeUnwantedSubscriptions(ctx, p, append(filterSubs, subs...))
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1.Channelable, error) {
@@ -172,24 +174,20 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	channelable, ok := c.(*duckv1.Channelable)
 	if !ok {
 		logger.Errorw("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, fmt.Errorf("Failed to convert to Channelable Object: %+v", c)
+		return nil, fmt.Errorf("failed to convert to Channelable Object: %+v", c)
 	}
 	return channelable, nil
 }
 
 func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v1.Parallel) (*messagingv1.Subscription, *messagingv1.Subscription, error) {
 	filterExpected := resources.NewFilterSubscription(branchNumber, p)
-	filterSubName := resources.ParallelFilterSubscriptionName(p.Name, branchNumber)
-
-	filterSub, err := r.reconcileSubscription(ctx, branchNumber, filterExpected, filterSubName, p.Namespace)
+	filterSub, err := r.reconcileSubscription(ctx, branchNumber, filterExpected)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	expected := resources.NewSubscription(branchNumber, p)
-	subName := resources.ParallelSubscriptionName(p.Name, branchNumber)
-
-	sub, err := r.reconcileSubscription(ctx, branchNumber, expected, subName, p.Namespace)
+	sub, err := r.reconcileSubscription(ctx, branchNumber, expected)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -197,8 +195,8 @@ func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v
 	return filterSub, sub, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int, expected *messagingv1.Subscription, subName, ns string) (*messagingv1.Subscription, error) {
-	sub, err := r.subscriptionLister.Subscriptions(ns).Get(subName)
+func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int, expected *messagingv1.Subscription) (*messagingv1.Subscription, error) {
+	sub, err := r.subscriptionLister.Subscriptions(expected.Namespace).Get(expected.Name)
 
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
@@ -253,4 +251,87 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, p *v1.Parallel, r
 		return nil, err
 	}
 	return obj, err
+}
+
+func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1.Parallel, wanted []*duckv1.Channelable) error {
+	channelObjRef := corev1.ObjectReference{
+		Kind:       p.Spec.ChannelTemplate.Kind,
+		APIVersion: p.Spec.ChannelTemplate.APIVersion,
+	}
+
+	l, err := r.channelableTracker.ListerFor(channelObjRef)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channelRef", channelObjRef), zap.Error(err))
+		return err
+	}
+
+	exists, err := l.ByNamespace(p.GetNamespace()).List(labels.Everything())
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error listing Channels", zap.Any("namespace", p.Namespace), zap.Any("channelRef", channelObjRef), zap.Error(err))
+		return err
+	}
+
+	for _, c := range exists {
+		ch, err := kmeta.DeletionHandlingAccessor(c)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Failed to get channel", zap.Any("channel", c), zap.Error(err))
+			return err
+		}
+
+		if !ch.GetDeletionTimestamp().IsZero() ||
+			!metav1.IsControlledBy(ch, p) {
+			continue
+		}
+
+		used := false
+		for _, cw := range wanted {
+			if cw.Name == ch.GetName() {
+				used = true
+				break
+			}
+		}
+
+		if !used {
+			err = channelResourceInterface.Delete(ctx, ch.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Errorw("Failed to delete Channel", zap.Any("channel", ch), zap.Error(err))
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, p *v1.Parallel, wanted []*messagingv1.Subscription) error {
+	subs, err := r.subscriptionLister.Subscriptions(p.Namespace).List(labels.Everything())
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Error listing Subscriptions", zap.Any("namespace", p.Namespace), zap.Error(err))
+		return err
+	}
+
+	for _, sub := range subs {
+		if !sub.GetDeletionTimestamp().IsZero() ||
+			!metav1.IsControlledBy(sub, p) {
+			continue
+		}
+
+		used := false
+		for _, sw := range wanted {
+			if sub.Name == sw.Name {
+				used = true
+				break
+			}
+		}
+
+		if !used {
+			err = r.eventingClientSet.MessagingV1().Subscriptions(p.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Infow("Failed to delete Subscription", zap.Any("subscription", sub), zap.Error(err))
+				return err
+			}
+		}
+	}
+
+	return nil
 }
