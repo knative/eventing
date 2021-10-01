@@ -20,7 +20,7 @@ metadata:
   labels:
     app: eventshub-{{ .name }}
 spec:
-  serviceAccountName: "{{ .name }}"
+  serviceAccountName: "{{ .namespace }}"
   restartPolicy: "Never"
   containers:
     - name: eventshub

@@ -15,7 +15,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ .name }}
+  name: {{ .namespace }}
   namespace: {{ .namespace }}
 rules:
   - apiGroups: [ "" ]
@@ -35,13 +35,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ .name }}
+  name: {{ .namespace }}
   namespace: {{ .namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ .name }}
+  name: {{ .namespace }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .name }}
+    name: {{ .namespace }}
     namespace: {{ .namespace }}
