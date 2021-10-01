@@ -275,6 +275,8 @@ func TestReceiver(t *testing.T) {
 				"X-Request-Id": []string{"123"},
 				// Knative-Foo will pass as a prefix match.
 				"Knative-Foo": []string{"baz"},
+				// Prefer: reply will be added for every request as defined in the spec.
+				"Prefer": []string{"reply"},
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
