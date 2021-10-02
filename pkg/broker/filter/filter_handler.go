@@ -229,6 +229,10 @@ func (h *Handler) sendEvent(ctx context.Context, headers http.Header, target str
 	defer message.Finish(nil)
 
 	additionalHeaders := utils.PassThroughHeaders(headers)
+
+	// Following the spec https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events
+	additionalHeaders.Set("prefer", "reply")
+
 	err = kncloudevents.WriteHTTPRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write request: %w", err)

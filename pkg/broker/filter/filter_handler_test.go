@@ -275,6 +275,33 @@ func TestReceiver(t *testing.T) {
 				"X-Request-Id": []string{"123"},
 				// Knative-Foo will pass as a prefix match.
 				"Knative-Foo": []string{"baz"},
+				// Prefer: reply will be added for every request as defined in the spec.
+				"Prefer": []string{"reply"},
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			returnedEvent:             makeDifferentEvent(),
+		},
+		"Maintain `Prefer: reply` header when it is provided in the original request": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			request: func() *http.Request {
+				e := makeEvent()
+				b, _ := e.MarshalJSON()
+				request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
+				// Following the spec (https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events)
+				//   this header should be present even if it is provided in the original request
+				request.Header.Set("Prefer", "reply")
+				// Content-Type will not pass filtering.
+				request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
+
+				return request
+			}(),
+			expectedHeaders: http.Header{
+				// Prefer: reply must be present, even if it is provided in the original request
+				"Prefer": []string{"reply"},
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
