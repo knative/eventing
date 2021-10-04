@@ -49,6 +49,13 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	if len(cs.SubscribableSpec.Subscribers) > 0 {
 		errs = errs.Also(apis.ErrDisallowedFields("subscribers").ViaField("subscribable"))
 	}
+
+	if cs.Delivery != nil {
+		if fe := cs.Delivery.Validate(ctx); fe != nil {
+			errs = errs.Also(fe.ViaField("delivery"))
+		}
+	}
+
 	return errs
 }
 

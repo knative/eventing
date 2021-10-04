@@ -23,9 +23,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/pkg/apis"
 )
 
 func TestChannelValidation(t *testing.T) {
@@ -95,6 +95,51 @@ func TestChannelValidation(t *testing.T) {
 			errs = errs.Also(apis.ErrDisallowedFields("spec.subscribable.subscribers"))
 			return errs
 		}(),
+	}, {
+		name: "invalid Delivery",
+		cr: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "Channel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+				},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					Delivery: getDelivery(backoffDelayInvalid),
+				},
+			},
+		},
+		want: apis.ErrInvalidValue(backoffDelayInvalid, "spec.delivery.backoffDelay"),
+	}, {
+		name: "valid Delivery",
+		cr: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "Channel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+				},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					Delivery: getDelivery(backoffDelayValid),
+				},
+			},
+		},
+		want: nil,
+	}, {
+		name: "valid minimal spec",
+		cr: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "Channel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+				},
+			},
+		},
+		want: nil,
 	}}
 
 	doValidateTest(t, tests)
