@@ -152,15 +152,22 @@ func (ts *TriggerStatus) MarkSubscriberResolvedUnknown(reason, messageFormat str
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscriberResolved, reason, messageFormat, messageA...)
 }
 
-func (ts *TriggerStatus) MarkDeadLetterSinkResolvedSucceeded() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionDeadLetterSinkResolved)
+func (ts *TriggerStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
+	ts.DeadLetterSinkURI = deadLetterSinkURI
+	if deadLetterSinkURI != nil {
+		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionDeadLetterSinkResolved)
+	} else {
+		ts.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil")
+	}
 }
 
 func (ts *TriggerStatus) MarkDeadLetterSinkNotConfigured() {
+	ts.DeadLetterSinkURI = nil
 	triggerCondSet.Manage(ts).MarkTrueWithReason(TriggerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
 func (ts *TriggerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	ts.DeadLetterSinkURI = nil
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }
 
