@@ -68,6 +68,12 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
+	if ss.Delivery != nil {
+		if fe := ss.Delivery.Validate(ctx); fe != nil {
+			errs = errs.Also(fe.ViaField("delivery"))
+		}
+	}
+
 	return errs
 }
 
