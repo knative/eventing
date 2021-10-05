@@ -58,7 +58,7 @@ func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 	}
 }
 
-func WithTriggerDeadLeaderSink(ref *duckv1.KReference, uri string) TriggerOption {
+func WithTriggerDeadLetterSink(ref *duckv1.KReference, uri string) TriggerOption {
 	return func(t *v1.Trigger) {
 		if t.Spec.Delivery == nil {
 			t.Spec.Delivery = new(eventingv1.DeliverySpec)
@@ -93,6 +93,21 @@ func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name, namespace strin
 				Kind:       gvk.Kind,
 				Name:       name,
 				Namespace:  namespace,
+			},
+		}
+	}
+}
+
+func WithTriggerDeliveryDeadLetterSinkRef(gvk metav1.GroupVersionKind, name, namespace string) TriggerOption {
+	return func(t *v1.Trigger) {
+		t.Spec.Delivery = &eventingv1.DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					APIVersion: apiVersion(gvk),
+					Kind:       gvk.Kind,
+					Name:       name,
+					Namespace:  namespace,
+				},
 			},
 		}
 	}
