@@ -36,9 +36,17 @@ rules:
       - "sources.knative.dev"
     resources:
       - "apiserversources"
+      - "apiserversources/finalizers"
+      - "apiserversources/status"
       - "containersources"
+      - "containersources/finalizers"
+      - "containersources/status"
       - "pingsources"
+      - "pingsources/finalizers"
+      - "pingsources/status"
       - "sinkbindings"
+      - "sinkbindings/finalizers"
+      - "sinkbindings/status"
     verbs:
       - "get"
       - "list"
@@ -50,8 +58,14 @@ rules:
       - "eventing.knative.dev"
     resources:
       - "brokers"
+      - "brokers/finalizers"
+      - "brokers/status"
       - "eventtypes"
+      - "eventtypes/finalizers"
+      - "eventtypes/status"
       - "triggers"
+      - "triggers/finalizers"
+      - "triggers/status"
     verbs:
       - "get"
       - "list"
@@ -63,8 +77,14 @@ rules:
       - "messaging.knative.dev"
     resources:
       - "channels"
+      - "channels/finalizers"
+      - "channels/status"
       - "inmemorychannels"
+      - "inmemorychannels/finalizers"
+      - "inmemorychannels/status"
       - "subscriptions"
+      - "subscriptions/finalizers"
+      - "subscriptions/status"
     verbs:
       - "get"
       - "list"
@@ -76,7 +96,11 @@ rules:
       - "flows.knative.dev"
     resources:
       - "parallels"
+      - "parallels/finalizers"
+      - "parallels/status"
       - "sequences"
+      - "sequences/finalizers"
+      - "sequences/status"
     verbs:
       - "get"
       - "list"
