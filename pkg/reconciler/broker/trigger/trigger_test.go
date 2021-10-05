@@ -667,7 +667,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
-					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithDeadLetterSink(brokerDestv1.Ref, ""),
 				),
 				makeSubscriberAddressableAsUnstructured(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
