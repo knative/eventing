@@ -44,7 +44,6 @@ rules:
       - "list"
       - "create"
       - "update"
-      - "delete"
       - "patch"
       - "watch"
   - apiGroups:
@@ -58,7 +57,6 @@ rules:
       - "list"
       - "create"
       - "update"
-      - "delete"
       - "patch"
       - "watch"
   - apiGroups:
@@ -72,7 +70,6 @@ rules:
       - "list"
       - "create"
       - "update"
-      - "delete"
       - "patch"
       - "watch"
   - apiGroups:
@@ -85,7 +82,6 @@ rules:
       - "list"
       - "create"
       - "update"
-      - "delete"
       - "patch"
       - "watch"
   - apiGroups:
