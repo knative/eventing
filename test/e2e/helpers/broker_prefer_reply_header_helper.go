@@ -18,78 +18,99 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	sourcesv1beta2 "knative.dev/eventing/pkg/apis/sources/v1beta2"
+	eventingtestingv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
 )
 
-func BrokerPreferHeaderCheck(ctx context.Context, t *testing.T, creator BrokerCreator, options ...recordevents.EventRecordOption) {
-	const (
-		triggerName = "trigger"
-		eventRecord = "event-record"
-		senderName  = "sender"
+func BrokerPreferHeaderCheck(
+	ctx context.Context,
+	brokerClass string,
+	t *testing.T, channelTestRunner testlib.ComponentsTestRunner,
+	options ...testlib.SetupClientOption) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		const (
+			eventRecord          = "event-record"
+			senderName           = "sender"
+			triggerName          = "trigger-annotation"
+			subscriberName       = "subscriber-annotation"
+			dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta2"}`
+			pingSourceName       = "test-ping-source-annotation"
+			// Every 1 minute starting from now
+			schedule = "*/1 * * * *"
+		)
 
-		eventType   = "type"
-		eventSource = "http://source.com"
-		eventBody   = `{"msg":"broker-redelivery"}`
-	)
+		tests := []struct {
+			name string
+		}{
+			{
+				name: "test messag without prefer header",
+			},
+		}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				client := testlib.Setup(t, true)
+				defer testlib.TearDown(client)
 
-	tests := []struct {
-		name string
-	}{
-		{
-			name: "test messag without prefer header",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			client := testlib.Setup(t, true)
-			defer testlib.TearDown(client)
+				brokerName := ChannelBasedBrokerCreator(channel, brokerClass)(client, "v1")
 
-			brokerName := creator(client, "v1")
+				// Create event tracker that should receive all events.
+				allEventTracker, _ := recordevents.StartEventRecordOrFail(
+					ctx,
+					client,
+					eventRecord,
+				)
 
-			// Wait for broker ready.
-			client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
+				client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-			// Create event tracker that should receive all events.
-			allEventTracker, _ := recordevents.StartEventRecordOrFail(
-				ctx,
-				client,
-				eventRecord,
-				options...,
-			)
+				client.CreateTriggerOrFail(triggerName,
+					resources.WithSubscriberServiceRefForTrigger(eventRecord),
+					resources.WithDependencyAnnotationTrigger(dependencyAnnotation),
+					resources.WithBroker(brokerName),
+				)
 
-			client.CreateTriggerOrFail(
-				triggerName,
-				resources.WithBroker(brokerName),
-				resources.WithSubscriberServiceRefForTrigger(eventRecord),
-			)
+				jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())
+				pingSource := eventingtestingv1beta2.NewPingSource(
+					pingSourceName,
+					client.Namespace,
+					eventingtestingv1beta2.WithPingSourceSpec(sourcesv1beta2.PingSourceSpec{
+						Schedule:    schedule,
+						ContentType: cloudevents.ApplicationJSON,
+						Data:        jsonData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink: duckv1.Destination{
+								Ref: &duckv1.KReference{
+									Name:       brokerName,
+									APIVersion: "eventing.knative.dev/v1",
+									Kind:       "Broker",
+								},
+							},
+						},
+					}),
+				)
 
-			client.WaitForAllTestResourcesReadyOrFail(ctx)
+				client.CreatePingSourceV1Beta2OrFail(pingSource)
 
-			// send CloudEvent to the broker
-			eventToSend := cloudevents.NewEvent()
-			eventToSend.SetID(uuid.New().String())
-			eventToSend.SetType(eventType)
-			eventToSend.SetSource(eventSource)
-			if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
-				t.Fatal("Cannot set the payload of the event:", err.Error())
-			}
+				// Trigger should become ready after pingSource was created
+				client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
 
-			client.SendEventToAddressable(ctx, senderName, brokerName, testlib.BrokerTypeMeta, eventToSend)
-
-			allEventTracker.AssertAtLeast(
-				1,
-				recordevents.MatchKind(recordevents.EventReceived),
-				recordevents.HasAdditionalHeader("Prefer", "Reply"),
-			)
-
-			t.Fatal("TESTT")
-		})
-	}
+				allEventTracker.AssertExact(
+					1,
+					recordevents.HasAdditionalHeader("Prefer", "reply"),
+				)
+			})
+		}
+	})
 }
