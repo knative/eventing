@@ -38,11 +38,12 @@ type InMemoryMessageDispatcher struct {
 }
 
 type InMemoryMessageDispatcherArgs struct {
-	Port         int
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-	Handler      multichannelfanout.MultiChannelMessageHandler
-	Logger       *zap.Logger
+	Port                       int
+	ReadTimeout                time.Duration
+	WriteTimeout               time.Duration
+	Handler                    multichannelfanout.MultiChannelMessageHandler
+	Logger                     *zap.Logger
+	HTTPMessageReceiverOptions []kncloudevents.HTTPMessageReceiverOption
 }
 
 // GetHandler gets the current multichannelfanout.MessageHandler to delegate all HTTP
@@ -64,7 +65,10 @@ func (d *InMemoryMessageDispatcher) WaitReady() {
 
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
 	// TODO set read timeouts?
-	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(args.Port)
+	bindingsReceiver := kncloudevents.NewHTTPMessageReceiver(
+		args.Port,
+		args.HTTPMessageReceiverOptions...,
+	)
 
 	dispatcher := &InMemoryMessageDispatcher{
 		handler:              args.Handler,
