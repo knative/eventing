@@ -38,14 +38,15 @@ import (
 func BrokerPreferHeaderCheck(
 	ctx context.Context,
 	brokerClass string,
-	t *testing.T, channelTestRunner testlib.ComponentsTestRunner,
+	t *testing.T,
+	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		const (
 			eventRecord          = "event-record"
 			senderName           = "sender"
-			triggerName          = "trigger-annotation"
-			subscriberName       = "subscriber-annotation"
+			triggerName          = "test-trigger"
+			subscriberName       = "test-subscriber"
 			dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta2"}`
 			pingSourceName       = "test-ping-source-annotation"
 			// Every 1 minute starting from now
