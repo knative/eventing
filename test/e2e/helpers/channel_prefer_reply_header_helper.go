@@ -23,30 +23,34 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
-
-	testlib "knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/recordevents"
-	"knative.dev/eventing/test/lib/resources"
+	"k8s.io/utils/pointer"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/recordevents"
+	"knative.dev/eventing/test/lib/resources"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
-func BrokerPreferHeaderCheck(
+func ChannelPreferHeaderCheck(
 	ctx context.Context,
-	brokerClass string,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		const (
-			eventRecord          = "event-record"
-			triggerName          = "test-trigger"
-			dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta2"}`
-			pingSourceName       = "test-ping-source-annotation"
+			eventRecord    = "event-record"
+			senderName     = "sender"
+			channelName    = "test-channel"
+			pingSourceName = "test-ping-source-annotation"
 			// Every 1 minute starting from now
 			schedule = "*/1 * * * *"
 		)
@@ -55,7 +59,7 @@ func BrokerPreferHeaderCheck(
 			name string
 		}{
 			{
-				name: "test messag without explicit prefer header should have the header",
+				name: "test messag without prefer header",
 			},
 		}
 		for _, test := range tests {
@@ -63,22 +67,62 @@ func BrokerPreferHeaderCheck(
 				client := testlib.Setup(t, true)
 				defer testlib.TearDown(client)
 
-				brokerName := ChannelBasedBrokerCreator(channel, brokerClass)(client, "v1")
+				// create channel
+				client.CreateChannelWithDefaultOrFail(&messagingv1.Channel{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      channelName,
+						Namespace: client.Namespace,
+					},
+					Spec: messagingv1.ChannelSpec{
+						ChannelTemplate: &messagingv1.ChannelTemplateSpec{
+							TypeMeta: channel,
+						},
+						ChannelableSpec: eventingduckv1.ChannelableSpec{
+							Delivery: &eventingduckv1.DeliverySpec{
+								DeadLetterSink: &duckv1.Destination{
+									Ref: resources.KnativeRefForService(eventRecord, client.Namespace),
+								},
+								Retry: pointer.Int32Ptr(10),
+							},
+						},
+					},
+				})
 
-				// Create event tracker that should receive all events.
+				client.WaitForResourcesReadyOrFail(&channel)
+
 				allEventTracker, _ := recordevents.StartEventRecordOrFail(
 					ctx,
 					client,
 					eventRecord,
 				)
 
+				// wait for all test resources to be ready, so that we can start sending events
 				client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-				client.CreateTriggerOrFail(triggerName,
-					resources.WithSubscriberServiceRefForTrigger(eventRecord),
-					resources.WithDependencyAnnotationTrigger(dependencyAnnotation),
-					resources.WithBroker(brokerName),
-				)
+				metaResourceList := resources.NewMetaResourceList(client.Namespace, &channel)
+				objs, err := duck.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduckv1.Subscribable{})
+				if err != nil {
+					t.Fatal("Failed to list the underlying channels:", err)
+				}
+
+				// Note that since by default MT ChannelBroker creates a Broker in each namespace, there's
+				// actually two channels.
+				// https://github.com/knative/eventing/issues/3138
+				// So, filter out the broker channel from the list before checking that there's only one.
+				filteredObjs := make([]runtime.Object, 0)
+				for _, o := range objs {
+					if o.(*eventingduckv1.Subscribable).Name != "default-kne-trigger" {
+						filteredObjs = append(filteredObjs, o)
+					}
+				}
+
+				if len(filteredObjs) != 1 {
+					t.Logf("Got unexpected channels:")
+					for i, ec := range filteredObjs {
+						t.Logf("Extra channels: %d : %+v", i, ec)
+					}
+					t.Fatal("The defaultchannel is expected to create 1 underlying channel, but got", len(filteredObjs))
+				}
 
 				jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())
 				pingSource := eventingtestingv1.NewPingSource(
@@ -91,9 +135,9 @@ func BrokerPreferHeaderCheck(
 						SourceSpec: duckv1.SourceSpec{
 							Sink: duckv1.Destination{
 								Ref: &duckv1.KReference{
-									Name:       brokerName,
+									Name:       channelName,
 									APIVersion: "eventing.knative.dev/v1",
-									Kind:       "Broker",
+									Kind:       "Channel",
 								},
 							},
 						},
@@ -102,11 +146,7 @@ func BrokerPreferHeaderCheck(
 
 				client.CreatePingSourceV1OrFail(pingSource)
 
-				// Trigger should become ready after pingSource was created
-				client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
-
-				allEventTracker.AssertExact(
-					1,
+				allEventTracker.AssertAtLeast(1,
 					recordevents.HasAdditionalHeader("Prefer", "reply"),
 				)
 			})
