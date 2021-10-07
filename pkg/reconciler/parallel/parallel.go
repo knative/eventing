@@ -126,11 +126,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	// If a parallel instance is modified resulting in the number of steps decreasing, there will be
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, p, append(channels, ingressChannel)); err != nil {
-		return fmt.Errorf("error removing unwanted channels: %w", err)
+		return fmt.Errorf("error removing unwanted Channels: %w", err)
 	}
 
 	if err := r.removeUnwantedSubscriptions(ctx, p, append(filterSubs, subs...)); err != nil {
-		return fmt.Errorf("error removing unwanted subscriptions: %w", err)
+		return fmt.Errorf("error removing unwanted Subscriptions: %w", err)
 	}
 
 	return nil
@@ -215,21 +215,21 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 		}
 		return newSub, nil
 	} else if err != nil {
-		logging.FromContext(ctx).Errorw("Failed to get subscription", zap.Error(err))
+		logging.FromContext(ctx).Errorw("Failed to get Subscription", zap.Error(err))
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallels's subscription failed: %v", err)
-		return nil, fmt.Errorf("failed to get subscription: %s", err)
+		return nil, fmt.Errorf("failed to get Subscription: %s", err)
 	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
 		err = r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
 		if err != nil {
-			logging.FromContext(ctx).Infow("Cannot delete subscription", zap.Error(err))
+			logging.FromContext(ctx).Infow("Cannot delete Subscription", zap.Error(err))
 			return nil, err
 		}
 		newSub, err := r.eventingClientSet.MessagingV1().Subscriptions(sub.Namespace).Create(ctx, expected, metav1.CreateOptions{})
 		if err != nil {
-			logging.FromContext(ctx).Infow("Cannot create subscription", zap.Error(err))
+			logging.FromContext(ctx).Infow("Cannot create Subscription", zap.Error(err))
 			return nil, err
 		}
 		return newSub, nil
@@ -243,7 +243,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, p *v1.Parallel, r
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
 	if err := r.channelableTracker.TrackInNamespace(ctx, p)(ref); err != nil {
-		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to channel %+v : %w", ref, err)
+		return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "TrackerFailed", "unable to track changes to Channel %+v : %w", ref, err)
 	}
 	chLister, err := r.channelableTracker.ListerFor(ref)
 	if err != nil {
@@ -252,7 +252,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, p *v1.Parallel, r
 	}
 	obj, err := chLister.ByNamespace(p.Namespace).Get(ref.Name)
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Error getting channel from lister", zap.Any("channel", ref), zap.Error(err))
+		logging.FromContext(ctx).Errorw("Error getting Channel from lister", zap.Any("channel", ref), zap.Error(err))
 		return nil, err
 	}
 	return obj, err
@@ -278,7 +278,7 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 	for _, c := range ownedChannels {
 		ch, err := kmeta.DeletionHandlingAccessor(c)
 		if err != nil {
-			return fmt.Errorf("error reading channel %q: %w", ch.GetName(), err)
+			return fmt.Errorf("error reading Channel %q: %w", ch.GetName(), err)
 		}
 
 		if !ch.GetDeletionTimestamp().IsZero() ||
@@ -297,7 +297,7 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 	for _, c := range ownedSet.Difference(wantedSet).List() {
 		err = channelResourceInterface.Delete(ctx, c, metav1.DeleteOptions{})
 		if err != nil {
-			return fmt.Errorf("error deleting channel %q: %w", c, err)
+			return fmt.Errorf("error deleting Channel %q: %w", c, err)
 		}
 	}
 
@@ -328,7 +328,7 @@ func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, p *v1.Para
 	for _, s := range ownedSet.Difference(wantedSet).List() {
 		err = r.eventingClientSet.MessagingV1().Subscriptions(p.Namespace).Delete(ctx, s, metav1.DeleteOptions{})
 		if err != nil {
-			return fmt.Errorf("error deleting subscription %q: %w", s, err)
+			return fmt.Errorf("error deleting Subscription %q: %w", s, err)
 
 		}
 	}
