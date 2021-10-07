@@ -94,3 +94,15 @@ func (b *Broker) IsReady() bool {
 func (bs *BrokerStatus) InitializeConditions() {
 	bs.GetConditionSet().Manage(bs).InitializeConditions()
 }
+
+func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded() {
+	triggerCondSet.Manage(bs).MarkTrue(TriggerConditionDeadLetterSinkResolved)
+}
+
+func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
+	triggerCondSet.Manage(bs).MarkTrueWithReason(TriggerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
+}
+
+func (bs *BrokerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(bs).MarkFalse(TriggerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
+}

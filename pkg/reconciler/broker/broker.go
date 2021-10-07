@@ -50,6 +50,7 @@ import (
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
+	"knative.dev/eventing/vendor/knative.dev/pkg/resolver"
 )
 
 type Reconciler struct {
@@ -65,6 +66,9 @@ type Reconciler struct {
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
+
+	//
+	uriResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements Interface
@@ -136,6 +140,21 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.Annotations[eventing.BrokerChannelKindStatusAnnotationKey] = chanMan.ref.Kind
 	b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey] = chanMan.ref.APIVersion
 	b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = chanMan.ref.Name
+
+	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
+			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
+			b.Status.DeadLetterSinkURI = nil
+			return err
+		}
+
+		b.Status.DeadLetterSinkURI = deadLetterSinkUri
+		b.Status.MarkDeadLetterSinkResolvedSucceeded()
+	}
+
+	b.Status.MarkDeadLetterSinkNotConfigured()
 
 	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
