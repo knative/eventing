@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 /*
@@ -20,19 +21,18 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	. "github.com/cloudevents/sdk-go/v2/test"
+	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	eventingtestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
+	"knative.dev/eventing/test/lib/sender"
 )
 
 func BrokerPreferHeaderCheck(
@@ -43,12 +43,12 @@ func BrokerPreferHeaderCheck(
 	options ...testlib.SetupClientOption) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		const (
-			eventRecord          = "event-record"
-			triggerName          = "test-trigger"
-			dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}`
-			pingSourceName       = "test-ping-source-annotation"
-			// Every 1 minute starting from now
-			schedule = "*/1 * * * *"
+			eventRecord = "event-recorder"
+			triggerName = "test-trigger"
+			senderName  = "request-sender"
+			eventSource = "source1"
+			eventType   = "type1"
+			eventBody   = `{"msg":"e2e-eventtransformation-body"}`
 		)
 
 		tests := []struct {
@@ -76,39 +76,41 @@ func BrokerPreferHeaderCheck(
 
 				client.CreateTriggerOrFail(triggerName,
 					resources.WithSubscriberServiceRefForTrigger(eventRecord),
-					resources.WithDependencyAnnotationTrigger(dependencyAnnotation),
 					resources.WithBroker(brokerName),
 				)
 
-				jsonData := `{"msg":"Test msg"}`
-				pingSource := eventingtestingv1.NewPingSource(
-					pingSourceName,
-					client.Namespace,
-					eventingtestingv1.WithPingSourceSpec(sourcesv1.PingSourceSpec{
-						Schedule:    schedule,
-						ContentType: cloudevents.ApplicationJSON,
-						Data:        jsonData,
-						SourceSpec: duckv1.SourceSpec{
-							Sink: duckv1.Destination{
-								Ref: &duckv1.KReference{
-									Name:       brokerName,
-									APIVersion: "eventing.knative.dev/v1",
-									Kind:       "Broker",
-								},
-							},
-						},
-					}),
+				client.WaitForAllTestResourcesReadyOrFail(ctx)
+
+				eventToSend := cloudevents.NewEvent()
+				eventToSend.SetID(uuid.New().String())
+				eventToSend.SetType(eventType)
+				eventToSend.SetSource(eventSource)
+				if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
+					t.Fatal("Cannot set the payload of the event:", err.Error())
+				}
+				client.SendEventToAddressable(
+					ctx,
+					senderName,
+					brokerName,
+					testlib.BrokerTypeMeta,
+					eventToSend,
+					sender.WithMethod("POST"),
 				)
 
-				client.CreatePingSourceV1OrFail(pingSource)
+				fmt.Println(" HEREEE ")
+				fmt.Println(allEventTracker.Find(recordevents.Any()))
 
-				// Trigger should become ready after pingSource was created
-				client.WaitForResourceReadyOrFail(triggerName, testlib.TriggerTypeMeta)
+				// check if the logging service receives the correct event
+				allEventTracker.AssertAtLeast(1, recordevents.MatchEvent(
+					HasSource(eventSource),
+					HasType(eventType),
+					HasData([]byte(eventBody)),
+				))
 
-				allEventTracker.AssertExact(
+				/*allEventTracker.AssertAtLeast(
 					1,
 					recordevents.HasAdditionalHeader("Prefer", "reply"),
-				)
+				)*/
 			})
 		}
 	})
