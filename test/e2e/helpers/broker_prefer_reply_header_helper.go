@@ -18,12 +18,10 @@ package helpers
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -80,7 +78,7 @@ func BrokerPreferHeaderCheck(
 					resources.WithBroker(brokerName),
 				)
 
-				jsonData := fmt.Sprintf(`{"msg":"Test trigger-annotation %s"}`, uuid.NewUUID())
+				jsonData := `{"msg":"Test msg"}`
 				pingSource := eventingtestingv1.NewPingSource(
 					pingSourceName,
 					client.Namespace,
