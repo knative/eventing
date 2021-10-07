@@ -45,7 +45,7 @@ func BrokerPreferHeaderCheck(
 		const (
 			eventRecord          = "event-record"
 			triggerName          = "test-trigger"
-			dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1beta2"}`
+			dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1"}`
 			pingSourceName       = "test-ping-source-annotation"
 			// Every 1 minute starting from now
 			schedule = "*/1 * * * *"
