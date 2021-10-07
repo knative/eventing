@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
 
 	duckapis "knative.dev/pkg/apis/duck"
@@ -125,10 +126,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1.Parallel) pkgrecon
 	// If a parallel instance is modified resulting in the number of steps decreasing, there will be
 	// leftover channels and subscriptions that need to be removed.
 	if err := r.removeUnwantedChannels(ctx, channelResourceInterface, p, append(channels, ingressChannel)); err != nil {
-		return err
+		return fmt.Errorf("error removing unwanted channels: %w", err)
 	}
 
-	return r.removeUnwantedSubscriptions(ctx, p, append(filterSubs, subs...))
+	if err := r.removeUnwantedSubscriptions(ctx, p, append(filterSubs, subs...)); err != nil {
+		return fmt.Errorf("error removing unwanted subscriptions: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1.Channelable, error) {
@@ -261,21 +266,19 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 
 	l, err := r.channelableTracker.ListerFor(channelObjRef)
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Error getting lister for Channel", zap.Any("channelRef", channelObjRef), zap.Error(err))
-		return err
+		return fmt.Errorf("error getting lister for Channels: %w", err)
 	}
 
-	exists, err := l.ByNamespace(p.GetNamespace()).List(labels.Everything())
+	ownedChannels, err := l.ByNamespace(p.GetNamespace()).List(labels.Everything())
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Error listing Channels", zap.Any("namespace", p.Namespace), zap.Any("channelRef", channelObjRef), zap.Error(err))
-		return err
+		return fmt.Errorf("error listing Channels: %w", err)
 	}
 
-	for _, c := range exists {
+	ownedSet := sets.String{}
+	for _, c := range ownedChannels {
 		ch, err := kmeta.DeletionHandlingAccessor(c)
 		if err != nil {
-			logging.FromContext(ctx).Errorw("Failed to get channel", zap.Any("channel", c), zap.Error(err))
-			return err
+			return fmt.Errorf("error reading channel %q: %w", ch.GetName(), err)
 		}
 
 		if !ch.GetDeletionTimestamp().IsZero() ||
@@ -283,20 +286,18 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 			continue
 		}
 
-		used := false
-		for _, cw := range wanted {
-			if cw.Name == ch.GetName() {
-				used = true
-				break
-			}
-		}
+		ownedSet.Insert(ch.GetName())
+	}
 
-		if !used {
-			err = channelResourceInterface.Delete(ctx, ch.GetName(), metav1.DeleteOptions{})
-			if err != nil {
-				logging.FromContext(ctx).Errorw("Failed to delete Channel", zap.Any("channel", ch), zap.Error(err))
-				return err
-			}
+	wantedSet := sets.String{}
+	for _, cw := range wanted {
+		wantedSet.Insert(cw.Name)
+	}
+
+	for _, c := range ownedSet.Difference(wantedSet).List() {
+		err = channelResourceInterface.Delete(ctx, c, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("error deleting channel %q: %w", c, err)
 		}
 	}
 
@@ -306,30 +307,29 @@ func (r *Reconciler) removeUnwantedChannels(ctx context.Context, channelResource
 func (r *Reconciler) removeUnwantedSubscriptions(ctx context.Context, p *v1.Parallel, wanted []*messagingv1.Subscription) error {
 	subs, err := r.subscriptionLister.Subscriptions(p.Namespace).List(labels.Everything())
 	if err != nil {
-		logging.FromContext(ctx).Errorw("Error listing Subscriptions", zap.Any("namespace", p.Namespace), zap.Error(err))
-		return err
+		return fmt.Errorf("error listing Subscriptions: %w", err)
 	}
 
+	ownedSet := sets.String{}
 	for _, sub := range subs {
 		if !sub.GetDeletionTimestamp().IsZero() ||
 			!metav1.IsControlledBy(sub, p) {
 			continue
 		}
 
-		used := false
-		for _, sw := range wanted {
-			if sub.Name == sw.Name {
-				used = true
-				break
-			}
-		}
+		ownedSet.Insert(sub.GetName())
+	}
 
-		if !used {
-			err = r.eventingClientSet.MessagingV1().Subscriptions(p.Namespace).Delete(ctx, sub.Name, metav1.DeleteOptions{})
-			if err != nil {
-				logging.FromContext(ctx).Infow("Failed to delete Subscription", zap.Any("subscription", sub), zap.Error(err))
-				return err
-			}
+	wantedSet := sets.String{}
+	for _, sw := range wanted {
+		wantedSet.Insert(sw.Name)
+	}
+
+	for _, s := range ownedSet.Difference(wantedSet).List() {
+		err = r.eventingClientSet.MessagingV1().Subscriptions(p.Namespace).Delete(ctx, s, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("error deleting subscription %q: %w", s, err)
+
 		}
 	}
 
