@@ -1,4 +1,3 @@
-//go:build e2e
 // +build e2e
 
 /*
@@ -21,18 +20,15 @@ package helpers
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	. "github.com/cloudevents/sdk-go/v2/test"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
-	"knative.dev/eventing/test/lib/sender"
 )
 
 func BrokerPreferHeaderCheck(
@@ -94,23 +90,12 @@ func BrokerPreferHeaderCheck(
 					brokerName,
 					testlib.BrokerTypeMeta,
 					eventToSend,
-					sender.WithMethod("POST"),
 				)
 
-				fmt.Println(" HEREEE ")
-				fmt.Println(allEventTracker.Find(recordevents.Any()))
-
-				// check if the logging service receives the correct event
-				allEventTracker.AssertAtLeast(1, recordevents.MatchEvent(
-					HasSource(eventSource),
-					HasType(eventType),
-					HasData([]byte(eventBody)),
-				))
-
-				/*allEventTracker.AssertAtLeast(
+				allEventTracker.AssertAtLeast(
 					1,
 					recordevents.HasAdditionalHeader("Prefer", "reply"),
-				)*/
+				)
 			})
 		}
 	})
