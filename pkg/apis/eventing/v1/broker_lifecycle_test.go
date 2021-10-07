@@ -188,6 +188,9 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -218,6 +221,9 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -246,6 +252,9 @@ func TestBrokerInitializeConditions(t *testing.T) {
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionFilter,
@@ -280,6 +289,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady             *bool
 		markTriggerChannelReady      *bool
 		markFilterReady              *bool
+		markDLQReady                 *bool
 		address                      *apis.URL
 		markIngressSubscriptionOwned bool
 		markIngressSubscriptionReady *bool
@@ -289,6 +299,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLQReady:                 &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -298,6 +309,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLQReady:                 &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -370,6 +382,11 @@ func TestBrokerIsReady(t *testing.T) {
 				}
 				bs.PropagateTriggerChannelReadiness(c)
 			}
+
+			if test.markDLQReady != nil {
+				bs.MarkDeadLetterSinkResolvedSucceeded()
+			}
+
 			if test.markFilterReady != nil {
 				var ep *corev1.Endpoints
 				if *test.markFilterReady {

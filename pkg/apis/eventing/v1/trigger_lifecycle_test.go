@@ -261,7 +261,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		wantConditionStatus         corev1.ConditionStatus
 	}{{
 		name:                        "all happy",
-		brokerStatus:                TestHelper.ReadyBrokerStatus(false),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
@@ -290,7 +290,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "subscribed sad",
-		brokerStatus:                TestHelper.ReadyBrokerStatus(false),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.FalseSubscriptionCondition(),
@@ -299,7 +299,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "failed to resolve subscriber",
-		brokerStatus:                TestHelper.ReadyBrokerStatus(false),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
@@ -309,7 +309,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "dependency unknown",
-		brokerStatus:                TestHelper.ReadyBrokerStatus(false),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
@@ -320,7 +320,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		wantConditionStatus:         corev1.ConditionUnknown,
 	}, {
 		name:                        "dependency false",
-		brokerStatus:                TestHelper.ReadyBrokerStatus(false),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
@@ -340,7 +340,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "dlq status false",
-		brokerStatus:                TestHelper.ReadyBrokerStatus(false),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),

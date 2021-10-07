@@ -55,19 +55,23 @@ func (testHelper) ReadySubscriptionStatus() *messagingv1.SubscriptionStatus {
 	return ss
 }
 
-func (t testHelper) ReadyBrokerStatus(definedDLQ bool) *BrokerStatus {
+func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressAvailability(t.AvailableEndpoints())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateFilterAvailability(t.AvailableEndpoints())
 	bs.SetAddress(apis.HTTP("example.com"))
+	bs.MarkDeadLetterSinkResolvedSucceeded()
+	return bs
+}
 
-	if !definedDLQ {
-		bs.MarkDeadLetterSinkNotConfigured()
-	} else {
-		bs.MarkDeadLetterSinkResolvedSucceeded()
-	}
-
+func (t testHelper) ReadyBrokerStatusWithoutDLQ() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.PropagateIngressAvailability(t.AvailableEndpoints())
+	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateFilterAvailability(t.AvailableEndpoints())
+	bs.SetAddress(apis.HTTP("example.com"))
+	bs.MarkDeadLetterSinkNotConfigured()
 	return bs
 }
 
