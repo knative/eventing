@@ -38,6 +38,7 @@ import (
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
@@ -85,6 +86,7 @@ func NewController(
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
+	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

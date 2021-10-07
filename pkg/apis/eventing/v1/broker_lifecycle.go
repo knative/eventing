@@ -23,11 +23,12 @@ import (
 )
 
 const (
-	BrokerConditionReady                             = apis.ConditionReady
-	BrokerConditionIngress        apis.ConditionType = "IngressReady"
-	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
-	BrokerConditionFilter         apis.ConditionType = "FilterReady"
-	BrokerConditionAddressable    apis.ConditionType = "Addressable"
+	BrokerConditionReady                                     = apis.ConditionReady
+	BrokerConditionIngress                apis.ConditionType = "IngressReady"
+	BrokerConditionTriggerChannel         apis.ConditionType = "TriggerChannelReady"
+	BrokerConditionFilter                 apis.ConditionType = "FilterReady"
+	BrokerConditionAddressable            apis.ConditionType = "Addressable"
+	BrokerConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 )
 
 var brokerCondSet = apis.NewLivingConditionSet(
@@ -35,6 +36,7 @@ var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionTriggerChannel,
 	BrokerConditionFilter,
 	BrokerConditionAddressable,
+	BrokerConditionDeadLetterSinkResolved,
 )
 var brokerCondSetLock = sync.RWMutex{}
 
@@ -96,13 +98,13 @@ func (bs *BrokerStatus) InitializeConditions() {
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded() {
-	triggerCondSet.Manage(bs).MarkTrue(TriggerConditionDeadLetterSinkResolved)
+	bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionDeadLetterSinkResolved)
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
-	triggerCondSet.Manage(bs).MarkTrueWithReason(TriggerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
+	bs.GetConditionSet().Manage(bs).MarkTrueWithReason(BrokerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
-	triggerCondSet.Manage(bs).MarkFalse(TriggerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
+	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

@@ -46,11 +46,10 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
-	"knative.dev/eventing/pkg/duck"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/eventing/vendor/knative.dev/pkg/resolver"
+	"knative.dev/pkg/resolver"
 )
 
 type Reconciler struct {
@@ -62,12 +61,12 @@ type Reconciler struct {
 	subscriptionLister messaginglisters.SubscriptionLister
 	configmapLister    corev1listers.ConfigMapLister
 
-	channelableTracker duck.ListableTracker
+	channelableTracker ducklib.ListableTracker
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
 
-	//
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Brokers DLQ.
 	uriResolver *resolver.URIResolver
 }
 
@@ -141,21 +140,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey] = chanMan.ref.APIVersion
 	b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = chanMan.ref.Name
 
-	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
-		if err != nil {
-			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
-			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
-			b.Status.DeadLetterSinkURI = nil
-			return err
-		}
-
-		b.Status.DeadLetterSinkURI = deadLetterSinkUri
-		b.Status.MarkDeadLetterSinkResolvedSucceeded()
-	}
-
-	b.Status.MarkDeadLetterSinkNotConfigured()
-
 	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
 
@@ -174,6 +158,21 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
+
+	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
+			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
+			b.Status.DeadLetterSinkURI = nil
+			return err
+		}
+
+		b.Status.DeadLetterSinkURI = deadLetterSinkUri
+		b.Status.MarkDeadLetterSinkResolvedSucceeded()
+	} else {
+		b.Status.MarkDeadLetterSinkNotConfigured()
+	}
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.
