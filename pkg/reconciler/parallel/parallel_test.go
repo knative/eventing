@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/duck"
@@ -448,6 +449,103 @@ func TestAllBranches(t *testing.T) {
 					WithInitFlowsParallelConditions,
 					WithFlowsParallelChannelTemplateSpec(imc),
 					WithFlowsParallelBranches([]v1.ParallelBranch{{Subscriber: createSubscriber(1)}}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		},
+		{
+			Name: "two branches, update: remove one branch",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Subscriber: createSubscriber(0)},
+					}),
+					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					WithFlowsParallelBranchStatuses([]v1.ParallelBranchStatus{
+						{
+							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+							FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+							SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						},
+						{
+							FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 1, corev1.ConditionFalse),
+							FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 1, corev1.ConditionFalse),
+							SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 1, corev1.ConditionFalse),
+						},
+					})),
+
+				createChannel(parallelName),
+				createBranchChannel(parallelName, 0),
+				createBranchChannel(parallelName, 1),
+
+				resources.NewSubscription(0, NewFlowsParallel(parallelName, testNS,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Subscriber: createSubscriber(0)},
+						{Subscriber: createSubscriber(1)},
+					}))),
+				resources.NewFilterSubscription(0, NewFlowsParallel(parallelName, testNS,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Subscriber: createSubscriber(0)},
+						{Subscriber: createSubscriber(1)},
+					}))),
+
+				resources.NewSubscription(1, NewFlowsParallel(parallelName, testNS,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Subscriber: createSubscriber(0)},
+						{Subscriber: createSubscriber(1)},
+					}))),
+				resources.NewFilterSubscription(1, NewFlowsParallel(parallelName, testNS,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Subscriber: createSubscriber(0)},
+						{Subscriber: createSubscriber(1)},
+					}))),
+			},
+			WantErr: false,
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					},
+					Name: resources.ParallelSubscriptionName(parallelName, 1),
+				}, {
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					},
+					Name: resources.ParallelFilterSubscriptionName(parallelName, 1),
+				}, {
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+						Resource:  v1.SchemeGroupVersion.WithResource("inmemorychannels"),
+					},
+					Name: resources.ParallelBranchChannelName(parallelName, 1),
+				},
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewFlowsParallel(parallelName, testNS,
+					WithInitFlowsParallelConditions,
+					WithFlowsParallelChannelTemplateSpec(imc),
+					WithFlowsParallelBranches([]v1.ParallelBranch{
+						{Subscriber: createSubscriber(0)},
+					}),
 					WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
 					WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
