@@ -630,7 +630,7 @@ func TestReconcile(t *testing.T) {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					//WithTriggerDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithTriggerDeadLeaderSink(brokerDestv1.Ref, ""),
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
 					WithTriggerStatusSubscriberURI(subscriberURI),

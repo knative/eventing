@@ -216,7 +216,7 @@ func TestEventTypeConditionStatus(t *testing.T) {
 	}{{
 		name:                "all happy",
 		markBrokerExists:    &trueValue,
-		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatus(),
+		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatus(false),
 		wantConditionStatus: corev1.ConditionTrue,
 	}, {
 		name:                "broker exist sad",
