@@ -104,7 +104,7 @@ func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
 
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1.Broker) {
-	b.Status = *v1.TestHelper.ReadyBrokerStatus()
+	b.Status = *v1.TestHelper.ReadyBrokerStatusWithoutDLQ()
 }
 
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
