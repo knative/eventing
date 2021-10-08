@@ -15,6 +15,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,19 @@ func NewBroker(name, namespace string, o ...BrokerOption) *v1.Broker {
 // WithInitBrokerConditions initializes the Broker's conditions.
 func WithInitBrokerConditions(b *v1.Broker) {
 	b.Status.InitializeConditions()
+}
+
+func WithFalseBrokerDLSConditions(b *v1.Broker) {
+
+	b.Status.MarkDeadLetterSinkResolvedFailed(
+		"Unable to get the DeadLetterSink's URI",
+		fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
+			b.Spec.Delivery.DeadLetterSink.Ref.Name,
+		))
+	b.Status.GetConditionSet().Manage(&b.Status).MarkTrue(v1.BrokerConditionIngress)
+	b.Status.GetConditionSet().Manage(&b.Status).MarkTrue(v1.BrokerConditionTriggerChannel)
+	b.Status.GetConditionSet().Manage(&b.Status).MarkTrue(v1.BrokerConditionFilter)
+	b.Status.GetConditionSet().Manage(&b.Status).MarkUnknown(v1.BrokerConditionAddressable, "", "")
 }
 
 func WithBrokerFinalizers(finalizers ...string) BrokerOption {

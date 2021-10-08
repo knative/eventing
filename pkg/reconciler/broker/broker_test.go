@@ -55,6 +55,7 @@ const (
 	systemNS   = "knative-testing"
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
+	sinkName   = "test-sink"
 
 	configMapName = "test-configmap"
 
@@ -81,6 +82,14 @@ var (
 		Scheme: "http",
 		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
+	}
+
+	brokerDestv1 = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1",
+		},
 	}
 )
 
@@ -361,6 +370,39 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": inducing failure for update brokers`),
 			},
+			WantErr: true,
+		}, {
+			Name: "Error broker, status with non existent DLQ",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(testNS, true),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`, sinkName)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithFalseBrokerDLSConditions,
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
+			}},
 			WantErr: true,
 		},
 	}

@@ -164,8 +164,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
 			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
-			b.Status.DeadLetterSinkURI = nil
-			return err
+			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
 		}
 
 		b.Status.DeadLetterSinkURI = deadLetterSinkURI
