@@ -25,6 +25,7 @@ import (
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -57,6 +58,8 @@ var (
 		Type:   BrokerConditionAddressable,
 		Status: corev1.ConditionFalse,
 	}
+
+	url, _ = apis.ParseURL("http://example.com")
 )
 
 func TestBrokerGetConditionSet(t *testing.T) {
@@ -268,6 +271,61 @@ func TestBrokerInitializeConditions(t *testing.T) {
 				}, {
 					Type:   BrokerConditionTriggerChannel,
 					Status: corev1.ConditionUnknown,
+				}},
+			},
+		}}, {
+		name: "default ready status without defined DLS",
+		bs:   TestHelper.ReadyBrokerStatusWithoutDLS(),
+		want: &BrokerStatus{
+			Address: v1.Addressable{URL: url},
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
+					Status: corev1.ConditionTrue,
+				}},
+			},
+		}}, {
+		name: "broker ready condition",
+		bs: &BrokerStatus{
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{*TestHelper.ReadyBrokerCondition()},
+			},
+		},
+		want: &BrokerStatus{
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
+					Status: corev1.ConditionTrue,
 				}},
 			},
 		}},
