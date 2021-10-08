@@ -66,7 +66,7 @@ type Reconciler struct {
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
 
-	// Dynamic tracker to track AddressableTypes. In particular, it tracks Brokers DLQ.
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Brokers DLS.
 	uriResolver *resolver.URIResolver
 }
 
@@ -160,7 +160,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
 	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
+		deadLetterSinkURI, err := r.uriResolver.URIFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
 		if err != nil {
 			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
 			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
@@ -168,7 +168,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			return err
 		}
 
-		b.Status.DeadLetterSinkURI = deadLetterSinkUri
+		b.Status.DeadLetterSinkURI = deadLetterSinkURI
 		b.Status.MarkDeadLetterSinkResolvedSucceeded()
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()

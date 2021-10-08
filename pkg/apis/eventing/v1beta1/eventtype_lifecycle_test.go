@@ -219,9 +219,9 @@ func TestEventTypeConditionStatus(t *testing.T) {
 		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatus(),
 		wantConditionStatus: corev1.ConditionTrue,
 	}, {
-		name:                "all happy dlq not configured",
+		name:                "all happy, dls not configured",
 		markBrokerExists:    &trueValue,
-		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatusWithoutDLQ(),
+		brokerStatus:        eventingv1.TestHelper.ReadyBrokerStatusWithoutDLS(),
 		wantConditionStatus: corev1.ConditionTrue,
 	}, {
 		name:                "broker exist sad",

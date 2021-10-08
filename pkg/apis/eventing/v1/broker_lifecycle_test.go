@@ -289,7 +289,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady             *bool
 		markTriggerChannelReady      *bool
 		markFilterReady              *bool
-		markDLQReady                 *bool
+		markDLSResolved              *bool
 		address                      *apis.URL
 		markIngressSubscriptionOwned bool
 		markIngressSubscriptionReady *bool
@@ -299,7 +299,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -309,7 +309,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -319,7 +319,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -329,7 +329,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &falseVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -339,7 +339,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
-		markDLQReady:                 &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -349,27 +349,27 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
-		name:                         "dlq sad",
+		name:                         "dls sad",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 &falseVal,
+		markDLSResolved:              &falseVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
-		name:                         "dlq not configured",
+		name:                         "dls not configured",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		markDLQReady:                 nil,
+		markDLSResolved:              nil,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -379,7 +379,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &falseVal,
 		markFilterReady:              &falseVal,
-		markDLQReady:                 &falseVal,
+		markDLSResolved:              &falseVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &falseVal,
@@ -408,10 +408,10 @@ func TestBrokerIsReady(t *testing.T) {
 				bs.PropagateTriggerChannelReadiness(c)
 			}
 
-			if test.markDLQReady == &trueVal {
+			if test.markDLSResolved == &trueVal {
 				bs.MarkDeadLetterSinkResolvedSucceeded()
-			} else if test.markDLQReady == &falseVal {
-				bs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "subscriber not found")
+			} else if test.markDLSResolved == &falseVal {
+				bs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
 			} else {
 				bs.MarkDeadLetterSinkNotConfigured()
 			}

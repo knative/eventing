@@ -65,7 +65,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	return bs
 }
 
-func (t testHelper) ReadyBrokerStatusWithoutDLQ() *BrokerStatus {
+func (t testHelper) ReadyBrokerStatusWithoutDLS() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressAvailability(t.AvailableEndpoints())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
