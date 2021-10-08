@@ -467,7 +467,7 @@ func TestBrokerIsReady(t *testing.T) {
 			}
 
 			if test.markDLSResolved == &trueVal {
-				bs.MarkDeadLetterSinkResolvedSucceeded()
+				bs.MarkDeadLetterSinkResolvedSucceeded(nil)
 			} else if test.markDLSResolved == &falseVal {
 				bs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
 			} else {

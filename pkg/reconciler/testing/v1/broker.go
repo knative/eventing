@@ -120,6 +120,11 @@ func WithBrokerReady(b *v1.Broker) {
 	b.Status = *v1.TestHelper.ReadyBrokerStatusWithoutDLS()
 }
 
+// WithBrokerReady sets .Status to ready.
+func WithBrokerReadyWithDLS(b *v1.Broker) {
+	b.Status = *v1.TestHelper.ReadyBrokerStatus()
+}
+
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
 func WithTriggerChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1.Broker) {
@@ -177,6 +182,12 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 			b.Status.Annotations = make(map[string]string, 1)
 		}
 		b.Status.Annotations[eventing.BrokerChannelAddressStatusAnnotationKey] = address
+	}
+}
+
+func WithStatusDLSURI(dlsURI *apis.URL) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
 	}
 }
 

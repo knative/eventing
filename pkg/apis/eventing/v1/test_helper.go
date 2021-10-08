@@ -61,7 +61,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateFilterAvailability(t.AvailableEndpoints())
 	bs.SetAddress(apis.HTTP("example.com"))
-	bs.MarkDeadLetterSinkResolvedSucceeded()
+	bs.MarkDeadLetterSinkResolvedSucceeded(nil)
 	return bs
 }
 

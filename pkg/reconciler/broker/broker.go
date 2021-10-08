@@ -167,8 +167,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
 		}
 
-		b.Status.DeadLetterSinkURI = deadLetterSinkURI
-		b.Status.MarkDeadLetterSinkResolvedSucceeded()
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI)
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()
 	}

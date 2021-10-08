@@ -97,7 +97,8 @@ func (bs *BrokerStatus) InitializeConditions() {
 	bs.GetConditionSet().Manage(bs).InitializeConditions()
 }
 
-func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded() {
+func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
+	bs.DeadLetterSinkURI = deadLetterSinkURI
 	bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionDeadLetterSinkResolved)
 }
 

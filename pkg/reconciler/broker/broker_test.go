@@ -56,6 +56,7 @@ const (
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
 	sinkName   = "test-sink"
+	dlsName    = "test-dls"
 
 	configMapName = "test-configmap"
 
@@ -91,6 +92,23 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
+
+	DLSAddress = &apis.URL{
+		Scheme: "http",
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
+		Path:   fmt.Sprintf("/%s/%s", testNS, dlsName),
+	}
+
+	sinkSVCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+
+	dlsURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
 )
 
 func TestReconcile(t *testing.T) {
@@ -404,6 +422,39 @@ func TestReconcile(t *testing.T) {
 					WithChannelNameAnnotation(triggerChannelName)),
 			}},
 			WantErr: true,
+		}, {
+			Name: "valid Broker with DLQ",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(testNS, true),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithBrokerAddressURI(brokerAddress),
+					WithStatusDLSURI(dlsURI),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
+			}},
+			WantErr: false,
 		},
 	}
 
@@ -563,5 +614,18 @@ func FilterLabels() map[string]string {
 func IngressLabels() map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/brokerRole": "ingress",
+	}
+}
+
+func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      dlsName,
+			},
+		},
 	}
 }
