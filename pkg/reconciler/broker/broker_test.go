@@ -390,7 +390,7 @@ func TestReconcile(t *testing.T) {
 					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`, sinkName)),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`Failed to resolve Dead Letter Sink URI: brokers.eventing.knative.dev "%s" not found`, sinkName)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
