@@ -102,6 +102,7 @@ func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded() {
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
+	bs.DeadLetterSinkURI = nil
 	bs.GetConditionSet().Manage(bs).MarkTrueWithReason(BrokerConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
