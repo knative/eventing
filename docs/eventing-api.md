@@ -353,11 +353,9 @@ string
 <em>(Optional)</em>
 <p>Timeout is the timeout of each single request. The value must be greater than 0.
 More information on Duration format:
-
 - <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
-
-<p>Note: This API is EXPERIMENTAL and could be deprecated in the future. For more details see <a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/5148</a></p>
+<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/5148</a></p>
 </td>
 </tr>
 <tr>
@@ -395,17 +393,16 @@ For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 <td>
 <code>retryAfter</code><br/>
 <em>
+<a href="#duck.knative.dev/v1.RetryAfter">
 RetryAfter
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>RetryAfter contains configuration controlling the handling of
-"<a href="https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.3">Retry-After</a>"
-headers for responses with <b>429</b> (Too Many Requests) and <b>503</b> (Service Unavailable)
-response codes.</p>
-<p>Note: This API is EXPERIMENTAL and could be deprecated in the future. For more details see
-<a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/TODO</a></p>
+<p>RetryAfter controls how &ldquo;Retry-After&rdquo; header durations are handled for 429 and 503 response codes.
+If not provided, the default behavior is to ignore &ldquo;Retry-After&rdquo; headers in responses.</p>
+<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/TODO">https://github.com/knative/eventing/issues/TODO</a></p>
 </td>
 </tr>
 </tbody>
@@ -447,14 +444,10 @@ where failed events are sent to.</p>
 </h3>
 <p>
 (<em>Appears on:</em><a href="#duck.knative.dev/v1.DeliverySpec">DeliverySpec</a>)
-<p>RetryAfter contains configuration controlling the handling of HTTP
-"<a href="https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.3">Retry-After</a>"
-headers for responses with <b>429</b> (Too Many Requests) and <b>503</b>
-(Service Unavailable) response codes. If not provided, the default behavior is
-to simply ignore "Retry-After" headers and to retry at the configured rate
-specified in the DeliverySpec.</p>
-<p>Note: This API is EXPERIMENTAL and could be deprecated in the future. For more details see
-<a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/TODO</a></p>
+</p>
+<p>
+<p>RetryAfter contains configuration related to the handling of &ldquo;Retry-After&rdquo; headers.</p>
+</p>
 <table>
 <thead>
 <tr>
@@ -471,10 +464,11 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled is a boolean flag indicating whether "Retry-After" headers should be
-respected when calculating back-off durations while re-sending events.  The
-largest of the "Retry-After" duration, and the calculated linear or exponential
-backoff will be used.</p>
+<p>Enabled is a flag indicating whether to respect the &ldquo;Retry-After&rdquo; header duration.
+If enabled, the largest of the normal backoff duration and the &ldquo;Retry-After&rdquo;
+header value will be used when calculating the next backoff duration.  This will
+only be considered when a 429 (Too Many Requests) or 503 (Service Unavailable)
+response code is received and Retry is greater than 0.</p>
 </td>
 </tr>
 <tr>
@@ -486,17 +480,13 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxDuration represents an override of the "Retry-After" header value in order
-to prevent excessively large durations from negatively impacting event
-processing. If the "Retry-After" duration exceeds the maxDuration, then it will
-be replaced with the maxDuration. This value does <b>NOT</b> impact the 
-calculated linear or exponential backoff durations.
-
+<p>MaxDuration is the maximum time to wait before retrying.  It is intended as an
+override to protect against excessively large &ldquo;Retry-After&rdquo; durations. If provided,
+the value must be greater than 0.  If not provided, the largest of the &ldquo;Retry-After&rdquo;
+duration and the normal backoff duration will be used.
 More information on Duration format:
-
 - <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
-
 </td>
 </tr>
 </tbody>
