@@ -124,7 +124,7 @@ func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.
 		handler = dec(handler)
 	}
 
-	server := &http.Server{Addr: ":8080", Handler: handler}
+	server := &http.Server{Addr: fmt.Sprintf(":%d", recordevents.EventRecordReceivePort), Handler: handler}
 
 	var err error
 	go func() {
