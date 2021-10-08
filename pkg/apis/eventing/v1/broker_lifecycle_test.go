@@ -319,6 +319,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLQReady:                 &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -328,6 +329,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &falseVal,
 		markFilterReady:              &trueVal,
+		markDLQReady:                 &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -337,6 +339,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
+		markDLQReady:                 &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -346,15 +349,37 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLQReady:                 &trueVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
+		name:                         "dlq sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		markDLQReady:                 &falseVal,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
+	}, {
+		name:                         "dlq not configured",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		markDLQReady:                 nil,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    true,
+	}, {
 		name:                         "all sad",
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &falseVal,
 		markFilterReady:              &falseVal,
+		markDLQReady:                 &falseVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &falseVal,
@@ -383,8 +408,12 @@ func TestBrokerIsReady(t *testing.T) {
 				bs.PropagateTriggerChannelReadiness(c)
 			}
 
-			if test.markDLQReady != nil {
+			if test.markDLQReady == &trueVal {
 				bs.MarkDeadLetterSinkResolvedSucceeded()
+			} else if test.markDLQReady == &falseVal {
+				bs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "subscriber not found")
+			} else {
+				bs.MarkDeadLetterSinkNotConfigured()
 			}
 
 			if test.markFilterReady != nil {
