@@ -21,14 +21,20 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/apis/feature"
 )
+
+// TODO - add test cases for RetryAfter
 
 func TestDeliverySpecValidation(t *testing.T) {
 	deliveryTimeoutEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
 		feature.DeliveryTimeout: feature.Enabled,
+	})
+	deliveryRetryAfterEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
+		feature.DeliveryRetryAfter: feature.Enabled,
 	})
 
 	invalidString := "invalid time"
@@ -102,9 +108,41 @@ func TestDeliverySpecValidation(t *testing.T) {
 	}, {
 		name: "valid retry 0",
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(0)},
+		want: nil,
 	}, {
 		name: "valid retry 1",
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(1)},
+		want: nil,
+	}, {
+		name: "valid complete retryAfter",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true, MaxDuration: &validDuration}},
+		want: nil,
+	}, {
+		name: "valid sparse retryAfter",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true}},
+		want: nil,
+	}, {
+		name: "zero retryAfter.MaxDuration",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true, MaxDuration: pointer.StringPtr("PT0S")}},
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue("PT0S", "retryAfter.maxDuration")
+		}(),
+	}, {
+		name: "invalid retryAfter.MaxDuration",
+		ctx:  deliveryRetryAfterEnabledCtx,
+		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true, MaxDuration: &invalidDuration}},
+		want: func() *apis.FieldError {
+			return apis.ErrInvalidValue(invalidDuration, "retryAfter.maxDuration")
+		}(),
+	}, {
+		name: "disabled retryAfter",
+		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true}},
+		want: func() *apis.FieldError {
+			return apis.ErrDisallowedFields("retryAfter")
+		}(),
 	}}
 
 	for _, test := range tests {

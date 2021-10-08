@@ -353,9 +353,11 @@ string
 <em>(Optional)</em>
 <p>Timeout is the timeout of each single request. The value must be greater than 0.
 More information on Duration format:
+
 - <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
 - <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
-<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/5148</a></p>
+
+<p>Note: This API is EXPERIMENTAL and could be deprecated in the future. For more details see <a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/5148</a></p>
 </td>
 </tr>
 <tr>
@@ -389,6 +391,23 @@ More information on Duration format:
 For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>retryAfter</code><br/>
+<em>
+RetryAfter
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryAfter contains configuration controlling the handling of
+"<a href="https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.3">Retry-After</a>"
+headers for responses with <b>429</b> (Too Many Requests) and <b>503</b> (Service Unavailable)
+response codes.</p>
+<p>Note: This API is EXPERIMENTAL and could be deprecated in the future. For more details see
+<a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/TODO</a></p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus
@@ -420,6 +439,64 @@ knative.dev/pkg/apis.URL
 <em>(Optional)</em>
 <p>DeadLetterSink is a KReference that is the reference to the native, platform specific channel
 where failed events are sent to.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1.RetryAfter">RetryAfter
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1.DeliverySpec">DeliverySpec</a>)
+<p>RetryAfter contains configuration controlling the handling of HTTP
+"<a href="https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.3">Retry-After</a>"
+headers for responses with <b>429</b> (Too Many Requests) and <b>503</b>
+(Service Unavailable) response codes. If not provided, the default behavior is
+to simply ignore "Retry-After" headers and to retry at the configured rate
+specified in the DeliverySpec.</p>
+<p>Note: This API is EXPERIMENTAL and could be deprecated in the future. For more details see
+<a href="https://github.com/knative/eventing/issues/5148">https://github.com/knative/eventing/issues/TODO</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled is a boolean flag indicating whether "Retry-After" headers should be
+respected when calculating back-off durations while re-sending events.  The
+largest of the "Retry-After" duration, and the calculated linear or exponential
+backoff will be used.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxDuration</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxDuration represents an override of the "Retry-After" header value in order
+to prevent excessively large durations from negatively impacting event
+processing. If the "Retry-After" duration exceeds the maxDuration, then it will
+be replaced with the maxDuration. This value does <b>NOT</b> impact the 
+calculated linear or exponential backoff durations.
+
+More information on Duration format:
+
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
+
 </td>
 </tr>
 </tbody>

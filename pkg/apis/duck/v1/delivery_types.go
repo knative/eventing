@@ -20,9 +20,10 @@ import (
 	"context"
 
 	"github.com/rickb777/date/period"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 // DeliverySpec contains the delivery options for event senders,
@@ -60,6 +61,33 @@ type DeliverySpec struct {
 	// For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
+
+	// RetryAfter controls how "Retry-After" header durations are handled for 429 and 503 response codes.
+	// If not provided, the default behavior is to ignore "Retry-After" headers in responses.
+	//
+	// Note: This API is EXPERIMENTAL and might break anytime. For more details: https://github.com/knative/eventing/issues/TODO
+	// +optional
+	RetryAfter *RetryAfter `json:"retryAfter,omitempty"`
+}
+
+// RetryAfter contains configuration related to the handling of "Retry-After" headers.
+type RetryAfter struct {
+	// Enabled is a flag indicating whether to respect the "Retry-After" header duration.
+	// If enabled, the largest of the normal backoff duration and the "Retry-After"
+	// header value will be used when calculating the next backoff duration.  This will
+	// only be considered when a 429 (Too Many Requests) or 503 (Service Unavailable)
+	// response code is received and Retry is greater than 0.
+	Enabled bool `json:"enabled"`
+
+	// MaxDuration is the maximum time to wait before retrying.  It is intended as an
+	// override to protect against excessively large "Retry-After" durations. If provided,
+	// the value must be greater than 0.  If not provided, the largest of the "Retry-After"
+	// duration and the normal backoff duration will be used.
+	// More information on Duration format:
+	//  - https://www.iso.org/iso-8601-date-and-time-format.html
+	//  - https://en.wikipedia.org/wiki/ISO_8601
+	// +optional
+	MaxDuration *string `json:"maxDuration,omitempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
@@ -101,6 +129,20 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
 		}
 	}
+
+	if ds.RetryAfter != nil {
+		if feature.FromContext(ctx).IsEnabled(feature.DeliveryRetryAfter) {
+			if ds.RetryAfter.MaxDuration != nil && *ds.RetryAfter.MaxDuration != "" {
+				m, me := period.Parse(*ds.RetryAfter.MaxDuration)
+				if me != nil || m.IsZero() {
+					errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfter.MaxDuration, "retryAfter.maxDuration"))
+				}
+			}
+		} else {
+			errs = errs.Also(apis.ErrDisallowedFields("retryAfter"))
+		}
+	}
+
 	return errs
 }
 

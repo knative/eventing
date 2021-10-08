@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
+
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
@@ -192,6 +194,238 @@ func TestHTTPMessageSenderSendWithRetriesWithSingleRequestTimeout(t *testing.T) 
 	require.Equal(t, 5, int(atomic.LoadInt32(&n)))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, got.StatusCode)
+}
+
+func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
+	t.Parallel()
+
+	// Create A Quick Enum For RetryAfter Format
+	type RetryAfterFormat int
+	const (
+		None RetryAfterFormat = iota
+		Seconds
+		Date
+		Invalid
+	)
+
+	// Define The TestCases
+	tests := []struct {
+		name            string
+		config          *RetryConfig     // The RetryConfig to use in for the test case.
+		statusCode      int              // The HTTP StatusCode which the Server should return.
+		responseFormat  RetryAfterFormat // Indicates the format in which the Server should return the Retry-After header.
+		responseSeconds int              // Indicates the number of Seconds for the Server to use when returning the Retry-After header.
+		wantReqCount    int              // The total number of expected requests, including initial request.
+	}{{
+		name: "disabled 429 without Retry-After",
+		config: &RetryConfig{
+			RetryMax: 2,
+		},
+		statusCode:     http.StatusTooManyRequests,
+		responseFormat: None,
+		wantReqCount:   3,
+	}, {
+		name: "disabled 429 with Retry-After seconds",
+		config: &RetryConfig{
+			RetryMax: 2,
+		},
+		statusCode:      http.StatusTooManyRequests,
+		responseFormat:  Seconds,
+		responseSeconds: 1,
+		wantReqCount:    3,
+	}, {
+		name: "disabled 429 with Retry-After date",
+		config: &RetryConfig{
+			RetryMax: 2,
+		},
+		statusCode:      http.StatusTooManyRequests,
+		responseFormat:  Date,
+		responseSeconds: 2,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 429 without Retry-After",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:     http.StatusTooManyRequests,
+		responseFormat: None,
+		wantReqCount:   3,
+	}, {
+		name: "enabled 429 with Retry-After seconds",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:      http.StatusTooManyRequests,
+		responseFormat:  Seconds,
+		responseSeconds: 1,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 429 with Retry-After seconds max override",
+		config: &RetryConfig{
+			RetryMax:              2,
+			RetryAfterEnabled:     true,
+			RetryAfterMaxDuration: 1 * time.Second,
+		},
+		statusCode:      http.StatusTooManyRequests,
+		responseFormat:  Seconds,
+		responseSeconds: 4,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 429 with Retry-After date",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:      http.StatusTooManyRequests,
+		responseFormat:  Date,
+		responseSeconds: 2,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 429 with Retry-After date max override",
+		config: &RetryConfig{
+			RetryMax:              2,
+			RetryAfterEnabled:     true,
+			RetryAfterMaxDuration: 1 * time.Second,
+		},
+		statusCode:      http.StatusTooManyRequests,
+		responseFormat:  Date,
+		responseSeconds: 4,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 429 with invalid Retry-After",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:     http.StatusTooManyRequests,
+		responseFormat: Invalid,
+		wantReqCount:   3,
+	}, {
+		name: "enabled 503 with Retry-After seconds",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:      http.StatusServiceUnavailable,
+		responseFormat:  Seconds,
+		responseSeconds: 1,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 503 with Retry-After date",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:      http.StatusServiceUnavailable,
+		responseFormat:  Date,
+		responseSeconds: 2,
+		wantReqCount:    3,
+	}, {
+		name: "enabled 503 with invalid Retry-After",
+		config: &RetryConfig{
+			RetryMax:          2,
+			RetryAfterEnabled: true,
+		},
+		statusCode:     http.StatusServiceUnavailable,
+		responseFormat: Invalid,
+		wantReqCount:   3,
+	}}
+
+	// Execute The TestCases
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			// Consistent CheckRetry & Backoff Implementation For All TestCases
+			backoffDuration := 100 * time.Millisecond
+			tc.config.CheckRetry = SelectiveRetry
+			tc.config.Backoff = func(attemptNum int, resp *http.Response) time.Duration { return backoffDuration }
+
+			// Determine The Response Retry-After Backoff Duration From TestCase
+			var responseDuration time.Duration
+			switch tc.responseFormat {
+			case None, Invalid:
+			case Seconds, Date:
+				if tc.responseSeconds > 0 {
+					responseDuration = time.Duration(tc.responseSeconds) * time.Second
+				}
+			default:
+				assert.Fail(t, "TestCase with unsupported ResponseFormat '%v'", tc.responseFormat)
+			}
+
+			// Tracking Variables
+			var previousReqTime time.Time
+			var reqCount int32
+
+			// Create A Test HTTP Server Capable Of Validating Request Interim Durations
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+
+				// Determine Time Of Current Request
+				currentReqTime := time.Now()
+				if tc.config.RetryAfterEnabled && tc.responseFormat == Date && tc.responseSeconds > 0 {
+					currentReqTime = currentReqTime.Round(time.Second) // Round When Using Date Format To Account For RFC850 Precision
+				}
+
+				// Count The Requests
+				atomic.AddInt32(&reqCount, 1)
+
+				// Add Retry-After Header To Response Based On TestCase
+				switch tc.responseFormat {
+				case None:
+					// Don't Write Anything ; )
+				case Seconds:
+					writer.Header().Set(RetryAfterHeader, strconv.Itoa(int(responseDuration.Seconds())))
+				case Date:
+					writer.Header().Set(RetryAfterHeader, currentReqTime.Add(responseDuration).Format(time.RFC850)) // RFC850 Drops Millis
+				case Invalid:
+					writer.Header().Set(RetryAfterHeader, "FOO")
+				default:
+					assert.Fail(t, "TestCase with unsupported ResponseFormat '%v'", tc.responseFormat)
+				}
+
+				// Calculate The Expected Request Duration Based On TestCase
+				expectedRequestDuration := backoffDuration
+				if tc.config.RetryAfterEnabled && responseDuration > 0 {
+					expectedRequestDuration = responseDuration
+					if tc.config.RetryAfterMaxDuration > 0 && tc.config.RetryAfterMaxDuration < expectedRequestDuration {
+						expectedRequestDuration = tc.config.RetryAfterMaxDuration
+					}
+				}
+
+				// Validate Inter-Request Durations Meet Or Exceed Expected Minimums
+				actualRequestDuration := currentReqTime.Sub(previousReqTime)
+				assert.GreaterOrEqual(t, actualRequestDuration, expectedRequestDuration, "previousReqTime=%s, currentReqTime=%s", previousReqTime.String(), currentReqTime.String())
+
+				// Respond With StatusCode From TestCase & Cycle The Times
+				writer.WriteHeader(tc.statusCode)
+				previousReqTime = currentReqTime
+			}))
+
+			// Initialize The Previous Request Time Back Far Enough For Consistent Time Comparisons
+			previousReqTime = time.Now().Add(-2 * backoffDuration)
+			if responseDuration > 0 {
+				previousReqTime = previousReqTime.Add(-2 * responseDuration)
+			}
+
+			// Perform The Test - Generate And Send The Request
+			sender := &HTTPMessageSender{Client: http.DefaultClient}
+			request, err := http.NewRequest("POST", server.URL, nil)
+			assert.Nil(t, err)
+			got, err := sender.SendWithRetries(request, tc.config)
+
+			// Verify Final Results
+			if err != nil {
+				t.Fatalf("SendWithRetries() error = %v, wantErr nil", err)
+			}
+			if got.StatusCode != tc.statusCode {
+				t.Fatalf("SendWithRetries() got = %v, want %v", got.StatusCode, tc.statusCode)
+			}
+			if int(atomic.LoadInt32(&reqCount)) != tc.wantReqCount {
+				t.Fatalf("expected %d retries got %d", tc.config.RetryMax, reqCount)
+			}
+		})
+	}
 }
 
 func TestRetriesOnNetworkErrors(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/rickb777/date/period"
+
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
@@ -66,12 +67,17 @@ type RetryConfig struct {
 
 	// RequestTimeout represents the timeout of the single request
 	RequestTimeout time.Duration
+
+	// Specify whether to handle "Retry-After" headers in 429/503 responses.
+	RetryAfterEnabled     bool
+	RetryAfterMaxDuration time.Duration
 }
 
 func NoRetries() RetryConfig {
 	return noRetries
 }
 
+// RetryConfigFromDeliverySpec returns a RetryConfig based on the specified DeliverySpec.
 func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 
 	retryConfig := NoRetries()
@@ -110,6 +116,17 @@ func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 			return retryConfig, fmt.Errorf("failed to parse Spec.Timeout: %w", err)
 		}
 		retryConfig.RequestTimeout, _ = timeout.Duration()
+	}
+
+	if spec.RetryAfter != nil {
+		retryConfig.RetryAfterEnabled = spec.RetryAfter.Enabled
+		if spec.RetryAfter.MaxDuration != nil && *spec.RetryAfter.MaxDuration != "" {
+			maxPeriod, err := period.Parse(*spec.RetryAfter.MaxDuration)
+			if err != nil {
+				return retryConfig, fmt.Errorf("failed to parse Spec.RetryAfter.MaxDuration: %w", err)
+			}
+			retryConfig.RetryAfterMaxDuration, _ = maxPeriod.Duration()
+		}
 	}
 
 	return retryConfig, nil

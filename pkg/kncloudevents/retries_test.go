@@ -23,19 +23,40 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rickb777/date/period"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/pointer"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/pkg/ptr"
+
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
+
+// Test The NoRetries() Functionality
+func TestNoRetries(t *testing.T) {
+	retryConfig := NoRetries()
+	assert.NotNil(t, retryConfig)
+	assert.Equal(t, 0, retryConfig.RetryMax)
+	assert.NotNil(t, retryConfig.CheckRetry)
+	result, err := retryConfig.CheckRetry(context.TODO(), nil, nil)
+	assert.False(t, result)
+	assert.Nil(t, err)
+	assert.NotNil(t, retryConfig.Backoff)
+	assert.Equal(t, time.Duration(0), retryConfig.Backoff(1, nil))
+	assert.Equal(t, time.Duration(0), retryConfig.Backoff(100, nil))
+}
 
 // Test The RetryConfigFromDeliverySpec() Functionality
 func TestRetryConfigFromDeliverySpec(t *testing.T) {
 	const retry = 5
+	validISO8601DurationString := "PT30S"
+	invalidISO8601DurationString := "FOO"
+
 	testcases := []struct {
 		name                     string
 		backoffPolicy            v1.BackoffPolicyType
 		backoffDelay             string
+		timeout                  *string
+		retryAfter               *v1.RetryAfter
 		expectedBackoffDurations []time.Duration
 		wantErr                  bool
 	}{{
@@ -76,16 +97,67 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffPolicy: v1.BackoffPolicyLinear,
 		backoffDelay:  "FOO",
 		wantErr:       true,
+	}, {
+		name:          "With Valid Timeout",
+		backoffPolicy: v1.BackoffPolicyExponential,
+		backoffDelay:  "PT0.5S",
+		timeout:       &validISO8601DurationString,
+		expectedBackoffDurations: []time.Duration{
+			1 * time.Second,
+			2 * time.Second,
+			4 * time.Second,
+			8 * time.Second,
+			16 * time.Second,
+		},
+	}, {
+		name:          "With Invalid Timeout",
+		backoffPolicy: v1.BackoffPolicyExponential,
+		backoffDelay:  "PT0.5S",
+		timeout:       &invalidISO8601DurationString,
+		wantErr:       true,
+	}, {
+		name:          "With Valid Sparse Retry-After",
+		backoffPolicy: v1.BackoffPolicyExponential,
+		backoffDelay:  "PT0.5S",
+		retryAfter:    &v1.RetryAfter{Enabled: true},
+		expectedBackoffDurations: []time.Duration{
+			1 * time.Second,
+			2 * time.Second,
+			4 * time.Second,
+			8 * time.Second,
+			16 * time.Second,
+		},
+	}, {
+		name:          "With Valid Complete Retry-After",
+		backoffPolicy: v1.BackoffPolicyExponential,
+		backoffDelay:  "PT0.5S",
+		retryAfter:    &v1.RetryAfter{Enabled: true, MaxDuration: &validISO8601DurationString},
+		expectedBackoffDurations: []time.Duration{
+			1 * time.Second,
+			2 * time.Second,
+			4 * time.Second,
+			8 * time.Second,
+			16 * time.Second,
+		},
+	}, {
+		name:          "With Invalid Complete Retry-After",
+		backoffPolicy: v1.BackoffPolicyExponential,
+		backoffDelay:  "PT0.5S",
+		retryAfter:    &v1.RetryAfter{Enabled: true, MaxDuration: &invalidISO8601DurationString},
+		wantErr:       true,
 	}}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			// Create The DeliverySpec To Test
 			deliverySpec := v1.DeliverySpec{
 				DeadLetterSink: nil,
 				Retry:          ptr.Int32(retry),
 				BackoffPolicy:  &tc.backoffPolicy,
 				BackoffDelay:   &tc.backoffDelay,
+				Timeout:        tc.timeout,
+				RetryAfter:     tc.retryAfter,
 			}
 
 			// Create the RetryConfig from the deliverySpec
@@ -95,6 +167,22 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			// If successful then validate the retryConfig (Max & Backoff calculations).
 			if err == nil {
 				assert.Equal(t, retry, retryConfig.RetryMax)
+				if tc.timeout != nil && *tc.timeout != "" {
+					expectedTimeoutPeriod, _ := period.Parse(*tc.timeout)
+					expectedTimeoutDuration, _ := expectedTimeoutPeriod.Duration()
+					assert.Equal(t, expectedTimeoutDuration, retryConfig.RequestTimeout)
+				}
+				if tc.retryAfter != nil {
+					assert.Equal(t, tc.retryAfter.Enabled, retryConfig.RetryAfterEnabled)
+					if tc.retryAfter.MaxDuration != nil && *tc.retryAfter.MaxDuration != "" {
+						expectedMaxPeriod, _ := period.Parse(*tc.retryAfter.MaxDuration)
+						expectedMaxDuration, _ := expectedMaxPeriod.Duration()
+						assert.Equal(t, expectedMaxDuration, retryConfig.RetryAfterMaxDuration)
+					}
+				} else {
+					assert.False(t, retryConfig.RetryAfterEnabled)
+					assert.Equal(t, time.Duration(0), retryConfig.RetryAfterMaxDuration)
+				}
 				for i := 1; i < retry; i++ {
 					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
 					actualBackoffDuration := retryConfig.Backoff(i, nil)

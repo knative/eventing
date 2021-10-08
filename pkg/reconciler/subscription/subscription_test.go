@@ -22,40 +22,37 @@ import (
 	"fmt"
 	"testing"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/kref"
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/tracker"
-
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/kref"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
+	. "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-
-	. "knative.dev/pkg/reconciler/testing"
-
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
@@ -1419,6 +1416,10 @@ func TestAllCases(t *testing.T) {
 		},
 		{
 			Name: "v1 imc - delivery defaulting - full delivery spec",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.DeliveryTimeout:    feature.Enabled,
+				feature.DeliveryRetryAfter: feature.Enabled,
+			}),
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
@@ -1445,6 +1446,11 @@ func TestAllCases(t *testing.T) {
 						Retry:         pointer.Int32Ptr(10),
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
+						Timeout:       pointer.StringPtr("PT2S"),
+						RetryAfter: &eventingduck.RetryAfter{
+							Enabled:     true,
+							MaxDuration: pointer.StringPtr("PT3S"),
+						},
 					}),
 				),
 				NewService(serviceName, testNS),
@@ -1480,6 +1486,11 @@ func TestAllCases(t *testing.T) {
 							Retry:         pointer.Int32Ptr(10),
 							BackoffPolicy: &linear,
 							BackoffDelay:  pointer.StringPtr("PT1S"),
+							Timeout:       pointer.StringPtr("PT2S"),
+							RetryAfter: &eventingduck.RetryAfter{
+								Enabled:     true,
+								MaxDuration: pointer.StringPtr("PT3S"),
+							},
 						},
 					},
 				}),
@@ -1488,6 +1499,10 @@ func TestAllCases(t *testing.T) {
 		},
 		{
 			Name: "v1 imc - don't default delivery - full delivery spec",
+			Ctx: feature.ToContext(context.TODO(), feature.Flags{
+				feature.DeliveryTimeout:    feature.Enabled,
+				feature.DeliveryRetryAfter: feature.Enabled,
+			}),
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
@@ -1505,6 +1520,11 @@ func TestAllCases(t *testing.T) {
 						Retry:         pointer.Int32Ptr(10),
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
+						Timeout:       pointer.StringPtr("PT2S"),
+						RetryAfter: &eventingduck.RetryAfter{
+							Enabled:     true,
+							MaxDuration: pointer.StringPtr("PT3S"),
+						},
 					}),
 				),
 				NewUnstructured(subscriberGVK, dlcName, testNS,
@@ -1530,6 +1550,11 @@ func TestAllCases(t *testing.T) {
 						Retry:         pointer.Int32Ptr(20),
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT10S"),
+						Timeout:       pointer.StringPtr("PT20S"),
+						RetryAfter: &eventingduck.RetryAfter{
+							Enabled:     false,
+							MaxDuration: pointer.StringPtr("PT30S"),
+						},
 					}),
 				),
 				NewService(serviceName, testNS),
@@ -1562,6 +1587,11 @@ func TestAllCases(t *testing.T) {
 						Retry:         pointer.Int32Ptr(10),
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
+						Timeout:       pointer.StringPtr("PT2S"),
+						RetryAfter: &eventingduck.RetryAfter{
+							Enabled:     true,
+							MaxDuration: pointer.StringPtr("PT3S"),
+						},
 					}),
 					WithSubscriptionDeadLetterSinkURI(dlcURI),
 				),
@@ -1578,6 +1608,11 @@ func TestAllCases(t *testing.T) {
 							Retry:         pointer.Int32Ptr(10),
 							BackoffPolicy: &linear,
 							BackoffDelay:  pointer.StringPtr("PT1S"),
+							Timeout:       pointer.StringPtr("PT2S"),
+							RetryAfter: &eventingduck.RetryAfter{
+								Enabled:     true,
+								MaxDuration: pointer.StringPtr("PT3S"),
+							},
 						},
 					},
 				}),
