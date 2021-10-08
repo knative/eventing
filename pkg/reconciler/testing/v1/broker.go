@@ -120,7 +120,7 @@ func WithBrokerReady(b *v1.Broker) {
 	b.Status = *v1.TestHelper.ReadyBrokerStatusWithoutDLS()
 }
 
-// WithBrokerReady sets .Status to ready.
+// WithBrokerReady sets .Status to ready with the DLS defined.
 func WithBrokerReadyWithDLS(b *v1.Broker) {
 	b.Status = *v1.TestHelper.ReadyBrokerStatus()
 }
