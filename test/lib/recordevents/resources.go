@@ -52,7 +52,8 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 		envOption("EVENT_GENERATORS", "receiver"),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, true)
+	readinessProbe := true
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, readinessProbe)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
@@ -70,7 +71,8 @@ func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name s
 		envOption("SINK", sink),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, false)
+	readinessProbe := false // this is not needed for sender pod
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, readinessProbe)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
