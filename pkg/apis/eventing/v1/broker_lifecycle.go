@@ -106,5 +106,6 @@ func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	bs.DeadLetterSinkURI = nil
 	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }
