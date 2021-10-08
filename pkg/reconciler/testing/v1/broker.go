@@ -51,16 +51,15 @@ func WithInitBrokerConditions(b *v1.Broker) {
 }
 
 func WithFalseBrokerDLSConditions(b *v1.Broker) {
-
 	b.Status.MarkDeadLetterSinkResolvedFailed(
 		"Unable to get the DeadLetterSink's URI",
 		fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
 			b.Spec.Delivery.DeadLetterSink.Ref.Name,
 		))
-	b.Status.GetConditionSet().Manage(&b.Status).MarkTrue(v1.BrokerConditionIngress)
-	b.Status.GetConditionSet().Manage(&b.Status).MarkTrue(v1.BrokerConditionTriggerChannel)
-	b.Status.GetConditionSet().Manage(&b.Status).MarkTrue(v1.BrokerConditionFilter)
-	b.Status.GetConditionSet().Manage(&b.Status).MarkUnknown(v1.BrokerConditionAddressable, "", "")
+	b.Status.PropagateIngressAvailability(v1.TestHelper.AvailableEndpoints())
+	b.Status.PropagateTriggerChannelReadiness(v1.TestHelper.ReadyChannelStatus())
+	b.Status.PropagateFilterAvailability(v1.TestHelper.AvailableEndpoints())
+	b.Status.MarkBrokerAddressableUnknown("", "")
 }
 
 func WithBrokerFinalizers(finalizers ...string) BrokerOption {
