@@ -122,6 +122,7 @@ func recordEventsPod(imageName string, name string, serviceAccountName string, r
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromString("receive"),
+					Path: "/healthz",
 				},
 			},
 		}
