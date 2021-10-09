@@ -348,6 +348,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady      *bool
 		markFilterReady              *bool
 		markDLSResolved              *bool
+		markAddressable              *bool
 		address                      *apis.URL
 		markIngressSubscriptionOwned bool
 		markIngressSubscriptionReady *bool
@@ -408,6 +409,17 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		markDLSResolved:              &trueVal,
+		address:                      nil,
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
+	}, {
+		name:                         "addressable unknown",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
+		markAddressable:              nil,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -482,6 +494,10 @@ func TestBrokerIsReady(t *testing.T) {
 					ep = TestHelper.UnavailableEndpoints()
 				}
 				bs.PropagateFilterAvailability(ep)
+			}
+
+			if test.markAddressable == nil && test.address == nil {
+				bs.MarkBrokerAddressableUnknown("", "")
 			}
 			bs.SetAddress(test.address)
 
