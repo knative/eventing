@@ -32,20 +32,20 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-func BrokerPreferHeaderCheck(
+func ChannelPreferHeaderCheck(
 	ctx context.Context,
-	brokerClass string,
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		const (
-			recorderName = "event-recorder"
-			triggerName  = "test-trigger"
-			senderName   = "request-sender"
-			eventSource  = "source1"
-			eventType    = "type1"
-			eventBody    = `{"msg":"test msg"}`
+			recorderName     = "event-recorder"
+			channelName      = "test-channel"
+			subscriptionName = "test-subscription"
+			senderName       = "request-sender"
+			eventSource      = "source1"
+			eventType        = "type1"
+			eventBody        = `{"msg":"test msg"}`
 		)
 
 		tests := []struct {
@@ -60,18 +60,18 @@ func BrokerPreferHeaderCheck(
 				client := testlib.Setup(t, true)
 				defer testlib.TearDown(client)
 
-				brokerName := ChannelBasedBrokerCreator(channel, brokerClass)(client, "v1")
+				// create channels
+				client.CreateChannelOrFail(channelName, &channel)
+				client.WaitForResourcesReadyOrFail(&channel)
 
-				// Create event tracker that should receive all events.
-				eventTracker, _ := recordevents.StartEventRecordOrFail(
-					ctx,
-					client,
-					recorderName,
-				)
+				// create loggerPod and expose it as a service
+				eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recorderName)
 
-				client.CreateTriggerOrFail(triggerName,
-					resources.WithSubscriberServiceRefForTrigger(recorderName),
-					resources.WithBroker(brokerName),
+				client.CreateSubscriptionOrFail(
+					subscriptionName,
+					channelName,
+					&channel,
+					resources.WithReplyForSubscription(channelName, &channel),
 				)
 
 				client.WaitForAllTestResourcesReadyOrFail(ctx)
@@ -86,8 +86,8 @@ func BrokerPreferHeaderCheck(
 				client.SendEventToAddressable(
 					ctx,
 					senderName,
-					brokerName,
-					testlib.BrokerTypeMeta,
+					channelName,
+					&channel,
 					eventToSend,
 				)
 

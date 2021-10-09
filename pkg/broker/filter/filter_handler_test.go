@@ -316,9 +316,6 @@ func TestReceiver(t *testing.T) {
 				e := makeEvent()
 				b, _ := e.MarshalJSON()
 				request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
-				// Following the spec (https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events)
-				//   this header should be present even if it isn't provided in the original request
-				// Content-Type to pass filtering.
 				request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 
 				return request
