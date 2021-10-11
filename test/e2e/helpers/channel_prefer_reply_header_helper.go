@@ -1,4 +1,3 @@
-//go:build e2e
 // +build e2e
 
 /*
@@ -52,7 +51,7 @@ func ChannelPreferHeaderCheck(
 			name string
 		}{
 			{
-				name: "test messag without explicit prefer header should have the header",
+				name: "test messag without explicit prefer header should have it after fanout",
 			},
 		}
 		for _, test := range tests {
@@ -71,7 +70,7 @@ func ChannelPreferHeaderCheck(
 					subscriptionName,
 					channelName,
 					&channel,
-					resources.WithReplyForSubscription(channelName, &channel),
+					resources.WithSubscriberForSubscription(recorderName),
 				)
 
 				client.WaitForAllTestResourcesReadyOrFail(ctx)
