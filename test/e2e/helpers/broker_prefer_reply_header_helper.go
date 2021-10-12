@@ -55,7 +55,7 @@ func BrokerPreferHeaderCheck(
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := testlib.Setup(t, true)
+			client := testlib.Setup(t, true, options...)
 			defer testlib.TearDown(client)
 
 			brokerName := creator(client, "v1")
