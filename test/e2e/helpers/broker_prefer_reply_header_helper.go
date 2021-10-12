@@ -37,7 +37,7 @@ func BrokerPreferHeaderCheck(
 	t *testing.T,
 	channelTestRunner testlib.ComponentsTestRunner,
 	options ...testlib.SetupClientOption) {
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
 		const (
 			recorderName = "event-recorder"
 			triggerName  = "test-trigger"
@@ -59,7 +59,7 @@ func BrokerPreferHeaderCheck(
 				client := testlib.Setup(t, true)
 				defer testlib.TearDown(client)
 
-				brokerName := ChannelBasedBrokerCreator(channel, brokerClass)(client, "v1")
+				brokerName := ChannelBasedBrokerCreator(component, brokerClass)(client, "v1")
 
 				// Create event tracker that should receive all events.
 				eventTracker, _ := recordevents.StartEventRecordOrFail(
