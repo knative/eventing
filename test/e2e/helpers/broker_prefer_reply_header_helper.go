@@ -33,7 +33,6 @@ import (
 
 func BrokerPreferHeaderCheck(
 	ctx context.Context,
-	brokerClass string,
 	t *testing.T,
 	creator BrokerCreator,
 	options ...testlib.SetupClientOption) {
