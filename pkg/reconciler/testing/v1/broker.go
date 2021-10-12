@@ -50,18 +50,6 @@ func WithInitBrokerConditions(b *v1.Broker) {
 	b.Status.InitializeConditions()
 }
 
-func WithFalseBrokerDLSConditions(b *v1.Broker) {
-	b.Status.MarkDeadLetterSinkResolvedFailed(
-		"Unable to get the DeadLetterSink's URI",
-		fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
-			b.Spec.Delivery.DeadLetterSink.Ref.Name,
-		))
-	b.Status.PropagateIngressAvailability(v1.TestHelper.AvailableEndpoints())
-	b.Status.PropagateTriggerChannelReadiness(v1.TestHelper.ReadyChannelStatus())
-	b.Status.PropagateFilterAvailability(v1.TestHelper.AvailableEndpoints())
-	b.Status.MarkBrokerAddressableUnknown("", "")
-}
-
 func WithBrokerFinalizers(finalizers ...string) BrokerOption {
 	return func(b *v1.Broker) {
 		b.Finalizers = finalizers
@@ -231,5 +219,22 @@ func WithDeadLeaderSink(ref *duckv1.KReference, uri string) BrokerOption {
 			Ref: ref,
 			URI: u,
 		}
+	}
+}
+
+func WithAddressableUnknown() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkBrokerAddressableUnknown("", "")
+	}
+}
+
+func WithDLSResolveFailed() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkResolvedFailed(
+			"Unable to get the DeadLetterSink's URI",
+			fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
+				b.Spec.Delivery.DeadLetterSink.Ref.Name,
+			),
+		)
 	}
 }
