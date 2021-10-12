@@ -51,7 +51,7 @@ func ChannelPreferHeaderCheck(
 		name string
 	}{
 		{
-			name: "test messag without explicit prefer header should have it after fanout",
+			name: "test message without explicit prefer header should have it after fanout",
 		},
 	}
 	for _, test := range tests {
