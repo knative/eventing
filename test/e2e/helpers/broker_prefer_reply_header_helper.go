@@ -49,12 +49,12 @@ func BrokerPreferHeaderCheck(
 		name string
 	}{
 		{
-			name: "test messag without explicit prefer header should have the header",
+			name: "test message without explicit prefer header should have the header",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := testlib.Setup(t, true)
+			client := testlib.Setup(t, true, options...)
 			defer testlib.TearDown(client)
 
 			brokerName := creator(client, "v1")
