@@ -50,7 +50,7 @@ func BrokerPreferHeaderCheck(
 		name string
 	}{
 		{
-			name: "test messag without explicit prefer header should have the header",
+			name: "test message without explicit prefer header should have the header",
 		},
 	}
 	for _, test := range tests {
