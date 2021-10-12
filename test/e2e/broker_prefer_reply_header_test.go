@@ -30,6 +30,6 @@ import (
 func TestBrokerPreferReplyHeader(t *testing.T) {
 	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
 		brokerCreator := helpers.ChannelBasedBrokerCreator(component, brokerClass)
-		helpers.BrokerPreferHeaderCheck(context.Background(), brokerClass, t, brokerCreator)
+		helpers.BrokerPreferHeaderCheck(context.Background(), t, brokerCreator)
 	})
 }
