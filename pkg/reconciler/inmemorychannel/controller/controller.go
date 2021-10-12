@@ -31,6 +31,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
+	"knative.dev/pkg/resolver"
 
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
@@ -82,6 +83,7 @@ func NewController(
 	r.dispatcherImage = env.Image
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r)
+	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

@@ -43,6 +43,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -81,6 +82,8 @@ type Reconciler struct {
 	roleBindingLister    rbacv1listers.RoleBindingLister
 
 	eventDispatcherConfigStore *config.EventDispatcherConfigStore
+
+	uriResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements Interface
@@ -144,7 +147,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return errors.New("there are no endpoints ready for Dispatcher service")
 	}
 
-	imc.Status.MarkEndpointsTrue()
+	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
+		logging.FromContext(ctx).Info("HEREEE ", deadLetterSinkUri, err)
+	}
 
 	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
 	// ExternalName
