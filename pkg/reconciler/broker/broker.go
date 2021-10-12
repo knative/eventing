@@ -92,6 +92,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 
+	var tmpChan duckv1.ChannelableSpec = duckv1.ChannelableSpec{
+		Delivery: b.Spec.Delivery,
+	}
+
 	logging.FromContext(ctx).Infow("Reconciling the trigger channel")
 	c, err := ducklib.NewPhysicalChannel(
 		chanMan.template.TypeMeta,
@@ -104,6 +108,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			Labels:      TriggerChannelLabels(b.Name),
 			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
 		},
+		ducklib.WithChannelableSpec(tmpChan),
 		ducklib.WithPhysicalChannelSpec(chanMan.template.Spec),
 	)
 	if err != nil {
@@ -118,12 +123,20 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return fmt.Errorf("Failed to reconcile trigger channel: %v", err)
 	}
 
+	if triggerChan.Spec.Delivery != nil && triggerChan.Status.DeadLetterSinkURI == nil {
+		logging.FromContext(ctx).Debugw("Trigger Channel does not have an Dead Letter Sink URI", zap.Any("triggerChan", triggerChan))
+		b.Status.MarkTriggerChannelFailed("NoDeadLetterSinkUri", "Unable to get the DeadLetterSink's URI")
+		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
+		return nil
+	}
+
 	if triggerChan.Status.Address == nil {
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return nil
 	}
+
 	if url := triggerChan.Status.Address.URL; url == nil || url.Host == "" {
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
@@ -140,7 +153,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey] = chanMan.ref.APIVersion
 	b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = chanMan.ref.Name
 
-	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
+	channelStatus := &duckv1.ChannelableStatus{
+		AddressStatus: pkgduckv1.AddressStatus{
+			Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL},
+		},
+	}
+
+	if triggerChan.Spec.Delivery != nil {
+		logging.FromContext(ctx).Info("ChannelStatuss", triggerChan.Spec.Delivery.DeadLetterSink)
+	}
+
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
 
 	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(names.BrokerFilterName)
@@ -159,15 +181,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
-	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkURI, err := r.uriResolver.URIFromDestinationV1(ctx, *b.Spec.Delivery.DeadLetterSink, b)
-		if err != nil {
-			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
-			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
-			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
-		}
-
-		b.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI)
+	if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
@@ -179,6 +194,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		Host:   network.GetServiceHostname("broker-ingress", system.Namespace()),
 		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
 	})
+
+	logging.FromContext(ctx).Info("Usingjiji %s %s", channelStatus.DeadLetterSinkURI, *triggerChan)
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
