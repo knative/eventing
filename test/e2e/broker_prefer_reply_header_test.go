@@ -22,9 +22,14 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/e2e/helpers"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestBrokerPreferReplyHeader(t *testing.T) {
-	helpers.BrokerPreferHeaderCheck(context.Background(), brokerClass, t, channelTestRunner)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
+		brokerCreator := helpers.ChannelBasedBrokerCreator(component, brokerClass)
+		helpers.BrokerPreferHeaderCheck(context.Background(), brokerClass, t, brokerCreator)
+	})
 }

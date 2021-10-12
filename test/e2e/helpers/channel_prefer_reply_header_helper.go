@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 /*
@@ -34,67 +35,65 @@ import (
 func ChannelPreferHeaderCheck(
 	ctx context.Context,
 	t *testing.T,
-	channelTestRunner testlib.ComponentsTestRunner,
+	component metav1.TypeMeta,
 	options ...testlib.SetupClientOption) {
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		const (
-			recorderName     = "event-recorder"
-			channelName      = "test-channel"
-			subscriptionName = "test-subscription"
-			senderName       = "request-sender"
-			eventSource      = "source1"
-			eventType        = "type1"
-			eventBody        = `{"msg":"test msg"}`
-		)
+	const (
+		recorderName     = "event-recorder"
+		channelName      = "test-channel"
+		subscriptionName = "test-subscription"
+		senderName       = "request-sender"
+		eventSource      = "source1"
+		eventType        = "type1"
+		eventBody        = `{"msg":"test msg"}`
+	)
 
-		tests := []struct {
-			name string
-		}{
-			{
-				name: "test messag without explicit prefer header should have it after fanout",
-			},
-		}
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				client := testlib.Setup(t, true)
-				defer testlib.TearDown(client)
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "test messag without explicit prefer header should have it after fanout",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := testlib.Setup(t, true)
+			defer testlib.TearDown(client)
 
-				// create channels
-				client.CreateChannelOrFail(channelName, &channel)
-				client.WaitForResourcesReadyOrFail(&channel)
+			// create channels
+			client.CreateChannelOrFail(channelName, &component)
+			client.WaitForResourcesReadyOrFail(&component)
 
-				// create loggerPod and expose it as a service
-				eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recorderName)
+			// create loggerPod and expose it as a service
+			eventTracker, _ := recordevents.StartEventRecordOrFail(ctx, client, recorderName)
 
-				client.CreateSubscriptionOrFail(
-					subscriptionName,
-					channelName,
-					&channel,
-					resources.WithSubscriberForSubscription(recorderName),
-				)
+			client.CreateSubscriptionOrFail(
+				subscriptionName,
+				channelName,
+				&component,
+				resources.WithSubscriberForSubscription(recorderName),
+			)
 
-				client.WaitForAllTestResourcesReadyOrFail(ctx)
+			client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-				eventToSend := cloudevents.NewEvent()
-				eventToSend.SetID(uuid.New().String())
-				eventToSend.SetType(eventType)
-				eventToSend.SetSource(eventSource)
-				if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
-					t.Fatal("Cannot set the payload of the event:", err.Error())
-				}
-				client.SendEventToAddressable(
-					ctx,
-					senderName,
-					channelName,
-					&channel,
-					eventToSend,
-				)
+			eventToSend := cloudevents.NewEvent()
+			eventToSend.SetID(uuid.New().String())
+			eventToSend.SetType(eventType)
+			eventToSend.SetSource(eventSource)
+			if err := eventToSend.SetData(cloudevents.ApplicationJSON, []byte(eventBody)); err != nil {
+				t.Fatal("Cannot set the payload of the event:", err.Error())
+			}
+			client.SendEventToAddressable(
+				ctx,
+				senderName,
+				channelName,
+				&component,
+				eventToSend,
+			)
 
-				eventTracker.AssertAtLeast(
-					1,
-					recordevents.HasAdditionalHeader("Prefer", "reply"),
-				)
-			})
-		}
-	})
+			eventTracker.AssertAtLeast(
+				1,
+				recordevents.HasAdditionalHeader("Prefer", "reply"),
+			)
+		})
+	}
 }

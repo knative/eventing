@@ -22,9 +22,13 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/e2e/helpers"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestChannelPreferReplyHeader(t *testing.T) {
-	helpers.ChannelPreferHeaderCheck(context.Background(), t, channelTestRunner)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
+		helpers.ChannelPreferHeaderCheck(context.Background(), t, component)
+	})
 }
