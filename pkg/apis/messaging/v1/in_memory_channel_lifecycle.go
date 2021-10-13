@@ -166,7 +166,7 @@ func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	imcs.DeadLetterSinkURI = deadLetterSinkURI
+	imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
 }
 

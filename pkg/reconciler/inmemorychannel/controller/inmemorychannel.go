@@ -147,18 +147,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return errors.New("there are no endpoints ready for Dispatcher service")
 	}
 
-	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
-		if err != nil {
-			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
-			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
-			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
-		}
-		imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
-	} else {
-		imc.Status.MarkDeadLetterSinkNotConfigured()
-	}
-
 	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, dispatcherNamespace, imc)
@@ -168,6 +156,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	}
 	imc.Status.MarkChannelServiceTrue()
 	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
+
+	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
+			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
+			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
+		} else {
+			imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
+		}
+	} else {
+		imc.Status.MarkDeadLetterSinkNotConfigured()
+	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

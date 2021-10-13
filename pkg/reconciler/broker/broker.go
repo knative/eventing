@@ -93,7 +93,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 
-	var tmpChan duckv1.ChannelableSpec = duckv1.ChannelableSpec{
+	var tmpChannelableSpec duckv1.ChannelableSpec = duckv1.ChannelableSpec{
 		Delivery: b.Spec.Delivery,
 	}
 
@@ -109,7 +109,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			Labels:      TriggerChannelLabels(b.Name),
 			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
 		},
-		ducklib.WithChannelableSpec(tmpChan),
+		ducklib.WithChannelableSpec(tmpChannelableSpec),
 		ducklib.WithPhysicalChannelSpec(chanMan.template.Spec),
 	)
 	if err != nil {
@@ -163,12 +163,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		},
 	}
 
-	if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
-		b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
-	} else {
-		b.Status.MarkDeadLetterSinkNotConfigured()
-	}
-
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
 
 	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(names.BrokerFilterName)
@@ -186,6 +180,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
+
+	if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
+	} else {
+		b.Status.MarkDeadLetterSinkNotConfigured()
+	}
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.
