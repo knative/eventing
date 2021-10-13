@@ -1115,6 +1115,7 @@ knative.dev/pkg/test/mako/alerter/github
 knative.dev/pkg/test/mako/alerter/slack
 knative.dev/pkg/test/mako/config
 knative.dev/pkg/test/mako/stub-sidecar
+knative.dev/pkg/test/migrate
 knative.dev/pkg/test/monitoring
 knative.dev/pkg/test/prow
 knative.dev/pkg/test/slackutil
