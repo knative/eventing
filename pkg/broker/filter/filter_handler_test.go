@@ -294,7 +294,28 @@ func TestReceiver(t *testing.T) {
 				// Following the spec (https://github.com/knative/specs/blob/main/specs/eventing/data-plane.md#derived-reply-events)
 				//   this header should be present even if it is provided in the original request
 				request.Header.Set("Prefer", "reply")
-				// Content-Type will not pass filtering.
+				// Content-Type to pass filtering.
+				request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
+
+				return request
+			}(),
+			expectedHeaders: http.Header{
+				// Prefer: reply must be present, even if it is provided in the original request
+				"Prefer": []string{"reply"},
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			returnedEvent:             makeDifferentEvent(),
+		},
+		"Add `Prefer: reply` header when it isn't provided in the original request": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			request: func() *http.Request {
+				e := makeEvent()
+				b, _ := e.MarshalJSON()
+				request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
 				request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 
 				return request
