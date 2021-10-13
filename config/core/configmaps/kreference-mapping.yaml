@@ -22,7 +22,7 @@ metadata:
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
   annotations:
-    knative.dev/example-checksum: "5a523f93"
+    knative.dev/example-checksum: "7375dbe1"
 data:
   _example: |
     ################################
@@ -42,5 +42,6 @@ data:
     # - Name: reference name
     # - Namespace: reference namespace
     # - SystemNamespace: knative namespace
+    # - UID: reference UID
     #
     # Pod.v1: https://addressable-pod.{{ .SystemNamespace }}.svc.cluster.local/{{ .Name }}
