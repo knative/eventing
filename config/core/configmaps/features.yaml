@@ -39,4 +39,3 @@ data:
   # ALPHA feature: The subscriber-strict flag force subscriptions to define a subscriber
   # For more details: https://github.com/knative/eventing/issues/5756
   strict-subscriber: "disabled"
-  
