@@ -40,6 +40,7 @@ import (
 	"knative.dev/pkg/system"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -157,10 +158,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		AddressStatus: pkgduckv1.AddressStatus{
 			Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL},
 		},
+		DeliveryStatus: v1.DeliveryStatus{
+			DeadLetterSinkURI: triggerChan.Status.DeliveryStatus.DeadLetterSinkURI,
+		},
 	}
 
-	if triggerChan.Spec.Delivery != nil {
-		logging.FromContext(ctx).Info("ChannelStatuss", triggerChan.Spec.Delivery.DeadLetterSink)
+	if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
+	} else {
+		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
 
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
@@ -180,12 +186,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
-
-	if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
-		b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
-	} else {
-		b.Status.MarkDeadLetterSinkNotConfigured()
-	}
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.
