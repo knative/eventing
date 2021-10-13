@@ -43,6 +43,8 @@ func TestNoRetries(t *testing.T) {
 	assert.NotNil(t, retryConfig.Backoff)
 	assert.Equal(t, time.Duration(0), retryConfig.Backoff(1, nil))
 	assert.Equal(t, time.Duration(0), retryConfig.Backoff(100, nil))
+	assert.False(t, retryConfig.RetryAfterEnabled)
+	assert.Equal(t, time.Duration(0), retryConfig.RetryAfterMaxDuration)
 }
 
 // Test The RetryConfigFromDeliverySpec() Functionality
@@ -98,7 +100,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffDelay:  "FOO",
 		wantErr:       true,
 	}, {
-		name:          "With Valid Timeout",
+		name:          "Valid Timeout",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
 		timeout:       &validISO8601DurationString,
@@ -110,13 +112,13 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			16 * time.Second,
 		},
 	}, {
-		name:          "With Invalid Timeout",
+		name:          "Invalid Timeout",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
 		timeout:       &invalidISO8601DurationString,
 		wantErr:       true,
 	}, {
-		name:          "With Valid Sparse Retry-After",
+		name:          "Valid Sparse Retry-After",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
 		retryAfter:    &v1.RetryAfter{Enabled: true},
@@ -128,7 +130,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			16 * time.Second,
 		},
 	}, {
-		name:          "With Valid Complete Retry-After",
+		name:          "Valid Complete Retry-After",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
 		retryAfter:    &v1.RetryAfter{Enabled: true, MaxDuration: &validISO8601DurationString},
@@ -140,7 +142,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			16 * time.Second,
 		},
 	}, {
-		name:          "With Invalid Complete Retry-After",
+		name:          "Invalid Complete Retry-After",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
 		retryAfter:    &v1.RetryAfter{Enabled: true, MaxDuration: &invalidISO8601DurationString},
@@ -178,6 +180,8 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 						expectedMaxPeriod, _ := period.Parse(*tc.retryAfter.MaxDuration)
 						expectedMaxDuration, _ := expectedMaxPeriod.Duration()
 						assert.Equal(t, expectedMaxDuration, retryConfig.RetryAfterMaxDuration)
+					} else {
+						assert.Equal(t, time.Duration(0), retryConfig.RetryAfterMaxDuration)
 					}
 				} else {
 					assert.False(t, retryConfig.RetryAfterEnabled)

@@ -97,14 +97,13 @@ func (s *HTTPMessageSender) SendWithRetries(req *nethttp.Request, config *RetryC
 func generateBackoffFn(config *RetryConfig) retryablehttp.Backoff {
 	return func(_, _ time.Duration, attemptNum int, resp *nethttp.Response) time.Duration {
 
-		// If Response is 429 or 503 Then Parse Any Retry-After Header Durations & Enforce Optional MaxDuration
+		// If RetryAfter Is Enabled And Response is 429 / 503, Then Parse Any Retry-After Header Durations & Enforce Optional MaxDuration
 		var retryAfterDuration time.Duration
-		if resp != nil && (resp.StatusCode == nethttp.StatusTooManyRequests || resp.StatusCode == nethttp.StatusServiceUnavailable) {
-			if config.RetryAfterEnabled {
-				retryAfterDuration, _ = parseRetryAfterDuration(resp)
-				if config.RetryAfterMaxDuration > 0 && config.RetryAfterMaxDuration < retryAfterDuration {
-					retryAfterDuration = config.RetryAfterMaxDuration
-				}
+		if config.RetryAfterEnabled && resp != nil &&
+			(resp.StatusCode == nethttp.StatusTooManyRequests || resp.StatusCode == nethttp.StatusServiceUnavailable) {
+			retryAfterDuration, _ = parseRetryAfterDuration(resp)
+			if config.RetryAfterMaxDuration > 0 && config.RetryAfterMaxDuration < retryAfterDuration {
+				retryAfterDuration = config.RetryAfterMaxDuration
 			}
 		}
 
