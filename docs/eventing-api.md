@@ -402,7 +402,7 @@ RetryAfter
 <em>(Optional)</em>
 <p>RetryAfter controls how &ldquo;Retry-After&rdquo; header durations are handled for 429 and 503 response codes.
 If not provided, the default behavior is to ignore &ldquo;Retry-After&rdquo; headers in responses.</p>
-<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/TODO">https://github.com/knative/eventing/issues/TODO</a></p>
+<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/5811">https://github.com/knative/eventing/issues/5811</a></p>
 </td>
 </tr>
 </tbody>

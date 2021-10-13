@@ -65,7 +65,7 @@ type DeliverySpec struct {
 	// RetryAfter controls how "Retry-After" header durations are handled for 429 and 503 response codes.
 	// If not provided, the default behavior is to ignore "Retry-After" headers in responses.
 	//
-	// Note: This API is EXPERIMENTAL and might break anytime. For more details: https://github.com/knative/eventing/issues/TODO
+	// Note: This API is EXPERIMENTAL and might break anytime. For more details: https://github.com/knative/eventing/issues/5811
 	// +optional
 	RetryAfter *RetryAfter `json:"retryAfter,omitempty"`
 }
