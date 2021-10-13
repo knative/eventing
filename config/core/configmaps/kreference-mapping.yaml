@@ -42,5 +42,6 @@ data:
     # - Name: reference name
     # - Namespace: reference namespace
     # - SystemNamespace: knative namespace
+    # - UID: reference UID
     #
     # Pod.v1: https://addressable-pod.{{ .SystemNamespace }}.svc.cluster.local/{{ .Name }}
