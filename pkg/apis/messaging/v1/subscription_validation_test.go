@@ -630,3 +630,80 @@ func TestValidChannel(t *testing.T) {
 		})
 	}
 }
+
+func TestSubscriptionSpecValidationWithStrictSubscriber(t *testing.T) {
+	tests := []struct {
+		name string
+		c    *SubscriptionSpec
+		want *apis.FieldError
+	}{{
+		name: "missing Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber and Reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      &duckv1.Destination{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "missing Subscriber",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Reply:   getValidReply(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "empty Subscriber",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      getValidReply(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return fe
+		}(),
+	}, {
+		name: "missing name in channel, and missing subscriber, reply",
+		c: &SubscriptionSpec{
+			Channel: duckv1.KReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a subscriber"
+			return apis.ErrMissingField("channel.name").Also(fe)
+		}(),
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := feature.ToContext(context.TODO(), feature.Flags{
+				feature.StrictSubscriber: feature.Enabled,
+			})
+			got := test.c.Validate(ctx)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: strictSubscriber (-want, +got) = %v", test.name, diff)
+			}
+		})
+	}
+}

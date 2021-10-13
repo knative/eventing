@@ -35,3 +35,7 @@ data:
   # ALPHA feature: The kreference-mapping allows you to map kreference onto templated URI
   # For more details: https://github.com/knative/eventing/issues/5593
   kreference-mapping: "disabled"
+
+  # ALPHA feature: The subscriber-strict flag force subscriptions to define a subscriber
+  # For more details: https://github.com/knative/eventing/issues/5756
+  strict-subscriber: "disabled"

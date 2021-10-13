@@ -24,3 +24,4 @@ metadata:
 data:
   kreference-group: "enabled"
   delivery-timeout: "enabled"
+  strict-subscriber: "disabled"
