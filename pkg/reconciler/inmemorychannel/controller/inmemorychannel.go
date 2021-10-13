@@ -147,6 +147,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 		return errors.New("there are no endpoints ready for Dispatcher service")
 	}
 
+	imc.Status.MarkEndpointsTrue()
+
 	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, dispatcherNamespace, imc)
@@ -157,6 +159,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 	imc.Status.MarkChannelServiceTrue()
 	imc.Status.SetAddress(apis.HTTP(network.GetServiceHostname(svc.Name, svc.Namespace)))
 
+	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
 	if imc.Spec.Delivery != nil && imc.Spec.Delivery.DeadLetterSink != nil {
 		deadLetterSinkUri, err := r.uriResolver.URIFromDestinationV1(ctx, *imc.Spec.Delivery.DeadLetterSink, imc)
 		if err != nil {
