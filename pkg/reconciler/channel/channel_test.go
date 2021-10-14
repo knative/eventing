@@ -129,7 +129,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelServiceReady(),
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
-				WithInMemoryChannelAddress(backingChannelHostname)),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -156,7 +157,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelAddress(backingChannelHostname)),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDLSUnknown()),
 		},
 	}, {
 		Name: "Backing channel created",
@@ -247,7 +249,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelAddress(backingChannelHostname)),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -279,7 +282,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelAddress(backingChannelHostname),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelStatusSubscribers(subscriberStatuses())),
+				WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
+				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,

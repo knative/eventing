@@ -238,3 +238,9 @@ func WithDLSResolvedFailed() BrokerOption {
 		)
 	}
 }
+
+func WithDLSNotConfigured() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkNotConfigured()
+	}
+}

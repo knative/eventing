@@ -124,13 +124,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return fmt.Errorf("Failed to reconcile trigger channel: %v", err)
 	}
 
-	if triggerChan.Spec.Delivery != nil && triggerChan.Status.DeadLetterSinkURI == nil {
-		logging.FromContext(ctx).Debugw("Trigger Channel does not have an Dead Letter Sink URI", zap.Any("triggerChan", triggerChan))
-		b.Status.MarkTriggerChannelFailed("NoDeadLetterSinkUri", "Unable to get the DeadLetterSink's URI")
-		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
-		return nil
-	}
-
 	if triggerChan.Status.Address == nil {
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
@@ -181,8 +174,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	}
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
-	if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
-		b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
+	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
+		if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
+			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
+		} else {
+			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "")
+		}
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
