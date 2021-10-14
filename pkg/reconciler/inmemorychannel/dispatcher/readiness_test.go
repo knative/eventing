@@ -36,6 +36,7 @@ func TestReadinessChecker(t *testing.T) {
 			WithInMemoryChannelEndpointsReady(),
 			WithInMemoryChannelChannelServiceReady(),
 			WithInMemoryChannelAddress("fake-address"),
+			WithInMemoryChannelDLSUnknown(),
 		),
 	})
 

@@ -261,6 +261,9 @@ func TestAllCases(t *testing.T) {
 				),
 			},
 			WantErr: true,
+			WantCreates: []runtime.Object{
+				makeChannelService(NewInMemoryChannel(imcName, testNS)),
+			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`Failed to resolve Dead Letter Sink URI: services "%s" not found`, dlsName)),
 			},
@@ -473,7 +476,10 @@ func TestInNamespace(t *testing.T) {
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeEventDispatcherConfigMap(),
-				NewInMemoryChannel(imcName, testNS, WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
+				makeDLSServiceAsUnstructured(),
+				NewInMemoryChannel(imcName, testNS,
+					WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, testNS)),
 				makeReadyEndpoints(),
 			},
@@ -493,6 +499,8 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 			WantEvents: []string{
@@ -507,7 +515,10 @@ func TestInNamespace(t *testing.T) {
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeEventDispatcherConfigMap(),
-				NewInMemoryChannel(imcName, testNS, WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
+				makeDLSServiceAsUnstructured(),
+				NewInMemoryChannel(imcName, testNS,
+					WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
+					WithDeadLetterSink(imcDest.Ref, "")),
 				makeServiceAccount(NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", NewInMemoryChannel(imcName, "knative-testing")),
@@ -527,6 +538,8 @@ func TestInNamespace(t *testing.T) {
 					WithInMemoryChannelEndpointsReady(),
 					WithInMemoryChannelChannelServiceReady(),
 					WithInMemoryChannelAddress(channelServiceAddress),
+					WithDeadLetterSink(imcDest.Ref, ""),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 			}},
 		},

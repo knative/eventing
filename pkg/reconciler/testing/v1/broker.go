@@ -173,7 +173,7 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 	}
 }
 
-func WithStatusDLSURI(dlsURI *apis.URL) BrokerOption {
+func WithBrokerStatusDLSURI(dlsURI *apis.URL) BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
 	}
@@ -228,7 +228,7 @@ func WithAddressableUnknown() BrokerOption {
 	}
 }
 
-func WithDLSResolveFailed() BrokerOption {
+func WithDLSResolvedFailed() BrokerOption {
 	return func(b *v1.Broker) {
 		b.Status.MarkDeadLetterSinkResolvedFailed(
 			"Unable to get the DeadLetterSink's URI",
