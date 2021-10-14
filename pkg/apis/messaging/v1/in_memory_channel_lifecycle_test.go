@@ -28,37 +28,37 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var condReady = apis.Condition{
-	Type:   InMemoryChannelConditionReady,
-	Status: corev1.ConditionTrue,
-}
-
-var condDispatcherNotReady = apis.Condition{
-	Type:   InMemoryChannelConditionDispatcherReady,
-	Status: corev1.ConditionFalse,
-}
-
 var (
+	condReady = apis.Condition{
+		Type:   InMemoryChannelConditionReady,
+		Status: corev1.ConditionTrue,
+	}
+
+	condDispatcherNotReady = apis.Condition{
+		Type:   InMemoryChannelConditionDispatcherReady,
+		Status: corev1.ConditionFalse,
+	}
+
 	trueVal  = true
 	falseVal = false
+
+	deploymentConditionReady = appsv1.DeploymentCondition{
+		Type:   appsv1.DeploymentAvailable,
+		Status: corev1.ConditionTrue,
+	}
+
+	deploymentConditionNotReady = appsv1.DeploymentCondition{
+		Type:   appsv1.DeploymentAvailable,
+		Status: corev1.ConditionFalse,
+	}
+
+	deploymentStatusReady    = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionReady}}
+	deploymentStatusNotReady = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionNotReady}}
+
+	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
+		apis.Condition{},
+		"LastTransitionTime", "Message", "Reason", "Severity")
 )
-
-var deploymentConditionReady = appsv1.DeploymentCondition{
-	Type:   appsv1.DeploymentAvailable,
-	Status: corev1.ConditionTrue,
-}
-
-var deploymentConditionNotReady = appsv1.DeploymentCondition{
-	Type:   appsv1.DeploymentAvailable,
-	Status: corev1.ConditionFalse,
-}
-
-var deploymentStatusReady = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionReady}}
-var deploymentStatusNotReady = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionNotReady}}
-
-var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-	apis.Condition{},
-	"LastTransitionTime", "Message", "Reason", "Severity")
 
 func TestInMemoryChannelGetConditionSet(t *testing.T) {
 	r := &InMemoryChannel{}
@@ -130,13 +130,13 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionChannelServiceReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionDispatcherReady,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionEndpointsReady,
-						Status: corev1.ConditionUnknown,
-					}, {
-						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionReady,
@@ -151,7 +151,7 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		cs: &InMemoryChannelStatus{
-			ChannelableStatus: eventingduckv1.ChannelableStatus{
+			eventingduckv1.ChannelableStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   InMemoryChannelConditionDispatcherReady,
@@ -161,7 +161,7 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &InMemoryChannelStatus{
-			ChannelableStatus: eventingduckv1.ChannelableStatus{
+			eventingduckv1.ChannelableStatus{
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   InMemoryChannelConditionAddressable,
@@ -170,13 +170,13 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionChannelServiceReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionDispatcherReady,
 						Status: corev1.ConditionFalse,
 					}, {
 						Type:   InMemoryChannelConditionEndpointsReady,
-						Status: corev1.ConditionUnknown,
-					}, {
-						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionReady,
@@ -210,6 +210,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionChannelServiceReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionDispatcherReady,
 						Status: corev1.ConditionTrue,
 					}, {
@@ -217,9 +220,6 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionReady,
-						Status: corev1.ConditionUnknown,
-					}, {
-						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionServiceReady,
@@ -233,7 +233,7 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.cs.InitializeConditions()
-			if diff := cmp.Diff(test.want, test.cs, ignoreAllButTypeAndStatus); diff != "" {
+			if diff := cmp.Diff(test.cs, test.want, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
 		})
@@ -432,4 +432,14 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ReadyBrokerStatusWithoutDLS() *InMemoryChannelStatus {
+	imcs := &InMemoryChannelStatus{}
+	imcs.MarkChannelServiceTrue()
+	imcs.MarkDeadLetterSinkNotConfigured()
+	imcs.MarkEndpointsTrue()
+	imcs.SetAddress(apis.HTTP("example.com"))
+	imcs.MarkServiceTrue()
+	return imcs
 }
