@@ -233,7 +233,7 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.cs.InitializeConditions()
-			if diff := cmp.Diff(test.cs, test.want, ignoreAllButTypeAndStatus); diff != "" {
+			if diff := cmp.Diff(test.want, test.cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Error("unexpected conditions (-want, +got) =", diff)
 			}
 		})
