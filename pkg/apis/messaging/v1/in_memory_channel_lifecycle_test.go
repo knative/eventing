@@ -38,6 +38,11 @@ var condDispatcherNotReady = apis.Condition{
 	Status: corev1.ConditionFalse,
 }
 
+var (
+	trueVal  = true
+	falseVal = false
+)
+
 var deploymentConditionReady = appsv1.DeploymentCondition{
 	Type:   appsv1.DeploymentAvailable,
 	Status: corev1.ConditionTrue,
@@ -131,6 +136,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionEndpointsReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}, {
@@ -166,6 +174,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Status: corev1.ConditionFalse,
 					}, {
 						Type:   InMemoryChannelConditionEndpointsReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   InMemoryChannelConditionReady,
@@ -208,6 +219,9 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   InMemoryChannelConditionServiceReady,
 						Status: corev1.ConditionUnknown,
 					}},
@@ -233,6 +247,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		markChannelServiceReady bool
 		setAddress              bool
 		markEndpointsReady      bool
+		DLSResolved             *bool
 		wantReady               bool
 		dispatcherStatus        *appsv1.DeploymentStatus
 	}{{
@@ -243,6 +258,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
 		wantReady:               true,
+		DLSResolved:             &trueVal,
 	}, {
 		name:                    "service not ready",
 		markServiceReady:        false,
@@ -251,6 +267,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
 		wantReady:               false,
+		DLSResolved:             &trueVal,
 	}, {
 		name:                    "endpoints not ready",
 		markServiceReady:        true,
@@ -259,6 +276,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
 		wantReady:               false,
+		DLSResolved:             &trueVal,
 	}, {
 		name:                    "deployment not ready",
 		markServiceReady:        true,
@@ -267,6 +285,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusNotReady,
 		setAddress:              true,
 		wantReady:               false,
+		DLSResolved:             &trueVal,
 	}, {
 		name:                    "address not set",
 		markServiceReady:        true,
@@ -275,6 +294,7 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              false,
 		wantReady:               false,
+		DLSResolved:             &trueVal,
 	}, {
 		name:                    "channel service not ready",
 		markServiceReady:        true,
@@ -283,6 +303,25 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
 		wantReady:               false,
+		DLSResolved:             &trueVal,
+	}, {
+		name:                    "dls sad",
+		markServiceReady:        true,
+		markChannelServiceReady: false,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
+		DLSResolved:             &falseVal,
+	}, {
+		name:                    "dls not configured",
+		markServiceReady:        true,
+		markChannelServiceReady: false,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
+		DLSResolved:             &trueVal,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -310,6 +349,13 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.PropagateDispatcherStatus(test.dispatcherStatus)
 			} else {
 				cs.MarkDispatcherFailed("NotReadyDispatcher", "testing")
+			}
+			if test.DLSResolved == &trueVal {
+				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+			} else if test.DLSResolved == &falseVal {
+				cs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
+			} else {
+				cs.MarkDeadLetterSinkNotConfigured()
 			}
 			imc := InMemoryChannel{Status: cs}
 			got := imc.IsReady()
