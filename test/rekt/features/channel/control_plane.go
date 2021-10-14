@@ -117,7 +117,8 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		}
 	}
 
-	f.Setup("Create Channel Impl", channel_impl.Install(channelName, chOpts...))
+	f.Setup("Create Channel Impl", channel_impl.Install(channelName+"-2", chOpts...))
+	f.Setup("Channel is Ready", channel_impl.IsReady(channelName+"-2"))
 
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
@@ -126,7 +127,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 			readyChannelIsAddressable).
 		Must("When the channel has a valid Delivery DeadLetterSink Ref it MUST update its "+
 			"status.deadLetterSink URI with the resolved URI of the Destination.",
-			readyChannelWithDLSHaveStatusUpdated)
+			readyChannelWithDLSHaveStatusUpdated(channelName))
 
 	return f
 }
@@ -259,29 +260,31 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 	}
 }
 
-func readyChannelWithDLSHaveStatusUpdated(ctx context.Context, t feature.T) {
-	var ch *duckv1.Channelable
+func readyChannelWithDLSHaveStatusUpdated(channelName string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		var ch *duckv1.Channelable
 
-	// Poll for a ready channel.
-	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		ch = getChannelable(ctx, t)
+		// Poll for a ready channel.
+		interval, timeout := environment.PollTimingsFromContext(ctx)
+		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			ch = getChannelable(ctx, t)
+			if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+				return true, nil
+			}
+			return false, nil
+		})
+		if err != nil {
+			t.Fatalf("failed to get a ready channel", err)
+		}
+
+		// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
 		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-			return true, nil
+			if ch.Status.DeadLetterSinkURI == nil {
+				t.Errorf("DLS was not resolved %s", ch.Status)
+			}
+			// Success!
+		} else {
+			t.Errorf("channel was not ready")
 		}
-		return false, nil
-	})
-	if err != nil {
-		t.Fatalf("failed to get a ready channel", err)
-	}
-
-	// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
-	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-		if ch.Status.DeadLetterSinkURI == nil {
-			t.Errorf("channel is not addressable")
-		}
-		// Success!
-	} else {
-		t.Errorf("channel was not ready")
 	}
 }
