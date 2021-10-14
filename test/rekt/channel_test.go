@@ -50,7 +50,7 @@ func TestChannelConformance(t *testing.T) {
 	env.Prerequisite(ctx, t, channel.ImplGoesReady(channelName))
 
 	env.TestSet(ctx, t, channel.ControlPlaneConformance(channelName))
-	//env.TestSet(ctx, t, channel.DataPlaneConformance(channelName))
+	env.TestSet(ctx, t, channel.DataPlaneConformance(channelName))
 }
 
 // TestSmoke_Channel
