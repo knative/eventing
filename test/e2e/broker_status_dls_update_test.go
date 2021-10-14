@@ -23,9 +23,13 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/e2e/helpers"
+	testlib "knative.dev/eventing/test/lib"
 )
 
 func TestBrokerDLSStatusUpdate(t *testing.T) {
-	helpers.BrokerDLSStatusUpdate(context.Background(), brokerClass, t, channelTestRunner)
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		helpers.BrokerDLSStatusUpdate(context.Background(), brokerClass, t, channel)
+	})
 }

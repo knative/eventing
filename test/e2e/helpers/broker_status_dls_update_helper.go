@@ -37,66 +37,66 @@ func BrokerDLSStatusUpdate(
 	ctx context.Context,
 	brokerClass string,
 	t *testing.T,
-	channelTestRunner testlib.ComponentsTestRunner,
+	channel metav1.TypeMeta,
 	options ...testlib.SetupClientOption) {
-	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		const (
-			brokerName   = "test-broker"
-			recorderName = "event-recorder"
-		)
 
-		tests := []struct {
-			name string
-		}{
-			{
-				name: "broker with deadLetterSink.ref updates its status.deadLetterSinkUri",
-			},
-		}
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				client := testlib.Setup(t, true)
-				defer testlib.TearDown(client)
+	const (
+		brokerName   = "test-broker"
+		recorderName = "event-recorder"
+	)
 
-				recordevents.DeployEventRecordOrFail(ctx, client, recorderName)
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "broker with deadLetterSink.ref updates its status.deadLetterSinkUri",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := testlib.Setup(t, true)
+			defer testlib.TearDown(client)
 
-				config := client.CreateBrokerConfigMapOrFail("config-"+brokerName, &channel)
+			recordevents.DeployEventRecordOrFail(ctx, client, recorderName)
 
-				// create a new broker.
-				client.CreateBrokerOrFail(
-					brokerName,
-					resources.WithBrokerClassForBroker(brokerClass),
-					resources.WithConfigForBroker(config),
-					func(broker *v1.Broker) {
-						broker.Spec.Delivery = &eventingduckv1.DeliverySpec{
-							DeadLetterSink: &duckv1.Destination{
-								Ref: resources.KnativeRefForService(recorderName, client.Namespace),
-							},
-						}
-					},
-				)
+			config := client.CreateBrokerConfigMapOrFail("config-"+brokerName, &channel)
 
-				client.WaitForAllTestResourcesReadyOrFail(ctx)
-
-				var br *v1.Broker
-				brokers := client.Eventing.EventingV1().Brokers(client.Namespace)
-				err := client.RetryWebhookErrors(func(attempts int) (err error) {
-					var e error
-					client.T.Logf("Getting v1 Broker %s", brokerName)
-					br, e = brokers.Get(context.Background(), brokerName, metav1.GetOptions{})
-					if e != nil {
-						t.Logf("Failed to get Broker %q: %v", brokerName, e)
+			// create a new broker.
+			client.CreateBrokerOrFail(
+				brokerName,
+				resources.WithBrokerClassForBroker(brokerClass),
+				resources.WithConfigForBroker(config),
+				func(broker *v1.Broker) {
+					broker.Spec.Delivery = &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: resources.KnativeRefForService(recorderName, client.Namespace),
+						},
 					}
-					return err
-				})
+				},
+			)
 
-				if err != nil {
-					t.Fatalf("Error: Could not get broker %s: %v", brokerName, err)
-				}
+			client.WaitForAllTestResourcesReadyOrFail(ctx)
 
-				if br.Status.DeadLetterSinkURI == nil {
-					t.Fatalf("Error: broker.Status.DeadLetterSinkURI is nil but resource reported Ready")
+			var br *v1.Broker
+			brokers := client.Eventing.EventingV1().Brokers(client.Namespace)
+			err := client.RetryWebhookErrors(func(attempts int) (err error) {
+				var e error
+				client.T.Logf("Getting v1 Broker %s", brokerName)
+				br, e = brokers.Get(context.Background(), brokerName, metav1.GetOptions{})
+				if e != nil {
+					t.Logf("Failed to get Broker %q: %v", brokerName, e)
 				}
+				return err
 			})
-		}
-	})
+
+			if err != nil {
+				t.Fatalf("Error: Could not get broker %s: %v", brokerName, err)
+			}
+
+			if br.Status.DeadLetterSinkURI == nil {
+				t.Fatalf("Error: broker.Status.DeadLetterSinkURI is nil but resource reported Ready")
+			}
+		})
+	}
+
 }
