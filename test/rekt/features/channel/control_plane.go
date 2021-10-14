@@ -124,10 +124,7 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
 			"Each channel CRD MUST have a status subresource which contains [address]. "+
 			"When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
-			readyChannelIsAddressable).
-		Must("When the channel has a valid Delivery DeadLetterSink Ref it MUST update its "+
-			"status.deadLetterSink URI with the resolved URI of the Destination.",
-			readyChannelWithDLSHaveStatusUpdated(channelName))
+			readyChannelIsAddressable)
 
 	return f
 }
@@ -257,34 +254,5 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 		// Success!
 	} else {
 		t.Errorf("channel was not ready")
-	}
-}
-
-func readyChannelWithDLSHaveStatusUpdated(channelName string) feature.StepFn {
-	return func(ctx context.Context, t feature.T) {
-		var ch *duckv1.Channelable
-
-		// Poll for a ready channel.
-		interval, timeout := environment.PollTimingsFromContext(ctx)
-		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-			ch = getChannelable(ctx, t)
-			if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-				return true, nil
-			}
-			return false, nil
-		})
-		if err != nil {
-			t.Fatalf("failed to get a ready channel", err)
-		}
-
-		// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
-		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-			if ch.Status.DeadLetterSinkURI == nil {
-				t.Errorf("DLS was not resolved %s", ch.Status)
-			}
-			// Success!
-		} else {
-			t.Errorf("channel was not ready")
-		}
 	}
 }

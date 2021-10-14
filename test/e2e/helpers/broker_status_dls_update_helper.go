@@ -90,7 +90,7 @@ func BrokerDLSStatusUpdate(
 			})
 
 			if err != nil {
-				t.Fatalf("Error: Could not get broker %s: %v", brokerName, err)
+				t.Fatalf("Error: Could not get Broker %s: %v", brokerName, err)
 			}
 
 			if br.Status.DeadLetterSinkURI == nil {
