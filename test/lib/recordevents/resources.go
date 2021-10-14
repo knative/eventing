@@ -23,11 +23,14 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgtest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
 )
+
+const EventRecordReceivePort = 8080
 
 func noop(pod *corev1.Pod, client *testlib.Client) error {
 	return nil
@@ -49,7 +52,8 @@ func DeployEventRecordOrFail(ctx context.Context, client *testlib.Client, name s
 		envOption("EVENT_GENERATORS", "receiver"),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace)
+	readinessProbe := true
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, readinessProbe)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
@@ -67,7 +71,8 @@ func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name s
 		envOption("SINK", sink),
 	)
 
-	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace)
+	readinessProbe := false // this is not needed for sender pod
+	eventRecordPod := recordEventsPod("recordevents", name, client.Namespace, readinessProbe)
 	client.CreatePodOrFail(eventRecordPod, options...)
 	err := pkgtest.WaitForPodRunning(ctx, client.Kube, name, client.Namespace)
 	if err != nil {
@@ -76,8 +81,8 @@ func DeployEventSenderOrFail(ctx context.Context, client *testlib.Client, name s
 	return eventRecordPod
 }
 
-func recordEventsPod(imageName string, name string, serviceAccountName string) *corev1.Pod {
-	return &corev1.Pod{
+func recordEventsPod(imageName string, name string, serviceAccountName string, readinessProbe bool) *corev1.Pod {
+	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
@@ -101,9 +106,26 @@ func recordEventsPod(imageName string, name string, serviceAccountName string) *
 					Name:  "EVENT_LOGS",
 					Value: "recorder,logger",
 				}},
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "receive",
+						ContainerPort: EventRecordReceivePort,
+					},
+				},
 			}},
 			ServiceAccountName: serviceAccountName,
 			RestartPolicy:      corev1.RestartPolicyAlways,
 		},
 	}
+	if readinessProbe {
+		pod.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Port: intstr.FromString("receive"),
+					Path: "/healthz",
+				},
+			},
+		}
+	}
+	return pod
 }

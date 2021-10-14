@@ -75,11 +75,11 @@ func TestMappingResolver(t *testing.T) {
 					Namespace: testingNamespace,
 				},
 				Data: map[string]string{
-					"Service.v1": "https://{{ .Name }}.{{ .Namespace }}.svc.cluster.local",
+					"Service.v1": "https://{{ .Name }}.{{ .Namespace }}.svc.cluster.local/{{ .UID }}",
 				},
 			},
 			wantHandled: true,
-			wantURI:     "https://aservice.testns.svc.cluster.local",
+			wantURI:     "https://aservice.testns.svc.cluster.local/e23097c8-15a8-487b-b5a3-76fdc4a48c46",
 		},
 		"enabled, handled, with error (broken template)": {
 			enabled: true,
@@ -159,5 +159,6 @@ func serviceObjRef(ns string) *corev1.ObjectReference {
 		Name:       "aservice",
 		APIVersion: "v1",
 		Namespace:  ns,
+		UID:        "e23097c8-15a8-487b-b5a3-76fdc4a48c46",
 	}
 }

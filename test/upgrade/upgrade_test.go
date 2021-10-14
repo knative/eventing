@@ -32,9 +32,7 @@ func TestEventingUpgrades(t *testing.T) {
 			PreUpgrade: []pkgupgrade.Operation{
 				PreUpgradeTest(),
 			},
-			PostUpgrade: []pkgupgrade.Operation{
-				PostUpgradeTest(),
-			},
+			PostUpgrade: PostUpgradeTests(),
 			PostDowngrade: []pkgupgrade.Operation{
 				PostDowngradeTest(),
 			},

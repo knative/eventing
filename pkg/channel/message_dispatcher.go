@@ -121,8 +121,11 @@ func (d *MessageDispatcherImpl) DispatchMessageWithRetries(ctx context.Context, 
 		messagesToFinish = append(messagesToFinish, message)
 
 		// Add `Prefer: reply` header no matter if a reply destination is provided. Discussion: https://github.com/knative/eventing/pull/5764
-		additionalHeadersForDestination := additionalHeaders.Clone()
-		additionalHeadersForDestination.Add("Prefer", "reply")
+		additionalHeadersForDestination := nethttp.Header{}
+		if additionalHeaders != nil {
+			additionalHeadersForDestination = additionalHeaders.Clone()
+		}
+		additionalHeadersForDestination.Set("Prefer", "reply")
 
 		ctx, responseMessage, responseAdditionalHeaders, dispatchExecutionInfo, err = d.executeRequest(ctx, destination, message, additionalHeadersForDestination, retriesConfig, transformers...)
 		if err != nil {

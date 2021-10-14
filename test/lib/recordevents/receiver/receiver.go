@@ -123,8 +123,13 @@ func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.
 	for _, dec := range handlerFuncs {
 		handler = dec(handler)
 	}
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
-	server := &http.Server{Addr: ":8080", Handler: handler}
+	server := &http.Server{Addr: fmt.Sprintf(":%d", recordevents.EventRecordReceivePort), Handler: mux}
 
 	var err error
 	go func() {

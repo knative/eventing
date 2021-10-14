@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
@@ -46,6 +47,7 @@ type MappingResolverTemplateValues struct {
 	Name            string
 	Namespace       string
 	SystemNamespace string
+	UID             types.UID
 }
 
 func NewMappingResolver(ctx context.Context, cmw configmap.Watcher, t tracker.Interface) *MappingResolver {
@@ -90,6 +92,7 @@ func (mr *MappingResolver) MappingURIFromObjectReference(ctx context.Context, re
 	data := MappingResolverTemplateValues{
 		Name:            ref.Name,
 		Namespace:       ref.Namespace,
+		UID:             ref.UID,
 		SystemNamespace: system.Namespace(),
 	}
 

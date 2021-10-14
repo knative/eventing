@@ -1,3 +1,5 @@
+// +build e2e
+
 /*
 Copyright 2021 The Knative Authors
 
@@ -14,12 +16,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package feature
+package e2e
 
-const (
-	KReferenceGroup    = "kreference-group"
-	DeliveryRetryAfter = "delivery-retryafter"
-	DeliveryTimeout    = "delivery-timeout"
-	KReferenceMapping  = "kreference-mapping"
-	StrictSubscriber   = "strict-subscriber"
+import (
+	"context"
+	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/e2e/helpers"
+	testlib "knative.dev/eventing/test/lib"
 )
+
+func TestBrokerPreferReplyHeader(t *testing.T) {
+	channelTestRunner.RunTests(t, testlib.FeatureBasic, func(t *testing.T, component metav1.TypeMeta) {
+		brokerCreator := helpers.ChannelBasedBrokerCreator(component, brokerClass)
+		helpers.BrokerPreferHeaderCheck(context.Background(), t, brokerCreator)
+	})
+}
