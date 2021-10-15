@@ -33,7 +33,6 @@ import (
 	messagingclientsetv1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
-	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	apiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -88,10 +87,8 @@ func getChannelable(ctx context.Context, t feature.T) *duckv1.Channelable {
 		t.Fatalf("Failed to convert channelImpl to Channelable: %v", err)
 	}
 
-	url, _ := apis.ParseURL("test")
 	channel.ResourceVersion = channel_impl.GVR().Version
 	channel.APIVersion = channel_impl.GVR().GroupVersion().String()
-	channel.Status.DeadLetterSinkURI = url
 
 	return channel
 }

@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/account_role"
@@ -32,9 +31,8 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
@@ -103,28 +101,22 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
 			todo) // how to test this?
 
-	prober := eventshub.NewProber()
-	f.Setup("install channel DLQ", prober.ReceiverInstall("chdlq"))
+	cName := feature.MakeRandomK8sName("channel")
+	sink := feature.MakeRandomK8sName("sink")
 
-	var chDS *v1.DeliverySpec
-	var chOpts []manifest.CfgFn
-	if chDS != nil {
-		if chDS.DeadLetterSink != nil {
-			chOpts = append(chOpts, delivery.WithDeadLetterSink(prober.AsKReference("chdlq"), ""))
-		}
-		if chDS.Retry != nil {
-			chOpts = append(chOpts, delivery.WithRetry(*chDS.Retry, chDS.BackoffPolicy, chDS.BackoffDelay))
-		}
-	}
+	f.Setup("Set Broker Name", setChannelableName(cName))
 
-	f.Setup("Create Channel Impl", channel_impl.Install(channelName+"-2", chOpts...))
-	f.Setup("Channel is Ready", channel_impl.IsReady(channelName+"-2"))
+	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+	f.Setup("update broker", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("broker goes ready", channel_impl.IsReady(cName))
 
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
 			"Each channel CRD MUST have a status subresource which contains [address]. "+
 			"When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
-			readyChannelIsAddressable)
+			readyChannelIsAddressable).
+		Should("Set the channel status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
+			readyChannelWithDLSHaveStatusUpdated)
 
 	return f
 }
@@ -250,6 +242,33 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
 		if ch.Status.Address.URL == nil {
 			t.Errorf("channel is not addressable")
+		}
+		// Success!
+	} else {
+		t.Errorf("channel was not ready")
+	}
+}
+
+func readyChannelWithDLSHaveStatusUpdated(ctx context.Context, t feature.T) {
+	var ch *duckv1.Channelable
+
+	// Poll for a ready channel.
+	interval, timeout := environment.PollTimingsFromContext(ctx)
+	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		ch = getChannelable(ctx, t)
+		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("failed to get a ready channel", err)
+	}
+
+	// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
+	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+		if ch.Status.DeadLetterSinkURI == nil {
+			t.Errorf("DLS was not resolved")
 		}
 		// Success!
 	} else {
