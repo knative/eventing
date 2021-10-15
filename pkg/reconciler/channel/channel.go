@@ -38,7 +38,6 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	eventingduck "knative.dev/eventing/pkg/duck"
-	"knative.dev/pkg/resolver"
 )
 
 type Reconciler struct {
@@ -48,8 +47,6 @@ type Reconciler struct {
 
 	// dynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
-
-	uriResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements Interface

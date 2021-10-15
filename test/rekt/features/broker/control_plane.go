@@ -97,7 +97,8 @@ func ControlPlaneBroker(brokerName string) *feature.Feature {
 			readyBrokerIsAddressable).
 		Should("The class of a Broker object SHOULD be immutable.",
 			brokerClassIsImmutable).
-		Should("test", BrokerStatusDLSURISet)
+		Should("Set the Broker status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
+			BrokerStatusDLSURISet)
 	return f
 }
 

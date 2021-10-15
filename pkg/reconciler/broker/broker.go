@@ -50,7 +50,6 @@ import (
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/pkg/resolver"
 )
 
 type Reconciler struct {
@@ -66,9 +65,6 @@ type Reconciler struct {
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
-
-	// Dynamic tracker to track AddressableTypes. In particular, it tracks Brokers DLS.
-	uriResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements Interface

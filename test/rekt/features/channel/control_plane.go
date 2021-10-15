@@ -107,15 +107,15 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	f.Setup("Set Broker Name", setChannelableName(cName))
 
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
-	f.Setup("update broker", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
-	f.Setup("broker goes ready", channel_impl.IsReady(cName))
+	f.Setup("update Broker", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("Broker goes ready", channel_impl.IsReady(cName))
 
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
-			"Each channel CRD MUST have a status subresource which contains [address]. "+
-			"When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
+			"Each Channel CRD MUST have a status subresource which contains [address]. "+
+			"When the Channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
 			readyChannelIsAddressable).
-		Should("Set the channel status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
+		Should("Set the Channel status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
 			readyChannelWithDLSHaveStatusUpdated)
 
 	return f

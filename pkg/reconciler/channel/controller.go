@@ -27,7 +27,6 @@ import (
 	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/channel"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/pkg/resolver"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -45,7 +44,6 @@ func NewController(
 	impl := channelreconciler.NewImpl(ctx, r)
 
 	r.channelableTracker = duck.NewListableTrackerFromTracker(ctx, channelable.Get, impl.Tracker)
-	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

@@ -34,7 +34,6 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/configmap"
@@ -42,7 +41,6 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
-	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -458,7 +456,7 @@ func TestReconcile(t *testing.T) {
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)
-		ctx = v1addr.WithDuck(ctx)
+
 		r := &Reconciler{
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
@@ -466,7 +464,6 @@ func TestReconcile(t *testing.T) {
 			endpointsLister:    listers.GetEndpointsLister(),
 			configmapLister:    listers.GetConfigMapLister(),
 			channelableTracker: duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0)),
-			uriResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return broker.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetBrokerLister(),

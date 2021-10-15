@@ -41,7 +41,6 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/network"
 	. "knative.dev/pkg/reconciler/testing"
-	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 )
 
@@ -312,7 +311,6 @@ func TestReconcile(t *testing.T) {
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: &fakeListableTracker{duck.NewListableTrackerFromTracker(ctx, channelable.Get, tracker.New(func(types.NamespacedName) {}, 0))},
-			uriResolver:        resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0)),
 		}
 		return channelreconciler.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),
