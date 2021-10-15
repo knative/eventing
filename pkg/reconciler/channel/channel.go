@@ -38,6 +38,7 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1"
 	ducklib "knative.dev/eventing/pkg/duck"
 	eventingduck "knative.dev/eventing/pkg/duck"
+	"knative.dev/pkg/resolver"
 )
 
 type Reconciler struct {
@@ -47,6 +48,8 @@ type Reconciler struct {
 
 	// dynamicClientSet allows us to configure pluggable Build objects
 	dynamicClientSet dynamic.Interface
+
+	uriResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements Interface
@@ -84,6 +87,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 
 	c.Status.Channel = &backingChannelObjRef
 	c.Status.PropagateStatuses(&backingChannel.Status)
+
+	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
+	if c.Spec.Delivery != nil && c.Spec.Delivery.DeadLetterSink != nil {
+		if backingChannel.Status.DeliveryStatus.DeadLetterSinkURI != nil {
+			c.Status.MarkDeadLetterSinkResolvedSucceeded(backingChannel.Status.DeliveryStatus.DeadLetterSinkURI)
+		} else {
+			c.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "")
+		}
+	} else {
+		c.Status.MarkDeadLetterSinkNotConfigured()
+	}
 
 	return nil
 }

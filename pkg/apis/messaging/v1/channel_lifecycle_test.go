@@ -105,6 +105,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Type:   ChannelConditionBackingChannelReady,
 						Status: corev1.ConditionUnknown,
 					}, {
+						Type:   ChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
+					}, {
 						Type:   ChannelConditionReady,
 						Status: corev1.ConditionUnknown,
 					}},
@@ -131,6 +134,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 						Status: corev1.ConditionFalse,
 					}, {
 						Type:   ChannelConditionBackingChannelReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   ChannelConditionReady,
@@ -160,6 +166,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 					}, {
 						Type:   ChannelConditionBackingChannelReady,
 						Status: corev1.ConditionTrue,
+					}, {
+						Type:   ChannelConditionDeadLetterSinkResolved,
+						Status: corev1.ConditionUnknown,
 					}, {
 						Type:   ChannelConditionReady,
 						Status: corev1.ConditionUnknown,
