@@ -192,8 +192,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
 	})
 
-	logging.FromContext(ctx).Info("Usingjiji %s %s", channelStatus.DeadLetterSinkURI, *triggerChan)
-
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
 	return nil

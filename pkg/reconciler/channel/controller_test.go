@@ -21,6 +21,8 @@ import (
 
 	"knative.dev/pkg/configmap"
 
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -32,6 +34,7 @@ import (
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
+	ctx = v1addr.WithDuck(ctx)
 
 	c := NewController(ctx, configmap.NewStaticWatcher())
 
