@@ -4,6 +4,9 @@
 <a href="#duck.knative.dev%2fv1">duck.knative.dev/v1</a>
 </li>
 <li>
+<a href="#duck.knative.dev%2fv1alpha1">duck.knative.dev/v1alpha1</a>
+</li>
+<li>
 <a href="#duck.knative.dev%2fv1beta1">duck.knative.dev/v1beta1</a>
 </li>
 <li>
@@ -715,6 +718,168 @@ string
 <td>
 <em>(Optional)</em>
 <p>A human readable message indicating details of Ready status.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="duck.knative.dev/v1alpha1">duck.knative.dev/v1alpha1</h2>
+<p>
+</p>
+Resource Types:
+<ul></ul>
+<h3 id="duck.knative.dev/v1alpha1.Placeable">Placeable
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1alpha1.PlaceableStatus">PlaceableStatus</a>)
+</p>
+<p>
+<p>Placeable is a list of podName and virtual replicas pairs.
+Each pair represents the assignment of virtual replicas to a pod</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxAllowedVReplicas</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>placements</code><br/>
+<em>
+<a href="#duck.knative.dev/v1alpha1.Placement">
+[]Placement
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1alpha1.PlaceableStatus">PlaceableStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1alpha1.PlaceableType">PlaceableType</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Placeable</code><br/>
+<em>
+<a href="#duck.knative.dev/v1alpha1.Placeable">
+Placeable
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Placeable</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1alpha1.PlaceableType">PlaceableType
+</h3>
+<p>
+<p>PlaceableType is a skeleton type wrapping Placeable in the manner we expect
+resource writers defining compatible resources to embed it.  We will
+typically use this type to deserialize Placeable ObjectReferences and
+access the Placeable data.  This is not a real resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#duck.knative.dev/v1alpha1.PlaceableStatus">
+PlaceableStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="duck.knative.dev/v1alpha1.Placement">Placement
+</h3>
+<p>
+(<em>Appears on:</em><a href="#duck.knative.dev/v1alpha1.Placeable">Placeable</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>podName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PodName is the name of the pod where the resource is placed</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>vreplicas</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>VReplicas is the number of virtual replicas assigned to in the pod</p>
 </td>
 </tr>
 </tbody>
