@@ -598,7 +598,7 @@ func readyBrokerIsAddressable(ctx context.Context, t feature.T) {
 		}
 		// Success!
 	} else {
-		t.Errorf("broker was not ready")
+		t.Errorf("broker was not ready, reason: %s", broker.Status.GetTopLevelCondition().Reason)
 	}
 }
 

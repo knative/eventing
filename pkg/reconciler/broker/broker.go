@@ -40,7 +40,6 @@ import (
 	"knative.dev/pkg/system"
 
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -147,7 +146,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		AddressStatus: pkgduckv1.AddressStatus{
 			Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL},
 		},
-		DeliveryStatus: v1.DeliveryStatus{
+		DeliveryStatus: duckv1.DeliveryStatus{
 			DeadLetterSinkURI: triggerChan.Status.DeliveryStatus.DeadLetterSinkURI,
 		},
 	}
@@ -174,7 +173,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
 			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
 		} else {
-			b.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "")
+			b.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Channel %s didn't set status.deadLetterSinkURI", triggerChan.Name), "")
 		}
 	} else {
 		b.Status.MarkDeadLetterSinkNotConfigured()

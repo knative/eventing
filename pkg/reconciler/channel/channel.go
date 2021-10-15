@@ -90,7 +90,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 		if backingChannel.Status.DeliveryStatus.DeadLetterSinkURI != nil {
 			c.Status.MarkDeadLetterSinkResolvedSucceeded(backingChannel.Status.DeliveryStatus.DeadLetterSinkURI)
 		} else {
-			c.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "")
+			c.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Backing Channel %s didn't set status.deadLetterSinkURI", backingChannel.Name), "")
 		}
 	} else {
 		c.Status.MarkDeadLetterSinkNotConfigured()

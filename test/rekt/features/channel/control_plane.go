@@ -104,11 +104,11 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 	cName := feature.MakeRandomK8sName("channel")
 	sink := feature.MakeRandomK8sName("sink")
 
-	f.Setup("Set Broker Name", setChannelableName(cName))
+	f.Setup("Set Channel Name", setChannelableName(cName))
 
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
-	f.Setup("update Broker", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
-	f.Setup("Broker goes ready", channel_impl.IsReady(cName))
+	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("Channel goes ready", channel_impl.IsReady(cName))
 
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
@@ -245,33 +245,20 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 		}
 		// Success!
 	} else {
-		t.Errorf("channel was not ready")
+		t.Errorf("channel was not ready, reason: %s", ch.Status.GetCondition(apis.ConditionReady).Reason)
 	}
 }
 
 func readyChannelWithDLSHaveStatusUpdated(ctx context.Context, t feature.T) {
-	var ch *duckv1.Channelable
-
-	// Poll for a ready channel.
-	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		ch = getChannelable(ctx, t)
-		if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		t.Fatalf("failed to get a ready channel", err)
-	}
+	ch := getChannelable(ctx, t)
 
 	// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
 	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
 		if ch.Status.DeadLetterSinkURI == nil {
-			t.Errorf("DLS was not resolved")
+			t.Errorf("channel DLS not resolved but resource reported ready")
 		}
 		// Success!
 	} else {
-		t.Errorf("channel was not ready")
+		t.Errorf("channel was not ready, reason: %s", ch.Status.GetCondition(apis.ConditionReady).Reason)
 	}
 }

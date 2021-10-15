@@ -166,9 +166,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1.InMemoryChannel)
 			logging.FromContext(ctx).Errorw("Unable to get the DeadLetterSink's URI", zap.Error(err))
 			imc.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the DeadLetterSink's URI", "%v", err)
 			return fmt.Errorf("Failed to resolve Dead Letter Sink URI: %v", err)
-		} else {
-			imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
 		}
+		imc.Status.MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkUri)
 	} else {
 		imc.Status.MarkDeadLetterSinkNotConfigured()
 	}

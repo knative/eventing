@@ -25,7 +25,6 @@ import (
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -277,7 +276,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		name: "default ready status without defined DLS",
 		bs:   TestHelper.ReadyBrokerStatusWithoutDLS(),
 		want: &BrokerStatus{
-			Address: v1.Addressable{URL: url},
+			Address: duckv1.Addressable{URL: url},
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   BrokerConditionAddressable,
