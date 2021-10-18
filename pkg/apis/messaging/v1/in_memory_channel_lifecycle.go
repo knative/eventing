@@ -59,8 +59,8 @@ const (
 	// Because this uses ExternalName, there are no endpoints to check.
 	InMemoryChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
 
-	// InMemoryChannelConditionDeadLetterSinkResolved has status True when there is a Dead Letter Sink ref or URI
-	// defined in the Spec.Delivery, is a valid destination and its correctly resolved into a valid URI
+	// InMemoryChannelConditionDeadLetterSinkResolved has status True when the Dead Letter Sink field is not informed,
+	// contains an URI, or contains a reference object that has been correctly resolved into an URI.
 	InMemoryChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 )
 
@@ -166,8 +166,12 @@ func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
-	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
+	if deadLetterSinkURI != nil {
+		imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
+		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
+	} else {
+		imcs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
+	}
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkNotConfigured() {

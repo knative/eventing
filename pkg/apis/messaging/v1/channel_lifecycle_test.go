@@ -240,7 +240,8 @@ func TestChannelConditionStatus(t *testing.T) {
 			}
 
 			if test.DLSResolved == corev1.ConditionTrue {
-				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+				url, _ := apis.ParseURL("test")
+				cs.MarkDeadLetterSinkResolvedSucceeded(url)
 			}
 			got := cs.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {

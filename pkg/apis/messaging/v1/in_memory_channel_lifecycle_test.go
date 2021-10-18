@@ -351,7 +351,8 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 				cs.MarkDispatcherFailed("NotReadyDispatcher", "testing")
 			}
 			if test.DLSResolved == &trueVal {
-				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+				url, _ := apis.ParseURL("test")
+				cs.MarkDeadLetterSinkResolvedSucceeded(url)
 			} else if test.DLSResolved == &falseVal {
 				cs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
 			} else {

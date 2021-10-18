@@ -19,20 +19,20 @@ package controller
 import (
 	"context"
 
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/logging"
-
 	"github.com/kelseyhightower/envconfig"
+
 	"k8s.io/client-go/tools/cache"
+
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1/inmemorychannel"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
-	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
-	"knative.dev/pkg/resolver"
-
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"

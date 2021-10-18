@@ -226,7 +226,7 @@ func WithInMemoryChannelDLSResolvedFailed() InMemoryChannelOption {
 	}
 }
 
-func WithDeadLetterSink(ref *duckv1.KReference, uri string) InMemoryChannelOption {
+func WithIMCDeadLetterSink(ref *duckv1.KReference, uri string) InMemoryChannelOption {
 	return func(imc *v1.InMemoryChannel) {
 		if imc.Spec.Delivery == nil {
 			imc.Spec.Delivery = new(eventingv1.DeliverySpec)

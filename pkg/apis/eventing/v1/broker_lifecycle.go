@@ -98,8 +98,12 @@ func (bs *BrokerStatus) InitializeConditions() {
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	bs.DeadLetterSinkURI = deadLetterSinkURI
-	bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionDeadLetterSinkResolved)
+	if deadLetterSinkURI != nil {
+		bs.DeadLetterSinkURI = deadLetterSinkURI
+		bs.GetConditionSet().Manage(bs).MarkTrue(BrokerConditionDeadLetterSinkResolved)
+	} else {
+		bs.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil")
+	}
 }
 
 func (bs *BrokerStatus) MarkDeadLetterSinkNotConfigured() {
