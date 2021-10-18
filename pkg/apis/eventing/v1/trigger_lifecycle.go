@@ -157,7 +157,7 @@ func (ts *TriggerStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *
 	if deadLetterSinkURI != nil {
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionDeadLetterSinkResolved)
 	} else {
-		ts.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil")
+		ts.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil.")
 	}
 }
 

@@ -136,7 +136,7 @@ func (cs *ChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *
 		cs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
 		chCondSet.Manage(cs).MarkTrue(ChannelConditionDeadLetterSinkResolved)
 	} else {
-		cs.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil")
+		cs.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil.")
 	}
 }
 
