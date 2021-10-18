@@ -274,7 +274,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 			},
 		}}, {
 		name: "default ready status without defined DLS",
-		bs:   TestHelper.ReadyBrokerStatusWithoutDLS(),
+		bs:   TestHelper.ReadyBrokerStatus(),
 		want: &BrokerStatus{
 			Address: duckv1.Addressable{URL: url},
 			Status: duckv1.Status{

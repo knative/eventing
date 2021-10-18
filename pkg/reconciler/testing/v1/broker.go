@@ -105,7 +105,7 @@ func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
 
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1.Broker) {
-	b.Status = *v1.TestHelper.ReadyBrokerStatusWithoutDLS()
+	b.Status = *v1.TestHelper.ReadyBrokerStatus()
 }
 
 // WithBrokerReady sets .Status to ready with the DLS defined.

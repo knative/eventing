@@ -250,9 +250,9 @@ func WithTriggerDeadLetterSinkResolvedFailed(reason, message string) TriggerOpti
 	}
 }
 
-func WithTriggerDeadLetterSinkResolvedSucceeded() TriggerOption {
+func WithTriggerDeadLetterSinkResolvedSucceeded(url string) TriggerOption {
 	return func(t *v1.Trigger) {
-		url, _ := apis.ParseURL("test")
+		url, _ := apis.ParseURL(url)
 		t.Status.MarkDeadLetterSinkResolvedSucceeded(url)
 	}
 }

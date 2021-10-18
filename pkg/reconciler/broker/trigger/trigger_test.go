@@ -99,6 +99,8 @@ const (
 apiVersion: "messaging.knative.dev/v1"
 kind: "InMemoryChannel"
 `
+
+	dlsURL = "http://example.com"
 )
 
 var (
@@ -289,23 +291,23 @@ func TestReconcile(t *testing.T) {
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerDeadLetterSink(nil, "http://example.com")),
+					WithTriggerDeadLetterSink(nil, dlsURL)),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, "http://example.com", nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, dlsURL, nil, nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerDeadLetterSink(nil, "http://example.com"),
+					WithTriggerDeadLetterSink(nil, dlsURL),
 					WithTriggerBrokerReady(),
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerStatusDeadLetterSinkURI("http://example.com"),
-					WithTriggerDeadLetterSinkResolvedSucceeded()),
+					WithTriggerStatusDeadLetterSinkURI(dlsURL),
+					WithTriggerDeadLetterSinkResolvedSucceeded(dlsURL)),
 			}},
 		}, {
 			Name: "Subscription Create fails",
@@ -648,12 +650,12 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions,
-					WithBrokerReady,
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLetterSink(brokerDestv1.Ref, ""),
+					WithDLSResolvedFailed(),
 				),
 				makeSubscriberAddressableAsUnstructured(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -661,22 +663,15 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberURI(subscriberURI),
 					WithInitTriggerConditions),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `brokers.eventing.knative.dev "testsink" not found`),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerFailed("Unable to get the DeadLetterSink's URI", `brokers.eventing.knative.dev "testsink" not found`),
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", `brokers.eventing.knative.dev "testsink" not found`),
 				),
 			}},
-			WantErr: true,
 		}, {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  testKey,
