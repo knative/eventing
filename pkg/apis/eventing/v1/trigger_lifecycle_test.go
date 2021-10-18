@@ -255,7 +255,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		markVirtualServiceExists    bool
 		subscriptionCondition       *apis.Condition
 		subscriberResolvedStatus    bool
-		dlqResolvedStatus           bool
+		dlsResolvedStatus           bool
 		dependencyAnnotationExists  bool
 		dependencyStatus            corev1.ConditionStatus
 		wantConditionStatus         corev1.ConditionStatus
@@ -266,7 +266,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
-		dlqResolvedStatus:           true,
+		dlsResolvedStatus:           true,
 		dependencyAnnotationExists:  false,
 		wantConditionStatus:         corev1.ConditionTrue,
 	}, {
@@ -276,7 +276,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
-		dlqResolvedStatus:           true,
+		dlsResolvedStatus:           true,
 		dependencyAnnotationExists:  false,
 		wantConditionStatus:         corev1.ConditionUnknown,
 	}, {
@@ -315,7 +315,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  true,
-		dlqResolvedStatus:           true,
+		dlsResolvedStatus:           true,
 		dependencyStatus:            corev1.ConditionUnknown,
 		wantConditionStatus:         corev1.ConditionUnknown,
 	}, {
@@ -339,14 +339,14 @@ func TestTriggerConditionStatus(t *testing.T) {
 		dependencyStatus:            corev1.ConditionFalse,
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
-		name:                        "dlq status false",
+		name:                        "dls status false",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  true,
-		dlqResolvedStatus:           false,
+		dlsResolvedStatus:           false,
 		wantConditionStatus:         corev1.ConditionFalse,
 	}}
 	for _, test := range tests {
@@ -363,7 +363,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 			} else {
 				ts.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "subscriber not found")
 			}
-			if test.dlqResolvedStatus {
+			if test.dlsResolvedStatus {
 				ts.MarkDeadLetterSinkResolvedSucceeded()
 			} else {
 				ts.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "subscriber not found")

@@ -390,7 +390,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: true,
 		}, {
-			Name: "Error broker, status with non existent DLQ",
+			Name: "Error broker, status with non existent DLS",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
@@ -416,7 +416,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
 		}, {
-			Name: "valid Broker with DLQ",
+			Name: "valid Broker with DLS",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				makeDLSServiceAsUnstructured(),
