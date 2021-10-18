@@ -49,6 +49,10 @@ func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1.ChannelableS
 	}
 }
 
+func (bs *BrokerStatus) MarkBrokerAddressableUnknown(reason, format string, args ...interface{}) {
+	bs.GetConditionSet().Manage(bs).MarkUnknown(BrokerConditionAddressable, reason, format, args...)
+}
+
 func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interface{}) {
 	bs.GetConditionSet().Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
 }

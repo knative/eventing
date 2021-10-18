@@ -35,7 +35,9 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	triggerfeatures "knative.dev/eventing/test/rekt/features/trigger"
+	"knative.dev/eventing/test/rekt/resources/broker"
 	brokerresources "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	triggerresources "knative.dev/eventing/test/rekt/resources/trigger"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -77,8 +79,14 @@ func setBrokerName(name string) feature.StepFn {
 
 func ControlPlaneBroker(brokerName string) *feature.Feature {
 	f := feature.NewFeatureNamed("Broker")
+	bName := feature.MakeRandomK8sName("broker")
+	sink := feature.MakeRandomK8sName("sink")
 
-	f.Setup("Set Broker Name", setBrokerName(brokerName))
+	f.Setup("Set Broker Name", setBrokerName(bName))
+
+	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+	f.Setup("update broker", broker.Install(bName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("broker goes ready", broker.IsReady(bName))
 
 	f.Stable("Conformance").
 		Should("Broker objects SHOULD include a Ready condition in their status",
@@ -88,7 +96,9 @@ func ControlPlaneBroker(brokerName string) *feature.Feature {
 		Should("While a Broker is Ready, it SHOULD be a valid Addressable and its `status.address.url` field SHOULD indicate the address of its ingress.",
 			readyBrokerIsAddressable).
 		Should("The class of a Broker object SHOULD be immutable.",
-			brokerClassIsImmutable)
+			brokerClassIsImmutable).
+		Should("Set the Broker status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
+			BrokerStatusDLSURISet)
 	return f
 }
 
@@ -585,6 +595,19 @@ func readyBrokerIsAddressable(ctx context.Context, t feature.T) {
 	if broker.IsReady() {
 		if broker.Status.Address.URL == nil {
 			t.Errorf("broker is not addressable")
+		}
+		// Success!
+	} else {
+		t.Errorf("broker was not ready, reason: %s", broker.Status.GetTopLevelCondition().Reason)
+	}
+}
+
+func BrokerStatusDLSURISet(ctx context.Context, t feature.T) {
+	broker := getBroker(ctx, t)
+
+	if broker.IsReady() {
+		if broker.Status.DeadLetterSinkURI == nil {
+			t.Errorf("broker DLS not resolved but resource reported ready")
 		}
 		// Success!
 	} else {

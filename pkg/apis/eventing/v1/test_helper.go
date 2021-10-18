@@ -61,6 +61,17 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateFilterAvailability(t.AvailableEndpoints())
 	bs.SetAddress(apis.HTTP("example.com"))
+	bs.MarkDeadLetterSinkResolvedSucceeded(nil)
+	return bs
+}
+
+func (t testHelper) ReadyBrokerStatusWithoutDLS() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.PropagateIngressAvailability(t.AvailableEndpoints())
+	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateFilterAvailability(t.AvailableEndpoints())
+	bs.SetAddress(apis.HTTP("example.com"))
+	bs.MarkDeadLetterSinkNotConfigured()
 	return bs
 }
 

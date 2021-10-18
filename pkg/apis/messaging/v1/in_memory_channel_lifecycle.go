@@ -24,7 +24,14 @@ import (
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
-var imcCondSet = apis.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable, InMemoryChannelConditionChannelServiceReady)
+var imcCondSet = apis.NewLivingConditionSet(
+	InMemoryChannelConditionDispatcherReady,
+	InMemoryChannelConditionServiceReady,
+	InMemoryChannelConditionEndpointsReady,
+	InMemoryChannelConditionAddressable,
+	InMemoryChannelConditionChannelServiceReady,
+	InMemoryChannelConditionDeadLetterSinkResolved,
+)
 
 const (
 	// InMemoryChannelConditionReady has status True when all subconditions below have been set to True.
@@ -51,6 +58,10 @@ const (
 	// InMemoryChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
 	// Because this uses ExternalName, there are no endpoints to check.
 	InMemoryChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
+
+	// InMemoryChannelConditionDeadLetterSinkResolved has status True when there is a Dead Letter Sink ref or URI
+	// defined in the Spec.Delivery, is a valid destination and its correctly resolved into a valid URI
+	InMemoryChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -152,4 +163,19 @@ func (imcs *InMemoryChannelStatus) MarkEndpointsUnknown(reason, messageFormat st
 
 func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionEndpointsReady)
+}
+
+func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
+	imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
+	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
+}
+
+func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkNotConfigured() {
+	imcs.DeadLetterSinkURI = nil
+	imcCondSet.Manage(imcs).MarkTrueWithReason(InMemoryChannelConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
+}
+
+func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	imcs.DeadLetterSinkURI = nil
+	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
 }

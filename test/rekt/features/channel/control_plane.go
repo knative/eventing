@@ -27,10 +27,12 @@ import (
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/resources/svc"
 )
 
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
@@ -99,11 +101,22 @@ func ControlPlaneChannel(channelName string) *feature.Feature {
 		Should("status.conditions SHOULD indicate status transitions and error reasons if present",
 			todo) // how to test this?
 
+	cName := feature.MakeRandomK8sName("channel")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f.Setup("Set Channel Name", setChannelableName(cName))
+
+	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
+	f.Setup("update Channel", channel_impl.Install(cName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	f.Setup("Channel goes ready", channel_impl.IsReady(cName))
+
 	f.Stable("Channel Status").
 		Must("When the channel instance is ready to receive events status.address.url MUST be populated. "+
-			"Each channel CRD MUST have a status subresource which contains [address]. "+
-			"When the channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
-			readyChannelIsAddressable)
+			"Each Channel CRD MUST have a status subresource which contains [address]. "+
+			"When the Channel instance is ready to receive events status.address.url status.addressable MUST be set to True",
+			readyChannelIsAddressable).
+		Should("Set the Channel status.deadLetterSinkURI if there is a valid spec.delivery.deadLetterSink defined",
+			readyChannelWithDLSHaveStatusUpdated)
 
 	return f
 }
@@ -232,6 +245,20 @@ func readyChannelIsAddressable(ctx context.Context, t feature.T) {
 		}
 		// Success!
 	} else {
-		t.Errorf("channel was not ready")
+		t.Errorf("channel was not ready, reason: %s", ch.Status.GetCondition(apis.ConditionReady).Reason)
+	}
+}
+
+func readyChannelWithDLSHaveStatusUpdated(ctx context.Context, t feature.T) {
+	ch := getChannelable(ctx, t)
+
+	// Confirm the channel is ready, and has the status.deadLetterSinkURI set.
+	if c := ch.Status.GetCondition(apis.ConditionReady); c.IsTrue() {
+		if ch.Status.DeadLetterSinkURI == nil {
+			t.Errorf("channel DLS not resolved but resource reported ready")
+		}
+		// Success!
+	} else {
+		t.Errorf("channel was not ready, reason: %s", ch.Status.GetCondition(apis.ConditionReady).Reason)
 	}
 }

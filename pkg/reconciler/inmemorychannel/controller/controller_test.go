@@ -23,6 +23,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
+
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -39,6 +42,7 @@ import (
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
+	ctx = v1addr.WithDuck(ctx)
 
 	os.Setenv("DISPATCHER_IMAGE", "animage")
 	cmw := configmap.NewStaticWatcher(&corev1.ConfigMap{

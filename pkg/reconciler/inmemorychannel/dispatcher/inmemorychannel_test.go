@@ -45,6 +45,8 @@ import (
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/inmemorychannel"
 	"knative.dev/eventing/pkg/kncloudevents"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 )
 
 const (
@@ -260,7 +262,8 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					}),
-					WithInMemoryChannelAddress(channelServiceAddress)),
+					WithInMemoryChannelAddress(channelServiceAddress),
+					WithInMemoryChannelDLSUnknown()),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "InternalError", "failed to parse Spec.BackoffDelay: expected 'P' period mark at the start: garbage"),
@@ -294,13 +297,15 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					WithInMemoryChannelAddress(channelServiceAddress),
-					WithInMemoryChannelDeleted),
+					WithInMemoryChannelDeleted,
+					WithInMemoryChannelDLSUnknown()),
 			},
 		},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
 			multiChannelMessageHandler: newFakeMultiChannelHandler(),
 			messagingClientSet:         fakeeventingclient.Get(ctx).MessagingV1(),
@@ -335,7 +340,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
-				WithInMemoryChannelAddress(channelServiceAddress)),
+				WithInMemoryChannelAddress(channelServiceAddress),
+				WithInMemoryChannelDLSUnknown()),
 			wantSubs: []fanout.Subscription{
 				{Subscriber: apis.HTTP("call1").URL(),
 					Reply: apis.HTTP("sink2").URL()},
@@ -351,7 +357,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
-				WithInMemoryChannelAddress(channelServiceAddress)),
+				WithInMemoryChannelAddress(channelServiceAddress),
+				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1},
 			wantSubs: []fanout.Subscription{
 				{Subscriber: apis.HTTP("call1").URL(),
@@ -368,7 +375,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers),
-				WithInMemoryChannelAddress(channelServiceAddress)),
+				WithInMemoryChannelAddress(channelServiceAddress),
+				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{Subscriber: apis.HTTP("call1").URL(),
@@ -385,7 +393,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1}),
-				WithInMemoryChannelAddress(channelServiceAddress)),
+				WithInMemoryChannelAddress(channelServiceAddress),
+				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{Subscriber: apis.HTTP("call1").URL(),
@@ -400,7 +409,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1, subscriber3}),
-				WithInMemoryChannelAddress(channelServiceAddress)),
+				WithInMemoryChannelAddress(channelServiceAddress),
+				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{*subscription1, *subscription2},
 			wantSubs: []fanout.Subscription{
 				{Subscriber: apis.HTTP("call1").URL(),
@@ -417,7 +427,8 @@ func TestReconciler_ReconcileKind(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers([]eventingduckv1.SubscriberSpec{subscriber1WithLinearRetry}),
-				WithInMemoryChannelAddress(channelServiceAddress)),
+				WithInMemoryChannelAddress(channelServiceAddress),
+				WithInMemoryChannelDLSUnknown()),
 			subs: []fanout.Subscription{{Subscriber: apis.HTTP("call1").URL(),
 				Reply:       apis.HTTP("sink2").URL(),
 				RetryConfig: &kncloudevents.RetryConfig{RetryMax: 2, BackoffPolicy: &exponential}}},

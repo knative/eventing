@@ -34,7 +34,6 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/configmap"
@@ -54,6 +53,8 @@ const (
 	systemNS   = "knative-testing"
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
+	sinkName   = "test-sink"
+	dlsName    = "test-dls"
 
 	configMapName = "test-configmap"
 
@@ -81,6 +82,31 @@ var (
 		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
+
+	brokerDestv1 = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1",
+		},
+	}
+
+	DLSAddress = &apis.URL{
+		Scheme: "http",
+		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
+		Path:   fmt.Sprintf("/%s/%s", testNS, dlsName),
+	}
+
+	sinkSVCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+
+	dlsURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
 )
 
 func TestReconcile(t *testing.T) {
@@ -324,7 +350,8 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
-					WithChannelNameAnnotation(triggerChannelName)),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured()),
 			}},
 		}, {
 			Name: "Successful Reconciliation, status update fails",
@@ -355,12 +382,72 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
-					WithChannelNameAnnotation(triggerChannelName)),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDLSNotConfigured()),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": inducing failure for update brokers`),
 			},
 			WantErr: true,
+		}, {
+			Name: "Error broker, status with non existent DLQ",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(testNS, false),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
+			}},
+		}, {
+			Name: "valid Broker with DLQ",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(testNS, true),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithBrokerAddressURI(brokerAddress),
+					WithBrokerStatusDLSURI(dlsURI),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
+			}},
+			WantErr: false,
 		},
 	}
 
@@ -369,7 +456,7 @@ func TestReconcile(t *testing.T) {
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)
-		ctx = v1addr.WithDuck(ctx)
+
 		r := &Reconciler{
 			eventingClientSet:  fakeeventingclient.Get(ctx),
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
@@ -435,6 +522,7 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 					"annotations": annotations,
 				},
 				"status": map[string]interface{}{
+					"deadLetterSinkURI": dlsURI.String(),
 					"address": map[string]interface{}{
 						"url": triggerChannelURL,
 					},
@@ -519,5 +607,18 @@ func FilterLabels() map[string]string {
 func IngressLabels() map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/brokerRole": "ingress",
+	}
+}
+
+func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      dlsName,
+			},
+		},
 	}
 }

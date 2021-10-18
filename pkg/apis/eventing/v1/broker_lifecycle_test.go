@@ -57,6 +57,8 @@ var (
 		Type:   BrokerConditionAddressable,
 		Status: corev1.ConditionFalse,
 	}
+
+	url, _ = apis.ParseURL("http://example.com")
 )
 
 func TestBrokerGetConditionSet(t *testing.T) {
@@ -188,6 +190,9 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -216,6 +221,9 @@ func TestBrokerInitializeConditions(t *testing.T) {
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionFilter,
@@ -248,6 +256,9 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionTrue,
 				}, {
@@ -259,6 +270,61 @@ func TestBrokerInitializeConditions(t *testing.T) {
 				}, {
 					Type:   BrokerConditionTriggerChannel,
 					Status: corev1.ConditionUnknown,
+				}},
+			},
+		}}, {
+		name: "default ready status without defined DLS",
+		bs:   TestHelper.ReadyBrokerStatusWithoutDLS(),
+		want: &BrokerStatus{
+			Address: duckv1.Addressable{URL: url},
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
+					Status: corev1.ConditionTrue,
+				}},
+			},
+		}}, {
+		name: "broker ready condition",
+		bs: &BrokerStatus{
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{*TestHelper.ReadyBrokerCondition()},
+			},
+		},
+		want: &BrokerStatus{
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionDeadLetterSinkResolved,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
+					Status: corev1.ConditionTrue,
 				}},
 			},
 		}},
@@ -280,6 +346,8 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady             *bool
 		markTriggerChannelReady      *bool
 		markFilterReady              *bool
+		markDLSResolved              *bool
+		markAddressable              *bool
 		address                      *apis.URL
 		markIngressSubscriptionOwned bool
 		markIngressSubscriptionReady *bool
@@ -289,6 +357,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -298,6 +367,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -307,6 +377,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -316,6 +387,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &falseVal,
 		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -325,6 +397,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
+		markDLSResolved:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
@@ -334,15 +407,48 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
+		name:                         "addressable unknown",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		markDLSResolved:              &trueVal,
+		markAddressable:              nil,
+		address:                      nil,
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
+	}, {
+		name:                         "dls sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		markDLSResolved:              &falseVal,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
+	}, {
+		name:                         "dls not configured",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		markDLSResolved:              nil,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    true,
+	}, {
 		name:                         "all sad",
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &falseVal,
 		markFilterReady:              &falseVal,
+		markDLSResolved:              &falseVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &falseVal,
@@ -370,6 +476,15 @@ func TestBrokerIsReady(t *testing.T) {
 				}
 				bs.PropagateTriggerChannelReadiness(c)
 			}
+
+			if test.markDLSResolved == &trueVal {
+				bs.MarkDeadLetterSinkResolvedSucceeded(nil)
+			} else if test.markDLSResolved == &falseVal {
+				bs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
+			} else {
+				bs.MarkDeadLetterSinkNotConfigured()
+			}
+
 			if test.markFilterReady != nil {
 				var ep *corev1.Endpoints
 				if *test.markFilterReady {
@@ -378,6 +493,10 @@ func TestBrokerIsReady(t *testing.T) {
 					ep = TestHelper.UnavailableEndpoints()
 				}
 				bs.PropagateFilterAvailability(ep)
+			}
+
+			if test.markAddressable == nil && test.address == nil {
+				bs.MarkBrokerAddressableUnknown("", "")
 			}
 			bs.SetAddress(test.address)
 
