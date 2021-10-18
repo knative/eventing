@@ -252,7 +252,8 @@ func WithTriggerDeadLetterSinkResolvedFailed(reason, message string) TriggerOpti
 
 func WithTriggerDeadLetterSinkResolvedSucceeded() TriggerOption {
 	return func(t *v1.Trigger) {
-		t.Status.MarkDeadLetterSinkResolvedSucceeded()
+		url, _ := apis.ParseURL("test")
+		t.Status.MarkDeadLetterSinkResolvedSucceeded(url)
 	}
 }
 
