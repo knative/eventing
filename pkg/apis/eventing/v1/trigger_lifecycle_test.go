@@ -363,7 +363,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 			} else {
 				ts.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "subscriber not found")
 			}
-			if test.dlqResolvedStatus {
+			if test.dlsResolvedStatus {
 				url, _ := apis.ParseURL("test")
 				ts.MarkDeadLetterSinkResolvedSucceeded(url)
 			} else {
