@@ -88,7 +88,7 @@ type SequenceStep struct {
 	duckv1.Destination `json:",inline"`
 
 	// Delivery is the delivery specification for events to the subscriber
-	// This includes things like retries, DLQ, etc.
+	// This includes things like retries, DLS, etc.
 	// +optional
 	Delivery *eventingduckv1.DeliverySpec `json:"delivery,omitempty"`
 }
