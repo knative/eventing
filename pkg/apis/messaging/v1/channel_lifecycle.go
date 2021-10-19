@@ -41,8 +41,8 @@ const (
 	// the Addressable contract and has a non-empty hostname.
 	ChannelConditionAddressable apis.ConditionType = "Addressable"
 
-	// ChannelConditionDeadLetterSinkResolved has status True when the Dead Letter Sink field is not informed,
-	// contains an URI, or contains a reference object that has been correctly resolved into an URI.
+	// ChannelConditionDeadLetterSinkResolved has status True when there is a Dead Letter Sink ref or URI
+	// defined in the Spec.Delivery, is a valid destination and its correctly resolved into a valid URI
 	ChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 )
 
