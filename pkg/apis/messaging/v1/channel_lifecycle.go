@@ -132,12 +132,8 @@ func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) 
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	if deadLetterSinkURI != nil {
-		cs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
-		chCondSet.Manage(cs).MarkTrue(ChannelConditionDeadLetterSinkResolved)
-	} else {
-		cs.MarkDeadLetterSinkResolvedFailed("NilDeadLetterSinkURI", "Resolved DeadLetterSinkURI is nil.")
-	}
+	cs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
+	chCondSet.Manage(cs).MarkTrue(ChannelConditionDeadLetterSinkResolved)
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkNotConfigured() {

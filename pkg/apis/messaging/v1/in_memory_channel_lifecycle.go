@@ -166,12 +166,8 @@ func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *apis.URL) {
-	if deadLetterSinkURI != nil {
-		imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
-		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
-	} else {
-		imcs.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "DLS reference not found")
-	}
+	imcs.DeliveryStatus.DeadLetterSinkURI = deadLetterSinkURI
+	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDeadLetterSinkResolved)
 }
 
 func (imcs *InMemoryChannelStatus) MarkDeadLetterSinkNotConfigured() {
