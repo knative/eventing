@@ -114,6 +114,8 @@ var (
 
 	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 
+	dlsName = "test-dls"
+
 	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
 	subscriberGVK        = metav1.GroupVersionKind{
 		Group:   subscriberGroup,
@@ -132,6 +134,15 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
+	dlsSVCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+
 	sinkDNS = network.GetServiceHostname("sink", "mynamespace")
 	sinkURI = "http://" + sinkDNS
 
@@ -642,6 +653,37 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantErr: true,
+		}, {
+			Name: "Trigger has a valid dls ref and goes ready",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeSubscriberKubernetesServiceAsUnstructured(),
+				makeDLSServiceAsUnstructured(),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
+					WithInitTriggerConditions,
+					WithTriggerDeadLetterSink(dlsSVCDest.Ref, ""),
+				)}...),
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDeadLetterSink(dlsSVCDest.Ref, ""),
+					WithTriggerDependencyReady(),
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDeadLetterSinkResolvedSucceeded("http://test-dls.test-namespace.svc.cluster.local"),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+			},
+			WantErr: false,
 		}, {
 			Name: "Broker has a dls ref that doesn't exist",
 			Key:  testKey,
@@ -1255,4 +1297,17 @@ func ReadyBroker() *eventingv1.Broker {
 		WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 		WithChannelKindAnnotation(triggerChannelKind),
 		WithChannelNameAnnotation(triggerChannelName))
+}
+
+func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      dlsName,
+			},
+		},
+	}
 }
