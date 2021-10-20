@@ -714,7 +714,6 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				),
 			}},
-			WantErr: true,
 		}, {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  testKey,
