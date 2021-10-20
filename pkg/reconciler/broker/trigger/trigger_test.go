@@ -149,6 +149,8 @@ var (
 		Host:   network.GetServiceHostname(ingressServiceName, systemNS),
 		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
 	}
+
+	brokerDLSURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
 )
 
 func TestReconcile(t *testing.T) {
@@ -714,6 +716,59 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "Broker has a valid dls ref, trigger fallbacks to it and goes ready",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithBrokerResourceVersion(""),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDeadLeaderSink(dlsSVCDest.Ref, ""),
+					WithBrokerStatusDLSURI(brokerDLSURI),
+				),
+				createChannel(testNS, true),
+				imcConfigMap(),
+				makeReadySubscription(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDependencyReady(),
+					WithTriggerSubscribed(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+				),
+			}},
+		}, {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
@@ -753,14 +808,14 @@ func TestReconcile(t *testing.T) {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
-					WithTriggerBrokerReady(),
+					WithTriggerDependencyReady(),
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDeadLetterSinkNotConfigured(),
-					WithTriggerDependencyReady(),
 				),
 			}},
 		}, {
