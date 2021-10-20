@@ -166,7 +166,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 	// Fallback to broker's DLS
 	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
 		if b.Status.DeadLetterSinkURI != nil {
-			t.Status.MarkDeadLetterSinkResolvedSucceeded(b.Status.DeliveryStatus.DeadLetterSinkURI)
+			t.Status.MarkDeadLetterSinkResolvedSucceeded(b.Status.DeadLetterSinkURI)
 		} else {
 			t.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Broker %s didn't set status.deadLetterSinkURI", b.Name), "")
 			return fmt.Errorf("broker %s didn't set status.deadLetterSinkURI", b.Name)
