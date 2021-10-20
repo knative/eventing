@@ -65,6 +65,8 @@ const (
 	systemNS   = "knative-testing"
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
+	dlsName    = "test-dls"
+	dlsURL     = "http://example.com"
 
 	configMapName = "test-configmap"
 
@@ -130,6 +132,15 @@ var (
 			APIVersion: "eventing.knative.dev/v1",
 		},
 	}
+	dlsSVCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+
 	sinkDNS = network.GetServiceHostname("sink", "mynamespace")
 	sinkURI = "http://" + sinkDNS
 
@@ -289,22 +300,22 @@ func TestReconcile(t *testing.T) {
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerDeadLeaderSink(nil, "http://example.com")),
+					WithTriggerDeadLeaderSink(nil, dlsURL)),
 			},
 			WantCreates: []runtime.Object{
-				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, "http://example.com", nil, nil, nil)),
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(nil, dlsURL, nil, nil, nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
-					WithTriggerDeadLeaderSink(nil, "http://example.com"),
+					WithTriggerDeadLeaderSink(nil, dlsURL),
 					WithTriggerBrokerReady(),
 					WithTriggerDependencyReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
 					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerStatusDeadLetterSinkURI("http://example.com"),
+					WithTriggerStatusDeadLetterSinkURI(dlsURL),
 					WithTriggerDeadLetterSinkResolvedSucceeded()),
 			}},
 		}, {
@@ -641,6 +652,38 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantErr: true,
 		}, {
+			Name: "Trigger has a valid dls ref and goes ready",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				makeSubscriberKubernetesServiceAsUnstructured(),
+				makeDLSServiceAsUnstructured(),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
+					WithInitTriggerConditions,
+					WithTriggerDeadLeaderSink(dlsSVCDest.Ref, ""),
+				)}...),
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDeadLeaderSink(dlsSVCDest.Ref, ""),
+					WithTriggerDependencyReady(),
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+			},
+			WantErr: false,
+		}, {
 			Name: "Broker has a dls ref that doesn't exist",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -648,12 +691,12 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions,
-					WithBrokerReady,
 					WithChannelAddressAnnotation(triggerChannelURL),
 					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 					WithChannelKindAnnotation(triggerChannelKind),
 					WithChannelNameAnnotation(triggerChannelName),
 					WithDeadLeaderSink(brokerDestv1.Ref, ""),
+					WithDLSResolvedFailed(),
 				),
 				makeSubscriberAddressableAsUnstructured(testNS),
 				NewTrigger(triggerName, testNS, brokerName,
@@ -661,22 +704,15 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberURI(subscriberURI),
 					WithInitTriggerConditions),
 			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `brokers.eventing.knative.dev "testsink" not found`),
-			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerFailed("Unable to get the DeadLetterSink's URI", `brokers.eventing.knative.dev "testsink" not found`),
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
-					WithTriggerStatusSubscriberURI(subscriberURI),
-					WithTriggerBrokerReady(),
-					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", `brokers.eventing.knative.dev "testsink" not found`),
 				),
 			}},
-			WantErr: true,
 		}, {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  testKey,
@@ -1260,4 +1296,17 @@ func ReadyBroker() *eventingv1.Broker {
 		WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
 		WithChannelKindAnnotation(triggerChannelKind),
 		WithChannelNameAnnotation(triggerChannelName))
+}
+
+func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      dlsName,
+			},
+		},
+	}
 }
