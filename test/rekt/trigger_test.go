@@ -57,7 +57,7 @@ func TestTriggerWithDLS(t *testing.T) {
 	//                               +--[DLS]--> sink
 	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLS("test1"))
 
-	// Test that a Trigger DLS "test1" works as expected with the following topology:
+	// Test that a Trigger DLS "test2" works as expected with the following topology:
 	// source ---> broker --[trigger]--> bad uri
 	//               |          |
 	//               +--[DLS]   +--[DLS]--> sink

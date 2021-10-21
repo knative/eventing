@@ -71,7 +71,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 	//                +--[DLQ]--> sink
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ("test1"))
 
-	// Test that a Broker "test1" works as expected with the following topology:
+	// Test that a Broker "test2" works as expected with the following topology:
 	// source ---> broker +--[trigger<via1>]--> bad uri
 	//                |   |
 	//                |   +--[trigger<vai2>]--> sink2
