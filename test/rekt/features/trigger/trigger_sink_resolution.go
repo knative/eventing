@@ -85,7 +85,7 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 // failing events to it's DLS even when it's corresponding Ready Broker also have a DLS defined.
 //
 // source ---> broker --[trigger]--> bad uri
-//               |				  |
+//               |          |
 //               +--[DLS]   +--[DLS]--> sink
 //
 func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Feature {
