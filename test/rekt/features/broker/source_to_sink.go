@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/eventlibrary"
@@ -100,10 +99,10 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
 	// Setup data plane
+	brokerConfig := append(b.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference("sink"), ""))
 	f.Setup("update broker with DLQ", broker.Install(
 		brokerName,
-		delivery.WithDeadLetterSink(prober.AsKReference("sink"), ""),
-		b.WithBrokerClass(eventing.MTChannelBrokerClassValue),
+		brokerConfig...,
 	))
 	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 
