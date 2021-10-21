@@ -23,5 +23,6 @@ metadata:
     knative.dev/config-category: eventing
 data:
   kreference-group: "enabled"
+  delivery-retryafter: "enabled"
   delivery-timeout: "enabled"
   strict-subscriber: "disabled"
