@@ -163,11 +163,8 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 
 		t.Status.DeadLetterSinkURI = deadLetterSinkURI
 		t.Status.MarkDeadLetterSinkResolvedSucceeded()
-		return nil
-	}
-
-	// Fallback to broker's DLS
-	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
+		// In case there is no DLS defined in the Trigger Spec, fallback to Broker's
+	} else if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
 		if b.Status.DeadLetterSinkURI != nil {
 			t.Status.DeadLetterSinkURI = b.Status.DeadLetterSinkURI
 			t.Status.MarkDeadLetterSinkResolvedSucceeded()
@@ -177,7 +174,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 			return fmt.Errorf("broker %s didn't set status.deadLetterSinkURI", b.Name)
 		}
 	} else {
-		// There is no DLS defined on the broker neither
+		// There is no DLS defined in nither Trigger nor the Broker
 		t.Status.DeadLetterSinkURI = nil
 		t.Status.MarkDeadLetterSinkNotConfigured()
 	}
