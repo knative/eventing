@@ -32,6 +32,8 @@ import (
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 
+	b "knative.dev/eventing/test/rekt/resources/broker"
+
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
 )
@@ -97,7 +99,11 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
 	// Setup data plane
-	f.Setup("update broker with DLQ", broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference("sink"), "")))
+	brokerConfig := append(b.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference("sink"), ""))
+	f.Setup("update broker with DLQ", broker.Install(
+		brokerName,
+		brokerConfig...,
+	))
 	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 
 	// Resources ready.
