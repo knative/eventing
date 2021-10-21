@@ -40,7 +40,7 @@ func TestTriggerDefaulting(t *testing.T) {
 	env.Finish()
 }
 
-func TestTriggerWithDLQ(t *testing.T) {
+func TestTriggerWithDLS(t *testing.T) {
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -51,9 +51,16 @@ func TestTriggerWithDLQ(t *testing.T) {
 
 	// The following will reuse the same environment for two different tests.
 
-	// Test that a Broker "test1" works as expected with the following topology:
+	// Test that a Trigger DLS "test1" works as expected with the following topology:
 	// source ---> broker<Via> --[trigger]--> bad uri
 	//                               |
-	//                               +--[DLQ]--> sink
-	env.Test(ctx, t, trigger.SourceToSinkWithDLQ("test1"))
+	//                               +--[DLS]--> sink
+	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLS("test1"))
+
+	// Test that a Trigger DLS "test1" works as expected with the following topology:
+	// source ---> broker --[trigger]--> bad uri
+	//               |				  |
+	//               +--[DLS]   +--[DLS]--> sink
+	//
+	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers("test2"))
 }

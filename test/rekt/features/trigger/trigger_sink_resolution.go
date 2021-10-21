@@ -27,17 +27,17 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
-// SourceToSinkWithDLQ tests to see if a Ready Broker acts as middleware.
+// SourceToTriggerSinkWithDLS tests to see if a Ready Trigger with a DLS defined send
+// failing events to it's DLS.
 //
-// source ---> broker<Via> --[trigger]--> bad uri
-//                |
-//                +--[DLQ]--> sink
+// source ---> broker --[trigger]--> bad uri
+//                          |
+//                          +--[DLS]--> sink
 //
-func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
+func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 	prober := eventshub.NewProber()
+	brokerName := feature.MakeRandomK8sName("broker-")
 	prober.SetTargetResource(broker.GVR(), brokerName)
-
-	via := feature.MakeRandomK8sName("via")
 
 	f := feature.NewFeature()
 
@@ -53,15 +53,19 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
 	// Setup data plane
-	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference("sink"), ""))
-	f.Setup("update broker with DLQ", broker.Install(
+	f.Setup("update broker with DLS", broker.Install(
 		brokerName,
-		brokerConfig...,
+		broker.WithEnvConfig()...,
 	))
-	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
+		trigger.WithSubscriber(nil, "bad://uri"),
+		delivery.WithDeadLetterSink(prober.AsKReference("sink"), "")))
 
 	// Resources ready.
-	f.Setup("trigger goes ready", trigger.IsReady(via))
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
 	// Install events after data plane is ready.
 	f.Setup("install source", prober.SenderInstall("source"))
@@ -70,9 +74,68 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	// Assert events ended up where we expected.
-	f.Stable("broker with DLQ").
+	f.Stable("broker with DLS").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ", prober.AssertReceivedAll("source", "sink"))
+		Must("deliver event to DLS", prober.AssertReceivedAll("source", "sink"))
+
+	return f
+}
+
+// SourceToTriggerSinkWithDLSDontUseBrokers tests to see if a Ready Trigger sends
+// failing events to it's DLS even when it's corresponding Ready Broker also have a DLS defined.
+//
+// source ---> broker --[trigger]--> bad uri
+//               |				  |
+//               +--[DLS]   +--[DLS]--> sink
+//
+func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Feature {
+	prober := eventshub.NewProber()
+	brokerName := feature.MakeRandomK8sName("broker-")
+	prober.SetTargetResource(broker.GVR(), brokerName)
+
+	f := feature.NewFeature()
+
+	lib := feature.MakeRandomK8sName("lib")
+	f.Setup("install events", eventlibrary.Install(lib))
+	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
+	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
+	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
+		panic(fmt.Errorf("can not find event files: %s", err))
+	}
+
+	// Setup Probes
+	f.Setup("install trigger recorder", prober.ReceiverInstall("trigger-sink"))
+	f.Setup("install brokers recorder", prober.ReceiverInstall("broker-sink"))
+
+	// Setup data plane
+	brokerConfig := append(
+		broker.WithEnvConfig(),
+		delivery.WithDeadLetterSink(prober.AsKReference("broker-sink"), ""))
+	f.Setup("update broker with DLS", broker.Install(
+		brokerName,
+		brokerConfig...,
+	))
+
+	f.Setup("install trigger", trigger.Install(
+		triggerName,
+		brokerName,
+		trigger.WithSubscriber(nil, "bad://uri"),
+		delivery.WithDeadLetterSink(prober.AsKReference("trigger-sink"), "")))
+
+	// Resources ready.
+	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
+
+	// Install events after data plane is ready.
+	f.Setup("install source", prober.SenderInstall("source"))
+
+	// After we have finished sending.
+	f.Requirement("sender is finished", prober.SenderDone("source"))
+
+	// Assert events ended up where we expected.
+	f.Stable("broker with DLS").
+		Must("accepted all events", prober.AssertSentAll("source")).
+		Must("deliver event to DLS", prober.AssertReceivedAll("source", "trigger-sink")).
+		MustNot("not receive any events", prober.AssertReceivedAll("source", "broker-sink"))
 
 	return f
 }
