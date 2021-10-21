@@ -52,8 +52,22 @@ var (
 		Status: corev1.ConditionFalse,
 	}
 
-	deploymentStatusReady    = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionReady}}
-	deploymentStatusNotReady = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionNotReady}}
+	deploymentConditionReplicasUnavailable = appsv1.DeploymentCondition{
+		Type:   appsv1.DeploymentAvailable,
+		Status: corev1.ConditionFalse,
+		Reason: dispatcherMinReplicasUnavailable,
+	}
+
+	deploymentStatusReady        = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionReady}}
+	deploymentStatusNotReady     = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionNotReady}}
+	deploymentStatusReplicaReady = &appsv1.DeploymentStatus{
+		Conditions:        []appsv1.DeploymentCondition{deploymentConditionReplicasUnavailable},
+		AvailableReplicas: 1,
+	}
+	deploymentStatusReplicaNotReady = &appsv1.DeploymentStatus{
+		Conditions:        []appsv1.DeploymentCondition{deploymentConditionReplicasUnavailable},
+		AvailableReplicas: 0,
+	}
 
 	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 		apis.Condition{},
@@ -319,6 +333,24 @@ func TestInMemoryChannelIsReady(t *testing.T) {
 		markChannelServiceReady: false,
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
+		DLSResolved:             &trueVal,
+	}, {
+		name:                    "scaling with one replica",
+		markServiceReady:        true,
+		markChannelServiceReady: true,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReplicaReady,
+		setAddress:              true,
+		wantReady:               true,
+		DLSResolved:             &trueVal,
+	}, {
+		name:                    "scaling with no replicas",
+		markServiceReady:        true,
+		markChannelServiceReady: true,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReplicaNotReady,
 		setAddress:              true,
 		wantReady:               false,
 		DLSResolved:             &trueVal,

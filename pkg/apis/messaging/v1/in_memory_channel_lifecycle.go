@@ -64,6 +64,9 @@ const (
 	InMemoryChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
 )
 
+// Dispatcher deployment unavailability reason during scaling.
+const dispatcherMinReplicasUnavailable = "MinimumReplicasUnavailable"
+
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
 func (*InMemoryChannel) GetConditionSet() apis.ConditionSet {
 	return imcCondSet
@@ -121,7 +124,11 @@ func (imcs *InMemoryChannelStatus) PropagateDispatcherStatus(ds *appsv1.Deployme
 			if cond.Status == corev1.ConditionTrue {
 				imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDispatcherReady)
 			} else if cond.Status == corev1.ConditionFalse {
-				imcs.MarkDispatcherFailed("DispatcherDeploymentFalse", "The status of Dispatcher Deployment is False: %s : %s", cond.Reason, cond.Message)
+				if cond.Reason == dispatcherMinReplicasUnavailable && ds.AvailableReplicas > 0 {
+					imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDispatcherReady)
+				} else {
+					imcs.MarkDispatcherFailed("DispatcherDeploymentFalse", "The status of Dispatcher Deployment is False: %s : %s", cond.Reason, cond.Message)
+				}
 			} else if cond.Status == corev1.ConditionUnknown {
 				imcs.MarkDispatcherUnknown("DispatcherDeploymentUnknown", "The status of Dispatcher Deployment is Unknown: %s : %s", cond.Reason, cond.Message)
 			}
