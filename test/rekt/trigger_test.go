@@ -23,8 +23,11 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/rekt/features/trigger"
+	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/k8s"
+	"knative.dev/reconciler-test/pkg/knative"
 )
 
 func TestTriggerDefaulting(t *testing.T) {
@@ -35,4 +38,22 @@ func TestTriggerDefaulting(t *testing.T) {
 	env.TestSet(ctx, t, trigger.Defaulting())
 
 	env.Finish()
+}
+
+func TestTriggerWithDLQ(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// The following will reuse the same environment for two different tests.
+
+	// Test that a Broker "test1" works as expected with the following topology:
+	// source ---> broker<Via> --[trigger]--> bad uri
+	//                               |
+	//                               +--[DLQ]--> sink
+	env.Test(ctx, t, trigger.SourceToSinkWithDLQ("test1"))
 }
