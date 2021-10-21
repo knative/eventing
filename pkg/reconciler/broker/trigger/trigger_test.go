@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -135,6 +134,14 @@ var (
 	dlsSVCDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+	k8sSVCDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       subscriberName,
 			Kind:       "Service",
 			APIVersion: "v1",
 			Namespace:  testNS,
@@ -435,7 +442,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
-					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
 				},
 				Name: subscriptionName,
 			}},
@@ -471,7 +478,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
-					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
 				},
 				Name: subscriptionName,
 			}},
@@ -512,7 +519,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
-					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
 				},
 				Name: subscriptionName,
 			}},
@@ -716,7 +723,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Broker has a valid dls ref, trigger fallbacks to it and goes ready",
+			Name: "Trigger has no dls ref, Broker has a valid dls ref, Trigger fallbacks to it and goes ready",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				makeDLSServiceAsUnstructured(),
@@ -748,7 +755,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				ActionImpl: clientgotesting.ActionImpl{
 					Namespace: testNS,
-					Resource:  v1.SchemeGroupVersion.WithResource("subscriptions"),
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
 				},
 				Name: subscriptionName,
 			}},
@@ -761,6 +768,62 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerDependencyReady(),
 					WithTriggerSubscribed(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+				),
+			}},
+		}, {
+			Name: "Trigger has a valid dls ref, Broker has a valid dls ref, Trigger uses it's dls and goes ready",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				makeSubscriberKubernetesServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithBrokerResourceVersion(""),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDeadLeaderSink(k8sSVCDest.Ref, ""),
+					WithBrokerStatusDLSURI(k8sSVCDest.URI),
+				),
+				createChannel(testNS, true),
+				imcConfigMap(),
+				makeReadySubscription(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerDeadLeaderSink(dlsSVCDest.Ref, "")),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDependencyReady(),
+					WithTriggerSubscribed(),
+					WithTriggerDeadLeaderSink(dlsSVCDest.Ref, ""),
 					WithTriggerSubscriptionNotConfigured(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
@@ -1191,8 +1254,8 @@ func makeEmptyDelivery() *eventingduckv1.DeliverySpec {
 	return nil
 }
 
-func makeDelivery(ref *duckv1.KReference, uri string, retry *int32, backoffPolicy *v1.BackoffPolicyType, backoffDelay *string) *eventingduckv1.DeliverySpec {
-	ds := &v1.DeliverySpec{
+func makeDelivery(ref *duckv1.KReference, uri string, retry *int32, backoffPolicy *eventingduckv1.BackoffPolicyType, backoffDelay *string) *eventingduckv1.DeliverySpec {
+	ds := &eventingduckv1.DeliverySpec{
 		Retry:         retry,
 		BackoffPolicy: backoffPolicy,
 		BackoffDelay:  backoffDelay,
