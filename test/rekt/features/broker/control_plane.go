@@ -85,7 +85,8 @@ func ControlPlaneBroker(brokerName string) *feature.Feature {
 	f.Setup("Set Broker Name", setBrokerName(bName))
 
 	f.Setup("install a service", svc.Install(sink, "app", "rekt"))
-	f.Setup("update broker", broker.Install(bName, delivery.WithDeadLetterSink(svc.AsKReference(sink), "")))
+	brokerOpts := append(brokerresources.WithEnvConfig(), delivery.WithDeadLetterSink(svc.AsKReference(sink), ""))
+	f.Setup("update broker", broker.Install(bName, brokerOpts...))
 	f.Setup("broker goes ready", broker.IsReady(bName))
 
 	f.Stable("Conformance").
