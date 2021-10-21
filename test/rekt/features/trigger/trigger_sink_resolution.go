@@ -74,7 +74,7 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	// Assert events ended up where we expected.
-	f.Stable("broker with DLS").
+	f.Stable("trigger with DLS").
 		Must("accepted all events", prober.AssertSentAll("source")).
 		Must("deliver event to DLS", prober.AssertReceivedAll("source", "sink"))
 
@@ -132,10 +132,9 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Featu
 	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	// Assert events ended up where we expected.
-	f.Stable("broker with DLS").
+	f.Stable("trigger with DLS").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLS", prober.AssertReceivedAll("source", "trigger-sink")).
-		MustNot("not receive any events", prober.AssertReceivedAll("source", "broker-sink"))
+		Must("deliver events to trigger DLS", prober.AssertReceivedAll("source", "trigger-sink"))
 
 	return f
 }
