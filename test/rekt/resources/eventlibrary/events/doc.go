@@ -1,3 +1,4 @@
+//go:build cloudevents
 // +build cloudevents
 
 /*

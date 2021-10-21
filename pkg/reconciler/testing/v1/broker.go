@@ -15,6 +15,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,6 +105,11 @@ func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
 
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1.Broker) {
+	b.Status = *v1.TestHelper.ReadyBrokerStatusWithoutDLS()
+}
+
+// WithBrokerReady sets .Status to ready with the DLS defined.
+func WithBrokerReadyWithDLS(b *v1.Broker) {
 	b.Status = *v1.TestHelper.ReadyBrokerStatus()
 }
 
@@ -167,6 +173,12 @@ func WithChannelAddressAnnotation(address string) BrokerOption {
 	}
 }
 
+func WithBrokerStatusDLSURI(dlsURI *apis.URL) BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkResolvedSucceeded(dlsURI)
+	}
+}
+
 func WithChannelAPIVersionAnnotation(apiVersion string) BrokerOption {
 	return func(b *v1.Broker) {
 		if b.Status.Annotations == nil {
@@ -207,5 +219,28 @@ func WithDeadLeaderSink(ref *duckv1.KReference, uri string) BrokerOption {
 			Ref: ref,
 			URI: u,
 		}
+	}
+}
+
+func WithAddressableUnknown() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkBrokerAddressableUnknown("", "")
+	}
+}
+
+func WithDLSResolvedFailed() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkResolvedFailed(
+			"Unable to get the DeadLetterSink's URI",
+			fmt.Sprintf(`brokers.eventing.knative.dev "%s" not found`,
+				b.Spec.Delivery.DeadLetterSink.Ref.Name,
+			),
+		)
+	}
+}
+
+func WithDLSNotConfigured() BrokerOption {
+	return func(b *v1.Broker) {
+		b.Status.MarkDeadLetterSinkNotConfigured()
 	}
 }

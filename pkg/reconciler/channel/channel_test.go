@@ -34,6 +34,7 @@ import (
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -129,7 +130,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelServiceReady(),
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
-				WithInMemoryChannelAddress(backingChannelHostname)),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -137,6 +139,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
+				WithChannelDLSUnknown(),
 				WithChannelAddress(backingChannelHostname)),
 		}},
 	}, {
@@ -148,7 +151,8 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname)),
+				WithChannelAddress(backingChannelHostname),
+				WithChannelDLSUnknown()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -156,7 +160,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelAddress(backingChannelHostname)),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDLSUnknown()),
 		},
 	}, {
 		Name: "Backing channel created",
@@ -178,6 +183,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
+				WithChannelDLSUnknown(),
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
 		}},
 	}, {
@@ -227,6 +233,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
 				WithChannelDelivery(deliverySpec),
+				WithChannelDLSUnknown(),
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
 		}},
 	}, {
@@ -247,13 +254,15 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelEndpointsReady(),
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelAddress(backingChannelHostname)),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelDLSUnknown(),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
 				WithChannelGeneration(42),
@@ -279,7 +288,8 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelAddress(backingChannelHostname),
 				WithInMemoryChannelSubscribers(subscribers()),
-				WithInMemoryChannelStatusSubscribers(subscriberStatuses())),
+				WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
+				WithInMemoryChannelDLSUnknown()),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
@@ -288,13 +298,15 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
-				WithChannelSubscriberStatuses(subscriberStatuses())),
+				WithChannelSubscriberStatuses(subscriberStatuses()),
+				WithChannelDLSUnknown()),
 		}},
 	}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
+		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
 			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),

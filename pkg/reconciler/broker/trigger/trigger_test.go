@@ -274,7 +274,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}},
 		}, {
-			Name: "Creates subscription with dlq from trigger",
+			Name: "Creates subscription with dls from trigger",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
@@ -613,7 +613,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantErr: true,
 		}, {
-			Name: "Trigger has a dlq ref that doesn't exist",
+			Name: "Trigger has a dls ref that doesn't exist",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeSubscriberAddressableAsUnstructured(testNS),
@@ -641,7 +641,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantErr: true,
 		}, {
-			Name: "Broker has a dlq ref that doesn't exist",
+			Name: "Broker has a dls ref that doesn't exist",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,

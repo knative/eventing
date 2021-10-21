@@ -46,7 +46,6 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1"
-	"knative.dev/eventing/pkg/duck"
 	ducklib "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
@@ -61,7 +60,7 @@ type Reconciler struct {
 	subscriptionLister messaginglisters.SubscriptionLister
 	configmapLister    corev1listers.ConfigMapLister
 
-	channelableTracker duck.ListableTracker
+	channelableTracker ducklib.ListableTracker
 
 	// If specified, only reconcile brokers with these labels
 	brokerClass string
@@ -89,6 +88,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 
+	var tmpChannelableSpec duckv1.ChannelableSpec = duckv1.ChannelableSpec{
+		Delivery: b.Spec.Delivery,
+	}
+
 	logging.FromContext(ctx).Infow("Reconciling the trigger channel")
 	c, err := ducklib.NewPhysicalChannel(
 		chanMan.template.TypeMeta,
@@ -101,6 +104,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 			Labels:      TriggerChannelLabels(b.Name),
 			Annotations: map[string]string{eventing.ScopeAnnotationKey: eventing.ScopeCluster},
 		},
+		ducklib.WithChannelableSpec(tmpChannelableSpec),
 		ducklib.WithPhysicalChannelSpec(chanMan.template.Spec),
 	)
 	if err != nil {
@@ -121,6 +125,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return nil
 	}
+
 	if url := triggerChan.Status.Address.URL; url == nil || url.Host == "" {
 		logging.FromContext(ctx).Debugw("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
@@ -137,7 +142,15 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	b.Status.Annotations[eventing.BrokerChannelAPIVersionStatusAnnotationKey] = chanMan.ref.APIVersion
 	b.Status.Annotations[eventing.BrokerChannelNameStatusAnnotationKey] = chanMan.ref.Name
 
-	channelStatus := &duckv1.ChannelableStatus{AddressStatus: pkgduckv1.AddressStatus{Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL}}}
+	channelStatus := &duckv1.ChannelableStatus{
+		AddressStatus: pkgduckv1.AddressStatus{
+			Address: &pkgduckv1.Addressable{URL: triggerChan.Status.Address.URL},
+		},
+		DeliveryStatus: duckv1.DeliveryStatus{
+			DeadLetterSinkURI: triggerChan.Status.DeliveryStatus.DeadLetterSinkURI,
+		},
+	}
+
 	b.Status.PropagateTriggerChannelReadiness(channelStatus)
 
 	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(names.BrokerFilterName)
@@ -155,6 +168,16 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 		return err
 	}
 	b.Status.PropagateIngressAvailability(ingressEndpoints)
+
+	if b.Spec.Delivery != nil && b.Spec.Delivery.DeadLetterSink != nil {
+		if triggerChan.Status.DeliveryStatus.DeadLetterSinkURI != nil {
+			b.Status.MarkDeadLetterSinkResolvedSucceeded(triggerChan.Status.DeliveryStatus.DeadLetterSinkURI)
+		} else {
+			b.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Channel %s didn't set status.deadLetterSinkURI", triggerChan.Name), "")
+		}
+	} else {
+		b.Status.MarkDeadLetterSinkNotConfigured()
+	}
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.

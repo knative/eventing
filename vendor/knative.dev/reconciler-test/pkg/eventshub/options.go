@@ -120,6 +120,20 @@ func DropEventsResponseCode(code int) EventsHubOption {
 	)
 }
 
+// DropEventsResponseHeaders will cause the receiver to reply with the specific headers to the dropped events
+func DropEventsResponseHeaders(headers map[string]string) EventsHubOption {
+	headerEnvConfigString := ""
+	for k, v := range headers {
+		if headerEnvConfigString != "" {
+			headerEnvConfigString = headerEnvConfigString + ","
+		}
+		headerEnvConfigString = fmt.Sprintf("%s%s:%s", headerEnvConfigString, k, v) // Format as envconfig map[string]string
+	}
+	return compose(
+		envOptionalOpt("SKIP_RESPONSE_HEADERS", headerEnvConfigString),
+	)
+}
+
 // --- Sender options
 
 // InitialSenderDelay defines how much the sender has to wait (in millisecond), when started, before start sending events.

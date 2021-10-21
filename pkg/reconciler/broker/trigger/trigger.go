@@ -152,17 +152,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) p
 }
 
 func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Broker, t *eventingv1.Trigger) error {
-	// resolve the trigger's dlq first, fall back to the broker's
+	// resolve the trigger's dls first, fall back to the broker's
 	for _, delivery := range []*eventingduckv1.DeliverySpec{t.Spec.Delivery, b.Spec.Delivery} {
 		if delivery != nil && delivery.DeadLetterSink != nil {
-			dlqURI, err := r.uriResolver.URIFromDestinationV1(ctx, *delivery.DeadLetterSink, b)
+			dlsURI, err := r.uriResolver.URIFromDestinationV1(ctx, *delivery.DeadLetterSink, b)
 			if err != nil {
 				logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
 				t.Status.MarkDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", "%v", err)
 				t.Status.DeadLetterSinkURI = nil
 				return err
 			}
-			t.Status.DeadLetterSinkURI = dlqURI
+			t.Status.DeadLetterSinkURI = dlsURI
 			t.Status.MarkDeadLetterSinkResolvedSucceeded()
 			return nil
 		}

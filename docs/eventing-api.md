@@ -2494,7 +2494,7 @@ DeliverySpec
 <td>
 <em>(Optional)</em>
 <p>Delivery is the delivery specification for events to the subscriber
-This includes things like retries, DLQ, etc.</p>
+This includes things like retries, DLS, etc.</p>
 </td>
 </tr>
 </tbody>
@@ -3115,7 +3115,7 @@ DeliverySpec
 <td>
 <em>(Optional)</em>
 <p>Delivery is the delivery specification for events to the subscriber
-This includes things like retries, DLQ, etc.</p>
+This includes things like retries, DLS, etc.</p>
 </td>
 </tr>
 </tbody>
