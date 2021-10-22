@@ -17,6 +17,7 @@ limitations under the License.
 package trigger
 
 import (
+	"context"
 	"fmt"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
@@ -91,6 +92,8 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Feature {
 	prober := eventshub.NewProber()
 	brokerName := feature.MakeRandomK8sName("broker-")
+	brokerSinkName := "broker-sink"
+	triggerSinkName := "trigger-sink"
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	f := feature.NewFeature()
@@ -104,13 +107,13 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Featu
 	}
 
 	// Setup Probes
-	f.Setup("install trigger recorder", prober.ReceiverInstall("trigger-sink"))
-	f.Setup("install brokers recorder", prober.ReceiverInstall("broker-sink"))
+	f.Setup("install trigger recorder", prober.ReceiverInstall(triggerSinkName))
+	f.Setup("install brokers recorder", prober.ReceiverInstall(brokerSinkName))
 
 	// Setup data plane
 	brokerConfig := append(
 		broker.WithEnvConfig(),
-		delivery.WithDeadLetterSink(prober.AsKReference("broker-sink"), ""))
+		delivery.WithDeadLetterSink(prober.AsKReference(brokerSinkName), ""))
 	f.Setup("update broker with DLS", broker.Install(
 		brokerName,
 		brokerConfig...,
@@ -120,7 +123,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Featu
 		triggerName,
 		brokerName,
 		trigger.WithSubscriber(nil, "bad://uri"),
-		delivery.WithDeadLetterSink(prober.AsKReference("trigger-sink"), "")))
+		delivery.WithDeadLetterSink(prober.AsKReference(triggerSinkName), "")))
 
 	// Resources ready.
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
@@ -132,9 +135,20 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Featu
 	f.Requirement("sender is finished", prober.SenderDone("source"))
 
 	// Assert events ended up where we expected.
-	f.Stable("trigger with DLS").
+	f.Stable("trigger with a valid DLS ref defined in its spec").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver events to trigger DLS", prober.AssertReceivedAll("source", "trigger-sink"))
+		Must("deliver events to trigger DLS", prober.AssertReceivedAll("source", triggerSinkName)).
+		Must("not deliver events to its broker DLS", noEventsToDLS(prober, brokerSinkName))
 
 	return f
+}
+
+func noEventsToDLS(prober *eventshub.EventProber, sinkName string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		if len(prober.ReceivedBy(ctx, sinkName)) == 0 {
+			t.Log("no events were sent to %s DLS", sinkName)
+		} else {
+			t.Errorf("events were received by %s DLS", sinkName)
+		}
+	}
 }

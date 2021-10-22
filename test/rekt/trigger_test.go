@@ -59,8 +59,10 @@ func TestTriggerWithDLS(t *testing.T) {
 
 	// Test that a Trigger DLS "test2" works as expected with the following topology:
 	// source ---> broker --[trigger]--> bad uri
-	//               |          |
-	//               +--[DLS]   +--[DLS]--> sink
+	//              |          |
+	//              x--[DLS]   +--[DLS]--> sink
 	//
 	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers("test2"))
+
+	//Broker's DLS is been test by the broker Flow
 }
