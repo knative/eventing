@@ -832,7 +832,7 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Trigger does not have DLS defined, Boker DLS URI resolved no nil, Trigger error status",
+			Name: "Trigger does not have DLS defined, Broker DLS URI resolved to nil, Trigger returns error status",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				makeSubscriberKubernetesServiceAsUnstructured(),

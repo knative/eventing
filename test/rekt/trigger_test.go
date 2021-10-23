@@ -63,6 +63,4 @@ func TestTriggerWithDLS(t *testing.T) {
 	//              x--[DLS]   +--[DLS]--> sink
 	//
 	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers("test2"))
-
-	// Broker's DLS its tested by the broker_test Flow
 }
