@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -51,12 +52,13 @@ import (
 )
 
 const (
-	systemNS     = "knative-testing"
-	testNS       = "test-namespace"
-	brokerName   = "test-broker"
-	sinkName     = "test-sink"
-	dlsName      = "test-dls"
-	alternateDLS = "test-dls-alternate"
+	systemNS        = "knative-testing"
+	testNS          = "test-namespace"
+	brokerName      = "test-broker"
+	sinkName        = "test-sink"
+	dlsName         = "test-dls"
+	alternateDLS    = "test-dls-alternate"
+	deliveryRetries = 3
 
 	configMapName = "test-configmap"
 
@@ -466,7 +468,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantErr: false,
 		}, {
-			Name: "valid Broker with DLS, updated DLS needs to propagate to channel",
+			Name: "valid Broker with DLS is updated with new DLS, needs to propagate to channel",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				makeDLSServiceAsUnstructured(),
@@ -499,6 +501,40 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				makeChannelDLSRefNamePatch(sinkSVCDest.Ref.Name),
+			},
+		}, {
+			Name: "valid Broker with no delivery is updated to use retries, needs to propagate to channel",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerDeliveryRetries(deliveryRetries),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerDeliveryRetries(deliveryRetries),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				makeChannelDeliveryRetryPatch(deliveryRetries),
 			},
 		},
 	}
@@ -695,5 +731,15 @@ func makeChannelDLSRefNamePatch(refName string) clientgotesting.PatchActionImpl 
 		},
 		Name:  fmt.Sprintf("%s-kne-trigger", brokerName),
 		Patch: []byte(`[{"op":"replace","path":"/spec/delivery/deadLetterSink/ref/name","value":"` + refName + `"}]`),
+	}
+}
+
+func makeChannelDeliveryRetryPatch(retries int) clientgotesting.PatchActionImpl {
+	return clientgotesting.PatchActionImpl{
+		ActionImpl: clientgotesting.ActionImpl{
+			Namespace: testNS,
+		},
+		Name:  fmt.Sprintf("%s-kne-trigger", brokerName),
+		Patch: []byte(`[{"op":"add","path":"/spec/delivery","value":{"retry":` + strconv.Itoa(retries) + `}}]`),
 	}
 }
