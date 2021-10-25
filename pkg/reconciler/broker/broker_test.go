@@ -18,7 +18,9 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -50,11 +52,13 @@ import (
 )
 
 const (
-	systemNS   = "knative-testing"
-	testNS     = "test-namespace"
-	brokerName = "test-broker"
-	sinkName   = "test-sink"
-	dlsName    = "test-dls"
+	systemNS        = "knative-testing"
+	testNS          = "test-namespace"
+	brokerName      = "test-broker"
+	sinkName        = "test-sink"
+	dlsName         = "test-dls"
+	alternateDLS    = "test-dls-alternate"
+	deliveryRetries = 3
 
 	configMapName = "test-configmap"
 
@@ -100,6 +104,15 @@ var (
 	sinkSVCDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Name:       dlsName,
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  testNS,
+		},
+	}
+
+	alternateDLSDest = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       alternateDLS,
 			Kind:       "Service",
 			APIVersion: "v1",
 			Namespace:  testNS,
@@ -204,20 +217,26 @@ func TestReconcile(t *testing.T) {
 				imcConfigMap(),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(testNS, false),
+				createChannel(),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithBrokerConfig(config()),
-					WithTriggerChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
+					WithTriggerChannelFailed("ChannelFailure",
+						"failed to create channel "+
+							testNS+"/"+triggerChannelName+
+							": inducing failure for create inmemorychannels")),
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", "Failed to reconcile trigger channel: %v", "inducing failure for create inmemorychannels"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile trigger channel: "+
+					"failed to create channel "+
+					testNS+"/"+triggerChannelName+
+					": inducing failure for create inmemorychannels"),
 			},
 			WantErr: true,
 		}, {
@@ -231,7 +250,7 @@ func TestReconcile(t *testing.T) {
 				imcConfigMap(),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(testNS, false),
+				createChannel(),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -288,7 +307,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions),
 				imcConfigMap(),
-				createChannel(testNS, false),
+				createChannel(),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -306,7 +325,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions),
 				imcConfigMap(),
-				createChannel(testNS, true),
+				createChannel(withChannelReady),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -332,7 +351,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions),
-				createChannel(testNS, true),
+				createChannel(withChannelReady),
 				imcConfigMap(),
 				NewEndpoints(filterServiceName, systemNS,
 					WithEndpointsLabels(FilterLabels()),
@@ -361,7 +380,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerConfig(config()),
 					WithInitBrokerConditions),
-				createChannel(testNS, true),
+				createChannel(withChannelReady),
 				imcConfigMap(),
 				NewEndpoints(filterServiceName, systemNS,
 					WithEndpointsLabels(FilterLabels()),
@@ -398,7 +417,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithDeadLeaderSink(brokerDestv1.Ref, ""),
 					WithInitBrokerConditions),
-				createChannel(testNS, false),
+				createChannel(withChannelDeadLetterSink(brokerDestv1)),
 				imcConfigMap(),
 				NewEndpoints(filterServiceName, systemNS,
 					WithEndpointsLabels(FilterLabels()),
@@ -425,7 +444,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerConfig(config()),
 					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
 					WithInitBrokerConditions),
-				createChannel(testNS, true),
+				createChannel(withChannelReady, withChannelDeadLetterSink(sinkSVCDest)),
 				imcConfigMap(),
 				NewEndpoints(filterServiceName, systemNS,
 					WithEndpointsLabels(FilterLabels()),
@@ -448,6 +467,75 @@ func TestReconcile(t *testing.T) {
 					WithChannelNameAnnotation(triggerChannelName)),
 			}},
 			WantErr: false,
+		}, {
+			Name: "valid Broker with DLS is updated with new DLS, needs to propagate to channel",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady, withChannelDeadLetterSink(alternateDLSDest)),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReadyWithDLS,
+					WithDeadLeaderSink(sinkSVCDest.Ref, ""),
+					WithBrokerAddressURI(brokerAddress),
+					WithBrokerStatusDLSURI(dlsURI),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				makeChannelDLSRefNamePatch(sinkSVCDest.Ref.Name),
+			},
+		}, {
+			Name: "valid Broker with no delivery is updated to use retries, needs to propagate to channel",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerDeliveryRetries(deliveryRetries),
+					WithInitBrokerConditions),
+				createChannel(withChannelReady),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithBrokerReady,
+					WithBrokerDeliveryRetries(deliveryRetries),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName)),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				makeChannelDeliveryRetryPatch(deliveryRetries),
+			},
 		},
 	}
 
@@ -490,55 +578,57 @@ func imcConfigMap() *corev1.ConfigMap {
 		WithConfigMapData(map[string]string{"channelTemplateSpec": imcSpec}))
 }
 
-func createChannel(namespace string, ready bool) *unstructured.Unstructured {
-	name := fmt.Sprintf("%s-kne-trigger", brokerName)
-	labels := map[string]interface{}{
-		eventing.BrokerLabelKey:                 brokerName,
-		"eventing.knative.dev/brokerEverything": "true",
-	}
-	annotations := map[string]interface{}{
-		"eventing.knative.dev/scope": "cluster",
-	}
-	if ready {
-		return &unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "messaging.knative.dev/v1",
-				"kind":       "InMemoryChannel",
-				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"namespace":         namespace,
-					"name":              name,
-					"ownerReferences": []interface{}{
-						map[string]interface{}{
-							"apiVersion":         "eventing.knative.dev/v1",
-							"blockOwnerDeletion": true,
-							"controller":         true,
-							"kind":               "Broker",
-							"name":               brokerName,
-							"uid":                "",
-						},
-					},
-					"labels":      labels,
-					"annotations": annotations,
-				},
-				"status": map[string]interface{}{
-					"deadLetterSinkURI": dlsURI.String(),
-					"address": map[string]interface{}{
-						"url": triggerChannelURL,
-					},
-				},
-			},
+// unstructuredOption modifies *unstructured.Unstructured contents.
+type unstructuredOption func(*unstructured.Unstructured)
+
+func withChannelStatusAddress(url string) unstructuredOption {
+	return func(channel *unstructured.Unstructured) {
+		if err := unstructured.SetNestedField(channel.Object, url,
+			"status", "address", "url"); err != nil {
+			panic(err)
 		}
 	}
+}
 
-	return &unstructured.Unstructured{
+func withChannelStatusDeadLetterSinkURI(uri string) unstructuredOption {
+	return func(channel *unstructured.Unstructured) {
+		unstructured.SetNestedField(channel.Object, uri,
+			"status", "deadLetterSinkURI")
+	}
+}
+
+func withChannelDeadLetterSink(d duckv1.Destination) unstructuredOption {
+	u := map[string]interface{}{}
+	b, err := json.Marshal(d)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := json.Unmarshal(b, &u); err != nil {
+		panic(err)
+	}
+
+	return func(channel *unstructured.Unstructured) {
+		unstructured.SetNestedField(channel.Object, u,
+			"spec", "delivery", "deadLetterSink")
+	}
+}
+
+func withChannelReady(channel *unstructured.Unstructured) {
+	withChannelStatusAddress(triggerChannelURL)(channel)
+	withChannelStatusDeadLetterSinkURI(dlsURI.String())(channel)
+}
+
+func createChannel(opts ...unstructuredOption) *unstructured.Unstructured {
+
+	channel := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "messaging.knative.dev/v1",
 			"kind":       "InMemoryChannel",
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
-				"namespace":         namespace,
-				"name":              name,
+				"namespace":         testNS,
+				"name":              fmt.Sprintf("%s-kne-trigger", brokerName),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "eventing.knative.dev/v1",
@@ -549,11 +639,22 @@ func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 						"uid":                "",
 					},
 				},
-				"labels":      labels,
-				"annotations": annotations,
+				"labels": map[string]interface{}{
+					eventing.BrokerLabelKey:                 brokerName,
+					"eventing.knative.dev/brokerEverything": "true",
+				},
+				"annotations": map[string]interface{}{
+					"eventing.knative.dev/scope": "cluster",
+				},
 			},
 		},
 	}
+
+	for _, f := range opts {
+		f(channel)
+	}
+
+	return channel
 }
 
 func createChannelNoHostInUrl(namespace string) *unstructured.Unstructured {
@@ -620,5 +721,25 @@ func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
 				"name":      dlsName,
 			},
 		},
+	}
+}
+
+func makeChannelDLSRefNamePatch(refName string) clientgotesting.PatchActionImpl {
+	return clientgotesting.PatchActionImpl{
+		ActionImpl: clientgotesting.ActionImpl{
+			Namespace: testNS,
+		},
+		Name:  fmt.Sprintf("%s-kne-trigger", brokerName),
+		Patch: []byte(`[{"op":"replace","path":"/spec/delivery/deadLetterSink/ref/name","value":"` + refName + `"}]`),
+	}
+}
+
+func makeChannelDeliveryRetryPatch(retries int) clientgotesting.PatchActionImpl {
+	return clientgotesting.PatchActionImpl{
+		ActionImpl: clientgotesting.ActionImpl{
+			Namespace: testNS,
+		},
+		Name:  fmt.Sprintf("%s-kne-trigger", brokerName),
+		Patch: []byte(`[{"op":"add","path":"/spec/delivery","value":{"retry":` + strconv.Itoa(retries) + `}}]`),
 	}
 }
