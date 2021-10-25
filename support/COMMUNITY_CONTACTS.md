@@ -82,7 +82,7 @@ The schedule can be regenerated randomly for a new cycle with the command (run
 from the eventing base directory).
 
 ```sh
-ROSTER=$(grep -v -e '^$' support/ROSTER)
+ROSTER=$(cat support/ROSTER support/VOLUNTEERS)
 echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 ```
 
@@ -96,6 +96,7 @@ echo ${ROSTER} | sed 's/ /\n/g' | sort | uniq | sort -R
 - [tayarani](https://github.com/tayarani)
 - [devguyio](https://github.com/devguyio)
 - [benmoss](https://github.com/benmoss)
+- [odacremolbap](https://github.com/odacremolbap)
 
 # Schedule
 
