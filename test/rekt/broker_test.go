@@ -55,8 +55,6 @@ func TestBrokerAsMiddleware(t *testing.T) {
 
 // TestBrokerDLQ
 func TestBrokerWithDLQ(t *testing.T) {
-	class := eventing.MTChannelBrokerClassValue
-
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -67,17 +65,11 @@ func TestBrokerWithDLQ(t *testing.T) {
 
 	// The following will reuse the same environment for two different tests.
 
-	// Install and wait for a Ready Broker "test1".
-	env.Prerequisite(ctx, t, broker.GoesReady("test1", b.WithBrokerClass(class)))
-
 	// Test that a Broker "test1" works as expected with the following topology:
 	// source ---> broker<Via> --[trigger]--> bad uri
 	//                |
 	//                +--[DLQ]--> sink
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ("test1"))
-
-	// Install and wait for a Ready Broker "test2"
-	env.Prerequisite(ctx, t, broker.GoesReady("test2", b.WithBrokerClass(class)))
 
 	// Test that a Broker "test1" works as expected with the following topology:
 	// source ---> broker +--[trigger<via1>]--> bad uri

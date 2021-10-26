@@ -23,10 +23,12 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/kmeta"
@@ -116,7 +118,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	if err != nil {
 		logging.FromContext(ctx).Errorw("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
-		return fmt.Errorf("Failed to reconcile trigger channel: %v", err)
+		return fmt.Errorf("failed to reconcile trigger channel: %v", err)
 	}
 
 	if triggerChan.Status.Address == nil {
@@ -183,7 +185,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *eventingv1.Broker) pk
 	// so we can route there appropriately.
 	b.Status.SetAddress(&apis.URL{
 		Scheme: "http",
-		Host:   network.GetServiceHostname("broker-ingress", system.Namespace()),
+		Host:   network.GetServiceHostname(names.BrokerIngressName, system.Namespace()),
 		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
 	})
 
@@ -264,35 +266,90 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
-	// If the resource doesn't exist, we'll create it
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Info(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
-			created, err := channelResourceInterface.Create(ctx, newChannel, metav1.CreateOptions{})
-			if err != nil {
-				logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
-				return nil, err
-			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewPhysicalChannel", newChannel))
-			channelable := &duckv1.Channelable{}
-			err = duckapis.FromUnstructured(created, channelable)
-			if err != nil {
-				logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("createdChannel", created), zap.Error(err))
-				return nil, err
 
-			}
-			return channelable, nil
+	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
+	switch {
+	case apierrs.IsNotFound(err):
+		// Create the Channel if it doesn't exists.
+		logging.FromContext(ctx).Info(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
+		created, err := channelResourceInterface.Create(ctx, newChannel, metav1.CreateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create channel %s/%s: %w", channelObjRef.Namespace, channelObjRef.Name, err)
 		}
+		logging.FromContext(ctx).Debug(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewPhysicalChannel", created))
+
+		channelable := &duckv1.Channelable{}
+		err = duckapis.FromUnstructured(created, channelable)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert to Channelable Object %s/%s: %w", channelObjRef.Namespace, channelObjRef.Name, err)
+		}
+		return channelable, nil
+	case err != nil:
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to get Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
+
 	}
+
+	// Make sure the existing Channel options match those of
+	// the Broker, if not Patch.
+
 	logging.FromContext(ctx).Debugw(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name))
 	channelable, ok := c.(*duckv1.Channelable)
 	if !ok {
 		logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
+
+	// We are only interested in comparing mutable properties, all
+	// others should not change. Any mutable property added to Channel based Brokers
+	// that needs to be propagated to underlying Channels should be added
+	// to this comparison.
+	desired := &duckv1.Channelable{}
+	err = duckapis.FromUnstructured(newChannel, desired)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert %s/%s into Channelable: %w", channelObjRef.Namespace, channelObjRef.Name, err)
+	}
+
+	if equality.Semantic.DeepEqual(desired.Spec.Delivery, channelable.Spec.Delivery) {
+		// If propagated/mutable properties match return the Channel.
+		return channelable, nil
+	}
+
+	// Create a Patch by isolating desired and existing Channel mutable
+	// properties.
+	jsonPatch, err := duckapis.CreatePatch(
+		// Existing Channel properties
+		duckv1.Channelable{
+			Spec: duckv1.ChannelableSpec{
+				Delivery: channelable.Spec.Delivery,
+			},
+		},
+		// Desired Channel properties
+		duckv1.Channelable{
+			Spec: duckv1.ChannelableSpec{
+				Delivery: desired.Spec.Delivery,
+			},
+		})
+	if err != nil {
+		return nil, fmt.Errorf("creating JSON patch for Channelable Object %s/%s: %w",
+			channelObjRef.Namespace, channelObjRef.Name, err)
+	}
+	if len(jsonPatch) == 0 {
+		return nil, fmt.Errorf("unexpected empty JSON patch for %s/%s",
+			channelObjRef.Namespace, channelObjRef.Name)
+	}
+
+	patch, err := jsonPatch.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("marshalling JSON patch for Channelable Object %s/%s: %w",
+			channelObjRef.Namespace, channelObjRef.Name, err)
+	}
+
+	patched, err := channelResourceInterface.Patch(ctx, channelObjRef.Name, types.JSONPatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("patching channeable object %s/%s: %w", channelObjRef.Namespace, channelObjRef.Name, err)
+	}
+	logging.FromContext(ctx).Info("Patched Channel", zap.Any("patched", patched))
 	return channelable, nil
 }
 

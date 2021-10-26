@@ -50,7 +50,7 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 }
 
 func withDynamicInformer(ctx context.Context) context.Context {
-	inf := &wrapper{client: client.Get(ctx)}
+	inf := &wrapper{client: client.Get(ctx), resourceVersion: injection.GetResourceVersion(ctx)}
 	return context.WithValue(ctx, Key{}, inf)
 }
 
@@ -68,6 +68,8 @@ type wrapper struct {
 	client versioned.Interface
 
 	namespace string
+
+	resourceVersion string
 }
 
 var _ v1.TriggerInformer = (*wrapper)(nil)
@@ -82,13 +84,21 @@ func (w *wrapper) Lister() eventingv1.TriggerLister {
 }
 
 func (w *wrapper) Triggers(namespace string) eventingv1.TriggerNamespaceLister {
-	return &wrapper{client: w.client, namespace: namespace}
+	return &wrapper{client: w.client, namespace: namespace, resourceVersion: w.resourceVersion}
+}
+
+// SetResourceVersion allows consumers to adjust the minimum resourceVersion
+// used by the underlying client.  It is not accessible via the standard
+// lister interface, but can be accessed through a user-defined interface and
+// an implementation check e.g. rvs, ok := foo.(ResourceVersionSetter)
+func (w *wrapper) SetResourceVersion(resourceVersion string) {
+	w.resourceVersion = resourceVersion
 }
 
 func (w *wrapper) List(selector labels.Selector) (ret []*apiseventingv1.Trigger, err error) {
 	lo, err := w.client.EventingV1().Triggers(w.namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: selector.String(),
-		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+		LabelSelector:   selector.String(),
+		ResourceVersion: w.resourceVersion,
 	})
 	if err != nil {
 		return nil, err
@@ -101,6 +111,6 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apiseventingv1.Trigger,
 
 func (w *wrapper) Get(name string) (*apiseventingv1.Trigger, error) {
 	return w.client.EventingV1().Triggers(w.namespace).Get(context.TODO(), name, metav1.GetOptions{
-		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
+		ResourceVersion: w.resourceVersion,
 	})
 }
