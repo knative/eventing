@@ -55,7 +55,7 @@ type envConfig struct {
 	PodName            string `envconfig:"POD_NAME" required:"true"`
 	ContainerName      string `envconfig:"CONTAINER_NAME" required:"true"`
 	Port               int    `envconfig:"FILTER_PORT" default:"8080"`
-	IgnoreResponseBody bool   `envconfig:"IGNORE_RESPONSE_BODY" required:"false"`
+	IgnoreResponseBody bool   `envconfig:"IGNORE_RESPONSE_BODY" default:"false"`
 }
 
 func main() {
@@ -113,7 +113,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port, env.IgnoreReponseBody)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port, env.IgnoreResponseBody)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
