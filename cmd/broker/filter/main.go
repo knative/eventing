@@ -52,9 +52,10 @@ const (
 type envConfig struct {
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 	// TODO: change this environment variable to something like "PodGroupName".
-	PodName       string `envconfig:"POD_NAME" required:"true"`
-	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
-	Port          int    `envconfig:"FILTER_PORT" default:"8080"`
+	PodName            string `envconfig:"POD_NAME" required:"true"`
+	ContainerName      string `envconfig:"CONTAINER_NAME" required:"true"`
+	Port               int    `envconfig:"FILTER_PORT" default:"8080"`
+	IgnoreResponseBody bool   `envconfig:"IGNORE_RESPONSE_BODY" required:"false"`
 }
 
 func main() {
@@ -112,7 +113,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port, env.IgnoreReponseBody)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

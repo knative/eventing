@@ -365,7 +365,8 @@ func TestReceiver(t *testing.T) {
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
-				8080)
+				8080,
+				false)
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")

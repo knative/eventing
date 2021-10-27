@@ -63,13 +63,14 @@ type Handler struct {
 	// reporter reports stats of status code and dispatch time
 	reporter StatsReporter
 
-	triggerLister eventinglisters.TriggerLister
-	logger        *zap.Logger
+	triggerLister      eventinglisters.TriggerLister
+	logger             *zap.Logger
+	ignoreResponseBody bool
 }
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, ignoreResponseBody bool) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -81,11 +82,12 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 	}
 
 	return &Handler{
-		receiver:      kncloudevents.NewHTTPMessageReceiver(port),
-		sender:        sender,
-		reporter:      reporter,
-		triggerLister: triggerLister,
-		logger:        logger,
+		receiver:           kncloudevents.NewHTTPMessageReceiver(port),
+		sender:             sender,
+		reporter:           reporter,
+		triggerLister:      triggerLister,
+		logger:             logger,
+		ignoreResponseBody: ignoreResponseBody,
 	}, nil
 }
 
@@ -263,7 +265,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		body := make([]byte, 1)
 		n, _ := response.BodyReader.Read(body)
 		response.BodyReader.Close()
-		if n != 0 {
+		if n != 0 && h.ignoreResponseBody {
 			// Note that we could just use StatusInternalServerError, but to distinguish
 			// between the failure cases, we use a different code here.
 			writer.WriteHeader(http.StatusBadGateway)
