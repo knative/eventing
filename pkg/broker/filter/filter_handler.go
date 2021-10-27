@@ -265,7 +265,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 		body := make([]byte, 1)
 		n, _ := response.BodyReader.Read(body)
 		response.BodyReader.Close()
-		if n != 0 && h.ignoreResponseBody {
+		if n != 0 && !h.ignoreResponseBody {
 			// Note that we could just use StatusInternalServerError, but to distinguish
 			// between the failure cases, we use a different code here.
 			writer.WriteHeader(http.StatusBadGateway)
