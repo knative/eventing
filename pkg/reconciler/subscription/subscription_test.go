@@ -882,7 +882,7 @@ func TestAllCases(t *testing.T) {
 					WithBackingChannelObjRef(&imcV1KRef),
 					WithBackingChannelReady,
 					WithChannelAddress("example.com"),
-					WithChannelDLSUnknown(),
+					WithChannelStatusDLSNotConfigured(),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,

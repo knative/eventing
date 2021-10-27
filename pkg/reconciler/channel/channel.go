@@ -18,17 +18,20 @@ package channel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/pkg/kmeta"
 
 	duckapis "knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
@@ -108,48 +111,88 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		return nil, err
 	}
 	backingChannel, err := lister.ByNamespace(backingChannelObjRef.Namespace).Get(backingChannelObjRef.Name)
-	// If the resource doesn't exist, we'll create it
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			newBackingChannel, err := ducklib.NewPhysicalChannel(
-				c.Spec.ChannelTemplate.TypeMeta,
-				metav1.ObjectMeta{
-					Name:      c.Name,
-					Namespace: c.Namespace,
-					OwnerReferences: []metav1.OwnerReference{
-						*kmeta.NewControllerRef(c),
-					},
+	switch {
+	case apierrs.IsNotFound(err):
+		// Create the Channel if it doesn't exists.
+		newBackingChannel, err := ducklib.NewPhysicalChannel(
+			c.Spec.ChannelTemplate.TypeMeta,
+			metav1.ObjectMeta{
+				Name:      c.Name,
+				Namespace: c.Namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					*kmeta.NewControllerRef(c),
 				},
-				ducklib.WithChannelableSpec(c.Spec.ChannelableSpec),
-				ducklib.WithPhysicalChannelSpec(c.Spec.ChannelTemplate.Spec),
-			)
-			if err != nil {
-				logger.Errorw("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
-				return nil, err
-			}
-			logger.Debugf("Creating Channel Object: %+v", newBackingChannel)
-			created, err := channelResourceInterface.Create(ctx, newBackingChannel, metav1.CreateOptions{})
-			if err != nil {
-				logger.Errorw("Failed to create backing Channel", zap.Any("backingChannel", newBackingChannel), zap.Error(err))
-				return nil, err
-			}
-			logger.Debug("Created backing Channel", zap.Any("backingChannel", newBackingChannel))
-			channelable := &eventingduckv1.Channelable{}
-			err = duckapis.FromUnstructured(created, channelable)
-			if err != nil {
-				logger.Errorw("Failed to convert to Channelable Object", zap.Any("backingChannel", backingChannelObjRef), zap.Any("createdChannel", created), zap.Error(err))
-				return nil, err
-
-			}
-			return channelable, nil
+			},
+			ducklib.WithChannelableSpec(c.Spec.ChannelableSpec),
+			ducklib.WithPhysicalChannelSpec(c.Spec.ChannelTemplate.Spec),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create physical channel from ChannelTemplate: %w", err)
 		}
-		logger.Infow("Failed to get backing Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
-		return nil, err
+		logger.Infow("Creating Channel Object", zap.Any("Channel", newBackingChannel))
+		created, err := channelResourceInterface.Create(ctx, newBackingChannel, metav1.CreateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create physical channel: %w", err)
+		}
+
+		channelable := &eventingduckv1.Channelable{}
+		err = duckapis.FromUnstructured(created, channelable)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert Channelable to physical Channel: %w", err)
+		}
+		return channelable, nil
+
+	case err != nil:
+		return nil, fmt.Errorf("failed to get backing Channel: %w", err)
 	}
+
 	logger.Debugw("Found backing Channel", zap.Any("backingChannel", backingChannelObjRef))
 	channelable, ok := backingChannel.(*eventingduckv1.Channelable)
 	if !ok {
-		return nil, fmt.Errorf("Failed to convert to Channelable Object %+v", backingChannel)
+		return nil, fmt.Errorf("failed to convert to Channelable Object %+v", backingChannel)
 	}
+
+	// Make sure the existing physical Channel options match those of
+	// the Channel, if not Patch.
+
+	if equality.Semantic.DeepEqual(c.Spec.Delivery, channelable.Spec.Delivery) {
+		// If propagated/mutable properties match return the Channel.
+		return channelable, nil
+	}
+
+	// Create a Patch by isolating desired and existing Channel mutable
+	// properties.
+	jsonPatch, err := duckapis.CreatePatch(
+		// Existing physical Channel properties
+		eventingduckv1.Channelable{
+			Spec: eventingduckv1.ChannelableSpec{
+				Delivery: channelable.Spec.Delivery,
+			},
+		},
+		// Channel (abstract) properties
+		eventingduckv1.Channelable{
+			Spec: eventingduckv1.ChannelableSpec{
+				Delivery: c.Spec.Delivery,
+			},
+		})
+	if err != nil {
+		return nil, fmt.Errorf("creating JSON patch for Channelable Object: %w", err)
+	}
+	if len(jsonPatch) == 0 {
+		// This is a very unexpected path.
+		return nil, errors.New("unexpected empty JSON patch to update physical Channel")
+	}
+
+	patch, err := jsonPatch.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("marshalling JSON patch for Channelable Object: %w", err)
+	}
+
+	logger.Info("Patching Channel", zap.String("patch", string(patch)))
+	_, err = channelResourceInterface.Patch(ctx, backingChannelObjRef.Name, types.JSONPatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("patching channelable object: %w", err)
+	}
+
 	return channelable, nil
 }

@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
@@ -53,10 +52,7 @@ var (
 	testKey = fmt.Sprintf("%s/%s", testNS, channelName)
 
 	backingChannelHostname = network.GetServiceHostname("foo", "bar")
-
-	deliverySpec = &eventingduckv1.DeliverySpec{
-		Retry: pointer.Int32Ptr(10),
-	}
+	tDeadLetterSinkURI     = apis.HTTP("test.dls")
 )
 
 func TestReconcile(t *testing.T) {
@@ -108,13 +104,13 @@ func TestReconcile(t *testing.T) {
 			Object: NewChannel(channelName, testNS,
 				WithInitChannelConditions,
 				WithChannelTemplate(channelCRD()),
-				WithBackingChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
+				WithBackingChannelFailed("ChannelFailure", "failed to create physical channel: inducing failure for create inmemorychannels")),
 		}},
 		WithReactors: []clientgotesting.ReactionFunc{
 			InduceFailure("create", "inmemorychannels"),
 		},
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", "problem reconciling the backing channel: %v", "inducing failure for create inmemorychannels"),
+			Eventf(corev1.EventTypeWarning, "InternalError", "problem reconciling the backing channel: %v", "failed to create physical channel: inducing failure for create inmemorychannels"),
 		},
 		WantErr: true,
 	}, {
@@ -139,7 +135,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelDLSUnknown(),
+				WithChannelStatusDLSNotConfigured(),
 				WithChannelAddress(backingChannelHostname)),
 		}},
 	}, {
@@ -152,7 +148,7 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
-				WithChannelDLSUnknown()),
+				WithChannelStatusDLSNotConfigured()),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -183,7 +179,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
-				WithChannelDLSUnknown(),
+				WithChannelStatusDLSNotConfigured(),
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
 		}},
 	}, {
@@ -195,7 +191,9 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelDelivery(deliverySpec),
+				WithChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+				)),
 				WithChannelAddress(backingChannelHostname)),
 		},
 		WantCreates: []runtime.Object{
@@ -220,7 +218,7 @@ func TestReconcile(t *testing.T) {
 					},
 					"spec": map[string]interface{}{
 						"delivery": map[string]interface{}{
-							"retry": int64(10),
+							"retry": int64(42),
 						},
 					},
 				},
@@ -232,8 +230,10 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithChannelNoAddress(),
-				WithChannelDelivery(deliverySpec),
-				WithChannelDLSUnknown(),
+				WithChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+				)),
+				WithChannelStatusDLSNotConfigured(),
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
 		}},
 	}, {
@@ -262,7 +262,7 @@ func TestReconcile(t *testing.T) {
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
-				WithChannelDLSUnknown(),
+				WithChannelStatusDLSNotConfigured(),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
 				WithChannelGeneration(42),
@@ -299,8 +299,104 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
 				WithChannelSubscriberStatuses(subscriberStatuses()),
-				WithChannelDLSUnknown()),
+				WithChannelStatusDLSNotConfigured()),
 		}},
+	}, {
+		Name: "Updating delivery options",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+					WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI),
+				))),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDuckAnnotationV1Beta1,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelSubscribers(subscribers()),
+				WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
+				WithInMemoryChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+				))),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makeDeliveryDeadLetterSinkURIPatch(tDeadLetterSinkURI.String()),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelUnknown("", ""),
+				WithChannelAddress(backingChannelHostname),
+				WithChannelSubscriberStatuses(subscriberStatuses()),
+				WithChannelStatusDLSFailed("Backing Channel test-channel didn't set status.deadLetterSinkURI", ""),
+				WithChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+					WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI),
+				))),
+		}},
+	}, {
+		Name: "Updating delivery options fails patching physical channel",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+					WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI),
+				))),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDuckAnnotationV1Beta1,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelSubscribers(subscribers()),
+				WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
+				WithInMemoryChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+				))),
+		},
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("patch", "inmemorychannels"),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makeDeliveryDeadLetterSinkURIPatch(tDeadLetterSinkURI.String()),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelFailed("ChannelFailure", "patching channelable object: inducing failure for patch inmemorychannels"),
+				WithChannelAddress(backingChannelHostname),
+				WithChannelStatusDLSUnknown("", ""),
+				WithChannelDelivery(NewDelivery(
+					WithDeliveryRetries(42),
+					WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI),
+				))),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "problem reconciling the backing channel: patching channelable object: inducing failure for patch inmemorychannels"),
+		},
+		WantErr: true,
 	}}
 
 	logger := logtesting.TestLogger(t)
@@ -469,5 +565,15 @@ func createChannel(namespace, name string, ready bool) *unstructured.Unstructure
 				},
 			},
 		},
+	}
+}
+
+func makeDeliveryDeadLetterSinkURIPatch(uri string) clientgotesting.PatchActionImpl {
+	return clientgotesting.PatchActionImpl{
+		ActionImpl: clientgotesting.ActionImpl{
+			Namespace: testNS,
+		},
+		Name:  channelName,
+		Patch: []byte(`[{"op":"add","path":"/spec/delivery/deadLetterSink","value":{"uri":"` + uri + `"}}]`),
 	}
 }

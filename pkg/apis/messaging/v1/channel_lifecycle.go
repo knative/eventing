@@ -141,6 +141,11 @@ func (cs *ChannelStatus) MarkDeadLetterSinkNotConfigured() {
 	chCondSet.Manage(cs).MarkTrueWithReason(ChannelConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
 }
 
+func (cs *ChannelStatus) MarkDeadLetterSinkResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	cs.DeadLetterSinkURI = nil
+	chCondSet.Manage(cs).MarkUnknown(ChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)
+}
+
 func (cs *ChannelStatus) MarkDeadLetterSinkResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
 	cs.DeadLetterSinkURI = nil
 	chCondSet.Manage(cs).MarkFalse(ChannelConditionDeadLetterSinkResolved, reason, messageFormat, messageA...)

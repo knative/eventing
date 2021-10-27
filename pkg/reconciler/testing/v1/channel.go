@@ -153,7 +153,19 @@ func WithChannelStatusDLSURI(dlsURI *apis.URL) ChannelOption {
 	}
 }
 
-func WithChannelDLSUnknown() ChannelOption {
+func WithChannelStatusDLSFailed(reason, message string) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkDeadLetterSinkResolvedFailed(reason, message)
+	}
+}
+
+func WithChannelStatusDLSUnknown(reason, message string) ChannelOption {
+	return func(c *eventingv1.Channel) {
+		c.Status.MarkDeadLetterSinkResolvedUnknown(reason, message)
+	}
+}
+
+func WithChannelStatusDLSNotConfigured() ChannelOption {
 	return func(c *eventingv1.Channel) {
 		c.Status.MarkDeadLetterSinkNotConfigured()
 	}
