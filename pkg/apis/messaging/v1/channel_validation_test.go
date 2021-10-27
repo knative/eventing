@@ -28,6 +28,10 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
+var (
+	tRetries int32 = 42
+)
+
 func TestChannelValidation(t *testing.T) {
 	tests := []CRDTest{{
 		name: "empty",
@@ -233,6 +237,40 @@ func TestChannelImmutableFields(t *testing.T) {
 	+: "OtherChannel"
 `,
 		},
+	}, {
+		name: "good (delivery option removed)",
+		current: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					Delivery: &eventingduck.DeliverySpec{
+						Retry: &tRetries,
+					},
+				},
+			},
+		},
+		original: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+			},
+		},
+		want: nil,
 	}}
 
 	for _, test := range tests {

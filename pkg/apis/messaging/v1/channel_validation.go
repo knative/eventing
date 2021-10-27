@@ -75,7 +75,7 @@ func (c *Channel) CheckImmutableFields(ctx context.Context, original *Channel) *
 		return nil
 	}
 
-	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "SubscribableSpec")
+	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "SubscribableSpec", "Delivery")
 	if diff, err := kmp.ShortDiff(original.Spec, c.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff Channel",
