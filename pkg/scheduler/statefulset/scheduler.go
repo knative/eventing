@@ -18,8 +18,9 @@ package statefulset
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"sort"
 	"sync"
 	"time"
@@ -485,7 +486,7 @@ func (s *StatefulSetScheduler) selectPod(podScoreList st.PodScoreList) (int32, e
 
 	maxScore := podScoreList[0].Score
 	selected := podScoreList[0].ID
-	cntOfMaxScore := 1
+	cntOfMaxScore := int64(1)
 	for _, ps := range podScoreList[1:] {
 		if ps.Score > maxScore {
 			maxScore = ps.Score
@@ -493,7 +494,11 @@ func (s *StatefulSetScheduler) selectPod(podScoreList st.PodScoreList) (int32, e
 			cntOfMaxScore = 1
 		} else if ps.Score == maxScore { //if equal scores, randomly picks one
 			cntOfMaxScore++
-			if rand.Intn(cntOfMaxScore) == 0 {
+			randNum, err := rand.Int(rand.Reader, big.NewInt(cntOfMaxScore))
+			if err != nil {
+				return -1, fmt.Errorf("failed to generate random number")
+			}
+			if randNum.Int64() == int64(0) {
 				selected = ps.ID
 			}
 		}
