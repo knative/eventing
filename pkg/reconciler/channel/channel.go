@@ -88,17 +88,20 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1.Channel) pkgreconc
 	c.Status.Channel = &backingChannelObjRef
 	c.Status.PropagateStatuses(&backingChannel.Status)
 
-	// If a DeadLetterSink is defined in Spec.Delivery then whe resolve its URI and update the stauts
-	if c.Spec.Delivery != nil && c.Spec.Delivery.DeadLetterSink != nil {
-		if backingChannel.Status.DeliveryStatus.DeadLetterSinkURI != nil {
-			c.Status.MarkDeadLetterSinkResolvedSucceeded(backingChannel.Status.DeliveryStatus.DeadLetterSinkURI)
-		} else {
-			c.Status.MarkDeadLetterSinkResolvedFailed(fmt.Sprintf("Backing Channel %s didn't set status.deadLetterSinkURI", backingChannel.Name), "")
-		}
-	} else {
+	if c.Spec.Delivery == nil || c.Spec.Delivery.DeadLetterSink == nil {
 		c.Status.MarkDeadLetterSinkNotConfigured()
+		return nil
 	}
 
+	// If DeadLetterSink is defined, propagate the physical Channel resolved URI
+	// to the abstract Channel.
+	if backingChannel.Status.DeliveryStatus.DeadLetterSinkURI == nil {
+		err = fmt.Errorf("physical channel has not resolved the dead letter sink URI: %+v", backingChannelObjRef)
+		c.Status.MarkDeadLetterSinkResolvedFailed(v1.ReasonDeadLetterSinkNotPropagated, err.Error())
+		return err
+	}
+
+	c.Status.MarkDeadLetterSinkResolvedSucceeded(backingChannel.Status.DeliveryStatus.DeadLetterSinkURI)
 	return nil
 }
 
@@ -110,27 +113,29 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		logger.Errorw("Error getting lister for Channel", zap.Any("backingChannel", backingChannelObjRef), zap.Error(err))
 		return nil, err
 	}
+
+	// desiredUnstructured is the physical Channel built from the abstract
+	// Channel spec applied first, and the abstract Channel template applied last.
+	desiredUnstructured, err := ducklib.NewPhysicalChannel(
+		c.Spec.ChannelTemplate.TypeMeta,
+		metav1.ObjectMeta{
+			Name:      c.Name,
+			Namespace: c.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(c),
+			},
+		},
+		ducklib.WithChannelableSpec(c.Spec.ChannelableSpec),
+		ducklib.WithPhysicalChannelSpec(c.Spec.ChannelTemplate.Spec))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create physical channel from ChannelTemplate: %w", err)
+	}
+
 	backingChannel, err := lister.ByNamespace(backingChannelObjRef.Namespace).Get(backingChannelObjRef.Name)
 	switch {
 	case apierrs.IsNotFound(err):
-		// Create the Channel if it doesn't exists.
-		newBackingChannel, err := ducklib.NewPhysicalChannel(
-			c.Spec.ChannelTemplate.TypeMeta,
-			metav1.ObjectMeta{
-				Name:      c.Name,
-				Namespace: c.Namespace,
-				OwnerReferences: []metav1.OwnerReference{
-					*kmeta.NewControllerRef(c),
-				},
-			},
-			ducklib.WithChannelableSpec(c.Spec.ChannelableSpec),
-			ducklib.WithPhysicalChannelSpec(c.Spec.ChannelTemplate.Spec),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create physical channel from ChannelTemplate: %w", err)
-		}
-		logger.Infow("Creating Channel Object", zap.Any("Channel", newBackingChannel))
-		created, err := channelResourceInterface.Create(ctx, newBackingChannel, metav1.CreateOptions{})
+		logger.Infow("Creating Channel Object", zap.Any("Channel", desiredUnstructured))
+		created, err := channelResourceInterface.Create(ctx, desiredUnstructured, metav1.CreateOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create physical channel: %w", err)
 		}
@@ -152,10 +157,16 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		return nil, fmt.Errorf("failed to convert to Channelable Object %+v", backingChannel)
 	}
 
-	// Make sure the existing physical Channel options match those of
-	// the Channel, if not Patch.
+	// Make sure the existing physical Channel mutable options
+	// match those of the desired Channel, if not Patch.
 
-	if equality.Semantic.DeepEqual(c.Spec.Delivery, channelable.Spec.Delivery) {
+	desired := &eventingduckv1.Channelable{}
+	err = duckapis.FromUnstructured(desiredUnstructured, desired)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert Channelable to physical Channel: %w", err)
+	}
+
+	if desired.Spec.Delivery == nil || equality.Semantic.DeepEqual(desired.Spec.Delivery, channelable.Spec.Delivery) {
 		// If propagated/mutable properties match return the Channel.
 		return channelable, nil
 	}

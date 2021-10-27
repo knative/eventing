@@ -44,6 +44,14 @@ const (
 	// ChannelConditionDeadLetterSinkResolved has status True when there is a Dead Letter Sink ref or URI
 	// defined in the Spec.Delivery, is a valid destination and its correctly resolved into a valid URI
 	ChannelConditionDeadLetterSinkResolved apis.ConditionType = "DeadLetterSinkResolved"
+
+	// ReasonDeadLetterSinkNotPropagated is the reason to use when the Dead Letter Sink has not been resolved
+	// yet and does not show at the physical Channel status.
+	ReasonDeadLetterSinkNotPropagated = "DeadLetterSinkNotPropagated"
+
+	// ReasonDeadLetterSinkNotConfigured is the reason to use when the Dead Letter Sink is not
+	// informed at the abstract Channel.
+	ReasonDeadLetterSinkNotConfigured = "DeadLetterSinkNotConfigured"
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
@@ -111,20 +119,19 @@ func (cs *ChannelStatus) MarkBackingChannelReady() {
 func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
 	readyCondition := chs.Status.GetCondition(apis.ConditionReady)
-	if readyCondition == nil {
+	switch {
+	case readyCondition == nil:
 		cs.MarkBackingChannelNotConfigured()
-	} else {
-		switch {
-		case readyCondition.Status == corev1.ConditionUnknown:
-			cs.MarkBackingChannelUnknown(readyCondition.Reason, readyCondition.Message)
-		case readyCondition.Status == corev1.ConditionTrue:
-			cs.MarkBackingChannelReady()
-		case readyCondition.Status == corev1.ConditionFalse:
-			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
-		default:
-			cs.MarkBackingChannelUnknown("BackingChannelUnknown", "The status of BackingChannel is invalid: %v", readyCondition.Status)
-		}
+	case readyCondition.Status == corev1.ConditionUnknown:
+		cs.MarkBackingChannelUnknown(readyCondition.Reason, readyCondition.Message)
+	case readyCondition.Status == corev1.ConditionTrue:
+		cs.MarkBackingChannelReady()
+	case readyCondition.Status == corev1.ConditionFalse:
+		cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
+	default:
+		cs.MarkBackingChannelUnknown("BackingChannelUnknown", "The status of BackingChannel is invalid: %v", readyCondition.Status)
 	}
+
 	// Set the address and update the Addressable conditions.
 	cs.SetAddress(chs.AddressStatus.Address)
 	// Set the subscribable status.
@@ -138,7 +145,7 @@ func (cs *ChannelStatus) MarkDeadLetterSinkResolvedSucceeded(deadLetterSinkURI *
 
 func (cs *ChannelStatus) MarkDeadLetterSinkNotConfigured() {
 	cs.DeadLetterSinkURI = nil
-	chCondSet.Manage(cs).MarkTrueWithReason(ChannelConditionDeadLetterSinkResolved, "DeadLetterSinkNotConfigured", "No dead letter sink is configured.")
+	chCondSet.Manage(cs).MarkTrueWithReason(ChannelConditionDeadLetterSinkResolved, ReasonDeadLetterSinkNotConfigured, "No dead letter sink is configured.")
 }
 
 func (cs *ChannelStatus) MarkDeadLetterSinkResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {

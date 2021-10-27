@@ -225,23 +225,43 @@ func TestChannelConditionStatus(t *testing.T) {
 			address:              validAddress,
 			backingChannelStatus: corev1.ConditionFalse,
 			wantConditionStatus:  corev1.ConditionFalse,
+		}, {
+			name:                 "DLS not reconciled from physical channel",
+			address:              validAddress,
+			backingChannelStatus: corev1.ConditionTrue,
+			DLSResolved:          corev1.ConditionUnknown,
+			wantConditionStatus:  corev1.ConditionUnknown,
+		}, {
+			name:                 "DLS reconciled not resolved at physical channel",
+			address:              validAddress,
+			backingChannelStatus: corev1.ConditionTrue,
+			DLSResolved:          corev1.ConditionFalse,
+			wantConditionStatus:  corev1.ConditionFalse,
 		}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.InitializeConditions()
 			cs.SetAddress(test.address)
-			if test.backingChannelStatus == corev1.ConditionTrue {
+
+			switch test.backingChannelStatus {
+			case corev1.ConditionTrue:
 				cs.MarkBackingChannelReady()
-			} else if test.backingChannelStatus == corev1.ConditionFalse {
+			case corev1.ConditionFalse:
 				cs.MarkBackingChannelFailed("ChannelFailure", "testing")
-			} else {
+			default:
 				cs.MarkBackingChannelUnknown("ChannelUnknown", "testing")
 			}
 
-			if test.DLSResolved == corev1.ConditionTrue {
+			switch test.DLSResolved {
+			case corev1.ConditionTrue:
 				cs.MarkDeadLetterSinkResolvedSucceeded(nil)
+			case corev1.ConditionFalse:
+				cs.MarkDeadLetterSinkResolvedFailed("DLSFailed", "testing")
+			default:
+				cs.MarkDeadLetterSinkResolvedUnknown("DLSUnknown", "testing")
 			}
+
 			got := cs.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)

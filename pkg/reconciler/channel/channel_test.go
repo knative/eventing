@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/channel"
@@ -237,6 +238,42 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
 		}},
 	}, {
+		Name: "Delivery propagated from physical channel",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelDelivery(NewDelivery(WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI))),
+				WithChannelStatusDLSUnknown("test", "test"),
+			),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers(subscribers()),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelDelivery(NewDelivery(WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI))),
+				WithInMemoryChannelStatusDLSURI(tDeadLetterSinkURI),
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelDelivery(NewDelivery(WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI))),
+				WithChannelStatusDLSURI(tDeadLetterSinkURI),
+			),
+		}},
+	}, {
 		Name: "Generation Bump",
 		Key:  testKey,
 		Objects: []runtime.Object{
@@ -340,12 +377,16 @@ func TestReconcile(t *testing.T) {
 				WithBackingChannelUnknown("", ""),
 				WithChannelAddress(backingChannelHostname),
 				WithChannelSubscriberStatuses(subscriberStatuses()),
-				WithChannelStatusDLSFailed("Backing Channel test-channel didn't set status.deadLetterSinkURI", ""),
+				WithChannelStatusDLSFailed(messagingv1.ReasonDeadLetterSinkNotPropagated, "physical channel has not resolved the dead letter sink URI: {Kind:InMemoryChannel Namespace:test-namespace Name:test-channel APIVersion:messaging.knative.dev/v1 Group:}"),
 				WithChannelDelivery(NewDelivery(
 					WithDeliveryRetries(42),
 					WithDeliveryDeadLetterSinkURI(tDeadLetterSinkURI),
 				))),
 		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "physical channel has not resolved the dead letter sink URI: {Kind:InMemoryChannel Namespace:test-namespace Name:test-channel APIVersion:messaging.knative.dev/v1 Group:}"),
+		},
+		WantErr: true,
 	}, {
 		Name: "Updating delivery options fails patching physical channel",
 		Key:  testKey,
