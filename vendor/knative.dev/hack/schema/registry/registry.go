@@ -17,8 +17,9 @@ limitations under the License.
 package registry
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Registry struct {
