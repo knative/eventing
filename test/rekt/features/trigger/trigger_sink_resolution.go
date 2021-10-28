@@ -54,7 +54,7 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
 	// Setup data plane
-	f.Setup("install broker with DLS", broker.Install(
+	f.Setup("install broker", broker.Install(
 		brokerName,
 		broker.WithEnvConfig()...,
 	))
