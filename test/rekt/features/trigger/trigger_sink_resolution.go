@@ -99,11 +99,11 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSin
 	f.Setup("install trigger recorder", prober.ReceiverInstall(triggerSinkName))
 	f.Setup("install brokers recorder", prober.ReceiverInstall(brokerSinkName))
 
-	// Setup data plane
+	// Setup topology
 	brokerConfig := append(
 		broker.WithEnvConfig(),
 		delivery.WithDeadLetterSink(prober.AsKReference(brokerSinkName), ""))
-	f.Setup("update broker with DLS", broker.Install(
+	f.Setup("install broker with DLS", broker.Install(
 		brokerName,
 		brokerConfig...,
 	))
@@ -117,7 +117,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSin
 	// Resources ready.
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
-	// Install events after data plane is ready.
+	// Install events after topology is ready.
 	f.Setup("install source", prober.SenderInstall("source"))
 
 	// After we have finished sending.
