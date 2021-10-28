@@ -24,11 +24,6 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/part-of: knative-eventing
 spec:
-  strategy:
-    rollingUpdate:
-      maxSurge: 50%
-      maxUnavailable: 75%
-    type: RollingUpdate
   selector:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
