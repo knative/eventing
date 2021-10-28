@@ -70,7 +70,7 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 // GoesReady returns a feature that will create a Broker of the given
 // name and class, with an event receiver as its DLS
 // and confirm it becomes ready with an address.
-func GoesReadyWithProberSink(name, sinkName string, prober *eventshub.EventProber, cfg ...manifest.CfgFn) *feature.Feature {
+func GoesReadyWithProbeReceiver(name, sinkName string, prober *eventshub.EventProber, cfg ...manifest.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
 
 	f.Setup("install probe", prober.ReceiverInstall(sinkName))

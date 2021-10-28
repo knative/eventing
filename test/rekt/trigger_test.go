@@ -72,6 +72,6 @@ func TestTriggerWithDLS(t *testing.T) {
 	//
 	brokerName = "dls-broker"
 	brokerSinkName := "broker-sink"
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProberSink(brokerName, brokerSinkName, prober, b.WithEnvConfig()...))
+	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, brokerSinkName, prober, b.WithEnvConfig()...))
 	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers("test2", brokerName, brokerSinkName, prober))
 }

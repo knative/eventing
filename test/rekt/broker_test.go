@@ -78,7 +78,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 	sink1 := "sink"
 
 	// Wait till broker is ready since we need it to run the test
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProberSink(brokerName, sink1, prober, b.WithEnvConfig()...))
+	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ(brokerName, sink1, prober))
 
 	// Test that a Broker "test2" works as expected with the following topology:
@@ -90,7 +90,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 	// Wait till broker is ready since we need it to run this test
 	brokerName = "dls-broker"
 	sink2 := "sink2"
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProberSink(brokerName, sink1, prober, b.WithEnvConfig()...))
+	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
 	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ(brokerName, sink1, sink2, prober))
 }
 
