@@ -25,7 +25,6 @@ import (
 )
 
 var imcCondSet = apis.NewLivingConditionSet(
-	InMemoryChannelConditionDispatcherReady,
 	InMemoryChannelConditionServiceReady,
 	InMemoryChannelConditionEndpointsReady,
 	InMemoryChannelConditionAddressable,
