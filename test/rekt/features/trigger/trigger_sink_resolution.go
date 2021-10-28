@@ -35,11 +35,8 @@ import (
 //                          |
 //                          +--[DLS]--> sink
 //
-func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
-	prober := eventshub.NewProber()
-	brokerName := feature.MakeRandomK8sName("broker-")
+func SourceToTriggerSinkWithDLS(triggerName, brokerName string, prober *eventshub.EventProber) *feature.Feature {
 	prober.SetTargetResource(broker.GVR(), brokerName)
-
 	f := feature.NewFeature()
 
 	lib := feature.MakeRandomK8sName("lib")
@@ -53,12 +50,7 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 	// Setup Probes
 	f.Setup("install recorder", prober.ReceiverInstall("sink"))
 
-	// Setup data plane
-	f.Setup("install broker", broker.Install(
-		brokerName,
-		broker.WithEnvConfig()...,
-	))
-
+	// Setup trigger
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
@@ -68,7 +60,7 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 	// Resources ready.
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
 
-	// Install events after data plane is ready.
+	// Install sender.
 	f.Setup("install source", prober.SenderInstall("source"))
 
 	// After we have finished sending.
@@ -89,10 +81,7 @@ func SourceToTriggerSinkWithDLS(triggerName string) *feature.Feature {
 //               |          |
 //               +--[DLS]   +--[DLS]--> sink
 //
-func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName string) *feature.Feature {
-	prober := eventshub.NewProber()
-	brokerName := feature.MakeRandomK8sName("broker-")
-	brokerSinkName := "broker-sink"
+func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSinkName string, prober *eventshub.EventProber) *feature.Feature {
 	triggerSinkName := "trigger-sink"
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
