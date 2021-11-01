@@ -27,6 +27,21 @@ spec:
               value: "heartbeats"
             - name: POD_NAMESPACE
               value: "default"
+          resources:
+            requests:
+              cpu: 30m
+              memory: 60Mi
+            limits:
+              cpu: 250m
+              memory: 200Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - all
+
   sink:
     ref:
       apiVersion: serving.knative.dev/v1

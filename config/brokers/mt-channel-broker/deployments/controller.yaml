@@ -57,6 +57,9 @@ spec:
           requests:
             cpu: 100m
             memory: 100Mi
+          limits:
+            cpu: 1000m
+            memory: 1000Mi
 
         env:
           - name: SYSTEM_NAMESPACE
@@ -85,6 +88,11 @@ spec:
 
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
 
         ports:
         - name: metrics

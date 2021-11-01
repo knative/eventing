@@ -57,6 +57,9 @@ spec:
           requests:
             cpu: 100m
             memory: 100Mi
+          limits:
+            cpu: 1000m
+            memory: 1000Mi
         ports:
         - containerPort: 8080
           name: http
@@ -92,6 +95,11 @@ spec:
             value: "8080"
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
 
 ---
 
