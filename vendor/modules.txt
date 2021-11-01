@@ -1002,11 +1002,11 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20211028194650-b96d65a5ff5e
+# knative.dev/hack v0.0.0-20211101195839-11d193bf617b
 ## explicit
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/hack/schema v0.0.0-20211028194650-b96d65a5ff5e
+# knative.dev/hack/schema v0.0.0-20211101195839-11d193bf617b
 ## explicit
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
