@@ -36,3 +36,11 @@ spec:
           value: recorder,logger
         - name: EVENT_GENERATORS
           value: receiver
+      # This is needed to run under the "restricted" Pod Security Standard
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        capabilities:
+          drop:
+          - all
