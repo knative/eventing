@@ -56,13 +56,6 @@ spec:
               fieldRef:
                 fieldPath: metadata.name
 
-        resources:
-          requests:
-            cpu: 60m
-            memory: 100Mi
-          limits:
-            cpu: 1000m
-            memory: 800Mi
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

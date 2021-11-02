@@ -95,10 +95,3 @@ spec:
           capabilities:
             drop:
             - all
-        resources:
-          requests:
-            cpu: 100m
-            memory: 200Mi
-          limits:
-            cpu: 1000m
-            memory: 1200Mi

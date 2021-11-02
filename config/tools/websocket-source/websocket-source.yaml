@@ -23,13 +23,6 @@ spec:
       containers:
         - image: ko://knative.dev/eventing/cmd/websocketsource
           name: hue
-          resources:
-            requests:
-              cpu: 125m
-              memory: 100Mi
-            limits:
-              cpu: 1000m
-              memory: 600Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
