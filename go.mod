@@ -17,8 +17,8 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/onsi/ginkgo v1.14.2
-	github.com/openzipkin/zipkin-go v0.2.5
+	github.com/onsi/ginkgo v1.16.5
+	github.com/openzipkin/zipkin-go v0.3.0
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.2
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
@@ -34,7 +34,7 @@ require (
 	go.uber.org/zap v1.19.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	google.golang.org/grpc v1.41.0
+	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
 	k8s.io/api v0.21.4
 	k8s.io/apiextensions-apiserver v0.21.4
@@ -42,10 +42,10 @@ require (
 	k8s.io/apiserver v0.21.4
 	k8s.io/client-go v0.21.4
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
-	knative.dev/hack v0.0.0-20211101195839-11d193bf617b
-	knative.dev/hack/schema v0.0.0-20211101195839-11d193bf617b
-	knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc
-	knative.dev/reconciler-test v0.0.0-20211101214439-9839937c9b13
+	knative.dev/hack v0.0.0-20211102174540-b284d49386cc
+	knative.dev/hack/schema v0.0.0-20211102174540-b284d49386cc
+	knative.dev/pkg v0.0.0-20211103135647-464034912f7e
+	knative.dev/reconciler-test v0.0.0-20211101213739-c5f938aa9974
 	sigs.k8s.io/yaml v1.3.0
 )
 
