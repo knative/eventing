@@ -43,9 +43,8 @@ func (c *Centroid) Add(r Centroid) error {
 // CentroidList is sorted by the Mean of the centroid, ascending.
 type CentroidList []Centroid
 
-// Clear clears the list.
 func (l *CentroidList) Clear() {
-	*l = (*l)[:0]
+	*l = (*l)[0:0]
 }
 
 func (l CentroidList) Len() int           { return len(l) }

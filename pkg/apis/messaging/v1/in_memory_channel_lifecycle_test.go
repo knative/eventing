@@ -133,9 +133,6 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 						Type:   InMemoryChannelConditionDeadLetterSinkResolved,
 						Status: corev1.ConditionUnknown,
 					}, {
-						Type:   InMemoryChannelConditionDispatcherReady,
-						Status: corev1.ConditionUnknown,
-					}, {
 						Type:   InMemoryChannelConditionEndpointsReady,
 						Status: corev1.ConditionUnknown,
 					}, {
