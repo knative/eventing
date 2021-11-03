@@ -129,6 +129,8 @@ var (
 		Namespace:  testNS,
 		Name:       channelName,
 	}
+
+	dlsURI = apis.HTTP(dlcDNS)
 )
 
 func TestAllCases(t *testing.T) {
@@ -1447,6 +1449,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
 					}),
+					WithInMemoryChannelStatusDLSURI(dlsURI),
 				),
 				NewService(serviceName, testNS),
 			},
