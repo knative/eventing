@@ -3134,6 +3134,7 @@ knative.dev/pkg/apis/duck/v1.Status
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SubscriptionStatuses is an array of corresponding Subscription statuses.
 Matches the Spec.Steps array in the order.</p>
 </td>
@@ -3148,6 +3149,7 @@ Matches the Spec.Steps array in the order.</p>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ChannelStatuses is an array of corresponding Channel statuses.
 Matches the Spec.Steps array in the order.</p>
 </td>
