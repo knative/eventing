@@ -1491,6 +1491,53 @@ func TestAllCases(t *testing.T) {
 			},
 		},
 		{
+			Name: "v1 imc - no dls on imc nor subscription",
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+				),
+				NewService(serviceName, testNS),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{
+						UID:           "a-" + subscriptionUID,
+						SubscriberURI: serviceURI,
+					},
+				}),
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+		},
+		{
 			Name: "v1 imc - don't default delivery - full delivery spec",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
