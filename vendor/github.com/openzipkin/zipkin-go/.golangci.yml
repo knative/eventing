@@ -1,7 +1,5 @@
 run:
   deadline: 5m
-  skip-dirs:
-    - zipkin_proto3
 
 linters:
   disable-all: true
@@ -10,9 +8,10 @@ linters:
     - goconst
     - gocyclo
     - gofmt
-    - revive
+    - golint
     - govet
     - ineffassign
+    - interfacer
     - lll
     - misspell
     - nakedret
@@ -22,10 +21,10 @@ linters:
 
 linters-settings:
   dupl:
-    threshold: 400
-  lll:
+    threshold: 400 
+  lll:   
     line-length: 170
   gocyclo:
-    min-complexity: 20
+    min-complexity: 15
   golint:
     min-confidence: 0.85

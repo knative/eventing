@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2019 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package zipkin
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -55,7 +54,7 @@ func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
 
 	addrs, err := net.LookupIP(host)
 	if err != nil {
-		return nil, fmt.Errorf("host lookup failure: %w", err)
+		return nil, err
 	}
 
 	for i := range addrs {
