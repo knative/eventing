@@ -1538,6 +1538,58 @@ func TestAllCases(t *testing.T) {
 			},
 		},
 		{
+			Name: "v1 imc - error on channel status dls uri, subscription not ready",
+			Objects: []runtime.Object{
+				NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelSubscribers(nil),
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber("a-"+subscriptionUID),
+					WithInMemoryChannelDelivery(&eventingduck.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
+								Kind:       subscriberGVK.Kind,
+								Name:       dlcName,
+								Namespace:  testNS,
+							},
+						},
+					}),
+					WithInMemoryChannelStatusDLSURI(nil),
+					WithInMemoryChannelReady(channelDNS),
+				),
+				NewService(serviceName, testNS),
+			},
+			Key:     testNS + "/" + "a-" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", "channel %s didn't set status.deadLetterSinkURI", channelName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(imcV1GVK, channelName),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", fmt.Sprintf("channel %s didn't set status.deadLetterSinkURI", channelName)),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+				),
+			}},
+		},
+		{
 			Name: "v1 imc - don't default delivery - full delivery spec",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
