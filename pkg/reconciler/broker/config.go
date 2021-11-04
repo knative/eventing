@@ -23,11 +23,13 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
-	corev1 "k8s.io/api/core/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	cm "knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging"
+
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 )
 
 type Config struct {
@@ -35,7 +37,8 @@ type Config struct {
 }
 
 const (
-	channelTemplateSpec = "channelTemplateSpec"
+	channelTemplateSpec       = "channel-template-spec"
+	legacyChannelTemplateSpec = "channelTemplateSpec"
 )
 
 func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.ConfigMap) (*Config, error) {
@@ -44,15 +47,19 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{},
 		}
 
-		temp, present := configMap.Data[channelTemplateSpec]
-		if !present {
-			logging.FromContext(ctx).Infow("ConfigMap is missing key", zap.String("key", channelTemplateSpec), zap.Any("configMap", configMap))
-			return nil, errors.New("not found")
+		temp := ""
+		if err := cm.Parse(configMap.Data,
+			// Legacy for backwards compatibility
+			cm.AsString(legacyChannelTemplateSpec, &temp),
+
+			cm.AsString(channelTemplateSpec, &temp),
+		); err != nil {
+			return nil, fmt.Errorf("ConfigMap's could not be parsed: %w", err)
 		}
 
 		if temp == "" {
-			logging.FromContext(ctx).Infow("ConfigMap's value was the empty string, ignoring it.", zap.Any("configMap", configMap))
-			return nil, errors.New("empty value for config")
+			logging.FromContext(ctx).Infow("ConfigMap's value is missing or empty, ignoring it.", zap.Any("configMap", configMap))
+			return nil, errors.New("empty or missing value for config")
 		}
 
 		j, err := yaml.YAMLToJSON([]byte(temp))

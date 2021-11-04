@@ -63,6 +63,29 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 			},
 			Data: map[string]string{
 				"_example": `
+			################################
+			#                              #
+			#    EXAMPLE CONFIGURATION     #
+			#                              #
+			################################
+
+			# Max number of bytes allowed to be sent for message excluding any
+			# base64 decoding.  Default is no limit set for data
+			data-max-size: 4096
+	`,
+			},
+		},
+	}, {
+		name:        "legacy example text",
+		wantErr:     false,
+		wantDefault: DefaultDataMaxSize,
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      PingDefaultsConfigName,
+			},
+			Data: map[string]string{
+				"_example": `
     ################################
     #                              #
     #    EXAMPLE CONFIGURATION     #
@@ -76,7 +99,7 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 			},
 		},
 	}, {
-		name:        "specific dataMaxSize",
+		name:        "specific data-max-size",
 		wantErr:     false,
 		wantDefault: 1337,
 		config: &corev1.ConfigMap{
@@ -85,7 +108,7 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 				Name:      PingDefaultsConfigName,
 			},
 			Data: map[string]string{
-				"dataMaxSize": "1337",
+				"data-max-size": "1337",
 			},
 		},
 	}, {
@@ -98,7 +121,7 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 				Name:      PingDefaultsConfigName,
 			},
 			Data: map[string]string{
-				"dataMaxSize": "#nothing to see here",
+				"data-max-size": "#nothing to see here",
 			},
 		},
 	}}

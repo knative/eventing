@@ -25,7 +25,7 @@ metadata:
   name: config-broker
   namespace: perf-eventing
 data:
-  channelTemplateSpec: |
+  channel-template-spec: |
     apiVersion: messaging.knative.dev/v1beta1
     kind: InMemoryChannel
 

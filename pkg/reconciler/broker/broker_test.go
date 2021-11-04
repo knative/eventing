@@ -575,7 +575,7 @@ func config() *duckv1.KReference {
 
 func imcConfigMap() *corev1.ConfigMap {
 	return NewConfigMap(configMapName, testNS,
-		WithConfigMapData(map[string]string{"channelTemplateSpec": imcSpec}))
+		WithConfigMapData(map[string]string{"channel-template-spec": imcSpec}))
 }
 
 // unstructuredOption modifies *unstructured.Unstructured contents.

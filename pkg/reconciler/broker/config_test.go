@@ -40,7 +40,7 @@ func TestOurConfig(t *testing.T) {
 		data    *corev1.ConfigMap
 	}{{
 		name:    "Actual config, no defaults.",
-		wantErr: "not found",
+		wantErr: "empty or missing value for config",
 		want:    nil,
 		data:    actual,
 	}, {
@@ -56,11 +56,11 @@ func TestOurConfig(t *testing.T) {
 		data: example,
 	}, {
 		name:    "Empty string for config",
-		wantErr: "empty value for config",
+		wantErr: "empty or missing value for config",
 		want:    nil,
 		data: &corev1.ConfigMap{
 			Data: map[string]string{
-				"channelTemplateSpec": "",
+				"channel-template-spec": "",
 			},
 		},
 	}, {
@@ -69,11 +69,29 @@ func TestOurConfig(t *testing.T) {
 		want:    nil,
 		data: &corev1.ConfigMap{
 			Data: map[string]string{
-				"channelTemplateSpec": "asdf",
+				"channel-template-spec": "asdf",
 			},
 		},
 	}, {
 		name: "With values",
+		want: &Config{
+			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "Foo/v1",
+					Kind:       "Bar",
+				},
+			},
+		},
+		data: &corev1.ConfigMap{
+			Data: map[string]string{
+				"channel-template-spec": `
+      apiVersion: Foo/v1
+      kind: Bar
+`,
+			},
+		},
+	}, {
+		name: "With values - legacy",
 		want: &Config{
 			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{

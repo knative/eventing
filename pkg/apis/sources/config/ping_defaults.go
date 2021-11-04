@@ -17,10 +17,9 @@ limitations under the License.
 package config
 
 import (
-	"fmt"
-	"strconv"
-
 	corev1 "k8s.io/api/core/v1"
+
+	cm "knative.dev/pkg/configmap"
 )
 
 const (
@@ -28,7 +27,11 @@ const (
 	// configs that pings should use.
 	PingDefaultsConfigName = "config-ping-defaults"
 
-	DataMaxSizeKey = "dataMaxSize"
+	DataMaxSizeKey = "data-max-size"
+
+	// Legacy configuration item should be removed when a migration
+	// update script is released.
+	LegacyDataMaxSizeKey = "dataMaxSize"
 
 	DefaultDataMaxSize = -1
 )
@@ -37,16 +40,15 @@ const (
 func NewPingDefaultsConfigFromMap(data map[string]string) (*PingDefaults, error) {
 	nc := &PingDefaults{DataMaxSize: DefaultDataMaxSize}
 
-	// Parse out the MaxSizeKey
-	value, present := data[DataMaxSizeKey]
-	if !present || value == "" {
-		return nc, nil
+	if err := cm.Parse(data,
+		// Legacy for backwards compatibility
+		cm.AsInt64(LegacyDataMaxSizeKey, &nc.DataMaxSize),
+
+		cm.AsInt64(DataMaxSizeKey, &nc.DataMaxSize),
+	); err != nil {
+		return nil, err
 	}
-	int64Value, err := strconv.ParseInt(value, 0, 64)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to parse the entry: %s", err)
-	}
-	nc.DataMaxSize = int64Value
+
 	return nc, nil
 }
 
@@ -57,7 +59,7 @@ func NewPingDefaultsConfigFromConfigMap(config *corev1.ConfigMap) (*PingDefaults
 
 // PingDefaults includes the default values to be populated by the webhook.
 type PingDefaults struct {
-	DataMaxSize int64 `json:"dataMaxSize"`
+	DataMaxSize int64 `json:"data-max-size"`
 }
 
 func (d *PingDefaults) GetPingConfig() *PingDefaults {
