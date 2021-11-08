@@ -134,7 +134,10 @@ func TestPingDefaultsConfiguration(t *testing.T) {
 				t.Fatalf("Test: %q: NewPingDefaultsConfigFromMap() error = %v, wantErr %v", tc.name, err, tc.wantErr)
 			}
 			if !tc.wantErr {
-				if diff := cmp.Diff(tc.wantDefault, actualDefault.DataMaxSize); diff != "" {
+				// Testing DeepCopy just to increase coverage
+				actualDefault = actualDefault.DeepCopy()
+
+				if diff := cmp.Diff(tc.wantDefault, actualDefault.GetPingConfig().DataMaxSize); diff != "" {
 					t.Error("unexpected value (-want, +got)", diff)
 				}
 			}
