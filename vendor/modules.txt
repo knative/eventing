@@ -1072,17 +1072,17 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20211102174540-b284d49386cc
+# knative.dev/hack v0.0.0-20211105231158-29f86c2653b5
 ## explicit
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/hack/schema v0.0.0-20211102174540-b284d49386cc
+# knative.dev/hack/schema v0.0.0-20211105231158-29f86c2653b5
 ## explicit
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20211103135647-464034912f7e
+# knative.dev/pkg v0.0.0-20211108064904-3cc697a3cb09
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
