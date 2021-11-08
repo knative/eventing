@@ -23,8 +23,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
 
-	"github.com/onsi/ginkgo"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -44,7 +44,7 @@ import (
 type Tracker struct {
 	resourcesToCheckStatus []resources.MetaResource
 	resourcesToClean       []ResourceDeleter
-	tc                     ginkgo.GinkgoTInterface
+	tc                     *testing.T
 	dynamicClient          dynamic.Interface
 }
 
@@ -56,7 +56,7 @@ type ResourceDeleter struct {
 }
 
 // NewTracker creates a new Tracker
-func NewTracker(t ginkgo.GinkgoTInterface, client dynamic.Interface) *Tracker {
+func NewTracker(t *testing.T, client dynamic.Interface) *Tracker {
 	tracker := &Tracker{
 		resourcesToCheckStatus: make([]resources.MetaResource, 0),
 		resourcesToClean:       make([]ResourceDeleter, 0),

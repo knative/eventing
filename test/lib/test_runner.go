@@ -28,7 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,7 +156,7 @@ var SetupClientOptionNoop SetupClientOption = func(*Client) {
 // GSetup creates
 // - the client objects needed in the e2e tests,
 // - the namespace hosting all objects needed by the test
-func GSetup(t ginkgo.GinkgoTInterface, options ...SetupClientOption) *Client {
+func GSetup(t *testing.T, options ...SetupClientOption) *Client {
 	client, err := CreateNamespacedClient(t)
 	if err != nil {
 		t.Fatal("Couldn't initialize clients:", err)
@@ -182,7 +181,7 @@ func GSetup(t ginkgo.GinkgoTInterface, options ...SetupClientOption) *Client {
 // Setup creates
 // - the client objects needed in the e2e tests,
 // - the namespace hosting all objects needed by the test
-func Setup(t ginkgo.GinkgoTInterface, runInParallel bool, options ...SetupClientOption) *Client {
+func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
 	client := GSetup(t, options...)
 
 	// Run the test case in parallel if needed.
@@ -193,7 +192,7 @@ func Setup(t ginkgo.GinkgoTInterface, runInParallel bool, options ...SetupClient
 	return client
 }
 
-func CreateNamespacedClient(t ginkgo.GinkgoTInterface) (*Client, error) {
+func CreateNamespacedClient(t *testing.T) (*Client, error) {
 	ns := ""
 	// Try next MaxNamespaceSkip namespaces before giving up. This should address the issue with
 	// development cycles when namespaces from previous runs were not cleaned properly.
@@ -336,7 +335,7 @@ func formatEvent(e *corev1.Event) string {
 }
 
 // SetupServiceAccount creates a new namespace if it does not exist.
-func SetupServiceAccount(t ginkgo.GinkgoTInterface, client *Client) {
+func SetupServiceAccount(t *testing.T, client *Client) {
 	// https://github.com/kubernetes/kubernetes/issues/66689
 	// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
 	err := waitForServiceAccountExists(client, "default", client.Namespace)
@@ -346,7 +345,7 @@ func SetupServiceAccount(t ginkgo.GinkgoTInterface, client *Client) {
 }
 
 // SetupPullSecret sets up kn-eventing-test-pull-secret on the client namespace.
-func SetupPullSecret(t ginkgo.GinkgoTInterface, client *Client) {
+func SetupPullSecret(t *testing.T, client *Client) {
 	// If the "default" Namespace has a secret called
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the "default" ServiceAccount in this new Namespace.
