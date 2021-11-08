@@ -43,8 +43,7 @@ func TestNoRetries(t *testing.T) {
 	assert.NotNil(t, retryConfig.Backoff)
 	assert.Equal(t, time.Duration(0), retryConfig.Backoff(1, nil))
 	assert.Equal(t, time.Duration(0), retryConfig.Backoff(100, nil))
-	assert.False(t, retryConfig.RetryAfterEnabled)
-	assert.Equal(t, time.Duration(0), retryConfig.RetryAfterMaxDuration)
+	assert.Nil(t, retryConfig.RetryAfterMaxDuration)
 }
 
 // Test The RetryConfigFromDeliverySpec() Functionality
@@ -58,7 +57,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		backoffPolicy            v1.BackoffPolicyType
 		backoffDelay             string
 		timeout                  *string
-		retryAfter               *v1.RetryAfter
+		retryAfterMax            *string
 		expectedBackoffDurations []time.Duration
 		wantErr                  bool
 	}{{
@@ -118,10 +117,10 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 		timeout:       &invalidISO8601DurationString,
 		wantErr:       true,
 	}, {
-		name:          "Valid Sparse Retry-After",
+		name:          "Valid RetryAfterMax",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
-		retryAfter:    &v1.RetryAfter{Enabled: true},
+		retryAfterMax: &validISO8601DurationString,
 		expectedBackoffDurations: []time.Duration{
 			1 * time.Second,
 			2 * time.Second,
@@ -130,22 +129,10 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 			16 * time.Second,
 		},
 	}, {
-		name:          "Valid Complete Retry-After",
+		name:          "Invalid RetryAfterMax",
 		backoffPolicy: v1.BackoffPolicyExponential,
 		backoffDelay:  "PT0.5S",
-		retryAfter:    &v1.RetryAfter{Enabled: true, MaxDuration: &validISO8601DurationString},
-		expectedBackoffDurations: []time.Duration{
-			1 * time.Second,
-			2 * time.Second,
-			4 * time.Second,
-			8 * time.Second,
-			16 * time.Second,
-		},
-	}, {
-		name:          "Invalid Complete Retry-After",
-		backoffPolicy: v1.BackoffPolicyExponential,
-		backoffDelay:  "PT0.5S",
-		retryAfter:    &v1.RetryAfter{Enabled: true, MaxDuration: &invalidISO8601DurationString},
+		retryAfterMax: &invalidISO8601DurationString,
 		wantErr:       true,
 	}}
 
@@ -159,7 +146,7 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 				BackoffPolicy:  &tc.backoffPolicy,
 				BackoffDelay:   &tc.backoffDelay,
 				Timeout:        tc.timeout,
-				RetryAfter:     tc.retryAfter,
+				RetryAfterMax:  tc.retryAfterMax,
 			}
 
 			// Create the RetryConfig from the deliverySpec
@@ -174,19 +161,15 @@ func TestRetryConfigFromDeliverySpec(t *testing.T) {
 					expectedTimeoutDuration, _ := expectedTimeoutPeriod.Duration()
 					assert.Equal(t, expectedTimeoutDuration, retryConfig.RequestTimeout)
 				}
-				if tc.retryAfter != nil {
-					assert.Equal(t, tc.retryAfter.Enabled, retryConfig.RetryAfterEnabled)
-					if tc.retryAfter.MaxDuration != nil && *tc.retryAfter.MaxDuration != "" {
-						expectedMaxPeriod, _ := period.Parse(*tc.retryAfter.MaxDuration)
-						expectedMaxDuration, _ := expectedMaxPeriod.Duration()
-						assert.Equal(t, expectedMaxDuration, retryConfig.RetryAfterMaxDuration)
-					} else {
-						assert.Equal(t, time.Duration(0), retryConfig.RetryAfterMaxDuration)
-					}
+
+				if tc.retryAfterMax != nil && *tc.retryAfterMax != "" {
+					expectedMaxPeriod, _ := period.Parse(*tc.retryAfterMax)
+					expectedMaxDuration, _ := expectedMaxPeriod.Duration()
+					assert.Equal(t, expectedMaxDuration, *retryConfig.RetryAfterMaxDuration)
 				} else {
-					assert.False(t, retryConfig.RetryAfterEnabled)
-					assert.Equal(t, time.Duration(0), retryConfig.RetryAfterMaxDuration)
+					assert.Nil(t, retryConfig.RetryAfterMaxDuration)
 				}
+
 				for i := 1; i < retry; i++ {
 					expectedBackoffDuration := tc.expectedBackoffDurations[i-1]
 					actualBackoffDuration := retryConfig.Backoff(i, nil)

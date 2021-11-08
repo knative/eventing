@@ -68,16 +68,17 @@ type RetryConfig struct {
 	// RequestTimeout represents the timeout of the single request
 	RequestTimeout time.Duration
 
-	// Specify whether to handle "Retry-After" headers in 429/503 responses.
-	RetryAfterEnabled     bool
-	RetryAfterMaxDuration time.Duration
+	// RetryAfterMaxDuration represents an optional override for the maximum
+	// value allowed for "Retry-After" headers in 429 / 503 responses.  A nil
+	// value indicates no maximum override.  A value of "0" indicates "Retry-After"
+	// headers are to be ignored.
+	RetryAfterMaxDuration *time.Duration
 }
 
 func NoRetries() RetryConfig {
 	return noRetries
 }
 
-// RetryConfigFromDeliverySpec returns a RetryConfig based on the specified DeliverySpec.
 func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 
 	retryConfig := NoRetries()
@@ -118,15 +119,13 @@ func RetryConfigFromDeliverySpec(spec v1.DeliverySpec) (RetryConfig, error) {
 		retryConfig.RequestTimeout, _ = timeout.Duration()
 	}
 
-	if spec.RetryAfter != nil {
-		retryConfig.RetryAfterEnabled = spec.RetryAfter.Enabled
-		if spec.RetryAfter.MaxDuration != nil && *spec.RetryAfter.MaxDuration != "" {
-			maxPeriod, err := period.Parse(*spec.RetryAfter.MaxDuration)
-			if err != nil {
-				return retryConfig, fmt.Errorf("failed to parse Spec.RetryAfter.MaxDuration: %w", err)
-			}
-			retryConfig.RetryAfterMaxDuration, _ = maxPeriod.Duration()
+	if spec.RetryAfterMax != nil {
+		maxPeriod, err := period.Parse(*spec.RetryAfterMax)
+		if err != nil { // Should never happen based on DeliverySpec validation
+			return retryConfig, fmt.Errorf("failed to parse Spec.RetryAfterMax: %w", err)
 		}
+		maxDuration, _ := maxPeriod.Duration()
+		retryConfig.RetryAfterMaxDuration = &maxDuration
 	}
 
 	return retryConfig, nil

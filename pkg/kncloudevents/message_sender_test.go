@@ -208,6 +208,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		Invalid
 	)
 
+	// Test Data
+	smallRetryAfterMaxDuration := 1 * time.Second
+	largeRetryAfterMaxDuration := 10 * time.Second
+
 	// Define The TestCases
 	tests := []struct {
 		name            string
@@ -216,129 +220,213 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		responseFormat  RetryAfterFormat // Indicates the format in which the Server should return the Retry-After header.
 		responseSeconds int              // Indicates the number of Seconds for the Server to use when returning the Retry-After header.
 		wantReqCount    int              // The total number of expected requests, including initial request.
-	}{{
-		name: "disabled 429 without Retry-After",
-		config: &RetryConfig{
-			RetryMax: 2,
+	}{
+		//
+		// Default Max Tests (0 Duration opt-in vs opt-out)
+		//
+
+		{
+			name: "default max 429 without Retry-After",
+			config: &RetryConfig{
+				RetryMax: 2,
+			},
+			statusCode:     http.StatusTooManyRequests,
+			responseFormat: None,
+			wantReqCount:   3,
 		},
-		statusCode:     http.StatusTooManyRequests,
-		responseFormat: None,
-		wantReqCount:   3,
-	}, {
-		name: "disabled 429 with Retry-After seconds",
-		config: &RetryConfig{
-			RetryMax: 2,
+		{
+			name: "default max 429 with Retry-After seconds",
+			config: &RetryConfig{
+				RetryMax: 2,
+			},
+			statusCode:      http.StatusTooManyRequests,
+			responseFormat:  Seconds,
+			responseSeconds: 1,
+			wantReqCount:    3,
 		},
-		statusCode:      http.StatusTooManyRequests,
-		responseFormat:  Seconds,
-		responseSeconds: 1,
-		wantReqCount:    3,
-	}, {
-		name: "disabled 429 with Retry-After date",
-		config: &RetryConfig{
-			RetryMax: 2,
+		{
+			name: "default max 429 with Retry-After date",
+			config: &RetryConfig{
+				RetryMax: 2,
+			},
+			statusCode:      http.StatusTooManyRequests,
+			responseFormat:  Date,
+			responseSeconds: 2,
+			wantReqCount:    3,
 		},
-		statusCode:      http.StatusTooManyRequests,
-		responseFormat:  Date,
-		responseSeconds: 2,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 429 without Retry-After",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+		{
+			name: "default max 429 with invalid Retry-After",
+			config: &RetryConfig{
+				RetryMax: 2,
+			},
+			statusCode:     http.StatusTooManyRequests,
+			responseFormat: Invalid,
+			wantReqCount:   3,
 		},
-		statusCode:     http.StatusTooManyRequests,
-		responseFormat: None,
-		wantReqCount:   3,
-	}, {
-		name: "enabled 429 with Retry-After seconds",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+		{
+			name: "default max 503 with Retry-After seconds",
+			config: &RetryConfig{
+				RetryMax: 2,
+			},
+			statusCode:      http.StatusServiceUnavailable,
+			responseFormat:  Seconds,
+			responseSeconds: 1,
+			wantReqCount:    3,
 		},
-		statusCode:      http.StatusTooManyRequests,
-		responseFormat:  Seconds,
-		responseSeconds: 1,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 429 with Retry-After seconds max override",
-		config: &RetryConfig{
-			RetryMax:              2,
-			RetryAfterEnabled:     true,
-			RetryAfterMaxDuration: 1 * time.Second,
+		{
+			name: "default max 500 without Retry-After",
+			config: &RetryConfig{
+				RetryMax: 2,
+			},
+			statusCode:     http.StatusInternalServerError,
+			responseFormat: None,
+			wantReqCount:   3,
 		},
-		statusCode:      http.StatusTooManyRequests,
-		responseFormat:  Seconds,
-		responseSeconds: 4,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 429 with Retry-After date",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+
+		//
+		// Large Max Tests (Greater Than Retry-After Value)
+		//
+
+		{
+			name: "large max 429 without Retry-After",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
+			},
+			statusCode:     http.StatusTooManyRequests,
+			responseFormat: None,
+			wantReqCount:   3,
 		},
-		statusCode:      http.StatusTooManyRequests,
-		responseFormat:  Date,
-		responseSeconds: 2,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 429 with Retry-After date max override",
-		config: &RetryConfig{
-			RetryMax:              2,
-			RetryAfterEnabled:     true,
-			RetryAfterMaxDuration: 1 * time.Second,
+		{
+			name: "large max 429 with Retry-After seconds",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
+			},
+			statusCode:      http.StatusTooManyRequests,
+			responseFormat:  Seconds,
+			responseSeconds: 1,
+			wantReqCount:    3,
 		},
-		statusCode:      http.StatusTooManyRequests,
-		responseFormat:  Date,
-		responseSeconds: 4,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 429 with invalid Retry-After",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+		{
+			name: "large max 429 with Retry-After date",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
+			},
+			statusCode:      http.StatusTooManyRequests,
+			responseFormat:  Date,
+			responseSeconds: 1,
+			wantReqCount:    3,
 		},
-		statusCode:     http.StatusTooManyRequests,
-		responseFormat: Invalid,
-		wantReqCount:   3,
-	}, {
-		name: "enabled 503 with Retry-After seconds",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+		{
+			name: "large max 429 with invalid Retry-After",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
+			},
+			statusCode:     http.StatusTooManyRequests,
+			responseFormat: Invalid,
+			wantReqCount:   3,
 		},
-		statusCode:      http.StatusServiceUnavailable,
-		responseFormat:  Seconds,
-		responseSeconds: 1,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 503 with Retry-After date",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+		{
+			name: "large max 503 with Retry-After seconds",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
+			},
+			statusCode:      http.StatusServiceUnavailable,
+			responseFormat:  Seconds,
+			responseSeconds: 1,
+			wantReqCount:    3,
 		},
-		statusCode:      http.StatusServiceUnavailable,
-		responseFormat:  Date,
-		responseSeconds: 2,
-		wantReqCount:    3,
-	}, {
-		name: "enabled 503 with invalid Retry-After",
-		config: &RetryConfig{
-			RetryMax:          2,
-			RetryAfterEnabled: true,
+		{
+			name: "large max 500 without Retry-After",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
+			},
+			statusCode:     http.StatusInternalServerError,
+			responseFormat: None,
+			wantReqCount:   3,
 		},
-		statusCode:     http.StatusServiceUnavailable,
-		responseFormat: Invalid,
-		wantReqCount:   3,
-	}}
+
+		//
+		// Small Max Tests (Less Than Retry-After Value)
+		//
+
+		{
+			name: "small max 429 without Retry-After",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
+			},
+			statusCode:     http.StatusTooManyRequests,
+			responseFormat: None,
+			wantReqCount:   3,
+		},
+		{
+			name: "small max 429 with Retry-After seconds",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
+			},
+			statusCode:      http.StatusTooManyRequests,
+			responseFormat:  Seconds,
+			responseSeconds: 4,
+			wantReqCount:    3,
+		},
+		{
+			name: "small max 429 with Retry-After date",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
+			},
+			statusCode:      http.StatusTooManyRequests,
+			responseFormat:  Date,
+			responseSeconds: 2,
+			wantReqCount:    3,
+		},
+		{
+			name: "small max 429 with invalid Retry-After",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
+			},
+			statusCode:     http.StatusTooManyRequests,
+			responseFormat: Invalid,
+			wantReqCount:   3,
+		},
+		{
+			name: "small max 503 with Retry-After seconds",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
+			},
+			statusCode:      http.StatusServiceUnavailable,
+			responseFormat:  Seconds,
+			responseSeconds: 4,
+			wantReqCount:    3,
+		},
+		{
+			name: "small max 500 without Retry-After",
+			config: &RetryConfig{
+				RetryMax:              2,
+				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
+			},
+			statusCode:     http.StatusInternalServerError,
+			responseFormat: None,
+			wantReqCount:   3,
+		},
+	}
 
 	// Execute The TestCases
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 
 			// Consistent CheckRetry & Backoff Implementation For All TestCases
-			backoffDuration := 100 * time.Millisecond
+			paddingDuration := 250 * time.Millisecond // Test Execution Allowance For Resending Requests
+			backoffDuration := 500 * time.Millisecond // Constant Backoff Time For Simplified Testing
 			tc.config.CheckRetry = SelectiveRetry
 			tc.config.Backoff = func(attemptNum int, resp *http.Response) time.Duration { return backoffDuration }
 
@@ -363,8 +451,13 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 
 				// Determine Time Of Current Request
 				currentReqTime := time.Now()
-				if tc.config.RetryAfterEnabled && tc.responseFormat == Date && tc.responseSeconds > 0 {
-					currentReqTime = currentReqTime.Round(time.Second) // Round When Using Date Format To Account For RFC850 Precision
+				// TODO - Remove this check when experimental-feature moves to Stable/GA to convert behavior from opt-in to opt-out
+				if tc.config.RetryAfterMaxDuration != nil {
+
+					// TODO - Keep this logic as is (no change required) when experimental-feature is Stable/GA
+					if tc.responseFormat == Date && tc.responseSeconds > 0 {
+						currentReqTime = currentReqTime.Round(time.Second) // Round When Using Date Format To Account For RFC850 Precision
+					}
 				}
 
 				// Count The Requests
@@ -373,7 +466,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				// Add Retry-After Header To Response Based On TestCase
 				switch tc.responseFormat {
 				case None:
-					// Don't Write Anything ; )
+					// Don't Write Anything ;)
 				case Seconds:
 					writer.Header().Set(RetryAfterHeader, strconv.Itoa(int(responseDuration.Seconds())))
 				case Date:
@@ -384,31 +477,45 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 					assert.Fail(t, "TestCase with unsupported ResponseFormat '%v'", tc.responseFormat)
 				}
 
-				// Calculate The Expected Request Duration Based On TestCase
-				expectedRequestDuration := backoffDuration
-				if tc.config.RetryAfterEnabled && responseDuration > 0 {
-					expectedRequestDuration = responseDuration
-					if tc.config.RetryAfterMaxDuration > 0 && tc.config.RetryAfterMaxDuration < expectedRequestDuration {
-						expectedRequestDuration = tc.config.RetryAfterMaxDuration
-					}
-				}
+				// Only Validate Timings Of Retries - Not Interested In Initial Request
+				if reqCount > 1 {
 
-				// Validate Inter-Request Durations Meet Or Exceed Expected Minimums
-				actualRequestDuration := currentReqTime.Sub(previousReqTime)
-				assert.GreaterOrEqual(t, actualRequestDuration, expectedRequestDuration, "previousReqTime=%s, currentReqTime=%s", previousReqTime.String(), currentReqTime.String())
+					// Calculate The Expected Maximum Request Duration Of TestCase
+					expectedMinRequestDuration := backoffDuration
+					// TODO - Remove this check when experimental-feature moves to Stable/GA to convert behavior from opt-in to opt-out
+					if tc.config.RetryAfterMaxDuration != nil {
+
+						// TODO - Keep this logic as is (no change required) when experimental-feature is Stable/GA
+						if responseDuration > 0 {
+							expectedMinRequestDuration = responseDuration
+							if tc.config.RetryAfterMaxDuration != nil {
+								if *tc.config.RetryAfterMaxDuration == 0 {
+									expectedMinRequestDuration = backoffDuration
+								} else if *tc.config.RetryAfterMaxDuration < expectedMinRequestDuration {
+									expectedMinRequestDuration = *tc.config.RetryAfterMaxDuration
+								}
+							}
+						}
+					}
+					expectedMaxRequestDuration := expectedMinRequestDuration + paddingDuration
+
+					// Validate Inter-Request Durations Meet Or Exceed Expected Minimums
+					actualRequestDuration := currentReqTime.Sub(previousReqTime)
+					assert.GreaterOrEqual(t, actualRequestDuration, expectedMinRequestDuration, "previousReqTime =", previousReqTime.String(), "currentReqTime =", currentReqTime.String())
+					assert.LessOrEqual(t, actualRequestDuration, expectedMaxRequestDuration, "previousReqTime =", previousReqTime.String(), "currentReqTime =", currentReqTime.String())
+					t.Logf("Validated Request Duration %s between expected range %s - %s",
+						actualRequestDuration.String(),
+						expectedMinRequestDuration.String(),
+						expectedMaxRequestDuration.String())
+				}
 
 				// Respond With StatusCode From TestCase & Cycle The Times
 				writer.WriteHeader(tc.statusCode)
 				previousReqTime = currentReqTime
 			}))
 
-			// Initialize The Previous Request Time Back Far Enough For Consistent Time Comparisons
-			previousReqTime = time.Now().Add(-2 * backoffDuration)
-			if responseDuration > 0 {
-				previousReqTime = previousReqTime.Add(-2 * responseDuration)
-			}
-
 			// Perform The Test - Generate And Send The Request
+			t.Logf("Testing %d Response With RetryAfter (%d) %ds & Max %+v", tc.statusCode, tc.responseFormat, tc.responseSeconds, tc.config.RetryAfterMaxDuration)
 			sender := &HTTPMessageSender{Client: http.DefaultClient}
 			request, err := http.NewRequest("POST", server.URL, nil)
 			assert.Nil(t, err)

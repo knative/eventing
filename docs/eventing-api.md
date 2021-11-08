@@ -394,18 +394,27 @@ For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 </tr>
 <tr>
 <td>
-<code>retryAfter</code><br/>
+<code>retryAfterMax</code><br/>
 <em>
-<a href="#duck.knative.dev/v1.RetryAfter">
-RetryAfter
-</a>
+string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>RetryAfter controls how &ldquo;Retry-After&rdquo; header durations are handled for 429 and 503 response codes.
-If not provided, the default behavior is to ignore &ldquo;Retry-After&rdquo; headers in responses.</p>
-<p>Note: This API is EXPERIMENTAL and might break anytime. For more details: <a href="https://github.com/knative/eventing/issues/5811">https://github.com/knative/eventing/issues/5811</a></p>
+<p>RetryAfterMax provides an optional upper bound on the duration specified in a &ldquo;Retry-After&rdquo; header
+when calculating backoff times for retrying 429 and 502 response codes.  Setting the value to
+zero (&ldquo;PT0S&rdquo;) can be used to opt-out of respecting &ldquo;Retry-After&rdquo; header values altogether. This
+value only takes effect if &ldquo;Retry&rdquo; is configured, and also depends on specific implementations
+(Channels, Sources, etc.) choosing to provide this capability.</p>
+<p>Note: This API is EXPERIMENTAL and might be changed at anytime! While this experimental
+feature is in the Alpha/Beta stage, you must provide a valid a value to opt-in to
+supporting &ldquo;Retry-After&rdquo; headers.  When the feature becomes Stable/GA &ldquo;Retry-After&rdquo;
+headers will be respected by default, and you can choose to specify &ldquo;PT0S&rdquo; to
+opt-out of supporting &ldquo;Retry-After&rdquo; headers.
+For more details: <a href="https://github.com/knative/eventing/issues/5811">https://github.com/knative/eventing/issues/5811</a></p>
+<p>More information on Duration format:
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 </td>
 </tr>
 </tbody>
@@ -439,57 +448,6 @@ knative.dev/pkg/apis.URL
 <em>(Optional)</em>
 <p>DeadLetterSink is a KReference that is the reference to the native, platform specific channel
 where failed events are sent to.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="duck.knative.dev/v1.RetryAfter">RetryAfter
-</h3>
-<p>
-(<em>Appears on:</em><a href="#duck.knative.dev/v1.DeliverySpec">DeliverySpec</a>)
-</p>
-<p>
-<p>RetryAfter contains configuration related to the handling of &ldquo;Retry-After&rdquo; headers.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled is a flag indicating whether to respect the &ldquo;Retry-After&rdquo; header duration.
-If enabled, the largest of the normal backoff duration and the &ldquo;Retry-After&rdquo;
-header value will be used when calculating the next backoff duration.  This will
-only be considered when a 429 (Too Many Requests) or 503 (Service Unavailable)
-response code is received and Retry is greater than 0.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxDuration</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxDuration is the maximum time to wait before retrying.  It is intended as an
-override to protect against excessively large &ldquo;Retry-After&rdquo; durations. If provided,
-the value must be greater than 0.  If not provided, the largest of the &ldquo;Retry-After&rdquo;
-duration and the normal backoff duration will be used.
-More information on Duration format:
-- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
-- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
 </td>
 </tr>
 </tbody>

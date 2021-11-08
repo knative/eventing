@@ -97,13 +97,43 @@ func (s *HTTPMessageSender) SendWithRetries(req *nethttp.Request, config *RetryC
 func generateBackoffFn(config *RetryConfig) retryablehttp.Backoff {
 	return func(_, _ time.Duration, attemptNum int, resp *nethttp.Response) time.Duration {
 
-		// If RetryAfter Is Enabled And Response is 429 / 503, Then Parse Any Retry-After Header Durations & Enforce Optional MaxDuration
+		//
+		// NOTE - The following logic will need to be altered slightly once the "delivery-retryafter"
+		//        experimental-feature graduates from Alpha/Beta to Stable/GA.  This is according to
+		//        plan as described in https://github.com/knative/eventing/issues/5811.
+		//
+		//        During the Alpha/Beta stages the ability to respect Retry-After headers is "opt-in"
+		//        requiring the DeliverySpec.RetryAfterMax to be populated.  The Stable/GA behavior
+		//        will be "opt-out" where Retry-After headers are always respected (in the context of
+		//        calculating backoff durations for 429 / 503 responses) unless the
+		//        DeliverySpec.RetryAfterMax is set to "PT0S".
+		//
+		//        While this might seem unnecessarily complex, it achieves the following design goals...
+		//          - Does not require an explicit "enabled" flag in the DeliverySpec.
+		//          - Does not require implementations calling the message_sender to be aware of experimental-features.
+		//          - Does not modify existing Knative CRs with arbitrary default "max" values.
+		//
+		//        The intended behavior of RetryConfig.RetryAfterMaxDuration is as follows...
+		//
+		//          RetryAfterMaxDuration    Alpha/Beta                              Stable/GA
+		//          ---------------------    ----------                              ---------
+		//               nil                 Do NOT respect Retry-After headers      Respect Retry-After headers without Max
+		//                0                  Do NOT respect Retry-After headers      Do NOT respect Retry-After headers
+		//               >0                  Respect Retry-After headers with Max    Respect Retry-After headers with Max
+		//
+
+		// If Response is 429 / 503, Then Parse Any Retry-After Header Durations & Enforce Optional MaxDuration
 		var retryAfterDuration time.Duration
-		if config.RetryAfterEnabled && resp != nil &&
-			(resp.StatusCode == nethttp.StatusTooManyRequests || resp.StatusCode == nethttp.StatusServiceUnavailable) {
-			retryAfterDuration, _ = parseRetryAfterDuration(resp)
-			if config.RetryAfterMaxDuration > 0 && config.RetryAfterMaxDuration < retryAfterDuration {
-				retryAfterDuration = config.RetryAfterMaxDuration
+
+		// TODO - Remove this check when experimental-feature moves to Stable/GA to convert behavior from opt-in to opt-out
+		if config.RetryAfterMaxDuration != nil {
+
+			// TODO - Keep this logic as is (no change required) when experimental-feature is Stable/GA
+			if resp != nil && (resp.StatusCode == nethttp.StatusTooManyRequests || resp.StatusCode == nethttp.StatusServiceUnavailable) {
+				retryAfterDuration = parseRetryAfterDuration(resp)
+				if config.RetryAfterMaxDuration != nil && *config.RetryAfterMaxDuration < retryAfterDuration {
+					retryAfterDuration = *config.RetryAfterMaxDuration
+				}
 			}
 		}
 
@@ -120,11 +150,11 @@ func generateBackoffFn(config *RetryConfig) retryablehttp.Backoff {
 }
 
 // parseRetryAfterDuration returns a Duration expressing the amount of time
-// requested to wait by a Retry-After header, or none if not present or invalid.
+// requested to wait by a Retry-After header, or 0 if not present or invalid.
 // According to the spec (https://tools.ietf.org/html/rfc7231#section-7.1.3)
 // the Retry-After Header's value can be one of an HTTP-date or delay-seconds,
 // both of which are supported here.
-func parseRetryAfterDuration(resp *nethttp.Response) (time.Duration, error) {
+func parseRetryAfterDuration(resp *nethttp.Response) time.Duration {
 	var retryAfterDuration time.Duration
 	if resp != nil && resp.Header != nil {
 		retryAfterString := resp.Header.Get(RetryAfterHeader)
@@ -134,11 +164,12 @@ func parseRetryAfterDuration(resp *nethttp.Response) (time.Duration, error) {
 			} else {
 				retryAfterTime, parseTimeErr := nethttp.ParseTime(retryAfterString) // Supports http.TimeFormat, time.RFC850 & time.ANSIC
 				if parseTimeErr != nil {
-					return retryAfterDuration, fmt.Errorf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v", parseIntErr, parseTimeErr)
+					fmt.Printf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v", parseIntErr, parseTimeErr)
+					return retryAfterDuration
 				}
 				retryAfterDuration = time.Until(retryAfterTime)
 			}
 		}
 	}
-	return retryAfterDuration, nil
+	return retryAfterDuration
 }

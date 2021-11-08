@@ -62,32 +62,25 @@ type DeliverySpec struct {
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
 
-	// RetryAfter controls how "Retry-After" header durations are handled for 429 and 503 response codes.
-	// If not provided, the default behavior is to ignore "Retry-After" headers in responses.
+	// RetryAfterMax provides an optional upper bound on the duration specified in a "Retry-After" header
+	// when calculating backoff times for retrying 429 and 502 response codes.  Setting the value to
+	// zero ("PT0S") can be used to opt-out of respecting "Retry-After" header values altogether. This
+	// value only takes effect if "Retry" is configured, and also depends on specific implementations
+	// (Channels, Sources, etc.) choosing to provide this capability.
 	//
-	// Note: This API is EXPERIMENTAL and might break anytime. For more details: https://github.com/knative/eventing/issues/5811
-	// +optional
-	RetryAfter *RetryAfter `json:"retryAfter,omitempty"`
-}
-
-// RetryAfter contains configuration related to the handling of "Retry-After" headers.
-type RetryAfter struct {
-	// Enabled is a flag indicating whether to respect the "Retry-After" header duration.
-	// If enabled, the largest of the normal backoff duration and the "Retry-After"
-	// header value will be used when calculating the next backoff duration.  This will
-	// only be considered when a 429 (Too Many Requests) or 503 (Service Unavailable)
-	// response code is received and Retry is greater than 0.
-	Enabled bool `json:"enabled"`
-
-	// MaxDuration is the maximum time to wait before retrying.  It is intended as an
-	// override to protect against excessively large "Retry-After" durations. If provided,
-	// the value must be greater than 0.  If not provided, the largest of the "Retry-After"
-	// duration and the normal backoff duration will be used.
+	// Note: This API is EXPERIMENTAL and might be changed at anytime! While this experimental
+	//       feature is in the Alpha/Beta stage, you must provide a valid a value to opt-in to
+	//       supporting "Retry-After" headers.  When the feature becomes Stable/GA "Retry-After"
+	//       headers will be respected by default, and you can choose to specify "PT0S" to
+	//       opt-out of supporting "Retry-After" headers.
+	//       For more details: https://github.com/knative/eventing/issues/5811
+	//
 	// More information on Duration format:
 	//  - https://www.iso.org/iso-8601-date-and-time-format.html
 	//  - https://en.wikipedia.org/wiki/ISO_8601
+	//
 	// +optional
-	MaxDuration *string `json:"maxDuration,omitempty"`
+	RetryAfterMax *string `json:"retryAfterMax,omitempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
@@ -130,16 +123,14 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if ds.RetryAfter != nil {
+	if ds.RetryAfterMax != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryRetryAfter) {
-			if ds.RetryAfter.MaxDuration != nil && *ds.RetryAfter.MaxDuration != "" {
-				m, me := period.Parse(*ds.RetryAfter.MaxDuration)
-				if me != nil || m.IsZero() {
-					errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfter.MaxDuration, "retryAfter.maxDuration"))
-				}
+			_, me := period.Parse(*ds.RetryAfterMax)
+			if me != nil {
+				errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfterMax, "retryAfterMax"))
 			}
 		} else {
-			errs = errs.Also(apis.ErrDisallowedFields("retryAfter"))
+			errs = errs.Also(apis.ErrDisallowedFields("retryAfterMax"))
 		}
 	}
 

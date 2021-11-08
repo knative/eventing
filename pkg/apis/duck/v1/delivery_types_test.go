@@ -27,8 +27,6 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 )
 
-// TODO - add test cases for RetryAfter
-
 func TestDeliverySpecValidation(t *testing.T) {
 	deliveryTimeoutEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
 		feature.DeliveryTimeout: feature.Enabled,
@@ -114,34 +112,34 @@ func TestDeliverySpecValidation(t *testing.T) {
 		spec: &DeliverySpec{Retry: pointer.Int32Ptr(1)},
 		want: nil,
 	}, {
-		name: "valid complete retryAfter",
+		name: "valid retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
-		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true, MaxDuration: &validDuration}},
+		spec: &DeliverySpec{RetryAfterMax: &validDuration},
 		want: nil,
 	}, {
-		name: "valid sparse retryAfter",
+		name: "zero retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
-		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true}},
+		spec: &DeliverySpec{RetryAfterMax: pointer.StringPtr("PT0S")},
 		want: nil,
 	}, {
-		name: "zero retryAfter.MaxDuration",
+		name: "empty retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
-		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true, MaxDuration: pointer.StringPtr("PT0S")}},
+		spec: &DeliverySpec{RetryAfterMax: pointer.StringPtr("")},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue("PT0S", "retryAfter.maxDuration")
+			return apis.ErrInvalidValue("", "retryAfterMax")
 		}(),
 	}, {
-		name: "invalid retryAfter.MaxDuration",
+		name: "invalid retryAfterMax",
 		ctx:  deliveryRetryAfterEnabledCtx,
-		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true, MaxDuration: &invalidDuration}},
+		spec: &DeliverySpec{RetryAfterMax: &invalidDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidDuration, "retryAfter.maxDuration")
+			return apis.ErrInvalidValue(invalidDuration, "retryAfterMax")
 		}(),
 	}, {
-		name: "disabled retryAfter",
-		spec: &DeliverySpec{RetryAfter: &RetryAfter{Enabled: true}},
+		name: "disabled feature with retryAfterMax",
+		spec: &DeliverySpec{RetryAfterMax: &validDuration},
 		want: func() *apis.FieldError {
-			return apis.ErrDisallowedFields("retryAfter")
+			return apis.ErrDisallowedFields("retryAfterMax")
 		}(),
 	}}
 
