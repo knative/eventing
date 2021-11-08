@@ -22,12 +22,16 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	kubeinformers "k8s.io/client-go/informers"
+	fakekubeclient "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -38,12 +42,14 @@ import (
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -1128,8 +1134,17 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(
+		fakekubeclient.NewSimpleClientset(k8sServices()...), 0)
+	svcInformerIface := kubeInformerFactory.Core().V1().Services()
+	svcInformerIface.Informer() // register informer in factory
+	go kubeInformerFactory.Start(ctx.Done())
+	kubeInformerFactory.WaitForCacheSync(ctx.Done())
+
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = context.WithValue(ctx, service.Key{}, svcInformerIface)
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)
@@ -1468,6 +1483,41 @@ func makeDLSServiceAsUnstructured() *unstructured.Unstructured {
 				"namespace": testNS,
 				"name":      dlsName,
 			},
+		},
+	}
+}
+
+func k8sServices() []runtime.Object {
+	return []runtime.Object{
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      dlsName,
+				Namespace: testNS,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Name: "http",
+						Port: 80,
+					},
+				},
+			},
+			Status: corev1.ServiceStatus{},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      subscriberName,
+				Namespace: testNS,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Name: "http",
+						Port: 80,
+					},
+				},
+			},
+			Status: corev1.ServiceStatus{},
 		},
 	}
 }

@@ -22,32 +22,34 @@ import (
 	"fmt"
 	"testing"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/feature"
-	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/kref"
-	"knative.dev/pkg/network"
-	"knative.dev/pkg/tracker"
-
-	eventingclient "knative.dev/eventing/pkg/client/injection/client"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	kubeinformers "k8s.io/client-go/informers"
+	fakekubeclient "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/kref"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/network"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -1799,8 +1801,17 @@ func TestAllCases(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(
+		fakekubeclient.NewSimpleClientset(k8sServices()...), 0)
+	svcInformerIface := kubeInformerFactory.Core().V1().Services()
+	svcInformerIface.Informer() // register informer in factory
+	go kubeInformerFactory.Start(ctx.Done())
+	kubeInformerFactory.WaitForCacheSync(ctx.Done())
+
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = context.WithValue(ctx, service.Key{}, svcInformerIface)
 		ctx = channelable.WithDuck(ctx)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
@@ -1870,4 +1881,24 @@ func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionIm
 	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
 	action.Patch = []byte(patch)
 	return action
+}
+
+func k8sServices() []runtime.Object {
+	return []runtime.Object{
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: testNS,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Name: "http",
+						Port: 80,
+					},
+				},
+			},
+			Status: corev1.ServiceStatus{},
+		},
+	}
 }

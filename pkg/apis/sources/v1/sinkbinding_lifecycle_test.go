@@ -21,14 +21,20 @@ import (
 	"reflect"
 	"testing"
 
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
+
 	"github.com/google/go-cmp/cmp"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	"knative.dev/pkg/injection"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
@@ -477,7 +483,8 @@ func TestSinkBindingDo(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.in
-			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, got)
+			ctx, _ := injection.Fake.SetupInformers(context.Background(), &rest.Config{})
+			ctx, _ = fakedynamicclient.With(ctx, scheme.Scheme, got)
 			ctx = addressable.WithDuck(ctx)
 			r := resolver.NewURIResolverFromTracker(ctx, tracker.New(func(types.NamespacedName) {}, 0))
 			ctx = WithURIResolver(context.Background(), r)
