@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/flaker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -31,8 +30,6 @@ import (
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
-
-	b "knative.dev/eventing/test/rekt/resources/broker"
 
 	. "github.com/cloudevents/sdk-go/v2/test"
 	. "knative.dev/reconciler-test/pkg/eventshub/assert"
@@ -79,8 +76,7 @@ func SourceToSink(brokerName string) *feature.Feature {
 //                |
 //                +--[DLQ]--> sink
 //
-func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
-	prober := eventshub.NewProber()
+func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventProber) *feature.Feature {
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	via := feature.MakeRandomK8sName("via")
@@ -95,15 +91,6 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
 
-	// Setup Probes
-	f.Setup("install recorder", prober.ReceiverInstall("sink"))
-
-	// Setup data plane
-	brokerConfig := append(b.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference("sink"), ""))
-	f.Setup("update broker with DLQ", broker.Install(
-		brokerName,
-		brokerConfig...,
-	))
 	f.Setup("install trigger", trigger.Install(via, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
 
 	// Resources ready.
@@ -118,7 +105,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ", prober.AssertReceivedAll("source", "sink"))
+		Must("deliver event to DLQ", prober.AssertReceivedAll("source", sinkName))
 
 	return f
 }
@@ -131,8 +118,7 @@ func SourceToSinkWithDLQ(brokerName string) *feature.Feature {
 //                |
 //                +--[DLQ]--> sink1
 //
-func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
-	prober := eventshub.NewProber()
+func SourceToTwoSinksWithDLQ(brokerName, sink1, sink2 string, prober *eventshub.EventProber) *feature.Feature {
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	via1 := feature.MakeRandomK8sName("via")
@@ -149,13 +135,11 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 	}
 
 	// Setup Probes
-	f.Setup("install recorder1", prober.ReceiverInstall("sink1"))
-	f.Setup("install recorder2", prober.ReceiverInstall("sink2"))
+	f.Setup("install recorder2", prober.ReceiverInstall(sink2))
 
 	// Setup data plane
-	f.Setup("update broker with DLQ", broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference("sink1"), "")))
 	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
-	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference("sink2"), "")))
+	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference(sink2), "")))
 
 	// Resources ready.
 	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
@@ -166,14 +150,14 @@ func SourceToTwoSinksWithDLQ(brokerName string) *feature.Feature {
 
 	// After we have finished sending.
 	f.Requirement("sender is finished", prober.SenderDone("source"))
-	f.Requirement("receiver 1 is finished", prober.ReceiverDone("source", "sink1"))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone("source", "sink2"))
+	f.Requirement("receiver 1 is finished", prober.ReceiverDone("source", sink1))
+	f.Requirement("receiver 2 is finished", prober.ReceiverDone("source", sink2))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", "sink1")).
-		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", "sink2"))
+		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", sink1)).
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", sink2))
 
 	return f
 }
