@@ -66,6 +66,7 @@ const (
 	serviceName    = "service"
 	dlcName        = "dlc"
 	dlc2Name       = "dlc2"
+	dlsName        = "dls"
 
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
@@ -93,6 +94,9 @@ var (
 	dlcURI = apis.HTTP(dlcDNS)
 
 	dlc2DNS = "dlc2.mynamespace.svc." + network.GetClusterDomainName()
+
+	dlsDNS = "dls.mynamespace.svc." + network.GetClusterDomainName()
+	dlsURI = apis.HTTP(dlsDNS)
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "messaging.knative.dev",
@@ -129,8 +133,6 @@ var (
 		Namespace:  testNS,
 		Name:       channelName,
 	}
-
-	dlsURI = apis.HTTP(dlcDNS)
 )
 
 func TestAllCases(t *testing.T) {
@@ -789,7 +791,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
 					WithUnstructuredAddressable(subscriberDNS),
@@ -804,17 +806,17 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dlc" not found`),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dls" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dlc" not found`),
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dls" not found`),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
@@ -828,13 +830,13 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
 					WithUnstructuredAddressable(subscriberDNS),
 				),
-				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+				NewUnstructured(subscriberGVK, dlsName, testNS,
+					WithUnstructuredAddressable(dlsDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -853,18 +855,18 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionDeadLetterSinkURI(dlcURI),
+					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dlc.mynamespace.svc.cluster.local")}}},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -1284,11 +1286,11 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID("a-"+subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
-					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
-					WithSubscriptionDeadLetterSinkURI(dlcURI),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
+					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
-				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+				NewUnstructured(subscriberGVK, dlsName, testNS,
+					WithUnstructuredAddressable(dlsDNS),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b-"+subscriptionName, testNS,
@@ -1321,18 +1323,18 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID("a-"+subscriptionUID),
 					WithSubscriptionChannel(imcV1GVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName, testNS),
-					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkReferencesResolved,
 					MarkAddedToChannel,
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
-					WithSubscriptionDeadLetterSinkURI(dlcURI),
+					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dlc.mynamespace.svc.cluster.local")}}},
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI, Delivery: &eventingduck.DeliverySpec{DeadLetterSink: &duckv1.Destination{URI: apis.HTTP("dls.mynamespace.svc.cluster.local")}}},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
@@ -1349,7 +1351,7 @@ func TestAllCases(t *testing.T) {
 							Ref: &duckv1.KReference{
 								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
 								Kind:       subscriberGVK.Kind,
-								Name:       dlcName,
+								Name:       dlsName,
 								Namespace:  testNS,
 							},
 						},
@@ -1358,8 +1360,8 @@ func TestAllCases(t *testing.T) {
 						BackoffDelay:  pointer.StringPtr("PT1S"),
 					}),
 				),
-				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+				NewUnstructured(subscriberGVK, dlsName, testNS,
+					WithUnstructuredAddressable(dlsDNS),
 				),
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
@@ -1391,7 +1393,7 @@ func TestAllCases(t *testing.T) {
 							Ref: &duckv1.KReference{
 								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
 								Kind:       subscriberGVK.Kind,
-								Name:       dlcName,
+								Name:       dlsName,
 								Namespace:  testNS,
 							},
 						},
@@ -1399,7 +1401,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
 					}),
-					WithSubscriptionDeadLetterSinkURI(dlcURI),
+					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1409,7 +1411,7 @@ func TestAllCases(t *testing.T) {
 						SubscriberURI: serviceURI,
 						Delivery: &eventingduck.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
-								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
+								URI: apis.HTTP("dls.mynamespace.svc.cluster.local"),
 							},
 							Retry:         pointer.Int32Ptr(10),
 							BackoffPolicy: &linear,
@@ -1449,7 +1451,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
 					}),
-					WithInMemoryChannelStatusDLSURI(dlsURI),
+					WithInMemoryChannelStatusDLSURI(dlcURI),
 				),
 				NewService(serviceName, testNS),
 			},
@@ -1601,7 +1603,7 @@ func TestAllCases(t *testing.T) {
 							Ref: &duckv1.KReference{
 								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
 								Kind:       subscriberGVK.Kind,
-								Name:       dlcName,
+								Name:       dlsName,
 								Namespace:  testNS,
 							},
 						},
@@ -1610,8 +1612,8 @@ func TestAllCases(t *testing.T) {
 						BackoffDelay:  pointer.StringPtr("PT1S"),
 					}),
 				),
-				NewUnstructured(subscriberGVK, dlcName, testNS,
-					WithUnstructuredAddressable(dlcDNS),
+				NewUnstructured(subscriberGVK, dlsName, testNS,
+					WithUnstructuredAddressable(dlsDNS),
 				),
 				NewUnstructured(subscriberGVK, dlc2Name, testNS,
 					WithUnstructuredAddressable(dlc2DNS),
@@ -1658,7 +1660,7 @@ func TestAllCases(t *testing.T) {
 							Ref: &duckv1.KReference{
 								APIVersion: subscriberGVK.Group + "/" + subscriberGVK.Version,
 								Kind:       subscriberGVK.Kind,
-								Name:       dlcName,
+								Name:       dlsName,
 								Namespace:  testNS,
 							},
 						},
@@ -1666,7 +1668,7 @@ func TestAllCases(t *testing.T) {
 						BackoffPolicy: &linear,
 						BackoffDelay:  pointer.StringPtr("PT1S"),
 					}),
-					WithSubscriptionDeadLetterSinkURI(dlcURI),
+					WithSubscriptionDeadLetterSinkURI(dlsURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1676,7 +1678,7 @@ func TestAllCases(t *testing.T) {
 						SubscriberURI: serviceURI,
 						Delivery: &eventingduck.DeliverySpec{
 							DeadLetterSink: &duckv1.Destination{
-								URI: apis.HTTP("dlc.mynamespace.svc.cluster.local"),
+								URI: apis.HTTP("dls.mynamespace.svc.cluster.local"),
 							},
 							Retry:         pointer.Int32Ptr(10),
 							BackoffPolicy: &linear,
