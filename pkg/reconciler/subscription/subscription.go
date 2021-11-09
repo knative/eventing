@@ -283,7 +283,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, s *v1.Subscripti
 			s.Status.PhysicalSubscription.DeadLetterSinkURI = c.Status.DeadLetterSinkURI
 		} else {
 			s.Status.PhysicalSubscription.DeadLetterSinkURI = nil
-			logging.FromContext(ctx).Warnw("Failed to use channel status.deadLetterSinkURI",
+			logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
 				zap.Any("delivery.deadLetterSink", c.Spec.Delivery.DeadLetterSink))
 			s.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", c.Name)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", c.Name)
