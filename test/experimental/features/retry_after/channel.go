@@ -140,10 +140,7 @@ func installRetryAfterSubscription(channelName, subscriptionName, sinkName strin
 					Retry:         pointer.Int32Ptr(retryAttempts),
 					BackoffPolicy: &backoffPolicy,
 					BackoffDelay:  pointer.StringPtr("PT0.5S"),
-					RetryAfter: &eventingduckv1.RetryAfter{
-						Enabled:     true,
-						MaxDuration: pointer.StringPtr("PT30S"),
-					},
+					RetryAfterMax: pointer.StringPtr("PT30S"),
 				},
 			},
 		}
