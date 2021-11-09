@@ -261,7 +261,7 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 	return nil
 }
 
-func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, s *v1.Subscription, c *eventingduckv1.Channelable) pkgreconciler.Event {
+func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1.Subscription, channel *eventingduckv1.Channelable) pkgreconciler.Event {
 	// resolve the Subscription's dls first, fall back to the Channels's
 	if s.Spec.Delivery != nil && s.Spec.Delivery.DeadLetterSink != nil {
 		deadLetterSinkURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *s.Spec.Delivery.DeadLetterSink, s)
