@@ -263,36 +263,39 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 
 func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1.Subscription, channel *eventingduckv1.Channelable) pkgreconciler.Event {
 	// resolve the Subscription's dls first, fall back to the Channels's
-	if s.Spec.Delivery != nil && s.Spec.Delivery.DeadLetterSink != nil {
-		deadLetterSinkURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *s.Spec.Delivery.DeadLetterSink, s)
+	if subscription.Spec.Delivery != nil && subscription.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscription.Spec.Delivery.DeadLetterSink, subscription)
 		if err != nil {
-			s.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
 			logging.FromContext(ctx).Warnw("Failed to resolve spec.delivery.deadLetterSink",
 				zap.Error(err),
-				zap.Any("delivery.deadLetterSink", s.Spec.Delivery.DeadLetterSink))
-			s.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %w", err)
 		}
 
 		logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkURI.String()))
-		s.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
-		// In case there is no DLS defined in the Subscription Spec, fallback to Channel's
-	} else if c.Spec.Delivery != nil && c.Spec.Delivery.DeadLetterSink != nil {
-		if c.Status.DeadLetterSinkURI != nil {
-			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", c.Status.DeadLetterSinkURI.String()))
-			s.Status.PhysicalSubscription.DeadLetterSinkURI = c.Status.DeadLetterSinkURI
-		} else {
-			s.Status.PhysicalSubscription.DeadLetterSinkURI = nil
-			logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
-				zap.Any("delivery.deadLetterSink", c.Spec.Delivery.DeadLetterSink))
-			s.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", c.Name)
-			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", c.Name)
-		}
-	} else {
-		// There is no DLS defined in neither Subscription nor the Channel
-		s.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
+		return nil
 	}
 
+	// In case there is no DLS defined in the Subscription Spec, fallback to Channel's
+	if channel.Spec.Delivery != nil && channel.Spec.Delivery.DeadLetterSink != nil {
+		if channel.Status.DeadLetterSinkURI != nil {
+			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", channel.Status.DeadLetterSinkURI.String()))
+			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = channel.Status.DeadLetterSinkURI
+			return nil
+		} else {
+			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+			logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
+				zap.Any("delivery.deadLetterSink", channel.Spec.Delivery.DeadLetterSink))
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
+			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
+		}
+	}
+
+	// There is no DLS defined in neither Subscription nor the Channel
+	subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
 	return nil
 }
 
