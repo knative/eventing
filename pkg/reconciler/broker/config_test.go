@@ -33,6 +33,9 @@ func TestOurConfig(t *testing.T) {
 	actual, example := ConfigMapsFromTestFile(t, "config-broker")
 	exampleSpec := runtime.RawExtension{Raw: []byte(`"customValue: foo\n"`)}
 
+	// Using legacy ConfiMap with to be deprecated element.
+	actualLegacy, exampleLegacy := ConfigMapsFromTestFile(t, "config-broker")
+
 	for _, tt := range []struct {
 		name    string
 		wantErr string
@@ -44,6 +47,11 @@ func TestOurConfig(t *testing.T) {
 		want:    nil,
 		data:    actual,
 	}, {
+		name:    "Actual config, no defaults. Legacy configuration",
+		wantErr: "empty or missing value for config",
+		want:    nil,
+		data:    actualLegacy,
+	}, {
 		name: "Example config",
 		want: &Config{
 			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
@@ -54,6 +62,17 @@ func TestOurConfig(t *testing.T) {
 				Spec: &exampleSpec,
 			}},
 		data: example,
+	}, {
+		name: "Example config. Legacy configuration",
+		want: &Config{
+			DefaultChannelTemplate: messagingv1.ChannelTemplateSpec{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "messaging.knative.dev/v1",
+					Kind:       "InMemoryChannel",
+				},
+				Spec: &exampleSpec,
+			}},
+		data: exampleLegacy,
 	}, {
 		name:    "Empty string for config",
 		wantErr: "empty or missing value for config",

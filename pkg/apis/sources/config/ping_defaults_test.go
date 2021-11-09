@@ -35,6 +35,14 @@ func TestNewPingDefaultsConfigFromConfigMap(t *testing.T) {
 	}
 }
 
+func TestNewPingDefaultsConfigFromLegacyConfigMap(t *testing.T) {
+	// Using legacy ConfiMap with to be deprecated element.
+	_, example := ConfigMapsFromTestFile(t, PingDefaultsConfigName+"-legacy")
+	if _, err := NewPingDefaultsConfigFromConfigMap(example); err != nil {
+		t.Error("NewPingDefaultsConfigFromMap(example) =", err)
+	}
+}
+
 func TestPingDefaultsConfiguration(t *testing.T) {
 	testCases := []struct {
 		name        string
