@@ -27,6 +27,14 @@ spec:
               value: "heartbeats"
             - name: POD_NAMESPACE
               value: "default"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - all
+
   sink:
     ref:
       apiVersion: serving.knative.dev/v1
