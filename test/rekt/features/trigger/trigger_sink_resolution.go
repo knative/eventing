@@ -125,7 +125,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSin
 
 	// Assert events ended up where we expected.
 	f.Stable("trigger with a valid DLS ref defined in its spec").
-		Must("accepted all events", prober.AssertSentAll("source")).
+		Must("accept all events", prober.AssertSentAll("source")).
 		Must("deliver events to trigger DLS", prober.AssertReceivedAll("source", triggerSinkName)).
 		Must("not deliver events to its broker DLS", noEventsToDLS(prober, brokerSinkName))
 
