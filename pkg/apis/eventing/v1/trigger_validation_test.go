@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/feature"
-
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,6 +28,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 var (

@@ -22,13 +22,12 @@ import (
 	"fmt"
 	"regexp"
 
-	"knative.dev/eventing/pkg/apis/feature"
-
-	"knative.dev/eventing/pkg/apis/eventing"
-
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 var (
