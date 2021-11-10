@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -55,7 +57,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 	return errs.Also(
 		ValidateAttributeFilters(ts.Filter).ViaField("filter"),
 	).Also(
-		ValidateSubscriptionAPIFiltersList(ts.Filters).ViaField("filters"),
+		ValidateSubscriptionAPIFiltersList(ctx, ts.Filters).ViaField("filters"),
 	).Also(
 		ts.Subscriber.Validate(ctx).ViaField("subscriber"),
 	).Also(
@@ -181,19 +183,19 @@ func ValidateSingleAttributeMap(expr map[string]string) (errs *apis.FieldError) 
 	return errs
 }
 
-func ValidateSubscriptionAPIFiltersList(filters []SubscriptionsAPIFilter) (errs *apis.FieldError) {
-	if filters == nil {
+func ValidateSubscriptionAPIFiltersList(ctx context.Context, filters []SubscriptionsAPIFilter) (errs *apis.FieldError) {
+	if filters == nil || !feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) {
 		return nil
 	}
 
 	for i, f := range filters {
 		f := f
-		errs = errs.Also(ValidateSubscriptionAPIFilter(&f)).ViaIndex(i)
+		errs = errs.Also(ValidateSubscriptionAPIFilter(ctx, &f)).ViaIndex(i)
 	}
 	return errs
 }
 
-func ValidateSubscriptionAPIFilter(filter *SubscriptionsAPIFilter) (errs *apis.FieldError) {
+func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPIFilter) (errs *apis.FieldError) {
 	if filter == nil {
 		return nil
 	}
@@ -206,10 +208,10 @@ func ValidateSubscriptionAPIFilter(filter *SubscriptionsAPIFilter) (errs *apis.F
 	).Also(
 		ValidateSingleAttributeMap(filter.Suffix).ViaField("suffix"),
 	).Also(
-		ValidateSubscriptionAPIFiltersList(filter.All).ViaField("all"),
+		ValidateSubscriptionAPIFiltersList(ctx, filter.All).ViaField("all"),
 	).Also(
-		ValidateSubscriptionAPIFiltersList(filter.Any).ViaField("any"),
-	).Also(ValidateSubscriptionAPIFilter(filter.Not).ViaField("not"))
+		ValidateSubscriptionAPIFiltersList(ctx, filter.Any).ViaField("any"),
+	).Also(ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"))
 	return errs
 }
 

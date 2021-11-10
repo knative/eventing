@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/feature"
+
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -488,6 +490,9 @@ func TestTriggerSpecValidation(t *testing.T) {
 }
 
 func TestFilterSpecValidation(t *testing.T) {
+	newTriggerFiltersEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
+		feature.NewTriggerFilters: feature.Enabled,
+	})
 	tests := []struct {
 		name    string
 		filter  *TriggerFilter
@@ -727,7 +732,7 @@ func TestFilterSpecValidation(t *testing.T) {
 				Filters:    test.filters,
 				Subscriber: validSubscriber,
 			}
-			got := ts.Validate(context.TODO())
+			got := ts.Validate(newTriggerFiltersEnabledCtx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
 			}
