@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"knative.dev/eventing/pkg/utils"
+	"knative.dev/eventing/pkg/apis/eventing"
 
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
@@ -55,7 +55,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 	return errs.Also(
 		ValidateAttributeFilters(ts.Filter).ViaField("filter"),
 	).Also(
-		ValidateSubscriptionAPIFiltersList(ts.Filters, "filters").ViaField("filters"),
+		ValidateSubscriptionAPIFiltersList(ts.Filters).ViaField("filters"),
 	).Also(
 		ts.Subscriber.Validate(ctx).ViaField("subscriber"),
 	).Also(
@@ -157,10 +157,6 @@ func ValidateAttributeFilters(filter *TriggerFilter) (errs *apis.FieldError) {
 }
 
 func ValidateAttributesNames(attrs map[string]string) (errs *apis.FieldError) {
-	if attrs == nil {
-		return nil
-	}
-
 	for attr := range attrs {
 		if !validAttributeName.MatchString(attr) {
 			errs = errs.Also(apis.ErrInvalidKeyName(attr, apis.CurrentField, "Attribute name must start with a letter and can only contain lowercase alphanumeric").ViaKey(attr))
@@ -185,12 +181,9 @@ func ValidateSingleAttributeMap(expr map[string]string) (errs *apis.FieldError) 
 	return errs
 }
 
-func ValidateSubscriptionAPIFiltersList(filters []SubscriptionsAPIFilter, field string) (errs *apis.FieldError) {
+func ValidateSubscriptionAPIFiltersList(filters []SubscriptionsAPIFilter) (errs *apis.FieldError) {
 	if filters == nil {
 		return nil
-	}
-	if len(filters) == 0 {
-		return apis.ErrGeneric(fmt.Sprintf("%s must contain at least one nested filter", field), apis.CurrentField)
 	}
 
 	for i, f := range filters {
@@ -213,15 +206,15 @@ func ValidateSubscriptionAPIFilter(filter *SubscriptionsAPIFilter) (errs *apis.F
 	).Also(
 		ValidateSingleAttributeMap(filter.Suffix).ViaField("suffix"),
 	).Also(
-		ValidateSubscriptionAPIFiltersList(filter.All, "all").ViaField("all"),
+		ValidateSubscriptionAPIFiltersList(filter.All).ViaField("all"),
 	).Also(
-		ValidateSubscriptionAPIFiltersList(filter.Any, "any").ViaField("any"),
+		ValidateSubscriptionAPIFiltersList(filter.Any).ViaField("any"),
 	).Also(ValidateSubscriptionAPIFilter(filter.Not).ViaField("not"))
 	return errs
 }
 
 func ValidateOneOf(filter *SubscriptionsAPIFilter) (err *apis.FieldError) {
-	if filter != nil && utils.HasMultipleSetFields(*filter) {
+	if filter != nil && eventing.HasMultipleSetFields(*filter) {
 		return apis.ErrGeneric("multiple dialects found, filters can have only one dialect set")
 	}
 	return nil

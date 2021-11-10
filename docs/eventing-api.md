@@ -1773,15 +1773,15 @@ filter will be sent to the Subscriber. If not specified, will default to allowin
 </td>
 <td>
 <em>(Optional)</em>
-<p>Filters is an experimental field that conforms to CNCF CloudEvents Subscriptions
-API. It&rsquo;s An array of filter expressions that evaluates to true or false.
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
 If any filter expression in the array evaluates to false, the event MUST
 NOT be sent to the Subscriber. If all the filter expressions in the array
-evaluates to true, the event MUST be attempted to be delivered. Absence of
+evaluate to true, the event MUST be attempted to be delivered. Absence of
 a filter or empty array implies a value of true. In the event of users
-specifying both Filter and Filters, then the later will override the first.
-This will allow our users to try out the effect of the new filters field
-without compromising existing Filter objects and try it out on existing
+specifying both Filter and Filters, then the latter will override the former.
+This will allow users to try out the effect of the new Filters field
+without compromising the existing attribute-based Filter and try it out on existing
 Trigger objects.</p>
 </td>
 </tr>
@@ -2181,15 +2181,15 @@ filter will be sent to the Subscriber. If not specified, will default to allowin
 </td>
 <td>
 <em>(Optional)</em>
-<p>Filters is an experimental field that conforms to CNCF CloudEvents Subscriptions
-API. It&rsquo;s An array of filter expressions that evaluates to true or false.
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
 If any filter expression in the array evaluates to false, the event MUST
 NOT be sent to the Subscriber. If all the filter expressions in the array
-evaluates to true, the event MUST be attempted to be delivered. Absence of
+evaluate to true, the event MUST be attempted to be delivered. Absence of
 a filter or empty array implies a value of true. In the event of users
-specifying both Filter and Filters, then the later will override the first.
-This will allow our users to try out the effect of the new filters field
-without compromising existing Filter objects and try it out on existing
+specifying both Filter and Filters, then the latter will override the former.
+This will allow users to try out the effect of the new Filters field
+without compromising the existing attribute-based Filter and try it out on existing
 Trigger objects.</p>
 </td>
 </tr>

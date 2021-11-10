@@ -643,13 +643,6 @@ func TestFilterSpecValidation(t *testing.T) {
 			"Attribute name must start with a letter and can only contain "+
 				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaField("not").ViaFieldIndex("filters", 0),
 	}, {
-		name: "all filter is empty",
-		filters: []SubscriptionsAPIFilter{
-			{
-				All: []SubscriptionsAPIFilter{},
-			}},
-		want: apis.ErrGeneric("all must contain at least one nested filter", "all").ViaFieldIndex("filters", 0),
-	}, {
 		name: "all filter is nil",
 		filters: []SubscriptionsAPIFilter{
 			{
@@ -687,13 +680,6 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
 			"Attribute name must start with a letter and can only contain "+
 				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("all", 2).ViaFieldIndex("filters", 0),
-	}, {
-		name: "any filter is empty",
-		filters: []SubscriptionsAPIFilter{
-			{
-				Any: []SubscriptionsAPIFilter{},
-			}},
-		want: apis.ErrGeneric("any must contain at least one nested filter", "any").ViaFieldIndex("filters", 0),
 	}, {
 		name: "any filter is valid",
 		filters: []SubscriptionsAPIFilter{
