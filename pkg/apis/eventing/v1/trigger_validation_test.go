@@ -528,6 +528,18 @@ func TestFilterSpecValidation(t *testing.T) {
 		filter: validTriggerFilter,
 		want:   &apis.FieldError{},
 	}, {
+		name: "invalid multiple dialects",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Exact: map[string]string{
+					"myext": "abc",
+				},
+				Suffix: map[string]string{
+					"myext": "abc",
+				},
+			}},
+		want: apis.ErrGeneric("multiple dialects found, filters can have only one dialect set"),
+	}, {
 		name:   "valid Attributes filter",
 		filter: validTriggerFilter,
 		want:   &apis.FieldError{},

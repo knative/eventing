@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"knative.dev/eventing/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -203,6 +205,8 @@ func ValidateSubscriptionAPIFilter(filter *SubscriptionsAPIFilter) (errs *apis.F
 		return nil
 	}
 	errs = errs.Also(
+		ValidateOneOf(filter),
+	).Also(
 		ValidateSingleAttributeMap(filter.Exact).ViaField("exact"),
 	).Also(
 		ValidateSingleAttributeMap(filter.Prefix).ViaField("prefix"),
@@ -214,4 +218,11 @@ func ValidateSubscriptionAPIFilter(filter *SubscriptionsAPIFilter) (errs *apis.F
 		ValidateSubscriptionAPIFiltersList(filter.Any, "any").ViaField("any"),
 	).Also(ValidateSubscriptionAPIFilter(filter.Not).ViaField("not"))
 	return errs
+}
+
+func ValidateOneOf(filter *SubscriptionsAPIFilter) (err *apis.FieldError) {
+	if filter != nil && utils.HasMultipleSetFields(*filter) {
+		return apis.ErrGeneric("multiple dialects found, filters can have only one dialect set")
+	}
+	return nil
 }
