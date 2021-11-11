@@ -183,13 +183,7 @@ func (r *Reconciler) resolveSubscriptionURIs(ctx context.Context, subscription *
 		return err
 	}
 
-	var err error
-	if subscription.Spec.Delivery == nil && channel.Spec.Delivery != nil {
-		err = r.resolveDeadLetterSink(ctx, channel.Spec.Delivery.DeadLetterSink, subscription)
-	} else if subscription.Spec.Delivery != nil {
-		err = r.resolveDeadLetterSink(ctx, subscription.Spec.Delivery.DeadLetterSink, subscription)
-	}
-	if err != nil {
+	if err := r.resolveDeadLetterSink(ctx, subscription, channel); err != nil {
 		return err
 	}
 
@@ -267,30 +261,40 @@ func (r *Reconciler) resolveReply(ctx context.Context, subscription *v1.Subscrip
 	return nil
 }
 
-func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, deadLetterSink *duckv1.Destination, subscription *v1.Subscription) pkgreconciler.Event {
-	// Resolve DeadLetterSink.
-	if deadLetterSink != nil {
-		// Populate the namespace for the dead letter sink since it is in the namespace
-		if deadLetterSink.Ref != nil {
-			deadLetterSink.Ref.Namespace = subscription.Namespace
-		}
-
-		deadLetterSink, err := r.destinationResolver.URIFromDestinationV1(ctx, *deadLetterSink, subscription)
+func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1.Subscription, channel *eventingduckv1.Channelable) pkgreconciler.Event {
+	// resolve the Subscription's dls first, fall back to the Channels's
+	if subscription.Spec.Delivery != nil && subscription.Spec.Delivery.DeadLetterSink != nil {
+		deadLetterSinkURI, err := r.destinationResolver.URIFromDestinationV1(ctx, *subscription.Spec.Delivery.DeadLetterSink, subscription)
 		if err != nil {
+			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
 			logging.FromContext(ctx).Warnw("Failed to resolve spec.delivery.deadLetterSink",
 				zap.Error(err),
 				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
 			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %w", err)
 		}
-		// If there is a change in resolved URI, log it.
-		if subscription.Status.PhysicalSubscription.DeadLetterSinkURI == nil || subscription.Status.PhysicalSubscription.DeadLetterSinkURI.String() != deadLetterSink.String() {
-			logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSink.String()))
-			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSink
-		}
-	} else {
-		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+
+		logging.FromContext(ctx).Debugw("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkURI.String()))
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
+		return nil
 	}
+
+	// In case there is no DLS defined in the Subscription Spec, fallback to Channel's
+	if channel.Spec.Delivery != nil && channel.Spec.Delivery.DeadLetterSink != nil {
+		if channel.Status.DeadLetterSinkURI != nil {
+			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", channel.Status.DeadLetterSinkURI.String()))
+			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = channel.Status.DeadLetterSinkURI
+			return nil
+		}
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+		logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
+			zap.Any("delivery.deadLetterSink", channel.Spec.Delivery.DeadLetterSink))
+		subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
+		return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
+	}
+
+	// There is no DLS defined in neither Subscription nor the Channel
+	subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
 	return nil
 }
 
