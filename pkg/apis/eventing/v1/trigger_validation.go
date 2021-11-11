@@ -26,7 +26,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/feature"
 )
 
@@ -215,8 +214,54 @@ func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPI
 }
 
 func ValidateOneOf(filter *SubscriptionsAPIFilter) (err *apis.FieldError) {
-	if filter != nil && eventing.HasMultipleSetFields(*filter) {
+	if filter != nil && hasMultipleDialects(filter) {
 		return apis.ErrGeneric("multiple dialects found, filters can have only one dialect set")
 	}
 	return nil
+}
+
+func hasMultipleDialects(filter *SubscriptionsAPIFilter) bool {
+	dialectFound := false
+	if len(filter.Exact) > 0 {
+		dialectFound = true
+	}
+	if len(filter.Prefix) > 0 {
+		if dialectFound {
+			return true
+		} else {
+			dialectFound = true
+		}
+	}
+	if len(filter.Suffix) > 0 {
+		if dialectFound {
+			return true
+		} else {
+			dialectFound = true
+		}
+	}
+	if len(filter.All) > 0 {
+		if dialectFound {
+			return true
+		} else {
+			dialectFound = true
+		}
+	}
+	if len(filter.Any) > 0 {
+		if dialectFound {
+			return true
+		} else {
+			dialectFound = true
+		}
+	}
+	if filter.Not != nil {
+		if dialectFound {
+			return true
+		} else {
+			dialectFound = true
+		}
+	}
+	if len(filter.Extensions) > 0 && dialectFound {
+		return true
+	}
+	return false
 }
