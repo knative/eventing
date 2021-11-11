@@ -285,13 +285,11 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", channel.Status.DeadLetterSinkURI.String()))
 			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = channel.Status.DeadLetterSinkURI
 			return nil
-		} else {
-			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
-			logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
-				zap.Any("delivery.deadLetterSink", channel.Spec.Delivery.DeadLetterSink))
-			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
-			return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
-		}
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
+		logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
+			zap.Any("delivery.deadLetterSink", channel.Spec.Delivery.DeadLetterSink))
+		subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
+		return pkgreconciler.NewEvent(corev1.EventTypeWarning, deadLetterSinkResolveFailed, "channel %s didn't set status.deadLetterSinkURI", channel.Name)
 	}
 
 	// There is no DLS defined in neither Subscription nor the Channel
