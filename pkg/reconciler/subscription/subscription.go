@@ -285,6 +285,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 			logging.FromContext(ctx).Debugw("Resolved channel deadLetterSink", zap.String("deadLetterSinkURI", channel.Status.DeadLetterSinkURI.String()))
 			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = channel.Status.DeadLetterSinkURI
 			return nil
+		}
 		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
 		logging.FromContext(ctx).Warnw("Channel didn't set status.deadLetterSinkURI",
 			zap.Any("delivery.deadLetterSink", channel.Spec.Delivery.DeadLetterSink))
