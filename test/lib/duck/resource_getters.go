@@ -41,7 +41,12 @@ import (
 //
 // https://github.com/knative/eventing/issues/3681
 func isWebhookError(err error) bool {
-	return strings.Contains(err.Error(), "eventing-webhook.knative-eventing")
+	str := err.Error()
+	// Example error:
+	// Internal error occurred: failed calling webhook "defaulting.webhook.kafka.eventing.knative.dev": Post "https://kafka-webhook-eventing.knative-eventing.svc:443/defaulting?timeout=2s": EOF
+	return strings.Contains(str, "webhook") &&
+		strings.Contains(str, "https") &&
+		strings.Contains(str, "EOF")
 }
 
 func RetryWebhookErrors(updater func(int) error) error {
