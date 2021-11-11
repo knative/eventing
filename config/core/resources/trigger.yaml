@@ -53,6 +53,7 @@ spec:
           spec:
             description: Spec defines the desired state of the Trigger.
             type: object
+            x-kubernetes-preserve-unknown-fields: true
             properties:
               broker:
                 description: Broker is the broker that this trigger receives events from.

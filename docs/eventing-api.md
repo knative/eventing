@@ -1764,6 +1764,29 @@ filter will be sent to the Subscriber. If not specified, will default to allowin
 </tr>
 <tr>
 <td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Subscriber. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true. In the event of users
+specifying both Filter and Filters, then the latter will override the former.
+This will allow users to try out the effect of the new Filters field
+without compromising the existing attribute-based Filter and try it out on existing
+Trigger objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>subscriber</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Destination">
@@ -1772,8 +1795,8 @@ knative.dev/pkg/apis/duck/v1.Destination
 </em>
 </td>
 <td>
-<p>Subscriber is the addressable that receives events from the Broker that pass the Filter. It
-is required.</p>
+<p>Subscriber is the addressable that receives events from the Broker that pass
+the Filter. It is required.</p>
 </td>
 </tr>
 <tr>
@@ -1927,6 +1950,140 @@ resolved delivery options.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter
+</h3>
+<p>
+(<em>Appears on:</em><a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">SubscriptionsAPIFilter</a>, <a href="#eventing.knative.dev/v1.TriggerSpec">TriggerSpec</a>)
+</p>
+<p>
+<p>SubscriptionsAPIFilter allows defining a filter expression using CloudEvents
+Subscriptions API. If multiple filters are specified, then the same semantics
+of SubscriptionsAPIFilter.All is applied. If no filter dialect or empty
+object is specified, then the filter always accept the events.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>all</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>All evaluates to true if all the nested expressions evaluate to true.
+It must contain at least one filter expression.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>any</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Any evaluates to true if at least one of the nested expressions evaluates
+to true. It must contain at least one filter expression.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>not</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Not evaluates to true if the nested expression evaluates to false.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>exact</code><br/>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Exact evaluates to true if the value of the matching CloudEvents
+attribute matches exactly the String value specified (case-sensitive).
+Exact must contain exactly one property, where the key is the name of the
+CloudEvents attribute to be matched, and its value is the String value to
+use in the comparison. The attribute name and value specified in the filter
+expression cannot be empty strings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>prefix</code><br/>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Prefix evaluates to true if the value of the matching CloudEvents
+attribute starts with the String value specified (case-sensitive). Prefix
+must contain exactly one property, where the key is the name of the
+CloudEvents attribute to be matched, and its value is the String value to
+use in the comparison. The attribute name and value specified in the filter
+expression cannot be empty strings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>suffix</code><br/>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Suffix evaluates to true if the value of the matching CloudEvents
+attribute ends with the String value specified (case-sensitive). Suffix
+must contain exactly one property, where the key is the name of the
+CloudEvents attribute to be matched, and its value is the String value to
+use in the comparison. The attribute name and value specified in the filter
+expression cannot be empty strings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>Extensions</code><br/>
+<em>
+map[string]*k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<p>
+(Members of <code>Extensions</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>Extensions includes the list of additional filter dialects supported by
+specific broker implementations. Check out the documentation of the
+broker implementation you&rsquo;re using to know about what additional filters
+are supported.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="eventing.knative.dev/v1.TriggerFilter">TriggerFilter
 </h3>
 <p>
@@ -1956,8 +2113,8 @@ TriggerFilterAttributes
 <p>Attributes filters events by exact match on event context attributes.
 Each key in the map is compared with the equivalent key in the event
 context. An event passes the filter if all values are equal to the
-specified values.</p>
-<p>Nested context attributes are not supported as keys. Only string values are supported.</p>
+specified values. Nested context attributes are not supported as keys. Only
+string values are supported.</p>
 </td>
 </tr>
 </tbody>
@@ -1969,8 +2126,8 @@ specified values.</p>
 </p>
 <p>
 <p>TriggerFilterAttributes is a map of context attribute names to values for
-filtering by equality. Only exact matches will pass the filter. You can use the value &ldquo;
-to indicate all strings match.</p>
+filtering by equality. Only exact matches will pass the filter. You can use
+the value &ldquo; to indicate all strings match.</p>
 </p>
 <h3 id="eventing.knative.dev/v1.TriggerSpec">TriggerSpec
 </h3>
@@ -2015,6 +2172,29 @@ filter will be sent to the Subscriber. If not specified, will default to allowin
 </tr>
 <tr>
 <td>
+<code>filters</code><br/>
+<em>
+<a href="#eventing.knative.dev/v1.SubscriptionsAPIFilter">
+[]SubscriptionsAPIFilter
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions
+API. It&rsquo;s an array of filter expressions that evaluate to true or false.
+If any filter expression in the array evaluates to false, the event MUST
+NOT be sent to the Subscriber. If all the filter expressions in the array
+evaluate to true, the event MUST be attempted to be delivered. Absence of
+a filter or empty array implies a value of true. In the event of users
+specifying both Filter and Filters, then the latter will override the former.
+This will allow users to try out the effect of the new Filters field
+without compromising the existing attribute-based Filter and try it out on existing
+Trigger objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>subscriber</code><br/>
 <em>
 <a href="https://pkg.go.dev/knative.dev/pkg/apis/duck/v1#Destination">
@@ -2023,8 +2203,8 @@ knative.dev/pkg/apis/duck/v1.Destination
 </em>
 </td>
 <td>
-<p>Subscriber is the addressable that receives events from the Broker that pass the Filter. It
-is required.</p>
+<p>Subscriber is the addressable that receives events from the Broker that pass
+the Filter. It is required.</p>
 </td>
 </tr>
 <tr>
