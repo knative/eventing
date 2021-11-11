@@ -209,7 +209,9 @@ func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPI
 		ValidateSubscriptionAPIFiltersList(ctx, filter.All).ViaField("all"),
 	).Also(
 		ValidateSubscriptionAPIFiltersList(ctx, filter.Any).ViaField("any"),
-	).Also(ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"))
+	).Also(
+		ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"),
+	)
 	return errs
 }
 
