@@ -143,9 +143,8 @@ func generateBackoffFn(config *RetryConfig) retryablehttp.Backoff {
 		// Return The Larger Of The Two Backoff Durations
 		if retryAfterDuration > backoffDuration {
 			return retryAfterDuration
-		} else {
-			return backoffDuration
 		}
+		return backoffDuration
 	}
 }
 
@@ -154,22 +153,30 @@ func generateBackoffFn(config *RetryConfig) retryablehttp.Backoff {
 // According to the spec (https://tools.ietf.org/html/rfc7231#section-7.1.3)
 // the Retry-After Header's value can be one of an HTTP-date or delay-seconds,
 // both of which are supported here.
-func parseRetryAfterDuration(resp *nethttp.Response) time.Duration {
-	var retryAfterDuration time.Duration
-	if resp != nil && resp.Header != nil {
-		retryAfterString := resp.Header.Get(RetryAfterHeader)
-		if len(retryAfterString) > 0 {
-			if retryAfterInt, parseIntErr := strconv.ParseInt(retryAfterString, 10, 64); parseIntErr == nil {
-				retryAfterDuration = time.Duration(retryAfterInt) * time.Second
-			} else {
-				retryAfterTime, parseTimeErr := nethttp.ParseTime(retryAfterString) // Supports http.TimeFormat, time.RFC850 & time.ANSIC
-				if parseTimeErr != nil {
-					fmt.Printf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v", parseIntErr, parseTimeErr)
-					return retryAfterDuration
-				}
-				retryAfterDuration = time.Until(retryAfterTime)
-			}
-		}
+func parseRetryAfterDuration(resp *nethttp.Response) (retryAfterDuration time.Duration) {
+
+	// Return 0 Duration If No Response / Headers
+	if resp == nil || resp.Header == nil {
+		return
 	}
-	return retryAfterDuration
+
+	// Return 0 Duration If No Retry-After Header
+	retryAfterString := resp.Header.Get(RetryAfterHeader)
+	if len(retryAfterString) <= 0 {
+		return
+	}
+
+	// Attempt To Parse Retry-After Header As Seconds - Return If Successful
+	retryAfterInt, parseIntErr := strconv.ParseInt(retryAfterString, 10, 64)
+	if parseIntErr == nil {
+		return time.Duration(retryAfterInt) * time.Second
+	}
+
+	// Attempt To Parse Retry-After Header As Timestamp (RFC850 & ANSIC) - Return If Successful
+	retryAfterTime, parseTimeErr := nethttp.ParseTime(retryAfterString)
+	if parseTimeErr != nil {
+		fmt.Printf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v", parseIntErr, parseTimeErr)
+		return
+	}
+	return time.Until(retryAfterTime)
 }

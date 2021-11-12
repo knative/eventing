@@ -68,8 +68,8 @@ type DeliverySpec struct {
 	// value only takes effect if "Retry" is configured, and also depends on specific implementations
 	// (Channels, Sources, etc.) choosing to provide this capability.
 	//
-	// Note: This API is EXPERIMENTAL and might be changed at anytime! While this experimental
-	//       feature is in the Alpha/Beta stage, you must provide a valid a value to opt-in to
+	// Note: This API is EXPERIMENTAL and might be changed at anytime. While this experimental
+	//       feature is in the Alpha/Beta stage, you must provide a valid value to opt-in for
 	//       supporting "Retry-After" headers.  When the feature becomes Stable/GA "Retry-After"
 	//       headers will be respected by default, and you can choose to specify "PT0S" to
 	//       opt-out of supporting "Retry-After" headers.
@@ -125,8 +125,8 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if ds.RetryAfterMax != nil {
 		if feature.FromContext(ctx).IsEnabled(feature.DeliveryRetryAfter) {
-			_, me := period.Parse(*ds.RetryAfterMax)
-			if me != nil {
+			p, me := period.Parse(*ds.RetryAfterMax)
+			if me != nil || p.IsNegative() {
 				errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfterMax, "retryAfterMax"))
 			}
 		} else {

@@ -406,8 +406,8 @@ when calculating backoff times for retrying 429 and 502 response codes.  Setting
 zero (&ldquo;PT0S&rdquo;) can be used to opt-out of respecting &ldquo;Retry-After&rdquo; header values altogether. This
 value only takes effect if &ldquo;Retry&rdquo; is configured, and also depends on specific implementations
 (Channels, Sources, etc.) choosing to provide this capability.</p>
-<p>Note: This API is EXPERIMENTAL and might be changed at anytime! While this experimental
-feature is in the Alpha/Beta stage, you must provide a valid a value to opt-in to
+<p>Note: This API is EXPERIMENTAL and might be changed at anytime. While this experimental
+feature is in the Alpha/Beta stage, you must provide a valid value to opt-in for
 supporting &ldquo;Retry-After&rdquo; headers.  When the feature becomes Stable/GA &ldquo;Retry-After&rdquo;
 headers will be respected by default, and you can choose to specify &ldquo;PT0S&rdquo; to
 opt-out of supporting &ldquo;Retry-After&rdquo; headers.
