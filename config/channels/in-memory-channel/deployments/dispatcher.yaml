@@ -95,6 +95,7 @@ spec:
           capabilities:
             drop:
             - all
+
         resources:
           requests:
             cpu: 100m

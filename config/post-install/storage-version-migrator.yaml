@@ -49,6 +49,7 @@ spec:
             - "sinkbindings.sources.knative.dev"
             - "subscriptions.messaging.knative.dev"
             - "triggers.eventing.knative.dev"
+
           resources:
             requests:
               cpu: 60m
@@ -56,6 +57,7 @@ spec:
             limits:
               cpu: 1000m
               memory: 400Mi
+
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -31,6 +31,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/reconciler-test/pkg/eventshub"
 )
 
 // TestBrokerAsMiddleware
@@ -69,15 +70,28 @@ func TestBrokerWithDLQ(t *testing.T) {
 	// source ---> broker<Via> --[trigger]--> bad uri
 	//                |
 	//                +--[DLQ]--> sink
-	env.Test(ctx, t, broker.SourceToSinkWithDLQ("test1"))
+	// Setup data plane
 
-	// Test that a Broker "test1" works as expected with the following topology:
+	// Install probes.
+	prober := eventshub.NewProber()
+	brokerName := "normal-broker"
+	sink1 := "sink"
+
+	// Wait till broker is ready since we need it to run the test
+	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ(brokerName, sink1, prober))
+
+	// Test that a Broker "test2" works as expected with the following topology:
 	// source ---> broker +--[trigger<via1>]--> bad uri
 	//                |   |
 	//                |   +--[trigger<vai2>]--> sink2
 	//                |
 	//                +--[DLQ]--> sink1
-	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ("test2"))
+	// Wait till broker is ready since we need it to run this test
+	brokerName = "dls-broker"
+	sink2 := "sink2"
+	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
+	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ(brokerName, sink1, sink2, prober))
 }
 
 // TestBrokerWithFlakyDLQ

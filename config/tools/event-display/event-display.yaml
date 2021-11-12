@@ -24,3 +24,11 @@ spec:
     spec:
       containers:
       - image: ko://knative.dev/eventing/cmd/event_display
+        # This is needed to run under the "restricted" Pod Security Standard
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
