@@ -88,3 +88,10 @@ spec:
             protocol: TCP
           - containerPort: 9090
             name: metrics
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all

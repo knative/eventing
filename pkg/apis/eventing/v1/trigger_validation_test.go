@@ -23,17 +23,24 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 var (
-	validEmptyFilter      = &TriggerFilter{}
-	validAttributesFilter = &TriggerFilter{
-		Attributes: TriggerFilterAttributes{
+	validEmptyTriggerFilter = newTriggerFilter(nil)
+	validTriggerFilter      = newTriggerFilter(
+		map[string]string{
 			"type":   "other_type",
 			"source": "other_source",
+		})
+	validSubscriptionAPIFilter = &SubscriptionsAPIFilter{
+		Exact: map[string]string{
+			"type": "other_type",
 		},
 	}
 	validSubscriber = duckv1.Destination{
@@ -76,7 +83,7 @@ func TestTriggerValidation(t *testing.T) {
 				}},
 			Spec: TriggerSpec{
 				Broker:     "default",
-				Filter:     validEmptyFilter,
+				Filter:     validEmptyTriggerFilter,
 				Subscriber: validSubscriber,
 			}},
 		want: nil,
@@ -100,7 +107,7 @@ func TestTriggerValidation(t *testing.T) {
 				}},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
-				Filter:     validEmptyFilter,
+				Filter:     validEmptyTriggerFilter,
 				Subscriber: validSubscriber,
 			}},
 		want: &apis.FieldError{
@@ -118,7 +125,7 @@ func TestTriggerValidation(t *testing.T) {
 				}},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
-				Filter:     validEmptyFilter,
+				Filter:     validEmptyTriggerFilter,
 				Subscriber: validSubscriber,
 			}},
 		want: &apis.FieldError{
@@ -136,7 +143,7 @@ func TestTriggerValidation(t *testing.T) {
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
@@ -153,7 +160,7 @@ func TestTriggerValidation(t *testing.T) {
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
@@ -170,7 +177,7 @@ func TestTriggerValidation(t *testing.T) {
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
@@ -187,7 +194,7 @@ func TestTriggerValidation(t *testing.T) {
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
@@ -225,7 +232,7 @@ func TestTriggerValidation(t *testing.T) {
 					}},
 				Spec: TriggerSpec{
 					Broker:     "default",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
@@ -266,7 +273,7 @@ func TestTriggerValidation(t *testing.T) {
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test-broker",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
@@ -282,7 +289,7 @@ func TestTriggerValidation(t *testing.T) {
 				},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
-					Filter:     validEmptyFilter,
+					Filter:     validEmptyTriggerFilter,
 					Subscriber: validSubscriber,
 					Delivery: &eventingduckv1.DeliverySpec{
 						BackoffDelay: &invalidString,
@@ -315,7 +322,7 @@ func TestTriggerUpdateValidation(t *testing.T) {
 			},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
-				Filter:     validEmptyFilter,
+				Filter:     validEmptyTriggerFilter,
 				Subscriber: validSubscriber,
 			}},
 		tNew: &Trigger{
@@ -324,7 +331,7 @@ func TestTriggerUpdateValidation(t *testing.T) {
 			},
 			Spec: TriggerSpec{
 				Broker:     "anotherBroker",
-				Filter:     validEmptyFilter,
+				Filter:     validEmptyTriggerFilter,
 				Subscriber: validSubscriber,
 			}},
 		want: &apis.FieldError{
@@ -370,7 +377,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "missing broker",
 		ts: &TriggerSpec{
 			Broker:     "",
-			Filter:     validAttributesFilter,
+			Filter:     validTriggerFilter,
 			Subscriber: validSubscriber,
 		},
 		want: func() *apis.FieldError {
@@ -380,10 +387,8 @@ func TestTriggerSpecValidation(t *testing.T) {
 	}, {
 		name: "missing attributes keys, match all",
 		ts: &TriggerSpec{
-			Broker: "test_broker",
-			Filter: &TriggerFilter{
-				Attributes: TriggerFilterAttributes{},
-			},
+			Broker:     "test_broker",
+			Filter:     validEmptyTriggerFilter,
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{},
@@ -391,44 +396,40 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "invalid attribute name, start with number",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: &TriggerFilter{
-				Attributes: TriggerFilterAttributes{
+			Filter: newTriggerFilter(
+				map[string]string{
 					"0invalid": "my-value",
-				},
-			},
+				}),
 			Subscriber: validSubscriber,
 		},
-		want: &apis.FieldError{
-			Message: `Invalid attribute name: "0invalid"`,
-			Paths:   []string{"filter.attributes"},
-		},
+		want: apis.ErrInvalidKeyName("0invalid", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("attributes", "0invalid").ViaField("filter"),
 	}, {
 		name: "invalid attribute name, capital letters",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: &TriggerFilter{
-				Attributes: TriggerFilterAttributes{
+			Filter: newTriggerFilter(
+				map[string]string{
 					"invALID": "my-value",
-				},
-			},
+				}),
 			Subscriber: validSubscriber,
 		},
-		want: &apis.FieldError{
-			Message: `Invalid attribute name: "invALID"`,
-			Paths:   []string{"filter.attributes"},
-		},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("attributes", "invALID").ViaField("filter"),
 	}, {
 		name: "missing subscriber",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: validAttributesFilter,
+			Filter: validTriggerFilter,
 		},
 		want: apis.ErrGeneric("expected at least one, got none", "subscriber.ref", "subscriber.uri"),
 	}, {
 		name: "missing subscriber.ref.name",
 		ts: &TriggerSpec{
 			Broker:     "test_broker",
-			Filter:     validAttributesFilter,
+			Filter:     validTriggerFilter,
 			Subscriber: invalidSubscriber,
 		},
 		want: apis.ErrMissingField("subscriber.ref.name"),
@@ -436,7 +437,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "missing broker",
 		ts: &TriggerSpec{
 			Broker:     "",
-			Filter:     validAttributesFilter,
+			Filter:     validTriggerFilter,
 			Subscriber: validSubscriber,
 		},
 		want: apis.ErrMissingField("broker"),
@@ -444,7 +445,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "valid empty filter",
 		ts: &TriggerSpec{
 			Broker:     "test_broker",
-			Filter:     validEmptyFilter,
+			Filter:     validEmptyTriggerFilter,
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{},
@@ -452,7 +453,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "valid SourceAndType filter",
 		ts: &TriggerSpec{
 			Broker:     "test_broker",
-			Filter:     validAttributesFilter,
+			Filter:     validTriggerFilter,
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{},
@@ -460,7 +461,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "valid Attributes filter",
 		ts: &TriggerSpec{
 			Broker:     "test_broker",
-			Filter:     validAttributesFilter,
+			Filter:     validTriggerFilter,
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{},
@@ -468,7 +469,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "invalid delivery, invalid delay string",
 		ts: &TriggerSpec{
 			Broker:     "test_broker",
-			Filter:     validEmptyFilter,
+			Filter:     validEmptyTriggerFilter,
 			Subscriber: validSubscriber,
 			Delivery: &eventingduckv1.DeliverySpec{
 				BackoffDelay: &invalidString,
@@ -480,6 +481,257 @@ func TestTriggerSpecValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.ts.Validate(context.TODO())
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFilterSpecValidation(t *testing.T) {
+	newTriggerFiltersEnabledCtx := feature.ToContext(context.TODO(), feature.Flags{
+		feature.NewTriggerFilters: feature.Enabled,
+	})
+	tests := []struct {
+		name    string
+		filter  *TriggerFilter
+		filters []SubscriptionsAPIFilter
+		want    *apis.FieldError
+	}{{
+		name:    "missing filters, match all",
+		filters: nil,
+		want:    &apis.FieldError{},
+	}, {
+		name: "invalid exact filter attribute name, start with number",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Exact: map[string]string{
+					"0invalid": "some-value",
+				},
+			}},
+		want: apis.ErrInvalidKeyName("0invalid", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("exact", "0invalid").ViaFieldIndex("filters", 0),
+	}, {
+		name: "invalid exact filter attribute name, capital letters",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Exact: map[string]string{
+					"invALID": "some-value",
+				},
+			}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("exact", "invALID").ViaFieldIndex("filters", 0),
+	}, {
+		name:   "valid empty filter",
+		filter: validEmptyTriggerFilter,
+		want:   &apis.FieldError{},
+	}, {
+		name:   "valid SourceAndType filter",
+		filter: validTriggerFilter,
+		want:   &apis.FieldError{},
+	}, {
+		name: "invalid multiple dialects",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Exact: map[string]string{
+					"myext": "abc",
+				},
+				Suffix: map[string]string{
+					"myext": "abc",
+				},
+			}},
+		want: apis.ErrGeneric("multiple dialects found, filters can have only one dialect set"),
+	}, {
+		name:   "valid Attributes filter",
+		filter: validTriggerFilter,
+		want:   &apis.FieldError{},
+	}, {
+		name: "exact filter contains more than one attribute",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Exact: map[string]string{
+					"myext":      "abc",
+					"anotherext": "xyz",
+				},
+			}},
+		want: apis.ErrGeneric("Multiple items found, can have only one key-value", "exact").ViaFieldIndex("filters", 0),
+	}, {
+		name: "valid exact filter",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Exact: map[string]string{
+					"valid": "abc",
+				},
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "suffix filter contains more than one attribute",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Suffix: map[string]string{
+					"myext":      "abc",
+					"anotherext": "xyz",
+				},
+			}},
+		want: apis.ErrGeneric("Multiple items found, can have only one key-value", "suffix").ViaFieldIndex("filters", 0),
+	}, {
+		name: "suffix filter contains invalid attribute name",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Suffix: map[string]string{
+					"invALID": "abc",
+				},
+			}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("suffix", "invALID").ViaFieldIndex("filters", 0),
+	}, {
+		name: "valid suffix filter",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Suffix: map[string]string{
+					"valid": "abc",
+				},
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "prefix filter contains more than one attribute",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Prefix: map[string]string{
+					"myext":      "abc",
+					"anotherext": "xyz",
+				},
+			}},
+		want: apis.ErrGeneric("Multiple items found, can have only one key-value", "prefix").ViaFieldIndex("filters", 0),
+	}, {
+		name: "prefix filter contains invalid attribute name",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Prefix: map[string]string{
+					"invALID": "abc",
+				},
+			}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("filters", 0),
+	}, {
+		name: "valid prefix filter",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Prefix: map[string]string{
+					"valid": "abc",
+				},
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "not nested expression is valid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Not: validSubscriptionAPIFilter,
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "not nested expression is invalid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Not: &SubscriptionsAPIFilter{
+					Prefix: map[string]string{
+						"invALID": "abc",
+					},
+				},
+			}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaField("not").ViaFieldIndex("filters", 0),
+	}, {
+		name: "all filter is nil",
+		filters: []SubscriptionsAPIFilter{
+			{
+				All: nil,
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "all filter is valid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				All: []SubscriptionsAPIFilter{
+					*validSubscriptionAPIFilter,
+					{
+						Exact: map[string]string{"myattr": "myval"},
+					},
+				},
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "all filter sub expression is invalid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				All: []SubscriptionsAPIFilter{
+					*validSubscriptionAPIFilter,
+					{
+						Exact: map[string]string{"myattr": "myval"},
+					},
+					{
+						Prefix: map[string]string{
+							"invALID": "abc",
+						},
+					},
+				},
+			}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("all", 2).ViaFieldIndex("filters", 0),
+	}, {
+		name: "any filter is valid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Any: []SubscriptionsAPIFilter{
+					*validSubscriptionAPIFilter,
+					{
+						Exact: map[string]string{"myattr": "myval"},
+					},
+				},
+			}},
+		want: &apis.FieldError{},
+	}, {
+		name: "any filter sub expression is invalid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Any: []SubscriptionsAPIFilter{
+					*validSubscriptionAPIFilter,
+					{
+						Exact: map[string]string{"myattr": "myval"},
+					},
+					{
+						Prefix: map[string]string{"invALID": "abc"},
+					},
+				},
+			}},
+		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
+			"Attribute name must start with a letter and can only contain "+
+				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("any", 2).ViaFieldIndex("filters", 0)}, {
+		name: "raw extension expression is valid",
+		filters: []SubscriptionsAPIFilter{
+			{
+				Extensions: map[string]*runtime.RawExtension{
+					"juel": {Raw: []byte("\"myExpressionUsingJUEL\"")},
+				},
+			}},
+		want: &apis.FieldError{},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ts := &TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     test.filter,
+				Filters:    test.filters,
+				Subscriber: validSubscriber,
+			}
+			got := ts.Validate(newTriggerFiltersEnabledCtx)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate TriggerSpec (-want, +got) =\n%s", diff)
 			}
@@ -529,7 +781,7 @@ func TestTriggerImmutableFields(t *testing.T) {
 		original: &Trigger{
 			Spec: TriggerSpec{
 				Broker:     "broker",
-				Filter:     validAttributesFilter,
+				Filter:     validTriggerFilter,
 				Subscriber: validSubscriber,
 			},
 		},
@@ -567,5 +819,11 @@ func TestTriggerImmutableFields(t *testing.T) {
 				t.Error("CheckImmutableFields (-want, +got) =", diff)
 			}
 		})
+	}
+}
+
+func newTriggerFilter(attrs map[string]string) *TriggerFilter {
+	return &TriggerFilter{
+		Attributes: attrs,
 	}
 }

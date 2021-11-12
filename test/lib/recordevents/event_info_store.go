@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
-	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -55,7 +55,7 @@ func StartEventRecordOrFail(ctx context.Context, client *testlib.Client, podName
 // This pulls events from the pod during any Find or Wait call, storing them
 // locally and trimming them from the remote pod store.
 type EventInfoStore struct {
-	tb ginkgo.GinkgoTInterface
+	tb *testing.T
 
 	podName      string
 	podNamespace string

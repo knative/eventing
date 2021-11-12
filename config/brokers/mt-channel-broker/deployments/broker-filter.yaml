@@ -92,6 +92,11 @@ spec:
             value: "8080"
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
 
 ---
 

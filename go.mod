@@ -17,7 +17,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/onsi/ginkgo v1.16.5
 	github.com/openzipkin/zipkin-go v0.3.0
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.2
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
@@ -42,11 +41,15 @@ require (
 	k8s.io/apiserver v0.21.4
 	k8s.io/client-go v0.21.4
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
-	knative.dev/hack v0.0.0-20211102174540-b284d49386cc
-	knative.dev/hack/schema v0.0.0-20211102174540-b284d49386cc
-	knative.dev/pkg v0.0.0-20211103135647-464034912f7e
+	knative.dev/hack v0.0.0-20211108170701-96aac1c30be3
+	knative.dev/hack/schema v0.0.0-20211108170701-96aac1c30be3
+	knative.dev/pkg v0.0.0-20211111114938-0b0c3390a475
 	knative.dev/reconciler-test v0.0.0-20211101213739-c5f938aa9974
 	sigs.k8s.io/yaml v1.3.0
 )
 
-replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+replace (
+	github.com/dgrijalva/jwt-go => github.com/form3tech-oss/jwt-go v0.0.0-20210511163231-5b2d2b5f6c34
+	github.com/miekg/dns v1.0.14 => github.com/miekg/dns v1.1.25
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+)

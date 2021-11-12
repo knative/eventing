@@ -86,4 +86,12 @@ spec:
             limits:
               cpu: 1000m
               memory: 2048Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - all
+
       serviceAccountName: pingsource-mt-adapter

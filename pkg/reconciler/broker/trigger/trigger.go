@@ -174,7 +174,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 			return fmt.Errorf("broker %s didn't set status.deadLetterSinkURI", b.Name)
 		}
 	} else {
-		// There is no DLS defined in nither Trigger nor the Broker
+		// There is no DLS defined in neither Trigger nor the Broker
 		t.Status.DeadLetterSinkURI = nil
 		t.Status.MarkDeadLetterSinkNotConfigured()
 	}
