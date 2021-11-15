@@ -19,9 +19,10 @@ package v1
 import (
 	"context"
 
+	"knative.dev/pkg/apis"
+
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/config"
-	"knative.dev/pkg/apis"
 )
 
 func (c *Channel) SetDefaults(ctx context.Context) {
@@ -48,6 +49,7 @@ func (cs *ChannelSpec) SetDefaults(ctx context.Context) {
 			c.Spec,
 		}
 	}
+	cs.Delivery.SetDefaults(ctx)
 }
 
 // ChannelDefaulter sets the default Channel CRD and Arguments on Channels that do not

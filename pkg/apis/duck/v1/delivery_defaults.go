@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2021 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,23 +16,13 @@ limitations under the License.
 
 package v1
 
-import (
-	"context"
+import "context"
 
-	"knative.dev/pkg/apis"
-)
-
-func (s *Subscription) SetDefaults(ctx context.Context) {
-	if s == nil {
+func (ds *DeliverySpec) SetDefaults(ctx context.Context) {
+	if ds == nil {
 		return
 	}
-	ctx = apis.WithinParent(ctx, s.ObjectMeta)
-	s.Spec.SetDefaults(ctx)
-}
-
-func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
-	if ss == nil {
-		return
+	if ds.DeadLetterSink != nil {
+		ds.DeadLetterSink.SetDefaults(ctx)
 	}
-	ss.Delivery.SetDefaults(ctx)
 }
