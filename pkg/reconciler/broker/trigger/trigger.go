@@ -29,6 +29,15 @@ import (
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/network"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
+
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
@@ -39,14 +48,6 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/network"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
@@ -155,6 +156,10 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, b *eventingv1.Br
 	// resolve the trigger's dlq first, fall back to the broker's
 	for _, delivery := range []*eventingduckv1.DeliverySpec{t.Spec.Delivery, b.Spec.Delivery} {
 		if delivery != nil && delivery.DeadLetterSink != nil {
+			if delivery.DeadLetterSink.Ref != nil && delivery.DeadLetterSink.Ref.Namespace == "" {
+				delivery = delivery.DeepCopy() // Do not mutate informer copy.
+				delivery.DeadLetterSink.Ref.Namespace = t.GetNamespace()
+			}
 			dlqURI, err := r.uriResolver.URIFromDestinationV1(ctx, *delivery.DeadLetterSink, b)
 			if err != nil {
 				logging.FromContext(ctx).Errorw("Unable to get the dead letter sink's URI", zap.Error(err))
