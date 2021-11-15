@@ -28,17 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -52,6 +41,18 @@ import (
 	"knative.dev/pkg/network"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
@@ -306,6 +307,72 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusDeadLetterSinkURI("http://example.com"),
 					WithTriggerDeadLetterSinkResolvedSucceeded()),
 			}},
+		}, {
+			Name: "Trigger with Broker DLQ",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithBrokerResourceVersion(""),
+					WithBrokerAddressURI(brokerAddress),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDeadLeaderSink(&duckv1.KReference{
+						Kind:       "Broker",
+						Name:       brokerName,
+						APIVersion: "eventing.knative.dev/v1",
+					}, ""),
+				),
+				createChannel(testNS, true),
+				imcConfigMap(),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				makeSubscriberAddressableAsUnstructured(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
+					WithInitTriggerConditions,
+				),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDependencyReady(),
+					WithTriggerStatusDeadLetterSinkURI("http://broker-ingress.knative-testing.svc.cluster.local/test-namespace/test-broker"),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeFilterSubscription(testNS, func(subscription *messagingv1.Subscription) {
+					subscription.Spec.Delivery = &eventingduckv1.DeliverySpec{
+						DeadLetterSink: &duckv1.Destination{
+							Ref: &duckv1.KReference{
+								Kind:       "Broker",
+								Name:       brokerName,
+								Namespace:  testNS,
+								APIVersion: "eventing.knative.dev/v1",
+							},
+						},
+					}
+				}),
+			},
 		}, {
 			Name: "Subscription Create fails",
 			Key:  testKey,
@@ -1054,8 +1121,12 @@ func makeServiceURI() *apis.URL {
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
-func makeFilterSubscription(subscriberNamespace string) *messagingv1.Subscription {
-	return resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
+func makeFilterSubscription(subscriberNamespace string, opts ...func(subscription *messagingv1.Subscription)) *messagingv1.Subscription {
+	s := resources.NewSubscription(makeTrigger(subscriberNamespace), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func makeTrigger(subscriberNamespace string) *eventingv1.Trigger {
