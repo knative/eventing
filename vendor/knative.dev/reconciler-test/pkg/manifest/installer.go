@@ -26,7 +26,9 @@ import (
 	"runtime"
 	"strings"
 
+	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -57,7 +59,14 @@ func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{})
 	}
 
 	// Apply yaml.
-	if err := manifest.ApplyAll(); err != nil {
+	err = retry.OnError(retry.DefaultRetry, isWebhookError, func() error {
+		// This is a workaround for https://github.com/knative/pkg/issues/1509
+		// Because tests currently fail immediately on any creation failure, this
+		// is problematic. On the reconcilers it's not an issue because they recover,
+		// but tests need this retry.
+		return manifest.ApplyAll()
+	})
+	if err != nil {
 		return manifest, err
 	}
 
@@ -120,4 +129,14 @@ func ImagesFromFS(fsys fs.FS) []string {
 	})
 
 	return images
+}
+
+// isWebhookError is a workaround for https://github.com/knative/pkg/issues/1509.
+func isWebhookError(err error) bool {
+	str := err.Error()
+	// Example error:
+	// Internal error occurred: failed calling webhook "defaulting.webhook.kafka.eventing.knative.dev": Post "https://kafka-webhook-eventing.knative-eventing.svc:443/defaulting?timeout=2s": EOF
+	return strings.Contains(str, "webhook") &&
+		strings.Contains(str, "https") &&
+		strings.Contains(str, "EOF")
 }
