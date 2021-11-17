@@ -224,7 +224,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 	// Define The TestCases
 	tests := []struct {
 		name            string
-		config          *RetryConfig     // The RetryConfig to use in for the test case.
+		config          RetryConfig      // The RetryConfig to use in for the test case.
 		statusCode      int              // The HTTP StatusCode which the Server should return.
 		responseFormat  RetryAfterFormat // Indicates the format in which the Server should return the Retry-After header.
 		responseSeconds int              // Indicates the number of Seconds for the Server to use when returning the Retry-After header.
@@ -236,7 +236,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 
 		{
 			name: "default max 429 without Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax: 2,
 			},
 			statusCode:     http.StatusTooManyRequests,
@@ -245,7 +245,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "default max 429 with Retry-After seconds",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax: 2,
 			},
 			statusCode:      http.StatusTooManyRequests,
@@ -255,7 +255,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "default max 429 with Retry-After date",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax: 2,
 			},
 			statusCode:      http.StatusTooManyRequests,
@@ -265,7 +265,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "default max 429 with invalid Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax: 2,
 			},
 			statusCode:     http.StatusTooManyRequests,
@@ -274,7 +274,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "default max 503 with Retry-After seconds",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax: 2,
 			},
 			statusCode:      http.StatusServiceUnavailable,
@@ -284,7 +284,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "default max 500 without Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax: 2,
 			},
 			statusCode:     http.StatusInternalServerError,
@@ -298,7 +298,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 
 		{
 			name: "large max 429 without Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
@@ -308,7 +308,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "large max 429 with Retry-After seconds",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
@@ -319,7 +319,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "large max 429 with Retry-After date",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
@@ -330,7 +330,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "large max 429 with invalid Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
@@ -340,7 +340,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "large max 503 with Retry-After seconds",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
@@ -351,7 +351,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "large max 500 without Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
@@ -366,7 +366,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 
 		{
 			name: "small max 429 without Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
@@ -376,7 +376,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "small max 429 with Retry-After seconds",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
@@ -387,7 +387,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "small max 429 with Retry-After date",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
@@ -398,7 +398,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "small max 429 with invalid Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
@@ -408,7 +408,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "small max 503 with Retry-After seconds",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
@@ -419,7 +419,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 		},
 		{
 			name: "small max 500 without Retry-After",
-			config: &RetryConfig{
+			config: RetryConfig{
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
@@ -430,10 +430,13 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 	}
 
 	// Execute The TestCases
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 
 			t.Parallel()
+
+			// Clone The TestCase (Parallel Execution Race Protection)
+			tc := test
 
 			// Consistent CheckRetry & Backoff Implementation For All TestCases
 			paddingDuration := 250 * time.Millisecond // Test Execution Allowance For Resending Requests
@@ -530,7 +533,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 			sender := &HTTPMessageSender{Client: http.DefaultClient}
 			request, err := http.NewRequest("POST", server.URL, nil)
 			assert.Nil(t, err)
-			got, err := sender.SendWithRetries(request, tc.config)
+			got, err := sender.SendWithRetries(request, &tc.config)
 
 			// Verify Final Results
 			if err != nil {
