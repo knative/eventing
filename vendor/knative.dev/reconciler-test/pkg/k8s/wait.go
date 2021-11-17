@@ -36,6 +36,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
+
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 )
@@ -145,6 +146,9 @@ func WaitForResourceCondition(ctx context.Context, namespace, name string, gvr s
 func isReady(name string) ConditionFunc {
 	lastMsg := ""
 	return func(obj duckv1.KResource) bool {
+		if obj.Generation != obj.GetStatus().ObservedGeneration {
+			return false
+		}
 		ready := readyCondition(obj)
 		if ready != nil {
 			if !ready.IsTrue() {

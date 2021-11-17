@@ -19,7 +19,6 @@ package lib
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -29,7 +28,6 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/retry"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler"
@@ -52,23 +50,8 @@ var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// This is a workaround for https://github.com/knative/pkg/issues/1509
-// Because tests currently fail immediately on any creation failure, this
-// is problematic. On the reconcilers it's not an issue because they recover,
-// but tests need this retry.
-//
-// https://github.com/knative/eventing/issues/3681
-func isWebhookError(err error) bool {
-	return strings.Contains(err.Error(), "eventing-webhook.knative-eventing")
-}
-
 func (c *Client) RetryWebhookErrors(updater func(int) error) error {
-	attempts := 0
-	return retry.OnError(retry.DefaultRetry, isWebhookError, func() error {
-		err := updater(attempts)
-		attempts++
-		return err
-	})
+	return duck.RetryWebhookErrors(updater)
 }
 
 // CreateChannelOrFail will create a typed Channel Resource in Eventing or fail the test if there is an error.
