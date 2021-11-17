@@ -196,8 +196,17 @@ func TestHTTPMessageSenderSendWithRetriesWithSingleRequestTimeout(t *testing.T) 
 	require.Equal(t, http.StatusOK, got.StatusCode)
 }
 
+/*
+ *  Test Retry-After Header Enforcement
+ *
+ *  Note - This test is a bit complicated in that it utilizes a custom
+ *         test Server which verifies subsequent retry attempts are
+ *         within an expected time window.  It is therefore inherently
+ *         "time" sensitive and could become brittle.  The timings
+ *         were chosen as a balance of stability and test execution
+ *         speed, but could require adjustment.
+ */
 func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
-	t.Parallel()
 
 	// Create A Quick Enum For RetryAfter Format
 	type RetryAfterFormat int
@@ -423,6 +432,8 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 	// Execute The TestCases
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+
+			t.Parallel()
 
 			// Consistent CheckRetry & Backoff Implementation For All TestCases
 			paddingDuration := 250 * time.Millisecond // Test Execution Allowance For Resending Requests

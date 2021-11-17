@@ -124,10 +124,8 @@ func generateBackoffFn(config *RetryConfig) retryablehttp.Backoff {
 
 		// If Response is 429 / 503, Then Parse Any Retry-After Header Durations & Enforce Optional MaxDuration
 		var retryAfterDuration time.Duration
-
 		// TODO - Remove this check when experimental-feature moves to Stable/GA to convert behavior from opt-in to opt-out
 		if config.RetryAfterMaxDuration != nil {
-
 			// TODO - Keep this logic as is (no change required) when experimental-feature is Stable/GA
 			if resp != nil && (resp.StatusCode == nethttp.StatusTooManyRequests || resp.StatusCode == nethttp.StatusServiceUnavailable) {
 				retryAfterDuration = parseRetryAfterDuration(resp)
@@ -175,7 +173,7 @@ func parseRetryAfterDuration(resp *nethttp.Response) (retryAfterDuration time.Du
 	// Attempt To Parse Retry-After Header As Timestamp (RFC850 & ANSIC) - Return If Successful
 	retryAfterTime, parseTimeErr := nethttp.ParseTime(retryAfterString)
 	if parseTimeErr != nil {
-		fmt.Printf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v", parseIntErr, parseTimeErr)
+		fmt.Printf("failed to parse Retry-After header: ParseInt Error = %v, ParseTime Error = %v\n", parseIntErr, parseTimeErr)
 		return
 	}
 	return time.Until(retryAfterTime)
