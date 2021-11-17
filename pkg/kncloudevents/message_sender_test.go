@@ -223,15 +223,15 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 
 	// Define The TestCases
 	tests := []struct {
-		name            string
-		config          RetryConfig      // The RetryConfig to use in for the test case.
-		statusCode      int              // The HTTP StatusCode which the Server should return.
-		responseFormat  RetryAfterFormat // Indicates the format in which the Server should return the Retry-After header.
-		responseSeconds int              // Indicates the number of Seconds for the Server to use when returning the Retry-After header.
-		wantReqCount    int              // The total number of expected requests, including initial request.
+		name             string
+		config           RetryConfig      // The RetryConfig to use in for the test case.
+		statusCode       int              // The HTTP StatusCode which the Server should return.
+		responseFormat   RetryAfterFormat // Indicates the format in which the Server should return the Retry-After header.
+		responseDuration time.Duration    // Indicates the Duration for the Server to use when returning the Retry-After header.
+		wantReqCount     int              // The total number of expected requests, including initial request.
 	}{
 		//
-		// Default Max Tests (0 Duration opt-in vs opt-out)
+		// Default Max Tests (No RetryAfterMax Specified - opt-in vs opt-out)
 		//
 
 		{
@@ -248,20 +248,20 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 			config: RetryConfig{
 				RetryMax: 2,
 			},
-			statusCode:      http.StatusTooManyRequests,
-			responseFormat:  Seconds,
-			responseSeconds: 1,
-			wantReqCount:    3,
+			statusCode:       http.StatusTooManyRequests,
+			responseFormat:   Seconds,
+			responseDuration: 1 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "default max 429 with Retry-After date",
 			config: RetryConfig{
 				RetryMax: 2,
 			},
-			statusCode:      http.StatusTooManyRequests,
-			responseFormat:  Date,
-			responseSeconds: 2,
-			wantReqCount:    3,
+			statusCode:       http.StatusTooManyRequests,
+			responseFormat:   Date,
+			responseDuration: 2 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "default max 429 with invalid Retry-After",
@@ -277,10 +277,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 			config: RetryConfig{
 				RetryMax: 2,
 			},
-			statusCode:      http.StatusServiceUnavailable,
-			responseFormat:  Seconds,
-			responseSeconds: 1,
-			wantReqCount:    3,
+			statusCode:       http.StatusServiceUnavailable,
+			responseFormat:   Seconds,
+			responseDuration: 1 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "default max 500 without Retry-After",
@@ -312,10 +312,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
-			statusCode:      http.StatusTooManyRequests,
-			responseFormat:  Seconds,
-			responseSeconds: 1,
-			wantReqCount:    3,
+			statusCode:       http.StatusTooManyRequests,
+			responseFormat:   Seconds,
+			responseDuration: 1 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "large max 429 with Retry-After date",
@@ -323,10 +323,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
-			statusCode:      http.StatusTooManyRequests,
-			responseFormat:  Date,
-			responseSeconds: 1,
-			wantReqCount:    3,
+			statusCode:       http.StatusTooManyRequests,
+			responseFormat:   Date,
+			responseDuration: 1 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "large max 429 with invalid Retry-After",
@@ -344,10 +344,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				RetryMax:              2,
 				RetryAfterMaxDuration: &largeRetryAfterMaxDuration,
 			},
-			statusCode:      http.StatusServiceUnavailable,
-			responseFormat:  Seconds,
-			responseSeconds: 1,
-			wantReqCount:    3,
+			statusCode:       http.StatusServiceUnavailable,
+			responseFormat:   Seconds,
+			responseDuration: 1 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "large max 500 without Retry-After",
@@ -380,10 +380,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
-			statusCode:      http.StatusTooManyRequests,
-			responseFormat:  Seconds,
-			responseSeconds: 4,
-			wantReqCount:    3,
+			statusCode:       http.StatusTooManyRequests,
+			responseFormat:   Seconds,
+			responseDuration: 4 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "small max 429 with Retry-After date",
@@ -391,10 +391,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
-			statusCode:      http.StatusTooManyRequests,
-			responseFormat:  Date,
-			responseSeconds: 2,
-			wantReqCount:    3,
+			statusCode:       http.StatusTooManyRequests,
+			responseFormat:   Date,
+			responseDuration: 2 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "small max 429 with invalid Retry-After",
@@ -412,10 +412,10 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				RetryMax:              2,
 				RetryAfterMaxDuration: &smallRetryAfterMaxDuration,
 			},
-			statusCode:      http.StatusServiceUnavailable,
-			responseFormat:  Seconds,
-			responseSeconds: 4,
-			wantReqCount:    3,
+			statusCode:       http.StatusServiceUnavailable,
+			responseFormat:   Seconds,
+			responseDuration: 4 * time.Second,
+			wantReqCount:     3,
 		},
 		{
 			name: "small max 500 without Retry-After",
@@ -444,18 +444,6 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 			tc.config.CheckRetry = SelectiveRetry
 			tc.config.Backoff = func(attemptNum int, resp *http.Response) time.Duration { return backoffDuration }
 
-			// Determine The Response Retry-After Backoff Duration From TestCase
-			var responseDuration time.Duration
-			switch tc.responseFormat {
-			case None, Invalid:
-			case Seconds, Date:
-				if tc.responseSeconds > 0 {
-					responseDuration = time.Duration(tc.responseSeconds) * time.Second
-				}
-			default:
-				assert.Fail(t, "TestCase with unsupported ResponseFormat '%v'", tc.responseFormat)
-			}
-
 			// Tracking Variables
 			var previousReqTime time.Time
 			var reqCount int32
@@ -469,7 +457,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				if tc.config.RetryAfterMaxDuration != nil {
 
 					// TODO - Keep this logic as is (no change required) when experimental-feature is Stable/GA
-					if tc.responseFormat == Date && tc.responseSeconds > 0 {
+					if tc.responseFormat == Date && tc.responseDuration > 0 {
 						currentReqTime = currentReqTime.Round(time.Second) // Round When Using Date Format To Account For RFC850 Precision
 					}
 				}
@@ -482,9 +470,9 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 				case None:
 					// Don't Write Anything ;)
 				case Seconds:
-					writer.Header().Set(RetryAfterHeader, strconv.Itoa(int(responseDuration.Seconds())))
+					writer.Header().Set(RetryAfterHeader, strconv.Itoa(int(tc.responseDuration.Seconds())))
 				case Date:
-					writer.Header().Set(RetryAfterHeader, currentReqTime.Add(responseDuration).Format(time.RFC850)) // RFC850 Drops Millis
+					writer.Header().Set(RetryAfterHeader, currentReqTime.Add(tc.responseDuration).Format(time.RFC850)) // RFC850 Drops Millis
 				case Invalid:
 					writer.Header().Set(RetryAfterHeader, "FOO")
 				default:
@@ -500,8 +488,8 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 					if tc.config.RetryAfterMaxDuration != nil {
 
 						// TODO - Keep this logic as is (no change required) when experimental-feature is Stable/GA
-						if responseDuration > 0 {
-							expectedMinRequestDuration = responseDuration
+						if tc.responseDuration > 0 {
+							expectedMinRequestDuration = tc.responseDuration
 							if tc.config.RetryAfterMaxDuration != nil {
 								if *tc.config.RetryAfterMaxDuration == 0 {
 									expectedMinRequestDuration = backoffDuration
@@ -529,7 +517,7 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 			}))
 
 			// Perform The Test - Generate And Send The Request
-			t.Logf("Testing %d Response With RetryAfter (%d) %ds & Max %+v", tc.statusCode, tc.responseFormat, tc.responseSeconds, tc.config.RetryAfterMaxDuration)
+			t.Logf("Testing %d Response With RetryAfter (%d) %fs & Max %+v", tc.statusCode, tc.responseFormat, tc.responseDuration.Seconds(), tc.config.RetryAfterMaxDuration)
 			sender := &HTTPMessageSender{Client: http.DefaultClient}
 			request, err := http.NewRequest("POST", server.URL, nil)
 			assert.Nil(t, err)
