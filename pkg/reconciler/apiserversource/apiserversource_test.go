@@ -27,8 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -41,7 +39,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -660,13 +657,8 @@ func TestReconcile(t *testing.T) {
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}}
 
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(
-		fakekubeclientset.NewSimpleClientset(), 0)
-	svcInformerIface := kubeInformerFactory.Core().V1().Services()
-
 	logger := logtesting.TestLogger(t)
 	table.Test(t, rttestingv1.MakeFactory(func(ctx context.Context, listers *rttestingv1.Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = context.WithValue(ctx, service.Key{}, svcInformerIface)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:       fakekubeclient.Get(ctx),

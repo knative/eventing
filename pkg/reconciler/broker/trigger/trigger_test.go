@@ -29,7 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclient "k8s.io/client-go/kubernetes/fake"
+	corev1informers "k8s.io/client-go/informers/core/v1"
+	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
@@ -49,7 +50,7 @@ import (
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
+	serviceinformers "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -165,6 +166,16 @@ var (
 
 	brokerDLSURI, _ = apis.ParseURL("http://test-dls.test-namespace.svc.cluster.local")
 )
+
+func v1ServiceInformer(ctx context.Context, objects []runtime.Object) corev1informers.ServiceInformer {
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(
+		fakekubeclientset.NewSimpleClientset(objects...), 0)
+	svcInformerIface := kubeInformerFactory.Core().V1().Services()
+	svcInformerIface.Informer() // register informer in factory
+	go kubeInformerFactory.Start(ctx.Done())
+	kubeInformerFactory.WaitForCacheSync(ctx.Done())
+	return svcInformerIface
+}
 
 func TestReconcile(t *testing.T) {
 	table := TableTest{
@@ -1134,17 +1145,10 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(
-		fakekubeclient.NewSimpleClientset(k8sServices()...), 0)
-	svcInformerIface := kubeInformerFactory.Core().V1().Services()
-	svcInformerIface.Informer() // register informer in factory
-	go kubeInformerFactory.Start(ctx.Done())
-	kubeInformerFactory.WaitForCacheSync(ctx.Done())
-
 	logger := logtesting.TestLogger(t)
+	svcInformer := v1ServiceInformer(context.Background(), k8sServices())
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = context.WithValue(ctx, service.Key{}, svcInformerIface)
+		ctx = context.WithValue(ctx, serviceinformers.Key{}, svcInformer)
 		ctx = channelable.WithDuck(ctx)
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)

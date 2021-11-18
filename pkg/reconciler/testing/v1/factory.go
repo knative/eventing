@@ -23,6 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
 	"go.uber.org/zap"
@@ -66,6 +68,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		}
 		ctx = logging.WithLogger(ctx, logger)
 
+		ctx, _ = injection.Fake.SetupInformers(ctx, &rest.Config{})
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,

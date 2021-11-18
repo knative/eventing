@@ -28,15 +28,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -360,13 +357,8 @@ func TestAllCases(t *testing.T) {
 		},
 	}
 
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(
-		fakekubeclientset.NewSimpleClientset(), 0)
-	svcInformerIface := kubeInformerFactory.Core().V1().Services()
-
 	logger := logtesting.TestLogger(t)
 	table.Test(t, rtv1.MakeFactory(func(ctx context.Context, listers *rtv1.Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = context.WithValue(ctx, service.Key{}, svcInformerIface)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			configAcc:     &reconcilersource.EmptyVarsGenerator{},

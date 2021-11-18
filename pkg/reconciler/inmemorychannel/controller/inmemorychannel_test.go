@@ -22,8 +22,6 @@ import (
 	"strconv"
 	"testing"
 
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,7 +38,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
+	serviceinformers "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
@@ -460,10 +458,10 @@ func TestAllCases(t *testing.T) {
 		}, {},
 	}
 
-	svcInformer := v1ServiceInformer(context.Background(), k8sServices())
 	logger := logtesting.TestLogger(t)
+	svcInformer := v1ServiceInformer(context.Background(), k8sServices())
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		ctx = context.WithValue(ctx, service.Key{}, svcInformer)
+		ctx = context.WithValue(ctx, serviceinformers.Key{}, svcInformer)
 		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:    fakekubeclient.Get(ctx),
@@ -559,12 +557,12 @@ func TestInNamespace(t *testing.T) {
 		},
 	}
 
-	svcInformer := v1ServiceInformer(context.Background(), k8sServices())
 	logger := logtesting.TestLogger(t)
+	svcInformer := v1ServiceInformer(context.Background(), k8sServices())
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		eventDispatcherConfigStore := config.NewEventDispatcherConfigStore(logger)
 		eventDispatcherConfigStore.WatchConfigs(cmw)
-		ctx = context.WithValue(ctx, service.Key{}, svcInformer)
+		ctx = context.WithValue(ctx, serviceinformers.Key{}, svcInformer)
 		ctx = v1addr.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:              fakekubeclient.Get(ctx),
