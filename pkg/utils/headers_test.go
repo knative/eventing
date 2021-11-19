@@ -29,7 +29,7 @@ func TestPassThroughHeaders(t *testing.T) {
 		additionalHeaders            http.Header
 		expectedPassedThroughHeaders http.Header
 	}{
-		"pass through of three values": {
+		"valid headers pass through": {
 			additionalHeaders: map[string][]string{
 				"not":                       {"passed", "through"},
 				"x-requEst-id":              {"1234"},
