@@ -117,20 +117,24 @@ func readyBrokerV1AvailableHelper(t *testing.T, brokerName string, client *testl
 
 func brokerV1ConfigCanNotBeUpdated(t *testing.T, brokerName string, client *testlib.Client) {
 	client.WaitForResourceReadyOrFail(brokerName, testlib.BrokerTypeMeta)
-	broker, err := client.Eventing.EventingV1().Brokers(client.Namespace).Get(context.Background(), brokerName, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("Error: Could not get broker %s: %v", brokerName, err)
-	}
-	broker.Spec = eventingv1.BrokerSpec{
-		Config: &v1.KReference{
-			Kind:       "kind",
-			Namespace:  "namespace",
-			Name:       "name",
-			APIVersion: "apiversion",
-		},
-	}
+	err := client.RetryWebhookErrors(func(i int) error {
+		broker, err := client.Eventing.EventingV1().Brokers(client.Namespace).Get(context.Background(), brokerName, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("Error: Could not get broker %s: %v", brokerName, err)
+			return err
+		}
+		broker.Spec = eventingv1.BrokerSpec{
+			Config: &v1.KReference{
+				Kind:       "kind",
+				Namespace:  "namespace",
+				Name:       "name",
+				APIVersion: "apiversion",
+			},
+		}
 
-	_, err = client.Eventing.EventingV1().Brokers(client.Namespace).Update(context.Background(), broker, metav1.UpdateOptions{})
+		_, err = client.Eventing.EventingV1().Brokers(client.Namespace).Update(context.Background(), broker, metav1.UpdateOptions{})
+		return err
+	})
 	if err == nil {
 		t.Fatalf("Error: Was able to update the broker.Spec.Config %s", brokerName)
 	}
@@ -150,14 +154,16 @@ func triggerV1ReadyBrokerReadyHelper(triggerName, brokerName string, client *tes
 }
 
 func triggerV1CanNotUpdateBroker(t *testing.T, triggerName, brokerName string, client *testlib.Client) {
-	err := reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
-		tr, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
-		if err != nil {
-			t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
-		}
-		tr.Spec.Broker = brokerName
-		_, e := client.Eventing.EventingV1().Triggers(client.Namespace).Update(context.Background(), tr, metav1.UpdateOptions{})
-		return e
+	err := client.RetryWebhookErrors(func(i int) error {
+		return reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+			tr, err := client.Eventing.EventingV1().Triggers(client.Namespace).Get(context.Background(), triggerName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Error: Could not get trigger %s: %v", triggerName, err)
+			}
+			tr.Spec.Broker = brokerName
+			_, e := client.Eventing.EventingV1().Triggers(client.Namespace).Update(context.Background(), tr, metav1.UpdateOptions{})
+			return e
+		})
 	})
 	if err == nil {
 		t.Fatalf("Error: Was able to update the trigger.Spec.Broker %s", triggerName)
