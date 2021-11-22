@@ -213,7 +213,7 @@ func TestBrokerWithManyTriggers(ctx context.Context, t *testing.T, brokerCreator
 			if shouldLabelNamespace {
 				// Label namespace so that it creates the default broker.
 				if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-					t.Fatal("Error annotating namespace:", err)
+					t.Fatal("Error labeling namespace:", err)
 				}
 			}
 

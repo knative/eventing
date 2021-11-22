@@ -97,7 +97,7 @@ func TestPingSourceV1Beta2EventTypes(t *testing.T) {
 
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
-		t.Fatal("Error annotating namespace:", err)
+		t.Fatal("Error labeling namespace:", err)
 	}
 
 	// Wait for default broker ready.
