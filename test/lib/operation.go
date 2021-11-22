@@ -23,27 +23,32 @@ import (
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	pkgTest "knative.dev/pkg/test"
+
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // LabelNamespace labels the given namespace with the labels map.
 func (c *Client) LabelNamespace(labels map[string]string) error {
 	namespace := c.Namespace
-	nsSpec, err := c.Kube.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
-	if err != nil {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		nsSpec, err := c.Kube.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if nsSpec.Labels == nil {
+			nsSpec.Labels = map[string]string{}
+		}
+		for k, v := range labels {
+			nsSpec.Labels[k] = v
+		}
+		_, err = c.Kube.CoreV1().Namespaces().Update(context.Background(), nsSpec, metav1.UpdateOptions{})
 		return err
-	}
-	if nsSpec.Labels == nil {
-		nsSpec.Labels = map[string]string{}
-	}
-	for k, v := range labels {
-		nsSpec.Labels[k] = v
-	}
-	_, err = c.Kube.CoreV1().Namespaces().Update(context.Background(), nsSpec, metav1.UpdateOptions{})
+	})
 	return err
 }
 
