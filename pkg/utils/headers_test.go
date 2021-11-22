@@ -19,38 +19,44 @@ package utils
 import (
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPassThroughHeaders(t *testing.T) {
 
 	testCases := map[string]struct {
 		additionalHeaders            http.Header
-		expectedPassedThroughHeaders int
+		expectedPassedThroughHeaders http.Header
 	}{
-		"pass through of two values": {
+		"valid headers pass through": {
 			additionalHeaders: map[string][]string{
 				"not":                       {"passed", "through"},
+				"x-requEst-id":              {"1234"},
 				"nor":                       {"this-one"},
+				"knatIve-will-pass-through": {"true", "always"},
+				"nope":                      {"nada"},
+				"X-B3-Spanid":               {"5678"},
+			},
+			expectedPassedThroughHeaders: map[string][]string{
 				"x-requEst-id":              {"1234"},
 				"knatIve-will-pass-through": {"true", "always"},
+				"X-B3-Spanid":               {"5678"},
 			},
-			expectedPassedThroughHeaders: 2,
 		},
 		"nothing passes through": {
 			additionalHeaders: map[string][]string{
-				"not": {"passed", "through"},
-				"nor": {"this-one"},
+				"not":  {"passed", "through"},
+				"nor":  {"this-one"},
+				"nope": {"nada"},
 			},
-			expectedPassedThroughHeaders: 0,
+			expectedPassedThroughHeaders: map[string][]string{},
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
 			headers := PassThroughHeaders(tc.additionalHeaders)
-			if len(headers) != tc.expectedPassedThroughHeaders {
-				t.Errorf("Not matching the expected number of passed through headers")
-			}
+			assert.Equal(t, tc.expectedPassedThroughHeaders, headers)
 		})
 	}
 }
