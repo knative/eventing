@@ -119,3 +119,32 @@ func TestTriggerMessagingDestinationAttribute(t *testing.T) {
 		})
 	}
 }
+
+func TestK8sAttributes(t *testing.T) {
+
+	tests := []struct {
+		name         string
+		namespace    string
+		resourceName string
+		want         []trace.Attribute
+	}{
+		{
+			name:         "foo",
+			namespace:    "default",
+			resourceName: "resource.k8s.io",
+
+			want: []trace.Attribute{
+				trace.StringAttribute(K8sNameName, "foo"),
+				trace.StringAttribute(K8sNamespaceName, "default"),
+				trace.StringAttribute(K8sResourceName, "resource.k8s.io"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := K8sAttributes(tt.name, tt.namespace, tt.resourceName); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("K8sAttributes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -28,6 +28,10 @@ const (
 	MessagingDestinationAttributeName = "messaging.destination"
 	MessagingProtocolAttributeName    = "messaging.protocol"
 	MessagingMessageIDAttributeName   = "messaging.message_id"
+
+	K8sNamespaceName = "k8s.namespace"
+	K8sNameName      = "k8s.name"
+	K8sResourceName  = "k8s.resource" // Qualified resource name, eg. pingsource.sources.knative.dev
 )
 
 var (
@@ -56,4 +60,12 @@ func TriggerMessagingDestination(t types.NamespacedName) string {
 
 func TriggerMessagingDestinationAttribute(t types.NamespacedName) trace.Attribute {
 	return trace.StringAttribute(MessagingDestinationAttributeName, TriggerMessagingDestination(t))
+}
+
+func K8sAttributes(name, namespace, resource string) []trace.Attribute {
+	return []trace.Attribute{
+		trace.StringAttribute(K8sNameName, name),
+		trace.StringAttribute(K8sNamespaceName, namespace),
+		trace.StringAttribute(K8sResourceName, resource),
+	}
 }
