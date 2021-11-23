@@ -402,7 +402,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>RetryAfterMax provides an optional upper bound on the duration specified in a &ldquo;Retry-After&rdquo; header
-when calculating backoff times for retrying 429 and 502 response codes.  Setting the value to
+when calculating backoff times for retrying 429 and 503 response codes.  Setting the value to
 zero (&ldquo;PT0S&rdquo;) can be used to opt-out of respecting &ldquo;Retry-After&rdquo; header values altogether. This
 value only takes effect if &ldquo;Retry&rdquo; is configured, and also depends on specific implementations
 (Channels, Sources, etc.) choosing to provide this capability.</p>
