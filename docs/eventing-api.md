@@ -392,6 +392,31 @@ More information on Duration format:
 For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>retryAfterMax</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryAfterMax provides an optional upper bound on the duration specified in a &ldquo;Retry-After&rdquo; header
+when calculating backoff times for retrying 429 and 503 response codes.  Setting the value to
+zero (&ldquo;PT0S&rdquo;) can be used to opt-out of respecting &ldquo;Retry-After&rdquo; header values altogether. This
+value only takes effect if &ldquo;Retry&rdquo; is configured, and also depends on specific implementations
+(Channels, Sources, etc.) choosing to provide this capability.</p>
+<p>Note: This API is EXPERIMENTAL and might be changed at anytime. While this experimental
+feature is in the Alpha/Beta stage, you must provide a valid value to opt-in for
+supporting &ldquo;Retry-After&rdquo; headers.  When the feature becomes Stable/GA &ldquo;Retry-After&rdquo;
+headers will be respected by default, and you can choose to specify &ldquo;PT0S&rdquo; to
+opt-out of supporting &ldquo;Retry-After&rdquo; headers.
+For more details: <a href="https://github.com/knative/eventing/issues/5811">https://github.com/knative/eventing/issues/5811</a></p>
+<p>More information on Duration format:
+- <a href="https://www.iso.org/iso-8601-date-and-time-format.html">https://www.iso.org/iso-8601-date-and-time-format.html</a>
+- <a href="https://en.wikipedia.org/wiki/ISO_8601">https://en.wikipedia.org/wiki/ISO_8601</a></p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="duck.knative.dev/v1.DeliveryStatus">DeliveryStatus

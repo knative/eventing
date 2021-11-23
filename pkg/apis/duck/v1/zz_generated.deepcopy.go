@@ -163,6 +163,11 @@ func (in *DeliverySpec) DeepCopyInto(out *DeliverySpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.RetryAfterMax != nil {
+		in, out := &in.RetryAfterMax, &out.RetryAfterMax
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

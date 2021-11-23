@@ -20,9 +20,10 @@ import (
 	"context"
 
 	"github.com/rickb777/date/period"
-	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	"knative.dev/eventing/pkg/apis/feature"
 )
 
 // DeliverySpec contains the delivery options for event senders,
@@ -60,6 +61,26 @@ type DeliverySpec struct {
 	// For exponential policy, backoff delay is backoffDelay*2^<numberOfRetries>.
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
+
+	// RetryAfterMax provides an optional upper bound on the duration specified in a "Retry-After" header
+	// when calculating backoff times for retrying 429 and 503 response codes.  Setting the value to
+	// zero ("PT0S") can be used to opt-out of respecting "Retry-After" header values altogether. This
+	// value only takes effect if "Retry" is configured, and also depends on specific implementations
+	// (Channels, Sources, etc.) choosing to provide this capability.
+	//
+	// Note: This API is EXPERIMENTAL and might be changed at anytime. While this experimental
+	//       feature is in the Alpha/Beta stage, you must provide a valid value to opt-in for
+	//       supporting "Retry-After" headers.  When the feature becomes Stable/GA "Retry-After"
+	//       headers will be respected by default, and you can choose to specify "PT0S" to
+	//       opt-out of supporting "Retry-After" headers.
+	//       For more details: https://github.com/knative/eventing/issues/5811
+	//
+	// More information on Duration format:
+	//  - https://www.iso.org/iso-8601-date-and-time-format.html
+	//  - https://en.wikipedia.org/wiki/ISO_8601
+	//
+	// +optional
+	RetryAfterMax *string `json:"retryAfterMax,omitempty"`
 }
 
 func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
@@ -101,6 +122,18 @@ func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
 			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
 		}
 	}
+
+	if ds.RetryAfterMax != nil {
+		if feature.FromContext(ctx).IsEnabled(feature.DeliveryRetryAfter) {
+			p, me := period.Parse(*ds.RetryAfterMax)
+			if me != nil || p.IsNegative() {
+				errs = errs.Also(apis.ErrInvalidValue(*ds.RetryAfterMax, "retryAfterMax"))
+			}
+		} else {
+			errs = errs.Also(apis.ErrDisallowedFields("retryAfterMax"))
+		}
+	}
+
 	return errs
 }
 
