@@ -232,11 +232,14 @@ func newRetryAfterValidationServer(t *testing.T, statusCode int, retryAfterForma
 
 		// Determine Time Of Current Request
 		currentReqTime := time.Now()
+
+		// Adjust Expected Min Request Duration To Account For RFC850 Date Format Milliseconds Truncation
 		// TODO - Remove this check when experimental-feature moves to Stable/GA to convert behavior from opt-in to opt-out
 		if server.minRequestDuration > retryBackoffDuration {
 			// TODO - Keep this logic as is (no change required) when experimental-feature moves to Stable/GA
-			if retryAfterFormat == Date && retryAfterDuration > 0 {
-				currentReqTime = currentReqTime.Round(time.Second) // Round When Using Date Format To Account For RFC850 Precision
+			if retryAfterFormat == Date {
+				truncatedDuration := currentReqTime.Sub(currentReqTime.Truncate(time.Second))
+				server.minRequestDuration = server.minRequestDuration - truncatedDuration
 			}
 		}
 
@@ -264,7 +267,7 @@ func newRetryAfterValidationServer(t *testing.T, statusCode int, retryAfterForma
 			actualRequestDuration := currentReqTime.Sub(server.previousReqTime)
 			assert.GreaterOrEqual(t, actualRequestDuration, server.minRequestDuration, "previousReqTime =", server.previousReqTime.String(), "currentReqTime =", currentReqTime.String())
 			assert.LessOrEqual(t, actualRequestDuration, server.maxRequestDuration, "previousReqTime =", server.previousReqTime.String(), "currentReqTime =", currentReqTime.String())
-			t.Logf("Validated Request Duration %s between expected range %s - %s",
+			t.Logf("Request Duration %s should be within expected range %s - %s",
 				actualRequestDuration.String(),
 				server.minRequestDuration.String(),
 				server.maxRequestDuration.String())
@@ -379,9 +382,9 @@ func TestHTTPMessageSenderSendWithRetriesWithRetryAfter(t *testing.T) {
 			name:                  "large max 429 with Retry-After date",
 			statusCode:            http.StatusTooManyRequests,
 			retryAfterFormat:      Date,
-			retryAfterDuration:    1 * time.Second,
+			retryAfterDuration:    2 * time.Second,
 			retryAfterMaxDuration: &largeRetryAfterMaxDuration,
-			wantRequestDuration:   1 * time.Second,
+			wantRequestDuration:   2 * time.Second,
 		},
 		{
 			name:                  "large max 429 with invalid Retry-After",
