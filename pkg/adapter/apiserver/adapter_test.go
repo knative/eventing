@@ -39,6 +39,8 @@ import (
 	pkgtesting "knative.dev/pkg/reconciler/testing"
 )
 
+const apiServerSourceNameTest = "test-apiserversource"
+
 func TestAdapter_StartRef(t *testing.T) {
 	ce := adaptertest.NewTestClient()
 
@@ -288,18 +290,20 @@ func validateNotSent(t *testing.T, ce *adaptertest.TestCloudEventsClient, want s
 func makeResourceAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsClient) {
 	ce := adaptertest.NewTestClient()
 	return &resourceDelegate{
-		ce:     ce,
-		source: "unit-test",
-		logger: zap.NewExample().Sugar(),
+		ce:                  ce,
+		source:              "unit-test",
+		apiServerSourceName: apiServerSourceNameTest,
+		logger:              zap.NewExample().Sugar(),
 	}, ce
 }
 
 func makeRefAndTestingClient() (*resourceDelegate, *adaptertest.TestCloudEventsClient) {
 	ce := adaptertest.NewTestClient()
 	return &resourceDelegate{
-		ce:     ce,
-		source: "unit-test",
-		logger: zap.NewExample().Sugar(),
-		ref:    true,
+		ce:                  ce,
+		source:              "unit-test",
+		apiServerSourceName: apiServerSourceNameTest,
+		logger:              zap.NewExample().Sugar(),
+		ref:                 true,
 	}, ce
 }
