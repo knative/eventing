@@ -23,8 +23,12 @@ import (
 	"strconv"
 	"testing"
 
+	"k8s.io/utils/pointer"
 	_ "knative.dev/pkg/system/testing"
 
+	"knative.dev/reconciler-test/pkg/manifest"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/apiserversource"
 	"knative.dev/eventing/test/rekt/features/broker"
@@ -33,8 +37,8 @@ import (
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	"knative.dev/eventing/test/rekt/features/sequence"
 	b "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
-	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 // TestSmoke_Broker
@@ -187,5 +191,31 @@ func TestSmoke_Sequence(t *testing.T) {
 
 	for _, name := range names {
 		env.Test(ctx, t, sequence.GoesReady(name))
+	}
+}
+
+// TestSmoke_Sequence
+func TestSmoke_SequenceDelivery(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, sequence.GoesReady(name, func(manifest map[string]interface{}) {
+			spec := map[string]interface{}{}
+
+			linear := eventingduck.BackoffPolicyLinear
+			delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
+
+			manifest["channelTemplate"] = map[string]interface{}{"spec": spec}
+		}))
 	}
 }
