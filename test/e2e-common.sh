@@ -73,6 +73,8 @@ SYSTEM_NAMESPACE="${SYSTEM_NAMESPACE:-"knative-eventing-"$(head -c 128 < \
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(latest_version)
 
+echo "${LATEST_RELEASE_VERSION}"
+
 readonly SKIP_UPLOAD_TEST_IMAGES="${SKIP_UPLOAD_TEST_IMAGES:-}"
 
 UNINSTALL_LIST=()
@@ -154,6 +156,7 @@ function install_knative_eventing() {
     local EVENTING_RELEASE_YAML=${TMP_DIR}/"eventing-${LATEST_RELEASE_VERSION}.yaml"
     # Download the latest release of Knative Eventing.
     local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
+    echo "${url}"
     wget --retry-on-http-error=502 "${url}/eventing.yaml" -O "${EVENTING_RELEASE_YAML}" \
       || fail_test "Unable to download latest knative/eventing file."
 
