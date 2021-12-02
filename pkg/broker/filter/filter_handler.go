@@ -274,6 +274,7 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 			writer.WriteHeader(http.StatusBadGateway)
 			return http.StatusBadGateway, errors.New("received a non-empty response not recognized as CloudEvent. The response MUST be either empty or a valid CloudEvent")
 		}
+		proxyHeaders(resp.Header, writer) // Proxy original Response Headers for downstream use
 		h.logger.Debug("Response doesn't contain a CloudEvent, replying with an empty response", zap.Any("target", target))
 		writer.WriteHeader(resp.StatusCode)
 		return resp.StatusCode, nil
@@ -296,6 +297,9 @@ func (h *Handler) writeResponse(ctx context.Context, writer http.ResponseWriter,
 
 	eventResponse := binding.ToMessage(event)
 	defer eventResponse.Finish(nil)
+
+	// Proxy the original Response Headers for downstream use
+	proxyHeaders(resp.Header, writer)
 
 	if err := cehttp.WriteResponseWriter(ctx, eventResponse, resp.StatusCode, writer); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to write response event: %w", err)
@@ -351,4 +355,13 @@ func triggerFilterAttribute(filter *eventingv1.TriggerFilter, attributeName stri
 		}
 	}
 	return attributeValue
+}
+
+// proxyHeaders adds the specified HTTP Headers to the ResponseWriter.
+func proxyHeaders(httpHeader http.Header, writer http.ResponseWriter) {
+	for headerKey, headerValues := range httpHeader {
+		for _, headerValue := range headerValues {
+			writer.Header().Add(headerKey, headerValue)
+		}
+	}
 }

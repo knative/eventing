@@ -79,6 +79,7 @@ func TestReceiver(t *testing.T) {
 		expectedEventDispatchTime   bool
 		expectedEventProcessingTime bool
 		response                    *http.Response
+		responseHeaders             http.Header
 	}{
 		"Not POST": {
 			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
@@ -263,6 +264,8 @@ func TestReceiver(t *testing.T) {
 				request.Header.Set("Traceparent", "0")
 				// Knative-Foo will pass as a prefix match.
 				request.Header.Set("Knative-Foo", "baz")
+				// X-B3-Foo will pass as a prefix match.
+				request.Header.Set("X-B3-Foo", "bing")
 				// X-Request-Id will pass as an exact header match.
 				request.Header.Set("X-Request-Id", "123")
 				// Content-Type will not pass filtering.
@@ -275,6 +278,8 @@ func TestReceiver(t *testing.T) {
 				"X-Request-Id": []string{"123"},
 				// Knative-Foo will pass as a prefix match.
 				"Knative-Foo": []string{"baz"},
+				// X-B3-Foo will pass as a prefix match.
+				"X-B3-Foo": []string{"bing"},
 				// Prefer: reply will be added for every request as defined in the spec.
 				"Prefer": []string{"reply"},
 			},
@@ -379,17 +384,39 @@ func TestReceiver(t *testing.T) {
 			expectedStatus:            http.StatusAccepted,
 			response:                  makeEmptyResponse(202),
 		},
+		"Proxy CloudEvent response headers": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			returnedEvent:             makeDifferentEvent(),
+			responseHeaders:           http.Header{"Test-Header": []string{"TestValue"}},
+		},
+		"Proxy empty non event response headers": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedStatus:            http.StatusTooManyRequests,
+			response:                  makeEmptyResponse(http.StatusTooManyRequests),
+			responseHeaders:           http.Header{"Retry-After": []string{"10"}},
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 
 			fh := fakeHandler{
-				failRequest:   tc.requestFails,
-				failStatus:    tc.failureStatus,
-				returnedEvent: tc.returnedEvent,
-				headers:       tc.expectedHeaders,
-				t:             t,
-				response:      tc.response,
+				failRequest:     tc.requestFails,
+				failStatus:      tc.failureStatus,
+				returnedEvent:   tc.returnedEvent,
+				headers:         tc.expectedHeaders,
+				t:               t,
+				response:        tc.response,
+				responseHeaders: tc.responseHeaders,
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Close()
@@ -443,6 +470,14 @@ func TestReceiver(t *testing.T) {
 			}, tc.request)
 
 			response := responseWriter.Result()
+
+			if tc.expectedStatus != http.StatusInternalServerError && tc.expectedStatus != http.StatusBadGateway {
+				for expectedHeaderKey, expectedHeaderValues := range tc.responseHeaders {
+					if response.Header[expectedHeaderKey] == nil || response.Header[expectedHeaderKey][0] != expectedHeaderValues[0] {
+						t.Errorf("Response header proxy failed for header '%v'. Expected %v, Actual %v", expectedHeaderKey, expectedHeaderValues[0], response.Header[expectedHeaderKey])
+					}
+				}
+			}
 
 			if tc.expectedStatus != 0 && tc.expectedStatus != response.StatusCode {
 				t.Errorf("Unexpected status. Expected %v. Actual %v.", tc.expectedStatus, response.StatusCode)
@@ -543,6 +578,7 @@ type fakeHandler struct {
 	returnedEvent   *cloudevents.Event
 	t               *testing.T
 	response        *http.Response
+	responseHeaders http.Header
 }
 
 func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
@@ -576,6 +612,9 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if h.returnedEvent != nil {
 		message := binding.ToMessage(h.returnedEvent)
 		defer message.Finish(nil)
+		for k, v := range h.responseHeaders {
+			resp.Header().Set(k, v[0])
+		}
 		err := cehttp.WriteResponseWriter(context.Background(), message, http.StatusAccepted, resp)
 		if err != nil {
 			h.t.Fatalf("Unable to write body: %v", err)
@@ -584,6 +623,9 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if h.response != nil {
 		for k, v := range h.response.Header {
 			resp.Header().Set(k, v[0])
+		}
+		for k, v := range h.responseHeaders {
+			resp.Header().Add(k, v[0])
 		}
 		resp.WriteHeader(h.response.StatusCode)
 		if h.response.Body != nil {
