@@ -19,9 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
-    app.kubernetes.io/name: pingsource-mt-adapter
+    app.kubernetes.io/component: pingsource-mt-adapter
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 spec:
   # when set to 0 (and only 0) will be set to 1 when the first PingSource is created.
   replicas: 0
@@ -34,9 +34,9 @@ spec:
       labels:
         <<: *labels
         eventing.knative.dev/release: devel
-        app.kubernetes.io/name: pingsource-mt-adapter
+        app.kubernetes.io/component: pingsource-mt-adapter
         app.kubernetes.io/version: devel
-        app.kubernetes.io/part-of: knative-eventing
+        app.kubernetes.io/name: knative-eventing
     spec:
       affinity:
         podAntiAffinity:
