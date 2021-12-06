@@ -110,14 +110,7 @@ rules:
     resources:
       - "mutatingwebhookconfigurations"
       - "validatingwebhookconfigurations"
-    verbs: &everything
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # For manipulating certs into secrets.
   - apiGroups:
