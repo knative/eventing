@@ -175,6 +175,25 @@ func TestSmoke_Parallel(t *testing.T) {
 	}
 }
 
+// TestSmoke_ParallelDelivery
+func TestSmoke_ParallelDelivery(t *testing.T) {
+	t.Parallel()
+
+	ctx, env := global.Environment()
+	t.Cleanup(env.Finish)
+
+	names := []string{
+		"customname",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
+	}
+
+	for _, name := range names {
+		env.Test(ctx, t, parallel.GoesReady(name, withDelivery))
+	}
+}
+
 // TestSmoke_Sequence
 func TestSmoke_Sequence(t *testing.T) {
 	t.Parallel()
@@ -194,7 +213,7 @@ func TestSmoke_Sequence(t *testing.T) {
 	}
 }
 
-// TestSmoke_Sequence
+// TestSmoke_SequenceDelivery
 func TestSmoke_SequenceDelivery(t *testing.T) {
 	t.Parallel()
 
@@ -209,13 +228,15 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, sequence.GoesReady(name, func(manifest map[string]interface{}) {
-			spec := map[string]interface{}{}
-
-			linear := eventingduck.BackoffPolicyLinear
-			delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
-
-			manifest["channelTemplate"] = map[string]interface{}{"spec": spec}
-		}))
+		env.Test(ctx, t, sequence.GoesReady(name, withDelivery))
 	}
+}
+
+func withDelivery(manifest map[string]interface{}) {
+	spec := map[string]interface{}{}
+
+	linear := eventingduck.BackoffPolicyLinear
+	delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
+
+	manifest["channelTemplate"] = map[string]interface{}{"spec": spec}
 }
