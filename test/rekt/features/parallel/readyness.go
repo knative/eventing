@@ -28,7 +28,7 @@ import (
 
 // GoesReady returns a feature testing if a Parallel becomes ready with 3 branches.
 func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
-	f := feature.NewFeatureNamed("Sequence goes ready.")
+	f := feature.NewFeatureNamed("Parallel goes ready.")
 
 	{
 		reply := feature.MakeRandomK8sName("reply")

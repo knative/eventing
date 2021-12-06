@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	_ "knative.dev/pkg/system/testing"
 
@@ -39,6 +40,9 @@ import (
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
+
+	sparallel "knative.dev/eventing/test/rekt/resources/parallel"
+	sresources "knative.dev/eventing/test/rekt/resources/sequence"
 )
 
 // TestSmoke_Broker
@@ -190,7 +194,15 @@ func TestSmoke_ParallelDelivery(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, parallel.GoesReady(name, withDelivery))
+
+		template := sresources.ChannelTemplate{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "InMemoryChannel",
+				APIVersion: "messaging.knative.dev/v1",
+			},
+		}
+		SpecDelivery(template.Spec)
+		env.Test(ctx, t, parallel.GoesReady(name, ))
 	}
 }
 
@@ -228,15 +240,18 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, sequence.GoesReady(name, withDelivery))
+		template := sparallel.ChannelTemplate{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "InMemoryChannel",
+				APIVersion: "messaging.knative.dev/v1",
+			},
+		}
+		SpecDelivery(template.Spec)
+		env.Test(ctx, t, sequence.GoesReady(name, sparallel.WithChannelTemplate(template)))
 	}
 }
 
-func withDelivery(manifest map[string]interface{}) {
-	spec := map[string]interface{}{}
-
+func SpecDelivery(spec map[string]interface{}) {
 	linear := eventingduck.BackoffPolicyLinear
 	delivery.WithRetry(10, &linear, pointer.StringPtr("PT1S"))(spec)
-
-	manifest["channelTemplate"] = map[string]interface{}{"spec": spec}
 }
