@@ -19,9 +19,10 @@ package parallel_test
 import (
 	"os"
 
-	"knative.dev/eventing/test/rekt/resources/parallel"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -146,7 +147,7 @@ func Example_full() {
 	//   channelTemplate:
 	//     apiVersion: channelimpl/v1
 	//     kind: mychannel
-	//     spec:
+	//     spec: |-
 	//       thing1: value1
 	//       thing2: value2
 	//   branches:
