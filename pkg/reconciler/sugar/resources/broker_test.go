@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 )
 
@@ -43,10 +42,9 @@ func TestMakeBroker(t *testing.T) {
 			},
 			want: &v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:   "default",
-					Name:        "df-broker",
-					Labels:      Labels(),
-					Annotations: map[string]string{eventing.BrokerClassKey: eventing.MTChannelBrokerClassValue},
+					Namespace: "default",
+					Name:      "df-broker",
+					Labels:    Labels(),
 				},
 			},
 		},
