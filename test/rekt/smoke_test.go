@@ -40,9 +40,9 @@ import (
 	b "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
-
-	sparallel "knative.dev/eventing/test/rekt/resources/parallel"
 	sresources "knative.dev/eventing/test/rekt/resources/sequence"
+
+	presources "knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 // TestSmoke_Broker
@@ -195,14 +195,15 @@ func TestSmoke_ParallelDelivery(t *testing.T) {
 
 	for _, name := range names {
 
-		template := sresources.ChannelTemplate{
+		template := presources.ChannelTemplate{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "InMemoryChannel",
 				APIVersion: "messaging.knative.dev/v1",
 			},
+			Spec: map[string]interface{}{},
 		}
 		SpecDelivery(template.Spec)
-		env.Test(ctx, t, parallel.GoesReady(name, ))
+		env.Test(ctx, t, parallel.GoesReady(name, presources.WithChannelTemplate(template)))
 	}
 }
 
@@ -234,20 +235,24 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 
 	names := []string{
 		"customname",
-		"name-with-dash",
-		"name1with2numbers3",
-		"name63-0123456789012345678901234567890123456789012345678901234",
+		//"name-with-dash",
+		//"name1with2numbers3",
+		//"name63-0123456789012345678901234567890123456789012345678901234",
 	}
 
 	for _, name := range names {
-		template := sparallel.ChannelTemplate{
+		template := sresources.ChannelTemplate{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "InMemoryChannel",
 				APIVersion: "messaging.knative.dev/v1",
 			},
+			Spec: map[string]interface{}{},
 		}
 		SpecDelivery(template.Spec)
-		env.Test(ctx, t, sequence.GoesReady(name, sparallel.WithChannelTemplate(template)))
+
+		t.Logf("%+v", template)
+
+		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
 	}
 }
 

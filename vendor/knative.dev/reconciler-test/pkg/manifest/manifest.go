@@ -83,6 +83,7 @@ func (f *YamlManifest) Apply(spec *unstructured.Unstructured) error {
 	}
 	if current == nil {
 		klog.Info("Creating type ", spec.GroupVersionKind(), " name ", spec.GetName())
+		klog.Infof("%+v", spec.UnstructuredContent())
 		gvr, _ := meta.UnsafeGuessKindToResource(spec.GroupVersionKind())
 		if _, err := f.client.Resource(gvr).Namespace(spec.GetNamespace()).Create(context.Background(), spec, v1.CreateOptions{}); err != nil {
 			return err

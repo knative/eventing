@@ -147,7 +147,7 @@ func Example_full() {
 	//   channelTemplate:
 	//     apiVersion: channelimpl/v1
 	//     kind: mychannel
-	//     spec: |-
+	//     spec:
 	//       thing1: value1
 	//       thing2: value2
 	//   branches:

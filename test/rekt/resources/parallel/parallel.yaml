@@ -25,9 +25,12 @@ spec:
     apiVersion: {{ .channelTemplate.apiVersion }}
     kind: {{ .channelTemplate.kind }}
     {{ if .channelTemplate.spec }}
-    spec: |-
+    spec:
       {{ range $key, $value := .channelTemplate.spec }}
-      {{ $key }}: {{ $value }}
+      {{ $key }}:
+        {{ range $key, $value := $value }}
+        {{ $key }}: {{ $value }}
+        {{ end }}
       {{ end }}
     {{ end }}
   {{ end }}
