@@ -94,7 +94,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, s, channelObjRef)
 		if err != nil {
 			logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", s.Namespace, ingressChannelName), zap.Error(err))
-			s.Status.MarkChannelsNotReady("ChannelsNotReady", "Failed to reconcile channels, step: %d", i)
+			s.Status.MarkChannelsNotReady("ChannelsNotReady", "Failed to reconcile channels, step: %d: %v", i, err)
 			return fmt.Errorf("failed to reconcile channel resource for step: %d : %s", i, err)
 		}
 		channels = append(channels, channelable)
