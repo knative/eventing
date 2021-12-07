@@ -23,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	nethttp "net/http"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/logging"
@@ -107,12 +109,28 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 		return fmt.Errorf("unsupported encoding option: %q", env.EventEncoding)
 	}
 
-	httpClient := &nethttp.Client{}
+	c := &nethttp.Client{}
 	if env.AddTracing {
-		httpClient.Transport = &ochttp.Transport{
+		c.Transport = &ochttp.Transport{
 			Base:        nethttp.DefaultTransport,
 			Propagation: tracecontextb3.TraceContextEgress,
 		}
+	}
+
+	httpClient := retryablehttp.Client{
+		HTTPClient:   c,
+		RetryWaitMin: time.Second,
+		RetryWaitMax: 30 * time.Second,
+		RetryMax:     10,
+		CheckRetry: retryablehttp.CheckRetry(func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+			// Retry only errors
+			return err != nil, nil
+		}),
+		Backoff: retryablehttp.DefaultBackoff,
+		ErrorHandler: func(resp *nethttp.Response, err error, numTries int) (*nethttp.Response, error) {
+			log.Println("Error handler", err)
+			return resp, err
+		},
 	}
 
 	var baseEvent *cloudevents.Event
@@ -164,7 +182,12 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte(env.InputBody)))
 		}
 
-		res, err := httpClient.Do(req)
+		r, err := retryablehttp.FromRequest(req)
+		if err != nil {
+			log.Fatal("Failed to create request", err)
+		}
+
+		res, err := httpClient.Do(r)
 
 		if err != nil {
 			// Publish error

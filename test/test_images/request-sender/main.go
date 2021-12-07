@@ -26,7 +26,9 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cecontext "github.com/cloudevents/sdk-go/v2/context"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-retryablehttp"
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
@@ -75,12 +77,34 @@ func main() {
 		log.Fatalf("failed to create httpClient, %v", err)
 	}
 
-	httpClient := &nethttp.Client{
+	c := &nethttp.Client{
 		Transport: &ochttp.Transport{
 			Base:        nethttp.DefaultTransport,
 			Propagation: tracecontextb3.TraceContextEgress,
 		},
 	}
+
+	httpClient := retryablehttp.Client{
+		HTTPClient:   c,
+		RetryWaitMin: time.Second,
+		RetryWaitMax: 30 * time.Second,
+		RetryMax:     10,
+		CheckRetry: retryablehttp.CheckRetry(func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
+			// Retry only errors
+			return err != nil, nil
+		}),
+		Backoff: retryablehttp.DefaultBackoff,
+		ErrorHandler: func(resp *nethttp.Response, err error, numTries int) (*nethttp.Response, error) {
+			log.Println("Error handler", err)
+			return resp, err
+		},
+	}
+
+	ctx := cecontext.WithRetryParams(context.Background(), &cecontext.RetryParams{
+		Strategy: cecontext.BackoffStrategyExponential,
+		MaxTries: 10,
+		Period:   200 * time.Millisecond,
+	})
 
 	sequence := 0
 
@@ -106,7 +130,12 @@ func main() {
 			}
 		}
 
-		response, err := httpClient.Do(request)
+		r, err := retryablehttp.FromRequest(request)
+		if err != nil {
+			log.Fatal("Failed to create request", err)
+		}
+
+		response, err := httpClient.Do(r)
 		if err != nil {
 			log.Fatalf("Error while executing HTTP request: %v", err.Error())
 		}
@@ -118,7 +147,7 @@ func main() {
 		)
 
 		if responseSink != "" {
-			res := ceClient.Send(cloudevents.ContextWithTarget(context.Background(), responseSink), responseEvent)
+			res := ceClient.Send(cloudevents.ContextWithTarget(ctx, responseSink), responseEvent)
 			if cloudevents.IsUndelivered(res) {
 				log.Printf("send to response sink returned an error: %v\n", res)
 			} else {

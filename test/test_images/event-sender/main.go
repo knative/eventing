@@ -28,6 +28,7 @@ import (
 	obsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/client"
+	cecontext "github.com/cloudevents/sdk-go/v2/context"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.uber.org/zap"
@@ -76,7 +77,11 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
-	ctx := context.Background()
+	ctx := cecontext.WithRetryParams(context.Background(), &cecontext.RetryParams{
+		Strategy: cecontext.BackoffStrategyExponential,
+		MaxTries: 10,
+		Period:   200 * time.Millisecond,
+	})
 	switch eventEncoding {
 	case "binary":
 		ctx = cloudevents.WithEncodingBinary(ctx)
