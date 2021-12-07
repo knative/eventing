@@ -151,7 +151,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		// event wasn't sent by the Broker, so we can drop it.
 		h.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
 		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
-		// the message to a DLQ.
+		// the message to a Dead Letter Sink.
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
