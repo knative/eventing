@@ -12,7 +12,7 @@ guarantees are made about the implementation**.
 
 ### Multi Tenant Channel Based Broker
 
-#### [High level implementation details](https://docs.google.com/document/d/1qYnmkRduWLUFQ3vEsaw7jU_mxS_nDHHkDkcGRf1_Fy4/edit)
+#### [High level implementation details](https://docs.google.com/document/d/1yUrm9IsgwIfSQfeg0hcUgNFN0RvBfxEv1-jYoeyPigE/edit)
 
 #### Installation
 
