@@ -19,15 +19,16 @@ package sequence
 import (
 	"strconv"
 
-	"knative.dev/eventing/test/rekt/resources/sequence"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
+
+	"knative.dev/eventing/test/rekt/resources/sequence"
 )
 
 // GoesReady returns a feature testing if a Sequence becomes ready with 3 steps.
 func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
-	f := feature.NewFeatureNamed("Parallel goes ready.")
+	f := feature.NewFeatureNamed("Sequence goes ready.")
 
 	{
 		reply := feature.MakeRandomK8sName("reply")
