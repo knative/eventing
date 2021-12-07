@@ -93,9 +93,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, s, channelObjRef)
 		if err != nil {
-			logging.FromContext(ctx).Errorw(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", s.Namespace, ingressChannelName), zap.Error(err))
-			s.Status.MarkChannelsNotReady("ChannelsNotReady", "Failed to reconcile channels, step: %d", i)
-			return fmt.Errorf("failed to reconcile channel resource for step: %d : %s", i, err)
+			err = fmt.Errorf("failed to reconcile channel %s at step %d: %w", ingressChannelName, i, err)
+			s.Status.MarkChannelsNotReady("ChannelsNotReady", err.Error())
+			return err
 		}
 		channels = append(channels, channelable)
 		logging.FromContext(ctx).Infof("Reconciled Channel Object: %s/%s %+v", s.Namespace, ingressChannelName, channelable)
@@ -107,8 +107,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, s *v1.Sequence) pkgrecon
 	for i := 0; i < len(s.Spec.Steps); i++ {
 		sub, err := r.reconcileSubscription(ctx, i, s)
 		if err != nil {
-			s.Status.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: %d", i)
-			return fmt.Errorf("failed to reconcile subscription resource for step: %d : %s", i, err)
+			err := fmt.Errorf("failed to reconcile subscription resource for step: %d : %s", i, err)
+			s.Status.MarkSubscriptionsNotReady("SubscriptionsNotReady", err.Error())
+			return err
 		}
 		subs = append(subs, sub)
 		logging.FromContext(ctx).Infof("Reconciled Subscription Object for step: %d: %+v", i, sub)
@@ -142,32 +143,27 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			)
 			logger.Infof("Creating Channel Object: %+v", newChannel)
 			if err != nil {
-				logger.Errorw("Failed to create Channel resource object", zap.Any("channel", channelObjRef), zap.Error(err))
-				return nil, err
+				return nil, fmt.Errorf("failed to create Channel resource %v: %w", channelObjRef, err)
 			}
 			created, err := channelResourceInterface.Create(ctx, newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logger.Errorw("Failed to create Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-				return nil, err
+				return nil, fmt.Errorf("failed to create channel %v: %w", channelObjRef, err)
 			}
 			logger.Debugw("Created Channel", zap.Any("channel", newChannel))
 
 			channelable := &eventingduckv1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logger.Errorw("Failed to convert to channelable", zap.Any("channel", created), zap.Error(err))
-				return nil, fmt.Errorf("failed to convert created channel to channelable: %s", err)
+				return nil, fmt.Errorf("failed to convert Channelable %v: %w", created, err)
 			}
 			return channelable, nil
 		}
-		logger.Errorw("Failed to get Channel", zap.Any("channel", channelObjRef), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to get channel %v: %w", channelObjRef, err)
 	}
 	logger.Debugw("Found Channel", zap.Any("channel", channelObjRef))
 	channelable, ok := c.(*eventingduckv1.Channelable)
 	if !ok {
-		logger.Errorw("Failed to convert to Channelable Object", zap.Any("channel", c), zap.Error(err))
-		return nil, fmt.Errorf("failed to convert to Channelable Object: %+v", c)
+		return nil, fmt.Errorf("failed to convert to Channelable Object %+v: %w", c, err)
 	}
 	return channelable, nil
 }

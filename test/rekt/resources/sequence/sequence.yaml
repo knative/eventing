@@ -27,7 +27,14 @@ spec:
     {{ if .channelTemplate.spec }}
     spec:
       {{ range $key, $value := .channelTemplate.spec }}
+      {{ if ne (printf "%T" $value) "string" }}
+      {{ $key }}:
+        {{ range $k, $v := $value }}
+        {{ $k }}: {{ $v }}
+        {{ end }}
+        {{ else }}
       {{ $key }}: {{ $value }}
+      {{ end }}
       {{ end }}
     {{ end }}
   {{ end }}

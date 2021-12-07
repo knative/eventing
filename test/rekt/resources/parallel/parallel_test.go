@@ -19,9 +19,10 @@ package parallel_test
 import (
 	"os"
 
-	"knative.dev/eventing/test/rekt/resources/parallel"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/resources/parallel"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -50,6 +51,161 @@ func Example_min() {
 	//   branches:
 }
 
+func Example_fullDelivery() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+		"channelTemplate": map[string]interface{}{
+			"apiVersion": "channelimpl/v1",
+			"kind":       "mychannel",
+			"spec": map[string]interface{}{
+				"delivery": map[string]interface{}{
+					"retry": 8,
+				},
+				"thing2": "value2",
+			},
+		},
+		"branches": []map[string]interface{}{{
+			"filter": map[string]interface{}{
+				"ref": map[string]string{
+					"apiVersion": "filter1-api",
+					"kind":       "filter1-kind",
+					"name":       "filter1",
+					"namespace":  "bar",
+				},
+				"uri": "/extra/path",
+			},
+			"subscriber": map[string]interface{}{
+				"ref": map[string]string{
+					"apiVersion": "subscriber1-api",
+					"kind":       "subscriber1-kind",
+					"name":       "subscriber1",
+					"namespace":  "bar",
+				},
+				"uri": "/extra/path",
+			},
+			"reply": map[string]interface{}{
+				"ref": map[string]string{
+					"apiVersion": "reply1-api",
+					"kind":       "reply1-kind",
+					"name":       "reply1",
+					"namespace":  "bar",
+				},
+				"uri": "/extra/path",
+			}}, {
+			"filter": map[string]interface{}{
+				"ref": map[string]string{
+					"apiVersion": "filter2-api",
+					"kind":       "filter2-kind",
+					"name":       "filter2",
+					"namespace":  "bar",
+				},
+				"uri": "/extra/path",
+			},
+			"subscriber": map[string]interface{}{
+				"ref": map[string]string{
+					"apiVersion": "subscriber2-api",
+					"kind":       "subscriber2-kind",
+					"name":       "subscriber2",
+					"namespace":  "bar",
+				},
+				"uri": "/extra/path",
+			},
+			"reply": map[string]interface{}{
+				"ref": map[string]string{
+					"apiVersion": "reply2-api",
+					"kind":       "reply2-kind",
+					"name":       "reply2",
+					"namespace":  "bar",
+				},
+				"uri": "/extra/path",
+			}},
+		},
+		"reply": map[string]interface{}{
+			"ref": map[string]string{
+				"apiVersion": "reply1-api",
+				"kind":       "reply1-kind",
+				"name":       "reply1",
+				"namespace":  "bar",
+			},
+			"uri": "/extra/path",
+		},
+	}
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: flows.knative.dev/v1
+	// kind: Parallel
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   channelTemplate:
+	//     apiVersion: channelimpl/v1
+	//     kind: mychannel
+	//     spec:
+	//       delivery:
+	//         retry: 8
+	//       thing2: value2
+	//   branches:
+	//     -
+	//       filter:
+	//         ref:
+	//           kind: filter1-kind
+	//           namespace: bar
+	//           name: filter1
+	//           apiVersion: filter1-api
+	//         uri: /extra/path
+	//       subscriber:
+	//         ref:
+	//           kind: subscriber1-kind
+	//           namespace: bar
+	//           name: subscriber1
+	//           apiVersion: subscriber1-api
+	//         uri: /extra/path
+	//       reply:
+	//         ref:
+	//           kind: reply1-kind
+	//           namespace: bar
+	//           name: reply1
+	//           apiVersion: reply1-api
+	//         uri: /extra/path
+	//     -
+	//       filter:
+	//         ref:
+	//           kind: filter2-kind
+	//           namespace: bar
+	//           name: filter2
+	//           apiVersion: filter2-api
+	//         uri: /extra/path
+	//       subscriber:
+	//         ref:
+	//           kind: subscriber2-kind
+	//           namespace: bar
+	//           name: subscriber2
+	//           apiVersion: subscriber2-api
+	//         uri: /extra/path
+	//       reply:
+	//         ref:
+	//           kind: reply2-kind
+	//           namespace: bar
+	//           name: reply2
+	//           apiVersion: reply2-api
+	//         uri: /extra/path
+	//   reply:
+	//     ref:
+	//       kind: reply1-kind
+	//       namespace: bar
+	//       name: reply1
+	//       apiVersion: reply1-api
+	//     uri: /extra/path
+}
 func Example_full() {
 	images := map[string]string{}
 	cfg := map[string]interface{}{

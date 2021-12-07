@@ -27,15 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
+
 	v1 "knative.dev/eventing/pkg/apis/flows/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
@@ -45,8 +41,15 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/tracker"
 
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1/sequence"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/sequence/resources"
+
 	. "knative.dev/pkg/reconciler/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
 const (
@@ -226,7 +229,7 @@ func TestAllCases(t *testing.T) {
 			InduceFailure("create", "inmemorychannels"),
 		},
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile channel resource for step: 0 : inducing failure for create inmemorychannels"),
+			Eventf(corev1.EventTypeWarning, "InternalError", "failed to reconcile channel test-sequence-kn-sequence-0 at step 0: failed to create channel {InMemoryChannel test-namespace test-sequence-kn-sequence-0  messaging.knative.dev/v1  }: inducing failure for create inmemorychannels"),
 		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
@@ -236,7 +239,7 @@ func TestAllCases(t *testing.T) {
 				WithInitSequenceConditions,
 				WithSequenceChannelTemplateSpec(imc),
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
-				WithSequenceChannelsNotReady("ChannelsNotReady", "Failed to reconcile channels, step: 0")),
+				WithSequenceChannelsNotReady("ChannelsNotReady", "failed to reconcile channel test-sequence-kn-sequence-0 at step 0: failed to create channel {InMemoryChannel test-namespace test-sequence-kn-sequence-0  messaging.knative.dev/v1  }: inducing failure for create inmemorychannels")),
 		}},
 	}, {
 		Name: "singlestep-subscriptioncreatefails",
@@ -267,7 +270,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: 0"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "failed to reconcile subscription resource for step: 0 : inducing failure for create subscriptions"),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -319,7 +322,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: 0"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "failed to reconcile subscription resource for step: 0 : inducing failure for delete subscriptions"),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{
@@ -376,7 +379,7 @@ func TestAllCases(t *testing.T) {
 				WithSequenceSteps([]v1.SequenceStep{{Destination: createDestination(0)}}),
 				WithSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Failed to reconcile subscriptions, step: 0"),
+				WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "failed to reconcile subscription resource for step: 0 : inducing failure for create subscriptions"),
 				WithSequenceChannelStatuses([]v1.SequenceChannelStatus{
 					{
 						Channel: corev1.ObjectReference{

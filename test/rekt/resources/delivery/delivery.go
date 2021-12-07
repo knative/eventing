@@ -17,9 +17,10 @@ limitations under the License.
 package delivery
 
 import (
-	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/duck/v1"
 )
 
 // WithDeadLetterSink adds the dead letter sink related config to the config.
@@ -59,10 +60,10 @@ func WithRetry(count int32, backoffPolicy *eventingv1.BackoffPolicyType, backoff
 
 		delivery["retry"] = count
 		if backoffPolicy != nil {
-			delivery["backoffPolicy"] = backoffPolicy
+			delivery["backoffPolicy"] = *backoffPolicy
 		}
 		if backoffDelay != nil {
-			delivery["backoffDelay"] = backoffDelay
+			delivery["backoffDelay"] = *backoffDelay
 		}
 	}
 }
