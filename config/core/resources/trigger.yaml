@@ -20,7 +20,7 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 spec:
   group: eventing.knative.dev
   versions:

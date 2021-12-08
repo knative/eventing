@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 data:
   channelTemplateSpec: |
     apiVersion: messaging.knative.dev/v1

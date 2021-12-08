@@ -21,7 +21,7 @@ metadata:
     messaging.knative.dev/subscribable: "true"
     duck.knative.dev/addressable: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 spec:
   group: messaging.knative.dev
   versions:

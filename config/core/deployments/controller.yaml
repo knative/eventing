@@ -20,9 +20,9 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     knative.dev/high-availability: "true"
-    app.kubernetes.io/name: eventing-controller
+    app.kubernetes.io/component: eventing-controller
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 spec:
   selector:
     matchLabels:
@@ -32,9 +32,9 @@ spec:
       labels:
         app: eventing-controller
         eventing.knative.dev/release: devel
-        app.kubernetes.io/name: eventing-autoscaler
+        app.kubernetes.io/component: eventing-autoscaler
         app.kubernetes.io/version: devel
-        app.kubernetes.io/part-of: knative-eventing
+        app.kubernetes.io/name: knative-eventing
     spec:
       # To avoid node becoming SPOF, spread our replicas to different nodes.
       affinity:

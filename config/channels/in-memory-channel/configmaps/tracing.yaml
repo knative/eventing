@@ -22,7 +22,7 @@ metadata:
     knative.dev/config-propagation: original
     knative.dev/config-category: eventing
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
   annotations:
     knative.dev/example-checksum: "c8f8c47b"
 data:

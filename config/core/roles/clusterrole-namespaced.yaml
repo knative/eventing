@@ -20,7 +20,7 @@ metadata:
     eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["eventing.knative.dev"]
     resources: ["*"]
@@ -34,7 +34,7 @@ metadata:
     eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["messaging.knative.dev"]
     resources: ["*"]
@@ -48,7 +48,7 @@ metadata:
     eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["flows.knative.dev"]
     resources: ["*"]
@@ -62,7 +62,7 @@ metadata:
     eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["sources.knative.dev"]
     resources: ["*"]
@@ -76,7 +76,7 @@ metadata:
     eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["bindings.knative.dev"]
     resources: ["*"]
@@ -90,7 +90,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev"]
     resources: ["*"]
@@ -104,7 +104,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
     eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
-    app.kubernetes.io/part-of: knative-eventing
+    app.kubernetes.io/name: knative-eventing
 rules:
   - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "flows.knative.dev", "bindings.knative.dev"]
     resources: ["*"]
