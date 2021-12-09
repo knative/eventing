@@ -128,19 +128,7 @@ func TestReceiver(t *testing.T) {
 			},
 			expectedEventCount: false,
 		},
-		"Wrong type with attribs": {
-			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
-			},
-			expectedEventCount: false,
-		},
 		"Wrong source": {
-			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
-			},
-			expectedEventCount: false,
-		},
-		"Wrong source with attribs": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
@@ -148,7 +136,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Wrong extension": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
+				makeTrigger(makeTriggerFilterWithAttributesAndExtension("", "", "some-other-extension")),
 			},
 			expectedEventCount: false,
 		},
@@ -178,15 +166,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
-		"Dispatch succeeded - Any with attribs": {
-			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
-			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-		},
-		"Dispatch succeeded - Specific": {
+		"Dispatch succeeded - Source with type": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
 			},
@@ -194,15 +174,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
-		"Dispatch succeeded - Specific with attribs": {
-			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
-			},
-			expectedDispatch:          true,
-			expectedEventCount:        true,
-			expectedEventDispatchTime: true,
-		},
-		"Dispatch succeeded - Extension with attribs": {
+		"Dispatch succeeded - Source, type and extensions": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, extensionValue)),
 			},
@@ -211,7 +183,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
-		"Dispatch succeeded - Any with attribs - Arrival extension": {
+		"Dispatch succeeded - Any - Arrival extension": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
@@ -221,7 +193,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime:   true,
 			expectedEventProcessingTime: true,
 		},
-		"Wrong Extension with attribs": {
+		"Wrong Extension with correct source and type": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
 			},
