@@ -19,9 +19,10 @@ package sequence_test
 import (
 	"os"
 
-	"knative.dev/eventing/test/rekt/resources/sequence"
 	v1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/resources/sequence"
 )
 
 // The following examples validate the processing of the With* helper methods
@@ -48,6 +49,93 @@ func Example_min() {
 	//   namespace: bar
 	// spec:
 	//   steps:
+}
+
+func Example_fullDelivery() {
+	images := map[string]string{}
+	cfg := map[string]interface{}{
+		"name":      "foo",
+		"namespace": "bar",
+		"channelTemplate": map[string]interface{}{
+			"apiVersion": "channelimpl/v1",
+			"kind":       "mychannel",
+			"spec": map[string]interface{}{
+				"delivery": map[string]interface{}{
+					"retry": 8,
+				},
+				"thing2": "value2",
+			},
+		},
+		"steps": []map[string]interface{}{{
+			"ref": map[string]string{
+				"apiVersion": "step0-api",
+				"kind":       "step0-kind",
+				"name":       "step0",
+				"namespace":  "bar",
+			},
+			"uri": "/extra/path",
+		}, {
+			"ref": map[string]string{
+				"apiVersion": "step1-api",
+				"kind":       "step1-kind",
+				"name":       "step1",
+				"namespace":  "bar",
+			},
+			"uri": "/extra/path",
+		}},
+		"reply": map[string]interface{}{
+			"ref": map[string]string{
+				"apiVersion": "reply-api",
+				"kind":       "reply-kind",
+				"name":       "reply",
+				"namespace":  "bar",
+			},
+			"uri": "/extra/path",
+		},
+	}
+
+	files, err := manifest.ExecuteLocalYAML(images, cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	manifest.OutputYAML(os.Stdout, files)
+	// Output:
+	// apiVersion: flows.knative.dev/v1
+	// kind: Sequence
+	// metadata:
+	//   name: foo
+	//   namespace: bar
+	// spec:
+	//   channelTemplate:
+	//     apiVersion: channelimpl/v1
+	//     kind: mychannel
+	//     spec:
+	//       delivery:
+	//         retry: 8
+	//       thing2: value2
+	//   steps:
+	//     -
+	//       ref:
+	//         kind: step0-kind
+	//         namespace: bar
+	//         name: step0
+	//         apiVersion: step0-api
+	//       uri: /extra/path
+	//     -
+	//       ref:
+	//         kind: step1-kind
+	//         namespace: bar
+	//         name: step1
+	//         apiVersion: step1-api
+	//       uri: /extra/path
+	//   reply:
+	//     ref:
+	//       kind: reply-kind
+	//       namespace: bar
+	//       name: reply
+	//       apiVersion: reply-api
+	//     uri: /extra/path
 }
 
 func Example_full() {
