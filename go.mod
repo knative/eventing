@@ -8,6 +8,7 @@ require (
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
 	github.com/cloudevents/sdk-go/v2 v2.4.1
+	github.com/dgryski/go-gk v0.0.0-20200319235926-a69029f61654 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/gofuzz v1.2.0
@@ -15,6 +16,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-retryablehttp v0.6.7
+	github.com/influxdata/tdigest v0.0.0-20181121200506-bf2b5ad3c0a9 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/openzipkin/zipkin-go v0.3.0
@@ -41,10 +43,10 @@ require (
 	k8s.io/apiserver v0.21.4
 	k8s.io/client-go v0.21.4
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
-	knative.dev/hack v0.0.0-20211122162614-813559cefdda
-	knative.dev/hack/schema v0.0.0-20211122162614-813559cefdda
-	knative.dev/pkg v0.0.0-20211120133512-d016976f2567
-	knative.dev/reconciler-test v0.0.0-20211206091826-80584b570590
+	knative.dev/hack v0.0.0-20211203062838-e11ac125e707
+	knative.dev/hack/schema v0.0.0-20211203062838-e11ac125e707
+	knative.dev/pkg v0.0.0-20211206113427-18589ac7627e
+	knative.dev/reconciler-test v0.0.0-20211207070557-0d138a88867b
 	sigs.k8s.io/yaml v1.3.0
 )
 
