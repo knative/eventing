@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -62,6 +64,8 @@ const (
 var (
 	validPath = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
 )
+
+type TriggerOption func(trigger *eventingv1.Trigger)
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
@@ -103,14 +107,14 @@ func TestReceiver(t *testing.T) {
 		},
 		"Trigger doesn't have SubscriberURI": {
 			triggers: []*eventingv1.Trigger{
-				makeTriggerWithoutSubscriberURI(),
+				makeTrigger(withoutSubscriberURI()),
 			},
 			expectedStatus:     http.StatusBadRequest,
 			expectedEventCount: true,
 		},
 		"Trigger without a Filter": {
 			triggers: []*eventingv1.Trigger{
-				makeTriggerWithoutFilter(),
+				makeTrigger(),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -118,31 +122,39 @@ func TestReceiver(t *testing.T) {
 		},
 		"No TTL": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{"type": "some-other-type"},
+				})),
 			},
 			event: makeEventWithoutTTL(),
 		},
 		"Wrong type": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{"type": "some-other-type"},
+				})),
 			},
 			expectedEventCount: false,
 		},
 		"Wrong source": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{"source": "some-other-source"},
+				})),
 			},
 			expectedEventCount: false,
 		},
 		"Wrong extension": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributesAndExtension("", "", "some-other-extension")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{extensionName: "some-other-extension"},
+				})),
 			},
 			expectedEventCount: false,
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			requestFails:              true,
 			expectedStatus:            http.StatusBadRequest,
@@ -152,7 +164,10 @@ func TestReceiver(t *testing.T) {
 		},
 		"GetTrigger fails": {
 			triggers: []*eventingv1.Trigger{
-				makeTriggerWithDifferentUID(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(
+					withAttributesFilter(&eventingv1.TriggerFilter{}),
+					withUID("wrongone"),
+				),
 			},
 			expectedDispatch:          false,
 			expectedEventCount:        false,
@@ -160,7 +175,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -168,7 +183,9 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Source with type": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{"type": eventType, "source": eventSource},
+				})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -176,7 +193,9 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Source, type and extensions": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, extensionValue)),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{"type": eventType, "source": eventSource, extensionName: extensionValue},
+				})),
 			},
 			event:                     makeEventWithExtension(extensionName, extensionValue),
 			expectedDispatch:          true,
@@ -185,7 +204,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Any - Arrival extension": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			event:                       makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
 			expectedDispatch:            true,
@@ -195,14 +214,19 @@ func TestReceiver(t *testing.T) {
 		},
 		"Wrong Extension with correct source and type": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{
+					Attributes: map[string]string{
+						"type":        eventType,
+						"source":      eventSource,
+						extensionName: "some-other-extension-value"},
+				})),
 			},
 			event:              makeEventWithExtension(extensionName, extensionValue),
 			expectedEventCount: false,
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -211,7 +235,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Error From Trigger": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			event:                     makeEvent(),
 			requestFails:              true,
@@ -223,7 +247,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			request: func() *http.Request {
 				e := makeEvent()
@@ -262,7 +286,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Maintain `Prefer: reply` header when it is provided in the original request": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			request: func() *http.Request {
 				e := makeEvent()
@@ -287,7 +311,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Add `Prefer: reply` header when it isn't provided in the original request": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			request: func() *http.Request {
 				e := makeEvent()
@@ -308,7 +332,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned non empty non event response": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -318,7 +342,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned malformed Cloud Event": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -328,7 +352,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned malformed structured Cloud Event": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -338,7 +362,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned empty body 200": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -348,7 +372,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned empty body 202": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -611,33 +635,8 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func makeTriggerFilterWithAttributes(t, s string) *eventingv1.TriggerFilter {
-	return &eventingv1.TriggerFilter{
-		Attributes: eventingv1.TriggerFilterAttributes{
-			"type":   t,
-			"source": s,
-		},
-	}
-}
-
-func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1.TriggerFilter {
-	return &eventingv1.TriggerFilter{
-		Attributes: eventingv1.TriggerFilterAttributes{
-			"type":        t,
-			"source":      s,
-			extensionName: e,
-		},
-	}
-}
-
-func makeTriggerWithDifferentUID(filter *eventingv1.TriggerFilter) *eventingv1.Trigger {
-	t := makeTrigger(filter)
-	t.ObjectMeta.UID = "wrongone"
-	return t
-}
-
-func makeTrigger(filter *eventingv1.TriggerFilter) *eventingv1.Trigger {
-	return &eventingv1.Trigger{
+func makeTrigger(options ...TriggerOption) *eventingv1.Trigger {
+	t := &eventingv1.Trigger{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1",
 			Kind:       "Trigger",
@@ -647,25 +646,33 @@ func makeTrigger(filter *eventingv1.TriggerFilter) *eventingv1.Trigger {
 			Name:      triggerName,
 			UID:       triggerUID,
 		},
-		Spec: eventingv1.TriggerSpec{
-			Filter: filter,
-		},
+		Spec: eventingv1.TriggerSpec{},
 		Status: eventingv1.TriggerStatus{
 			SubscriberURI: &apis.URL{Host: "toBeReplaced"},
 		},
 	}
-}
-
-func makeTriggerWithoutFilter() *eventingv1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithAttributes("", ""))
-	t.Spec.Filter = nil
+	for _, opt := range options {
+		opt(t)
+	}
 	return t
 }
 
-func makeTriggerWithoutSubscriberURI() *eventingv1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithAttributes("", ""))
-	t.Status = eventingv1.TriggerStatus{}
-	return t
+func withUID(uid string) TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		t.ObjectMeta.UID = types.UID(uid)
+	}
+}
+
+func withAttributesFilter(filter *eventingv1.TriggerFilter) TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		t.Spec.Filter = filter
+	}
+}
+
+func withoutSubscriberURI() TriggerOption {
+	return func(t *eventingv1.Trigger) {
+		t.Status = eventingv1.TriggerStatus{}
+	}
 }
 
 func makeEventWithoutTTL() *cloudevents.Event {
