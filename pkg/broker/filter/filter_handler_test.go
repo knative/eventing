@@ -670,7 +670,7 @@ func withAttributesFilter(filter *eventingv1.TriggerFilter) TriggerOption {
 
 func withoutSubscriberURI() TriggerOption {
 	return func(t *eventingv1.Trigger) {
-		t.Status = eventingv1.TriggerStatus{}
+		t.Status.SubscriberURI = nil
 	}
 }
 
