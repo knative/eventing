@@ -27,8 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -39,10 +37,11 @@ import (
 	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	broker "knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
 
@@ -382,7 +381,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Proxy CloudEvent response headers": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
@@ -392,7 +391,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Proxy empty non event response headers": {
 			triggers: []*eventingv1.Trigger{
-				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
