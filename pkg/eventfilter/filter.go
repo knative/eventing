@@ -44,6 +44,19 @@ func (x FilterResult) And(y FilterResult) FilterResult {
 	return FailFilter
 }
 
+func (x FilterResult) Or(y FilterResult) FilterResult {
+	if x == NoFilter {
+		return y
+	}
+	if y == NoFilter {
+		return x
+	}
+	if x == PassFilter || y == PassFilter {
+		return PassFilter
+	}
+	return FailFilter
+}
+
 // Filter is an interface representing an event filter of the trigger filter
 type Filter interface {
 	// Filter compute the predicate on the provided event and returns the result of the matching
