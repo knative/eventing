@@ -26,9 +26,11 @@ import (
 )
 
 const (
-	eventType   = "dev.knative.example"
-	eventSource = "knativesource"
-	eventID     = "1234"
+	eventType      = "dev.knative.example"
+	eventSource    = "knativesource"
+	eventID        = "1234"
+	extensionName  = `myextension`
+	extensionValue = `my-extension-value`
 )
 
 type passFilter struct{}
