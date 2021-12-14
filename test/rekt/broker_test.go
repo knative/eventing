@@ -56,6 +56,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 
 // TestBrokerDLQ
 func TestBrokerWithDLQ(t *testing.T) {
+	t.Skip("With PR 5841 this started to become flaky")
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
