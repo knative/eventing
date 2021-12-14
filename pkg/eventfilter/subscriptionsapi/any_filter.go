@@ -26,6 +26,7 @@ import (
 // AnyFilter runs each filter and performs an Or
 type anyFilter []eventfilter.Filter
 
+// NewAnyFilter returns an event filter which passes if any of the contained filters passes.
 func NewAnyFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 	return append(anyFilter{}, filters...)
 }

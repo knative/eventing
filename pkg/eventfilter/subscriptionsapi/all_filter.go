@@ -25,6 +25,7 @@ import (
 
 type allFilter eventfilter.Filters
 
+// NewAllFilter returns an event filter which passes if all the contained filters pass
 func NewAllFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 	return append(allFilter{}, filters...)
 }

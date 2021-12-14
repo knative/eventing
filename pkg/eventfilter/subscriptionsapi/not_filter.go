@@ -27,6 +27,7 @@ type notFilter struct {
 	filter eventfilter.Filter
 }
 
+// NewNotFilter returns an event filter which passes if the contained filter fails.
 func NewNotFilter(f eventfilter.Filter) eventfilter.Filter {
 	return &notFilter{
 		filter: f,

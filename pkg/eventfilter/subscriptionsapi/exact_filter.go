@@ -33,7 +33,7 @@ type exactFilter struct {
 	attrsFilter eventfilter.Filter
 }
 
-// NewExactFilter returs an event filter which passes if `value` exactly matches the value of the context
+// NewExactFilter returns an event filter which passes if `value` exactly matches the value of the context
 // attribute `attribute` in the CloudEvent.
 func NewExactFilter(attribute, value string) eventfilter.Filter {
 	return &exactFilter{
