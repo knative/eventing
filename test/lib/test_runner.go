@@ -32,7 +32,6 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/prow"
 
 	"knative.dev/eventing/pkg/utils"
@@ -198,11 +197,7 @@ func CreateNamespacedClient(t *testing.T) (*Client, error) {
 	// development cycles when namespaces from previous runs were not cleaned properly.
 	for i := 0; i < MaxNamespaceSkip; i++ {
 		ns = NextNamespace()
-		client, err := NewClient(
-			pkgTest.Flags.Kubeconfig,
-			pkgTest.Flags.Cluster,
-			ns,
-			t)
+		client, err := NewClient(ns, t)
 		if err != nil {
 			return nil, err
 		}
