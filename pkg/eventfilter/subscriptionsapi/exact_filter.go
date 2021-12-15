@@ -28,9 +28,8 @@ import (
 )
 
 type exactFilter struct {
-	attribute   string
-	value       string
-	attrsFilter eventfilter.Filter
+	attribute, value string
+	attrsFilter      eventfilter.Filter
 }
 
 // NewExactFilter returns an event filter which passes if `value` exactly matches the value of the context
