@@ -26,45 +26,45 @@ import (
 )
 
 const (
-	eventTypePrefix      = "dev.knative"
-	extensionValuePrefix = "my-extension"
+	eventTypeSuffix      = ".knative.example"
+	extensionValueSuffix = "extension-value"
 )
 
-func TestPrefixFilter(t *testing.T) {
+func TestSuffixFilter(t *testing.T) {
 	tests := map[string]struct {
 		attribute string
-		prefix    string
+		suffix    string
 		event     *cloudevents.Event
 		want      eventfilter.FilterResult
 	}{
 		"Missing attribute": {
 			attribute: "some-other-attribute",
-			prefix:    "wrong.prefix",
+			suffix:    "wrong.suffix",
 			want:      eventfilter.FailFilter,
 		},
-		"Wrong type prefix": {
+		"Wrong type suffix": {
 			attribute: "type",
-			prefix:    "wrong.prefix",
+			suffix:    "wrong.suffix",
 			want:      eventfilter.FailFilter,
 		},
-		"Wrong source prefix": {
+		"Wrong source suffix": {
 			attribute: "source",
-			prefix:    "wrong.prefix",
+			suffix:    "wrong.suffix",
 			want:      eventfilter.FailFilter,
 		},
-		"Wrong extension prefix": {
+		"Wrong extension suffix": {
 			attribute: extensionName,
-			prefix:    "wrong.prefix",
+			suffix:    "wrong.suffix",
 			want:      eventfilter.FailFilter,
 		},
-		"Match type prefix": {
+		"Match type suffix": {
 			attribute: "type",
-			prefix:    eventTypePrefix,
+			suffix:    eventTypeSuffix,
 			want:      eventfilter.PassFilter,
 		},
-		"Match extension prefix": {
+		"Match extension suffix": {
 			attribute: extensionName,
-			prefix:    extensionValuePrefix,
+			suffix:    extensionValueSuffix,
 			event:     makeEventWithExtension(extensionName, extensionValue),
 			want:      eventfilter.PassFilter,
 		},
@@ -76,7 +76,7 @@ func TestPrefixFilter(t *testing.T) {
 				e = makeEvent()
 			}
 
-			if got := NewPrefixFilter(tt.attribute, tt.prefix).Filter(context.TODO(), *e); got != tt.want {
+			if got := NewSuffixFilter(tt.attribute, tt.suffix).Filter(context.TODO(), *e); got != tt.want {
 				t.Errorf("Filter() = %v, want %v", got, tt.want)
 			}
 		})
