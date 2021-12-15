@@ -21,8 +21,9 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/eventfilter/attributes"
 	"knative.dev/pkg/logging"
+
+	"knative.dev/eventing/pkg/eventfilter/attributes"
 
 	"knative.dev/eventing/pkg/eventfilter"
 )
@@ -32,8 +33,8 @@ type exactFilter struct {
 	attrsFilter      eventfilter.Filter
 }
 
-// NewExactFilter returns an event filter which passes if `value` exactly matches the value of the context
-// attribute `attribute` in the CloudEvent.
+// NewExactFilter returns an event filter which passes if value exactly matches the value of the context
+// attribute in the CloudEvent.
 func NewExactFilter(attribute, value string) eventfilter.Filter {
 	return &exactFilter{
 		attribute: attribute,
