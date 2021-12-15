@@ -1,0 +1,219 @@
+# This file is auto-generated from peribolos.
+# Do not modify this file, instead modify peribolos/knative.yaml
+
+aliases:
+  api-core-wg-leads:
+  - dprotaso
+  autoscaling-reviewers:
+  - nader-ziada
+  - psschwei
+  - taragu
+  autoscaling-wg-leads:
+  - julz
+  autoscaling-writers:
+  - julz
+  - yanweiguo
+  client-reviewers:
+  - itsmurugappan
+  client-wg-leads:
+  - dsimansk
+  - navidshaikh
+  - rhuss
+  client-writers:
+  - dsimansk
+  - maximilien
+  - navidshaikh
+  - rhuss
+  conformance-task-force-leads:
+  - omerbensaadon
+  - salaboy
+  conformance-writers:
+  - omerbensaadon
+  - salaboy
+  docs-reviewers:
+  - RichardJJG
+  - mpetason
+  - nainaz
+  - omerbensaadon
+  - pmbanugo
+  - snneji
+  docs-wg-leads:
+  - csantanapr
+  - omerbensaadon
+  - snneji
+  docs-writers:
+  - RichardJJG
+  - abrennan89
+  - carieshmarie
+  - csantanapr
+  - omerbensaadon
+  - richieescarez
+  - snneji
+  eventing-reviewers:
+  - aslom
+  - tayarani
+  - tommyreddad
+  eventing-triage:
+  - akashrv
+  - antoineco
+  - lberk
+  eventing-wg-leads:
+  - devguyio
+  - lionelvillard
+  eventing-writers:
+  - akashrv
+  - aliok
+  - antoineco
+  - devguyio
+  - lberk
+  - lionelvillard
+  - matzew
+  - pierDipi
+  - vaikas
+  knative-admin:
+  - csantanapr
+  - dprotaso
+  - duglin
+  - evankanderson
+  - julz
+  - knative-prow-releaser-robot
+  - knative-prow-robot
+  - knative-prow-updater-robot
+  - knative-test-reporter-robot
+  - lance
+  - markusthoemmes
+  - matzew
+  - nak3
+  - pmorie
+  - rhuss
+  - spencerdillard
+  - thisisnotapril
+  - vaikas
+  knative-release-leads:
+  - matzew
+  - nak3
+  knative-robots:
+  - knative-prow-releaser-robot
+  - knative-prow-robot
+  - knative-prow-updater-robot
+  - knative-test-reporter-robot
+  networking-reviewers:
+  - JRBANCEL
+  - ZhiminXiang
+  - andrew-su
+  - arturenault
+  - carlisia
+  - nak3
+  - shashwathi
+  - tcnghia
+  - vagababov
+  - yanweiguo
+  networking-wg-leads:
+  - ZhiminXiang
+  - nak3
+  networking-writers:
+  - JRBANCEL
+  - ZhiminXiang
+  - nak3
+  - vagababov
+  operations-reviewers:
+  - Cynocracy
+  - aliok
+  - houshengbo
+  - jcrossley3
+  - matzew
+  - trshafer
+  operations-wg-leads:
+  - houshengbo
+  operations-writers:
+  - Cynocracy
+  - aliok
+  - houshengbo
+  - jcrossley3
+  - matzew
+  - trshafer
+  pkg-configmap-reviewers:
+  - dprotaso
+  - mattmoor
+  - vagababov
+  pkg-configmap-writers:
+  - dprotaso
+  - mattmoor
+  - vagababov
+  pkg-controller-reviewers:
+  - dprotaso
+  - mattmoor
+  - tcnghia
+  - vagababov
+  - whaught
+  pkg-controller-writers:
+  - dprotaso
+  - mattmoor
+  - tcnghia
+  - vagababov
+  productivity-reviewers:
+  - albertomilan
+  - efiturri
+  - evankanderson
+  - gerardo-lc
+  - joshua-bone
+  - kvmware
+  - steuhs
+  productivity-wg-leads:
+  - chizhg
+  - n3wscott
+  productivity-writers:
+  - chaodaiG
+  - chizhg
+  - coryrc
+  - n3wscott
+  security-wg-leads:
+  - evankanderson
+  - julz
+  security-writers:
+  - evankanderson
+  - julz
+  serving-observability-reviewers:
+  - skonto
+  - yanweiguo
+  serving-observability-writers:
+  - yanweiguo
+  serving-reviewers:
+  - carlisia
+  - julz
+  - nader-ziada
+  - nealhu
+  - psschwei
+  - whaught
+  serving-writers:
+  - dprotaso
+  - julz
+  - markusthoemmes
+  - tcnghia
+  - vagababov
+  source-wg-leads:
+  - lionelvillard
+  steering-committee:
+  - csantanapr
+  - lance
+  - pmorie
+  - thisisnotapril
+  - vaikas
+  technical-oversight-committee:
+  - dprotaso
+  - evankanderson
+  - julz
+  - markusthoemmes
+  - rhuss
+  trademark-committee:
+  - duglin
+  - evankanderson
+  - spencerdillard
+  ux-wg-leads:
+  - csantanapr
+  - omerbensaadon
+  - snneji
+  ux-writers:
+  - csantanapr
+  - omerbensaadon
+  - snneji
