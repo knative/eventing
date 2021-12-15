@@ -65,11 +65,11 @@ type Client struct {
 
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
-func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
+func NewClient(namespace string, t *testing.T) (*Client, error) {
 	var err error
 
 	client := &Client{}
-	client.Config, err = test.BuildClientConfig(configPath, clusterName)
+	client.Config, err = test.Flags.GetRESTConfig()
 	if err != nil {
 		return nil, err
 	}
