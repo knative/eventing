@@ -53,6 +53,14 @@ func TestCESQLFilter(t *testing.T) {
 			event:      makeEventWithExtension(extensionName, extensionValue),
 			want:       eventfilter.PassFilter,
 		},
+		"Match numeric extension": {
+			expression: fmt.Sprintf("%s < 30", eventTTLName),
+			want:       eventfilter.PassFilter,
+		},
+		"Match type OR Source": {
+			expression: fmt.Sprintf("(type = '%s') OR (source = '%s')", eventType, "some-other-source"),
+			want:       eventfilter.PassFilter,
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

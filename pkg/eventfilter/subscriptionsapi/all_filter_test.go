@@ -22,6 +22,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
@@ -31,6 +32,8 @@ const (
 	eventID        = "1234"
 	extensionName  = "myextension"
 	extensionValue = "my-extension-value"
+	eventTTLName   = "knativebrokerttl"
+	eventTTLValue  = 20
 )
 
 type passFilter struct{}
@@ -178,5 +181,6 @@ func makeEvent() *cloudevents.Event {
 	e.SetType(eventType)
 	e.SetSource(eventSource)
 	e.SetID(eventID)
+	_ = broker.SetTTL(e.Context, eventTTLValue)
 	return &e
 }
