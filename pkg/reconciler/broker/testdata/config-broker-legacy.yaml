@@ -22,6 +22,8 @@ data:
   _example: |
     ################################
     #                              #
+    #  DO NOT USE. LEGACY VERSION  #
+    #                              #
     #    EXAMPLE CONFIGURATION     #
     #                              #
     ################################
@@ -36,7 +38,7 @@ data:
     # to actually change the configuration.
 
     # This defines the default channel template to use for the broker.
-    channel-template-spec: |
+    channelTemplateSpec: |
       # The api and version of the kind of channel to use inthe broker.
       # This field required.
       apiVersion: messaging.knative.dev/v1

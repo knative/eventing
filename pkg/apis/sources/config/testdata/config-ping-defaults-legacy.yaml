@@ -1,4 +1,4 @@
-# Copyright 2020 The Knative Authors
+# Copyright 2021 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,12 +15,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: config-broker
-  namespace: default
-
+  name: config-ping-defaults
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 data:
   _example: |
     ################################
+    #                              #
+    #  DO NOT USE. LEGACY VERSION  #
     #                              #
     #    EXAMPLE CONFIGURATION     #
     #                              #
@@ -35,17 +38,6 @@ data:
     # this example block and unindented to be in the data block
     # to actually change the configuration.
 
-    # This defines the default channel template to use for the broker.
-    channel-template-spec: |
-      # The api and version of the kind of channel to use inthe broker.
-      # This field required.
-      apiVersion: messaging.knative.dev/v1
-
-      # The api and version of the kind of channel to use inthe broker.
-      # This field required.
-      kind: InMemoryChannel
-
-      # The custom spec that should be used for channel templates.
-      #This field is optional.
-      spec: |
-        customValue: foo
+    # Max number of bytes allowed to be sent for message excluding any
+    # base64 decoding.  Default is no limit set for data
+    dataMaxSize: 4096

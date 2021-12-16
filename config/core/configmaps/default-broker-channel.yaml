@@ -22,6 +22,6 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 data:
-  channelTemplateSpec: |
+  channel-template-spec: |
     apiVersion: messaging.knative.dev/v1
     kind: InMemoryChannel

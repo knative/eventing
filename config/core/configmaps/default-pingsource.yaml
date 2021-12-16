@@ -20,7 +20,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
   annotations:
-    knative.dev/example-checksum: "f8e5a744"
+    knative.dev/example-checksum: "9185c153"
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 data:
@@ -42,4 +42,4 @@ data:
 
     # Max number of bytes allowed to be sent for message excluding any
     # base64 decoding. Default is no limit set for data
-    dataMaxSize: -1
+    data-max-size: -1

@@ -776,6 +776,61 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 		}, {
+			// Same as previous test but using the legacy channel template configmap element.
+			Name: "Trigger has no dls ref, Broker has a valid dls ref, Trigger fallbacks to it and goes ready. Using legacy channel template config element.",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				makeDLSServiceAsUnstructured(),
+				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
+					WithBrokerConfig(config()),
+					WithInitBrokerConditions,
+					WithBrokerReady,
+					WithBrokerResourceVersion(""),
+					WithChannelAddressAnnotation(triggerChannelURL),
+					WithChannelAPIVersionAnnotation(triggerChannelAPIVersion),
+					WithChannelKindAnnotation(triggerChannelKind),
+					WithChannelNameAnnotation(triggerChannelName),
+					WithDeadLeaderSink(dlsSVCDest.Ref, ""),
+					WithBrokerStatusDLSURI(brokerDLSURI),
+				),
+				createChannel(testNS, true),
+				// Use the legacy channel template configmap element at this test.
+				imcConfigMapLegacy(),
+				makeReadySubscription(testNS),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(makeTrigger(testNS), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeDelivery(dlsSVCDest.Ref, "", nil, nil, nil)),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNS,
+					Resource:  eventingduckv1.SchemeGroupVersion.WithResource("subscriptions"),
+				},
+				Name: subscriptionName,
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerDependencyReady(),
+					WithTriggerSubscribed(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusDeadLetterSinkURI("http://test-dls.test-namespace.svc.cluster.local"),
+					WithTriggerDeadLetterSinkResolvedSucceeded(),
+				),
+			}},
+		}, {
 			Name: "Trigger has a valid dls ref, Broker has a valid dls ref, Trigger uses it's dls and goes ready",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -1167,6 +1222,14 @@ func config() *duckv1.KReference {
 }
 
 func imcConfigMap() *corev1.ConfigMap {
+	return NewConfigMap(configMapName, testNS,
+		WithConfigMapData(map[string]string{"channel-template-spec": imcSpec}))
+}
+
+// imcConfigMapLegacy returns a confirmap using the legacy configuration
+// element channelTemplateSpec . This element name will be deprecated in
+// favor of channel-template-spec.
+func imcConfigMapLegacy() *corev1.ConfigMap {
 	return NewConfigMap(configMapName, testNS,
 		WithConfigMapData(map[string]string{"channelTemplateSpec": imcSpec}))
 }
