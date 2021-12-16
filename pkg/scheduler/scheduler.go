@@ -92,6 +92,17 @@ type Scheduler interface {
 	Schedule(vpod VPod) ([]duckv1alpha1.Placement, error)
 }
 
+// SchedulerFunc type is an adapter to allow the use of
+// ordinary functions as Schedulers. If f is a function
+// with the appropriate signature, SchedulerFunc(f) is a
+// Scheduler that calls f.
+type SchedulerFunc func(vpod VPod) ([]duckv1alpha1.Placement, error)
+
+// Schedule implements the Scheduler interface.
+func (f SchedulerFunc) Schedule(vpod VPod) ([]duckv1alpha1.Placement, error) {
+	return f(vpod)
+}
+
 // VPod represents virtual replicas placed into real Kubernetes pods
 // The scheduler is responsible for placing VPods
 type VPod interface {
