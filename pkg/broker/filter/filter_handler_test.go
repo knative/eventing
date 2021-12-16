@@ -531,6 +531,134 @@ func TestReceiver(t *testing.T) {
 	}
 }
 
+func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
+	testCases := map[string]struct {
+		triggers                  []*eventingv1.Trigger
+		event                     *cloudevents.Event
+		expectedDispatch          bool
+		expectedEventCount        bool
+		expectedEventDispatchTime bool
+	}{
+		"Wrong source": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
+					Exact: map[string]string{"source": "some-other-source"},
+				})),
+			},
+			expectedEventCount: false,
+		},
+		"Wrong extension": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
+					Exact: map[string]string{extensionName: "some-other-extension"},
+				})),
+			},
+			expectedEventCount: false,
+		},
+		"Dispatch succeeded - Source with type": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
+					SQL: fmt.Sprintf("type = '%s' AND source = '%s'", eventType, eventSource),
+				})),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+		},
+		"Dispatch succeeded - Attributes Filter overrides SubscriptionsAPI filter": {
+			triggers: []*eventingv1.Trigger{
+				makeTrigger(
+					withAttributesFilter(&eventingv1.TriggerFilter{
+						Attributes: map[string]string{"type": eventType, "source": eventSource},
+					}),
+					withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
+						SQL: fmt.Sprintf("type = '%s' AND source = '%s'", "some-other-type", "some-other-source"),
+					})),
+			},
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+
+			fh := fakeHandler{
+				t: t,
+			}
+			s := httptest.NewServer(&fh)
+			defer s.Close()
+
+			// Replace the SubscriberURI to point at our fake server.
+			correctURI := make([]runtime.Object, 0, len(tc.triggers))
+			for _, trig := range tc.triggers {
+				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
+
+					url, err := apis.ParseURL(s.URL)
+					if err != nil {
+						t.Fatalf("Failed to parse URL %q : %s", s.URL, err)
+					}
+					trig.Status.SubscriberURI = url
+				}
+				correctURI = append(correctURI, trig)
+			}
+			listers := reconcilertesting.NewListers(correctURI)
+			reporter := &mockReporter{}
+			r, err := NewHandler(
+				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+				listers.GetTriggerLister(),
+				reporter,
+				8080)
+			if err != nil {
+				t.Fatal("Unable to create receiver:", err)
+			}
+
+			e := tc.event
+			if e == nil {
+				e = makeEvent()
+			}
+			b, err := e.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
+			request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
+			responseWriter := httptest.NewRecorder()
+			r.ServeHTTP(&responseWriterWithInvocationsCheck{
+				ResponseWriter: responseWriter,
+				headersWritten: atomic.NewBool(false),
+				t:              t,
+			}, request)
+
+			response := responseWriter.Result()
+
+			if tc.expectedDispatch != fh.requestReceived {
+				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
+			}
+			if tc.expectedEventCount != reporter.eventCountReported {
+				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+			}
+			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
+				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			}
+			// Compare the returned event.
+			message := cehttp.NewMessageFromHttpResponse(response)
+			event, err := binding.ToEvent(context.Background(), message)
+			if err == nil || event != nil {
+				t.Fatal("Unexpected response event:", event)
+			}
+		})
+	}
+}
+
+func withSubscriptionAPIFilter(filter *eventingv1.SubscriptionsAPIFilter) TriggerOption {
+	return func(trigger *eventingv1.Trigger) {
+		trigger.Spec.Filters = []eventingv1.SubscriptionsAPIFilter{
+			*filter,
+		}
+	}
+}
+
 type responseWriterWithInvocationsCheck struct {
 	http.ResponseWriter
 	headersWritten *atomic.Bool

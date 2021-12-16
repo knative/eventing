@@ -37,6 +37,7 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -185,7 +186,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	// Check if the event should be sent.
 	ctx = logging.WithLogger(ctx, h.logger.Sugar())
-	filterResult := filterEvent(ctx, t.Spec.Filter, *event)
+	filterResult := filterEvent(ctx, t.Spec, *event)
 
 	if filterResult == eventfilter.FailFilter {
 		// We do not count the event. The event will be counted in the broker ingress.
@@ -333,10 +334,71 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
-	if filter == nil {
-		return eventfilter.NoFilter
+func filterEvent(ctx context.Context, filterSpec eventingv1.TriggerSpec, event cloudevents.Event) eventfilter.FilterResult {
+	if filterSpec.Filter != nil {
+		return applyAttributesFilter(ctx, filterSpec.Filter, event)
+	} else if len(filterSpec.Filters) > 0 {
+		return applySubscriptionsAPIFilters(ctx, filterSpec.Filters, event)
 	}
+	return eventfilter.NoFilter
+}
+
+func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter, event cloudevents.Event) eventfilter.FilterResult {
+	return subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filters)...).Filter(ctx, event)
+}
+
+func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
+	var materializedFilter eventfilter.Filter
+
+	if len(filter.Exact) > 0 {
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, value := range filter.Exact {
+			materializedFilter = subscriptionsapi.NewExactFilter(attribute, value)
+		}
+	}
+	if len(filter.Prefix) > 0 {
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, prefix := range filter.Exact {
+			materializedFilter = subscriptionsapi.NewPrefixFilter(attribute, prefix)
+		}
+	}
+	if len(filter.Suffix) > 0 {
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, suffix := range filter.Exact {
+			materializedFilter = subscriptionsapi.NewSuffixFilter(attribute, suffix)
+		}
+	}
+	if len(filter.All) > 0 {
+		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filter.All)...)
+	}
+	if len(filter.Any) > 0 {
+		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.All)...)
+
+	}
+	if filter.Not != nil {
+		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(ctx, *filter.Not))
+	}
+	if filter.SQL != "" {
+		f, err := subscriptionsapi.NewCESQLFilter(filter.SQL)
+		if err != nil {
+			// This is weird, CESQL expression should be validated when Trigger's are created.
+			logging.FromContext(ctx).Debugw("Found an Invalid CE SQL expression", zap.String("expression", filter.SQL))
+			return nil
+		}
+		materializedFilter = f
+	}
+	return materializedFilter
+}
+
+func materializeFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
+	var materializedFilters []eventfilter.Filter
+	for _, f := range filters {
+		materializedFilters = append(materializedFilters, materializeSubscriptionsAPIFilter(ctx, f))
+	}
+	return materializedFilters
+}
+
+func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
 	var filters eventfilter.Filters
 	if filter.Attributes != nil && len(filter.Attributes) != 0 {
 		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
