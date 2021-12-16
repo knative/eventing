@@ -23,7 +23,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -713,15 +712,20 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
 			"Attribute name must start with a letter and can only contain "+
 				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("any", 2).ViaFieldIndex("filters", 0)}, {
-		name: "raw extension expression is valid",
+		name: "CE SQL with syntax error",
 		filters: []SubscriptionsAPIFilter{
 			{
-				Extensions: map[string]*runtime.RawExtension{
-					"juel": {Raw: []byte("\"myExpressionUsingJUEL\"")},
-				},
+				SQL: "this is wrong",
 			}},
-		want: &apis.FieldError{},
-	}}
+		want: apis.ErrInvalidValue("this is wrong", "sql", "syntax error: ").ViaFieldIndex("filters", 0),
+	}, {
+		name: "Valid CE SQL expression",
+		filters: []SubscriptionsAPIFilter{
+			{
+				SQL: "type = 'dev.knative' AND ttl < 3",
+			}},
+	},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
