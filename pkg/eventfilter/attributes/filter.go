@@ -35,6 +35,9 @@ func NewAttributesFilter(attrs map[string]string) eventfilter.Filter {
 }
 
 func (attrs attributesFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if attrs == nil {
+		return eventfilter.NoFilter
+	}
 	for k, v := range attrs {
 		value, ok := LookupAttribute(event, k)
 		// If the attribute does not exist in the event (extension context attributes) or if the event attribute

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
@@ -34,11 +35,11 @@ func NewNotFilter(f eventfilter.Filter) eventfilter.Filter {
 	}
 }
 
-func (f *notFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	if f.filter == nil {
+func (filter *notFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil || filter.filter == nil {
 		return eventfilter.NoFilter
 	}
-	switch f.filter.Filter(ctx, event) {
+	switch filter.filter.Filter(ctx, event) {
 	case eventfilter.FailFilter:
 		return eventfilter.PassFilter
 	case eventfilter.PassFilter:

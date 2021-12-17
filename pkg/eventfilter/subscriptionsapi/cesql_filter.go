@@ -51,21 +51,22 @@ func NewCESQLFilter(expr string) (eventfilter.Filter, error) {
 	}, nil
 }
 
-func (f *ceSQLFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	logger := logging.FromContext(ctx)
-	logger.Debugw("Performing a CESQL match ", zap.String("expression", f.rawExpression), zap.Any("event", event))
-	if f.rawExpression == "" {
+func (filter *ceSQLFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil || filter.rawExpression == "" {
 		return eventfilter.NoFilter
 	}
-	res, err := f.parsedExpression.Evaluate(event)
+	logger := logging.FromContext(ctx)
+	logger.Debugw("Performing a CESQL match ", zap.String("expression", filter.rawExpression), zap.Any("event", event))
+
+	res, err := filter.parsedExpression.Evaluate(event)
 
 	if err != nil {
-		logger.Debugw("Error evaluating expression on event.", zap.String("expression", f.rawExpression), zap.Error(err))
+		logger.Debugw("Error evaluating expression on event.", zap.String("expression", filter.rawExpression), zap.Error(err))
 		return eventfilter.FailFilter
 	}
 
 	if !res.(bool) {
-		logger.Debugw("CESOL match failed.", zap.String("expression", f.rawExpression), zap.Any("event", event))
+		logger.Debugw("CESOL match failed.", zap.String("expression", filter.rawExpression), zap.Any("event", event))
 		return eventfilter.FailFilter
 	}
 	return eventfilter.PassFilter

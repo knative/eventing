@@ -20,18 +20,30 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	"knative.dev/eventing/pkg/eventfilter"
 )
 
-type allFilter eventfilter.Filters
+type allFilter []eventfilter.Filter
 
 // NewAllFilter returns an event filter which passes if all the contained filters pass
 func NewAllFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 	return append(allFilter{}, filters...)
 }
 
-func (f allFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	return eventfilter.Filters(f).Filter(ctx, event)
+func (filter allFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil {
+		return eventfilter.NoFilter
+	}
+	res := eventfilter.NoFilter
+	for _, f := range filter {
+		res = res.And(f.Filter(ctx, event))
+		// Short circuit to optimize it
+		if res == eventfilter.FailFilter {
+			return eventfilter.FailFilter
+		}
+	}
+	return res
 }
 
 var _ eventfilter.Filter = allFilter{}

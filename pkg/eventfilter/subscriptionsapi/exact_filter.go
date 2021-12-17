@@ -44,9 +44,12 @@ func NewExactFilter(attribute, value string) eventfilter.Filter {
 	}
 }
 
-func (f *exactFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+func (filter *exactFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil || filter.attribute == "" || filter.value == "" {
+		return eventfilter.NoFilter
+	}
 	logger := logging.FromContext(ctx)
-	logger.Debugw("Performing an exact match ", zap.String("attribute", f.attribute), zap.String("value", f.value),
+	logger.Debugw("Performing an exact match ", zap.String("attribute", filter.attribute), zap.String("value", filter.value),
 		zap.Any("event", event))
-	return f.attrsFilter.Filter(ctx, event)
+	return filter.attrsFilter.Filter(ctx, event)
 }

@@ -42,18 +42,21 @@ func NewSuffixFilter(attribute, suffix string) eventfilter.Filter {
 	}
 }
 
-func (f *suffixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+func (filter *suffixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil || filter.attribute == "" || filter.suffix == "" {
+		return eventfilter.NoFilter
+	}
 	logger := logging.FromContext(ctx)
-	logger.Debugw("Performing a suffix match ", zap.String("attribute", f.attribute), zap.String("prefix", f.suffix),
+	logger.Debugw("Performing a suffix match ", zap.String("attribute", filter.attribute), zap.String("prefix", filter.suffix),
 		zap.Any("event", event))
-	value, ok := attributes.LookupAttribute(event, f.attribute)
+	value, ok := attributes.LookupAttribute(event, filter.attribute)
 	if !ok {
-		logger.Debugw("Couldn't find attribute in event. Suffix match failed.", zap.String("attribute", f.attribute), zap.String("prefix", f.suffix),
+		logger.Debugw("Couldn't find attribute in event. Suffix match failed.", zap.String("attribute", filter.attribute), zap.String("prefix", filter.suffix),
 			zap.Any("event", event))
 		return eventfilter.FailFilter
 	}
 
-	if strings.HasSuffix(fmt.Sprintf("%v", value), f.suffix) {
+	if strings.HasSuffix(fmt.Sprintf("%v", value), filter.suffix) {
 		return eventfilter.PassFilter
 	}
 	return eventfilter.FailFilter

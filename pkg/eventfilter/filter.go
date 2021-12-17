@@ -62,20 +62,3 @@ type Filter interface {
 	// Filter compute the predicate on the provided event and returns the result of the matching
 	Filter(ctx context.Context, event cloudevents.Event) FilterResult
 }
-
-// Filters is a wrapper that runs each filter and performs the and
-type Filters []Filter
-
-func (filters Filters) Filter(ctx context.Context, event cloudevents.Event) FilterResult {
-	res := NoFilter
-	for _, f := range filters {
-		res = res.And(f.Filter(ctx, event))
-		// Short circuit to optimize it
-		if res == FailFilter {
-			return FailFilter
-		}
-	}
-	return res
-}
-
-var _ Filter = Filters{}

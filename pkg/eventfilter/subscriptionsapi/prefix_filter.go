@@ -42,18 +42,21 @@ func NewPrefixFilter(attribute, prefix string) eventfilter.Filter {
 	}
 }
 
-func (f *prefixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+func (filter *prefixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
+	if filter == nil || filter.attribute == "" || filter.prefix == "" {
+		return eventfilter.NoFilter
+	}
 	logger := logging.FromContext(ctx)
-	logger.Debugw("Performing a prefix match ", zap.String("attribute", f.attribute), zap.String("prefix", f.prefix),
+	logger.Debugw("Performing a prefix match ", zap.String("attribute", filter.attribute), zap.String("prefix", filter.prefix),
 		zap.Any("event", event))
-	value, ok := attributes.LookupAttribute(event, f.attribute)
+	value, ok := attributes.LookupAttribute(event, filter.attribute)
 	if !ok {
-		logger.Debugw("Couldn't find attribute in event. Prefix match failed.", zap.String("attribute", f.attribute), zap.String("prefix", f.prefix),
+		logger.Debugw("Couldn't find attribute in event. Prefix match failed.", zap.String("attribute", filter.attribute), zap.String("prefix", filter.prefix),
 			zap.Any("event", event))
 		return eventfilter.FailFilter
 	}
 
-	if strings.HasPrefix(fmt.Sprintf("%v", value), f.prefix) {
+	if strings.HasPrefix(fmt.Sprintf("%v", value), filter.prefix) {
 		return eventfilter.PassFilter
 	}
 	return eventfilter.FailFilter

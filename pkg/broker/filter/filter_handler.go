@@ -399,11 +399,9 @@ func materializeFiltersList(ctx context.Context, filters []eventingv1.Subscripti
 }
 
 func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
-	var filters eventfilter.Filters
-	if filter.Attributes != nil && len(filter.Attributes) != 0 {
-		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
-	}
-	return filters.Filter(ctx, event)
+	var f eventfilter.Filter
+	f = attributes.NewAttributesFilter(filter.Attributes)
+	return f.Filter(ctx, event)
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
