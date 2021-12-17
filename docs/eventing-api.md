@@ -2091,20 +2091,14 @@ expression cannot be empty strings.</p>
 </tr>
 <tr>
 <td>
-<code>Extensions</code><br/>
+<code>sql</code><br/>
 <em>
-map[string]*k8s.io/apimachinery/pkg/runtime.RawExtension
+string
 </em>
 </td>
 <td>
-<p>
-(Members of <code>Extensions</code> are embedded into this type.)
-</p>
 <em>(Optional)</em>
-<p>Extensions includes the list of additional filter dialects supported by
-specific broker implementations. Check out the documentation of the
-broker implementation you&rsquo;re using to know about what additional filters
-are supported.</p>
+<p>SQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.</p>
 </td>
 </tr>
 </tbody>

@@ -1,3 +1,8 @@
+/*
+ Copyright 2021 The CloudEvents Authors
+ SPDX-License-Identifier: Apache-2.0
+*/
+
 package http
 
 import (
@@ -243,7 +248,7 @@ func WithDefaultOptionsHandlerFunc(methods []string, rate int, origins []string,
 		if p == nil {
 			return fmt.Errorf("http OPTIONS handler func can not set nil protocol")
 		}
-		p.OptionsHandlerFn = p.DeleteHandlerFn
+		p.OptionsHandlerFn = p.OptionsHandler
 		p.WebhookConfig = &WebhookConfig{
 			AllowedMethods:  methods,
 			AllowedRate:     &rate,
@@ -271,4 +276,26 @@ func WithIsRetriableFunc(isRetriable IsRetriable) Option {
 		p.isRetriableFunc = isRetriable
 		return nil
 	}
+}
+
+func WithRateLimiter(rl RateLimiter) Option {
+	return func(p *Protocol) error {
+		if p == nil {
+			return fmt.Errorf("http OPTIONS handler func can not set nil protocol")
+		}
+		p.limiter = rl
+		return nil
+	}
+}
+
+// WithRequestDataAtContextMiddleware adds to the Context RequestData.
+// This enables a user's dispatch handler to inspect HTTP request information by
+// retrieving it from the Context.
+func WithRequestDataAtContextMiddleware() Option {
+	return WithMiddleware(func(next nethttp.Handler) nethttp.Handler {
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+			ctx := WithRequestDataAtContext(r.Context(), r)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
 }
