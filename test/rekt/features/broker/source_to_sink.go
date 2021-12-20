@@ -101,6 +101,7 @@ func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventPro
 
 	// After we have finished sending.
 	f.Requirement("sender is finished", prober.SenderDone("source"))
+	f.Requirement("receiver is finished", prober.ReceiverDone("source", sinkName))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").

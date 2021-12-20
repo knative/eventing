@@ -75,11 +75,11 @@ func TestBrokerWithDLQ(t *testing.T) {
 	// Install probes.
 	prober := eventshub.NewProber()
 	brokerName := "normal-broker"
-	sink1 := "sink"
+	sink := "sink"
 
 	// Wait till broker is ready since we need it to run the test
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
-	env.Test(ctx, t, broker.SourceToSinkWithDLQ(brokerName, sink1, prober))
+	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink, prober, b.WithEnvConfig()...))
+	env.Test(ctx, t, broker.SourceToSinkWithDLQ(brokerName, sink, prober))
 
 	// Test that a Broker "test2" works as expected with the following topology:
 	// source ---> broker +--[trigger<via1>]--> bad uri
@@ -89,6 +89,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 	//                +--[DLQ]--> sink1
 	// Wait till broker is ready since we need it to run this test
 	brokerName = "dls-broker"
+	sink1 := "sink1"
 	sink2 := "sink2"
 	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
 	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ(brokerName, sink1, sink2, prober))
