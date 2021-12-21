@@ -152,8 +152,8 @@ func SourceToTwoSinksWithDLQ() *feature.Feature {
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
 	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
-	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
-	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
+	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/four.ce"))
+	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/four.ce")); err != nil {
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
 
