@@ -50,7 +50,6 @@ func TestBrokerAsMiddleware(t *testing.T) {
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSink("default"))
-
 	env.Finish()
 }
 
@@ -66,7 +65,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 
 	// The following will reuse the same environment for two different tests.
 
-	// Test that a Broker "test1" works as expected with the following topology:
+	// Test that a Broker "normal-broker" works as expected with the following topology:
 	// source ---> broker<Via> --[trigger]--> bad uri
 	//                |
 	//                +--[DLQ]--> sink
@@ -92,7 +91,7 @@ func TestBrokerWithDLQFallback(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	// Test that a Broker "test2" works as expected with the following topology:
+	// Test that a Broker "dls-broker" works as expected with the following topology:
 	// source ---> broker +--[trigger<via1>]--> bad uri
 	//                |   |
 	//                |   +--[trigger<vai2>]--> sink2
