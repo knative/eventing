@@ -80,6 +80,7 @@ func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventPro
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	via := feature.MakeRandomK8sName("via")
+	source := feature.MakeRandomK8sName("source")
 
 	f := feature.NewFeature()
 
@@ -97,16 +98,16 @@ func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventPro
 	f.Setup("trigger goes ready", trigger.IsReady(via))
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
+	f.Setup("install source", prober.SenderInstall(source))
 
 	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
-	f.Requirement("receiver is finished", prober.ReceiverDone("source", sinkName))
+	f.Requirement("sender is finished", prober.SenderDone(source))
+	f.Requirement("receiver is finished", prober.ReceiverDone(source, sinkName))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ", prober.AssertReceivedAll("source", sinkName))
+		Must("accepted all events", prober.AssertSentAll(source)).
+		Must("deliver event to DLQ", prober.AssertReceivedAll(source, sinkName))
 
 	return f
 }
@@ -124,6 +125,7 @@ func SourceToTwoSinksWithDLQ(brokerName, sink1, sink2 string, prober *eventshub.
 
 	via1 := feature.MakeRandomK8sName("via")
 	via2 := feature.MakeRandomK8sName("via")
+	source := feature.MakeRandomK8sName("source")
 
 	f := feature.NewFeature()
 
@@ -147,18 +149,18 @@ func SourceToTwoSinksWithDLQ(brokerName, sink1, sink2 string, prober *eventshub.
 	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
+	f.Setup("install source", prober.SenderInstall(source))
 
 	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
-	f.Requirement("receiver 1 is finished", prober.ReceiverDone("source", sink1))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone("source", sink2))
+	f.Requirement("sender is finished", prober.SenderDone(source))
+	f.Requirement("receiver 1 is finished", prober.ReceiverDone(source, sink1))
+	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink2))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", sink1)).
-		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", sink2))
+		Must("accepted all events", prober.AssertSentAll(source)).
+		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll(source, sink1)).
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll(source, sink2))
 
 	return f
 }
