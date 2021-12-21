@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/flaker"
 	"knative.dev/eventing/test/rekt/resources/trigger"
@@ -76,13 +77,20 @@ func SourceToSink(brokerName string) *feature.Feature {
 //                |
 //                +--[DLQ]--> sink
 //
-func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventProber) *feature.Feature {
-	prober.SetTargetResource(broker.GVR(), brokerName)
+func SourceToSinkWithDLQ() *feature.Feature {
+	f := feature.NewFeature()
 
+	prober := eventshub.NewProber()
+	brokerName := feature.MakeRandomK8sName("broker")
+	sink := feature.MakeRandomK8sName("sink")
 	via := feature.MakeRandomK8sName("via")
 	source := feature.MakeRandomK8sName("source")
 
-	f := feature.NewFeature()
+	f.Setup("install probe", prober.ReceiverInstall(sink))
+	f.Setup(fmt.Sprintf("install broker %q", brokerName), broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference(sink), "")))
+	// Block till broker is ready
+	f.Setup("Broker is ready", broker.IsReady(brokerName))
+	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
@@ -102,12 +110,12 @@ func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventPro
 
 	// After we have finished sending.
 	f.Requirement("sender is finished", prober.SenderDone(source))
-	f.Requirement("receiver is finished", prober.ReceiverDone(source, sinkName))
+	f.Requirement("receiver is finished", prober.ReceiverDone(source, sink))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
 		Must("accepted all events", prober.AssertSentAll(source)).
-		Must("deliver event to DLQ", prober.AssertReceivedAll(source, sinkName))
+		Must("deliver event to DLQ", prober.AssertReceivedAll(source, sink))
 
 	return f
 }
@@ -120,14 +128,26 @@ func SourceToSinkWithDLQ(brokerName, sinkName string, prober *eventshub.EventPro
 //                |
 //                +--[DLQ]--> sink1
 //
-func SourceToTwoSinksWithDLQ(brokerName, sink1, sink2 string, prober *eventshub.EventProber) *feature.Feature {
-	prober.SetTargetResource(broker.GVR(), brokerName)
+func SourceToTwoSinksWithDLQ() *feature.Feature {
+	f := feature.NewFeature()
 
+	prober := eventshub.NewProber()
+	brokerName := feature.MakeRandomK8sName("broker")
+	sink1 := feature.MakeRandomK8sName("sink-1")
+	sink2 := feature.MakeRandomK8sName("sink-2")
 	via1 := feature.MakeRandomK8sName("via")
 	via2 := feature.MakeRandomK8sName("via")
 	source := feature.MakeRandomK8sName("source")
 
-	f := feature.NewFeature()
+	// Setup Probes
+	f.Setup("install receiver 1", prober.ReceiverInstall(sink1))
+	f.Setup("install receiver 2", prober.ReceiverInstall(sink2))
+
+	f.Setup(fmt.Sprintf("install broker %q", brokerName), broker.Install(brokerName, delivery.WithDeadLetterSink(prober.AsKReference(sink1), "")))
+	// Block till broker is ready
+	f.Setup("Broker is ready", broker.IsReady(brokerName))
+
+	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
@@ -136,9 +156,6 @@ func SourceToTwoSinksWithDLQ(brokerName, sink1, sink2 string, prober *eventshub.
 	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
-
-	// Setup Probes
-	f.Setup("install recorder2", prober.ReceiverInstall(sink2))
 
 	// Setup data plane
 	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
