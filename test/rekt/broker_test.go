@@ -80,6 +80,17 @@ func TestBrokerWithDLQ(t *testing.T) {
 	// Wait till broker is ready since we need it to run the test
 	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink, prober, b.WithEnvConfig()...))
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ(brokerName, sink, prober))
+}
+
+// TestBrokerDLQFallback
+func TestBrokerWithDLQFallback(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
 
 	// Test that a Broker "test2" works as expected with the following topology:
 	// source ---> broker +--[trigger<via1>]--> bad uri
@@ -88,7 +99,11 @@ func TestBrokerWithDLQ(t *testing.T) {
 	//                |
 	//                +--[DLQ]--> sink1
 	// Wait till broker is ready since we need it to run this test
-	brokerName = "dls-broker"
+	// Setup data plane
+
+	// Install probes.
+	prober := eventshub.NewProber()
+	brokerName := "dls-broker"
 	sink1 := "sink1"
 	sink2 := "sink2"
 	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, sink1, prober, b.WithEnvConfig()...))
