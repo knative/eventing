@@ -62,39 +62,17 @@ func TestBrokerWithDLQ(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	// Test that a Broker "normal-broker" works as expected with the following topology:
-	// source ---> broker<Via> --[trigger]--> bad uri
+	// Test that a Broker works as expected with the following topology:
+	// source ---> broker --[trigger]--> bad uri
 	//                |
 	//                +--[DLQ]--> sink
 	env.Test(ctx, t, broker.SourceToSinkWithDLQ())
-}
-
-// TestBrokerDLQFallback
-func TestBrokerWithDLQFallback(t *testing.T) {
-	ctx, env := global.Environment(
-		knative.WithKnativeNamespace(system.Namespace()),
-		knative.WithLoggingConfig,
-		knative.WithTracingConfig,
-		k8s.WithEventListener,
-		environment.Managed(t),
-	)
-
-	// Test that a Broker "dls-broker" works as expected with the following topology:
-	// source ---> broker +--[trigger<via1>]--> bad uri
-	//                |   |
-	//                |   +--[trigger<vai2>]--> sink2
-	//                |
-	//                +--[DLQ]--> sink1
-	// Wait till broker is ready since we need it to run this test
-	env.Test(ctx, t, broker.SourceToTwoSinksWithDLQ())
 }
 
 // TestBrokerWithFlakyDLQ
 func TestBrokerWithFlakyDLQ(t *testing.T) {
 	t.Skip("Eventshub needs work")
 
-	class := eventing.MTChannelBrokerClassValue
-
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -102,9 +80,6 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
-
-	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
