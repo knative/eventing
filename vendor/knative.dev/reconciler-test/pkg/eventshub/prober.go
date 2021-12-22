@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -145,16 +144,21 @@ func (p *EventProber) SenderInstall(prefix string, opts ...EventsHubOption) feat
 func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
+		var events []EventInfoCombined
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-			events := p.SentBy(ctx, prefix)
-			log.Println(p.shortNameToName[prefix], "has sent", len(events))
+			events = p.SentBy(ctx, prefix)
+			t.Log(p.shortNameToName[prefix], "has sent", len(events))
 			if len(events) == len(p.ids) {
 				return true, nil
 			}
 			return false, nil
 		})
 		if err != nil {
-			t.Fatalf("timeout while waiting for sender to deliver all expected events: %v", err)
+			t.Fatalf("timeout while waiting for sender to deliver all expected events [prefix: %s]: %v\n\n%s\n",
+				prefix,
+				err,
+				stringify("sent", events),
+			)
 		}
 	}
 }
@@ -163,15 +167,20 @@ func (p *EventProber) SenderDone(prefix string) feature.StepFn {
 func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		interval, timeout := environment.PollTimingsFromContext(ctx)
+		var (
+			sent     []EventInfoCombined
+			received []EventInfo
+			rejected []EventInfo
+		)
 		err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-			sent := p.SentBy(ctx, from)
-			log.Println(p.shortNameToName[from], "has sent", len(sent))
+			sent = p.SentBy(ctx, from)
+			t.Log(p.shortNameToName[from], "has sent", len(sent))
 
-			received := p.ReceivedBy(ctx, to)
-			log.Println(p.shortNameToName[to], "has received", len(received))
+			received = p.ReceivedBy(ctx, to)
+			t.Log(p.shortNameToName[to], "has received", len(received))
 
-			rejected := p.RejectedBy(ctx, to)
-			log.Println(p.shortNameToName[to], "has rejected", len(rejected))
+			rejected = p.RejectedBy(ctx, to)
+			t.Log(p.shortNameToName[to], "has rejected", len(rejected))
 
 			if len(sent) == len(received)+len(rejected) {
 				return true, nil
@@ -179,7 +188,14 @@ func (p *EventProber) ReceiverDone(from, to string) feature.StepFn {
 			return false, nil
 		})
 		if err != nil {
-			t.Fatalf("timeout while waiting for receiver to receive all expected events: %v", err)
+			t.Fatalf("timeout while waiting for receiver to receive all expected events [from: %s, to: %s]: %v\n%s\n%s\n%s\n",
+				from,
+				to,
+				err,
+				stringify("sent", sent),
+				stringify("received", combine(received)),
+				stringify("rejected", combine(rejected)),
+			)
 		}
 	}
 }
@@ -421,4 +437,20 @@ func (p *EventProber) AssertReceivedOrRejectedAll(fromPrefix, toPrefix string) f
 			}
 		}
 	}
+}
+
+func stringify(title string, events []EventInfoCombined) string {
+	errorMsg := title + "\n"
+	for _, e := range events {
+		errorMsg += "Sent: " + e.Sent.String() + "\nResponse: " + e.Response.String() + "\n\n"
+	}
+	return errorMsg
+}
+
+func combine(ei []EventInfo) []EventInfoCombined {
+	var c []EventInfoCombined
+	for _, e := range ei {
+		c = append(c, EventInfoCombined{Sent: e})
+	}
+	return c
 }
