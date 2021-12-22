@@ -73,6 +73,8 @@ func TestBrokerWithDLQ(t *testing.T) {
 func TestBrokerWithFlakyDLQ(t *testing.T) {
 	t.Skip("Eventshub needs work")
 
+	class := eventing.MTChannelBrokerClassValue
+
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -80,6 +82,9 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 		k8s.WithEventListener,
 		environment.Managed(t),
 	)
+
+	// Install and wait for a Ready Broker.
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
