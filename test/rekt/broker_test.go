@@ -28,6 +28,8 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
@@ -104,4 +106,16 @@ func TestBrokerConformance(t *testing.T) {
 	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
+}
+
+func TestBrokerDefaultDelivery(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, broker.DefaultDeliverySpec())
 }

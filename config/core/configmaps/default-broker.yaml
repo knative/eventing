@@ -30,3 +30,7 @@ data:
       kind: ConfigMap
       name: config-br-default-channel
       namespace: knative-eventing
+      delivery:
+        retry: 10
+        backoffPolicy: exponential
+        backoffDelay: PT0.2S
