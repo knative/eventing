@@ -71,8 +71,8 @@ func SourceToSink(brokerName string) *feature.Feature {
 	return f
 }
 
-// SourceToSinkWithDLQ tests to see if a Trigger with a bad Sink, subscribed
-// to a Ready Broker, forward not sent events to it's Broker DLQ
+// SourceToSinkWithDLQ tests to see if a Trigger with no DLQ and a bad Sink, subscribed
+// to a Ready Broker, forward unsent events to it's Broker's DLQ
 //
 // source ---> broker<Via> --[trigger]--> bad uri
 //                |
