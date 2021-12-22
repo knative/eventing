@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
@@ -103,24 +104,47 @@ func (f *Feature) References() []corev1.ObjectReference {
 	return f.refs
 }
 
-// DeleteResourcesFn delete all known resources to the Feature registered
-// via `Reference`. Expected to be used as a StepFn.
+// DeleteResources delete all known resources to the Feature registered
+// via `Reference`.
+//
+// It doesn't fail when a referenced resource couldn't be deleted.
+// Use References to get the undeleted resources.
+//
+// Expected to be used as a StepFn.
 func (f *Feature) DeleteResources(ctx context.Context, t T) {
+	// refFailedDeletion keeps the failed to delete resources.
+	var refFailedDeletion []corev1.ObjectReference
 	dc := dynamicclient.Get(ctx)
 	for _, ref := range f.References() {
+
 		gv, err := schema.ParseGroupVersion(ref.APIVersion)
 		if err != nil {
-			t.Errorf("Could not parse GroupVersion for %+v", ref.APIVersion)
-		} else {
-			resource := apis.KindToResource(gv.WithKind(ref.Kind))
-			t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
-			if err := dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *metav1.NewDeleteOptions(0)); err != nil {
-				t.Logf("Warning, failed to delete %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
-			}
+			t.Fatalf("Could not parse GroupVersion for %+v", ref.APIVersion)
+		}
+
+		resource := apis.KindToResource(gv.WithKind(ref.Kind))
+		t.Logf("Deleting %s/%s of GVR: %+v", ref.Namespace, ref.Name, resource)
+
+		// Delete immediately, grace period is 0.
+		deleteOptions := metav1.NewDeleteOptions(0)
+		// Set delete propagation policy to foreground
+		foregroundDeletePropagation := metav1.DeletePropagationForeground
+		deleteOptions.PropagationPolicy = &foregroundDeletePropagation
+
+		err = dc.Resource(resource).Namespace(ref.Namespace).Delete(ctx, ref.Name, *deleteOptions)
+		// Ignore not found errors.
+		if err != nil && !apierrors.IsNotFound(err) {
+			refFailedDeletion = append(refFailedDeletion, ref)
+			t.Logf("Warning, failed to delete %s/%s of GVR: %+v: %v", ref.Namespace, ref.Name, resource, err)
 		}
 	}
-	f.refs = []corev1.ObjectReference(nil)
+	f.refs = refFailedDeletion
 }
+
+var (
+	// Expected to be used as a StepFn.
+	_ StepFn = (&Feature{}).DeleteResources
+)
 
 // Setup adds a step function to the feature set at the Setup timing phase.
 func (f *Feature) Setup(name string, fn StepFn) {

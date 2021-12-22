@@ -19,6 +19,7 @@ package milestone
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
@@ -64,6 +65,8 @@ func (ef *Factory) baseEvent(eventType string) cloudevents.Event {
 	event.SetSubject(ef.Subject)
 	event.SetSource(ef.Source)
 	event.SetType(eventType)
+	t, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	event.SetTime(t)
 
 	return event
 }
