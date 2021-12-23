@@ -58,11 +58,9 @@ func TestEventingUpgrades(t *testing.T) {
 }
 
 func newUpgradeConfig(t *testing.T) pkgupgrade.Configuration {
-	log, err := zap.NewDevelopment()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return pkgupgrade.Configuration{T: t, Log: log}
+	config := zap.NewDevelopmentConfig()
+	config.OutputPaths = []string{"stdout"}
+	return pkgupgrade.Configuration{T: t, LogConfig: pkgupgrade.LogConfig{Config: config}}
 }
 
 func TestMain(m *testing.M) {

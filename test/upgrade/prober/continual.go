@@ -54,6 +54,7 @@ func NewContinualVerification(
 	}
 	verify := func(c pkgupgrade.Context) {
 		runner.Verify(c)
+		c.T.Error("Induced error")
 	}
 	return pkgupgrade.NewBackgroundVerification(name, setup, verify)
 }
