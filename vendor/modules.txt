@@ -23,8 +23,6 @@ github.com/PuerkitoBio/urlesc
 ## explicit
 github.com/ahmetb/gen-crd-api-reference-docs
 github.com/ahmetb/gen-crd-api-reference-docs/template
-# github.com/antlr/antlr4 v0.0.0-20210105192202-5c2b686f95e1
-github.com/antlr/antlr4/runtime/Go/antlr
 # github.com/beorn7/perks v1.0.1
 ## explicit
 github.com/beorn7/perks/quantile
@@ -49,15 +47,6 @@ github.com/cloudevents/conformance/pkg/http
 ## explicit
 github.com/cloudevents/sdk-go/observability/opencensus/v2/client
 github.com/cloudevents/sdk-go/observability/opencensus/v2/http
-# github.com/cloudevents/sdk-go/sql/v2 v2.7.0
-## explicit
-github.com/cloudevents/sdk-go/sql/v2
-github.com/cloudevents/sdk-go/sql/v2/expression
-github.com/cloudevents/sdk-go/sql/v2/function
-github.com/cloudevents/sdk-go/sql/v2/gen
-github.com/cloudevents/sdk-go/sql/v2/parser
-github.com/cloudevents/sdk-go/sql/v2/runtime
-github.com/cloudevents/sdk-go/sql/v2/utils
 # github.com/cloudevents/sdk-go/v2 v2.7.0
 ## explicit
 github.com/cloudevents/sdk-go/v2
@@ -1086,17 +1075,17 @@ k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20211203062838-e11ac125e707
+# knative.dev/hack v0.0.0-20211222071919-abd085fc43de
 ## explicit
 knative.dev/hack
 knative.dev/hack/shell
-# knative.dev/hack/schema v0.0.0-20211203062838-e11ac125e707
+# knative.dev/hack/schema v0.0.0-20211222071919-abd085fc43de
 ## explicit
 knative.dev/hack/schema/commands
 knative.dev/hack/schema/docs
 knative.dev/hack/schema/registry
 knative.dev/hack/schema/schema
-# knative.dev/pkg v0.0.0-20211206113427-18589ac7627e
+# knative.dev/pkg v0.0.0-20211216142117-79271798f696
 ## explicit
 knative.dev/pkg/apiextensions/storageversion
 knative.dev/pkg/apiextensions/storageversion/cmd/migrate
@@ -1228,7 +1217,7 @@ knative.dev/pkg/webhook/resourcesemantics
 knative.dev/pkg/webhook/resourcesemantics/conversion
 knative.dev/pkg/webhook/resourcesemantics/defaulting
 knative.dev/pkg/webhook/resourcesemantics/validation
-# knative.dev/reconciler-test v0.0.0-20211207070557-0d138a88867b
+# knative.dev/reconciler-test v0.0.0-20211222120418-816f2192fec9
 ## explicit
 knative.dev/reconciler-test/cmd/eventshub
 knative.dev/reconciler-test/pkg/environment

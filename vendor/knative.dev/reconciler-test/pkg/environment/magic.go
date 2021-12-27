@@ -70,6 +70,9 @@ type MagicEnvironment struct {
 
 	// milestones sends milestone events, if configured.
 	milestones milestone.Emitter
+
+	// managedT is used for test-scoped logging, if configured.
+	managedT feature.T
 }
 
 const (
@@ -85,11 +88,13 @@ func (mr *MagicEnvironment) References() []corev1.ObjectReference {
 }
 
 func (mr *MagicEnvironment) Finish() {
+	// Delete the namespace after sending the Finished milestone event
+	// since emitters might use the namespace.
+	mr.milestones.Finished()
 	if err := mr.DeleteNamespaceIfNeeded(); err != nil {
 		mr.milestones.Exception(NamespaceDeleteErrorReason, "failed to delete namespace %q, %v", mr.namespace, err)
 		panic(err)
 	}
-	mr.milestones.Finished()
 }
 
 // WithPollTimings is an environment option to override default poll timings.
@@ -103,6 +108,9 @@ func WithPollTimings(interval, timeout time.Duration) EnvOpts {
 //  - registers a t.Cleanup callback on env.Finish().
 func Managed(t feature.T) EnvOpts {
 	return func(ctx context.Context, env Environment) (context.Context, error) {
+		if e, ok := env.(*MagicEnvironment); ok {
+			e.managedT = t
+		}
 		t.Cleanup(env.Finish)
 		return ctx, nil
 	}
@@ -137,14 +145,13 @@ func (mr *MagicGlobalEnvironment) Environment(opts ...EnvOpts) (context.Context,
 	// It is possible to have milestones set in the options, check for nil in
 	// env first before attempting to pull one from the os environment.
 	if env.milestones == nil {
-		milestones, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
+		eventEmitter, err := milestone.NewMilestoneEmitterFromEnv(mr.instanceID, namespace)
 		if err != nil {
 			// This is just an FYI error, don't block the test run.
 			logging.FromContext(mr.c).Error("failed to create the milestone event sender", zap.Error(err))
 		}
-		if milestones != nil {
-			env.milestones = milestones
-		}
+		logEmitter := milestone.NewLogEmitter(ctx, namespace, env.managedT)
+		env.milestones = milestone.Compose(eventEmitter, logEmitter)
 	}
 
 	if err := env.CreateNamespaceIfNeeded(); err != nil {
