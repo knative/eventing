@@ -343,13 +343,15 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# go.opentelemetry.io/otel v0.16.0
+# go.opentelemetry.io/otel v0.20.0
 ## explicit
+go.opentelemetry.io/otel/attribute
 go.opentelemetry.io/otel/codes
 go.opentelemetry.io/otel/internal
 go.opentelemetry.io/otel/internal/baggage
-go.opentelemetry.io/otel/label
 go.opentelemetry.io/otel/propagation
+# go.opentelemetry.io/otel/trace v0.20.0
+## explicit
 go.opentelemetry.io/otel/trace
 # go.uber.org/atomic v1.9.0
 ## explicit
