@@ -157,7 +157,7 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	}
 
 	// Setup Probes
-	f.Setup("install sink1", prober.ReceiverInstall(dlq))
+	f.Setup("install dlq", prober.ReceiverInstall(dlq))
 	f.Setup("install sink2", prober.ReceiverInstall(sink2))
 
 	// Setup data plane
