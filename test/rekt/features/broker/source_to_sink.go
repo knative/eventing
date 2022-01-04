@@ -98,7 +98,7 @@ func SourceToSinkWithDLQ() *feature.Feature {
 	f.Setup("install dlq", prober.ReceiverInstall(dlq))
 
 	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference(dlq), ""))
-	f.Setup(fmt.Sprintf("install broker %q", brokerName), broker.Install(brokerName, brokerConfig...))
+	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
 	// Block till broker is ready
 	f.Setup("Broker is ready", broker.IsReady(brokerName))
 	prober.SetTargetResource(broker.GVR(), brokerName)
