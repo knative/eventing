@@ -134,9 +134,9 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSin
 
 // source ---> broker +--[trigger<via1>]--> bad uri
 //                |   |
-//                |   +--[trigger<vai2>]--> sink2
+//                |   +--[trigger<vai2>]--> sink
 //                |
-//                +--[DLQ]--> sink1
+//                +--[DLQ]--> dlq
 //
 func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	f := feature.NewFeatureNamed("Bad Trigger does not affect good Trigger")
@@ -146,7 +146,7 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	via1 := feature.MakeRandomK8sName("via")
 	via2 := feature.MakeRandomK8sName("via")
 	dlq := feature.MakeRandomK8sName("dlq")
-	sink2 := feature.MakeRandomK8sName("sink2")
+	sink := feature.MakeRandomK8sName("sink")
 	source := feature.MakeRandomK8sName("source")
 
 	lib := feature.MakeRandomK8sName("lib")
@@ -159,7 +159,7 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 
 	// Setup Probes
 	f.Setup("install dlq", prober.ReceiverInstall(dlq))
-	f.Setup("install sink2", prober.ReceiverInstall(sink2))
+	f.Setup("install sink2", prober.ReceiverInstall(sink))
 
 	// Setup data plane
 	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference(dlq), ""))
@@ -169,7 +169,7 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
-	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference(sink2), "")))
+	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference(sink), "")))
 
 	// Resources ready.
 	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
@@ -181,13 +181,13 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	// After we have finished sending.
 	f.Requirement("sender is finished", prober.SenderDone(source))
 	f.Requirement("receiver 1 is finished", prober.ReceiverDone(source, dlq))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink2))
+	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
 		Must("accepted all events", prober.AssertSentAll(source)).
 		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll(source, dlq)).
-		Must("deliver event to sink (via2)", prober.AssertReceivedAll(source, sink2))
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll(source, sink))
 
 	return f
 }
