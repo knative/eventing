@@ -139,7 +139,7 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSin
 //                +--[DLQ]--> sink1
 //
 func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
-	f := feature.NewFeature()
+	f := feature.NewFeatureNamed("Bad Trigger does not affect good Trigger")
 
 	prober := eventshub.NewProber()
 	brokerName := feature.MakeRandomK8sName("broker")
@@ -147,6 +147,7 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	via2 := feature.MakeRandomK8sName("via")
 	dlq := feature.MakeRandomK8sName("dlq")
 	sink2 := feature.MakeRandomK8sName("sink2")
+	source := feature.MakeRandomK8sName("source")
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
@@ -175,18 +176,18 @@ func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
 	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
 
 	// Install events after data plane is ready.
-	f.Setup("install source", prober.SenderInstall("source"))
+	f.Requirement("install source", prober.SenderInstall(source))
 
 	// After we have finished sending.
-	f.Requirement("sender is finished", prober.SenderDone("source"))
-	f.Requirement("receiver 1 is finished", prober.ReceiverDone("source", dlq))
-	f.Requirement("receiver 2 is finished", prober.ReceiverDone("source", sink2))
+	f.Requirement("sender is finished", prober.SenderDone(source))
+	f.Requirement("receiver 1 is finished", prober.ReceiverDone(source, dlq))
+	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink2))
 
 	// Assert events ended up where we expected.
 	f.Stable("broker with DLQ").
-		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll("source", dlq)).
-		Must("deliver event to sink (via2)", prober.AssertReceivedAll("source", sink2))
+		Must("accepted all events", prober.AssertSentAll(source)).
+		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll(source, dlq)).
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll(source, sink2))
 
 	return f
 }
