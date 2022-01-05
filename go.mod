@@ -8,7 +8,6 @@ require (
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
 	github.com/cloudevents/sdk-go/v2 v2.7.0
-	github.com/dgryski/go-gk v0.0.0-20200319235926-a69029f61654 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/gofuzz v1.2.0
@@ -37,15 +36,15 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
-	k8s.io/api v0.21.4
-	k8s.io/apiextensions-apiserver v0.21.4
-	k8s.io/apimachinery v0.21.4
-	k8s.io/apiserver v0.21.4
-	k8s.io/client-go v0.21.4
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/api v0.22.5
+	k8s.io/apiextensions-apiserver v0.22.5
+	k8s.io/apimachinery v0.22.5
+	k8s.io/apiserver v0.22.5
+	k8s.io/client-go v0.22.5
+	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
 	knative.dev/hack v0.0.0-20211222071919-abd085fc43de
 	knative.dev/hack/schema v0.0.0-20211222071919-abd085fc43de
-	knative.dev/pkg v0.0.0-20211216142117-79271798f696
+	knative.dev/pkg v0.0.0-20220104185830-52e42b760b54
 	knative.dev/reconciler-test v0.0.0-20211222120418-816f2192fec9
 	sigs.k8s.io/yaml v1.3.0
 )
