@@ -132,6 +132,66 @@ func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSin
 	return f
 }
 
+// source ---> broker +--[trigger<via1>]--> bad uri
+//                |   |
+//                |   +--[trigger<vai2>]--> sink
+//                |
+//                +--[DLQ]--> dlq
+//
+func BadTriggerDoesNotAffectOkTrigger() *feature.Feature {
+	f := feature.NewFeatureNamed("Bad Trigger does not affect good Trigger")
+
+	prober := eventshub.NewProber()
+	brokerName := feature.MakeRandomK8sName("broker")
+	via1 := feature.MakeRandomK8sName("via")
+	via2 := feature.MakeRandomK8sName("via")
+	dlq := feature.MakeRandomK8sName("dlq")
+	sink := feature.MakeRandomK8sName("sink")
+	source := feature.MakeRandomK8sName("source")
+
+	lib := feature.MakeRandomK8sName("lib")
+	f.Setup("install events", eventlibrary.Install(lib))
+	f.Setup("event cache is ready", eventlibrary.IsReady(lib))
+	f.Setup("use events cache", prober.SenderEventsFromSVC(lib, "events/three.ce"))
+	if err := prober.ExpectYAMLEvents(eventlibrary.PathFor("events/three.ce")); err != nil {
+		panic(fmt.Errorf("can not find event files: %s", err))
+	}
+
+	// Setup Probes
+	f.Setup("install dlq", prober.ReceiverInstall(dlq))
+	f.Setup("install sink2", prober.ReceiverInstall(sink))
+
+	// Setup data plane
+	brokerConfig := append(broker.WithEnvConfig(), delivery.WithDeadLetterSink(prober.AsKReference(dlq), ""))
+	f.Setup("install broker", broker.Install(brokerName, brokerConfig...))
+	// Block till broker is ready
+	f.Setup("Broker is ready", broker.IsReady(brokerName))
+	prober.SetTargetResource(broker.GVR(), brokerName)
+
+	f.Setup("install trigger via1", trigger.Install(via1, brokerName, trigger.WithSubscriber(nil, "bad://uri")))
+	f.Setup("install trigger via2", trigger.Install(via2, brokerName, trigger.WithSubscriber(prober.AsKReference(sink), "")))
+
+	// Resources ready.
+	f.Setup("trigger1 goes ready", trigger.IsReady(via1))
+	f.Setup("trigger2 goes ready", trigger.IsReady(via2))
+
+	// Install events after data plane is ready.
+	f.Requirement("install source", prober.SenderInstall(source))
+
+	// After we have finished sending.
+	f.Requirement("sender is finished", prober.SenderDone(source))
+	f.Requirement("receiver 1 is finished", prober.ReceiverDone(source, dlq))
+	f.Requirement("receiver 2 is finished", prober.ReceiverDone(source, sink))
+
+	// Assert events ended up where we expected.
+	f.Stable("broker with DLQ").
+		Must("accepted all events", prober.AssertSentAll(source)).
+		Must("deliver event to DLQ (via1)", prober.AssertReceivedAll(source, dlq)).
+		Must("deliver event to sink (via2)", prober.AssertReceivedAll(source, sink))
+
+	return f
+}
+
 func noEventsToDLS(prober *eventshub.EventProber, sinkName string) feature.StepFn {
 	return func(ctx context.Context, t feature.T) {
 		if len(prober.ReceivedBy(ctx, sinkName)) == 0 {

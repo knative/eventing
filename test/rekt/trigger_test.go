@@ -75,3 +75,16 @@ func TestTriggerWithDLS(t *testing.T) {
 	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, brokerSinkName, prober, b.WithEnvConfig()...))
 	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers("test2", brokerName, brokerSinkName, prober))
 }
+
+func TestMultiTriggerTopology(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	// Test that a bad Trigger doesn't affect sending messages to a valid one
+	env.Test(ctx, t, trigger.BadTriggerDoesNotAffectOkTrigger())
+}
