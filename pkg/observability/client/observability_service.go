@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,10 +23,11 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/cloudevents/sdk-go/v2/observability"
+	ceobs "github.com/cloudevents/sdk-go/v2/observability"
+	"github.com/cloudevents/sdk-go/v2/protocol"
 	"go.opencensus.io/trace"
 
-	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/observability"
 )
 
 func New() knativeObservabilityService {
@@ -52,12 +53,14 @@ func (k knativeObservabilityService) RecordCallingInvoker(ctx context.Context, e
 }
 
 func (k knativeObservabilityService) RecordSendingEvent(ctx context.Context, event event.Event) (context.Context, func(errOrResult error)) {
+	ctx, r := obsclient.NewReporter(ctx, reportSend)
+
 	// From https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/messaging.md#span-name
 	// The span name SHOULD be set to the message destination name and the operation being performed
-	spanName := observability.ClientSpanName
+	spanName := ceobs.ClientSpanName
 	spanKind := trace.SpanKindClient
 
-	spanData := tracing.SpanDataFromContext(ctx)
+	spanData := observability.SpanDataFromContext(ctx)
 	if spanData != nil {
 		spanName = spanData.Name
 		spanKind = spanData.Kind
@@ -71,6 +74,11 @@ func (k knativeObservabilityService) RecordSendingEvent(ctx context.Context, eve
 
 	return ctx, func(errOrResult error) {
 		span.End()
+		if protocol.IsACK(errOrResult) {
+			r.OK()
+		} else {
+			r.Error()
+		}
 	}
 }
 

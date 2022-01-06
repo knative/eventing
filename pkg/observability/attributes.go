@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,31 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tracing
+package observability
 
 import (
-	"context"
-	"reflect"
-	"testing"
+	"go.opencensus.io/trace"
 )
 
-func TestSpanData(t *testing.T) {
-	ctx := context.Background()
-	sd := SpanDataFromContext(ctx)
-	if sd != nil {
-		t.Errorf("SpanDataFromContext() is %v, wanted nil", sd)
-	}
+const (
+	K8sNamespaceName = "k8s.namespace.name"
+)
 
-	want := SpanData{
-		Name:       "name",
-		Kind:       0,
-		Attributes: nil,
-	}
-
-	ctx = WithSpanData(ctx, "name", 0, nil)
-	sd = SpanDataFromContext(ctx)
-
-	if !reflect.DeepEqual(sd, &want) {
-		t.Errorf("SpanDataFromContext(). got %v, wanted %v", sd, want)
+// K8sAttributes generates Kubernetes trace attributes for the object of the
+// given name in the given namespace. resource identifies the object type
+// as <singular>.<group>
+func K8sAttributes(name, namespace, resource string) []trace.Attribute {
+	return []trace.Attribute{
+		trace.StringAttribute("k8s."+resource+".name", name),
+		trace.StringAttribute(K8sNamespaceName, namespace),
 	}
 }

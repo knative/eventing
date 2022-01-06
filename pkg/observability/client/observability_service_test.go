@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,19 +18,18 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/trace"
-	"knative.dev/eventing/pkg/tracing"
+
+	"knative.dev/eventing/pkg/observability"
 )
 
 type mockExporter chan *trace.SpanData
 
 func (m mockExporter) ExportSpan(s *trace.SpanData) {
-	fmt.Println("Span received")
 	m <- s
 }
 
@@ -48,9 +47,9 @@ func TestKnativeObservabilityServiceRequestSend(t *testing.T) {
 	event.SetSource("example.com")
 
 	ctx := context.Background()
-	ctx = tracing.WithSpanData(ctx, "spanname", 1, []trace.Attribute{trace.StringAttribute("myattr", "myvalue")})
+	ctx = observability.WithSpanData(ctx, "spanname", 1, []trace.Attribute{trace.StringAttribute("myattr", "myvalue")})
 
-	ctx, callback := New().RecordSendingEvent(ctx, event)
+	_, callback := New().RecordSendingEvent(ctx, event)
 	callback(nil)
 
 	trace := <-mockExp

@@ -37,7 +37,7 @@ import (
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	"knative.dev/eventing/pkg/metrics/source"
-	tracing "knative.dev/eventing/pkg/tracing/client"
+	obsclient "knative.dev/eventing/pkg/observability/client"
 )
 
 var newClientHTTPObserved = NewClientHTTPObserved
@@ -48,7 +48,7 @@ func NewClientHTTPObserved(topt []http.Option, copt []ceclient.Option) (ceclient
 		return nil, err
 	}
 
-	copt = append(copt, ceclient.WithTimeNow(), ceclient.WithUUIDs(), ceclient.WithObservabilityService(tracing.New()))
+	copt = append(copt, ceclient.WithTimeNow(), ceclient.WithUUIDs(), ceclient.WithObservabilityService(obsclient.New()))
 
 	c, err := ceclient.New(t, copt...)
 	if err != nil {
