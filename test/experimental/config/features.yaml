@@ -26,3 +26,4 @@ data:
   delivery-retryafter: "enabled"
   delivery-timeout: "enabled"
   strict-subscriber: "disabled"
+  new-trigger-filters: "enabled"
