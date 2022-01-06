@@ -23,6 +23,8 @@ github.com/PuerkitoBio/urlesc
 ## explicit
 github.com/ahmetb/gen-crd-api-reference-docs
 github.com/ahmetb/gen-crd-api-reference-docs/template
+# github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211221011931-643d94fcab96
+github.com/antlr/antlr4/runtime/Go/antlr
 # github.com/beorn7/perks v1.0.1
 ## explicit
 github.com/beorn7/perks/quantile
@@ -47,7 +49,16 @@ github.com/cloudevents/conformance/pkg/http
 ## explicit
 github.com/cloudevents/sdk-go/observability/opencensus/v2/client
 github.com/cloudevents/sdk-go/observability/opencensus/v2/http
-# github.com/cloudevents/sdk-go/v2 v2.7.0
+# github.com/cloudevents/sdk-go/sql/v2 v2.8.0
+## explicit
+github.com/cloudevents/sdk-go/sql/v2
+github.com/cloudevents/sdk-go/sql/v2/expression
+github.com/cloudevents/sdk-go/sql/v2/function
+github.com/cloudevents/sdk-go/sql/v2/gen
+github.com/cloudevents/sdk-go/sql/v2/parser
+github.com/cloudevents/sdk-go/sql/v2/runtime
+github.com/cloudevents/sdk-go/sql/v2/utils
+# github.com/cloudevents/sdk-go/v2 v2.8.0
 ## explicit
 github.com/cloudevents/sdk-go/v2
 github.com/cloudevents/sdk-go/v2/binding

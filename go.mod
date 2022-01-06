@@ -7,7 +7,8 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
-	github.com/cloudevents/sdk-go/v2 v2.7.0
+	github.com/cloudevents/sdk-go/sql/v2 v2.8.0
+	github.com/cloudevents/sdk-go/v2 v2.8.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/gofuzz v1.2.0
