@@ -712,7 +712,13 @@ func TestFilterSpecValidation(t *testing.T) {
 		want: apis.ErrInvalidKeyName("invALID", apis.CurrentField,
 			"Attribute name must start with a letter and can only contain "+
 				"lowercase alphanumeric").ViaFieldKey("prefix", "invALID").ViaFieldIndex("any", 2).ViaFieldIndex("filters", 0)}, {
-		//TODO: Add CE validation once this is merged https://github.com/cloudevents/sdk-go/pull/748
+		name: "CE SQL with syntax error",
+		filters: []SubscriptionsAPIFilter{
+			{
+				SQL: "this is wrong",
+			}},
+		want: apis.ErrInvalidValue("this is wrong", "sql", "syntax error: ").ViaFieldIndex("filters", 0),
+	}, {
 		name: "Valid CE SQL expression",
 		filters: []SubscriptionsAPIFilter{
 			{

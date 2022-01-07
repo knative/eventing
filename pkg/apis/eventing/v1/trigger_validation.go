@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"regexp"
 
+	cesqlparser "github.com/cloudevents/sdk-go/sql/v2/parser"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -193,6 +194,17 @@ func ValidateSubscriptionAPIFiltersList(ctx context.Context, filters []Subscript
 	return errs
 }
 
+func ValidateCESQLExpression(ctx context.Context, expression string) (errs *apis.FieldError) {
+	if expression == "" {
+		return nil
+	}
+	_, err := cesqlparser.Parse(expression)
+	if err != nil {
+		return apis.ErrInvalidValue(expression, apis.CurrentField, err.Error())
+	}
+	return nil
+}
+
 func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPIFilter) (errs *apis.FieldError) {
 	if filter == nil {
 		return nil
@@ -211,6 +223,8 @@ func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPI
 		ValidateSubscriptionAPIFiltersList(ctx, filter.Any).ViaField("any"),
 	).Also(
 		ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"),
+	).Also(
+		ValidateCESQLExpression(ctx, filter.SQL).ViaField("sql"),
 	)
 	return errs
 }
