@@ -27,6 +27,7 @@ import (
 	cecontext "github.com/cloudevents/sdk-go/v2/context"
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -35,6 +36,7 @@ import (
 	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/observability"
 )
 
 type CronJobRunner interface {
@@ -92,6 +94,12 @@ func (a *cronJobsRunner) AddSchedule(source *sourcesv1.PingSource) cron.EntryID 
 		Name:          source.Name,
 		ResourceGroup: resourceGroup,
 	}
+
+	// See https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/messaging.md#span-name
+	spanName := source.Status.SinkURI.String() + " send"
+
+	ctx = observability.WithSpanData(ctx, spanName, int(trace.SpanKindProducer),
+		observability.K8sAttributes(source.Name, source.Namespace, sourcesv1.Resource("pingsource").String()))
 
 	schedule := source.Spec.Schedule
 	if source.Spec.Timezone != "" {

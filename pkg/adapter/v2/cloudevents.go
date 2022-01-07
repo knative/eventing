@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package adapter
 
 import (
@@ -23,19 +24,39 @@ import (
 	"net/url"
 	"time"
 
-	cloudeventsobsclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
+	obshttp "github.com/cloudevents/sdk-go/observability/opencensus/v2/http"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	ceclient "github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
-	"knative.dev/eventing/pkg/metrics/source"
+
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
+	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	"knative.dev/eventing/pkg/metrics/source"
+	obsclient "knative.dev/eventing/pkg/observability/client"
 )
 
-var newClientHTTPObserved = cloudeventsobsclient.NewClientHTTP
+var newClientHTTPObserved = NewClientHTTPObserved
+
+func NewClientHTTPObserved(topt []http.Option, copt []ceclient.Option) (ceclient.Client, error) {
+	t, err := obshttp.NewObservedHTTP(topt...)
+	if err != nil {
+		return nil, err
+	}
+
+	copt = append(copt, ceclient.WithTimeNow(), ceclient.WithUUIDs(), ceclient.WithObservabilityService(obsclient.New()))
+
+	c, err := ceclient.New(t, copt...)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
 
 // NewCloudEventsClient returns a client that will apply the ceOverrides to
 // outbound events and report outbound event counts.
