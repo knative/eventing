@@ -454,3 +454,15 @@ func combine(ei []EventInfo) []EventInfoCombined {
 	}
 	return c
 }
+
+// AssertReceivedNone tests that no events sent by `fromPrefix` were received by `toPrefix`.
+func (p *EventProber) AssertReceivedNone(fromPrefix, toPrefix string) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+
+		events := p.ReceivedBy(ctx, toPrefix)
+		if len(events) > 0 {
+			t.Errorf("expected %q to not have received any events from %s, actually received %d",
+				toPrefix, fromPrefix, len(events))
+		}
+	}
+}
