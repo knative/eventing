@@ -37,7 +37,7 @@ const (
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var (
 		report *receiver.Report
-		err error
+		err    error
 	)
 	start := time.Now()
 	if fetchErr := wait.PollImmediate(fetchReportInterval, fetchReportTimeout, func() (bool, error) {
