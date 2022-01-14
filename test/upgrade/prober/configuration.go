@@ -64,7 +64,6 @@ type DuplicateAction string
 type Config struct {
 	Wathola
 	Interval      time.Duration
-	FinishedSleep time.Duration
 	Serving       ServingConfig
 	FailOnErrors  bool
 	OnDuplicate   DuplicateAction
@@ -110,7 +109,6 @@ func NewConfigOrFail(c pkgupgrade.Context) *Config {
 func NewConfig() (*Config, error) {
 	config := &Config{
 		Interval:      Interval,
-		FinishedSleep: defaultFinishedSleep,
 		FailOnErrors:  true,
 		OnDuplicate:   Warn,
 		Ctx:           context.Background(),
