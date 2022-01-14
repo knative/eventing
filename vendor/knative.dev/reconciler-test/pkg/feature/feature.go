@@ -18,6 +18,7 @@ package feature
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
@@ -39,6 +40,31 @@ type Feature struct {
 	State state.Store
 	// Contains all the resources created as part of this Feature.
 	refs []corev1.ObjectReference
+}
+
+func (f Feature) MarshalJSON() ([]byte, error) {
+	in := struct {
+		Name  string                   `json:"name"`
+		Steps []Step                   `json:"steps"`
+		State state.Store              `json:"state"`
+		Refs  []corev1.ObjectReference `json:"refs"`
+	}{
+		Name:  f.Name,
+		Steps: f.Steps,
+		State: f.State,
+		Refs:  f.refs,
+	}
+	return json.MarshalIndent(in, "", " ")
+}
+
+// DumpWith calls the provided log function with a nicely formatted string
+// that represents the Feature.
+func (f Feature) DumpWith(log func(args ...interface{})) {
+	b, err := f.MarshalJSON()
+	if err != nil {
+		log("Skipping feature logging due to error: " + err.Error())
+	}
+	log(string(b))
 }
 
 // NewFeatureNamed creates a new feature with the provided name
@@ -74,11 +100,11 @@ type StepFn func(ctx context.Context, t T)
 // Step is a structure to hold the step function, step name and state, level and
 // timing configuration.
 type Step struct {
-	Name string
-	S    States
-	L    Levels
-	T    Timing
-	Fn   StepFn
+	Name string `json:"name"`
+	S    States `json:"states"`
+	L    Levels `json:"levels"`
+	T    Timing `json:"timing"`
+	Fn   StepFn `json:"-"`
 }
 
 // TestName returns the constructed test name based on the timing, step, state,
