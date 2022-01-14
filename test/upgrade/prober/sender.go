@@ -114,7 +114,7 @@ func (p *prober) removeSender() {
 			return true, nil
 		}
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		return false, nil
 	})
