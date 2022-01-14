@@ -238,7 +238,8 @@ func WaitForServiceEndpointsOrFail(ctx context.Context, t feature.T, svcName str
 
 // WaitForPodRunningOrFail waits for the given pod to be in running state.
 func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
-	podClient := kubeclient.Get(ctx).CoreV1().Pods(environment.FromContext(ctx).Namespace())
+	ns := environment.FromContext(ctx).Namespace()
+	podClient := kubeclient.Get(ctx).CoreV1().Pods(ns)
 	p := podClient
 	interval, timeout := PollTimings(ctx, nil)
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
@@ -246,7 +247,15 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 		if err != nil {
 			return true, err
 		}
-		return podRunning(p), nil
+		isRunning := podRunning(p)
+
+		if !isRunning {
+			t.Log("Pod %s/%s is not running, dumping the pod object we got:", ns, podName)
+			b, _ := json.MarshalIndent(p, "", " ")
+			t.Log(string(b))
+		}
+
+		return isRunning, nil
 	})
 	if err != nil {
 		sb := strings.Builder{}

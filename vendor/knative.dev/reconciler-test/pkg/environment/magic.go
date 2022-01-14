@@ -224,6 +224,9 @@ func (mr *MagicEnvironment) Prerequisite(ctx context.Context, t *testing.T, f *f
 func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *feature.Feature) {
 	originalT.Helper() // Helper marks the calling function as a test helper function.
 
+	f.DumpWith(originalT.Log)
+	defer f.DumpWith(originalT.Log) // Log feature state at the end of the run
+
 	if !mr.featureMatch.MatchString(f.Name) {
 		originalT.Logf("Skipping feature '%s' assertions because --feature=%s  doesn't match", f.Name, mr.featureMatch.String())
 		return
