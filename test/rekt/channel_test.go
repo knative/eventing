@@ -156,7 +156,7 @@ TestChannelChain tests the following scenario:
 EventSource ---> (Channel ---> Subscription) x 10 ---> Sink
 
 */
-func TestChannelChain(t *testing.T) {
+func TestChannelChainByUsingReplyAsSubscriber(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
@@ -173,7 +173,7 @@ func TestChannelChain(t *testing.T) {
 	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
 }
 
-func TestChannelDeadLetterSink(t *testing.T) {
+func TestChannelDeadLetterSinkByUsingReplyAsSubscriber(t *testing.T) {
 	t.Parallel()
 
 	ctx, env := global.Environment(
