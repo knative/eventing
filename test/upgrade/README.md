@@ -61,20 +61,17 @@ all of those events propagated at least once.
 
 To achieve that
 a [wathola tool](https://pkg.go.dev/knative.dev/eventing/test/upgrade/prober/wathola)
-was prepared. It consists of 4 components: _sender_, _forwarder_, _receiver_,
-and _fetcher_. _Sender_ is the usual Kubernetes deployment that publishes events
-to the System Under Tests (SUT). By default, SUT is a default `broker`
-with two triggers for each type of events being sent. _Sender_ will send events
-with given interval. When it terminates (by either `SIGTERM`, or
-`SIGINT`), a `finished` event is generated. _Forwarder_ is a knative serving
-service that scales up from zero to receive the sent events and forward them to
+was prepared. It consists of 3 components: _sender_, _forwarder_ and _receiver_.
+All the components are deployed by Prober. _Sender_ is the usual Kubernetes
+deployment that publishes events to the System Under Tests (SUT). By default, SUT
+is a default `broker` with two triggers for each type of events being sent.
+_Sender_ will send events with given interval. When it terminates (by either `SIGTERM`,
+or `SIGINT`), a `finished` event is generated. _Forwarder_ is a knative serving
+service that scales up from zero to receive the sent events and forwards them to
 given target which is the _receiver_ in our case. _Receiver_ is an ordinary
 deployment that collects events from multiple forwarders and has an
-endpoint `/report` that can be polled to get the status of received events. To
-fetch the report from within the cluster _fetcher_ comes in. It's a simple one
-time job, that will fetch the report from _receiver_ and print it on stdout as
-JSON. That enables the test client to download _fetcher_ logs and parse the JSON
-to get the final report.
+endpoint `/report` that can be polled to get the final report with the status
+of received events.
 
 Diagram below describe the setup:
 
@@ -84,17 +81,17 @@ Diagram below describe the setup:
 (deployment)        (ksvc)           (deployment)         |
 +--------+       +-----------+       +----------+         |    +------------+
 |        |       |           ++      |          |         |    |            |
-| Sender |   +-->| Forwarder ||----->+ Receiver |         |    + TestProber |
-|        |   |   |           ||      |          |<---+    |    |            |
-+---+----+   |   +------------|      +----------+    |    |    +------------+
-    |        |    +-----------+                      |    |
-    | ```````|`````````````````````````````          |    |
-    | `      |                            ` +---------+   |
-    | `   +--+-----+       +---------+    ` |         |   |
-    +----->        |       |         +-+  ` | Fetcher |   |
-      `   | Broker | < - > | Trigger | |  ` |         |   |
-      `   |        |       |         | |  ` +---------+   |
-      `   +--------+       +---------+ |  `    (job)      |
+| Sender |   +-->| Forwarder ||----->+ Receiver |<--------|----+   Prober   |
+|        |   |   |           ||      |          |         |    |            |
++---+----+   |   +------------|      +----------+         |    +------------+
+    |        |    +-----------+                           |
+    | ```````|`````````````````````````````               |
+    | `      |                            `               |
+    | `   +--+-----+       +---------+    `               |
+    +----->        |       |         +-+  `               |
+      `   | Broker | < - > | Trigger | |  `               |
+      `   |        |       |         | |  `               |
+      `   +--------+       +---------+ |  `               |
       `    (default)        +----------+  `               |
       `              (SUT)                `
       `````````````````````````````````````
