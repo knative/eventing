@@ -19,11 +19,9 @@ package channel
 import (
 	"context"
 	"fmt"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/test"
-	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
@@ -166,7 +164,7 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 
 	event := cloudevents.NewEvent()
 	event.SetID(feature.MakeRandomK8sName("test"))
-	event.SetType(testlib.DefaultEventType)
+	event.SetType("myevent")
 	event.SetSource("http://sender.svc/")
 	prober.ExpectEvents([]string{event.ID()})
 
