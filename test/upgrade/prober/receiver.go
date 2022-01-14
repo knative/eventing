@@ -16,6 +16,7 @@
 package prober
 
 import (
+	"context"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,6 +26,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	pkgTest "knative.dev/pkg/test"
+	"knative.dev/pkg/test/ingress"
 )
 
 var (
@@ -70,10 +72,19 @@ func (p *prober) deployReceiverService() {
 			Selector: map[string]string{
 				"app": receiverName,
 			},
-			Type: corev1.ServiceTypeClusterIP,
+			Type: corev1.ServiceTypeLoadBalancer,
 		},
 	}
 	p.client.CreateServiceOrFail(service)
+}
+
+func (p *prober) getReceiverServiceHost() (string, error) {
+	svc, err := p.client.Kube.CoreV1().Services(p.client.Namespace).
+		Get(context.Background(), receiverName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return ingress.EndpointFromService(svc)
 }
 
 func (p *prober) createReceiverDeployment() *appsv1.Deployment {

@@ -82,7 +82,11 @@ func (p *prober) Finish() {
 }
 
 func (p *prober) fetchReport() (*receiver.Report, error) {
-	u, err := url.Parse(fmt.Sprintf("http://wathola-receiver.%s.svc.cluster.local", p.client.Namespace))
+	host, err := p.getReceiverServiceHost()
+	if err != nil {
+		return nil, err
+	}
+	u, err := url.Parse(fmt.Sprintf("http://%s", host))
 	if err != nil {
 		return nil, err
 	}
