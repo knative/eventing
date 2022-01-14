@@ -53,7 +53,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	}); fetchErr != nil {
 		p.client.T.Fatalf("Error fetching complete (inactive) report: %v\nReport: %+v", fetchErr, report)
 	}
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	availRate := 0.0
 	if report.TotalRequests != 0 {
 		availRate = float64(report.EventsSent*100) / float64(report.TotalRequests)
