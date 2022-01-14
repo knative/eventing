@@ -35,9 +35,13 @@ const (
 
 // Verify will verify prober state after finished event has been sent.
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
-	var report *receiver.Report
-	if fetchErr := wait.PollImmediate(fetchReportInterval, fetchReportTimeout, func() (done bool, err error) {
-		report, err := p.fetchReport()
+	var (
+		report *receiver.Report
+		err error
+	)
+	start := time.Now()
+	if fetchErr := wait.PollImmediate(fetchReportInterval, fetchReportTimeout, func() (bool, error) {
+		report, err = p.fetchReport()
 		if err != nil {
 			return false, err
 		}
@@ -49,12 +53,13 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	}); fetchErr != nil {
 		p.client.T.Fatalf("Error fetching complete (inactive) report: %v\nReport: %+v", fetchErr, report)
 	}
+	elapsed := time.Now().Sub(start)
 	availRate := 0.0
 	if report.TotalRequests != 0 {
 		availRate = float64(report.EventsSent*100) / float64(report.TotalRequests)
 	}
-	p.log.Infof("Fetched receiver report. Events propagated: %v. State: %v.",
-		report.EventsSent, report.State)
+	p.log.Infof("Fetched receiver report after %s. Events propagated: %v. State: %v.",
+		elapsed, report.EventsSent, report.State)
 	p.log.Infof("Availability: %.3f%%, Requests sent: %d.",
 		availRate, report.TotalRequests)
 	for _, t := range report.Thrown.Missing {
