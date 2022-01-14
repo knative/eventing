@@ -165,6 +165,7 @@ func SingleEventWithEncoding(encoding binding.Encoding) *feature.Feature {
 
 	event := cloudevents.NewEvent()
 	event.SetID(feature.MakeRandomK8sName("test"))
+	event.SetType("myevent")
 	event.SetSource("http://sender.svc/")
 	prober.ExpectEvents([]string{event.ID()})
 
