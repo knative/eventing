@@ -40,7 +40,6 @@ const (
 	defaultHomedir           = "/home/nonroot"
 	defaultConfigFilename    = "config.toml"
 	defaultHealthEndpoint    = "/healthz"
-	defaultFinishedSleep     = 5 * time.Second
 
 	// Silence will suppress notification about event duplicates.
 	Silence DuplicateAction = "silence"
