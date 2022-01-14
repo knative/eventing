@@ -18,13 +18,13 @@ package prober
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 )
 
@@ -82,7 +82,7 @@ func (p *prober) Finish() {
 }
 
 func (p *prober) fetchReport() (*receiver.Report, error) {
-	u, err := url.Parse(config.Instance.Forwarder.Target)
+	u, err := url.Parse(fmt.Sprintf("http://wathola-receiver.%s.svc.cluster.local", p.client.Namespace))
 	if err != nil {
 		return nil, err
 	}
