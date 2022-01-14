@@ -27,11 +27,13 @@ import (
 	ch "knative.dev/eventing/test/rekt/resources/channel"
 	chimpl "knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/subscription"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+	"knative.dev/reconciler-test/pkg/manifest"
 )
 
 // TestChannelConformance
@@ -165,7 +167,10 @@ func TestChannelChain(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, channel.ChannelChain(10))
+	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
+		return subscription.WithReply(ref, uri)
+	}
+	env.Test(ctx, t, channel.ChannelChain(10, createSubscriberFn))
 }
 
 func TestChannelDeadLetterSink(t *testing.T) {
@@ -179,7 +184,10 @@ func TestChannelDeadLetterSink(t *testing.T) {
 		environment.Managed(t),
 	)
 
-	env.Test(ctx, t, channel.DeadLetterSink())
+	createSubscriberFn := func(ref *duckv1.KReference, uri string) manifest.CfgFn {
+		return subscription.WithReply(ref, uri)
+	}
+	env.Test(ctx, t, channel.DeadLetterSink(createSubscriberFn))
 }
 
 /*

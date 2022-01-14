@@ -30,13 +30,15 @@ import (
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/eventshub/assert"
 	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 )
 
-func ChannelChain(length int) *feature.Feature {
+func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")
 	cs := feature.MakeRandomK8sName("containersource")
@@ -60,12 +62,12 @@ func ChannelChain(length int) *feature.Feature {
 			// install the final connection to the sink
 			f.Setup("install sink subscription", subscription.Install(sub,
 				subscription.WithChannel(channel_impl.AsRef(channels[i])),
-				subscription.WithReply(svc.AsKReference(sink), ""),
+				createSubscriberFn(svc.AsKReference(sink), ""),
 			))
 		} else {
 			f.Setup("install subscription", subscription.Install(sub,
 				subscription.WithChannel(channel_impl.AsRef(channels[i])),
-				subscription.WithReply(channel_impl.AsRef(channels[i+1]), ""),
+				createSubscriberFn(channel_impl.AsRef(channels[i+1]), ""),
 			))
 		}
 	}
@@ -76,7 +78,7 @@ func ChannelChain(length int) *feature.Feature {
 	return f
 }
 
-func DeadLetterSink() *feature.Feature {
+func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
 	f := feature.NewFeature()
 	sink := feature.MakeRandomK8sName("sink")
 	failer := feature.MakeK8sNamePrefix("failer")
@@ -89,7 +91,7 @@ func DeadLetterSink() *feature.Feature {
 	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel_impl.AsRef(name), "")))
 	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
 		subscription.WithChannel(channel_impl.AsRef(name)),
-		subscription.WithReply(svc.AsKReference(failer), ""),
+		createSubscriberFn(svc.AsKReference(failer), ""),
 	))
 
 	f.Requirement("channel is ready", channel_impl.IsReady(name))
