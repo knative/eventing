@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
 	pkgTest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
@@ -95,10 +94,7 @@ func (p *prober) removeSender() {
 	p.log.Info("Remove of sender deployment: ", senderName)
 
 	foreground := metav1.DeletePropagationForeground
-	dOpts := metav1.DeleteOptions{
-		GracePeriodSeconds: pointer.Int64(0),
-		PropagationPolicy:  &foreground,
-	}
+	dOpts := metav1.DeleteOptions{PropagationPolicy: &foreground}
 	err := p.client.Kube.AppsV1().
 		Deployments(p.client.Namespace).
 		Delete(p.config.Ctx, senderName, dOpts)
