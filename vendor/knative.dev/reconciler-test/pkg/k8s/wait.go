@@ -272,7 +272,7 @@ func WaitForPodRunningOrFail(ctx context.Context, t feature.T, podName string) {
 				sb.WriteString("\n")
 			}
 		}
-		t.Fatalf("Failed while waiting for pod %s running: %+v", podName, errors.WithStack(err))
+		t.Fatalf("Failed while waiting for pod %s running: %+v\n%s\n", podName, errors.WithStack(err), sb.String())
 	}
 }
 
