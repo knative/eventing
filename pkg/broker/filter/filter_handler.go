@@ -33,6 +33,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
@@ -335,12 +336,14 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 }
 
 func filterEvent(ctx context.Context, filterSpec eventingv1.TriggerSpec, event cloudevents.Event) eventfilter.FilterResult {
-	if filterSpec.Filter != nil {
-		return applyAttributesFilter(ctx, filterSpec.Filter, event)
-	} else if len(filterSpec.Filters) > 0 {
+	switch {
+	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(filterSpec.Filters) > 0:
 		return applySubscriptionsAPIFilters(ctx, filterSpec.Filters, event)
+	case filterSpec.Filter != nil:
+		return applyAttributesFilter(ctx, filterSpec.Filter, event)
+	default:
+		return eventfilter.NoFilter
 	}
-	return eventfilter.NoFilter
 }
 
 func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter, event cloudevents.Event) eventfilter.FilterResult {

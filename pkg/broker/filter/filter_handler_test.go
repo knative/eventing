@@ -41,6 +41,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker"
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing/v1"
 )
@@ -565,14 +566,14 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			expectedEventCount:        true,
 			expectedEventDispatchTime: true,
 		},
-		"Dispatch succeeded - Attributes Filter overrides SubscriptionsAPI filter": {
+		"Dispatch succeeded - SubscriptionsAPI filter overrides Attributes Filter": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(
-					withAttributesFilter(&eventingv1.TriggerFilter{
-						Attributes: map[string]string{"type": eventType, "source": eventSource},
-					}),
 					withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
-						SQL: fmt.Sprintf("type = '%s' AND source = '%s'", "some-other-type", "some-other-source"),
+						SQL: fmt.Sprintf("type = '%s' AND source = '%s'", eventType, eventSource),
+					}),
+					withAttributesFilter(&eventingv1.TriggerFilter{
+						Attributes: map[string]string{"type": "some-other-type", "source": "some-other-source"},
 					})),
 			},
 			expectedDispatch:          true,
@@ -621,7 +622,10 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
+			featureContext := feature.ToContext(context.TODO(), feature.Flags{
+				feature.NewTriggerFilters: feature.Enabled,
+			})
+			request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b)).WithContext(featureContext)
 			request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			responseWriter := httptest.NewRecorder()
 			r.ServeHTTP(&responseWriterWithInvocationsCheck{
