@@ -38,8 +38,8 @@ import (
 func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	matchedEvent := FullEvent()
 	unmatchedEvent := MinEvent()
-	unmatchedEvent.SetType("com.wrong.type")
-	unmatchedEvent.SetSource("com.wrong.source")
+	unmatchedEvent.SetType("org.wrong.type")
+	unmatchedEvent.SetSource("org.wrong.source")
 
 	var features []feature.Feature
 	tests := map[string]struct {
