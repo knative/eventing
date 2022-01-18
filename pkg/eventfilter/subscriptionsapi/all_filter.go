@@ -32,9 +32,6 @@ func NewAllFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 }
 
 func (filter allFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
-	if filter == nil {
-		return eventfilter.NoFilter
-	}
 	res := eventfilter.NoFilter
 	for _, f := range filter {
 		res = res.And(f.Filter(ctx, event))

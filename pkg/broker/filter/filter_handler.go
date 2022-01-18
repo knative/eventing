@@ -353,7 +353,8 @@ func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.Subs
 func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
 	var materializedFilter eventfilter.Filter
 	var err error
-	if len(filter.Exact) > 0 {
+	switch {
+	case len(filter.Exact) > 0:
 		// The webhook validates that this map has only a single key:value pair.
 		for attribute, value := range filter.Exact {
 			materializedFilter, err = subscriptionsapi.NewExactFilter(attribute, value)
@@ -362,8 +363,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 				return nil
 			}
 		}
-	}
-	if len(filter.Prefix) > 0 {
+	case len(filter.Prefix) > 0:
 		// The webhook validates that this map has only a single key:value pair.
 		for attribute, prefix := range filter.Exact {
 			materializedFilter, err = subscriptionsapi.NewPrefixFilter(attribute, prefix)
@@ -372,8 +372,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 				return nil
 			}
 		}
-	}
-	if len(filter.Suffix) > 0 {
+	case len(filter.Suffix) > 0:
 		// The webhook validates that this map has only a single key:value pair.
 		for attribute, suffix := range filter.Exact {
 			materializedFilter, err = subscriptionsapi.NewSuffixFilter(attribute, suffix)
@@ -382,25 +381,19 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 				return nil
 			}
 		}
-	}
-	if len(filter.All) > 0 {
+	case len(filter.All) > 0:
 		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filter.All)...)
-	}
-	if len(filter.Any) > 0 {
+	case len(filter.Any) > 0:
 		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.All)...)
 
-	}
-	if filter.Not != nil {
+	case filter.Not != nil:
 		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(ctx, *filter.Not))
-	}
-	if filter.SQL != "" {
-		f, err := subscriptionsapi.NewCESQLFilter(filter.SQL)
-		if err != nil {
+	case filter.SQL != "":
+		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.SQL); err != nil {
 			// This is weird, CESQL expression should be validated when Trigger's are created.
 			logging.FromContext(ctx).Debugw("Found an Invalid CE SQL expression", zap.String("expression", filter.SQL))
 			return nil
 		}
-		materializedFilter = f
 	}
 	return materializedFilter
 }
