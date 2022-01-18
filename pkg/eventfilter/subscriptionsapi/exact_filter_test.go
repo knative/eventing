@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -65,9 +65,13 @@ func TestExactMatchFilter(t *testing.T) {
 			if e == nil {
 				e = makeEvent()
 			}
-
-			if got := NewExactFilter(tt.attribute, tt.value).Filter(context.TODO(), *e); got != tt.want {
-				t.Errorf("Filter() = %v, want %v", got, tt.want)
+			f, err := NewExactFilter(tt.attribute, tt.value)
+			if err != nil {
+				t.Errorf("error while creating exact filter %v", err)
+			} else {
+				if got := f.Filter(context.TODO(), *e); got != tt.want {
+					t.Errorf("Filter() = %v, want %v", got, tt.want)
+				}
 			}
 		})
 	}

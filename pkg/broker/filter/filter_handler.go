@@ -349,23 +349,35 @@ func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.Subs
 
 func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
 	var materializedFilter eventfilter.Filter
-
+	var err error
 	if len(filter.Exact) > 0 {
 		// The webhook validates that this map has only a single key:value pair.
 		for attribute, value := range filter.Exact {
-			materializedFilter = subscriptionsapi.NewExactFilter(attribute, value)
+			materializedFilter, err = subscriptionsapi.NewExactFilter(attribute, value)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid exact expression", zap.String("attribute", attribute), zap.String("value", value), zap.Error(err))
+				return nil
+			}
 		}
 	}
 	if len(filter.Prefix) > 0 {
 		// The webhook validates that this map has only a single key:value pair.
 		for attribute, prefix := range filter.Exact {
-			materializedFilter = subscriptionsapi.NewPrefixFilter(attribute, prefix)
+			materializedFilter, err = subscriptionsapi.NewPrefixFilter(attribute, prefix)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid prefix expression", zap.String("attribute", attribute), zap.String("prefix", prefix), zap.Error(err))
+				return nil
+			}
 		}
 	}
 	if len(filter.Suffix) > 0 {
 		// The webhook validates that this map has only a single key:value pair.
 		for attribute, suffix := range filter.Exact {
-			materializedFilter = subscriptionsapi.NewSuffixFilter(attribute, suffix)
+			materializedFilter, err = subscriptionsapi.NewSuffixFilter(attribute, suffix)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid suffix expression", zap.String("attribute", attribute), zap.String("suffix", suffix), zap.Error(err))
+				return nil
+			}
 		}
 	}
 	if len(filter.All) > 0 {

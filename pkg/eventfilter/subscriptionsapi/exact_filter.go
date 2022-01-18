@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package subscriptionsapi
 
 import (
 	"context"
+	"fmt"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
@@ -35,13 +36,16 @@ type exactFilter struct {
 
 // NewExactFilter returns an event filter which passes if value exactly matches the value of the context
 // attribute in the CloudEvent.
-func NewExactFilter(attribute, value string) eventfilter.Filter {
+func NewExactFilter(attribute, value string) (eventfilter.Filter, error) {
+	if attribute == "" || value == "" {
+		return nil, fmt.Errorf("invalid arguments, attribute and value can't be empty")
+	}
 	return &exactFilter{
 		attribute: attribute,
 		value:     value,
 		// we're creating this filter to leverage the same filter logic of the existing attributes filter
 		attrsFilter: attributes.NewAttributesFilter(map[string]string{attribute: value}),
-	}
+	}, nil
 }
 
 func (filter *exactFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {

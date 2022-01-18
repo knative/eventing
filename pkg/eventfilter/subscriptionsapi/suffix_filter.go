@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,11 +35,14 @@ type suffixFilter struct {
 
 // NewSuffixFilter returns an event filter which passes if the value of the context
 // attribute in the CloudEvent ends with suffix.
-func NewSuffixFilter(attribute, suffix string) eventfilter.Filter {
+func NewSuffixFilter(attribute, suffix string) (eventfilter.Filter, error) {
+	if attribute == "" || suffix == "" {
+		return nil, fmt.Errorf("invalid arguments, attribute and suffix can't be empty")
+	}
 	return &suffixFilter{
 		attribute: attribute,
 		suffix:    suffix,
-	}
+	}, nil
 }
 
 func (filter *suffixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {

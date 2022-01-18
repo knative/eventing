@@ -198,8 +198,7 @@ func ValidateCESQLExpression(ctx context.Context, expression string) (errs *apis
 	if expression == "" {
 		return nil
 	}
-	_, err := cesqlparser.Parse(expression)
-	if err != nil {
+	if _, err := cesqlparser.Parse(expression); err != nil {
 		return apis.ErrInvalidValue(expression, apis.CurrentField, err.Error())
 	}
 	return nil

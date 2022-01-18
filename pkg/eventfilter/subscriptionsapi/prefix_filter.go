@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,11 +35,14 @@ type prefixFilter struct {
 
 // NewPrefixFilter returns an event filter which passes if the value of the context
 // attribute in the CloudEvent is prefixed with prefix.
-func NewPrefixFilter(attribute, prefix string) eventfilter.Filter {
+func NewPrefixFilter(attribute, prefix string) (eventfilter.Filter, error) {
+	if attribute == "" || prefix == "" {
+		return nil, fmt.Errorf("invalid arguments, attribute and prefix can't be empty")
+	}
 	return &prefixFilter{
 		attribute: attribute,
 		prefix:    prefix,
-	}
+	}, nil
 }
 
 func (filter *prefixFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {

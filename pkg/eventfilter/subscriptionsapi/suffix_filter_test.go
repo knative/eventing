@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2022 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -75,9 +75,13 @@ func TestSuffixFilter(t *testing.T) {
 			if e == nil {
 				e = makeEvent()
 			}
-
-			if got := NewSuffixFilter(tt.attribute, tt.suffix).Filter(context.TODO(), *e); got != tt.want {
-				t.Errorf("Filter() = %v, want %v", got, tt.want)
+			f, err := NewSuffixFilter(tt.attribute, tt.suffix)
+			if err != nil {
+				t.Errorf("error while creating suffix filter %v", err)
+			} else {
+				if got := f.Filter(context.TODO(), *e); got != tt.want {
+					t.Errorf("Filter() = %v, want %v", got, tt.want)
+				}
 			}
 		})
 	}
