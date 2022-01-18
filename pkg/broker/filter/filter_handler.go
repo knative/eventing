@@ -403,7 +403,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 }
 
 func materializeFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
-	var materializedFilters []eventfilter.Filter
+	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
 	for _, f := range filters {
 		materializedFilters = append(materializedFilters, materializeSubscriptionsAPIFilter(ctx, f))
 	}
