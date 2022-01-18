@@ -403,7 +403,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 }
 
 func materializeFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
-	var materializedFilters []eventfilter.Filter
+	materializedFilters := make([]eventfilter.Filter, len(filters))
 	for _, f := range filters {
 		materializedFilters = append(materializedFilters, materializeSubscriptionsAPIFilter(ctx, f))
 	}
@@ -411,9 +411,7 @@ func materializeFiltersList(ctx context.Context, filters []eventingv1.Subscripti
 }
 
 func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
-	var f eventfilter.Filter
-	f = attributes.NewAttributesFilter(filter.Attributes)
-	return f.Filter(ctx, event)
+	return attributes.NewAttributesFilter(filter.Attributes).Filter(ctx, event)
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
