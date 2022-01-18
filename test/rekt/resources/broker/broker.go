@@ -24,13 +24,20 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/multierr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/addressable"
-	"knative.dev/eventing/test/rekt/resources/delivery"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/apis"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 )
 
 //go:embed *.yaml
@@ -133,4 +140,91 @@ func IsAddressable(name string, timings ...time.Duration) feature.StepFn {
 // Address returns a broker's address.
 func Address(ctx context.Context, name string, timings ...time.Duration) (*apis.URL, error) {
 	return addressable.Address(ctx, GVR(), name, timings...)
+}
+
+type Condition struct {
+	Name      string
+	Condition func(br eventingv1.Broker) (bool, error)
+}
+
+func (c Condition) And(other Condition) Condition {
+	return c.compose(other, func(c1, c2 bool) bool { return c1 && c2 })
+}
+
+func (c Condition) compose(other Condition, combineFunc func(c1, c2 bool) bool) Condition {
+	return Condition{
+		Name: c.Name + " + " + other.Name,
+		Condition: func(br eventingv1.Broker) (bool, error) {
+			c1, err1 := c.Condition(br)
+			c2, err2 := other.Condition(br)
+			return combineFunc(c1, c2), multierr.Append(err1, err2)
+		},
+	}
+}
+
+func WaitForCondition(name string, condition Condition, timing ...time.Duration) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		env := environment.FromContext(ctx)
+		interval, timeout := k8s.PollTimings(ctx, timing)
+		var lastErr error
+		var lastBroker *eventingv1.Broker
+		err := wait.PollImmediate(interval, timeout, func() (done bool, err error) {
+			br, err := eventingclient.Get(ctx).
+				EventingV1().
+				Brokers(env.Namespace()).
+				Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				lastErr = err
+				return false, nil
+			}
+
+			lastBroker = br
+			return condition.Condition(*br)
+		})
+		if err != nil {
+			t.Fatalf("failed to verify condition %s %v: %v\n%+v\n", condition.Name, err, lastErr, lastBroker)
+		}
+	}
+}
+
+func HasDelivery() Condition {
+	return Condition{
+		Name: "has delivery",
+		Condition: func(br eventingv1.Broker) (bool, error) {
+			return br.Spec.Delivery != nil, nil
+		},
+	}
+}
+
+func HasDeliveryRetry() Condition {
+	return Condition{
+		Name: "has delivery retry",
+		Condition: func(br eventingv1.Broker) (bool, error) {
+			return br.Spec.Delivery != nil &&
+				br.Spec.Delivery.Retry != nil &&
+				*br.Spec.Delivery.Retry > 0, nil
+		},
+	}
+}
+
+func HasDeliveryBackoffDelay() Condition {
+	return Condition{
+		Name: "has delivery backoff delay",
+		Condition: func(br eventingv1.Broker) (bool, error) {
+			return br.Spec.Delivery != nil &&
+				br.Spec.Delivery.BackoffDelay != nil &&
+				len(*br.Spec.Delivery.BackoffDelay) > 0, nil
+		},
+	}
+}
+
+func HasDeliveryBackoffPolicy() Condition {
+	return Condition{
+		Name: "has delivery backoff policy",
+		Condition: func(br eventingv1.Broker) (bool, error) {
+			return br.Spec.Delivery != nil &&
+				br.Spec.Delivery.BackoffPolicy != nil &&
+				len(*br.Spec.Delivery.BackoffPolicy) > 0, nil
+		},
+	}
 }

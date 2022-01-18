@@ -105,3 +105,15 @@ func TestBrokerConformance(t *testing.T) {
 	env.TestSet(ctx, t, broker.ControlPlaneConformance("default"))
 	env.TestSet(ctx, t, broker.DataPlaneConformance("default"))
 }
+
+func TestBrokerDefaultDelivery(t *testing.T) {
+	ctx, env := global.Environment(
+		knative.WithKnativeNamespace(system.Namespace()),
+		knative.WithLoggingConfig,
+		knative.WithTracingConfig,
+		k8s.WithEventListener,
+		environment.Managed(t),
+	)
+
+	env.Test(ctx, t, broker.DefaultDeliverySpec())
+}
