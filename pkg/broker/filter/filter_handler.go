@@ -186,7 +186,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check if the event should be sent.
-	ctx = logging.WithLogger(ctx, h.logger.Sugar())
+	ctx = logging.WithLogger(ctx, h.logger.Sugar().With(zap.String("trigger", fmt.Sprintf("%s/%s", t.GetNamespace(), t.GetName()))))
 	filterResult := filterEvent(ctx, t.Spec, *event)
 
 	if filterResult == eventfilter.FailFilter {
