@@ -22,11 +22,11 @@ import (
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/resources/svc"
 )
 
 // TriggerGoesReady returns a feature that tests after the creation of a
@@ -67,7 +67,7 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	return f
 }
 
-// GoesReady returns a feature that will create a Broker of the given
+// GoesReadyWithProbeReceiver returns a feature that will create a Broker of the given
 // name and class, with an event receiver as its DLS
 // and confirm it becomes ready with an address.
 func GoesReadyWithProbeReceiver(name, sinkName string, prober *eventshub.EventProber, cfg ...manifest.CfgFn) *feature.Feature {

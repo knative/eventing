@@ -33,10 +33,12 @@ import (
 	"knative.dev/pkg/logging"
 
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	"knative.dev/eventing/pkg/apis/feature"
 	broker "knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/eventfilter"
 	"knative.dev/eventing/pkg/eventfilter/attributes"
+	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -184,8 +186,8 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check if the event should be sent.
-	ctx = logging.WithLogger(ctx, h.logger.Sugar())
-	filterResult := filterEvent(ctx, t.Spec.Filter, *event)
+	ctx = logging.WithLogger(ctx, h.logger.Sugar().With(zap.String("trigger", fmt.Sprintf("%s/%s", t.GetNamespace(), t.GetName()))))
+	filterResult := filterEvent(ctx, t.Spec, *event)
 
 	if filterResult == eventfilter.FailFilter {
 		// We do not count the event. The event will be counted in the broker ingress.
@@ -333,15 +335,79 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
-	if filter == nil {
+func filterEvent(ctx context.Context, filterSpec eventingv1.TriggerSpec, event cloudevents.Event) eventfilter.FilterResult {
+	switch {
+	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(filterSpec.Filters) > 0:
+		return applySubscriptionsAPIFilters(ctx, filterSpec.Filters, event)
+	case filterSpec.Filter != nil:
+		return applyAttributesFilter(ctx, filterSpec.Filter, event)
+	default:
 		return eventfilter.NoFilter
 	}
-	var filters eventfilter.Filters
-	if filter.Attributes != nil && len(filter.Attributes) != 0 {
-		filters = append(filters, attributes.NewAttributesFilter(filter.Attributes))
+}
+
+func applySubscriptionsAPIFilters(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter, event cloudevents.Event) eventfilter.FilterResult {
+	return subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filters)...).Filter(ctx, event)
+}
+
+func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.SubscriptionsAPIFilter) eventfilter.Filter {
+	var materializedFilter eventfilter.Filter
+	var err error
+	switch {
+	case len(filter.Exact) > 0:
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, value := range filter.Exact {
+			materializedFilter, err = subscriptionsapi.NewExactFilter(attribute, value)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid exact expression", zap.String("attribute", attribute), zap.String("value", value), zap.Error(err))
+				return nil
+			}
+		}
+	case len(filter.Prefix) > 0:
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, prefix := range filter.Exact {
+			materializedFilter, err = subscriptionsapi.NewPrefixFilter(attribute, prefix)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid prefix expression", zap.String("attribute", attribute), zap.String("prefix", prefix), zap.Error(err))
+				return nil
+			}
+		}
+	case len(filter.Suffix) > 0:
+		// The webhook validates that this map has only a single key:value pair.
+		for attribute, suffix := range filter.Exact {
+			materializedFilter, err = subscriptionsapi.NewSuffixFilter(attribute, suffix)
+			if err != nil {
+				logging.FromContext(ctx).Debugw("Invalid suffix expression", zap.String("attribute", attribute), zap.String("suffix", suffix), zap.Error(err))
+				return nil
+			}
+		}
+	case len(filter.All) > 0:
+		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filter.All)...)
+	case len(filter.Any) > 0:
+		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.All)...)
+
+	case filter.Not != nil:
+		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(ctx, *filter.Not))
+	case filter.SQL != "":
+		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.SQL); err != nil {
+			// This is weird, CESQL expression should be validated when Trigger's are created.
+			logging.FromContext(ctx).Debugw("Found an Invalid CE SQL expression", zap.String("expression", filter.SQL))
+			return nil
+		}
 	}
-	return filters.Filter(ctx, event)
+	return materializedFilter
+}
+
+func materializeFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
+	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
+	for _, f := range filters {
+		materializedFilters = append(materializedFilters, materializeSubscriptionsAPIFilter(ctx, f))
+	}
+	return materializedFilters
+}
+
+func applyAttributesFilter(ctx context.Context, filter *eventingv1.TriggerFilter, event cloudevents.Event) eventfilter.FilterResult {
+	return attributes.NewAttributesFilter(filter.Attributes).Filter(ctx, event)
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
