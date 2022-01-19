@@ -45,18 +45,18 @@ func NewLogEmitter(ctx context.Context, namespace string, t feature.T) Emitter {
 func (l logEmitter) Environment(env map[string]string) {
 	bytes, err := json.MarshalIndent(env, " ", " ")
 	if err != nil {
-		l.log(err)
+		l.log(nil, err)
 		return
 	}
-	l.log("Environment", "Namespace", l.namespace, "\n", string(bytes))
+	l.log(nil, "Environment", "Namespace", l.namespace, "\n", string(bytes))
 }
 
 func (l logEmitter) NamespaceCreated(namespace string) {
-	l.log("Namespace created", namespace)
+	l.log(nil, "Namespace created", namespace)
 }
 
 func (l logEmitter) NamespaceDeleted(namespace string) {
-	l.log("Namespace deleted", namespace)
+	l.log(nil, "Namespace deleted", namespace)
 }
 
 func (l logEmitter) TestStarted(feature string, t feature.T) {
@@ -103,12 +103,12 @@ func (l logEmitter) TestSetFinished(featureSet string, t feature.T) {
 }
 
 func (l logEmitter) Finished() {
-	l.log("Finished")
+	l.log(nil, "Finished")
 	l.dumpEvents()
 }
 
 func (l logEmitter) Exception(reason, messageFormat string, messageA ...interface{}) {
-	l.log("Exception", reason, fmt.Sprintf(messageFormat, messageA...))
+	l.log(nil, "Exception", reason, fmt.Sprintf(messageFormat, messageA...))
 }
 
 func (l logEmitter) dumpEvents() {
@@ -117,15 +117,15 @@ func (l logEmitter) dumpEvents() {
 	}
 	events, err := kubeclient.Get(l.ctx).CoreV1().Events(l.namespace).List(l.ctx, metav1.ListOptions{})
 	if err != nil {
-		l.log("failed to list events", err)
+		l.log(nil, "failed to list events", err)
 		return
 	}
 	if len(events.Items) == 0 {
-		l.log("No events found")
+		l.log(nil, "No events found")
 		return
 	}
 	for _, e := range sortEventsByTime(events.Items) {
-		l.log(formatEvent(e))
+		l.log(nil, formatEvent(e))
 	}
 }
 
@@ -166,11 +166,14 @@ func formatEvent(e corev1.Event) string {
 	}, "\n")
 }
 
-func (l logEmitter) log(args ...interface{}) {
+func (l logEmitter) log(t feature.T, args ...interface{}) {
 	ctxArgs := []interface{}{
 		"namespace", l.namespace,
 		"timestamp", time.Now().Format(time.RFC3339),
 		"\n",
+	}
+	if t == nil {
+		t = l.t
 	}
 	args = append(ctxArgs, args...)
 	if l.t != nil {
