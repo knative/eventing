@@ -43,7 +43,7 @@ const (
 // Verify will verify prober state after finished has been sent.
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
-	p.log.Info("Waiting for complete report from receiver")
+	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
 	if fetchErr := wait.PollImmediate(time.Second, 5*jobWaitTimeout, func() (bool, error) {
 		report = p.fetchReport()
@@ -108,7 +108,7 @@ func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
 func (p *prober) fetchExecution() *fetcher.Execution {
 	ns := p.client.Namespace
 	job := p.deployFetcher()
-	defer p.deleteFetcher()
+	defer p.deleteFetcher(job.Name)
 	pod, err := p.findSucceededPod(job)
 	p.ensureNoError(err)
 	bytes, err := pkgTest.PodLogs(p.config.Ctx, p.client.Kube, pod.Name, fetcherName, ns)
@@ -138,8 +138,8 @@ func (p *prober) deployFetcher() *batchv1.Job {
 	var replicas int32 = 1
 	fetcherJob := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fetcherName,
-			Namespace: p.client.Namespace,
+			GenerateName: fetcherName + "-",
+			Namespace:    p.client.Namespace,
 		},
 		Spec: batchv1.JobSpec{
 			Completions: &replicas,
@@ -184,11 +184,10 @@ func (p *prober) deployFetcher() *batchv1.Job {
 	return created
 }
 
-func (p *prober) deleteFetcher() {
+func (p *prober) deleteFetcher(name string) {
 	ns := p.client.Namespace
 	jobs := p.client.Kube.BatchV1().Jobs(ns)
-	foreground := metav1.DeletePropagationForeground
-	err := jobs.Delete(p.config.Ctx, fetcherName, metav1.DeleteOptions{PropagationPolicy: &foreground})
+	err := jobs.Delete(p.config.Ctx, name, metav1.DeleteOptions{})
 	p.ensureNoError(err)
 }
 
