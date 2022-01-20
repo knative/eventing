@@ -97,11 +97,11 @@ type reportHandler struct {
 
 func (r reportHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.RequestURI == "/report" {
-		s := r.receiver.finished.State()
+		//s := r.receiver.finished.State()
 		events := r.receiver.step.Count()
 		totalReq := r.receiver.finished.TotalRequests()
 		sj := &Report{
-			State:         stateToString(s),
+			State:         "active",
 			EventsSent:    events,
 			TotalRequests: totalReq,
 			Thrown: Thrown{
