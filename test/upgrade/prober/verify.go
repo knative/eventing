@@ -178,7 +178,7 @@ func (p *prober) deployFetcher() *batchv1.Job {
 	created, err := jobs.Create(p.config.Ctx, fetcherJob, metav1.CreateOptions{})
 	p.ensureNoError(err)
 	p.log.Info("Waiting for fetcher job to succeed: ", fetcherName)
-	err = waitForJobToComplete(p.config.Ctx, p.client.Kube, fetcherName, p.client.Namespace)
+	err = waitForJobToComplete(p.config.Ctx, p.client.Kube, created.Name, p.client.Namespace)
 	p.ensureNoError(err)
 
 	return created
