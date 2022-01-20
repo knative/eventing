@@ -37,14 +37,15 @@ import (
 const (
 	fetcherName     = "wathola-fetcher"
 	jobWaitInterval = time.Second
-	jobWaitTimeout  = 5 * time.Minute
+	jobWaitTimeout  = 1 * time.Minute
 )
 
 // Verify will verify prober state after finished has been sent.
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
+	p.log.Info("Waiting for complete report from receiver")
 	start := time.Now()
-	if fetchErr := wait.PollImmediate(time.Second, 2*jobWaitTimeout, func() (bool, error) {
+	if fetchErr := wait.PollImmediate(time.Second, 5*jobWaitTimeout, func() (bool, error) {
 		report = p.fetchReport()
 		return report.State != "active", nil
 	}); fetchErr != nil {
@@ -186,7 +187,8 @@ func (p *prober) deployFetcher() *batchv1.Job {
 func (p *prober) deleteFetcher() {
 	ns := p.client.Namespace
 	jobs := p.client.Kube.BatchV1().Jobs(ns)
-	err := jobs.Delete(p.config.Ctx, fetcherName, metav1.DeleteOptions{})
+	foreground := metav1.DeletePropagationForeground
+	err := jobs.Delete(p.config.Ctx, fetcherName, metav1.DeleteOptions{PropagationPolicy: &foreground})
 	p.ensureNoError(err)
 }
 
