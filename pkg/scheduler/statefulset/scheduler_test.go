@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/statefulset/fake"
 
@@ -714,16 +714,16 @@ func TestStatefulsetScheduler(t *testing.T) {
 			if tc.pending != nil {
 				s.pending = tc.pending
 			}
-			// Give some time for the informer to notify the scheduler and set the number of replicas
-			time.Sleep(200 * time.Millisecond)
 
-			func() {
+			// Give some time for the informer to notify the scheduler and set the number of replicas
+			err = wait.PollImmediate(200*time.Millisecond, time.Second, func() (bool, error) {
 				s.lock.Lock()
 				defer s.lock.Unlock()
-				if s.replicas != tc.replicas {
-					t.Fatalf("expected number of statefulset replica to be %d (got %d)", tc.replicas, s.replicas)
-				}
-			}()
+				return s.replicas == tc.replicas, nil
+			})
+			if err != nil {
+				t.Fatalf("expected number of statefulset replica to be %d (got %d)", tc.replicas, s.replicas)
+			}
 
 			vpod := vpodClient.Create(vpodNamespace, vpodName, tc.vreplicas, tc.placements)
 			placements, err := s.Schedule(vpod)
