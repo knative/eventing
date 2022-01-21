@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
       - name: zipkin
-        image: docker.io/openzipkin/zipkin:2.23.2
+        image: ghcr.io/openzipkin/zipkin:2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9411
