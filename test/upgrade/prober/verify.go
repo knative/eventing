@@ -45,11 +45,11 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
-	if fetchErr := wait.PollImmediate(time.Second, 5*jobWaitTimeout, func() (bool, error) {
+	if err := wait.PollImmediate(time.Second, 5*jobWaitTimeout, func() (bool, error) {
 		report = p.fetchReport()
 		return report.State != "active", nil
-	}); fetchErr != nil {
-		p.client.T.Fatalf("Error fetching complete (inactive) report: %v\nReport: %+v", fetchErr, report)
+	}); err != nil {
+		p.client.T.Fatalf("Error fetching complete/inactive report: %v\nReport: %+v", err, report)
 	}
 	elapsed := time.Since(start)
 	availRate := 0.0
