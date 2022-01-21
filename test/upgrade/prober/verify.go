@@ -37,7 +37,7 @@ import (
 const (
 	fetcherName     = "wathola-fetcher"
 	jobWaitInterval = time.Second
-	jobWaitTimeout  = 1 * time.Minute
+	jobWaitTimeout  = 10 * time.Minute
 )
 
 // Verify will verify prober state after finished has been sent.
@@ -45,7 +45,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
-	if err := wait.PollImmediate(time.Second, 5*jobWaitTimeout, func() (bool, error) {
+	if err := wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
 		report = p.fetchReport()
 		return report.State != "active", nil
 	}); err != nil {
