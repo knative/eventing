@@ -183,5 +183,11 @@ func webhookObservedUpdate(ch *messagingv1.Channel) bool {
 }
 
 func webhookObservedUpdateFromDeliverySpec(d *eventingduck.DeliverySpec) bool {
-	return d != nil && d.BackoffDelay != nil && d.Retry != nil && d.BackoffPolicy != nil
+	return d != nil &&
+		d.BackoffDelay != nil &&
+		*d.BackoffDelay == "PT0.5S" &&
+		d.Retry != nil &&
+		*d.Retry == int32(5) &&
+		d.BackoffPolicy != nil &&
+		*d.BackoffPolicy == eventingduck.BackoffPolicyExponential
 }
