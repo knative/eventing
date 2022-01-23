@@ -59,6 +59,17 @@ func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
 
 }
 
+// UpdateFromConfigMap returns an updater function to be used
+// with ConfigWatcher, that given an observability ConfigMap
+// updates the client's Event Recorder configuration.
+func UpdateFromConfigMap(client *CRStatusEventClient) func(configMap *corev1.ConfigMap) {
+	return func(cm *corev1.ConfigMap) {
+		if cm != nil && cm.Data["sink-event-error-reporting.enable"] == "true" {
+			client.isEnabledVar = true
+		}
+	}
+}
+
 var contextkey struct{}
 
 func ContextWithCRStatus(ctx context.Context, kubeEventSink *record.EventSink, component string, source runtime.Object, logf func(format string, args ...interface{})) context.Context {
