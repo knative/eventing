@@ -40,7 +40,6 @@ const (
 	defaultHomedir           = "/home/nonroot"
 	defaultConfigFilename    = "config.toml"
 	defaultHealthEndpoint    = "/healthz"
-	defaultFinishedSleep     = 5 * time.Second
 
 	// Silence will suppress notification about event duplicates.
 	Silence DuplicateAction = "silence"
@@ -63,12 +62,11 @@ type DuplicateAction string
 // Config represents a configuration for prober.
 type Config struct {
 	Wathola
-	Interval      time.Duration
-	FinishedSleep time.Duration
-	Serving       ServingConfig
-	FailOnErrors  bool
-	OnDuplicate   DuplicateAction
-	Ctx           context.Context
+	Interval     time.Duration
+	Serving      ServingConfig
+	FailOnErrors bool
+	OnDuplicate  DuplicateAction
+	Ctx          context.Context
 }
 
 // Wathola represents options related strictly to wathola testing tool.
@@ -109,11 +107,10 @@ func NewConfigOrFail(c pkgupgrade.Context) *Config {
 // NewConfig will create a prober.Config or return error.
 func NewConfig() (*Config, error) {
 	config := &Config{
-		Interval:      Interval,
-		FinishedSleep: defaultFinishedSleep,
-		FailOnErrors:  true,
-		OnDuplicate:   Warn,
-		Ctx:           context.Background(),
+		Interval:     Interval,
+		FailOnErrors: true,
+		OnDuplicate:  Warn,
+		Ctx:          context.Background(),
 		Serving: ServingConfig{
 			Use:         false,
 			ScaleToZero: true,

@@ -67,7 +67,6 @@ func (p *probeRunner) Verify(ctx pkgupgrade.Context) {
 	p.client.T = ctx.T
 	t := ctx.T
 	p.Finish()
-	waitAfterFinished(p.prober)
 
 	errors, events := p.prober.Verify()
 	if len(errors) == 0 {
@@ -136,9 +135,4 @@ func (p *prober) remove() {
 		p.removeForwarder()
 	}
 	p.ensureNoError(p.client.Tracker.Clean(true))
-}
-
-func waitAfterFinished(p *prober) {
-	p.log.Infof("Waiting %v after sender finished...", p.config.FinishedSleep)
-	time.Sleep(p.config.FinishedSleep)
 }
