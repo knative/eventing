@@ -67,11 +67,12 @@ type Handler struct {
 
 	triggerLister eventinglisters.TriggerLister
 	logger        *zap.Logger
+	withContext   func(ctx context.Context) context.Context
 }
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -88,6 +89,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 		reporter:      reporter,
 		triggerLister: triggerLister,
 		logger:        logger,
+		withContext:   wc,
 	}, nil
 }
 
@@ -121,7 +123,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := request.Context()
+	ctx := h.withContext(request.Context())
 
 	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)
