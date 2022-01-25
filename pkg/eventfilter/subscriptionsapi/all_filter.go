@@ -18,10 +18,10 @@ package subscriptionsapi
 
 import (
 	"context"
-	"go.uber.org/zap"
-	"knative.dev/pkg/logging"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/eventfilter"
 )
