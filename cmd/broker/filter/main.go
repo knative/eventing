@@ -24,7 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/apis/feature"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	configmap "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
@@ -38,6 +37,7 @@ import (
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/broker/filter"
 	eventingclientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
