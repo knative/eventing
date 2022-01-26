@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	component = "pingsource-mt-adapter"
+	component = "pingsource"
 )
 
 func main() {
@@ -39,5 +39,7 @@ func main() {
 
 	ctx = adapter.WithController(ctx, mtping.NewController)
 	ctx = adapter.WithHAEnabled(ctx)
+	ctx = adapter.WithAdapterDynamicConfig(ctx, adapter.NewAdapterDynamicConfig())
+
 	adapter.MainWithContext(ctx, component, mtping.NewEnvConfig, mtping.NewAdapter)
 }

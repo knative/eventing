@@ -19,7 +19,7 @@ package adapter
 import (
 	"context"
 
-	cminformer "knative.dev/pkg/configmap/informer"
+	"knative.dev/pkg/configmap"
 )
 
 type haEnabledKey struct{}
@@ -82,67 +82,36 @@ func NamespaceFromContext(ctx context.Context) string {
 	return value.(string)
 }
 
-type configMapConfiguredLoggerKey struct{}
-
-// WithConfigMapConfiguredLogger indicates that the logger is being configured using a ConfigMap.
-func WithConfigMapConfiguredLogger(ctx context.Context, configMapName string) context.Context {
-	return context.WithValue(ctx, configMapConfiguredLoggerKey{}, &configMapName)
-}
-
-// ConfigMapConfiguredLoggerFromContext gets the name of the ConfigMap that
-// contains the logging configuration.
-func ConfigMapConfiguredLoggerFromContext(ctx context.Context) string {
-	value := ctx.Value(configMapConfiguredLoggerKey{})
-	if value == nil {
-		return ""
-	}
-	return value.(string)
-}
-
-type configMapConfiguredObservabilityKey struct{}
-
-// WithConfigMapConfiguredObservability indicates that the observability options are
-// being configured using a ConfigMap.
-func WithConfigMapConfiguredObservability(ctx context.Context, configMapName string) context.Context {
-	return context.WithValue(ctx, configMapConfiguredObservabilityKey{}, configMapName)
-}
-
-// ConfigMapConfiguredObservabilityFromContext gets the name of the ConfigMap that
-// contains the observability configuration.
-func ConfigMapConfiguredObservabilityFromContext(ctx context.Context) string {
-	value := ctx.Value(configMapConfiguredObservabilityKey{})
-	if value == nil {
-		return ""
-	}
-	return value.(string)
-}
-
-type configMapConfiguredTracingKey struct{}
-
-// WithConfigMapConfiguredTracing indicates that the tracing options are
-// being configured using a ConfigMap.
-func WithConfigMapConfiguredTracing(ctx context.Context, configMapName string) context.Context {
-	return context.WithValue(ctx, configMapConfiguredTracingKey{}, configMapName)
-}
-
-// ConfigMapConfiguredTracingFromContext gets the name of the ConfigMap that
-// contains the tracing configuration.
-func ConfigMapConfiguredTracingFromContext(ctx context.Context) string {
-	value := ctx.Value(configMapConfiguredTracingKey{})
-	if value == nil {
-		return ""
-	}
-	return value.(string)
-}
-
 type withConfigWatcherKey struct{}
 
 // WithConfigWatcher adds a ConfigMap Watcher informer to the context.
-func WithConfigWatcher(ctx context.Context, cmw *cminformer.InformedWatcher) context.Context {
+func WithConfigWatcher(ctx context.Context, cmw configmap.Watcher) context.Context {
 	return context.WithValue(ctx, withConfigWatcherKey{}, cmw)
 }
 
 // ConfigWatcherFromContext retrieves a ConfigMap Watcher from the context.
-func ConfigWatcherFromContext(ctx context.Context) *cminformer.InformedWatcher {
-	return ctx.Value(withConfigWatcherKey{}).(*cminformer.InformedWatcher)
+func ConfigWatcherFromContext(ctx context.Context) configmap.Watcher {
+
+	if v := ctx.Value(withConfigWatcherKey{}); v != nil {
+		return v.(configmap.Watcher)
+	}
+	return nil
+}
+
+type withAdapterConfigWatcher struct{}
+
+// WithAdapterDynamicConfig sets the preference for configuring
+// dynamically the adapter using ConfigMaps and Watchers.
+func WithAdapterDynamicConfig(ctx context.Context, config *AdapterDynamicConfig) context.Context {
+	return context.WithValue(ctx, withAdapterConfigWatcher{}, config)
+}
+
+// AdapterDynamicConfigFromContext gets the preference for
+// configuring dynamically the adapter using ConfigMaps.
+func AdapterDynamicConfigFromContext(ctx context.Context) *AdapterDynamicConfig {
+	value := ctx.Value(withAdapterConfigWatcher{})
+	if value == nil {
+		return nil
+	}
+	return value.(*AdapterDynamicConfig)
 }
