@@ -20,6 +20,8 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/eventfilter"
 )
@@ -34,6 +36,7 @@ func NewAnyFilter(filters ...eventfilter.Filter) eventfilter.Filter {
 
 func (filter anyFilter) Filter(ctx context.Context, event cloudevents.Event) eventfilter.FilterResult {
 	res := eventfilter.NoFilter
+	logging.FromContext(ctx).Debugw("Performing an ANY match ", zap.Any("filters", filter), zap.Any("event", event))
 	for _, f := range filter {
 		res = res.Or(f.Filter(ctx, event))
 		// Short circuit to optimize it

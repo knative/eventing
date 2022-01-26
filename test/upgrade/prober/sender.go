@@ -16,13 +16,18 @@
 package prober
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testlib "knative.dev/eventing/test/lib"
+	"k8s.io/apimachinery/pkg/util/wait"
 	pkgTest "knative.dev/pkg/test"
+
+	testlib "knative.dev/eventing/test/lib"
 )
 
 var senderName = "wathola-sender"
@@ -88,8 +93,30 @@ func (p *prober) deploySender() {
 func (p *prober) removeSender() {
 	p.log.Info("Remove of sender deployment: ", senderName)
 
+	foreground := metav1.DeletePropagationForeground
+	dOpts := metav1.DeleteOptions{PropagationPolicy: &foreground}
 	err := p.client.Kube.AppsV1().
 		Deployments(p.client.Namespace).
-		Delete(p.config.Ctx, senderName, metav1.DeleteOptions{})
+		Delete(p.config.Ctx, senderName, dOpts)
 	p.ensureNoError(err)
+
+	var d *appsv1.Deployment
+	pollErr := wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+		// Save err and deployment for error reporting.
+		d, err = p.client.Kube.AppsV1().
+			Deployments(p.client.Namespace).
+			Get(p.config.Ctx, senderName, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		return false, nil
+	})
+
+	if pollErr != nil {
+		b, _ := json.MarshalIndent(d, "", " ")
+		p.client.T.Fatalf("Failed while waiting for sender deletion %v: %v\nDeployment: \n%s\n", pollErr, err, string(b))
+	}
 }

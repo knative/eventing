@@ -436,7 +436,11 @@ func TestReceiver(t *testing.T) {
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
-				8080)
+				8080,
+				func(ctx context.Context) context.Context {
+					return ctx
+				},
+			)
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")
@@ -609,7 +613,11 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
-				8080)
+				8080, func(ctx context.Context) context.Context {
+					return feature.ToContext(context.TODO(), feature.Flags{
+						feature.NewTriggerFilters: feature.Enabled,
+					})
+				})
 			if err != nil {
 				t.Fatal("Unable to create receiver:", err)
 			}
@@ -622,10 +630,8 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			featureContext := feature.ToContext(context.TODO(), feature.Flags{
-				feature.NewTriggerFilters: feature.Enabled,
-			})
-			request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b)).WithContext(featureContext)
+
+			request := httptest.NewRequest(http.MethodPost, validPath, bytes.NewBuffer(b))
 			request.Header.Set(cehttp.ContentType, event.ApplicationCloudEventsJSON)
 			responseWriter := httptest.NewRecorder()
 			r.ServeHTTP(&responseWriterWithInvocationsCheck{

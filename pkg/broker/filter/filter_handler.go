@@ -67,11 +67,12 @@ type Handler struct {
 
 	triggerLister eventinglisters.TriggerLister
 	logger        *zap.Logger
+	withContext   func(ctx context.Context) context.Context
 }
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int, wc func(ctx context.Context) context.Context) (*Handler, error) {
 	kncloudevents.ConfigureConnectionArgs(&kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
@@ -88,6 +89,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister,
 		reporter:      reporter,
 		triggerLister: triggerLister,
 		logger:        logger,
+		withContext:   wc,
 	}, nil
 }
 
@@ -121,7 +123,7 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := request.Context()
+	ctx := h.withContext(request.Context())
 
 	message := cehttp.NewMessageFromHttpRequest(request)
 	defer message.Finish(nil)
@@ -335,13 +337,16 @@ func (h *Handler) getTrigger(ref path.NamespacedNameUID) (*eventingv1.Trigger, e
 	return t, nil
 }
 
-func filterEvent(ctx context.Context, filterSpec eventingv1.TriggerSpec, event cloudevents.Event) eventfilter.FilterResult {
+func filterEvent(ctx context.Context, triggerSpec eventingv1.TriggerSpec, event cloudevents.Event) eventfilter.FilterResult {
 	switch {
-	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(filterSpec.Filters) > 0:
-		return applySubscriptionsAPIFilters(ctx, filterSpec.Filters, event)
-	case filterSpec.Filter != nil:
-		return applyAttributesFilter(ctx, filterSpec.Filter, event)
+	case feature.FromContext(ctx).IsEnabled(feature.NewTriggerFilters) && len(triggerSpec.Filters) > 0:
+		logging.FromContext(ctx).Debugw("New trigger filters feature is enabled. Applying new filters.", zap.Any("filters", triggerSpec.Filters))
+		return applySubscriptionsAPIFilters(ctx, triggerSpec.Filters, event)
+	case triggerSpec.Filter != nil:
+		logging.FromContext(ctx).Debugw("Applying attributes filter.", zap.Any("filter", triggerSpec.Filter))
+		return applyAttributesFilter(ctx, triggerSpec.Filter, event)
 	default:
+		logging.FromContext(ctx).Debugw("Found no filters in trigger", zap.Any("triggerSpec", triggerSpec))
 		return eventfilter.NoFilter
 	}
 }
@@ -365,7 +370,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 		}
 	case len(filter.Prefix) > 0:
 		// The webhook validates that this map has only a single key:value pair.
-		for attribute, prefix := range filter.Exact {
+		for attribute, prefix := range filter.Prefix {
 			materializedFilter, err = subscriptionsapi.NewPrefixFilter(attribute, prefix)
 			if err != nil {
 				logging.FromContext(ctx).Debugw("Invalid prefix expression", zap.String("attribute", attribute), zap.String("prefix", prefix), zap.Error(err))
@@ -374,7 +379,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 		}
 	case len(filter.Suffix) > 0:
 		// The webhook validates that this map has only a single key:value pair.
-		for attribute, suffix := range filter.Exact {
+		for attribute, suffix := range filter.Suffix {
 			materializedFilter, err = subscriptionsapi.NewSuffixFilter(attribute, suffix)
 			if err != nil {
 				logging.FromContext(ctx).Debugw("Invalid suffix expression", zap.String("attribute", attribute), zap.String("suffix", suffix), zap.Error(err))
@@ -384,8 +389,7 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 	case len(filter.All) > 0:
 		materializedFilter = subscriptionsapi.NewAllFilter(materializeFiltersList(ctx, filter.All)...)
 	case len(filter.Any) > 0:
-		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.All)...)
-
+		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.Any)...)
 	case filter.Not != nil:
 		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(ctx, *filter.Not))
 	case filter.SQL != "":
@@ -401,7 +405,12 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 func materializeFiltersList(ctx context.Context, filters []eventingv1.SubscriptionsAPIFilter) []eventfilter.Filter {
 	materializedFilters := make([]eventfilter.Filter, 0, len(filters))
 	for _, f := range filters {
-		materializedFilters = append(materializedFilters, materializeSubscriptionsAPIFilter(ctx, f))
+		f := materializeSubscriptionsAPIFilter(ctx, f)
+		if f == nil {
+			logging.FromContext(ctx).Warnw("Failed to parse filter. Skipping filter.", zap.Any("filter", f))
+			continue
+		}
+		materializedFilters = append(materializedFilters, f)
 	}
 	return materializedFilters
 }
