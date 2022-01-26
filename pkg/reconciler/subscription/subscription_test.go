@@ -650,7 +650,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: subscribers.messaging.knative.dev %q not found", subscriberName),
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: failed to get object testnamespace/subscriber: subscribers.messaging.knative.dev %q not found", subscriberName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -659,7 +659,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: subscribers.messaging.knative.dev "subscriber" not found`),
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, `Failed to resolve spec.subscriber: failed to get object testnamespace/subscriber: subscribers.messaging.knative.dev "subscriber" not found`),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -684,7 +684,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + subscriptionName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", `Failed to resolve spec.reply: inmemorychannels.messaging.knative.dev %q not found`, replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", `Failed to resolve spec.reply: failed to get object testnamespace/reply: inmemorychannels.messaging.knative.dev %q not found`, replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -695,7 +695,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf(`Failed to resolve spec.reply: failed to get object testnamespace/reply: inmemorychannels.messaging.knative.dev %q not found`, replyName)),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -803,7 +803,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dls" not found`),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: failed to get object testnamespace/dls: subscribers.messaging.knative.dev "dls" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -813,7 +813,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeliveryRef(subscriberGVK, dlsName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: subscribers.messaging.knative.dev "dls" not found`),
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", `Failed to resolve spec.delivery.deadLetterSink: failed to get object testnamespace/dls: subscribers.messaging.knative.dev "dls" not found`),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
