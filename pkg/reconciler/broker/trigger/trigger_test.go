@@ -28,16 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
-	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1beta2"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -53,11 +43,23 @@ import (
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1beta2"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/broker/resources"
+
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
+	. "knative.dev/pkg/reconciler/testing"
+
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	rtv1beta2 "knative.dev/eventing/pkg/reconciler/testing/v1beta2"
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
-	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -619,7 +621,7 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 				)}...),
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `services.serving.knative.dev "subscriber-name" not found`),
+				Eventf(corev1.EventTypeWarning, "InternalError", `failed to get object test-namespace/subscriber-name: services.serving.knative.dev "subscriber-name" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -628,7 +630,7 @@ func TestReconcile(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerSubscriberResolvedFailed("Unable to get the Subscriber's URI", `services.serving.knative.dev "subscriber-name" not found`),
+					WithTriggerSubscriberResolvedFailed("Unable to get the Subscriber's URI", `failed to get object test-namespace/subscriber-name: services.serving.knative.dev "subscriber-name" not found`),
 				),
 			}},
 			WantErr: true,
@@ -644,7 +646,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeadLeaderSink(brokerDestv1.Ref, ""),
 				)}...),
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", `brokers.eventing.knative.dev "testsink" not found`),
+				Eventf(corev1.EventTypeWarning, "InternalError", `failed to get object test-namespace/testsink: brokers.eventing.knative.dev "testsink" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -656,7 +658,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerBrokerReady(),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", `brokers.eventing.knative.dev "testsink" not found`),
+					WithTriggerDeadLetterSinkResolvedFailed("Unable to get the dead letter sink's URI", `failed to get object test-namespace/testsink: brokers.eventing.knative.dev "testsink" not found`),
 				),
 			}},
 			WantErr: true,

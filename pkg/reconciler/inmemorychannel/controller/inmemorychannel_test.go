@@ -25,10 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
+	"knative.dev/pkg/tracker"
+
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/config"
-	"knative.dev/pkg/tracker"
 
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/network"
@@ -44,10 +45,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
-	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
-	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/configmap"
@@ -55,6 +52,11 @@ import (
 	"knative.dev/pkg/kmeta"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
+	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
+	v1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
+	. "knative.dev/eventing/pkg/reconciler/testing/v1"
 
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 )
@@ -265,7 +267,7 @@ func TestAllCases(t *testing.T) {
 				makeChannelService(NewInMemoryChannel(imcName, testNS)),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`Failed to resolve Dead Letter Sink URI: services "%s" not found`, dlsName)),
+				Eventf(corev1.EventTypeWarning, "InternalError", fmt.Sprintf(`Failed to resolve Dead Letter Sink URI: failed to get object test-namespace/test-dls: services "%s" not found`, dlsName)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewInMemoryChannel(imcName, testNS,
