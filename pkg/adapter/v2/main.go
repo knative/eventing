@@ -210,6 +210,12 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	var configurator AdapterConfigurator
 	if ac := AdapterDynamicConfigFromContext(ctx); ac != nil {
+		// Create the Config Watcher if it has not been created yet.
+		if cmw := ConfigWatcherFromContext(ctx); cmw == nil {
+			cmw := SetupConfigMapWatch(ctx)
+			ctx = WithConfigWatcher(ctx, cmw)
+		}
+
 		configurator = NewAdapterConfiguratorFromConfigMaps(ctx, component, ac)
 	} else {
 		configurator = NewAdapterConfiguratorFromEnvironment(env, component)
@@ -505,15 +511,9 @@ type adapterConfiguratorConfigMap struct {
 }
 
 // NewAdapterConfiguratorFromConfigMaps creates an adapter configurator based on ConfigMaps.
+// A ConfigMapWatcher must be added to the context before using this configurator.
 func NewAdapterConfiguratorFromConfigMaps(ctx context.Context, component string, adc *AdapterDynamicConfig) *adapterConfiguratorConfigMap {
 	logger := logging.FromContext(ctx)
-
-	// Create the Config Watcher if it has not been created yet.
-	if cmw := ConfigWatcherFromContext(ctx); cmw == nil {
-		logger.Info("Setting up ConfigMap Watcher")
-		cmw := SetupConfigMapWatch(ctx)
-		ctx = WithConfigWatcher(ctx, cmw)
-	}
 
 	// Retrieve current ConfigMaps
 	lcm, err := GetConfigMapByPolling(ctx, adc.loggingConfigName)
