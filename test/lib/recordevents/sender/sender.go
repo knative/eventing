@@ -184,7 +184,7 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 
 		r, err := retryablehttp.FromRequest(req)
 		if err != nil {
-			log.Fatal("Failed to create request", err)
+			logging.FromContext(ctx).Fatalw("Failed to create request", zap.Error(err))
 		}
 
 		res, err := httpClient.Do(r)
