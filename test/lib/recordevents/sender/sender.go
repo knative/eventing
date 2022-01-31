@@ -23,7 +23,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	nethttp "net/http"
 	"strconv"
 	"strings"
@@ -35,6 +34,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/plugin/ochttp"
+	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
