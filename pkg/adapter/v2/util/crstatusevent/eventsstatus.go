@@ -52,7 +52,7 @@ func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
 	}
 
 	ret := &CRStatusEventClient{}
-	if "true" == metricMap["sink-event-error-reporting.enable"] {
+	if metricMap["sink-event-error-reporting.enable"] == "true" {
 		ret.isEnabledVar = true
 	}
 	return ret
@@ -64,8 +64,8 @@ func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
 // updates the client's Event Recorder configuration.
 func UpdateFromConfigMap(client *CRStatusEventClient) func(configMap *corev1.ConfigMap) {
 	return func(cm *corev1.ConfigMap) {
-		if cm != nil && cm.Data["sink-event-error-reporting.enable"] == "true" {
-			client.isEnabledVar = true
+		if cm != nil && cm.Data != nil && cm.Data["sink-event-error-reporting.enable"] != "" {
+			client.isEnabledVar, _ = strconv.ParseBool(cm.Data["sink-event-error-reporting.enable"])
 		}
 	}
 }
