@@ -124,7 +124,12 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 		RetryMax:     10,
 		CheckRetry: retryablehttp.CheckRetry(func(ctx context.Context, resp *nethttp.Response, err error) (bool, error) {
 			// Retry only errors
-			return err != nil, nil
+			if err == nil {
+				return false, nil
+			}
+
+			logging.FromContext(ctx).Warnw("Retrying after error", zap.Error(err))
+			return true, nil
 		}),
 		Backoff: retryablehttp.DefaultBackoff,
 		ErrorHandler: func(resp *nethttp.Response, err error, numTries int) (*nethttp.Response, error) {
