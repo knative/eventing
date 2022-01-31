@@ -128,7 +128,7 @@ func Start(ctx context.Context, logs *recordevents.EventLogs) error {
 		}),
 		Backoff: retryablehttp.DefaultBackoff,
 		ErrorHandler: func(resp *nethttp.Response, err error, numTries int) (*nethttp.Response, error) {
-			log.Println("Error handler", err)
+			logging.FromContext(ctx).Errorw("Failed sending request", zap.Int("retries", numTries), zap.Error(err))
 			return resp, err
 		},
 	}
