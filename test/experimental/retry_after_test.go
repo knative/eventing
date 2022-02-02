@@ -56,7 +56,7 @@ func TestRetryAfter(t *testing.T) {
 	state.SetOrFail(ctx, t, retry_after.SenderNameKey, retryAfterPrefix+"-sender")
 	state.SetOrFail(ctx, t, retry_after.ReceiverNameKey, retryAfterPrefix+"-receiver")
 	state.SetOrFail(ctx, t, retry_after.RetryAttemptsKey, 3)
-	state.SetOrFail(ctx, t, retry_after.RetryAfterSecondsKey, 10)
+	state.SetOrFail(ctx, t, retry_after.RetryAfterSecondsKey, 3)
 
 	// Configure DataPlane & Send An Event
 	env.Test(ctx, t, retry_after.ConfigureDataPlane(ctx, t))
