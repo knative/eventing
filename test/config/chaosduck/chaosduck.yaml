@@ -81,7 +81,7 @@ spec:
           # TODO(https://github.com/knative/eventing/issues/3590,
           # https://github.com/knative/pkg/issues/1509): Enable once chaos
           # issues are fixed.
-          "-disable=imc-controller", "-disable=imc-dispatcher", "-disable=eventing-webhook",
+          "-disable=imc-controller", "-disable=imc-dispatcher", "-disable=eventing-webhook", "-period=3m",
         ]
 
         env:
