@@ -28,11 +28,7 @@ jobs:
         include:
           - repo: eventing-autoscaler-keda
             org: knative-sandbox
-          - repo: eventing-awssqs
-            org: knative-sandbox
           - repo: eventing-ceph
-            org: knative-sandbox
-          - repo: eventing-couchdb
             org: knative-sandbox
           - repo: eventing-github
             org: knative-sandbox
@@ -43,8 +39,6 @@ jobs:
           - repo: eventing-kafka-broker
             org: knative-sandbox
           - repo: eventing-natss
-            org: knative-sandbox
-          - repo: eventing-prometheus
             org: knative-sandbox
           - repo: eventing-rabbitmq
             org: knative-sandbox
