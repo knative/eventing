@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -155,12 +156,18 @@ func receivedAtRegularInterval(id string, wait time.Duration, errorMarging time.
 	// nextExpected keeps track of the next event with the
 	// same ID expected.
 	nextExpected := time.Time{}
+	m := sync.Mutex{}
 
 	return func(eventInfo eventshub.EventInfo) error {
 		if eventInfo.Event.ID() != id {
 			return fmt.Errorf("received event ID %s, expected %s",
 				eventInfo.Event.ID(), id)
 		}
+
+		// In case multiple events are received concurrently, serialize
+		// to avoid races setting the next expected time.
+		m.Lock()
+		defer m.Unlock()
 
 		// Update nextExpected with this event time to prepare
 		// for a possible next event received.
