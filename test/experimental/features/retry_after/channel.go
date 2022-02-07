@@ -44,12 +44,13 @@ import (
 )
 
 const (
-	ChannelNameKey       = "ChannelNameKey"
-	SubscriptionNameKey  = "SubscriptionNameKey"
-	SenderNameKey        = "SenderNameKey"
-	ReceiverNameKey      = "ReceiverNameKey"
-	RetryAttemptsKey     = "RetryAttemptsKey"
-	RetryAfterSecondsKey = "RetryAfterSecondsKey"
+	ChannelNameKey             = "ChannelNameKey"
+	SubscriptionNameKey        = "SubscriptionNameKey"
+	SenderNameKey              = "SenderNameKey"
+	ReceiverNameKey            = "ReceiverNameKey"
+	RetryAttemptsKey           = "RetryAttemptsKey"
+	RetryAfterSecondsKey       = "RetryAfterSecondsKey"
+	ExpectedIntervalMargingKey = "ExpectedIntervalMargingKey!"
 )
 
 // ConfigureDataPlane creates a Feature which sets up the specified Channel,
@@ -87,12 +88,13 @@ func ConfigureDataPlane(ctx context.Context, t *testing.T) *feature.Feature {
 func SendEvent(ctx context.Context, t *testing.T) *feature.Feature {
 
 	// Get Component Names From Context
-	var retryAttempts, retryAfterSeconds int
+	var retryAttempts, retryAfterSeconds, expectedIntervalMargin int
 	channelName := state.GetStringOrFail(ctx, t, ChannelNameKey)
 	senderName := state.GetStringOrFail(ctx, t, SenderNameKey)
 	receiverName := state.GetStringOrFail(ctx, t, ReceiverNameKey)
 	state.GetOrFail(ctx, t, RetryAttemptsKey, &retryAttempts)
 	state.GetOrFail(ctx, t, RetryAfterSecondsKey, &retryAfterSeconds)
+	state.GetOrFail(ctx, t, ExpectedIntervalMargingKey, &expectedIntervalMargin)
 
 	// Create The Base CloudEvent To Send (ID will be set by the EventsHub Sender)
 	event := cetest.FullEvent()
@@ -101,12 +103,8 @@ func SendEvent(ctx context.Context, t *testing.T) *feature.Feature {
 	f := feature.NewFeatureNamed("Send Events")
 	f.Setup("Install An EventsHub Sender", eventshub.Install(senderName, eventshub.StartSenderToResource(channel.GVR(), channelName), eventshub.InputEvent(event)))
 	f.Assert("Events Received", assert.OnStore(receiverName).MatchEvent(cetest.HasId(event.ID())).Exact(retryAttempts+1)) // One Successful Response
-
-	// expectedIntervalMargin is the acceptable duration between an expected retry being received and when
-	// it is being actually received. Manual tests indicate that this value is less than 20 ms, a bigger
-	// value is set to avoid flakyness.
-	expectedIntervalMargin := 500 * time.Millisecond
-	f.Assert("Event Timing Verified", assert.OnStore(receiverName).Match(receivedAtRegularInterval(event.ID(), time.Duration(retryAfterSeconds)*time.Second, expectedIntervalMargin)).Exact(retryAttempts+1))
+	f.Assert("Event Timing Verified", assert.OnStore(receiverName).
+		Match(receivedAtRegularInterval(event.ID(), time.Duration(retryAfterSeconds)*time.Second, time.Duration(expectedIntervalMargin)*time.Second)).Exact(retryAttempts+1))
 
 	// Return The SendEvents Feature
 	return f
