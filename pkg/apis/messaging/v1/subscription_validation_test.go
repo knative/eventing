@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"k8s.io/utils/pointer"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
@@ -525,6 +526,23 @@ func TestSubscriptionImmutable(t *testing.T) {
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
 				Reply:   getValidReply(),
+			},
+		},
+		want: nil,
+	}, {
+		name: "valid, change delivery spec",
+		c: &Subscription{
+			Spec: SubscriptionSpec{
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
+				Delivery:   &eventingduckv1.DeliverySpec{Retry: pointer.Int32(2)},
+			},
+		},
+		og: &Subscription{
+			Spec: SubscriptionSpec{
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidDestination(),
+				Delivery:   &eventingduckv1.DeliverySpec{Retry: pointer.Int32(3)},
 			},
 		},
 		want: nil,
