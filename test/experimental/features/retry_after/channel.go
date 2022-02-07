@@ -174,8 +174,8 @@ func receivedAtRegularInterval(id string, wait time.Duration, errorMarging time.
 		expected := nextExpected
 		nextExpected = eventInfo.Time.Add(wait)
 
-		// First occurrence sets the last received variable an
-		// exists since it does not have a prior event to check
+		// First occurrence sets the last received variable and
+		// exits since it does not have a prior event to check
 		// the interval with.
 		if expected.Equal(time.Time{}) {
 			return nil
