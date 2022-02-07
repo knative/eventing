@@ -23,9 +23,11 @@ import (
 	"regexp"
 
 	cesqlparser "github.com/cloudevents/sdk-go/sql/v2/parser"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/apis/feature"
 )
@@ -198,6 +200,14 @@ func ValidateCESQLExpression(ctx context.Context, expression string) (errs *apis
 	if expression == "" {
 		return nil
 	}
+	// Need to recover in case Parse panics
+	defer func() {
+		if r := recover(); r != nil {
+			logging.FromContext(ctx).Debug("Warning! Calling CESQL Parser panicked. Treating expression as invalid.", zap.Any("recovered value", r), zap.String("CESQL", expression))
+			errs = apis.ErrInvalidValue(expression, apis.CurrentField)
+		}
+	}()
+
 	if _, err := cesqlparser.Parse(expression); err != nil {
 		return apis.ErrInvalidValue(expression, apis.CurrentField, err.Error())
 	}
