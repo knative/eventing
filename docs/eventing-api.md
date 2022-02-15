@@ -2098,7 +2098,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CESQL is a CloudEvents CESQL expression that will be evaluated to true or false against each CloudEvent.</p>
+<p>CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.</p>
 </td>
 </tr>
 </tbody>
