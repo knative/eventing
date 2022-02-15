@@ -56,7 +56,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 			filters: fmt.Sprintf(snippetFor("suffix"), matchedEvent.Type()[5:], matchedEvent.Source()[5:]),
 		},
 		"CloudEvents SQL filter": {
-			filters: fmt.Sprintf(`- sql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
+			filters: fmt.Sprintf(`- cesql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
 		},
 	}
 

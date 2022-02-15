@@ -392,10 +392,10 @@ func materializeSubscriptionsAPIFilter(ctx context.Context, filter eventingv1.Su
 		materializedFilter = subscriptionsapi.NewAnyFilter(materializeFiltersList(ctx, filter.Any)...)
 	case filter.Not != nil:
 		materializedFilter = subscriptionsapi.NewNotFilter(materializeSubscriptionsAPIFilter(ctx, *filter.Not))
-	case filter.SQL != "":
-		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.SQL); err != nil {
+	case filter.CESQL != "":
+		if materializedFilter, err = subscriptionsapi.NewCESQLFilter(filter.CESQL); err != nil {
 			// This is weird, CESQL expression should be validated when Trigger's are created.
-			logging.FromContext(ctx).Debugw("Found an Invalid CE SQL expression", zap.String("expression", filter.SQL))
+			logging.FromContext(ctx).Debugw("Found an Invalid CE SQL expression", zap.String("expression", filter.CESQL))
 			return nil
 		}
 	}

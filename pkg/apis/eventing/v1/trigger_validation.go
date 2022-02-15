@@ -223,7 +223,7 @@ func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPI
 	).Also(
 		ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"),
 	).Also(
-		ValidateCESQLExpression(ctx, filter.SQL).ViaField("sql"),
+		ValidateCESQLExpression(ctx, filter.CESQL).ViaField("sql"),
 	)
 	return errs
 }
@@ -275,7 +275,7 @@ func hasMultipleDialects(filter *SubscriptionsAPIFilter) bool {
 			dialectFound = true
 		}
 	}
-	if filter.SQL != "" && dialectFound {
+	if filter.CESQL != "" && dialectFound {
 		return true
 	}
 	return false
