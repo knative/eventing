@@ -34,7 +34,7 @@ import (
 // FiltersFeatureSet creates a feature set for testing the broker implementation of the new trigger filters experimental feature
 // (aka Cloud Events Subscriptions API filters). It requires a created and ready Broker resource with brokerName.
 //
-// The feature set tests four filter dialects: exact, prefix, suffix and sql (aka CloudEvents SQL).
+// The feature set tests four filter dialects: exact, prefix, suffix and cesql (aka CloudEvents SQL).
 func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	matchedEvent := FullEvent()
 	unmatchedEvent := MinEvent()
