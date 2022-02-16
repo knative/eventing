@@ -223,7 +223,7 @@ func ValidateSubscriptionAPIFilter(ctx context.Context, filter *SubscriptionsAPI
 	).Also(
 		ValidateSubscriptionAPIFilter(ctx, filter.Not).ViaField("not"),
 	).Also(
-		ValidateCESQLExpression(ctx, filter.CESQL).ViaField("sql"),
+		ValidateCESQLExpression(ctx, filter.CESQL).ViaField("cesql"),
 	)
 	return errs
 }
