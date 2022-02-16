@@ -294,6 +294,11 @@ func (mr *MagicEnvironment) Test(ctx context.Context, originalT *testing.T, f *f
 		// TODO implement fail fast feature to avoid proceeding with testing if an "expected level" assert fails here
 	}
 
+	if originalT.Failed() {
+		// Prepend logging steps to the teardown phase.
+		steps[feature.Teardown] = append(mr.loggingSteps(), steps[feature.Teardown]...)
+	}
+
 	for _, s := range steps[feature.Teardown] {
 		s := s
 
