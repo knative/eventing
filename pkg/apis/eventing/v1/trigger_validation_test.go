@@ -717,7 +717,7 @@ func TestFilterSpecValidation(t *testing.T) {
 			{
 				CESQL: "this is wrong",
 			}},
-		want: apis.ErrInvalidValue("this is wrong", "sql", "syntax error: ").ViaFieldIndex("filters", 0),
+		want: apis.ErrInvalidValue("this is wrong", "cesql", "syntax error: ").ViaFieldIndex("filters", 0),
 	}, {
 		name: "Valid CE SQL expression",
 		filters: []SubscriptionsAPIFilter{
