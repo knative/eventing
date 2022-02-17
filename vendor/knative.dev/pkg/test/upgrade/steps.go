@@ -46,16 +46,13 @@ func (se *suiteExecution) preUpgradeTests(num int) {
 }
 
 func (se *suiteExecution) startContinualTests(num int) {
+	l := se.logger
 	operations := se.suite.tests.continual
 	groupTemplate := "%d) 🔄 Starting continual tests. " +
 		"%d tests are registered."
 	elementTemplate := `%d.%d) Starting continual tests of "%s".`
 	numOps := len(operations)
 	se.configuration.T.Run("ContinualTests", func(t *testing.T) {
-		l, err := se.configuration.logger(t)
-		if err != nil {
-			t.Fatal(err)
-		}
 		if numOps > 0 {
 			l.Infof(groupTemplate, num, numOps)
 			for i := range operations {
@@ -66,28 +63,17 @@ func (se *suiteExecution) startContinualTests(num int) {
 					return
 				}
 				setup := operation.Setup()
-
-				logger, buffer := newInMemoryLoggerBuffer(se.configuration)
 				t.Run("Setup"+operation.Name(), func(t *testing.T) {
-					l, err = se.configuration.logger(t)
-					if err != nil {
-						t.Fatal(err)
-					}
-					setup(Context{T: t, Log: logger.Sugar()})
+					setup(Context{T: t, Log: l})
 				})
-
 				handler := operation.Handler()
 				go func() {
-					handler(BackgroundContext{
-						Log:       logger.Sugar(),
-						Stop:      operation.stop,
-						logBuffer: buffer,
-					})
+					bc := BackgroundContext{Log: l, Stop: operation.stop}
+					handler(bc)
 				}()
+
 				se.failed = se.failed || t.Failed()
 				if se.failed {
-					// need to dump logs here, because verify will not be executed.
-					l.Error(wrapLog(buffer.Dump()))
 					return
 				}
 			}
@@ -99,26 +85,18 @@ func (se *suiteExecution) startContinualTests(num int) {
 }
 
 func (se *suiteExecution) verifyContinualTests(num int) {
+	l := se.logger
 	testsCount := len(se.suite.tests.continual)
 	if testsCount > 0 {
 		se.configuration.T.Run("VerifyContinualTests", func(t *testing.T) {
-			l, err := se.configuration.logger(t)
-			if err != nil {
-				t.Fatal(err)
-			}
 			l.Infof("%d) ✋ Verifying %d running continual tests.", num, testsCount)
 			for i, operation := range se.suite.tests.continual {
 				t.Run(operation.Name(), func(t *testing.T) {
-					l, err = se.configuration.logger(t)
-					if err != nil {
-						t.Fatal(err)
-					}
 					l.Infof(`%d.%d) Verifying "%s".`, num, i+1, operation.Name())
 					finished := make(chan struct{})
 					operation.stop <- StopEvent{
 						T:        t,
 						Finished: finished,
-						logger:   l,
 						name:     "Stop of " + operation.Name(),
 					}
 					<-finished

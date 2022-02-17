@@ -162,11 +162,9 @@ func (o *Receiver) Start(ctx context.Context, handlerFuncs ...func(handler http.
 }
 
 func (o *Receiver) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	// Special case probe events && readiness probe.
-	if request.Method == http.MethodHead || request.URL.Path == "/health/ready" {
-		code := http.StatusOK
-		writer.WriteHeader(code)
-		_, _ = writer.Write([]byte(http.StatusText(code)))
+	// Special case probe events.
+	if request.Method == http.MethodHead {
+		writer.WriteHeader(http.StatusOK)
 		return
 	}
 

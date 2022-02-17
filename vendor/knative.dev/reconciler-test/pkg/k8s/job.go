@@ -18,7 +18,6 @@ package k8s
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -29,39 +28,27 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/logging"
-	"knative.dev/reconciler-test/pkg/environment"
+
 	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // WaitUntilJobDone waits until a job has finished.
 // Timing is optional but if provided is [interval, timeout].
-func WaitUntilJobDone(ctx context.Context, t feature.T, name string, timing ...time.Duration) error {
+func WaitUntilJobDone(ctx context.Context, t feature.T, client kubernetes.Interface, namespace, name string, timing ...time.Duration) error {
 	interval, timeout := PollTimings(ctx, timing)
-	namespace := environment.FromContext(ctx).Namespace()
-	kube := kubeclient.Get(ctx)
-	jobs := kube.BatchV1().Jobs(namespace)
 
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		job, err := jobs.Get(ctx, name, metav1.GetOptions{})
+		job, err := client.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logf("%s/%s job %+v", namespace, name, err)
+				t.Log(namespace, name, "not found", err)
 				// keep polling
 				return false, nil
 			}
 			return false, err
 		}
-		complete := IsJobComplete(job)
-		if !complete {
-			status, err := json.Marshal(job.Status)
-			if err != nil {
-				return false, err
-			}
-			t.Logf("%s/%s job status %s", namespace, name, status)
-		}
-		return complete, nil
+		return IsJobComplete(job), nil
 	})
 	if err != nil {
 		return err
@@ -72,16 +59,15 @@ func WaitUntilJobDone(ctx context.Context, t feature.T, name string, timing ...t
 
 // WaitForJobTerminationMessage waits for a job to end and then collects the termination message.
 // Timing is optional but if provided is [interval, timeout].
-func WaitForJobTerminationMessage(ctx context.Context, t feature.T, name string, timing ...time.Duration) (string, error) {
+func WaitForJobTerminationMessage(ctx context.Context, t feature.T, client kubernetes.Interface, namespace, name string, timing ...time.Duration) (string, error) {
 	interval, timeout := PollTimings(ctx, timing)
-	namespace := environment.FromContext(ctx).Namespace()
 
 	// poll until the pod is terminated.
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		pod, err := GetJobPodByJobName(ctx, name)
+		pod, err := GetJobPodByJobName(context.Background(), client, namespace, name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logf("%s/%s job termination %+v", namespace, name, err)
+				t.Log(namespace, name, "not found", err)
 				// keep polling
 				return false, nil
 			}
@@ -100,7 +86,7 @@ func WaitForJobTerminationMessage(ctx context.Context, t feature.T, name string,
 	if err != nil {
 		return "", err
 	}
-	pod, err := GetJobPodByJobName(ctx, name)
+	pod, err := GetJobPodByJobName(context.Background(), client, namespace, name)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +141,7 @@ func GetJobPod(ctx context.Context, kubeClientset kubernetes.Interface, namespac
 	labelSelector := &metav1.LabelSelector{
 		MatchLabels: matchLabels,
 	}
-	pods, err := kubeClientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.Set(labelSelector.MatchLabels).String()})
+	pods, err := kubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labels.Set(labelSelector.MatchLabels).String()})
 	if err != nil {
 		return nil, err
 	}
@@ -169,10 +155,8 @@ func GetJobPod(ctx context.Context, kubeClientset kubernetes.Interface, namespac
 // GetJobPodByJobName will find the Pods that belong to that job. Each pod
 // for a given job will have label called: "job-name" set to the job that
 // it belongs to, so just filter by that.
-func GetJobPodByJobName(ctx context.Context, jobName string) (*corev1.Pod, error) {
+func GetJobPodByJobName(ctx context.Context, kubeClientset kubernetes.Interface, namespace, jobName string) (*corev1.Pod, error) {
 	logger := logging.FromContext(ctx)
-	namespace := environment.FromContext(ctx).Namespace()
-	kube := kubeclient.Get(ctx)
 	logger.Infof("Looking for Pod with jobname: %q", jobName)
 	matchLabels := map[string]string{
 		"job-name": jobName,
@@ -180,8 +164,7 @@ func GetJobPodByJobName(ctx context.Context, jobName string) (*corev1.Pod, error
 	labelSelector := &metav1.LabelSelector{
 		MatchLabels: matchLabels,
 	}
-	pods, err := kube.CoreV1().Pods(namespace).
-		List(ctx, metav1.ListOptions{LabelSelector: labels.Set(labelSelector.MatchLabels).String()})
+	pods, err := kubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labels.Set(labelSelector.MatchLabels).String()})
 	if err != nil {
 		return nil, err
 	}
