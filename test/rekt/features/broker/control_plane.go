@@ -50,13 +50,13 @@ import (
 func ControlPlaneConformance(brokerName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Broker Specification - Control Plane",
-		Features: []feature.Feature{
-			*ControlPlaneBroker(brokerName),
-			*ControlPlaneTrigger_GivenBroker(brokerName),
-			*ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName),
-			*ControlPlaneTrigger_WithBrokerLifecycle(),
-			*ControlPlaneTrigger_WithValidFilters(brokerName),
-			*ControlPlaneTrigger_WithInvalidFilters(brokerName),
+		Features: []*feature.Feature{
+			ControlPlaneBroker(brokerName),
+			ControlPlaneTrigger_GivenBroker(brokerName),
+			ControlPlaneTrigger_GivenBrokerTriggerReady(brokerName),
+			ControlPlaneTrigger_WithBrokerLifecycle(),
+			ControlPlaneTrigger_WithValidFilters(brokerName),
+			ControlPlaneTrigger_WithInvalidFilters(brokerName),
 		},
 	}
 
@@ -390,7 +390,7 @@ func addControlPlaneDelivery(fs *feature.FeatureSet) {
 		})
 		f.Stable("Conformance").Should(tt.name, knconf.AssertEventPatterns(prober, expectedEvents))
 		f.Teardown("Delete feature resources", f.DeleteResources)
-		fs.Features = append(fs.Features, *f)
+		fs.Features = append(fs.Features, f)
 	}
 }
 
@@ -537,7 +537,7 @@ func addControlPlaneEventRouting(fs *feature.FeatureSet) {
 
 		f.Stable("Conformance").Should(tt.name, assertExpectedRoutedEvents(prober, expectedEvents))
 		f.Teardown("Delete feature resources", f.DeleteResources)
-		fs.Features = append(fs.Features, *f)
+		fs.Features = append(fs.Features, f)
 	}
 }
 

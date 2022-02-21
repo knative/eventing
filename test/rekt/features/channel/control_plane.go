@@ -38,8 +38,8 @@ import (
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
 	fs := &feature.FeatureSet{
 		Name: "Knative Channel Specification - Control Plane",
-		Features: []feature.Feature{
-			*ControlPlaneChannel(channelName),
+		Features: []*feature.Feature{
+			ControlPlaneChannel(channelName),
 		},
 	}
 
