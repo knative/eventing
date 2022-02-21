@@ -326,7 +326,7 @@ func (mr *MagicEnvironment) TestSet(ctx context.Context, t *testing.T, fs *featu
 	for _, f := range fs.Features {
 		// Make sure the name is appended
 		f.Name = fs.Name + "/" + f.Name
-		mr.Test(ctx, t, &f)
+		mr.Test(ctx, t, f)
 	}
 }
 
