@@ -42,10 +42,6 @@ readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
 # MT Channel Based Broker config.
 readonly MT_CHANNEL_BASED_BROKER_DEFAULT_CONFIG="config/core/configmaps/default-broker.yaml"
 
-# Sugar Controller config. For label/annotation magic.
-readonly SUGAR_CONTROLLER_CONFIG_DIR="config/sugar"
-readonly SUGAR_CONTROLLER_CONFIG="config/sugar/500-controller.yaml"
-
 # Config tracing config.
 readonly CONFIG_TRACING_CONFIG="test/config/config-tracing.yaml"
 
@@ -83,7 +79,7 @@ function knative_setup() {
 
   install_mt_broker || fail_test "Could not install MT Channel Based Broker"
 
-  install_sugar || fail_test "Could not install Sugar Controller"
+  enable_sugar || fail_test "Could not enable Sugar Controller Injection"
 
   unleash_duck || fail_test "Could not unleash the chaos duck"
 }
@@ -223,21 +219,13 @@ function install_mt_broker() {
   wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing with MT Broker did not come up"
 }
 
-function install_sugar() {
-  if [[ -z "${EVENTING_SUGAR_CONTROLLER_YAML:-}" ]]; then
-    build_knative_from_source
-  else
-    echo "use exist EVENTING_SUGAR_CONTROLLER_YAML"
-  fi
-  local EVENTING_SUGAR_CONTROLLER_NAME=${TMP_DIR}/${EVENTING_SUGAR_CONTROLLER_YAML##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_SUGAR_CONTROLLER_YAML} > ${EVENTING_SUGAR_CONTROLLER_NAME}
-  kubectl apply \
-    -f "${EVENTING_SUGAR_CONTROLLER_NAME}" || return 1
-  UNINSTALL_LIST+=( "${EVENTING_SUGAR_CONTROLLER_NAME}" )
-
-  scale_controlplane sugar-controller
-
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing Sugar Controller did not come up"
+function enable_sugar() {
+  # Extra parameters for ko apply
+  KO_FLAGS="${KO_FLAGS:-}"
+  echo "enable sugar controller injection"
+  cat test/config/sugar.yaml | \
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" | \
+    ko apply ${KO_FLAGS} -f - || return $?
 }
 
 function unleash_duck() {
