@@ -69,15 +69,6 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
-
-          # Due to the trivial per-Broker cost, we _can_ inject Brokers into every
-          # namespace by default. To change this default simply change this
-          # to "true".  To opt namespaces out of Broker injection, label
-          # them with:
-          #    knative-eventing-injection: disabled
-          - name: BROKER_INJECTION_DEFAULT
-            value: "false"
-
           - name: POD_NAME
             valueFrom:
               fieldRef:
