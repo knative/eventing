@@ -28,9 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+
+	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
@@ -97,7 +98,7 @@ func isResourceReady(obj runtime.Object, err error) (bool, error) {
 
 	kr := obj.(*duckv1beta1.KResource)
 	ready := kr.Status.GetCondition(apis.ConditionReady)
-	return ready != nil && ready.IsTrue(), nil
+	return ready != nil && ready.IsTrue() && kr.Generation == kr.Status.ObservedGeneration, nil
 }
 
 // isPodRunning will check the status conditions of the pod and return true if it's Running or Succeeded.
