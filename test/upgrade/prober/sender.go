@@ -35,6 +35,7 @@ var senderName = "wathola-sender"
 func (p *prober) deploySender() {
 	p.log.Info("Deploy sender deployment: ", senderName)
 	var replicas int32 = 1
+	var gracePeriodSeconds int64 = 300
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      senderName,
@@ -73,6 +74,7 @@ func (p *prober) deploySender() {
 							MountPath: p.config.ConfigMountPoint,
 						}},
 					}},
+					TerminationGracePeriodSeconds: &gracePeriodSeconds,
 				},
 			},
 		},
