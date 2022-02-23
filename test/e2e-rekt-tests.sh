@@ -30,6 +30,9 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
+# enable logs saving
+export ENABLE_GKE_TELEMETRY=true
+
 initialize $@ --skip-istio-addon
 
 export SKIP_UPLOAD_TEST_IMAGES="true"
