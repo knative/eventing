@@ -19,6 +19,9 @@ metadata:
   namespace: knative-eventing
   labels:
     app: "storage-version-migration-eventing"
+    app.kubernetes.io/name: knative-eventing
+    app.kubernetes.io/component: storage-version-migration-job
+    app.kubernetes.io/version: devel
     eventing.knative.dev/release: devel
 spec:
   ttlSecondsAfterFinished: 600
@@ -27,6 +30,9 @@ spec:
     metadata:
       labels:
         app: "storage-version-migration-eventing"
+        app.kubernetes.io/name: knative-eventing
+        app.kubernetes.io/component: storage-version-migration-job
+        app.kubernetes.io/version: devel
         eventing.knative.dev/release: devel
       annotations:
         sidecar.istio.io/inject: "false"
