@@ -25,33 +25,32 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 	pkgTest "knative.dev/pkg/test"
 
 	testlib "knative.dev/eventing/test/lib"
 )
 
-var senderName = "wathola-sender"
-
 func (p *prober) deploySender() {
-	p.log.Info("Deploy sender deployment: ", senderName)
+	p.log.Info("Deploy sender deployment: ", sender.Name)
 	var replicas int32 = 1
 	var gracePeriodSeconds int64 = 300
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      senderName,
+			Name:      sender.Name,
 			Namespace: p.client.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": senderName,
+					"app": sender.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": senderName,
+						"app": sender.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -67,7 +66,7 @@ func (p *prober) deploySender() {
 					}},
 					Containers: []corev1.Container{{
 						Name:  "sender",
-						Image: p.config.ImageResolver(senderName),
+						Image: p.config.ImageResolver(sender.Name),
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      p.config.ConfigMapName,
 							ReadOnly:  true,
@@ -85,21 +84,21 @@ func (p *prober) deploySender() {
 		Create(p.config.Ctx, deployment, metav1.CreateOptions{})
 	p.ensureNoError(err)
 
-	testlib.WaitFor(fmt.Sprint("sender deployment be ready: ", senderName), func() error {
+	testlib.WaitFor(fmt.Sprint("sender deployment be ready: ", sender.Name), func() error {
 		return pkgTest.WaitForDeploymentScale(
-			p.config.Ctx, p.client.Kube, senderName, p.client.Namespace, int(replicas),
+			p.config.Ctx, p.client.Kube, sender.Name, p.client.Namespace, int(replicas),
 		)
 	})
 }
 
 func (p *prober) removeSender() {
-	p.log.Info("Remove of sender deployment: ", senderName)
+	p.log.Info("Remove of sender deployment: ", sender.Name)
 
 	foreground := metav1.DeletePropagationForeground
 	dOpts := metav1.DeleteOptions{PropagationPolicy: &foreground}
 	err := p.client.Kube.AppsV1().
 		Deployments(p.client.Namespace).
-		Delete(p.config.Ctx, senderName, dOpts)
+		Delete(p.config.Ctx, sender.Name, dOpts)
 	p.ensureNoError(err)
 
 	var d *appsv1.Deployment
@@ -107,7 +106,7 @@ func (p *prober) removeSender() {
 		// Save err and deployment for error reporting.
 		d, err = p.client.Kube.AppsV1().
 			Deployments(p.client.Namespace).
-			Get(p.config.Ctx, senderName, metav1.GetOptions{})
+			Get(p.config.Ctx, sender.Name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

@@ -16,7 +16,10 @@ limitations under the License.
 
 package sender
 
-import cloudevents "github.com/cloudevents/sdk-go/v2"
+import (
+	"context"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+)
 
 // Sender will send messages continuously until process receives a SIGINT
 type Sender interface {
@@ -29,5 +32,5 @@ type EventSender interface {
 	// this sender.
 	Supports(endpoint interface{}) bool
 	// SendEvent will send event to given endpoint.
-	SendEvent(ce cloudevents.Event, endpoint interface{}) error
+	SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error
 }

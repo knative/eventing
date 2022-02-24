@@ -26,10 +26,7 @@ import (
 
 	testlib "knative.dev/eventing/test/lib"
 	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
-)
-
-var (
-	receiverName = "wathola-receiver"
+	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 )
 
 func (p *prober) deployReceiver() {
@@ -38,22 +35,22 @@ func (p *prober) deployReceiver() {
 }
 
 func (p *prober) deployReceiverDeployment() {
-	p.log.Info("Deploy of receiver deployment: ", receiverName)
+	p.log.Info("Deploy of receiver deployment: ", receiver.Name)
 	deployment := p.createReceiverDeployment()
 	p.client.CreateDeploymentOrFail(deployment)
 
-	testlib.WaitFor(fmt.Sprint("receiver deployment be ready: ", receiverName), func() error {
+	testlib.WaitFor(fmt.Sprint("receiver deployment be ready: ", receiver.Name), func() error {
 		return pkgTest.WaitForDeploymentScale(
-			p.config.Ctx, p.client.Kube, receiverName, p.client.Namespace, 1,
+			p.config.Ctx, p.client.Kube, receiver.Name, p.client.Namespace, 1,
 		)
 	})
 }
 
 func (p *prober) deployReceiverService() {
-	p.log.Infof("Deploy of receiver service: %v", receiverName)
+	p.log.Infof("Deploy of receiver service: %v", receiver.Name)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      receiverName,
+			Name:      receiver.Name,
 			Namespace: p.client.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -69,7 +66,7 @@ func (p *prober) deployReceiverService() {
 				},
 			},
 			Selector: map[string]string{
-				"app": receiverName,
+				"app": receiver.Name,
 			},
 			Type: corev1.ServiceTypeClusterIP,
 		},
@@ -81,20 +78,20 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 	var replicas int32 = 1
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      receiverName,
+			Name:      receiver.Name,
 			Namespace: p.client.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": receiverName,
+					"app": receiver.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": receiverName,
+						"app": receiver.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -110,7 +107,7 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 					}},
 					Containers: []corev1.Container{{
 						Name:  "receiver",
-						Image: p.config.ImageResolver(receiverName),
+						Image: p.config.ImageResolver(receiver.Name),
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      p.config.ConfigMapName,
 							ReadOnly:  true,
