@@ -26,6 +26,8 @@
 
 export GO111MODULE=on
 
+export ENABLE_GKE_TELEMETRY=true
+
 source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
