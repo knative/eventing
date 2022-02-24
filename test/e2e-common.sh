@@ -85,7 +85,7 @@ function knative_setup() {
 
   install_sugar || fail_test "Could not install Sugar Controller"
 
-  unleash_duck || fail_test "Could not unleash the chaos duck"
+  # unleash_duck || fail_test "Could not unleash the chaos duck"
 }
 
 function scale_controlplane() {
