@@ -22,15 +22,23 @@ import (
 	"fmt"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/wavesoftware/go-ensure"
-	"knative.dev/eventing/test/upgrade/prober/wathola/config"
-	"knative.dev/eventing/test/upgrade/prober/wathola/event"
-
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	cloudeventshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/wavesoftware/go-ensure"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/trace"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/event"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+)
+
+const (
+	Name = "wathola-sender"
 )
 
 var (
@@ -54,7 +62,11 @@ type sender struct {
 
 func (s *sender) SendContinually() {
 	var shutdownCh = make(chan struct{})
-	defer s.sendFinished()
+	defer func() {
+		s.sendFinished()
+		// Give time to send tracing information.
+		time.Sleep(5 * time.Second)
+	}()
 
 	go func() {
 		c := make(chan os.Signal, 1)
@@ -127,7 +139,7 @@ func RegisterEventSender(es EventSender) {
 }
 
 // SendEvent will send cloud event to given url
-func SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+func SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
 	senders := make([]EventSender, 0, len(eventSenders)+1)
 	senders = append(senders, eventSenders...)
 	if len(senders) == 0 {
@@ -135,7 +147,7 @@ func SendEvent(ce cloudevents.Event, endpoint interface{}) error {
 	}
 	for _, eventSender := range senders {
 		if eventSender.Supports(endpoint) {
-			return eventSender.SendEvent(ce, endpoint)
+			return eventSender.SendEvent(ctx, ce, endpoint)
 		}
 	}
 	return fmt.Errorf("%w: endpoint is %#v", ErrEndpointTypeNotSupported, endpoint)
@@ -153,15 +165,19 @@ func (h httpSender) Supports(endpoint interface{}) bool {
 	}
 }
 
-func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+func (h httpSender) SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
 	url := endpoint.(string)
-	c, err := cloudevents.NewClientHTTP()
+	opts := []cloudeventshttp.Option{
+		cloudevents.WithRoundTripper(&ochttp.Transport{
+			Propagation: tracecontextb3.TraceContextEgress,
+		}),
+	}
+	c, err := cloudevents.NewClientHTTP(opts...)
 	if err != nil {
 		return err
 	}
-	ctx := cloudevents.ContextWithTarget(context.Background(), url)
-
-	result := c.Send(ctx, ce)
+	ctxWithTarget := cloudevents.ContextWithTarget(ctx, url)
+	result := c.Send(ctxWithTarget, ce)
 	if cloudevents.IsACK(result) {
 		return nil
 	}
@@ -171,9 +187,12 @@ func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error 
 func (s *sender) sendStep() error {
 	step := event.Step{Number: s.eventsSent + 1}
 	ce := NewCloudEvent(step, event.StepType)
+	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("step", int64(step.Number)))
 	endpoint := senderConfig.Address
 	log.Infof("Sending step event #%v to %#v", step.Number, endpoint)
-	err := SendEvent(ce, endpoint)
+	err := SendEvent(ctx, ce, endpoint)
 	// Record every request regardless of the result
 	s.totalRequests++
 	if err != nil {
@@ -190,6 +209,17 @@ func (s *sender) sendFinished() {
 	finished := event.Finished{EventsSent: s.eventsSent, TotalRequests: s.totalRequests, UnavailablePeriods: s.unavailablePeriods}
 	endpoint := senderConfig.Address
 	ce := NewCloudEvent(finished, event.FinishedType)
+	ctx, span := PopulateSpanWithEvent(context.Background(), ce, Name)
+	defer span.End()
 	log.Infof("Sending finished event (count: %v) to %#v", finished.EventsSent, endpoint)
-	ensure.NoError(SendEvent(ce, endpoint))
+	ensure.NoError(SendEvent(ctx, ce, endpoint))
+}
+
+func PopulateSpanWithEvent(ctx context.Context, ce cloudevents.Event, spanName string) (context.Context, *trace.Span) {
+	ctxWithSpan, span := trace.StartSpan(ctx, spanName)
+	span.AddAttributes(
+		trace.StringAttribute("cloudevents.type", ce.Type()),
+		trace.StringAttribute("cloudevents.id", ce.ID()),
+	)
+	return ctxWithSpan, span
 }
