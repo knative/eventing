@@ -59,7 +59,7 @@ func InstallYamlFS(ctx context.Context, fsys fs.FS, base map[string]interface{})
 	}
 
 	// Apply yaml.
-	err = retry.OnError(retry.DefaultRetry, isWebhookError, func() error {
+	err = retry.OnError(retry.DefaultRetry, func(err error) bool { return true }, func() error {
 		// This is a workaround for https://github.com/knative/pkg/issues/1509
 		// Because tests currently fail immediately on any creation failure, this
 		// is problematic. On the reconcilers it's not an issue because they recover,
