@@ -103,7 +103,6 @@ func (a *autoscaler) Start(ctx context.Context) {
 }
 
 func (a *autoscaler) Autoscale(ctx context.Context, attemptScaleDown bool, pending int32) {
-	a.trigger <- pending
 	a.syncAutoscale(ctx, attemptScaleDown, pending)
 }
 
