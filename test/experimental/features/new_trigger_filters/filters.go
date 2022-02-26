@@ -96,7 +96,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 		})
 
 		f.Alpha("Triggers with new filters").
-			Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(matchedEvent.ID())).Exact(1)).
+			Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(matchedEvent.ID())).AtLeast(1)).
 			MustNot("must not deliver unmatched events", OnStore(subscriber).MatchEvent(HasId(unmatchedEvent.ID())).Not())
 		features = append(features, f)
 	}
