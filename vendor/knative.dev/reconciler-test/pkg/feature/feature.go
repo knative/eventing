@@ -93,7 +93,7 @@ func NewFeature() *Feature {
 // FeatureSet is a list of features and feature set name.
 type FeatureSet struct {
 	Name     string
-	Features []Feature
+	Features []*Feature
 }
 
 // StepFn is the function signature for steps.
