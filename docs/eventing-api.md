@@ -2091,14 +2091,14 @@ expression cannot be empty strings.</p>
 </tr>
 <tr>
 <td>
-<code>sql</code><br/>
+<code>cesql</code><br/>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>SQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.</p>
+<p>CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.</p>
 </td>
 </tr>
 </tbody>

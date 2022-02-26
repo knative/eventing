@@ -34,7 +34,7 @@ import (
 // FiltersFeatureSet creates a feature set for testing the broker implementation of the new trigger filters experimental feature
 // (aka Cloud Events Subscriptions API filters). It requires a created and ready Broker resource with brokerName.
 //
-// The feature set tests four filter dialects: exact, prefix, suffix and sql (aka CloudEvents SQL).
+// The feature set tests four filter dialects: exact, prefix, suffix and cesql (aka CloudEvents SQL).
 func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	matchedEvent := FullEvent()
 	unmatchedEvent := MinEvent()
@@ -56,7 +56,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 			filters: fmt.Sprintf(snippetFor("suffix"), matchedEvent.Type()[5:], matchedEvent.Source()[5:]),
 		},
 		"CloudEvents SQL filter": {
-			filters: fmt.Sprintf(`- sql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
+			filters: fmt.Sprintf(`- cesql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
 		},
 	}
 

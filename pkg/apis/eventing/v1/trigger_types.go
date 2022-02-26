@@ -169,10 +169,10 @@ type SubscriptionsAPIFilter struct {
 	// +optional
 	Suffix map[string]string `json:"suffix,omitempty"`
 
-	// SQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.
+	// CESQL is a CloudEvents SQL expression that will be evaluated to true or false against each CloudEvent.
 	//
 	// +optional
-	SQL string `json:"sql,omitempty"`
+	CESQL string `json:"cesql,omitempty"`
 }
 
 // TriggerFilterAttributes is a map of context attribute names to values for
