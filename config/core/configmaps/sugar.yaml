@@ -21,6 +21,8 @@ metadata:
     eventing.knative.dev/release: devel
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
+  annotations:
+    knative.dev/example-checksum: "2f817977"
 data:
   # namespace-sugar-selector specifies a LabelSelector which
   # determines which namespaces the Sugar Controller should operate upon
