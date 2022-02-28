@@ -69,7 +69,6 @@ aliases:
   - carlisia
   - csantanapr
   - dprotaso
-  - duglin
   - evankanderson
   - itsmurugappan
   - julz
@@ -80,6 +79,7 @@ aliases:
   - lance
   - pmorie
   - rhuss
+  - smoser-ibm
   - spencerdillard
   - thisisnotapril
   - vaikas
@@ -117,6 +117,7 @@ aliases:
   - houshengbo
   - jcrossley3
   - matzew
+  - maximilien
   - trshafer
   operations-wg-leads:
   - houshengbo
@@ -126,6 +127,7 @@ aliases:
   - houshengbo
   - jcrossley3
   - matzew
+  - maximilien
   - trshafer
   pkg-configmap-reviewers:
   - dprotaso
@@ -152,6 +154,7 @@ aliases:
   - evankanderson
   - gerardo-lc
   - kvmware
+  - mgencur
   - shinigambit
   productivity-wg-leads:
   - chizhg
@@ -200,8 +203,8 @@ aliases:
   - julz
   - rhuss
   trademark-committee:
-  - duglin
   - evankanderson
+  - smoser-ibm
   - spencerdillard
   ux-wg-leads:
   - csantanapr
