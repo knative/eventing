@@ -18,6 +18,7 @@ package sender
 
 import (
 	"context"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
 
