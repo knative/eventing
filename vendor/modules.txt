@@ -267,6 +267,7 @@ github.com/openzipkin/zipkin-go/model
 github.com/openzipkin/zipkin-go/propagation
 github.com/openzipkin/zipkin-go/reporter
 github.com/openzipkin/zipkin-go/reporter/http
+github.com/openzipkin/zipkin-go/reporter/recorder
 # github.com/pelletier/go-toml/v2 v2.0.0-beta.2
 ## explicit
 github.com/pelletier/go-toml/v2
@@ -1244,6 +1245,7 @@ knative.dev/pkg/tracing
 knative.dev/pkg/tracing/config
 knative.dev/pkg/tracing/propagation
 knative.dev/pkg/tracing/propagation/tracecontextb3
+knative.dev/pkg/tracing/testing
 knative.dev/pkg/tracker
 knative.dev/pkg/version
 knative.dev/pkg/webhook
