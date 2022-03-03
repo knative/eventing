@@ -46,9 +46,10 @@ var (
 	// supported by any of the event senders that are registered.
 	ErrEndpointTypeNotSupported = errors.New("given endpoint isn't " +
 		"supported by any registered event sender")
-	log          = config.Log
-	senderConfig = &config.Instance.Sender
-	eventSenders = make([]EventSender, 0, 1)
+	log                     = config.Log
+	senderConfig            = &config.Instance.Sender
+	eventSenders            = make([]EventSender, 0, 1)
+	eventSendersWithContext = make([]EventSenderWithContext, 0, 1)
 )
 
 type sender struct {
@@ -131,27 +132,38 @@ func NewCloudEvent(data interface{}, typ string) cloudevents.Event {
 // ResetEventSenders will reset configured event senders to defaults.
 func ResetEventSenders() {
 	eventSenders = make([]EventSender, 0, 1)
+	eventSendersWithContext = make([]EventSenderWithContext, 0, 1)
 }
 
 // RegisterEventSender will register a EventSender to be used.
+// Deprecated. Use RegisterEventSenderWithContext.
 func RegisterEventSender(es EventSender) {
 	eventSenders = append(eventSenders, es)
 }
 
+// RegisterEventSenderWithContext will register EventSenderWithContext to be used.
+func RegisterEventSenderWithContext(es EventSenderWithContext) {
+	eventSendersWithContext = append(eventSendersWithContext, es)
+}
+
 // SendEvent will send cloud event to given url
 func SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
+	sendersWithCtx := make([]EventSenderWithContext, 0, len(eventSendersWithContext)+1)
+	sendersWithCtx = append(sendersWithCtx, eventSendersWithContext...)
+	if len(eventSendersWithContext) == 0 && len(eventSenders) == 0 {
+		sendersWithCtx = append(sendersWithCtx, httpSender{})
+	}
+	for _, eventSender := range sendersWithCtx {
+		if eventSender.Supports(endpoint) {
+			return eventSender.SendEventWithContext(ctx, ce, endpoint)
+		}
+	}
+	// Backwards compatibility.
+	// TODO: Remove when downstream repositories start using EventSenderWithContext.
 	senders := make([]EventSender, 0, len(eventSenders)+1)
 	senders = append(senders, eventSenders...)
-	if len(senders) == 0 {
-		senders = append(senders, httpSender{})
-	}
 	for _, eventSender := range senders {
 		if eventSender.Supports(endpoint) {
-			if sender, ok := eventSender.(EventSenderWithContext); ok {
-				return sender.SendEventWithContext(ctx, ce, endpoint)
-			}
-			// Ensure backwards compatibility for external implementations that do not
-			// support passing context yet.
 			return eventSender.SendEvent(ce, endpoint)
 		}
 	}

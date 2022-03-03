@@ -116,7 +116,7 @@ func TestTracePropagation(t *testing.T) {
 }
 
 func TestRegisterEventSender(t *testing.T) {
-	sender.RegisterEventSender(testEventSender{})
+	sender.RegisterEventSenderWithContext(testEventSender{})
 	defer sender.ResetEventSenders()
 	c := testConfig{
 		topic:   "sample",
@@ -130,7 +130,7 @@ func TestRegisterEventSender(t *testing.T) {
 }
 
 func TestUnsupportedEventSender(t *testing.T) {
-	sender.RegisterEventSender(testEventSender{})
+	sender.RegisterEventSenderWithContext(testEventSender{})
 	defer sender.ResetEventSenders()
 	ce := sender.NewCloudEvent(nil, "cetype")
 	err := sender.SendEvent(context.Background(), ce, "https://example.org/")
