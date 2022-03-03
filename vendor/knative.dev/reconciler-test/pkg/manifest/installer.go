@@ -131,12 +131,22 @@ func ImagesFromFS(fsys fs.FS) []string {
 	return images
 }
 
-// isWebhookError is a workaround for https://github.com/knative/pkg/issues/1509.
 func isWebhookError(err error) bool {
 	str := err.Error()
+
+	// isEOFError is a workaround for https://github.com/knative/pkg/issues/1509.
 	// Example error:
 	// Internal error occurred: failed calling webhook "defaulting.webhook.kafka.eventing.knative.dev": Post "https://kafka-webhook-eventing.knative-eventing.svc:443/defaulting?timeout=2s": EOF
-	return strings.Contains(str, "webhook") &&
+	isEOFError := strings.Contains(str, "webhook") &&
 		strings.Contains(str, "https") &&
 		strings.Contains(str, "EOF")
+
+	// In addition to the above error we're getting a "context deadline exceeded" generic error
+	// Example error:
+	// Internal error occurred: failed calling webhook "inmemorychannel.eventing.knative.dev": failed to call webhook: Post "https://inmemorychannel-webhook.knative-eventing-9zkohswwf9.svc:443/defaulting?timeout=10s": context deadline exceeded
+	isContextDeadlineExceededError := strings.Contains(str, "webhook") &&
+		strings.Contains(str, "https") &&
+		strings.Contains(str, "context deadline exceeded")
+
+	return isEOFError || isContextDeadlineExceededError
 }
