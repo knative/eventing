@@ -21,6 +21,7 @@ package rekt
 
 import (
 	"testing"
+	"time"
 
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
@@ -42,6 +43,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 		knative.WithLoggingConfig,
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Install and wait for a Ready Broker.
@@ -60,6 +62,7 @@ func TestBrokerWithDLQ(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Test that a Broker works as expected with the following topology:
@@ -81,6 +84,7 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Install and wait for a Ready Broker.
@@ -98,6 +102,7 @@ func TestBrokerConformance(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	// Install and wait for a Ready Broker.
@@ -113,6 +118,7 @@ func TestBrokerDefaultDelivery(t *testing.T) {
 		knative.WithTracingConfig,
 		k8s.WithEventListener,
 		environment.Managed(t),
+		environment.WithPollTimings(5*time.Second, 4*time.Minute),
 	)
 
 	env.Test(ctx, t, broker.DefaultDeliverySpec())
