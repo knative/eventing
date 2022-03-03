@@ -170,7 +170,11 @@ func (t testEventSender) Supports(endpoint interface{}) bool {
 	}
 }
 
-func (t testEventSender) SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
+func (t testEventSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+	return t.SendEventWithContext(context.Background(), ce, endpoint)
+}
+
+func (t testEventSender) SendEventWithContext(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
 	cfg := endpoint.(testConfig)
 	if cfg.valid {
 		return nil

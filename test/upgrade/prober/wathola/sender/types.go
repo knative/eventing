@@ -27,11 +27,22 @@ type Sender interface {
 	SendContinually()
 }
 
-// EventSender will be used to send events to configured endpoint.
-type EventSender interface {
+type EndpointSupporter interface {
 	// Supports will check given endpoint definition and decide if it's valid for
 	// this sender.
 	Supports(endpoint interface{}) bool
+}
+
+// EventSender will be used to send events to configured endpoint.
+type EventSender interface {
+	EndpointSupporter
 	// SendEvent will send event to given endpoint.
-	SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error
+	SendEvent(ce cloudevents.Event, endpoint interface{}) error
+}
+
+// EventSenderWithContext will be used to send events to configured endpoint, passing a context.
+type EventSenderWithContext interface {
+	EndpointSupporter
+	// SendEventWithContext will send event to the given endpoint and pass context.
+	SendEventWithContext(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error
 }

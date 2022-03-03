@@ -147,7 +147,12 @@ func SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) 
 	}
 	for _, eventSender := range senders {
 		if eventSender.Supports(endpoint) {
-			return eventSender.SendEvent(ctx, ce, endpoint)
+			if sender, ok := eventSender.(EventSenderWithContext); ok {
+				return sender.SendEventWithContext(ctx, ce, endpoint)
+			}
+			// Ensure backwards compatibility for external implementations that do not
+			// support passing context yet.
+			return eventSender.SendEvent(ce, endpoint)
 		}
 	}
 	return fmt.Errorf("%w: endpoint is %#v", ErrEndpointTypeNotSupported, endpoint)
@@ -165,7 +170,11 @@ func (h httpSender) Supports(endpoint interface{}) bool {
 	}
 }
 
-func (h httpSender) SendEvent(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
+func (h httpSender) SendEvent(ce cloudevents.Event, endpoint interface{}) error {
+	return h.SendEventWithContext(context.Background(), ce, endpoint)
+}
+
+func (h httpSender) SendEventWithContext(ctx context.Context, ce cloudevents.Event, endpoint interface{}) error {
 	url := endpoint.(string)
 	opts := []cloudeventshttp.Option{
 		cloudevents.WithRoundTripper(&ochttp.Transport{
