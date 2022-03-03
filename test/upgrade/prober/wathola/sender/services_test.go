@@ -108,7 +108,10 @@ func TestTracePropagation(t *testing.T) {
 	assert.Equal(t, sender.Name, spans[3].Name)
 	// Verify the trace is uninterrupted.
 	for i := 0; i != len(spans)-1; i++ {
-		assert.Equal(t, *spans[i].ParentID, spans[i+1].ID)
+		assert.NotNil(t, spans[i].ParentID)
+		if spans[i].ParentID != nil {
+			assert.Equal(t, *spans[i].ParentID, spans[i+1].ID)
+		}
 	}
 }
 
