@@ -22,15 +22,17 @@ package rekt
 import (
 	"testing"
 
-	"knative.dev/eventing/test/rekt/features/broker"
-	"knative.dev/eventing/test/rekt/features/trigger"
-	b "knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
+
+	"knative.dev/eventing/test/rekt/features/broker"
+	"knative.dev/eventing/test/rekt/features/trigger"
+	b "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 )
 
 func TestTriggerDefaulting(t *testing.T) {
@@ -72,7 +74,9 @@ func TestTriggerWithDLS(t *testing.T) {
 	//
 	brokerName = "dls-broker"
 	brokerSinkName := "broker-sink"
-	env.Prerequisite(ctx, t, broker.GoesReadyWithProbeReceiver(brokerName, brokerSinkName, prober, b.WithEnvConfig()...))
+	env.Prerequisite(ctx, t, broker.GoesReady(brokerName,
+		delivery.WithDeadLetterSink(prober.AsKReference(brokerSinkName), ""),
+	))
 	env.Test(ctx, t, trigger.SourceToTriggerSinkWithDLSDontUseBrokers("test2", brokerName, brokerSinkName, prober))
 }
 

@@ -619,21 +619,8 @@ func brokerClassIsImmutable(ctx context.Context, t feature.T) {
 }
 
 func triggerHasReadyInConditions(ctx context.Context, t feature.T) {
-	var trigger *eventingv1.Trigger
-
-	interval, timeout := environment.PollTimingsFromContext(ctx)
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		trigger = triggerfeatures.GetTrigger(ctx, t)
-		if trigger.Status.ObservedGeneration != 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		t.Errorf("unable to get a reconciled Trigger (status.observedGeneration != 0)")
-	}
-
-	knconf.HasReadyInConditions(ctx, t, trigger.Status.Status)
+	name := state.GetStringOrFail(ctx, t, triggerfeatures.TriggerNameKey)
+	knconf.KResourceHasReadyInConditions(triggerresources.GVR(), name)(ctx, t)
 }
 
 func readyTriggerCanDeliver(ctx context.Context, t feature.T) {

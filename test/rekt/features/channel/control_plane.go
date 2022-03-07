@@ -22,17 +22,18 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/duck"
+	"knative.dev/reconciler-test/pkg/environment"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/resources/svc"
+
 	duckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/test/rekt/features/knconf"
 	"knative.dev/eventing/test/rekt/resources/account_role"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/duck"
-	"knative.dev/reconciler-test/pkg/environment"
-	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/resources/svc"
 )
 
 func ControlPlaneConformance(channelName string) *feature.FeatureSet {
@@ -169,7 +170,7 @@ func channelAllowsSubscribersAndStatus(ctx context.Context, t feature.T) {
 	interval, timeout := environment.PollTimingsFromContext(ctx)
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		updated = getChannelable(ctx, t)
-		if updated.Status.ObservedGeneration != updated.Generation {
+		if updated.Status.ObservedGeneration < updated.Generation {
 			// keep polling.
 			return false, nil
 		}
