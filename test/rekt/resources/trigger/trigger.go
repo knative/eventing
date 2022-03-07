@@ -22,17 +22,18 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/delivery"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	"knative.dev/eventing/test/rekt/resources/delivery"
 )
 
 //go:embed *.yaml
 var yaml embed.FS
 
-func gvr() schema.GroupVersionResource {
+func GVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1", Resource: "triggers"}
 }
 
@@ -117,5 +118,5 @@ func Install(name, brokerName string, opts ...manifest.CfgFn) feature.StepFn {
 
 // IsReady tests to see if a Trigger becomes ready within the time given.
 func IsReady(name string, timing ...time.Duration) feature.StepFn {
-	return k8s.IsReady(gvr(), name, timing...)
+	return k8s.IsReady(GVR(), name, timing...)
 }

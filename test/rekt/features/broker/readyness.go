@@ -19,13 +19,11 @@ package broker
 import (
 	"fmt"
 
-	"knative.dev/reconciler-test/pkg/eventshub"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/manifest"
 	"knative.dev/reconciler-test/resources/svc"
 
 	"knative.dev/eventing/test/rekt/resources/broker"
-	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/trigger"
 )
 
@@ -44,10 +42,8 @@ func TriggerGoesReady(name, brokerName string, cfg ...manifest.CfgFn) *feature.F
 	f.Setup(fmt.Sprintf("install trigger %q", name), trigger.Install(name, brokerName, cfg...))
 
 	// Wait for a ready broker.
-	f.Requirement("Broker is ready", broker.IsReady(brokerName))
-	f.Requirement("Trigger is ready", trigger.IsReady(name))
-
-	f.Stable("trigger")
+	f.Setup("Broker is ready", broker.IsReady(brokerName))
+	f.Setup("Trigger is ready", trigger.IsReady(name))
 
 	return f
 }
@@ -58,30 +54,8 @@ func GoesReady(name string, cfg ...manifest.CfgFn) *feature.Feature {
 	f := new(feature.Feature)
 
 	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name, cfg...))
-
-	f.Requirement("Broker is ready", broker.IsReady(name))
-
-	f.Stable("broker").
-		Must("be addressable", broker.IsAddressable(name))
-
-	return f
-}
-
-// GoesReadyWithProbeReceiver returns a feature that will create a Broker of the given
-// name and class, with an event receiver as its DLS
-// and confirm it becomes ready with an address.
-func GoesReadyWithProbeReceiver(name, sinkName string, prober *eventshub.EventProber, cfg ...manifest.CfgFn) *feature.Feature {
-	f := new(feature.Feature)
-
-	f.Setup("install probe", prober.ReceiverInstall(sinkName))
-
-	brokerConfig := append(cfg, delivery.WithDeadLetterSink(prober.AsKReference(sinkName), ""))
-	f.Setup(fmt.Sprintf("install broker %q", name), broker.Install(name, brokerConfig...))
-
-	f.Requirement("Broker is ready", broker.IsReady(name))
-
-	f.Stable("broker").
-		Must("be addressable", broker.IsAddressable(name))
+	f.Setup("Broker is ready", broker.IsReady(name))
+	f.Setup("Broker is addressable", broker.IsAddressable(name))
 
 	return f
 }
