@@ -23,7 +23,7 @@ import (
 
 const (
 	DefaultPollInterval = 3 * time.Second
-	DefaultPollTimeout  = 2 * time.Minute
+	DefaultPollTimeout  = 10 * time.Minute
 )
 
 type timingsKey struct{}
