@@ -35,6 +35,7 @@ initialize $@ --skip-istio-addon
 export SKIP_UPLOAD_TEST_IMAGES="true"
 
 echo "Running E2E Reconciler Tests"
-go_test_e2e -timeout=1h -parallel=20 ./test/rekt || fail_test
+
+go_test_e2e -timeout=1h ./test/rekt || fail_test
 
 success
