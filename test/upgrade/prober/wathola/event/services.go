@@ -170,6 +170,10 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 	const eventFmt = "event #%v should be received once, but was received %v times"
 	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
 		times := steps.store[eventNo]
+		// TODO: Remove this induced failure. Test changes.
+		if eventNo == 10 {
+			times = 0
+		}
 		if times == 0 {
 			trace, err := GetTraceForEvent(eventNo)
 			if err != nil {
