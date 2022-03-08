@@ -148,6 +148,16 @@ func TestTraceParsing(t *testing.T) {
 	}
 	assert.Len(t, trace, 2)
 	assert.Equal(t, model.Kind("SERVER"), trace[0].Kind)
+	//tree, _ := tracinghelper.GetTraceTree(trace)
+	//tree.Children[0].Root = true
+	//tree2 := tracinghelper.SpanTree{
+	//	Root:     true,
+	//	Span: 	  tree.Children[0].Span,
+	//	Children: []tracinghelper.SpanTree {
+	//		tree.Children[0],
+	//	},
+	//}
+	//fmt.Printf("Tree: %v\n", tree)
 	//b, _ := json.MarshalIndent(trace, "", "  ")
 	//if err != nil {
 	//	t.Fatal(err)

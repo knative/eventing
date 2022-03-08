@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
+	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 	pkgconfig "knative.dev/pkg/tracing/config"
 )
@@ -198,11 +199,16 @@ func GetTraceForEvent(eventNo int) (string, error) {
 		if err != nil {
 			return trace, fmt.Errorf("failed to find trace for event %d: %w", eventNo, err)
 		}
-		b, err := json.MarshalIndent(traceModel, "", "  ")
+		tree, err := tracinghelper.GetTraceTree(traceModel)
 		if err != nil {
-			return trace, fmt.Errorf("failed to unmarshall trace for event %d: %w", eventNo, err)
+			return trace, fmt.Errorf("failed to create trace tree for event %d: %w", eventNo, err)
 		}
-		trace = string(b)
+		trace = tree.String()
+		//b, err := json.MarshalIndent(traceModel, "", "  ")
+		//if err != nil {
+		//	return trace, fmt.Errorf("failed to unmarshall trace for event %d: %w", eventNo, err)
+		//}
+		//trace = string(b)
 	}
 	return trace, nil
 }
