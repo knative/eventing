@@ -16,12 +16,21 @@
 package event
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"regexp"
 	"sync"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/model"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
+	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
+	pkgconfig "knative.dev/pkg/tracing/config"
 )
+
+const zipkinEndpointPattern = "(.*/api/v2/).*"
 
 var mutex = sync.RWMutex{}
 var lastProgressReport = time.Now()
@@ -159,10 +168,24 @@ func asStrings(errThrown []thrown) []string {
 func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
 	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
-		times, ok := steps.store[eventNo]
-		if !ok {
-			times = 0
+		times := steps.store[eventNo]
+		if times == 0 {
+			cfg, err := pkgconfig.JSONToTracingConfig(config.Instance.TracingConfig)
+			if err != nil {
+				log.Fatal("Failed to parse tracing config", err)
+			}
+			if cfg.Backend != pkgconfig.None {
+				r, _ := regexp.Compile(zipkinEndpointPattern)
+				matches := r.FindStringSubmatch(cfg.ZipkinEndpoint)
+				if len(matches) != 2 {
+					log.Fatalf("Unsupported Zipkin endpoint %s", cfg.ZipkinEndpoint)
+				}
+				tracesEndpoint := matches[1] + "traces"
+				trace, err := findEventTrace(tracesEndpoint, eventNo)
+
+			}
 		}
+
 		if times != 1 {
 			throwMethod := f.errors.throwMissing
 			if times > 1 {
@@ -172,6 +195,37 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 				eventNo, times)
 		}
 	}
+}
+
+func findEventTrace(endpoint string, eventNo int) ([]model.SpanModel, error) {
+	var empty []model.SpanModel
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return empty, err
+	}
+	req.Header.Add("spanName", sender.Name)
+	req.Header.Add("annotationQuery",
+		fmt.Sprintf("step=%d and cloudevents.type=%s", eventNo, StepType))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return empty, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return empty, err
+	}
+
+	//TODO: Change to slice of slices (after creating a test for it).
+	var models []model.SpanModel
+	err = json.Unmarshal(body, &models)
+	if err != nil {
+		return empty, fmt.Errorf("got an error in unmarshalling JSON %q: %w", body, err)
+	}
+	return models, nil
 }
 
 func (s *stepStore) reportProgress() {
