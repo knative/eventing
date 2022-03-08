@@ -16,6 +16,11 @@
 package event
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 
@@ -97,6 +102,57 @@ func TestUnavail(t *testing.T) {
 	assert.Empty(t, errors.thrown.missing)
 	assert.Empty(t, errors.thrown.unexpected)
 	assert.NotEmpty(t, errors.thrown.unavailable)
+}
+
+func TestTraceParsing(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			// Using a reduced variant of the response at https://zipkin.io/zipkin-api/#/default/get_traces
+			io.WriteString(w,
+				`[
+  [
+    {
+      "id": "352bff9a74ca9ad2",
+      "traceId": "5af7183fb1d4cf5f",
+      "name": "get /api",
+      "timestamp": 1556604172355737,
+      "duration": 1431,
+      "kind": "SERVER",
+      "tags": {
+        "http.method": "GET",
+        "http.path": "/api"
+      }
+    },
+	{
+      "id": "352bff9a74ca9ad3",
+      "traceId": "5af7183fb1d4cf60",
+      "parentId": "352bff9a74ca9ad2",
+      "name": "get /api",
+      "timestamp": 1556604172355737,
+      "duration": 1431,
+      "kind": "SERVER",
+      "tags": {
+        "http.method": "GET",
+        "http.path": "/api"
+      }
+    }
+  ]
+]`)
+		}))
+	defer ts.Close()
+	trace, err := FindEventTrace(ts.URL, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, trace, 2)
+	assert.Equal(t, model.Kind("SERVER"), trace[0].Kind)
+	//b, _ := json.MarshalIndent(trace, "", "  ")
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//fmt.Printf("Trace: %v\n", string(b))
 }
 
 func TestMain(m *testing.M) {

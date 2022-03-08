@@ -26,7 +26,6 @@ import (
 
 	"github.com/openzipkin/zipkin-go/model"
 	"knative.dev/eventing/test/upgrade/prober/wathola/config"
-	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 	pkgconfig "knative.dev/pkg/tracing/config"
 )
 
@@ -167,44 +166,55 @@ func asStrings(errThrown []thrown) []string {
 
 func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
+	const eventFmt = "event #%v should be received once, but was received %v times"
 	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
 		times := steps.store[eventNo]
 		if times == 0 {
-			cfg, err := pkgconfig.JSONToTracingConfig(config.Instance.TracingConfig)
+			trace, err := GetTraceForEvent(eventNo)
 			if err != nil {
-				log.Fatal("Failed to parse tracing config", err)
+				log.Warn(err)
 			}
-			if cfg.Backend != pkgconfig.None {
-				r, _ := regexp.Compile(zipkinEndpointPattern)
-				matches := r.FindStringSubmatch(cfg.ZipkinEndpoint)
-				if len(matches) != 2 {
-					log.Fatalf("Unsupported Zipkin endpoint %s", cfg.ZipkinEndpoint)
-				}
-				tracesEndpoint := matches[1] + "traces"
-				trace, err := findEventTrace(tracesEndpoint, eventNo)
-
-			}
-		}
-
-		if times != 1 {
-			throwMethod := f.errors.throwMissing
-			if times > 1 {
-				throwMethod = f.errors.throwDuplicated
-			}
-			throwMethod("event #%v should be received once, but was received %v times",
-				eventNo, times)
+			f.errors.throwMissing(eventFmt+", trace:\n", eventNo, times, trace)
+		} else if times > 1 {
+			f.errors.throwDuplicated(eventFmt, eventNo, times)
 		}
 	}
 }
 
-func findEventTrace(endpoint string, eventNo int) ([]model.SpanModel, error) {
+func GetTraceForEvent(eventNo int) (string, error) {
+	trace := "<unavailable>"
+	cfg, err := pkgconfig.JSONToTracingConfig(config.Instance.TracingConfig)
+	if err != nil {
+		return trace, fmt.Errorf("failed to parse tracing config: %w", err)
+	}
+	if cfg.Backend != pkgconfig.None {
+		r, _ := regexp.Compile(zipkinEndpointPattern)
+		matches := r.FindStringSubmatch(cfg.ZipkinEndpoint)
+		if len(matches) != 2 {
+			return trace, fmt.Errorf("unsupported Zipkin endpoint %s: %w", cfg.ZipkinEndpoint, err)
+		}
+		tracesEndpoint := matches[1] + "traces"
+		traceModel, err := FindEventTrace(tracesEndpoint, eventNo)
+		if err != nil {
+			return trace, fmt.Errorf("failed to find trace for event %d: %w", eventNo, err)
+		}
+		b, err := json.MarshalIndent(traceModel, "", "  ")
+		if err != nil {
+			return trace, fmt.Errorf("failed to unmarshall trace for event %d: %w", eventNo, err)
+		}
+		trace = string(b)
+	}
+	return trace, nil
+}
+
+func FindEventTrace(endpoint string, eventNo int) ([]model.SpanModel, error) {
 	var empty []model.SpanModel
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return empty, err
 	}
-	req.Header.Add("spanName", sender.Name)
+	req.Header.Add("spanName", "wathola-sender")
 	req.Header.Add("annotationQuery",
 		fmt.Sprintf("step=%d and cloudevents.type=%s", eventNo, StepType))
 
@@ -219,13 +229,15 @@ func findEventTrace(endpoint string, eventNo int) ([]model.SpanModel, error) {
 		return empty, err
 	}
 
-	//TODO: Change to slice of slices (after creating a test for it).
-	var models []model.SpanModel
+	var models [][]model.SpanModel
 	err = json.Unmarshal(body, &models)
 	if err != nil {
 		return empty, fmt.Errorf("got an error in unmarshalling JSON %q: %w", body, err)
 	}
-	return models, nil
+	if len(models) != 1 {
+		return empty, fmt.Errorf("found more than one trace for event: %d", len(models))
+	}
+	return models[0], nil
 }
 
 func (s *stepStore) reportProgress() {
