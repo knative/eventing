@@ -20,6 +20,8 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	sugarnamespace "knative.dev/eventing/pkg/reconciler/sugar/namespace"
+	sugartrigger "knative.dev/eventing/pkg/reconciler/sugar/trigger"
 	"knative.dev/pkg/injection/sharedmain"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
@@ -52,5 +54,10 @@ func main() {
 		containersource.NewController,
 		// Sources CRD
 		sourcecrd.NewController,
+
+		// Sugar for Namespaces
+		sugarnamespace.NewController,
+		// Sugar for Triggers
+		sugartrigger.NewController,
 	)
 }

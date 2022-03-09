@@ -50,7 +50,6 @@ rm -fr ${YAML_OUTPUT_DIR}/*.yaml
 # Generated Knative component YAML files
 readonly EVENTING_CORE_YAML=${YAML_OUTPUT_DIR}/"eventing-core.yaml"
 readonly EVENTING_CRDS_YAML=${YAML_OUTPUT_DIR}/"eventing-crds.yaml"
-readonly EVENTING_SUGAR_CONTROLLER_YAML=${YAML_OUTPUT_DIR}/"eventing-sugar-controller.yaml"
 readonly EVENTING_MT_CHANNEL_BROKER_YAML=${YAML_OUTPUT_DIR}/"mt-channel-broker.yaml"
 readonly EVENTING_IN_MEMORY_CHANNEL_YAML=${YAML_OUTPUT_DIR}/"in-memory-channel.yaml"
 readonly EVENTING_YAML=${YAML_OUTPUT_DIR}"/eventing.yaml"
@@ -90,16 +89,13 @@ ko resolve ${KO_YAML_FLAGS} -R -f config/core/ | "${LABEL_YAML_CMD[@]}" > "${EVE
 # Create eventing crds yaml
 ko resolve ${KO_YAML_FLAGS} -f config/core/resources/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_CRDS_YAML}"
 
-# Create sugar controller yaml
-ko resolve ${KO_YAML_FLAGS} -f config/sugar/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_SUGAR_CONTROLLER_YAML}"
-
 # Create mt channel broker yaml
 ko resolve ${KO_YAML_FLAGS} -f config/brokers/mt-channel-broker/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_MT_CHANNEL_BROKER_YAML}"
 
 # Create in memory channel yaml
 ko resolve ${KO_YAML_FLAGS} -Rf config/channels/in-memory-channel/ | "${LABEL_YAML_CMD[@]}" > "${EVENTING_IN_MEMORY_CHANNEL_YAML}"
 
-all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_SUGAR_CONTROLLER_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
+all_yamls=(${EVENTING_CORE_YAML} ${EVENTING_CRDS_YAML} ${EVENTING_MT_CHANNEL_BROKER_YAML} ${EVENTING_IN_MEMORY_CHANNEL_YAML} ${EVENTING_YAML})
 
 # Create the tools
 for tool in ${TOOLS[@]}; do
