@@ -101,10 +101,11 @@ func (c *Config) GetComponentConfig(name string) ComponentConfig {
 
 func defaultConfig() *Config {
 	return &Config{
-		Buckets:       1,
-		LeaseDuration: 60 * time.Second,
-		RenewDeadline: 40 * time.Second,
-		RetryPeriod:   10 * time.Second,
+		Buckets:                 1,
+		LeaseDuration:           60 * time.Second,
+		RenewDeadline:           40 * time.Second,
+		RetryPeriod:             10 * time.Second,
+		LeaseNamesPrefixMapping: make(map[string]string),
 	}
 }
 

@@ -1209,8 +1209,9 @@ knative.dev/hack v0.0.0-20220224013837-e1785985d364 h1:wOysRDkzacHlM2OEQoM5ayNT+
 knative.dev/hack v0.0.0-20220224013837-e1785985d364/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
 knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364 h1:iuM9VFi9cjSNuVc3x5gUbPQn4zndXfjWDYCJ1fYpk18=
 knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364/go.mod h1:ffjwmdcrH5vN3mPhO8RrF2KfNnbHeCE2C60A+2cv3U0=
-knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77 h1:eIH936a0/1X/XQOMN9+O3fw9spGvOJiMVKsBuu8J47U=
 knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77/go.mod h1:SsH9J6Gz+CvrHmoL0TELJXmMmohqKSQ5bpJvCv+1+ZI=
+knative.dev/pkg v0.0.0-20220310195447-38af013b30ff h1:KrKiBc0dMUq/+Fd0M3J86RdNOViEQYm/rOEHTCPzqR4=
+knative.dev/pkg v0.0.0-20220310195447-38af013b30ff/go.mod h1:SsH9J6Gz+CvrHmoL0TELJXmMmohqKSQ5bpJvCv+1+ZI=
 knative.dev/reconciler-test v0.0.0-20220303141206-84821d26ed1f h1:e0bUwEnXMtl/h1zUEm36zwqqkn6/DHVTV/2DWWY1x08=
 knative.dev/reconciler-test v0.0.0-20220303141206-84821d26ed1f/go.mod h1:K5pZJkenonlT9o+MtRaNsBP7BazGwjhqYPepuV1zdnU=
 pgregory.net/rapid v0.3.3 h1:jCjBsY4ln4Atz78QoBWxUEvAHaFyNDQg9+WU62aCn1U=
