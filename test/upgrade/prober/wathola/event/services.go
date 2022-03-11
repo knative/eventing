@@ -104,6 +104,7 @@ func (f *finishedStore) RegisterFinished(finished *Finished) {
 	log.Infof("waiting additional %v to be sure all events came", d)
 	time.Sleep(d)
 	receivedEvents := f.steps.Count()
+	receivedEvents = receivedEvents - 1 // TODO: Remove
 	if receivedEvents != finished.EventsSent {
 		f.errors.throwUnexpected("expecting to have %v unique events received, "+
 			"but received %v unique events", finished.EventsSent, receivedEvents)
@@ -160,6 +161,10 @@ func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
 	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
 		times := steps.store[eventNo]
+		// TODO: Remove this induced failure. Test changes.
+		if eventNo == 10 {
+			times = 0
+		}
 		if times != 1 {
 			throwMethod := f.errors.throwMissing
 			if times > 1 {
