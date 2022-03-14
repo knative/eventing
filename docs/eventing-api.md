@@ -3975,6 +3975,11 @@ in verbatim to the Channel CRD as Spec section.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="messaging.knative.dev/v1.ChannelTemplateSpecOption">ChannelTemplateSpecOption
+</h3>
+<p>
+<p>ChannelTemplateSpecOption is an optional function for ChannelTemplateSpec.</p>
+</p>
 <h3 id="messaging.knative.dev/v1.InMemoryChannelSpec">InMemoryChannelSpec
 </h3>
 <p>
