@@ -77,12 +77,6 @@ type Reconciler struct {
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, t *eventingv1.Trigger) pkgreconciler.Event {
 	logging.FromContext(ctx).Infow("Reconciling", zap.Any("Trigger", t))
-	t.Status.InitializeConditions()
-
-	if t.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
 
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {

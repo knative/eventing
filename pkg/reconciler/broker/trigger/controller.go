@@ -69,7 +69,21 @@ func NewController(
 	r.sourceTracker = duck.NewListableTrackerFromTracker(ctx, source.Get, impl.Tracker)
 	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
-	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
+		func(obj interface{}) {
+			if trigger, ok := obj.(*eventingv1.Trigger); ok {
+				broker, err := brokerInformer.Lister().Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+				if err != nil {
+					logger.Errorw("Failed to lookup Broker for Trigger", zap.Error(err))
+					return
+				}
+				label := broker.ObjectMeta.Annotations[brokerreconciler.ClassAnnotationKey]
+				if label == eventing.MTChannelBrokerClassValue {
+					impl.Enqueue(obj)
+				}
+			}
+		},
+	))
 
 	// Filter Brokers and enqueue associated Triggers
 	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
