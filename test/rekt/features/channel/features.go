@@ -23,6 +23,14 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/test"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/eventshub/assert"
+	"knative.dev/reconciler-test/pkg/feature"
+	"knative.dev/reconciler-test/pkg/manifest"
+	"knative.dev/reconciler-test/resources/svc"
+
+	"knative.dev/eventing/test/rekt/resources/channel"
 	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/containersource"
 	"knative.dev/eventing/test/rekt/resources/delivery"
@@ -30,12 +38,6 @@ import (
 	"knative.dev/eventing/test/rekt/resources/pingsource"
 	"knative.dev/eventing/test/rekt/resources/source"
 	"knative.dev/eventing/test/rekt/resources/subscription"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/eventshub/assert"
-	"knative.dev/reconciler-test/pkg/feature"
-	"knative.dev/reconciler-test/pkg/manifest"
-	"knative.dev/reconciler-test/resources/svc"
 )
 
 func ChannelChain(length int, createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
@@ -94,10 +96,47 @@ func DeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) 
 		createSubscriberFn(svc.AsKReference(failer), ""),
 	))
 
-	f.Requirement("channel is ready", channel_impl.IsReady(name))
-	f.Requirement("containersource is ready", containersource.IsReady(cs))
+	f.Setup("channel is ready", channel_impl.IsReady(name))
+	f.Setup("containersource is ready", containersource.IsReady(cs))
 
-	f.Assert("dls receives events", assert.OnStore(sink).MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).AtLeast(1))
+	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel_impl.GVR()))
+
+	f.Assert("dls receives events", assert.OnStore(sink).
+		MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
+		AtLeast(1),
+	)
+
+	return f
+}
+
+func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeature()
+	sink := feature.MakeRandomK8sName("sink")
+	failer := feature.MakeK8sNamePrefix("failer")
+	cs := feature.MakeRandomK8sName("containersource")
+	name := feature.MakeRandomK8sName("channel")
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(1)))
+	f.Setup("install channel", channel.Install(name,
+		channel.WithTemplate(),
+		delivery.WithDeadLetterSink(svc.AsKReference(sink), "")),
+	)
+	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel.AsRef(name), "")))
+	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+		subscription.WithChannel(channel.AsRef(name)),
+		createSubscriberFn(svc.AsKReference(failer), ""),
+	))
+
+	f.Setup("channel is ready", channel.IsReady(name))
+	f.Setup("containersource is ready", containersource.IsReady(cs))
+
+	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel.GVR()))
+
+	f.Assert("dls receives events", assert.OnStore(sink).
+		MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
+		AtLeast(1),
+	)
 
 	return f
 }

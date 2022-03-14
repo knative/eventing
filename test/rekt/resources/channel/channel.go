@@ -21,13 +21,17 @@ import (
 	"embed"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/addressable"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 )
 
 //go:embed *.yaml
@@ -80,4 +84,36 @@ func AsRef(name string) *duckv1.KReference {
 		APIVersion: apiVersion,
 		Name:       name,
 	}
+}
+
+// WithTemplate adds channelTemplate to the Channel's config after apply the provided
+// options.
+func WithTemplate(options ...messagingv1.ChannelTemplateSpecOption) manifest.CfgFn {
+	return func(m map[string]interface{}) {
+		t := withTemplate(options...)
+		channelTemplate := map[string]interface{}{
+			"apiVersion": t.APIVersion,
+			"kind":       t.Kind,
+		}
+		m["channelTemplate"] = channelTemplate
+		if t.Spec != nil {
+			channelTemplate["spec"] = t.Spec
+		}
+	}
+}
+
+func withTemplate(options ...messagingv1.ChannelTemplateSpecOption) *messagingv1.ChannelTemplateSpec {
+	gvk := channel_impl.GVK()
+	t := &messagingv1.ChannelTemplateSpec{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       gvk.Kind,
+			APIVersion: gvk.GroupVersion().String(),
+		},
+	}
+	for _, opt := range options {
+		if err := opt(t); err != nil {
+			panic(err)
+		}
+	}
+	return t
 }
