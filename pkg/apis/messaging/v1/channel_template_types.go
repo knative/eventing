@@ -30,3 +30,6 @@ type ChannelTemplateSpec struct {
 	// +optional
 	Spec *runtime.RawExtension `json:"spec,omitempty"`
 }
+
+// ChannelTemplateSpecOption is an optional function for ChannelTemplateSpec.
+type ChannelTemplateSpecOption func(*ChannelTemplateSpec) error

@@ -24,14 +24,20 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/rekt/resources/addressable"
-	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/reconciler-test/pkg/environment"
 	"knative.dev/reconciler-test/pkg/feature"
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/manifest"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
+	"knative.dev/eventing/test/rekt/resources/addressable"
+	"knative.dev/eventing/test/rekt/resources/delivery"
 )
 
 //go:embed *.yaml
@@ -87,6 +93,30 @@ func IsReady(name string, timing ...time.Duration) feature.StepFn {
 // given.
 func IsAddressable(name string, timing ...time.Duration) feature.StepFn {
 	return k8s.IsAddressable(GVR(), name, timing...)
+}
+
+// HasDeadLetterSinkURI asserts that the Channel has the resolved dead letter sink URI
+// in the status.
+func HasDeadLetterSinkURI(name string, gvr schema.GroupVersionResource) feature.StepFn {
+	return func(ctx context.Context, t feature.T) {
+		ns := environment.FromContext(ctx).Namespace()
+		ch, err := dynamicclient.Get(ctx).
+			Resource(gvr).
+			Namespace(ns).
+			Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("failed to get %s/%s channel: %v", ns, name, err)
+		}
+
+		channelable := &eventingduck.Channelable{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(ch.UnstructuredContent(), channelable); err != nil {
+			t.Fatal(err)
+		}
+
+		if channelable.Status.DeadLetterSinkURI.String() == "" {
+			t.Fatalf("channel %s/%s has no dead letter sink uri in the status", ns, name)
+		}
+	}
 }
 
 // Address returns a Channel's address.
