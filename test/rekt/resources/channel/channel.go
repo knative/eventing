@@ -19,6 +19,8 @@ package channel
 import (
 	"context"
 	"embed"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +99,15 @@ func WithTemplate(options ...messagingv1.ChannelTemplateSpecOption) manifest.Cfg
 		}
 		m["channelTemplate"] = channelTemplate
 		if t.Spec != nil {
-			channelTemplate["spec"] = t.Spec
+			s := map[string]string{}
+			bytes, err := t.Spec.MarshalJSON()
+			if err != nil {
+				panic(fmt.Errorf("failed to marshal spec: %w", err))
+			}
+			if err := json.Unmarshal(bytes, &s); err != nil {
+				panic(fmt.Errorf("failed to unmarshal spec '%s': %v", bytes, err))
+			}
+			channelTemplate["spec"] = s
 		}
 	}
 }
