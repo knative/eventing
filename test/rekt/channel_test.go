@@ -266,6 +266,7 @@ func TestGenericChannelDeadLetterSink(t *testing.T) {
 		return subscription.WithSubscriber(ref, uri)
 	}
 	env.Test(ctx, t, channel.DeadLetterSinkGenericChannel(createSubscriberFn))
+	env.Test(ctx, t, channel.AsDeadLetterSink(createSubscriberFn))
 }
 
 /*
