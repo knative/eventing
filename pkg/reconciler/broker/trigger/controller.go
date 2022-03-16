@@ -22,15 +22,15 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	apiseventing "knative.dev/eventing/pkg/apis/eventing"
+	eventing "knative.dev/eventing/pkg/apis/eventing/v1"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/broker"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
-	v1 "knative.dev/eventing/pkg/client/listers/eventing/v1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
@@ -63,20 +63,27 @@ func NewController(
 		triggerLister:      triggerLister,
 		configmapLister:    configmapInformer.Lister(),
 	}
-	impl := triggerreconciler.NewImpl(ctx, r)
+	impl := triggerreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{
+			PromoteFilterFunc: filterTriggers(r.brokerLister),
+		}
+	})
 	r.impl = impl
 
 	r.sourceTracker = duck.NewListableTrackerFromTracker(ctx, source.Get, impl.Tracker)
 	r.uriResolver = resolver.NewURIResolverFromTracker(ctx, impl.Tracker)
 
-	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	triggerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: filterTriggers(r.brokerLister),
+		Handler:    controller.HandleAll(impl.Enqueue),
+	})
 
 	// Filter Brokers and enqueue associated Triggers
-	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
+	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, apiseventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: brokerFilter,
 		Handler: controller.HandleAll(func(obj interface{}) {
-			if broker, ok := obj.(*eventingv1.Broker); ok {
+			if broker, ok := obj.(*eventing.Broker); ok {
 				for _, t := range getTriggersForBroker(logger, triggerLister, broker) {
 					impl.Enqueue(t)
 				}
@@ -86,20 +93,39 @@ func NewController(
 
 	// Reconcile Trigger when my Subscription changes
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterController(&eventingv1.Trigger{}),
+		FilterFunc: controller.FilterController(&eventing.Trigger{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl
 }
 
+// filterTriggers returns a function that returns true if the resource passed
+// is a trigger pointing to a MTChannelBroker.
+func filterTriggers(lister eventinglisters.BrokerLister) func(interface{}) bool {
+	return func(obj interface{}) bool {
+		trigger, ok := obj.(*eventing.Trigger)
+		if !ok {
+			return false
+		}
+
+		b, err := lister.Brokers(trigger.Namespace).Get(trigger.Spec.Broker)
+		if err != nil {
+			return false
+		}
+
+		value, ok := b.GetAnnotations()[apiseventing.BrokerClassKey]
+		return ok && value == apiseventing.MTChannelBrokerClassValue
+	}
+}
+
 // getTriggersForBroker makes sure the object passed in is a Broker, and gets all
 // the Triggers belonging to it. As there is no way to return failures in the
 // Informers EventHandler, errors are logged, and an empty array is returned in case
 // of failures.
-func getTriggersForBroker(logger *zap.SugaredLogger, triggerLister v1.TriggerLister, broker *eventingv1.Broker) []*eventingv1.Trigger {
-	r := make([]*eventingv1.Trigger, 0)
-	selector := labels.SelectorFromSet(map[string]string{eventing.BrokerLabelKey: broker.Name})
+func getTriggersForBroker(logger *zap.SugaredLogger, triggerLister eventinglisters.TriggerLister, broker *eventing.Broker) []*eventing.Trigger {
+	r := make([]*eventing.Trigger, 0)
+	selector := labels.SelectorFromSet(map[string]string{apiseventing.BrokerLabelKey: broker.Name})
 	triggers, err := triggerLister.Triggers(broker.Namespace).List(selector)
 	if err != nil {
 		logger.Warn("Failed to list triggers", zap.Any("broker", broker), zap.Error(err))
