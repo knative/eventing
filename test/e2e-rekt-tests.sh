@@ -30,11 +30,12 @@ source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
-initialize $@ --skip-istio-addon
+initialize $@ --skip-istio-addon --min-nodes=4 --max-nodes=4
 
 export SKIP_UPLOAD_TEST_IMAGES="true"
 
 echo "Running E2E Reconciler Tests"
-go_test_e2e -timeout=1h -parallel=20 ./test/rekt || fail_test
+
+go_test_e2e -timeout=1h ./test/rekt || fail_test
 
 success

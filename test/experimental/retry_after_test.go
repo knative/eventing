@@ -56,7 +56,20 @@ func TestRetryAfter(t *testing.T) {
 	state.SetOrFail(ctx, t, retry_after.SenderNameKey, retryAfterPrefix+"-sender")
 	state.SetOrFail(ctx, t, retry_after.ReceiverNameKey, retryAfterPrefix+"-receiver")
 	state.SetOrFail(ctx, t, retry_after.RetryAttemptsKey, 3)
-	state.SetOrFail(ctx, t, retry_after.RetryAfterSecondsKey, 10)
+
+	// TestRetryAfter is highly dependent on very low clock drift values
+	// among the test involved nodes. If this test fails even with low
+	// clock drifts, RetryAfterSecondsKey and ExpectedIntervalMargingKey should
+	// be increased.
+
+	// RetryAfterSecondsKey returned Retry-after header, it is expected
+	// that a failed event is re-sent just after that duration value.
+	//
+	// ExpectedIntervalMargingKey is the acceptable duration between an expected retry
+	// being received and when it is being actually received. Manual local tests indicate
+	// that this value is less than 20 ms.
+	state.SetOrFail(ctx, t, retry_after.RetryAfterSecondsKey, 6)
+	state.SetOrFail(ctx, t, retry_after.ExpectedIntervalMargingKey, 3)
 
 	// Configure DataPlane & Send An Event
 	env.Test(ctx, t, retry_after.ConfigureDataPlane(ctx, t))

@@ -175,6 +175,7 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 	}
 
 	placements := vpod.GetPlacements()
+	existingPlacements := placements
 	var left int32
 
 	// The scheduler when policy type is
@@ -239,10 +240,13 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 		// Trigger the autoscaler
 		if s.autoscaler != nil {
 			s.autoscaler.Autoscale(s.ctx, false, s.pendingVReplicas())
+		}
 
-			/* 			if state.SchedPolicy != nil {
-				delete(s.pending, vpod.GetKey()) //rebalancing doesn't care about pending since all vreps will be re-placed
-			} */
+		if state.SchedPolicy != nil {
+			logger.Info("reverting to previous placements")
+			s.reservePlacements(vpod, existingPlacements) //rebalancing doesn't care about new placements since all vreps will be re-placed
+			delete(s.pending, vpod.GetKey())              //rebalancing doesn't care about pending since all vreps will be re-placed
+			return existingPlacements, scheduler.ErrNotEnoughReplicas
 		}
 
 		return placements, scheduler.ErrNotEnoughReplicas
@@ -255,14 +259,8 @@ func (s *StatefulSetScheduler) scheduleVPod(vpod scheduler.VPod) ([]duckv1alpha1
 }
 
 func (s *StatefulSetScheduler) rebalanceReplicasWithPolicy(vpod scheduler.VPod, diff int32, placements []duckv1alpha1.Placement) ([]duckv1alpha1.Placement, int32) {
-	newPlacements := make([]duckv1alpha1.Placement, len(placements))
-	for i := 0; i < len(placements); i++ {
-		newPlacements[i].PodName = placements[i].PodName
-		newPlacements[i].VReplicas = 0
-	}
-	s.reservePlacements(vpod, newPlacements)
-
-	placements, diff = s.addReplicasWithPolicy(vpod, diff, newPlacements)
+	s.makeZeroPlacements(vpod, placements)
+	placements, diff = s.addReplicasWithPolicy(vpod, diff, make([]duckv1alpha1.Placement, 0)) //start fresh with a new placements list
 
 	return placements, diff
 }
@@ -685,6 +683,11 @@ func (s *StatefulSetScheduler) updateStatefulset(obj interface{}) {
 
 func (s *StatefulSetScheduler) reservePlacements(vpod scheduler.VPod, placements []duckv1alpha1.Placement) {
 	existing := vpod.GetPlacements()
+
+	if len(placements) == 0 { // clear our old placements in reserved
+		s.reserved[vpod.GetKey()] = make(map[string]int32)
+	}
+
 	for _, p := range placements {
 		placed := int32(0)
 		for _, e := range existing {
@@ -709,4 +712,15 @@ func (s *StatefulSetScheduler) reservePlacements(vpod scheduler.VPod, placements
 		}
 	}
 
+}
+
+func (s *StatefulSetScheduler) makeZeroPlacements(vpod scheduler.VPod, placements []duckv1alpha1.Placement) {
+	newPlacements := make([]duckv1alpha1.Placement, len(placements))
+	for i := 0; i < len(placements); i++ {
+		newPlacements[i].PodName = placements[i].PodName
+		newPlacements[i].VReplicas = 0
+	}
+	// This is necessary to make sure State() zeroes out initial pod/node/zone spread and
+	// free capacity when there are existing placements for a vpod
+	s.reservePlacements(vpod, newPlacements)
 }

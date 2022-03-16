@@ -32,7 +32,7 @@ spec:
       labels:
         app: eventing-controller
         eventing.knative.dev/release: devel
-        app.kubernetes.io/component: eventing-autoscaler
+        app.kubernetes.io/component: eventing-controller
         app.kubernetes.io/version: devel
         app.kubernetes.io/name: knative-eventing
     spec:

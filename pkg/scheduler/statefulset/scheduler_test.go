@@ -165,7 +165,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 1,
 			replicas:  int32(0),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -208,7 +208,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 15,
 			replicas:  int32(1),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{{PodName: "statefulset-name-0", VReplicas: 10}},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -314,7 +314,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 1,
 			replicas:  int32(0),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},
@@ -367,7 +367,7 @@ func TestStatefulsetScheduler(t *testing.T) {
 			vreplicas: 15,
 			replicas:  int32(1),
 			err:       scheduler.ErrNotEnoughReplicas,
-			expected:  []duckv1alpha1.Placement{},
+			expected:  nil,
 			schedulerPolicy: &scheduler.SchedulerPolicy{
 				Predicates: []scheduler.PredicatePolicy{
 					{Name: "PodFitsResources"},

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -43,12 +44,13 @@ import (
 )
 
 const (
-	ChannelNameKey       = "ChannelNameKey"
-	SubscriptionNameKey  = "SubscriptionNameKey"
-	SenderNameKey        = "SenderNameKey"
-	ReceiverNameKey      = "ReceiverNameKey"
-	RetryAttemptsKey     = "RetryAttemptsKey"
-	RetryAfterSecondsKey = "RetryAfterSecondsKey"
+	ChannelNameKey             = "ChannelNameKey"
+	SubscriptionNameKey        = "SubscriptionNameKey"
+	SenderNameKey              = "SenderNameKey"
+	ReceiverNameKey            = "ReceiverNameKey"
+	RetryAttemptsKey           = "RetryAttemptsKey"
+	RetryAfterSecondsKey       = "RetryAfterSecondsKey"
+	ExpectedIntervalMargingKey = "ExpectedIntervalMargingKey!"
 )
 
 // ConfigureDataPlane creates a Feature which sets up the specified Channel,
@@ -86,24 +88,23 @@ func ConfigureDataPlane(ctx context.Context, t *testing.T) *feature.Feature {
 func SendEvent(ctx context.Context, t *testing.T) *feature.Feature {
 
 	// Get Component Names From Context
-	var retryAttempts, retryAfterSeconds int
+	var retryAttempts, retryAfterSeconds, expectedIntervalMargin int
 	channelName := state.GetStringOrFail(ctx, t, ChannelNameKey)
 	senderName := state.GetStringOrFail(ctx, t, SenderNameKey)
 	receiverName := state.GetStringOrFail(ctx, t, ReceiverNameKey)
 	state.GetOrFail(ctx, t, RetryAttemptsKey, &retryAttempts)
 	state.GetOrFail(ctx, t, RetryAfterSecondsKey, &retryAfterSeconds)
+	state.GetOrFail(ctx, t, ExpectedIntervalMargingKey, &expectedIntervalMargin)
 
 	// Create The Base CloudEvent To Send (ID will be set by the EventsHub Sender)
 	event := cetest.FullEvent()
-
-	// Mark The Current Time Plus The Expected Retry-After Duration
-	earliestEventTime := time.Now().Add(time.Duration(retryAfterSeconds) * time.Second)
 
 	// Create A New Feature To Send An Event And Verify Retry-After Duration
 	f := feature.NewFeatureNamed("Send Events")
 	f.Setup("Install An EventsHub Sender", eventshub.Install(senderName, eventshub.StartSenderToResource(channel.GVR(), channelName), eventshub.InputEvent(event)))
 	f.Assert("Events Received", assert.OnStore(receiverName).MatchEvent(cetest.HasId(event.ID())).Exact(retryAttempts+1)) // One Successful Response
-	f.Assert("Event Timing Verified", assert.OnStore(receiverName).Match(receivedAfterEventInfoMatcher(earliestEventTime)).Exact(retryAttempts))
+	f.Assert("Event Timing Verified", assert.OnStore(receiverName).
+		Match(receivedAtRegularInterval(event.ID(), time.Duration(retryAfterSeconds)*time.Second, time.Duration(expectedIntervalMargin)*time.Second)).Exact(retryAttempts+1))
 
 	// Return The SendEvents Feature
 	return f
@@ -149,13 +150,46 @@ func installRetryAfterSubscription(channelName, subscriptionName, sinkName strin
 	}
 }
 
-// receivedAfterEventInfoMatcher returns an EventInfoMatcher that validates
-// the receipt time of the EventInfo is AFTER the specified minimum time.
-func receivedAfterEventInfoMatcher(earliestTime time.Time) eventshub.EventInfoMatcher {
+func receivedAtRegularInterval(id string, wait time.Duration, errorMarging time.Duration) eventshub.EventInfoMatcher {
+	// nextExpected keeps track of the next event with the
+	// same ID expected.
+	nextExpected := time.Time{}
+	m := sync.Mutex{}
+
 	return func(eventInfo eventshub.EventInfo) error {
-		if eventInfo.Time.Before(earliestTime) {
-			return fmt.Errorf("response received prior to Retry-After header duration")
+		if eventInfo.Event.ID() != id {
+			return fmt.Errorf("received event ID %s, expected %s",
+				eventInfo.Event.ID(), id)
 		}
+
+		// In case multiple events are received concurrently, serialize
+		// to avoid races setting the next expected time.
+		m.Lock()
+		defer m.Unlock()
+
+		// Update nextExpected with this event time to prepare
+		// for a possible next event received.
+		expected := nextExpected
+		nextExpected = eventInfo.Time.Add(wait)
+
+		// First occurrence sets the last received variable and
+		// exits since it does not have a prior event to check
+		// the interval with.
+		if expected.Equal(time.Time{}) {
+			return nil
+		}
+
+		if eventInfo.Time.Before(expected) {
+			return fmt.Errorf("response received at %s, it should have waited until %s",
+				eventInfo.Time.String(), expected.String())
+		}
+
+		maxWait := expected.Add(errorMarging)
+		if eventInfo.Time.After(maxWait) {
+			return fmt.Errorf("response received at %s, it should have arrived before %s",
+				eventInfo.Time.String(), maxWait.String())
+		}
+
 		return nil
 	}
 }

@@ -563,7 +563,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 		"Dispatch succeeded - Source with type": {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
-					SQL: fmt.Sprintf("type = '%s' AND source = '%s'", eventType, eventSource),
+					CESQL: fmt.Sprintf("type = '%s' AND source = '%s'", eventType, eventSource),
 				})),
 			},
 			expectedDispatch:          true,
@@ -574,7 +574,7 @@ func TestReceiver_WithSubscriptionsAPI(t *testing.T) {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(
 					withSubscriptionAPIFilter(&eventingv1.SubscriptionsAPIFilter{
-						SQL: fmt.Sprintf("type = '%s' AND source = '%s'", eventType, eventSource),
+						CESQL: fmt.Sprintf("type = '%s' AND source = '%s'", eventType, eventSource),
 					}),
 					withAttributesFilter(&eventingv1.TriggerFilter{
 						Attributes: map[string]string{"type": "some-other-type", "source": "some-other-source"},

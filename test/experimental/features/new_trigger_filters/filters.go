@@ -34,14 +34,14 @@ import (
 // FiltersFeatureSet creates a feature set for testing the broker implementation of the new trigger filters experimental feature
 // (aka Cloud Events Subscriptions API filters). It requires a created and ready Broker resource with brokerName.
 //
-// The feature set tests four filter dialects: exact, prefix, suffix and sql (aka CloudEvents SQL).
+// The feature set tests four filter dialects: exact, prefix, suffix and cesql (aka CloudEvents SQL).
 func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 	matchedEvent := FullEvent()
 	unmatchedEvent := MinEvent()
 	unmatchedEvent.SetType("org.wrong.type")
 	unmatchedEvent.SetSource("org.wrong.source")
 
-	features := make([]feature.Feature, 0, 8)
+	features := make([]*feature.Feature, 0, 8)
 	tests := map[string]struct {
 		filters string
 		step    feature.StepFn
@@ -56,7 +56,7 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 			filters: fmt.Sprintf(snippetFor("suffix"), matchedEvent.Type()[5:], matchedEvent.Source()[5:]),
 		},
 		"CloudEvents SQL filter": {
-			filters: fmt.Sprintf(`- sql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
+			filters: fmt.Sprintf(`- cesql: "type = '%s' AND source = '%s'" `, matchedEvent.Type(), matchedEvent.Source()),
 		},
 	}
 
@@ -96,9 +96,9 @@ func FiltersFeatureSet(brokerName string) *feature.FeatureSet {
 		})
 
 		f.Alpha("Triggers with new filters").
-			Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(matchedEvent.ID())).Exact(1)).
+			Must("must deliver matched events", OnStore(subscriber).MatchEvent(HasId(matchedEvent.ID())).AtLeast(1)).
 			MustNot("must not deliver unmatched events", OnStore(subscriber).MatchEvent(HasId(unmatchedEvent.ID())).Not())
-		features = append(features, *f)
+		features = append(features, f)
 	}
 
 	return &feature.FeatureSet{

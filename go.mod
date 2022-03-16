@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.1-0.20210420163308-c1402a70e2f1
-	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cloudevents/conformance v0.2.0
 	github.com/cloudevents/sdk-go/observability/opencensus/v2 v2.4.1
 	github.com/cloudevents/sdk-go/sql/v2 v2.8.0
@@ -44,10 +43,10 @@ require (
 	k8s.io/apiserver v0.22.5
 	k8s.io/client-go v0.22.5
 	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
-	knative.dev/hack v0.0.0-20220118141833-9b2ed8471e30
-	knative.dev/hack/schema v0.0.0-20220118141833-9b2ed8471e30
-	knative.dev/pkg v0.0.0-20220118160532-77555ea48cd4
-	knative.dev/reconciler-test v0.0.0-20220118183433-c8bfbe66bada
+	knative.dev/hack v0.0.0-20220314052818-c9c3ea17a2e9
+	knative.dev/hack/schema v0.0.0-20220314052818-c9c3ea17a2e9
+	knative.dev/pkg v0.0.0-20220316002959-3a4cc56708b9
+	knative.dev/reconciler-test v0.0.0-20220314160418-3b7a0d7f7b4b
 	sigs.k8s.io/yaml v1.3.0
 )
 

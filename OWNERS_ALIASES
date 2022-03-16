@@ -66,25 +66,29 @@ aliases:
   - pierDipi
   - vaikas
   knative-admin:
+  - carlisia
   - csantanapr
   - dprotaso
-  - duglin
   - evankanderson
+  - itsmurugappan
   - julz
   - knative-prow-releaser-robot
   - knative-prow-robot
   - knative-prow-updater-robot
   - knative-test-reporter-robot
+  - kvmware
   - lance
   - pmorie
-  - psschwei
   - rhuss
+  - smoser-ibm
   - spencerdillard
   - thisisnotapril
   - vaikas
+  - xtreme-sameer-vohra
   knative-release-leads:
-  - dprotaso
-  - psschwei
+  - carlisia
+  - kvmware
+  - xtreme-sameer-vohra
   knative-robots:
   - knative-prow-releaser-robot
   - knative-prow-robot
@@ -115,6 +119,7 @@ aliases:
   - houshengbo
   - jcrossley3
   - matzew
+  - maximilien
   - trshafer
   operations-wg-leads:
   - houshengbo
@@ -124,6 +129,7 @@ aliases:
   - houshengbo
   - jcrossley3
   - matzew
+  - maximilien
   - trshafer
   pkg-configmap-reviewers:
   - dprotaso
@@ -149,16 +155,18 @@ aliases:
   - efiturri
   - evankanderson
   - gerardo-lc
-  - joshua-bone
-  - kvmware
+  - mgencur
   - shinigambit
-  - steuhs
   productivity-wg-leads:
   - chizhg
   productivity-writers:
+  - cardil
   - chaodaiG
   - chizhg
   - coryrc
+  - kvmware
+  - psschwei
+  - upodroid
   security-wg-leads:
   - evankanderson
   - julz
@@ -183,10 +191,9 @@ aliases:
   - julz
   - tcnghia
   - vagababov
-  source-wg-leads:
-  - lionelvillard
   steering-committee:
   - csantanapr
+  - itsmurugappan
   - lance
   - pmorie
   - thisisnotapril
@@ -197,8 +204,8 @@ aliases:
   - julz
   - rhuss
   trademark-committee:
-  - duglin
   - evankanderson
+  - smoser-ibm
   - spencerdillard
   ux-wg-leads:
   - csantanapr

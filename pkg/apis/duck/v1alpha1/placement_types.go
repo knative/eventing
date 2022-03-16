@@ -24,13 +24,6 @@ import (
 
 // +genduck
 
-// Placeable is a list of podName and virtual replicas pairs.
-// Each pair represents the assignment of virtual replicas to a pod
-type Placeable struct {
-	MaxAllowedVReplicas *int32      `json:"maxAllowedVReplicas,omitempty"`
-	Placements          []Placement `json:"placements,omitempty"`
-}
-
 // PlaceableType is a skeleton type wrapping Placeable in the manner we expect
 // resource writers defining compatible resources to embed it.  We will
 // typically use this type to deserialize Placeable ObjectReferences and
@@ -45,6 +38,13 @@ type PlaceableType struct {
 
 type PlaceableStatus struct {
 	Placeable `json:",inline"`
+}
+
+// Placeable is a list of podName and virtual replicas pairs.
+// Each pair represents the assignment of virtual replicas to a pod
+type Placeable struct {
+	MaxAllowedVReplicas *int32      `json:"maxAllowedVReplicas,omitempty"`
+	Placements          []Placement `json:"placements,omitempty"`
 }
 
 type Placement struct {
