@@ -141,6 +141,53 @@ func DeadLetterSinkGenericChannel(createSubscriberFn func(ref *duckv1.KReference
 	return f
 }
 
+func AsDeadLetterSink(createSubscriberFn func(ref *duckv1.KReference, uri string) manifest.CfgFn) *feature.Feature {
+	f := feature.NewFeatureNamed("As dead letter sink")
+
+	cs := feature.MakeRandomK8sName("containersource")
+
+	name := feature.MakeRandomK8sName("channel")
+	dls := feature.MakeRandomK8sName("dls-channel")
+
+	failer := feature.MakeRandomK8sName("failer")
+	sink := feature.MakeRandomK8sName("sink")
+
+	f.Setup("install containersource", containersource.Install(cs, source.WithSink(channel.AsRef(name), "")))
+
+	f.Setup("install channel", channel.Install(name,
+		channel.WithTemplate(),
+		delivery.WithDeadLetterSink(channel.AsRef(dls), "")),
+	)
+	f.Setup("install subscription", subscription.Install(feature.MakeRandomK8sName("subscription"),
+		subscription.WithChannel(channel.AsRef(name)),
+		createSubscriberFn(svc.AsKReference(failer), ""),
+	))
+
+	f.Setup("install DLS channel", channel.Install(dls,
+		channel.WithTemplate(),
+	))
+	f.Setup("install DLS subscription", subscription.Install(feature.MakeRandomK8sName("dls-subscription"),
+		subscription.WithChannel(channel.AsRef(dls)),
+		createSubscriberFn(svc.AsKReference(sink), ""),
+	))
+
+	f.Setup("install sink", eventshub.Install(sink, eventshub.StartReceiver))
+	f.Setup("install failing receiver", eventshub.Install(failer, eventshub.StartReceiver, eventshub.DropFirstN(10)))
+
+	f.Setup("channel is ready", channel.IsReady(name))
+	f.Setup("channel is ready", channel.IsReady(dls))
+	f.Setup("containersource is ready", containersource.IsReady(cs))
+
+	f.Requirement("Channel has dead letter sink uri", channel_impl.HasDeadLetterSinkURI(name, channel.GVR()))
+
+	f.Assert("dls receives events", assert.OnStore(sink).
+		MatchEvent(test.HasType("dev.knative.eventing.samples.heartbeat")).
+		AtLeast(1),
+	)
+
+	return f
+}
+
 func EventTransformation() *feature.Feature {
 	f := feature.NewFeature()
 	lib := feature.MakeRandomK8sName("lib")
