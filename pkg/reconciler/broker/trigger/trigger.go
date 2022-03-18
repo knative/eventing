@@ -29,6 +29,15 @@ import (
 	"k8s.io/client-go/dynamic"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/network"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1 "knative.dev/eventing/pkg/apis/eventing/v1"
 	messagingv1 "knative.dev/eventing/pkg/apis/messaging/v1"
@@ -38,14 +47,6 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/sugar/trigger/path"
-	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/network"
-	pkgreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 )
 
 var brokerGVK = eventingv1.SchemeGroupVersion.WithKind("Broker")
@@ -194,10 +195,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *eventingv1
 		Namespace:  b.Namespace,
 	}
 
-	delivery := t.Spec.Delivery
-	if delivery == nil {
-		delivery = b.Spec.Delivery
-	}
+	delivery := t.Spec.Delivery.Merge(b.Spec.Delivery)
 
 	expected := resources.NewSubscription(t, brokerTrigger, brokerObjRef, uri, delivery)
 

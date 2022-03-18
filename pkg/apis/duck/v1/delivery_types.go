@@ -155,3 +155,52 @@ type DeliveryStatus struct {
 	// +optional
 	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
 }
+
+func (d *DeliverySpec) Merge(other *DeliverySpec) *DeliverySpec {
+	if d == nil {
+		return other
+	}
+	if other == nil {
+		return d
+	}
+
+	r := &DeliverySpec{}
+
+	if d.Retry != nil {
+		r.Retry = d.Retry
+	} else {
+		r.Retry = other.Retry
+	}
+
+	if d.BackoffDelay != nil {
+		r.BackoffDelay = d.BackoffDelay
+	} else {
+		r.BackoffDelay = other.BackoffDelay
+	}
+
+	if d.BackoffPolicy != nil {
+		r.BackoffPolicy = d.BackoffPolicy
+	} else {
+		r.BackoffPolicy = other.BackoffPolicy
+	}
+
+	if d.DeadLetterSink != nil {
+		r.DeadLetterSink = d.DeadLetterSink
+	} else {
+		r.DeadLetterSink = other.DeadLetterSink
+	}
+
+	if d.RetryAfterMax != nil {
+		r.RetryAfterMax = d.RetryAfterMax
+	} else {
+		r.RetryAfterMax = other.RetryAfterMax
+	}
+
+	if d.Timeout != nil {
+		r.Timeout = d.Timeout
+	} else {
+		r.Timeout = other.Timeout
+	}
+
+	return r
+}

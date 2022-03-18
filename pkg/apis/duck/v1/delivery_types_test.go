@@ -156,3 +156,163 @@ func TestDeliverySpecValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestDeliverySpecMerge(t *testing.T) {
+
+	linear := BackoffPolicyLinear
+	exponential := BackoffPolicyExponential
+
+	tt := []struct {
+		name     string
+		d1       *DeliverySpec
+		d2       *DeliverySpec
+		expected *DeliverySpec
+	}{{
+		name: "nil",
+	}, {
+		name:     "nil other",
+		d1:       &DeliverySpec{},
+		expected: &DeliverySpec{},
+	}, {
+		name: "retry",
+		d1: &DeliverySpec{
+			Retry: pointer.Int32Ptr(2),
+		},
+		d2: &DeliverySpec{
+			Retry: pointer.Int32Ptr(3),
+		},
+		expected: &DeliverySpec{
+			Retry: pointer.Int32Ptr(2),
+		},
+	}, {
+		name: "retry other",
+		d1:   &DeliverySpec{},
+		d2: &DeliverySpec{
+			Retry: pointer.Int32Ptr(3),
+		},
+		expected: &DeliverySpec{
+			Retry: pointer.Int32Ptr(3),
+		},
+	}, {
+		name: "backoff delay",
+		d1: &DeliverySpec{
+			BackoffDelay: pointer.StringPtr("PT100S"),
+		},
+		d2: &DeliverySpec{
+			BackoffDelay: pointer.StringPtr("PT200S"),
+		},
+		expected: &DeliverySpec{
+			BackoffDelay: pointer.StringPtr("PT100S"),
+		},
+	}, {
+		name: "backoff delay other",
+		d1:   &DeliverySpec{},
+		d2: &DeliverySpec{
+			BackoffDelay: pointer.StringPtr("PT200S"),
+		},
+		expected: &DeliverySpec{
+			BackoffDelay: pointer.StringPtr("PT200S"),
+		},
+	}, {
+		name: "backoff policy",
+		d1: &DeliverySpec{
+			BackoffPolicy: &linear,
+		},
+		d2: &DeliverySpec{
+			BackoffPolicy: &exponential,
+		},
+		expected: &DeliverySpec{
+			BackoffPolicy: &linear,
+		},
+	}, {
+		name: "backoff policy other",
+		d1:   &DeliverySpec{},
+		d2: &DeliverySpec{
+			BackoffPolicy: &linear,
+		},
+		expected: &DeliverySpec{
+			BackoffPolicy: &linear,
+		},
+	}, {
+		name: "timeout",
+		d1: &DeliverySpec{
+			Timeout: pointer.StringPtr("PT200S"),
+		},
+		d2: &DeliverySpec{
+			Timeout: pointer.StringPtr("PT100S"),
+		},
+		expected: &DeliverySpec{
+			Timeout: pointer.StringPtr("PT200S"),
+		},
+	}, {
+		name: "timeout other",
+		d1:   &DeliverySpec{},
+		d2: &DeliverySpec{
+			Timeout: pointer.StringPtr("PT100S"),
+		},
+		expected: &DeliverySpec{
+			Timeout: pointer.StringPtr("PT100S"),
+		},
+	}, {
+		name: "retryAfterMax other",
+		d1:   &DeliverySpec{},
+		d2: &DeliverySpec{
+			RetryAfterMax: pointer.StringPtr("PT100S"),
+		},
+		expected: &DeliverySpec{
+			RetryAfterMax: pointer.StringPtr("PT100S"),
+		},
+	}, {
+		name: "retryAfterMax",
+		d1: &DeliverySpec{
+			RetryAfterMax: pointer.StringPtr("PT200S"),
+		},
+		d2: &DeliverySpec{
+			RetryAfterMax: pointer.StringPtr("PT100S"),
+		},
+		expected: &DeliverySpec{
+			RetryAfterMax: pointer.StringPtr("PT200S"),
+		},
+	}, {
+		name: "deadLetterSink other",
+		d1:   &DeliverySpec{},
+		d2: &DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+		expected: &DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				URI: apis.HTTP("example.com"),
+			},
+		},
+	}, {
+		name: "deadLetterSink",
+		d1: &DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				URI: apis.HTTP("example1.com"),
+			},
+		},
+		d2: &DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				URI: apis.HTTP("example2.com"),
+			},
+		},
+		expected: &DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				URI: apis.HTTP("example1.com"),
+			},
+		},
+	}}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.d1.Merge(tc.d2)
+
+			if diff := cmp.Diff(tc.expected, got); diff != "" {
+				t.Error("(-want, +got)", diff)
+			}
+		})
+	}
+
+}
