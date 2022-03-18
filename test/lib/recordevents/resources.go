@@ -119,7 +119,7 @@ func recordEventsPod(imageName string, name string, serviceAccountName string, r
 	}
 	if readinessProbe {
 		pod.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromString("receive"),
 					Path: "/healthz",

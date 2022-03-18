@@ -29,12 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"knative.dev/eventing/pkg/adapter/apiserver"
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/system"
+
+	"knative.dev/eventing/pkg/adapter/apiserver"
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	reconcilersource "knative.dev/eventing/pkg/reconciler/source"
 )
 
 // ReceiveAdapterArgs are the arguments needed to create a ApiServer Receive Adapter.
@@ -94,7 +95,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) (*appsv1.Deployment, error) {
 								ContainerPort: 8080,
 							}},
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Port: intstr.FromString("health"),
 									},
