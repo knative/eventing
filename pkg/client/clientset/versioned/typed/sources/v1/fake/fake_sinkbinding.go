@@ -117,7 +117,7 @@ func (c *FakeSinkBindings) UpdateStatus(ctx context.Context, sinkBinding *source
 // Delete takes name of the sinkBinding and deletes it. Returns an error if one occurs.
 func (c *FakeSinkBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(sinkbindingsResource, c.ns, name), &sourcesv1.SinkBinding{})
+		Invokes(testing.NewDeleteActionWithOptions(sinkbindingsResource, c.ns, name, opts), &sourcesv1.SinkBinding{})
 
 	return err
 }

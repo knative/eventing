@@ -117,7 +117,7 @@ func (c *FakeChannels) UpdateStatus(ctx context.Context, channel *messagingv1.Ch
 // Delete takes name of the channel and deletes it. Returns an error if one occurs.
 func (c *FakeChannels) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(channelsResource, c.ns, name), &messagingv1.Channel{})
+		Invokes(testing.NewDeleteActionWithOptions(channelsResource, c.ns, name, opts), &messagingv1.Channel{})
 
 	return err
 }
