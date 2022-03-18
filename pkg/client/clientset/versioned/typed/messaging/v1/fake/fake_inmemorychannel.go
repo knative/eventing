@@ -117,7 +117,7 @@ func (c *FakeInMemoryChannels) UpdateStatus(ctx context.Context, inMemoryChannel
 // Delete takes name of the inMemoryChannel and deletes it. Returns an error if one occurs.
 func (c *FakeInMemoryChannels) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(inmemorychannelsResource, c.ns, name), &messagingv1.InMemoryChannel{})
+		Invokes(testing.NewDeleteActionWithOptions(inmemorychannelsResource, c.ns, name, opts), &messagingv1.InMemoryChannel{})
 
 	return err
 }

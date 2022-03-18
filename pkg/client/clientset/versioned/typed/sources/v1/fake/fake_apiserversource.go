@@ -117,7 +117,7 @@ func (c *FakeApiServerSources) UpdateStatus(ctx context.Context, apiServerSource
 // Delete takes name of the apiServerSource and deletes it. Returns an error if one occurs.
 func (c *FakeApiServerSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(apiserversourcesResource, c.ns, name), &sourcesv1.ApiServerSource{})
+		Invokes(testing.NewDeleteActionWithOptions(apiserversourcesResource, c.ns, name, opts), &sourcesv1.ApiServerSource{})
 
 	return err
 }

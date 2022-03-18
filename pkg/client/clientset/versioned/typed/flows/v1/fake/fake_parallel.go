@@ -117,7 +117,7 @@ func (c *FakeParallels) UpdateStatus(ctx context.Context, parallel *flowsv1.Para
 // Delete takes name of the parallel and deletes it. Returns an error if one occurs.
 func (c *FakeParallels) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(parallelsResource, c.ns, name), &flowsv1.Parallel{})
+		Invokes(testing.NewDeleteActionWithOptions(parallelsResource, c.ns, name, opts), &flowsv1.Parallel{})
 
 	return err
 }

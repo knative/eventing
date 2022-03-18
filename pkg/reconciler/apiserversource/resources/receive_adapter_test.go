@@ -27,11 +27,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	v1 "knative.dev/eventing/pkg/apis/sources/v1"
-	"knative.dev/eventing/pkg/reconciler/source"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
+
+	v1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/eventing/pkg/reconciler/source"
 
 	_ "knative.dev/pkg/metrics/testing"
 	_ "knative.dev/pkg/system/testing"
@@ -157,7 +158,7 @@ func TestMakeReceiveAdapters(t *testing.T) {
 								},
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Port: intstr.FromString("health"),
 									},

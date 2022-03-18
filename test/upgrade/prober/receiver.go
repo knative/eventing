@@ -22,9 +22,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	pkgTest "knative.dev/pkg/test"
+
 	testlib "knative.dev/eventing/test/lib"
 	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
-	pkgTest "knative.dev/pkg/test"
 )
 
 var (
@@ -116,7 +117,7 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 							MountPath: p.config.ConfigMountPoint,
 						}},
 						ReadinessProbe: &corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path: p.config.HealthEndpoint,
 									Port: intstr.FromInt(watholaconfig.DefaultReceiverPort),
