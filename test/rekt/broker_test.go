@@ -29,12 +29,10 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/broker"
 	b "knative.dev/eventing/test/rekt/resources/broker"
 )
 
-// TestBrokerAsMiddleware
 func TestBrokerAsMiddleware(t *testing.T) {
 	t.Parallel()
 
@@ -47,7 +45,7 @@ func TestBrokerAsMiddleware(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSink("default"))
@@ -76,8 +74,6 @@ func TestBrokerWithDLQ(t *testing.T) {
 func TestBrokerWithFlakyDLQ(t *testing.T) {
 	t.Skip("Eventshub needs work")
 
-	class := eventing.MTChannelBrokerClassValue
-
 	ctx, env := global.Environment(
 		knative.WithKnativeNamespace(system.Namespace()),
 		knative.WithLoggingConfig,
@@ -88,7 +84,7 @@ func TestBrokerWithFlakyDLQ(t *testing.T) {
 	)
 
 	// Install and wait for a Ready Broker.
-	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithBrokerClass(class)))
+	env.Prerequisite(ctx, t, broker.GoesReady("default", b.WithEnvConfig()...))
 
 	// Test that a Broker can act as middleware.
 	env.Test(ctx, t, broker.SourceToSinkWithFlakyDLQ("default"))
