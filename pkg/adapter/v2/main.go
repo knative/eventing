@@ -138,14 +138,32 @@ type AdapterDynamicConfig struct {
 	metricsDomain string
 }
 
+// TracinfConfiguration for adapters.
+type TracingConfiguration struct {
+	InstanceName string
+}
+
+// ObservabilityConfigurator
+type ObservabilityConfigurator interface {
+	CreateLogger(ctx context.Context) *zap.SugaredLogger
+	SetupMetricsExporter(ctx context.Context)
+	SetupTracing(ctx context.Context, cfg *TracingConfiguration)
+}
+
 // AdapterConfigurator exposes methods for configuring
 // the adapter.
 type AdapterConfigurator interface {
-	CreateLogger(ctx context.Context) *zap.SugaredLogger
-	SetupMetricsExporter(ctx context.Context)
+	ObservabilityConfigurator
+	ProfilerConfigurator
+	CloudEventsConfigurator
+}
+
+type ProfilerConfigurator interface {
 	CreateProfilingServer(ctx context.Context) *http.Server
+}
+
+type CloudEventsConfigurator interface {
 	CreateCloudEventsEventStatusReporter(ctx context.Context) *crstatusevent.CRStatusEventClient
-	SetupTracing(ctx context.Context, instanceName string)
 }
 
 type injectorEnabledKey struct{}
@@ -245,7 +263,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		}()
 	}
 
-	configurator.SetupTracing(ctx, env.GetName())
+	configurator.SetupTracing(ctx, &TracingConfiguration{InstanceName: env.GetName()})
 
 	crStatusEventClient := configurator.CreateCloudEventsEventStatusReporter(ctx)
 
@@ -493,7 +511,7 @@ func (c *adapterConfiguratorEnvironment) CreateCloudEventsEventStatusReporter(ct
 	return crstatusevent.NewCRStatusEventClient(mc.ConfigMap)
 }
 
-func (c *adapterConfiguratorEnvironment) SetupTracing(ctx context.Context, instanceName string) {
+func (c *adapterConfiguratorEnvironment) SetupTracing(ctx context.Context, _ *TracingConfiguration) {
 	logger := logging.FromContext(ctx)
 	if err := c.env.SetupTracing(logger); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
@@ -624,11 +642,11 @@ func (c *adapterConfiguratorConfigMap) CreateCloudEventsEventStatusReporter(ctx 
 	return r
 }
 
-func (c *adapterConfiguratorConfigMap) SetupTracing(ctx context.Context, instanceName string) {
+func (c *adapterConfiguratorConfigMap) SetupTracing(ctx context.Context, cfg *TracingConfiguration) {
 	logger := logging.FromContext(ctx)
 
 	cmw := ConfigWatcherFromContext(ctx)
-	service := fmt.Sprintf("%s.%s", instanceName, NamespaceFromContext(ctx))
+	service := fmt.Sprintf("%s.%s", cfg.InstanceName, NamespaceFromContext(ctx))
 
 	logger.Infof("Adding Watcher on ConfigMap %s for tracing", c.adc.tracingConfigName)
 	if err := tracing.SetupDynamicPublishing(logger, cmw, service, c.adc.tracingConfigName); err != nil {
