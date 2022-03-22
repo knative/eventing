@@ -84,9 +84,11 @@ func NewK8sService(imc *v1.InMemoryChannel, opts ...K8sServiceOption) (*corev1.S
 }
 
 func GetServicePorts() []corev1.ServicePort {
-	return {
-		Name:     PortName,
-		Protocol: corev1.ProtocolTCP,
-		Port:     PortNumber,
-	},
+	return []corev1.ServicePort{
+		{
+			Name:     PortName,
+			Protocol: corev1.ProtocolTCP,
+			Port:     PortNumber,
+		},
+	}
 }
