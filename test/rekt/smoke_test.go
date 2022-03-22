@@ -23,14 +23,12 @@ import (
 	"strconv"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/reconciler-test/pkg/manifest"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/test/rekt/features/apiserversource"
 	"knative.dev/eventing/test/rekt/features/broker"
 	"knative.dev/eventing/test/rekt/features/containersource"
@@ -38,6 +36,7 @@ import (
 	"knative.dev/eventing/test/rekt/features/pingsource"
 	"knative.dev/eventing/test/rekt/features/sequence"
 	b "knative.dev/eventing/test/rekt/resources/broker"
+	"knative.dev/eventing/test/rekt/resources/channel_impl"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	ps "knative.dev/eventing/test/rekt/resources/pingsource"
 	sresources "knative.dev/eventing/test/rekt/resources/sequence"
@@ -61,7 +60,7 @@ func TestSmoke_Broker(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, broker.GoesReady(name, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+		env.Test(ctx, t, broker.GoesReady(name, b.WithEnvConfig()...))
 	}
 }
 
@@ -81,7 +80,7 @@ func TestSmoke_Trigger(t *testing.T) {
 	}
 	brokerName := "broker-rekt"
 
-	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+	env.Prerequisite(ctx, t, broker.GoesReady(brokerName, b.WithEnvConfig()...))
 
 	for _, name := range names {
 		env.Test(ctx, t, broker.TriggerGoesReady(name, brokerName))
@@ -194,13 +193,9 @@ func TestSmoke_ParallelDelivery(t *testing.T) {
 	}
 
 	for _, name := range names {
-
 		template := presources.ChannelTemplate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "InMemoryChannel",
-				APIVersion: "messaging.knative.dev/v1",
-			},
-			Spec: map[string]interface{}{},
+			TypeMeta: channel_impl.TypeMeta(),
+			Spec:     map[string]interface{}{},
 		}
 		SpecDelivery(template.Spec)
 		env.Test(ctx, t, parallel.GoesReady(name, presources.WithChannelTemplate(template)))
@@ -222,7 +217,11 @@ func TestSmoke_Sequence(t *testing.T) {
 	}
 
 	for _, name := range names {
-		env.Test(ctx, t, sequence.GoesReady(name))
+		template := sresources.ChannelTemplate{
+			TypeMeta: channel_impl.TypeMeta(),
+			Spec:     map[string]interface{}{},
+		}
+		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
 	}
 }
 
@@ -235,23 +234,17 @@ func TestSmoke_SequenceDelivery(t *testing.T) {
 
 	names := []string{
 		"customname",
-		//"name-with-dash",
-		//"name1with2numbers3",
-		//"name63-0123456789012345678901234567890123456789012345678901234",
+		"name-with-dash",
+		"name1with2numbers3",
+		"name63-0123456789012345678901234567890123456789012345678901234",
 	}
 
 	for _, name := range names {
 		template := sresources.ChannelTemplate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "InMemoryChannel",
-				APIVersion: "messaging.knative.dev/v1",
-			},
-			Spec: map[string]interface{}{},
+			TypeMeta: channel_impl.TypeMeta(),
+			Spec:     map[string]interface{}{},
 		}
 		SpecDelivery(template.Spec)
-
-		t.Logf("%+v", template)
-
 		env.Test(ctx, t, sequence.GoesReady(name, sresources.WithChannelTemplate(template)))
 	}
 }

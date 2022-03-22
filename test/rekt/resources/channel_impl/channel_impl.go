@@ -52,6 +52,14 @@ func GVK() schema.GroupVersionKind {
 	return schema.ParseGroupKind(EnvCfg.ChannelGK).WithVersion(EnvCfg.ChannelV)
 }
 
+func TypeMeta() metav1.TypeMeta {
+	gvk := GVK()
+	return metav1.TypeMeta{
+		Kind:       gvk.Kind,
+		APIVersion: gvk.GroupVersion().String(),
+	}
+}
+
 var EnvCfg EnvConfig
 
 type EnvConfig struct {

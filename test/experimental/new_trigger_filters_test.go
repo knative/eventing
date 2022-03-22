@@ -29,7 +29,6 @@ import (
 	"knative.dev/reconciler-test/pkg/k8s"
 	"knative.dev/reconciler-test/pkg/knative"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	newfilters "knative.dev/eventing/test/experimental/features/new_trigger_filters"
 	"knative.dev/eventing/test/rekt/resources/broker"
 )
@@ -52,8 +51,7 @@ func TestMTChannelBrokerNewTriggerFilters(t *testing.T) {
 
 func InstallMTBroker(name string) *feature.Feature {
 	f := feature.NewFeatureNamed("Multi-tenant channel-based broker")
-	f.Setup(fmt.Sprintf("Install broker %q", name),
-		broker.Install(name, broker.WithBrokerClass(eventing.MTChannelBrokerClassValue)))
+	f.Setup(fmt.Sprintf("Install broker %q", name), broker.Install(name, broker.WithEnvConfig()...))
 	f.Requirement("Broker is ready", broker.IsReady(name))
 	return f
 }
