@@ -664,6 +664,13 @@ func makeChannelService(imc *v1.InMemoryChannel) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: network.GetServiceHostname(dispatcherName, testNS),
+			Ports: []corev1.ServicePort{
+				{
+					Name:     resources.PortName,
+					Protocol: corev1.ProtocolTCP,
+					Port:     resources.PortNumber,
+				},
+			},
 		},
 	}
 }
@@ -684,6 +691,13 @@ func makeChannelServiceNotOwnedByUs(imc *v1.InMemoryChannel) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: network.GetServiceHostname(dispatcherName, testNS),
+			Ports: []corev1.ServicePort{
+				{
+					Name:     resources.PortName,
+					Protocol: corev1.ProtocolTCP,
+					Port:     resources.PortNumber,
+				},
+			},
 		},
 	}
 }
