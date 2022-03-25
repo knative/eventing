@@ -45,6 +45,7 @@ func ExternalService(namespace, service string) K8sServiceOption {
 		svc.Spec = corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: network.GetServiceHostname(service, namespace),
+			Ports:        GetServicePorts(),
 		}
 		return nil
 	}
@@ -71,13 +72,7 @@ func NewK8sService(imc *v1.InMemoryChannel, opts ...K8sServiceOption) (*corev1.S
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:     PortName,
-					Protocol: corev1.ProtocolTCP,
-					Port:     PortNumber,
-				},
-			},
+			Ports: GetServicePorts(),
 		},
 	}
 	for _, opt := range opts {
@@ -86,4 +81,14 @@ func NewK8sService(imc *v1.InMemoryChannel, opts ...K8sServiceOption) (*corev1.S
 		}
 	}
 	return svc, nil
+}
+
+func GetServicePorts() []corev1.ServicePort {
+	return []corev1.ServicePort{
+		{
+			Name:     PortName,
+			Protocol: corev1.ProtocolTCP,
+			Port:     PortNumber,
+		},
+	}
 }
