@@ -91,27 +91,36 @@ func WithConfigWatcher(ctx context.Context, cmw configmap.Watcher) context.Conte
 
 // ConfigWatcherFromContext retrieves a ConfigMap Watcher from the context.
 func ConfigWatcherFromContext(ctx context.Context) configmap.Watcher {
-
 	if v := ctx.Value(withConfigWatcherKey{}); v != nil {
 		return v.(configmap.Watcher)
 	}
 	return nil
 }
 
-type withAdapterConfigWatcher struct{}
+type withConfigWatcherEnabledKey struct{}
 
-// WithAdapterDynamicConfig sets the preference for configuring
-// dynamically the adapter using ConfigMaps and Watchers.
-func WithAdapterDynamicConfig(ctx context.Context, config *AdapterDynamicConfig) context.Context {
-	return context.WithValue(ctx, withAdapterConfigWatcher{}, config)
+// WithConfigWatcherEnabled flags the ConfigMapWatcher to be configured.
+func WithConfigWatcherEnabled(ctx context.Context) context.Context {
+	return context.WithValue(ctx, withConfigWatcherEnabledKey{}, struct{}{})
 }
 
-// AdapterDynamicConfigFromContext gets the preference for
-// configuring dynamically the adapter using ConfigMaps.
-func AdapterDynamicConfigFromContext(ctx context.Context) *AdapterDynamicConfig {
-	value := ctx.Value(withAdapterConfigWatcher{})
+// IsConfigWatcherEnabled indicates whether the ConfigMapWatcher is required or not.
+func IsConfigWatcherEnabled(ctx context.Context) bool {
+	return ctx.Value(withConfigWatcherEnabledKey{}) != nil
+}
+
+type withConfiguratorOptions struct{}
+
+// WithConfiguratorOptions sets custom options on the adapter configurator.
+func WithConfiguratorOptions(ctx context.Context, opts []ConfiguratorOption) context.Context {
+	return context.WithValue(ctx, withConfiguratorOptions{}, opts)
+}
+
+// ConfiguratorOptionsFromContext retrieves adapter configurator options.
+func ConfiguratorOptionsFromContext(ctx context.Context) []ConfiguratorOption {
+	value := ctx.Value(withConfiguratorOptions{})
 	if value == nil {
 		return nil
 	}
-	return value.(*AdapterDynamicConfig)
+	return value.([]ConfiguratorOption)
 }

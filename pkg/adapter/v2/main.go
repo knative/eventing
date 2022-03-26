@@ -18,12 +18,10 @@ package adapter
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -45,21 +43,12 @@ import (
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/logging/logkey"
 	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
-	"knative.dev/pkg/tracing"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
 	"knative.dev/eventing/pkg/metrics/source"
-)
-
-const (
-	defaultMetricsPort   = 9092
-	defaultMetricsDomain = "knative.dev/eventing"
 )
 
 // Adapter is the interface receive adapters are expected to implement
@@ -73,97 +62,50 @@ type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client 
 // the multi-tenant receive adapter state
 type ControllerConstructor func(ctx context.Context, adapter Adapter) *controller.Impl
 
-type AdapterDynamicConfigOption func(*AdapterDynamicConfig)
-
-// metricDomainDefaulter is an AdapterDynamicconfig option that
-// retrieves the adater's metric domain by looking at the
-// environments metrics.DomainEnv variable first,
-// then to the component's hardcoded default metrics domain,
-// and if not present to the eventing default metrics domain.
-func metricDomainDefaulter(adc *AdapterDynamicConfig) {
-	if domain := os.Getenv(metrics.DomainEnv); domain != "" {
-		adc.metricsDomain = domain
-	} else if adc.metricsDomain == "" {
-		adc.metricsDomain = defaultMetricsDomain
-	}
+// LoggerConfigurator configures the logger for an adapter.
+type LoggerConfigurator interface {
+	CreateLogger(ctx context.Context) *zap.SugaredLogger
 }
 
-// WithLoggerConfigMapName overrides the default logger ConfigMap name.
-func WithLoggerConfigMapName(name string) AdapterDynamicConfigOption {
-	return func(adc *AdapterDynamicConfig) {
-		adc.loggingConfigName = name
-	}
+// MetricsExporterConfigurator configures the metrics exporter for an adapter.
+type MetricsExporterConfigurator interface {
+	SetupMetricsExporter(ctx context.Context)
 }
 
-// WithLoggerConfigMapName overrides the default observability ConfigMap name.
-func WithObservabilityConfigMapName(name string) AdapterDynamicConfigOption {
-	return func(adc *AdapterDynamicConfig) {
-		adc.observabilityConfigName = name
-	}
-}
-
-// WithLoggerConfigMapName overrides the default tracing ConfigMap name.
-func WithTracingConfigMapName(name string) AdapterDynamicConfigOption {
-	return func(adc *AdapterDynamicConfig) {
-		adc.tracingConfigName = name
-	}
-}
-
-// NewAdapterDynamicConfig creates a dynamic configurator for adapters.
-func NewAdapterDynamicConfig(opts ...AdapterDynamicConfigOption) *AdapterDynamicConfig {
-	adc := &AdapterDynamicConfig{
-		loggingConfigName:       logging.ConfigMapName(),
-		observabilityConfigName: metrics.ConfigMapName(),
-		tracingConfigName:       tracingconfig.ConfigName,
-	}
-
-	opts = append(opts, metricDomainDefaulter)
-
-	for _, opt := range opts {
-		opt(adc)
-	}
-
-	return adc
-}
-
-// AdapterDynamicConfig keeps the ConfigMap based dynamic
-// configuration parameters for the adapter.
-type AdapterDynamicConfig struct {
-	// ConfigMap names
-	loggingConfigName       string
-	observabilityConfigName string
-	tracingConfigName       string
-
-	// Metrics domain
-	metricsDomain string
-}
-
-// TracinfConfiguration for adapters.
+// TracingConfiguration for adapters.
 type TracingConfiguration struct {
 	InstanceName string
 }
 
-// ObservabilityConfigurator
-type ObservabilityConfigurator interface {
-	CreateLogger(ctx context.Context) *zap.SugaredLogger
-	SetupMetricsExporter(ctx context.Context)
+// TracingConfigurator configures the tracing settings for an adapter.
+type TracingConfigurator interface {
 	SetupTracing(ctx context.Context, cfg *TracingConfiguration)
 }
 
-// AdapterConfigurator exposes methods for configuring
-// the adapter.
-type AdapterConfigurator interface {
-	ObservabilityConfigurator
-	ProfilerConfigurator
-	CloudEventsConfigurator
+// ObservabilityConfigurator groups the observability related methods
+// that configure an adapter.
+type ObservabilityConfigurator interface {
+	LoggerConfigurator
+	MetricsExporterConfigurator
+	TracingConfigurator
 }
 
+// ProfilerConfigurator configures the profiling settings for an adapter.
 type ProfilerConfigurator interface {
 	CreateProfilingServer(ctx context.Context) *http.Server
 }
 
-type CloudEventsConfigurator interface {
-	CreateCloudEventsEventStatusReporter(ctx context.Context) *crstatusevent.CRStatusEventClient
+// CloudEventsStatusReporterConfigurator configures the CloudEvents client reporting
+// settings for an adapter.
+type CloudEventsStatusReporterConfigurator interface {
+	CreateCloudEventsStatusReporter(ctx context.Context) *crstatusevent.CRStatusEventClient
+}
+
+// AdapterConfigurator exposes methods for configuring the adapter.
+type AdapterConfigurator interface {
+	ObservabilityConfigurator
+	ProfilerConfigurator
+	CloudEventsStatusReporterConfigurator
 }
 
 type injectorEnabledKey struct{}
@@ -226,18 +168,16 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 		ctx = WithNamespace(ctx, env.GetNamespace())
 	}
 
-	var configurator AdapterConfigurator
-	if ac := AdapterDynamicConfigFromContext(ctx); ac != nil {
-		// Create the Config Watcher if it has not been created yet.
+	// If required a ConfigMap watcher is made available for configuration, either at this
+	// shared main function or at the downstream adapter's code.
+	if IsConfigWatcherEnabled(ctx) {
 		if cmw := ConfigWatcherFromContext(ctx); cmw == nil {
-			cmw := SetupConfigMapWatch(ctx)
-			ctx = WithConfigWatcher(ctx, cmw)
+			ctx = WithConfigWatcher(ctx, SetupConfigMapWatch(ctx))
 		}
-
-		configurator = NewAdapterConfiguratorFromConfigMaps(ctx, component, ac)
-	} else {
-		configurator = NewAdapterConfiguratorFromEnvironment(env, component)
 	}
+
+	// The adapter configurator is used to setup and customize the adapter behavior
+	configurator := newConfigurator(env, ConfiguratorOptionsFromContext(ctx)...)
 
 	logger := configurator.CreateLogger(ctx)
 	defer flush(logger)
@@ -265,7 +205,7 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 
 	configurator.SetupTracing(ctx, &TracingConfiguration{InstanceName: env.GetName()})
 
-	crStatusEventClient := configurator.CreateCloudEventsEventStatusReporter(ctx)
+	crStatusEventClient := configurator.CreateCloudEventsStatusReporter(ctx)
 
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
@@ -380,19 +320,6 @@ func GetConfigMapByPolling(ctx context.Context, name string) (cm *corev1.ConfigM
 	return cm, err
 }
 
-// SetupLoggerFromConfig sets up the logger using the provided config
-// and returns a logger and atomic level, or dies by calling log.Fatalf.
-func SetupLoggerFromConfig(config *logging.Config, component string) (*zap.SugaredLogger, zap.AtomicLevel) {
-	l, level := logging.NewLoggerFromConfig(config, component)
-
-	// If PodName is injected into the env vars, set it on the logger.
-	if pn := os.Getenv("POD_NAME"); pn != "" {
-		l = l.With(zap.String(logkey.Pod, pn))
-	}
-
-	return l, level
-}
-
 // ConfigMapWatchOptions are the options that can be set for
 // the ConfigMapWatch informer.
 type ConfigMapWatchOptions struct {
@@ -437,219 +364,77 @@ func SecretFetcher(ctx context.Context) metrics.SecretFetcher {
 	}
 }
 
-type adapterConfiguratorEnvironment struct {
-	env       EnvConfigAccessor
-	component string
+// adapterConfigurator hosts the range of configurators that
+// will be used when setting up the adapter.
+type adapterConfigurator struct {
+	LoggerConfigurator
+	MetricsExporterConfigurator
+	TracingConfigurator
+	ProfilerConfigurator
+	CloudEventsStatusReporterConfigurator
 }
 
-// NewAdapterConfiguratorFromEnvironment creates an adapter configurator based on
-// environment variables from the accessor.
-func NewAdapterConfiguratorFromEnvironment(env EnvConfigAccessor, component string) *adapterConfiguratorEnvironment {
-	return &adapterConfiguratorEnvironment{
-		env:       env,
-		component: component,
-	}
-}
+// ConfiguratorOption enables customizing the adapter configuration.
+type ConfiguratorOption func(*adapterConfigurator)
 
-func (c *adapterConfiguratorEnvironment) CreateLogger(ctx context.Context) *zap.SugaredLogger {
-	return c.env.GetLogger()
-}
-
-func (c *adapterConfiguratorEnvironment) getMetricsConfig() (*metrics.ExporterOptions, error) {
-	metricsConfig, err := c.env.GetMetricsConfig()
-	switch {
-	case err != nil:
-		return nil, fmt.Errorf("failed to process metrics options from environment: %w", err)
-	case metricsConfig == nil || metricsConfig.ConfigMap == nil:
-		return nil, errors.New("environment metrics options not provided")
-	}
-	return metricsConfig, nil
-}
-
-func (c *adapterConfiguratorEnvironment) SetupMetricsExporter(ctx context.Context) {
-	logger := logging.FromContext(ctx)
-	mc, err := c.getMetricsConfig()
-	if err != nil {
-		logger.Warn("metrics exporter not configured", zap.Error(err))
-		return
-	}
-
-	if err = metrics.UpdateExporter(ctx, *mc, logger); err != nil {
-		logger.Errorw("failed to create the metrics exporter", zap.Error(err))
+// WithLoggerConfigurator sets the adapter configurator with
+// a custom logger option.
+func WithLoggerConfigurator(c LoggerConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.LoggerConfigurator = c
 	}
 }
 
-func (c *adapterConfiguratorEnvironment) CreateProfilingServer(ctx context.Context) *http.Server {
-	logger := logging.FromContext(ctx)
-	mc, err := c.getMetricsConfig()
-	if err != nil {
-		logger.Warn("profiler not configured", zap.Error(err))
-		return nil
-	}
-
-	// Configure profiler using environment varibles.
-	enabled, err := profiling.ReadProfilingFlag(mc.ConfigMap)
-	switch {
-	case err != nil:
-		logger.Errorw("wrong profiler configuration", zap.Error(err))
-		return nil
-	case !enabled:
-		return nil
-	}
-
-	return profiling.NewServer(profiling.NewHandler(logger, true))
-}
-
-func (c *adapterConfiguratorEnvironment) CreateCloudEventsEventStatusReporter(ctx context.Context) *crstatusevent.CRStatusEventClient {
-	logger := logging.FromContext(ctx)
-	mc, err := c.getMetricsConfig()
-	if err != nil {
-		logger.Warn("CloudEvents client reporter not configured", zap.Error(err))
-		return nil
-	}
-
-	return crstatusevent.NewCRStatusEventClient(mc.ConfigMap)
-}
-
-func (c *adapterConfiguratorEnvironment) SetupTracing(ctx context.Context, _ *TracingConfiguration) {
-	logger := logging.FromContext(ctx)
-	if err := c.env.SetupTracing(logger); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the adapter
-		// to continue to start.
-		logger.Errorw("Error setting up trace publishing", zap.Error(err))
+// WithMetricsExporterConfigurator sets the adapter configurator with
+// a custom metrics exporter option.
+func WithMetricsExporterConfigurator(c MetricsExporterConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.MetricsExporterConfigurator = c
 	}
 }
 
-type adapterConfiguratorConfigMap struct {
-	adc       *AdapterDynamicConfig
-	component string
-
-	lcm *corev1.ConfigMap
-	ocm *corev1.ConfigMap
-}
-
-// NewAdapterConfiguratorFromConfigMaps creates an adapter configurator based on ConfigMaps.
-// A ConfigMapWatcher must be added to the context before using this configurator.
-func NewAdapterConfiguratorFromConfigMaps(ctx context.Context, component string, adc *AdapterDynamicConfig) *adapterConfiguratorConfigMap {
-	logger := logging.FromContext(ctx)
-
-	// Retrieve current ConfigMaps
-	lcm, err := GetConfigMapByPolling(ctx, adc.loggingConfigName)
-	if err != nil {
-		logger.Errorw("logging ConfigMap "+adc.loggingConfigName+" could not be retrieved", zap.Error(err))
-	}
-	ocm, err := GetConfigMapByPolling(ctx, adc.observabilityConfigName)
-	if err != nil {
-		logger.Errorw("observability ConfigMap "+adc.observabilityConfigName+" could not be retrieved", zap.Error(err))
-	}
-
-	return &adapterConfiguratorConfigMap{
-		adc:       adc,
-		component: component,
-		lcm:       lcm,
-		ocm:       ocm,
+// WithTracingConfigurator sets the adapter configurator with
+// a custom tracing option.
+func WithTracingConfigurator(c TracingConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.TracingConfigurator = c
 	}
 }
 
-func (c *adapterConfiguratorConfigMap) CreateLogger(ctx context.Context) *zap.SugaredLogger {
-	// Use any pre-existing logger to inform
-	logger := logging.FromContext(ctx)
-
-	// Get logging configuration from ConfigMap or a
-	// default configuration if the ConfigMap was not found.
-	var lc *logging.Config
-	var err error
-	if c.lcm == nil {
-		logger.Warn("logging configuration not found, falling back to defaults")
-		lc, err = logging.NewConfigFromMap(nil)
-	} else {
-		lc, err = logging.NewConfigFromConfigMap(c.lcm)
-	}
-
-	// Not being able to create the logging configuration is not expected, in
-	// such case panic.
-	if err != nil {
-		logger.Fatal("could not build the logging configuration", zap.Error(err))
-	}
-
-	logger, atomicLevel := SetupLoggerFromConfig(lc, c.component)
-
-	logger.Infof("Adding Watcher on ConfigMap %s for logs", c.adc.loggingConfigName)
-
-	cmw := ConfigWatcherFromContext(ctx)
-	cmw.Watch(c.adc.loggingConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, c.component))
-	if err := cmw.Start(ctx.Done()); err != nil {
-		logger.Fatalw("Failed to start configuration manager", zap.Error(err))
-	}
-
-	return logger
-}
-
-func (c *adapterConfiguratorConfigMap) CreateProfilingServer(ctx context.Context) *http.Server {
-	logger := logging.FromContext(ctx)
-
-	// Configure watcher to update profiler from ConfigMap.
-	var enabled bool
-	var err error
-	if c.ocm == nil {
-		logger.Warn("profiler configuration not found, falling back to disabling profiler requests")
-		enabled = false
-	} else if enabled, err = profiling.ReadProfilingFlag(c.ocm.Data); err != nil {
-		logger.Errorw("wrong profiler configuration")
-	}
-
-	// Setup profiler even if it is disabled at the handler. Users
-	// might activate it through the ConfigMap.
-	profilingHandler := profiling.NewHandler(logger, enabled)
-	profilingServer := profiling.NewServer(profilingHandler)
-
-	logger.Infof("Adding Watcher on ConfigMap %s for profiler", c.adc.observabilityConfigName)
-	ConfigWatcherFromContext(ctx).Watch(c.adc.observabilityConfigName, profilingHandler.UpdateFromConfigMap)
-
-	return profilingServer
-}
-
-func (c *adapterConfiguratorConfigMap) SetupMetricsExporter(ctx context.Context) {
-	logger := logging.FromContext(ctx)
-
-	// Configure watcher to update metrics from ConfigMap.
-	updateMetricsFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(ctx, metrics.ExporterOptions{
-		Domain:         c.adc.metricsDomain,
-		Component:      c.component,
-		PrometheusPort: defaultMetricsPort,
-		Secrets:        SecretFetcher(ctx),
-	}, logger)
-	if err != nil {
-		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
-	}
-
-	logger.Infof("Adding Watcher on ConfigMap %s for metrics", c.adc.observabilityConfigName)
-	ConfigWatcherFromContext(ctx).Watch(c.adc.observabilityConfigName, updateMetricsFunc)
-}
-
-func (c *adapterConfiguratorConfigMap) CreateCloudEventsEventStatusReporter(ctx context.Context) *crstatusevent.CRStatusEventClient {
-	logger := logging.FromContext(ctx)
-
-	var crStatusConfig map[string]string
-	if c.ocm != nil {
-		crStatusConfig = c.ocm.Data
-	}
-	r := crstatusevent.NewCRStatusEventClient(crStatusConfig)
-
-	logger.Infof("Adding Watcher on ConfigMap %s for CE client status reporter", c.adc.observabilityConfigName)
-	ConfigWatcherFromContext(ctx).Watch(c.adc.observabilityConfigName, crstatusevent.UpdateFromConfigMap(r))
-
-	return r
-}
-
-func (c *adapterConfiguratorConfigMap) SetupTracing(ctx context.Context, cfg *TracingConfiguration) {
-	logger := logging.FromContext(ctx)
-
-	cmw := ConfigWatcherFromContext(ctx)
-	service := fmt.Sprintf("%s.%s", cfg.InstanceName, NamespaceFromContext(ctx))
-
-	logger.Infof("Adding Watcher on ConfigMap %s for tracing", c.adc.tracingConfigName)
-	if err := tracing.SetupDynamicPublishing(logger, cmw, service, c.adc.tracingConfigName); err != nil {
-		logger.Errorw("Error setting up trace publishing. Tracing configuration will be ignored.", zap.Error(err))
+// WithProfilerConfigurator sets the adapter configurator with
+// a custom profiler option.
+func WithProfilerConfigurator(c ProfilerConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.ProfilerConfigurator = c
 	}
 }
+
+// WithCloudEventsStatusReporterConfigurator sets the adapter configurator with
+// a CloudEvents status reporter option.
+func WithCloudEventsStatusReporterConfigurator(c CloudEventsStatusReporterConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.CloudEventsStatusReporterConfigurator = c
+	}
+}
+
+// newConfigurator creates an adapter configurator that defaults to environment variable based
+// internal configurators, and can be overridden to use custom ones.
+func newConfigurator(env EnvConfigAccessor, opts ...ConfiguratorOption) AdapterConfigurator {
+	// default to environment variable based configurators
+	acfg := &adapterConfigurator{
+		LoggerConfigurator:                    NewLoggerConfiguratorFromEnvironment(env),
+		MetricsExporterConfigurator:           NewMetricsExporterConfiguratorFromEnvironment(env),
+		TracingConfigurator:                   NewTracingConfiguratorFromEnvironment(env),
+		ProfilerConfigurator:                  NewProfilerConfiguratorFromEnvironment(env),
+		CloudEventsStatusReporterConfigurator: NewCloudEventsStatusReporterConfiguratorFromEnvironment(env),
+	}
+
+	// override with user defined options
+	for _, opt := range opts {
+		opt(acfg)
+	}
+
+	return acfg
+}
+
+var _ AdapterConfigurator = (*adapterConfigurator)(nil)

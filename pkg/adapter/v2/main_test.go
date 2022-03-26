@@ -273,13 +273,12 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 	cmw := &configmap.ManualWatcher{
 		Namespace: NamespaceFromContext(ctx),
 	}
-
 	ctx = WithConfigWatcher(ctx, cmw)
-	ctx = WithAdapterDynamicConfig(ctx,
-		NewAdapterDynamicConfig(
-			WithLoggerConfigMapName(tLoggerConfigMapName),
-			WithObservabilityConfigMapName(tObservabilityConfigMapName),
-		))
+
+	ctx = WithConfiguratorOptions(ctx, []ConfiguratorOption{
+		WithLoggerConfigurator(NewLoggerConfiguratorFromConfigMap(tComponentName,
+			WithLoggerConfiguratorConfigMapName(tLoggerConfigMapName))),
+	})
 
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
 	done := make(chan bool)

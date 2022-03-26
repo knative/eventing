@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	component = "pingsource"
+	component = "pingsource-mt-adapter"
 )
 
 func main() {
@@ -39,7 +39,17 @@ func main() {
 
 	ctx = adapter.WithController(ctx, mtping.NewController)
 	ctx = adapter.WithHAEnabled(ctx)
-	ctx = adapter.WithAdapterDynamicConfig(ctx, adapter.NewAdapterDynamicConfig())
+
+	// The adapter constructor for PingSource uses sets watchs on ConfigMaps to
+	// dynamically configure observability, profiling and CloudEvents reporting.
+	ctx = adapter.WithConfigWatcherEnabled(ctx)
+	ctx = adapter.WithConfiguratorOptions(ctx, []adapter.ConfiguratorOption{
+		adapter.WithLoggerConfigurator(adapter.NewLoggerConfiguratorFromConfigMap(component)),
+		adapter.WithMetricsExporterConfigurator(adapter.NewMetricsExporterConfiguratorFromConfigMap(component)),
+		adapter.WithTracingConfigurator(adapter.NewTracingConfiguratorFromConfigMap()),
+		adapter.WithProfilerConfigurator(adapter.NewProfilerConfiguratorFromConfigMap()),
+		adapter.WithCloudEventsStatusReporterConfigurator(adapter.NewCloudEventsReporterConfiguratorFromConfigMap()),
+	})
 
 	adapter.MainWithContext(ctx, component, mtping.NewEnvConfig, mtping.NewAdapter)
 }

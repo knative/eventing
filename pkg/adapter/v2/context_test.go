@@ -49,5 +49,4 @@ func TestWithHAEnabled(t *testing.T) {
 	if !isHADisabledFlag(ctx) {
 		t.Error("Expected HA to be disabled via commandline flag")
 	}
-
 }
