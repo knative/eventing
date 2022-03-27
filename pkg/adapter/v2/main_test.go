@@ -41,7 +41,9 @@ const (
 	tNamespace                  = "test"
 	tLoggerConfigMapName        = "logger-config-test"
 	tObservabilityConfigMapName = "observability-config-test"
+	tTracingConfigMapName       = "tracing-config-test"
 	tComponentName              = "test-component"
+	tMetricsDomain              = "test-metrics-domain"
 )
 
 type myAdapter struct {
@@ -249,8 +251,18 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 			Name:      tObservabilityConfigMapName,
 		},
 		Data: map[string]string{
-			"metrics.backend-destination": "prometheus",
-			"profiling.enable":            "true",
+			"metrics.backend-destination":       "prometheus",
+			"profiling.enable":                  "false",
+			"sink-event-error-reporting.enable": "true",
+		},
+	}
+	tcm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: tNamespace,
+			Name:      tTracingConfigMapName,
+		},
+		Data: map[string]string{
+			"backend": "none",
 		},
 	}
 
@@ -258,6 +270,7 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 	os.Setenv("K_LOGGING_CONFIG", "this should not be applied")
 	os.Setenv("NAMESPACE", "ns from context should be used")
 	os.Setenv("POD_NAME", "my-test-pod")
+	os.Setenv(metrics.DomainEnv, "env-metrics-domain")
 
 	defer func() {
 		os.Unsetenv("K_SINK")
@@ -278,6 +291,19 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 	ctx = WithConfiguratorOptions(ctx, []ConfiguratorOption{
 		WithLoggerConfigurator(NewLoggerConfiguratorFromConfigMap(tComponentName,
 			WithLoggerConfiguratorConfigMapName(tLoggerConfigMapName))),
+
+		// Other configurator options are also enabled to make sure that at least
+		// they do not panic when ConfigMaps are updated.
+		WithMetricsExporterConfigurator(
+			NewMetricsExporterConfiguratorFromConfigMap(tComponentName,
+				WithMetricsExporterConfiguratorConfigMapName(tObservabilityConfigMapName),
+				WithMetricsExporterConfiguratorMetricsDomain(tMetricsDomain))),
+		WithTracingConfigurator(NewTracingConfiguratorFromConfigMap(
+			WithTracingConfiguratorConfigMapName(tTracingConfigMapName))),
+		WithCloudEventsStatusReporterConfigurator(NewCloudEventsReporterConfiguratorFromConfigMap(
+			WithCloudEventsStatusReporterConfiguratorConfigMapName(tObservabilityConfigMapName))),
+		WithProfilerConfigurator(NewProfilerConfiguratorFromConfigMap(
+			WithProfilerConfiguratorConfigMapName(tObservabilityConfigMapName))),
 	})
 
 	env := ConstructEnvOrDie(func() EnvConfigAccessor { return &myEnvConfig{} })
@@ -308,6 +334,17 @@ func TestMain_LogConfigWatcher(t *testing.T) {
 				if r := logger.Check(zap.DebugLevel, "debug message"); r == nil {
 					t.Error("Debug message should not be logged when debug level is configured")
 				}
+
+				// Change observability ConfigMap settings.
+				ocm.Data["metrics.backend-destination"] = "opencensus"
+				ocm.Data["profiling.enable"] = "true"
+				ocm.Data["sink-event-error-reporting.enable"] = "true"
+				cmw.OnChange(ocm)
+
+				// Change tracing ConfigMap settings.
+				tcm.Data["backend"] = "zipkin"
+				tcm.Data["zipkin-endpoint"] = "http://zipking-test-endpoint"
+				cmw.OnChange(tcm)
 
 				return &myAdapter{blocking: true}
 			})
