@@ -25,9 +25,9 @@ import (
 func SetupTracing() {
 	config, err := tracingconfig.JSONToTracingConfig(Instance.TracingConfig)
 	if err != nil {
-		Log.Warnf("Tracing configuration is invalid, using the no-op default", zap.Error(err))
+		Log.Warn("Tracing configuration is invalid, using the no-op default", zap.Error(err))
 	}
 	if err = tracing.SetupStaticPublishing(Log, "", config); err != nil {
-		Log.Warnf("Error setting up trace publishing", zap.Error(err))
+		Log.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 }
