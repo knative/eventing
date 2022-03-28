@@ -568,8 +568,8 @@ func (c *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName string) 
 func (c *Client) applyAdditionalEnv(pod *corev1.PodSpec) {
 	for i := 0; i < len(pod.Containers); i++ {
 		pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigTracingEnv, Value: c.TracingCfg})
-		if c.LoggingCfg != "" {
-			pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigLoggingEnv, Value: c.LoggingCfg})
+		if c.loggingCfg != "" {
+			pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigLoggingEnv, Value: c.loggingCfg})
 		}
 	}
 }

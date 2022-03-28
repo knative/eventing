@@ -61,7 +61,7 @@ type Client struct {
 	podsCreated []string
 
 	TracingCfg string
-	LoggingCfg string
+	loggingCfg string
 
 	cleanup func()
 }
@@ -109,7 +109,7 @@ func NewClient(namespace string, t *testing.T) (*Client, error) {
 		return nil, err
 	}
 
-	client.LoggingCfg, err = getLoggingConfig(client.Kube)
+	client.loggingCfg, err = getLoggingConfig(client.Kube)
 	if err != nil {
 		t.Log("Cannot retrieve the logging config map: ", err)
 	}
