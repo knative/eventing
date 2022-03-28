@@ -66,7 +66,7 @@ func (s *sender) SendContinually() {
 	defer func() {
 		s.sendFinished()
 		// Give time to send tracing information.
-		time.Sleep(5 * time.Second)
+		time.Sleep(time.Second)
 	}()
 
 	go func() {
