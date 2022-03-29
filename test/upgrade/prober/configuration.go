@@ -18,7 +18,6 @@ package prober
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -27,8 +26,11 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
+	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
+	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
@@ -141,9 +143,9 @@ func (p *prober) deployConfiguration() {
 		Log:    p.log,
 		Client: p.client,
 	}
-	ref := resources.KnativeRefForService(receiverName, p.client.Namespace)
+	ref := resources.KnativeRefForService(receiver.Name, p.client.Namespace)
 	if p.config.Serving.Use {
-		ref = resources.KnativeRefForKservice(forwarderName, p.client.Namespace)
+		ref = resources.KnativeRefForKservice(forwarder.Name, p.client.Namespace)
 	}
 	dest := duckv1.Destination{Ref: ref}
 	s := p.config.SystemUnderTest
@@ -153,19 +155,20 @@ func (p *prober) deployConfiguration() {
 			tr.Teardown(sc)
 		}
 	})
+
 	p.deployConfigToml(endpoint)
 }
 
 func (p *prober) deployConfigToml(endpoint interface{}) {
 	name := p.config.ConfigMapName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
-	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint)
+	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint, p.client.TracingCfg)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		p.config.ConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateName string, endpoint interface{}) string {
+func (p *prober) compileTemplate(templateName string, endpoint interface{}, tracingConfig string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
@@ -177,13 +180,15 @@ func (p *prober) compileTemplate(templateName string, endpoint interface{}) stri
 		*Config
 		Namespace string
 		// Deprecated: use Endpoint
-		BrokerURL string
-		Endpoint  interface{}
+		BrokerURL     string
+		Endpoint      interface{}
+		TracingConfig string
 	}{
 		p.config,
 		p.client.Namespace,
 		fmt.Sprintf("%v", endpoint),
 		endpoint,
+		tracingConfig,
 	}
 	p.ensureNoError(tmpl.Execute(&buff, data))
 	return buff.String()
