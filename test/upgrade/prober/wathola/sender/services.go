@@ -66,8 +66,8 @@ func (s *sender) SendContinually() {
 	defer func() {
 		s.sendFinished()
 		// Give time to send tracing information.
-		// https://github.com/census-instrumentation/opencensus-go/issues/862
-		time.Sleep(1500 * time.Millisecond)
+		// https://github.com/knative/pkg/issues/2475
+		time.Sleep(5 * time.Second)
 	}()
 
 	go func() {
