@@ -23,28 +23,25 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-)
-
-var (
-	forwarderName = "wathola-forwarder"
+	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 )
 
 func (p *prober) deployForwarder() {
-	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
+	p.log.Infof("Deploy forwarder knative service: %v", forwarder.Name)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	service := p.forwarderKService(forwarderName, p.client.Namespace)
+	service := p.forwarderKService(forwarder.Name, p.client.Namespace)
 	if _, err := serving.Create(p.config.Ctx, service, metav1.CreateOptions{}); err != nil {
 		p.client.T.Fatal(err)
 	}
 
 	sc := p.servingClient()
-	testlib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
-		return duck.WaitForKServiceReady(sc, forwarderName, p.client.Namespace)
+	testlib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarder.Name), func() error {
+		return duck.WaitForKServiceReady(sc, forwarder.Name, p.client.Namespace)
 	})
 
 	if p.config.Serving.ScaleToZero {
-		testlib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
-			return duck.WaitForKServiceScales(p.config.Ctx, sc, forwarderName, p.client.Namespace, func(scale int) bool {
+		testlib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarder.Name), func() error {
+			return duck.WaitForKServiceScales(p.config.Ctx, sc, forwarder.Name, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
 		})
@@ -52,9 +49,9 @@ func (p *prober) deployForwarder() {
 }
 
 func (p *prober) removeForwarder() {
-	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
+	p.log.Infof("Remove forwarder knative service: %v", forwarder.Name)
 	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
-	err := serving.Delete(p.config.Ctx, forwarderName, metav1.DeleteOptions{})
+	err := serving.Delete(p.config.Ctx, forwarder.Name, metav1.DeleteOptions{})
 	p.ensureNoError(err)
 }
 
@@ -73,8 +70,8 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"containers": []map[string]interface{}{{
-						"name":  forwarderName,
-						"image": p.config.ImageResolver(forwarderName),
+						"name":  forwarder.Name,
+						"image": p.config.ImageResolver(forwarder.Name),
 						"volumeMounts": []map[string]interface{}{{
 							"name":      p.config.ConfigMapName,
 							"mountPath": p.config.ConfigMountPoint,
