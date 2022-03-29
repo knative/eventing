@@ -41,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	ti "knative.dev/eventing/test/test_images"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -566,9 +567,9 @@ func (c *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName string) 
 
 func (c *Client) applyAdditionalEnv(pod *corev1.PodSpec) {
 	for i := 0; i < len(pod.Containers); i++ {
-		pod.Containers[i].Env = append(pod.Containers[i].Env, c.tracingEnv)
-		if c.loggingEnv != nil {
-			pod.Containers[i].Env = append(pod.Containers[i].Env, *c.loggingEnv)
+		pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigTracingEnv, Value: c.TracingCfg})
+		if c.loggingCfg != "" {
+			pod.Containers[i].Env = append(pod.Containers[i].Env, corev1.EnvVar{Name: ti.ConfigLoggingEnv, Value: c.loggingCfg})
 		}
 	}
 }
