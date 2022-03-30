@@ -21,15 +21,19 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	corev1 "k8s.io/client-go/listers/core/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	listers "knative.dev/eventing/pkg/reconciler/testing/v1"
 	"knative.dev/eventing/pkg/scheduler"
 	tscheduler "knative.dev/eventing/pkg/scheduler/testing"
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
 )
 
 const (
@@ -388,11 +392,11 @@ func TestStateBuilder(t *testing.T) {
 			nodes:               []*v1.Node{tscheduler.MakeNode("node-0", "zone-0"), tscheduler.MakeNode("node-1", "zone-1"), tscheduler.MakeNode("node-2", "zone-2"), tscheduler.MakeNode("node-3", "zone-0"), tscheduler.MakeNode("node-4", "zone-1")},
 		},
 		{
-			name:     "three vpods but one tainted and one wit no zoen label",
+			name:     "three vpods but one tainted and one with no zone label",
 			replicas: int32(1),
 			vpods:    [][]duckv1alpha1.Placement{{{PodName: "statefulset-name-0", VReplicas: 1}}},
-			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, LastOrdinal: 0, Replicas: 1, NumNodes: 1, NumZones: 1, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
-				NodeToZoneMap: map[string]string{"node-0": "zone-0"},
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9)}, SchedulablePods: []int32{int32(0)}, LastOrdinal: 0, Replicas: 1, NumNodes: 2, NumZones: 2, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
+				NodeToZoneMap: map[string]string{"node-0": "zone-0", "node-1": scheduler.UnknownZone},
 				PodSpread: map[types.NamespacedName]map[string]int32{
 					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
 						"statefulset-name-0": 1,
@@ -412,6 +416,32 @@ func TestStateBuilder(t *testing.T) {
 			freec:               int32(9),
 			schedulerPolicyType: scheduler.MAXFILLUP,
 			nodes:               []*v1.Node{tscheduler.MakeNode("node-0", "zone-0"), tscheduler.MakeNodeNoLabel("node-1"), tscheduler.MakeNodeTainted("node-2", "zone-2")},
+		},
+		{
+			name:     "one vpods, three vreplicas but one tainted and one control plane node",
+			replicas: int32(1),
+			vpods:    [][]duckv1alpha1.Placement{{{PodName: "statefulset-name-0", VReplicas: 3}}},
+			expected: State{Capacity: 10, FreeCap: []int32{int32(7)}, SchedulablePods: []int32{int32(0)}, LastOrdinal: 0, Replicas: 1, NumNodes: 1, NumZones: 1, SchedulerPolicy: scheduler.MAXFILLUP, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
+				NodeToZoneMap: map[string]string{"node-0": "zone-0"},
+				PodSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"statefulset-name-0": 3,
+					},
+				},
+				NodeSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"node-0": 3,
+					},
+				},
+				ZoneSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"zone-0": 3,
+					},
+				},
+			},
+			freec:               int32(7),
+			schedulerPolicyType: scheduler.MAXFILLUP,
+			nodes:               []*v1.Node{tscheduler.MakeNode("node-0", "zone-0"), tscheduler.MakeControlPlaneNode("node-1"), tscheduler.MakeNodeTainted("node-2", "zone-2")},
 		},
 		{
 			name:     "one vpod (HA)",
@@ -447,6 +477,51 @@ func TestStateBuilder(t *testing.T) {
 				},
 			},
 			nodes: []*v1.Node{tscheduler.MakeNode("node-0", "zone-0")},
+		},
+		{
+			name:     "two vpod (HA), one control plane node",
+			replicas: int32(2),
+			vpods: [][]duckv1alpha1.Placement{{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+			}},
+			expected: State{Capacity: 10, FreeCap: []int32{int32(9), int32(9)}, SchedulablePods: []int32{int32(0), int32(1)}, LastOrdinal: 1, Replicas: 2, NumNodes: 2, NumZones: 2, SchedPolicy: &scheduler.SchedulerPolicy{}, DeschedPolicy: &scheduler.SchedulerPolicy{}, StatefulSetName: sfsName,
+				NodeToZoneMap: map[string]string{"node-0": "zone-0", "node-1": "zone-1"},
+				PodSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"statefulset-name-0": 1,
+						"statefulset-name-1": 1,
+					},
+				},
+				NodeSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"node-0": 1,
+						"node-1": 1,
+					},
+				},
+				ZoneSpread: map[types.NamespacedName]map[string]int32{
+					{Name: vpodName + "-0", Namespace: vpodNs + "-0"}: {
+						"zone-0": 1,
+						"zone-1": 1,
+					},
+				},
+			},
+			freec: int32(18),
+			schedulerPolicy: &scheduler.SchedulerPolicy{
+				Predicates: []scheduler.PredicatePolicy{
+					{Name: "PodFitsResources"},
+					{Name: "EvenPodSpread", Args: "{\"MaxSkew\": 1}"},
+				},
+				Priorities: []scheduler.PriorityPolicy{
+					{Name: "AvailabilityNodePriority", Weight: 10, Args: "{\"MaxSkew\": 1}"},
+					{Name: "LowestOrdinalPriority", Weight: 5},
+				},
+			},
+			nodes: []*v1.Node{
+				tscheduler.MakeNode("node-0", "zone-0"),
+				tscheduler.MakeNode("node-1", "zone-1"),
+				tscheduler.MakeControlPlaneNode("node-2"),
+			},
 		},
 	}
 
@@ -522,7 +597,8 @@ func TestStateBuilder(t *testing.T) {
 				tc.expected.NodeToZoneMap = make(map[string]string)
 			}
 			if !reflect.DeepEqual(*state, tc.expected) {
-				t.Errorf("unexpected state, got %v, want %v", *state, tc.expected)
+				diff := cmp.Diff(tc.expected, *state, cmpopts.IgnoreInterfaces(struct{ corev1.PodNamespaceLister }{}))
+				t.Errorf("unexpected state, got %v, want %v\n(-want, +got)\n%s", *state, tc.expected, diff)
 			}
 
 			if state.FreeCapacity() != tc.freec {

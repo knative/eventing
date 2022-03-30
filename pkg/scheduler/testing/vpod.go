@@ -23,9 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/controller"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/scheduler"
-	"knative.dev/pkg/controller"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -79,6 +80,18 @@ func MakeNode(name, zonename string) *v1.Node {
 			Name: name,
 			Labels: map[string]string{
 				scheduler.ZoneLabel: zonename,
+			},
+		},
+	}
+	return obj
+}
+
+func MakeControlPlaneNode(name string) *v1.Node {
+	obj := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"node-role.kubernetes.io/control-plane": "",
 			},
 		},
 	}
