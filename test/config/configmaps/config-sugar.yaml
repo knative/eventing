@@ -22,17 +22,17 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
 data:
-  # namespace-sugar-selector specifies a LabelSelector which
+  # namespace-selector specifies a LabelSelector which
   # determines which namespaces the Sugar Controller should operate upon
   #
   # Use an empty value to disable the feature (this is the default):
-  #   namespace-sugar-selector: ""
+  #   namespace-selector: ""
   #
   # Use an empty object to enable for all namespaces
-  #   namespace-sugar-selector: {}
+  #   namespace-selector: {}
   #
   # Use the following block to replicate the legacy behaviour
-  #   namespace-sugar-selector: |
+  #   namespace-selector: |
   #     matchExpressions:
   #     - key: "eventing.knative.dev/injection"
   #       operator: "In"
@@ -41,28 +41,28 @@ data:
   # Useful labels include the "kubernetes.io/metadata.name" label to
   # avoid Sugar opearting on "kube-system" namespaces.
   #
-  namespace-sugar-selector: |
+  namespace-selector: |
     matchExpressions:
     - key: "e2e.eventing.knative.dev/injection"
       operator: "In"
       values: ["enabled"]
 
-  # trigger-sugar-selector specifies a LabelSelector which
+  # trigger-selector specifies a LabelSelector which
   # determines which triggers the Sugar Controller should operate upon
   #
   # Use an empty value to disable the feature (this is the default):
-  #   trigger-sugar-selector: ""
+  #   trigger-selector: ""
   #
   # Use an empty object to enable for all triggers
-  #   trigger-sugar-selector: {}
+  #   trigger-selector: {}
   #
   # Use the following block to replicate the legacy behaviour
-  #   trigger-sugar-selector: |
+  #   trigger-selector: |
   #     matchExpressions:
   #     - key: "eventing.knative.dev/injection"
   #       operator: "In"
   #       values: ["enabled"]
-  trigger-sugar-selector: |
+  trigger-selector: |
     matchExpressions:
     - key: "e2e.eventing.knative.dev/injection"
       operator: "In"

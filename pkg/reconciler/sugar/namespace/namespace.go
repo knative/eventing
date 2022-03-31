@@ -52,7 +52,7 @@ var _ namespacereconciler.Interface = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) pkgreconciler.Event {
 	cfg := sugarconfig.FromContext(ctx)
 
-	selector, err := metav1.LabelSelectorAsSelector(cfg.NamespaceSugarSelector)
+	selector, err := metav1.LabelSelectorAsSelector(cfg.NamespaceSelector)
 	if err != nil {
 		return fmt.Errorf("invalid label selector for namespaces: %w", err)
 	}

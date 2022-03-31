@@ -185,7 +185,7 @@ func TestEnabled(t *testing.T) {
 
 		sugarCfg := &sugarconfig.Config{}
 		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
-			sugarCfg.TriggerSugarSelector = ls
+			sugarCfg.TriggerSelector = ls
 		}
 
 		return trigger.NewReconciler(ctx, logger,
@@ -265,7 +265,7 @@ func TestDisabled(t *testing.T) {
 
 		sugarCfg := &sugarconfig.Config{}
 		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
-			sugarCfg.TriggerSugarSelector = ls
+			sugarCfg.TriggerSelector = ls
 		}
 
 		return trigger.NewReconciler(ctx, logger,

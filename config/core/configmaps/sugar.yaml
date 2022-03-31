@@ -22,7 +22,7 @@ metadata:
     app.kubernetes.io/version: devel
     app.kubernetes.io/name: knative-eventing
   annotations:
-    knative.dev/example-checksum: "2f817977"
+    knative.dev/example-checksum: "b05e6e70"
 data:
   _example: |
     ################################
@@ -39,18 +39,18 @@ data:
     # this example block and unindented to be in the data block
     # to actually change the configuration.
 
-    # namespace-sugar-selector specifies a LabelSelector which
+    # namespace-selector specifies a LabelSelector which
     # determines which namespaces the Sugar Controller should operate upon
     # Use an empty value to disable the feature (this is the default):
-    namespace-sugar-selector: ""
+    namespace-selector: ""
 
     # Use an empty object to enable for all namespaces
-    namespace-sugar-selector: {}
+    namespace-selector: {}
 
-    # trigger-sugar-selector specifies a LabelSelector which
+    # trigger-selector specifies a LabelSelector which
     # determines which triggers the Sugar Controller should operate upon
     # Use an empty value to disable the feature (this is the default):
-    trigger-sugar-selector: ""
+    trigger-selector: ""
 
     # Use an empty object to enable for all triggers
-    trigger-sugar-selector: {}
+    trigger-selector: {}

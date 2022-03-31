@@ -191,7 +191,7 @@ func TestEnabled(t *testing.T) {
 
 		sugarCfg := &sugarconfig.Config{}
 		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
-			sugarCfg.NamespaceSugarSelector = ls
+			sugarCfg.NamespaceSelector = ls
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,
@@ -280,7 +280,7 @@ func TestDisabled(t *testing.T) {
 
 		sugarCfg := &sugarconfig.Config{}
 		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
-			sugarCfg.NamespaceSugarSelector = ls
+			sugarCfg.NamespaceSelector = ls
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,

@@ -30,13 +30,13 @@ const ConfigName = "config-sugar"
 
 // Config holds the collection of configurations that we attach to contexts.
 type Config struct {
-	// NamespaceSugarSelector specifies a LabelSelector which
+	// NamespaceSelector specifies a LabelSelector which
 	// determines which namespaces the Sugar Controller should operate upon
-	NamespaceSugarSelector *metav1.LabelSelector
+	NamespaceSelector *metav1.LabelSelector
 
-	// TriggerSugarSelector specifies a LabelSelector which
+	// TriggerSelector specifies a LabelSelector which
 	// determines which triggers the Sugar Controller should operate upon
-	TriggerSugarSelector *metav1.LabelSelector
+	TriggerSelector *metav1.LabelSelector
 }
 
 func (c *Config) DeepCopy() *Config {

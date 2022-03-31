@@ -53,7 +53,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1.Trigger) reconcile
 
 	cfg := sugarconfig.FromContext(ctx)
 
-	selector, err := metav1.LabelSelectorAsSelector(cfg.TriggerSugarSelector)
+	selector, err := metav1.LabelSelectorAsSelector(cfg.TriggerSelector)
 	if err != nil {
 		return fmt.Errorf("invalid label selector for triggers: %w", err)
 	}

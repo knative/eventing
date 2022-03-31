@@ -24,15 +24,15 @@ import (
 )
 
 const (
-	// NamespaceSugarSelectorKey is the name of the configuration
+	// NamespaceSelectorKey is the name of the configuration
 	// entry that specifies a LabelSelector to control which namespaces
 	// the Sugar Controller operates on.
-	NamespaceSugarSelectorKey = "namespace-sugar-selector"
+	NamespaceSelectorKey = "namespace-selector"
 
-	// TriggerSugarSelectorKey is the name of the configuration
+	// TriggerSelectorKey is the name of the configuration
 	// entry that specifies a LabelSelector to control which triggers
 	// the Sugar Controller operates on.
-	TriggerSugarSelectorKey = "trigger-sugar-selector"
+	TriggerSelectorKey = "trigger-selector"
 )
 
 // NewConfigFromConfigMap creates a Config from the supplied ConfigMap
@@ -44,8 +44,8 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*Config, error) {
 func NewConfigFromMap(data map[string]string) (*Config, error) {
 	nc := &Config{}
 	if err := cm.Parse(data,
-		asLabelSelector(NamespaceSugarSelectorKey, &nc.NamespaceSugarSelector),
-		asLabelSelector(TriggerSugarSelectorKey, &nc.TriggerSugarSelector),
+		asLabelSelector(NamespaceSelectorKey, &nc.NamespaceSelector),
+		asLabelSelector(TriggerSelectorKey, &nc.TriggerSelector),
 	); err != nil {
 		return nil, err
 	}
