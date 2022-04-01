@@ -135,7 +135,7 @@ func (p *prober) getTraceForFinishedEvent() []byte {
 }
 
 func (p *prober) exportTrace(trace []byte, fileName string) error {
-	tracesDir := filepath.Join(prow.GetLocalArtifactsDir(), "traces", "missed-events")
+	tracesDir := filepath.Join(prow.GetLocalArtifactsDir(), "traces", "events")
 	if err := helpers.CreateDir(tracesDir); err != nil {
 		return fmt.Errorf("error creating directory %q: %w", tracesDir, err)
 	}
