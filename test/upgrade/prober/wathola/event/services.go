@@ -159,10 +159,7 @@ func asStrings(errThrown []thrown) []string {
 func (f *finishedStore) reportViolations(finished *Finished) {
 	steps := f.steps.(*stepStore)
 	for eventNo := 1; eventNo <= finished.EventsSent; eventNo++ {
-		times, ok := steps.store[eventNo]
-		if !ok {
-			times = 0
-		}
+		times := steps.store[eventNo]
 		if times != 1 {
 			throwMethod := f.errors.throwMissing
 			if times > 1 {

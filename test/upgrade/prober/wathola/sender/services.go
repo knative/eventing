@@ -242,6 +242,7 @@ func PopulateSpanWithEvent(ctx context.Context, ce cloudevents.Event, spanName s
 	span.AddAttributes(
 		trace.StringAttribute("cloudevents.type", ce.Type()),
 		trace.StringAttribute("cloudevents.id", ce.ID()),
+		trace.StringAttribute("target", config.Instance.Forwarder.Target),
 	)
 	return ctxWithSpan, span
 }

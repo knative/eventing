@@ -20,6 +20,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"time"
 
 	"go.uber.org/zap"
@@ -28,27 +31,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
+	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
 	pkgTest "knative.dev/pkg/test"
+	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/logging"
+	"knative.dev/pkg/test/prow"
+	"knative.dev/pkg/test/zipkin"
 )
 
 const (
-	fetcherName     = "wathola-fetcher"
-	jobWaitInterval = time.Second
-	jobWaitTimeout  = 10 * time.Minute
+	fetcherName         = "wathola-fetcher"
+	jobWaitInterval     = time.Second
+	jobWaitTimeout      = 10 * time.Minute
+	stepEventMsgPattern = "event #([0-9]+).*"
 )
 
 // Verify will verify prober state after finished has been sent.
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
+	// Enable port-forwarding for Zipkin endpoint.
+	tracinghelper.Setup(p.client.T, p.client)
+	// Required for proper cleanup.
+	zipkin.ZipkinTracingEnabled = true
+	defer zipkin.CleanupZipkinTracingSetup(p.log.Infof)
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
 	if err := wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
 		report = p.fetchReport()
 		return report.State != "active", nil
 	}); err != nil {
+		p.exportTrace(p.getTraceForFinishedEvent(), "finished.json")
 		p.client.T.Fatalf("Error fetching complete/inactive report: %v\nReport: %+v", err, report)
 	}
 	elapsed := time.Since(start)
@@ -62,6 +77,8 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		availRate, report.TotalRequests)
 	for _, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
+		stepNo := p.getStepNoFromMsg(t)
+		p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo))
 	}
 	for _, t := range report.Thrown.Unexpected {
 		eventErrs = append(eventErrs, errors.New(t))
@@ -75,6 +92,8 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
+		stepNo := p.getStepNoFromMsg(t)
+		p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo))
 	}
 	return eventErrs, report.EventsSent
 }
@@ -82,6 +101,56 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 // Finish terminates sender which sends finished event.
 func (p *prober) Finish() {
 	p.removeSender()
+}
+
+func (p *prober) getStepNoFromMsg(message string) string {
+	r, _ := regexp.Compile(stepEventMsgPattern)
+	matches := r.FindStringSubmatch(message)
+	if len(matches) != 2 {
+		p.log.Warnf("message does not match pattern %s: %s", stepEventMsgPattern, message)
+	}
+	return matches[1]
+}
+
+func (p *prober) getTraceForStepEvent(eventNo string) []byte {
+	p.log.Infof("Fetching trace for Step event #%s", eventNo)
+	query := fmt.Sprintf("step=%s and cloudevents.type=%s and target=%s",
+		eventNo, event.StepType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
+	trace, err := event.FindTrace(query)
+	if err != nil {
+		p.log.Warn(err)
+	}
+	return trace
+}
+
+func (p *prober) getTraceForFinishedEvent() []byte {
+	p.log.Info("Fetching trace for Finished event")
+	query := fmt.Sprintf("cloudevents.type=%s and target=%s",
+		event.FinishedType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
+	trace, err := event.FindTrace(query)
+	if err != nil {
+		p.log.Warn(err)
+	}
+	return trace
+}
+
+func (p *prober) exportTrace(trace []byte, fileName string) error {
+	tracesDir := filepath.Join(prow.GetLocalArtifactsDir(), "traces", "events")
+	if err := helpers.CreateDir(tracesDir); err != nil {
+		return fmt.Errorf("error creating directory %q: %w", tracesDir, err)
+	}
+	fp := filepath.Join(tracesDir, fileName)
+	p.log.Infof("Exporting trace into %s", fp)
+	f, err := os.Create(fp)
+	if err != nil {
+		return fmt.Errorf("error creating file %q: %w", fp, err)
+	}
+	defer f.Close()
+	_, err = f.Write(trace)
+	if err != nil {
+		return fmt.Errorf("error writing trace into file %q: %w", fp, err)
+	}
+	return nil
 }
 
 func (p *prober) fetchReport() *receiver.Report {
