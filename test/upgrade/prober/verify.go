@@ -63,7 +63,6 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		report = p.fetchReport()
 		return report.State != "active", nil
 	}); err != nil {
-		p.log.Info("Fetching trace for Finished event")
 		p.exportTrace(p.getTraceForFinishedEvent(), "finished.json")
 		p.client.T.Fatalf("Error fetching complete/inactive report: %v\nReport: %+v", err, report)
 	}
@@ -78,13 +77,7 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		availRate, report.TotalRequests)
 	for _, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
-		r, _ := regexp.Compile(stepEventMsgPattern)
-		matches := r.FindStringSubmatch(t)
-		if len(matches) != 2 {
-			p.log.Warnf("message does not match pattern %s: %s", stepEventMsgPattern, t)
-		}
-		stepNo := matches[1]
-		p.log.Infof("Fetching trace for Step event #%s", stepNo)
+		stepNo := p.getStepNoFromMsg(t)
 		p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo))
 	}
 	for _, t := range report.Thrown.Unexpected {
@@ -99,6 +92,8 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
+		stepNo := p.getStepNoFromMsg(t)
+		p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo))
 	}
 	return eventErrs, report.EventsSent
 }
@@ -108,7 +103,17 @@ func (p *prober) Finish() {
 	p.removeSender()
 }
 
+func (p *prober) getStepNoFromMsg(message string) string {
+	r, _ := regexp.Compile(stepEventMsgPattern)
+	matches := r.FindStringSubmatch(message)
+	if len(matches) != 2 {
+		p.log.Warnf("message does not match pattern %s: %s", stepEventMsgPattern, message)
+	}
+	return matches[1]
+}
+
 func (p *prober) getTraceForStepEvent(eventNo string) []byte {
+	p.log.Infof("Fetching trace for Step event #%s", eventNo)
 	query := fmt.Sprintf("step=%s and cloudevents.type=%s and target=%s",
 		eventNo, event.StepType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
 	trace, err := event.FindTrace(query)
@@ -119,6 +124,7 @@ func (p *prober) getTraceForStepEvent(eventNo string) []byte {
 }
 
 func (p *prober) getTraceForFinishedEvent() []byte {
+	p.log.Info("Fetching trace for Finished event")
 	query := fmt.Sprintf("cloudevents.type=%s and target=%s",
 		event.FinishedType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
 	trace, err := event.FindTrace(query)
