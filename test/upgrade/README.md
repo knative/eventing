@@ -135,7 +135,7 @@ Traces can be viewed as follows:
    ```
 - Send traces to the Zipkin endpoint:
    ```
-   $ curl -v -X POST localhost:9412/api/v2/spans \
+   $ curl -v -X POST localhost:9411/api/v2/spans \
      -H 'Content-Type: application/json' \
      -d @$ARTIFACTS/traces/missed-events/step-<step_number>.json
    ```
