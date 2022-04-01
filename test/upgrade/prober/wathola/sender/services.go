@@ -81,6 +81,7 @@ func (s *sender) SendContinually() {
 
 	var start time.Time
 	retry := 0
+	duplicateCounter := 0
 	for {
 		select {
 		case <-shutdownCh:
@@ -92,6 +93,27 @@ func (s *sender) SendContinually() {
 		default:
 		}
 		err := s.sendStep()
+		// Induce duplicate event.
+		if s.eventsSent == 20 {
+			// Only duplicate three times then continue.
+			if duplicateCounter < 3 {
+				s.eventsSent--
+				duplicateCounter++
+			} else {
+				duplicateCounter = 0
+			}
+		}
+		// Induce duplicate event. This one is sent twice but on receiver side
+		// we simulate it was missed and there should be two traces for this missed event.
+		if s.eventsSent == 10 {
+			// Only duplicate three times then continue.
+			if duplicateCounter < 3 {
+				s.eventsSent--
+				duplicateCounter++
+			} else {
+				duplicateCounter = 0
+			}
+		}
 		if err != nil {
 			if retry == 0 {
 				start = time.Now()
