@@ -29,11 +29,11 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger"
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -49,11 +49,15 @@ func NewController(
 	r := &Reconciler{
 		eventingClientSet: eventingclient.Get(ctx),
 		brokerLister:      brokerInformer.Lister(),
-		isEnabled:         sugar.LabelFilterFnOrDie(ctx),
 	}
 	impl := triggerreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+
+		configStore := sugarconfig.NewStore(logging.FromContext(ctx).Named("config-sugar-store"))
+		configStore.WatchConfigs(cmw)
+
 		return controller.Options{
 			SkipStatusUpdates: true,
+			ConfigStore:       configStore,
 		}
 	})
 

@@ -24,9 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1/trigger"
-	"knative.dev/eventing/pkg/reconciler/sugar"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -40,9 +40,31 @@ const (
 	testNS      = "test-namespace"
 	triggerName = "test-trigger"
 	brokerName  = "default"
+
+	SomeLabelKey        = "eventing.knative.dev/somekey"
+	SomeLabelValue      = "someValue"
+	SomeOtherLabelValue = "someOtherValue"
+
+	LegacyInjectionLabelKey           = "eventing.knative.dev/injection"
+	LegacyInjectionEnabledLabelValue  = "enabled"
+	LegacyInjectionDisabledLabelValue = "disabled"
 )
 
-func TestEnabledByDefault(t *testing.T) {
+type key int
+
+var (
+	sugarConfigContextKey key
+)
+
+type testConfigStore struct {
+	config *sugarconfig.Config
+}
+
+func (t *testConfigStore) ToContext(ctx context.Context) context.Context {
+	return sugarconfig.ToContext(ctx, t.config)
+}
+
+func TestEnabled(t *testing.T) {
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker %q created.", "default")
 
@@ -58,7 +80,7 @@ func TestEnabledByDefault(t *testing.T) {
 		// Make sure Reconcile handles good keys that don't exist.
 		Key: "foo/not-found",
 	}, {
-		Name: "Trigger is not labeled",
+		Name: "Enabled for all triggers",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName),
 		},
@@ -71,26 +93,12 @@ func TestEnabledByDefault(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
 	}, {
-		Name: "Trigger is labeled disabled",
+		Name: "Labelled namespace with expected `key` and `value`",
 		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionDisabledLabels())),
-		},
-		Key: testNS + "/" + triggerName,
-	}, {
-		Name: "Trigger is deleted no resources",
-		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue),
-				WithTriggerDeleted),
-		},
-		Key: testNS + "/" + triggerName,
-	}, {
-		Name: "Trigger enabled",
-		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue)),
+			NewTrigger(triggerName, testNS, brokerName, WithLabel(SomeLabelKey, SomeLabelValue)),
 		},
 		Key:                     testNS + "/" + triggerName,
 		SkipNamespaceValidation: true,
@@ -101,22 +109,58 @@ func TestEnabledByDefault(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      SomeLabelKey,
+					Operator: "In",
+					Values:   []string{SomeLabelValue},
+				}}}),
+	}, {
+		Name: "Labelled namespace with expected LegacyInjectionKey and LegacyInjectionEnabledValue",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName, WithLabel(LegacyInjectionLabelKey, LegacyInjectionEnabledLabelValue)),
+		},
+		Key:                     testNS + "/" + triggerName,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			brokerEvent,
+		},
+		WantCreates: []runtime.Object{
+			broker,
+		},
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      LegacyInjectionLabelKey,
+					Operator: "In",
+					Values:   []string{LegacyInjectionEnabledLabelValue},
+				}}}),
+	}, {
+		Name: "Trigger is deleted no resources",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName,
+				WithTriggerDeleted),
+		},
+		Key: testNS + "/" + triggerName,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
 	}, {
 		Name: "Trigger enabled, broker exists",
 		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue),
-			),
+			NewTrigger(triggerName, testNS, brokerName),
 			resources.MakeBroker(testNS, resources.DefaultBrokerName),
 		},
 		Key:                     testNS + "/" + triggerName,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
 	}, {
 		Name: "Trigger enabled, broker exists with no label",
 		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
+			NewTrigger(triggerName, testNS, brokerName),
 			&v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
@@ -127,27 +171,35 @@ func TestEnabledByDefault(t *testing.T) {
 		Key:                     testNS + "/" + triggerName,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-	}}
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
+	},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			brokerLister:      listers.GetBrokerLister(),
-			isEnabled:         sugar.OnByDefault,
 		}
+
+		sugarCfg := &sugarconfig.Config{}
+		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
+			sugarCfg.TriggerSelector = ls
+		}
+
 		return trigger.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
-			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
+			controller.GetEventRecorder(ctx), r, controller.Options{
+				SkipStatusUpdates: true,
+				ConfigStore: &testConfigStore{
+					config: sugarCfg,
+				},
+			})
 	}, false, logger))
 }
 
-func TestDisabledByDefault(t *testing.T) {
-	// Events
-	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker %q created.", "default")
-
-	broker := resources.MakeBroker(testNS, resources.DefaultBrokerName)
-
+func TestDisabled(t *testing.T) {
 	table := TableTest{{
 		Name: "bad workqueue key",
 		// Make sure Reconcile handles bad keys.
@@ -157,80 +209,72 @@ func TestDisabledByDefault(t *testing.T) {
 		// Make sure Reconcile handles good keys that don't exist.
 		Key: "foo/not-found",
 	}, {
-		Name: "Trigger is not labeled",
+		Name: "Disabled by default",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName),
 		},
 		Key:                     testNS + "/" + triggerName,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-		// When we're off by default, nothing happens when the label is missing.
 	}, {
-		Name: "Trigger is labeled disabled",
+		Name: "Labelled trigger with expected `key` but different `value`",
 		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
+			NewTrigger(triggerName, testNS, brokerName, WithLabel(SomeLabelKey, SomeOtherLabelValue)),
 		},
-		Key: testNS + "/" + triggerName,
+		Key:                     testNS + "/" + triggerName,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      SomeLabelKey,
+					Operator: "In",
+					Values:   []string{SomeLabelValue},
+				}}}),
+	}, {
+		Name: "Labelled trigger with expected LegacyInjectionKey and LegacyInjectionDisabledLabelValue",
+		Objects: []runtime.Object{
+			NewTrigger(triggerName, testNS, brokerName, WithLabel(LegacyInjectionLabelKey, LegacyInjectionDisabledLabelValue)),
+		},
+		Key:                     testNS + "/" + triggerName,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      LegacyInjectionLabelKey,
+					Operator: "In",
+					Values:   []string{LegacyInjectionEnabledLabelValue},
+				}}}),
 	}, {
 		Name: "Trigger is deleted no resources",
 		Objects: []runtime.Object{
 			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue),
 				WithTriggerDeleted),
 		},
 		Key: testNS + "/" + triggerName,
-	}, {
-		Name: "Trigger enabled",
-		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue)),
-		},
-		Key:                     testNS + "/" + triggerName,
-		SkipNamespaceValidation: true,
-		WantErr:                 false,
-		WantEvents: []string{
-			brokerEvent,
-		},
-		WantCreates: []runtime.Object{
-			broker,
-		},
-	}, {
-		Name: "Trigger enabled, broker exists",
-		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionEnabledLabelValue)),
-			resources.MakeBroker(testNS, resources.DefaultBrokerName),
-		},
-		Key:                     testNS + "/" + triggerName,
-		SkipNamespaceValidation: true,
-		WantErr:                 false,
-	}, {
-		Name: "Trigger enabled, broker exists with no label",
-		Objects: []runtime.Object{
-			NewTrigger(triggerName, testNS, brokerName,
-				WithAnnotation(sugar.InjectionLabelKey, sugar.InjectionDisabledLabelValue)),
-			&v1.Broker{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testNS,
-					Name:      resources.DefaultBrokerName,
-				},
-			},
-		},
-		Key:                     testNS + "/" + triggerName,
-		SkipNamespaceValidation: true,
-		WantErr:                 false,
-	}}
+	},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
 			brokerLister:      listers.GetBrokerLister(),
-			isEnabled:         sugar.OffByDefault,
 		}
+
+		sugarCfg := &sugarconfig.Config{}
+		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
+			sugarCfg.TriggerSelector = ls
+		}
+
 		return trigger.NewReconciler(ctx, logger,
 			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
-			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
+			controller.GetEventRecorder(ctx), r, controller.Options{
+				SkipStatusUpdates: true,
+				ConfigStore: &testConfigStore{
+					config: sugarCfg,
+				},
+			})
 	}, false, logger))
 }

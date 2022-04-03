@@ -161,13 +161,12 @@ ko apply -f config/brokers/mt-channel-broker/
 Depending on your needs you might want to install other
 [Broker implementations](https://github.com/knative/eventing/tree/main/docs/broker).
 
-## (Optional) Install Sugar controller
+## Enable Sugar controller
 
-If you are running full set of e2e tests, you will need to install the
-[sugar controller](config/sugar/README.md).
+If you are running e2e tests that leverage the Sugar Controller, you will need to explicitly enable it.
 
 ```shell
-ko apply -f config/sugar/
+ko apply -f test/config/sugar.yaml
 ```
 
 ## Iterating

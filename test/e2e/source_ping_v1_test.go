@@ -26,8 +26,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 	"knative.dev/eventing/test/lib/recordevents"
@@ -37,6 +35,7 @@ import (
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	"knative.dev/eventing/test/e2e/helpers"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 
@@ -96,7 +95,7 @@ func TestPingSourceV1EventTypes(t *testing.T) {
 	ctx := context.Background()
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
+	if err := client.LabelNamespace(map[string]string{helpers.InjectionLabelKey: helpers.InjectionEnabledLabelValue}); err != nil {
 		t.Fatal("Error labeling namespace:", err)
 	}
 

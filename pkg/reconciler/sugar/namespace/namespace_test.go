@@ -20,12 +20,11 @@ import (
 	"context"
 	"testing"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	sugarconfig "knative.dev/eventing/pkg/apis/sugar"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/sugar/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -40,9 +39,31 @@ import (
 
 const (
 	testNS = "test-namespace"
+
+	SomeLabelKey        = "eventing.knative.dev/somekey"
+	SomeLabelValue      = "someValue"
+	SomeOtherLabelValue = "someOtherValue"
+
+	LegacyInjectionLabelKey           = "eventing.knative.dev/injection"
+	LegacyInjectionEnabledLabelValue  = "enabled"
+	LegacyInjectionDisabledLabelValue = "disabled"
 )
 
-func TestEnabledByDefault(t *testing.T) {
+type key int
+
+var (
+	sugarConfigContextKey key
+)
+
+type testConfigStore struct {
+	config *sugarconfig.Config
+}
+
+func (t *testConfigStore) ToContext(ctx context.Context) context.Context {
+	return sugarconfig.ToContext(ctx, t.config)
+}
+
+func TestEnabled(t *testing.T) {
 	// Events
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 
@@ -58,7 +79,7 @@ func TestEnabledByDefault(t *testing.T) {
 		// Make sure Reconcile handles good keys that don't exist.
 		Key: "foo/not-found",
 	}, {
-		Name: "Namespace is not labeled",
+		Name: "Enabled for all namespaces",
 		Objects: []runtime.Object{
 			NewNamespace(testNS),
 		},
@@ -71,28 +92,15 @@ func TestEnabledByDefault(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
 	}, {
-		Name: "Namespace is labeled disabled",
+		Name: "Labelled namespace with expected `key` and `value`",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionDisabledLabels())),
-		},
-		Key: testNS,
-	}, {
-		Name: "Namespace is deleted no resources",
-		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
-				WithNamespaceDeleted,
-			),
-		},
-		Key: testNS,
-	}, {
-		Name: "Namespace enabled",
-		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
-			),
+				WithNamespaceLabeled(map[string]string{
+					SomeLabelKey: SomeLabelValue,
+				})),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
@@ -103,23 +111,62 @@ func TestEnabledByDefault(t *testing.T) {
 		WantCreates: []runtime.Object{
 			broker,
 		},
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      SomeLabelKey,
+					Operator: "In",
+					Values:   []string{SomeLabelValue},
+				}}}),
+	}, {
+		Name: "Labelled namespace with expected LegacyInjectionKey and LegacyInjectionEnabledValue",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(map[string]string{
+					LegacyInjectionLabelKey: LegacyInjectionEnabledLabelValue,
+				})),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			brokerEvent,
+		},
+		WantCreates: []runtime.Object{
+			broker,
+		},
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      LegacyInjectionLabelKey,
+					Operator: "In",
+					Values:   []string{LegacyInjectionEnabledLabelValue},
+				}}}),
+	}, {
+		Name: "Namespace is deleted no resources",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceDeleted,
+			),
+		},
+		Key: testNS,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
 	}, {
 		Name: "Namespace enabled, broker exists",
 		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
-			),
+			NewNamespace(testNS),
 			resources.MakeBroker(testNS, resources.DefaultBrokerName),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
 	}, {
 		Name: "Namespace enabled, broker exists with no label",
 		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionDisabledLabels()),
-			),
+			NewNamespace(testNS),
 			&v1.Broker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
@@ -130,27 +177,35 @@ func TestEnabledByDefault(t *testing.T) {
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-	}}
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{}),
+	},
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
-			isEnabled:         sugar.OnByDefault,
 			brokerLister:      listers.GetBrokerLister(),
+		}
+
+		sugarCfg := &sugarconfig.Config{}
+		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
+			sugarCfg.NamespaceSelector = ls
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,
 			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
-			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
+			controller.GetEventRecorder(ctx), r, controller.Options{
+				SkipStatusUpdates: true,
+				ConfigStore: &testConfigStore{
+					config: sugarCfg,
+				},
+			})
 	}, false, logger))
 }
 
-func TestDisabledByDefault(t *testing.T) {
-	// Events
-	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
-
-	broker := resources.MakeBroker(testNS, resources.DefaultBrokerName)
+func TestDisabled(t *testing.T) {
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -161,85 +216,80 @@ func TestDisabledByDefault(t *testing.T) {
 		// Make sure Reconcile handles good keys that don't exist.
 		Key: "foo/not-found",
 	}, {
-		Name: "Namespace is not labeled",
+		Name: "Disabled by default",
 		Objects: []runtime.Object{
 			NewNamespace(testNS),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
-		// When we're off by default, nothing happens when the label is missing.
 	}, {
-		Name: "Namespace is labeled disabled",
+		Name: "Labelled namespace with expected `key` but different `value`",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionDisabledLabels())),
+				WithNamespaceLabeled(map[string]string{
+					SomeLabelKey: SomeOtherLabelValue,
+				})),
 		},
-		Key: testNS,
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      SomeLabelKey,
+					Operator: "In",
+					Values:   []string{SomeLabelValue},
+				}}}),
+	}, {
+		Name: "Labelled namespace with expected LegacyInjectionKey and LegacyInjectionDisabledLabelValue",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(map[string]string{
+					LegacyInjectionLabelKey: LegacyInjectionDisabledLabelValue,
+				})),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		Ctx: context.WithValue(context.Background(), sugarConfigContextKey,
+			&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      LegacyInjectionLabelKey,
+					Operator: "In",
+					Values:   []string{LegacyInjectionEnabledLabelValue},
+				}}}),
 	}, {
 		Name: "Namespace is deleted no resources",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
 				WithNamespaceDeleted,
 			),
 		},
 		Key: testNS,
-	}, {
-		Name: "Namespace enabled",
-		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
-			),
-		},
-		Key:                     testNS,
-		SkipNamespaceValidation: true,
-		WantErr:                 false,
-		WantEvents: []string{
-			brokerEvent,
-		},
-		WantCreates: []runtime.Object{
-			broker,
-		},
-	}, {
-		Name: "Namespace enabled, broker exists",
-		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionEnabledLabels()),
-			),
-			resources.MakeBroker(testNS, resources.DefaultBrokerName),
-		},
-		Key:                     testNS,
-		SkipNamespaceValidation: true,
-		WantErr:                 false,
-	}, {
-		Name: "Namespace enabled, broker exists with no label",
-		Objects: []runtime.Object{
-			NewNamespace(testNS,
-				WithNamespaceLabeled(sugar.InjectionDisabledLabels()),
-			),
-			&v1.Broker{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testNS,
-					Name:      resources.DefaultBrokerName,
-				},
-			},
-		},
-		Key:                     testNS,
-		SkipNamespaceValidation: true,
-		WantErr:                 false,
-	}}
+	},
+	// 	TODO Test for when namespace doesn't match and broker should be removed.
+	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: fakeeventingclient.Get(ctx),
-			isEnabled:         sugar.OffByDefault,
 			brokerLister:      listers.GetBrokerLister(),
+		}
+
+		sugarCfg := &sugarconfig.Config{}
+		if ls, ok := ctx.Value(sugarConfigContextKey).(*metav1.LabelSelector); ok && ls != nil {
+			sugarCfg.NamespaceSelector = ls
 		}
 
 		return namespacereconciler.NewReconciler(ctx, logger,
 			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
-			controller.GetEventRecorder(ctx), r, controller.Options{SkipStatusUpdates: true})
+			controller.GetEventRecorder(ctx), r, controller.Options{
+				SkipStatusUpdates: true,
+				ConfigStore: &testConfigStore{
+					config: sugarCfg,
+				},
+			})
 	}, false, logger))
 }

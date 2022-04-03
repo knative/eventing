@@ -28,8 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 
-	"knative.dev/eventing/pkg/reconciler/sugar"
-
 	sugarresources "knative.dev/eventing/pkg/reconciler/sugar/resources"
 
 	cetest "github.com/cloudevents/sdk-go/v2/test"
@@ -43,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	rttestingv1 "knative.dev/eventing/pkg/reconciler/testing/v1"
+	"knative.dev/eventing/test/e2e/helpers"
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/recordevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -219,7 +218,7 @@ func TestApiServerSourceV1EventTypes(t *testing.T) {
 	)
 
 	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{sugar.InjectionLabelKey: sugar.InjectionEnabledLabelValue}); err != nil {
+	if err := client.LabelNamespace(map[string]string{helpers.InjectionLabelKey: helpers.InjectionEnabledLabelValue}); err != nil {
 		t.Fatalf("Error labeling namespace: %v", err)
 	}
 
