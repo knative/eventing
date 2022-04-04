@@ -19,7 +19,7 @@
 # Script entry point.
 
 export GO111MODULE=on
-export DEPLOY_KNATIVE_MONITORING=0
+
 # shellcheck disable=SC1090
 source "$(dirname "${BASH_SOURCE[0]}")/e2e-common.sh"
 
