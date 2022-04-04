@@ -31,10 +31,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
+	"knative.dev/pkg/system"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 	"knative.dev/pkg/test/logging"
@@ -53,9 +53,13 @@ const (
 func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	var report *receiver.Report
 	// Enable port-forwarding for Zipkin endpoint.
-	tracinghelper.Setup(p.client.T, p.client)
-	// Required for proper cleanup.
-	zipkin.ZipkinTracingEnabled = true
+	if err := zipkin.SetupZipkinTracingFromConfigTracing(context.Background(),
+		p.client.Kube, p.client.T.Logf, system.Namespace()); err != nil {
+		p.log.Warnf("Failed to setup Zipkin tracing. Traces for events won't be available.")
+	} else {
+		// Required for proper cleanup.
+		zipkin.ZipkinTracingEnabled = true
+	}
 	defer zipkin.CleanupZipkinTracingSetup(p.log.Infof)
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
@@ -63,7 +67,9 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		report = p.fetchReport()
 		return report.State != "active", nil
 	}); err != nil {
-		p.exportTrace(p.getTraceForFinishedEvent(), "finished.json")
+		if err := p.exportTrace(p.getTraceForFinishedEvent(), "finished.json"); err != nil {
+			p.log.Warnf("Failed to export trace for Finished event: %v", err)
+		}
 		p.client.T.Fatalf("Error fetching complete/inactive report: %v\nReport: %+v", err, report)
 	}
 	elapsed := time.Since(start)
@@ -78,7 +84,9 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	for _, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
 		stepNo := p.getStepNoFromMsg(t)
-		p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo))
+		if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
+			p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
+		}
 	}
 	for _, t := range report.Thrown.Unexpected {
 		eventErrs = append(eventErrs, errors.New(t))
@@ -93,7 +101,9 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 			eventErrs = append(eventErrs, errors.New(t))
 		}
 		stepNo := p.getStepNoFromMsg(t)
-		p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo))
+		if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
+			p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
+		}
 	}
 	return eventErrs, report.EventsSent
 }
