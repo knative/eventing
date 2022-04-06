@@ -74,7 +74,7 @@ func KResourceHasObservedGeneration(gvr schema.GroupVersionResource, name string
 				// Keep polling
 				return false, nil
 			}
-			if kr.Status.ObservedGeneration != 0 {
+			if kr.Status.ObservedGeneration == kr.Generation {
 				return true, nil
 			}
 			return false, nil
@@ -116,7 +116,7 @@ func KResourceHasReadyInConditions(gvr schema.GroupVersionResource, name string)
 				// Keep polling
 				return false, nil
 			}
-			if kr.Status.ObservedGeneration != 0 {
+			if kr.Status.ObservedGeneration == kr.Generation {
 				return true, nil
 			}
 			return false, nil

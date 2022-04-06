@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 
+	"knative.dev/reconciler-test/pkg/eventshub"
+	"knative.dev/reconciler-test/pkg/feature"
+
 	"knative.dev/eventing/test/rekt/resources/broker"
 	"knative.dev/eventing/test/rekt/resources/delivery"
 	"knative.dev/eventing/test/rekt/resources/eventlibrary"
 	"knative.dev/eventing/test/rekt/resources/trigger"
-	"knative.dev/reconciler-test/pkg/eventshub"
-	"knative.dev/reconciler-test/pkg/feature"
 )
 
 // SourceToTriggerSinkWithDLS tests to see if a Ready Trigger with a DLS defined send
@@ -35,9 +36,15 @@ import (
 //                          |
 //                          +--[DLS]--> sink
 //
-func SourceToTriggerSinkWithDLS(triggerName, brokerName string, prober *eventshub.EventProber) *feature.Feature {
+func SourceToTriggerSinkWithDLS() *feature.Feature {
+	f := feature.NewFeatureNamed("Trigger with DLS")
+
+	triggerName := feature.MakeRandomK8sName("trigger")
+	brokerName := feature.MakeRandomK8sName("broker")
+	triggerSinkName := feature.MakeRandomK8sName("trigger-sink")
+
+	prober := eventshub.NewProber()
 	prober.SetTargetResource(broker.GVR(), brokerName)
-	f := feature.NewFeature()
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
@@ -47,15 +54,17 @@ func SourceToTriggerSinkWithDLS(triggerName, brokerName string, prober *eventshu
 		panic(fmt.Errorf("can not find event files: %s", err))
 	}
 
+	f.Setup("install broker", broker.Install(brokerName, broker.WithEnvConfig()...))
+
 	// Setup Probes
-	f.Setup("install recorder", prober.ReceiverInstall("sink"))
+	f.Setup("install recorder", prober.ReceiverInstall(triggerSinkName))
 
 	// Setup trigger
 	f.Setup("install trigger", trigger.Install(
 		triggerName,
 		brokerName,
 		trigger.WithSubscriber(nil, "bad://uri"),
-		delivery.WithDeadLetterSink(prober.AsKReference("sink"), "")))
+		delivery.WithDeadLetterSink(prober.AsKReference(triggerSinkName), "")))
 
 	// Resources ready.
 	f.Setup("trigger goes ready", trigger.IsReady(triggerName))
@@ -69,7 +78,7 @@ func SourceToTriggerSinkWithDLS(triggerName, brokerName string, prober *eventshu
 	// Assert events ended up where we expected.
 	f.Stable("trigger with DLS").
 		Must("accepted all events", prober.AssertSentAll("source")).
-		Must("deliver event to DLS", prober.AssertReceivedAll("source", "sink"))
+		Must("deliver event to DLS", prober.AssertReceivedAll("source", triggerSinkName))
 
 	return f
 }
@@ -81,11 +90,16 @@ func SourceToTriggerSinkWithDLS(triggerName, brokerName string, prober *eventshu
 //               |          |
 //               +--[DLS]   +--[DLS]--> sink
 //
-func SourceToTriggerSinkWithDLSDontUseBrokers(triggerName, brokerName, brokerSinkName string, prober *eventshub.EventProber) *feature.Feature {
-	triggerSinkName := "trigger-sink"
-	prober.SetTargetResource(broker.GVR(), brokerName)
+func SourceToTriggerSinkWithDLSDontUseBrokers() *feature.Feature {
+	f := feature.NewFeatureNamed("When Trigger DLS is defined, Broker DLS is ignored")
 
-	f := feature.NewFeature()
+	triggerName := feature.MakeRandomK8sName("trigger")
+	brokerName := feature.MakeRandomK8sName("broker")
+	triggerSinkName := feature.MakeRandomK8sName("trigger-sink")
+	brokerSinkName := feature.MakeRandomK8sName("broker-sink")
+
+	prober := eventshub.NewProber()
+	prober.SetTargetResource(broker.GVR(), brokerName)
 
 	lib := feature.MakeRandomK8sName("lib")
 	f.Setup("install events", eventlibrary.Install(lib))
