@@ -18,6 +18,7 @@ package kncloudevents
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"testing"
@@ -66,6 +67,7 @@ func TestWithShutdownTimeout(t *testing.T) {
 		errChan <- messageReceiver.StartListen(WithShutdownTimeout(ctx, serverShutdownTimeout), &blockingHandler{
 			blockFor:        serverShutdownTimeout * 100,
 			receivedRequest: receivedRequest,
+			writtenResponse: make(chan bool, 1),
 		})
 	}()
 
@@ -170,6 +172,45 @@ func TestStartListenReceiveEvent(t *testing.T) {
 
 }
 
+func TestWithWriteTimeout(t *testing.T) {
+	writeTimeout := time.Millisecond * 10
+	writtenResponse := make(chan bool, 1)
+	receivedRequest := make(chan bool, 1)
+	messageReceiver := NewHTTPMessageReceiver(0, WithWriteTimeout(writeTimeout))
+	ctx := context.TODO()
+
+	go func() {
+		_ = messageReceiver.StartListen(ctx, &blockingHandler{
+			blockFor:        writeTimeout * 10,
+			writtenResponse: writtenResponse,
+			receivedRequest: receivedRequest,
+		})
+	}()
+
+	<-messageReceiver.Ready
+
+	addr := "http://" + messageReceiver.server.Addr
+	client := http.DefaultClient
+	req, err := http.NewRequest("GET", addr, nil)
+	assert.NoError(t, err)
+	_, err = client.Do(req)
+	<- receivedRequest
+
+	assert.Error(t, err)
+	// go http server implementation will abruptly close the connection and the client will only see an io EOF error
+	// due to a buffer.
+	// issue tracking an enhancement: https://github.com/golang/go/issues/21389
+	assert.EqualError(t, err, fmt.Sprintf("Get \"%s\": EOF", addr))
+}
+
+func TestWithReadTimeout(t *testing.T) {
+	readTimeout := 30 * time.Second
+
+	messageReceiver := NewHTTPMessageReceiver(0, WithReadTimeout(readTimeout))
+	
+	assert.Equal(t, readTimeout, messageReceiver.server.ReadTimeout)
+}
+
 type testEventParsingHandler struct {
 	t              *testing.T
 	ReceivedEvents chan *event.Event
@@ -194,10 +235,12 @@ func (th *testEventParsingHandler) ServeHTTP(writer http.ResponseWriter, request
 type blockingHandler struct {
 	blockFor        time.Duration
 	receivedRequest chan bool
+	writtenResponse chan bool
 }
 
 func (bh *blockingHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	bh.receivedRequest <- true
 	time.Sleep(bh.blockFor)
 	writer.WriteHeader(http.StatusOK)
+	bh.writtenResponse <- true
 }
