@@ -194,7 +194,7 @@ func TestWithWriteTimeout(t *testing.T) {
 	req, err := http.NewRequest("GET", addr, nil)
 	assert.NoError(t, err)
 	_, err = client.Do(req)
-	<- receivedRequest
+	<-receivedRequest
 
 	assert.Error(t, err)
 	// go http server implementation will abruptly close the connection and the client will only see an io EOF error
@@ -207,7 +207,7 @@ func TestWithReadTimeout(t *testing.T) {
 	readTimeout := 30 * time.Second
 
 	messageReceiver := NewHTTPMessageReceiver(0, WithReadTimeout(readTimeout))
-	
+
 	assert.Equal(t, readTimeout, messageReceiver.server.ReadTimeout)
 }
 
