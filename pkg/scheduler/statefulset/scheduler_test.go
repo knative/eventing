@@ -743,3 +743,73 @@ func TestStatefulsetScheduler(t *testing.T) {
 		})
 	}
 }
+
+func TestReservePlacements(t *testing.T) {
+	testCases := []struct {
+		name       string
+		vpod       scheduler.VPod
+		placements []duckv1alpha1.Placement
+		reserved   map[string]int32
+	}{
+		{
+			name:       "no replicas, no placement, no reserved",
+			vpod:       tscheduler.NewVPod(testNs, "vpod-1", 0, nil),
+			placements: nil,
+			reserved:   make(map[string]int32),
+		},
+		{
+			name: "one vpod, with placements in 2 pods, no reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: int32(8)},
+				{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			placements: nil,
+			reserved:   make(map[string]int32),
+		},
+		{
+			name: "no replicas, new placements, with reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 0, nil),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			reserved: map[string]int32{"statefulset-name-0": 1},
+		},
+		{
+			name: "one vpod, with placements in 2 pods, with reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: int32(8)},
+				{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+			},
+			reserved: map[string]int32{"statefulset-name-0": 1, "statefulset-name-1": 7},
+		},
+		{
+			name: "one vpod, with placements in 2 pods, with reserved",
+			vpod: tscheduler.NewVPod(testNs, "vpod-1", 15, []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: int32(8)},
+				{PodName: "statefulset-name-1", VReplicas: int32(7)}}),
+			placements: []duckv1alpha1.Placement{
+				{PodName: "statefulset-name-0", VReplicas: 1},
+				{PodName: "statefulset-name-1", VReplicas: 1},
+			},
+			reserved: map[string]int32{"statefulset-name-0": 1, "statefulset-name-1": 1},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, _ := tscheduler.SetupFakeContext(t)
+
+			vpodClient := tscheduler.NewVPodClient()
+			vpodClient.Append(tc.vpod)
+
+			s := NewStatefulSetScheduler(ctx, testNs, sfsName, vpodClient.List, nil, nil, nil).(*StatefulSetScheduler)
+			s.reservePlacements(tc.vpod, tc.vpod.GetPlacements()) //initial reserve
+
+			s.reservePlacements(tc.vpod, tc.placements) //new reserve
+			if !reflect.DeepEqual(s.reserved[tc.vpod.GetKey()], tc.reserved) {
+				t.Errorf("got %v, want %v", s.reserved[tc.vpod.GetKey()], tc.reserved)
+			}
+		})
+	}
+}
