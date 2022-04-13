@@ -47,6 +47,7 @@ const (
 	jobWaitInterval     = time.Second
 	jobWaitTimeout      = 10 * time.Minute
 	stepEventMsgPattern = "event #([0-9]+).*"
+	exportTraceLimit    = 1000
 )
 
 // Verify will verify prober state after finished has been sent.
@@ -81,8 +82,11 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		elapsed, report.EventsSent, report.State)
 	p.log.Infof("Availability: %.3f%%, Requests sent: %d.",
 		availRate, report.TotalRequests)
-	for _, t := range report.Thrown.Missing {
+	for i, t := range report.Thrown.Missing {
 		eventErrs = append(eventErrs, errors.New(t))
+		if i > exportTraceLimit {
+			continue
+		}
 		stepNo := p.getStepNoFromMsg(t)
 		if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
 			p.log.Warnf("Failed to export trace for Step event #%s: %v", stepNo, err)
@@ -94,11 +98,14 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	for _, t := range report.Thrown.Unavailable {
 		eventErrs = append(eventErrs, errors.New(t))
 	}
-	for _, t := range report.Thrown.Duplicated {
+	for i, t := range report.Thrown.Duplicated {
 		if p.config.OnDuplicate == Warn {
 			p.log.Warn("Duplicate events: ", t)
 		} else if p.config.OnDuplicate == Error {
 			eventErrs = append(eventErrs, errors.New(t))
+		}
+		if i > exportTraceLimit {
+			continue
 		}
 		stepNo := p.getStepNoFromMsg(t)
 		if err := p.exportTrace(p.getTraceForStepEvent(stepNo), fmt.Sprintf("step-%s.json", stepNo)); err != nil {
