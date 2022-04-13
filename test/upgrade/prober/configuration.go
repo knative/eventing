@@ -18,10 +18,10 @@ package prober
 import (
 	"bytes"
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
-	"path"
-	"runtime"
 	"text/template"
 	"time"
 
@@ -37,11 +37,10 @@ import (
 )
 
 const (
-	defaultConfigName        = "wathola-config"
-	defaultConfigHomedirPath = ".config/wathola"
-	defaultHomedir           = "/home/nonroot"
-	defaultConfigFilename    = "config.toml"
-	defaultHealthEndpoint    = "/healthz"
+	defaultConfigName       = "wathola-config"
+	defaultConfigMountPoint = "/etc/wathola"
+	defaultConfigFilename   = "config.toml"
+	defaultHealthEndpoint   = "/healthz"
 
 	// Silence will suppress notification about event duplicates.
 	Silence DuplicateAction = "silence"
@@ -58,6 +57,8 @@ const (
 var (
 	// ErrInvalidConfig is returned when the configuration is invalid.
 	ErrInvalidConfig = errors.New("invalid config")
+	//go:embed config.toml
+	defaultConfigFS embed.FS
 )
 
 // DuplicateAction is the action to take in case of duplicated events
@@ -87,10 +88,8 @@ type ImageResolver func(component string) string
 // ConfigToml represents options of wathola config toml file.
 type ConfigToml struct {
 	// ConfigTemplate is a template file that will be compiled to the configmap
-	ConfigTemplate   string
-	ConfigMapName    string
+	ConfigTemplate   fs.FS
 	ConfigMountPoint string
-	ConfigFilename   string
 }
 
 // ServingConfig represents a options for serving test component (wathola-forwarder).
@@ -122,10 +121,8 @@ func NewConfig() (*Config, error) {
 		Wathola: Wathola{
 			ImageResolver: pkgTest.ImagePath,
 			ConfigToml: ConfigToml{
-				ConfigTemplate:   defaultConfigFilename,
-				ConfigMapName:    defaultConfigName,
-				ConfigMountPoint: fmt.Sprintf("%s/%s", defaultHomedir, defaultConfigHomedirPath),
-				ConfigFilename:   defaultConfigFilename,
+				ConfigTemplate:   defaultConfigFS,
+				ConfigMountPoint: defaultConfigMountPoint,
 			},
 			HealthEndpoint:  defaultHealthEndpoint,
 			SystemUnderTest: sut.NewDefault(),
@@ -162,35 +159,29 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deployConfigToml(endpoint interface{}) {
-	name := p.config.ConfigMapName
+	name := defaultConfigName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
 	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint, p.client.TracingCfg)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
-		p.config.ConfigFilename: configData,
+		defaultConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateName string, endpoint interface{}, tracingConfig string) string {
-	_, filename, _, _ := runtime.Caller(0)
-	templateFilepath := path.Join(path.Dir(filename), templateName)
-	templateBytes, err := ioutil.ReadFile(templateFilepath)
+func (p *prober) compileTemplate(templateFS fs.FS, endpoint interface{}, tracingConfig string) string {
+	templateFile, err := templateFS.Open(defaultConfigFilename)
 	p.ensureNoError(err)
-	tmpl, err := template.New(templateName).Parse(string(templateBytes))
+	templateBytes, err := ioutil.ReadAll(templateFile)
+	p.ensureNoError(err)
+	tmpl, err := template.New(defaultConfigName).Parse(string(templateBytes))
 	p.ensureNoError(err)
 	var buff bytes.Buffer
 	data := struct {
 		*Config
-		// Deprecated: use ForwarderTarget
-		Namespace string
-		// Deprecated: use Endpoint
-		BrokerURL       string
 		Endpoint        interface{}
 		TracingConfig   string
 		ForwarderTarget string
 	}{
 		p.config,
-		p.client.Namespace,
-		fmt.Sprintf("%v", endpoint),
 		endpoint,
 		tracingConfig,
 		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace),

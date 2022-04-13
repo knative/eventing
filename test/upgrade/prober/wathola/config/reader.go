@@ -22,12 +22,12 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-var location = "~/.config/wathola/config.toml"
+var defaultLocation = "~/.config/wathola/config.toml"
 var logFatal = Log.Fatal
 
 // ReadIfPresent read a configuration file if it exists
 func ReadIfPresent() {
-	configFile, err := homedir.Expand(location)
+	configFile, err := homedir.Expand(configLocation())
 	if err != nil {
 		logFatal(err)
 	}
@@ -55,6 +55,14 @@ func Read(configFile string) error {
 	d.SetStrict(true)
 	err = d.Decode(Instance)
 	return err
+}
+
+func configLocation() string {
+	location, set := os.LookupEnv("WATHOLA_CONFIG_FILE_LOCATION")
+	if !set {
+		location = defaultLocation
+	}
+	return location
 }
 
 func setLogLevel() error {

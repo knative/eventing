@@ -26,14 +26,12 @@ import (
 )
 
 const (
-	defaultConfigFilename = "config.toml"
-	servingEnvName        = "EVENTING_UPGRADE_TESTS_SERVING_USE"
-	configFilenameEnvName = "EVENTING_UPGRADE_TESTS_CONFIGFILENAME"
+	servingEnvName = "EVENTING_UPGRADE_TESTS_SERVING_USE"
 )
 
 func TestNewConfig(t *testing.T) {
 	unsetList := []string{
-		servingEnvName, configFilenameEnvName,
+		servingEnvName,
 	}
 
 	for _, s := range createTestSuite() {
@@ -56,16 +54,14 @@ func TestNewConfig(t *testing.T) {
 			}
 			assert.Equal(t, s.servingUse, config.Serving.Use)
 			assert.True(t, config.Serving.ScaleToZero)
-			assert.Equal(t, s.configFilename, config.ConfigFilename)
 		})
 	}
 }
 
 type testCase struct {
-	servingUse     bool
-	configFilename string
-	env            map[string]string
-	err            error
+	servingUse bool
+	env        map[string]string
+	err        error
 }
 
 func createTestSuite() []testCase {
@@ -84,20 +80,13 @@ func createTestSuite() []testCase {
 			}
 			c.err = prober.ErrInvalidConfig
 		}),
-		createTestCase(func(c *testCase) {
-			c.env = map[string]string{
-				configFilenameEnvName: "replaced.toml",
-			}
-			c.configFilename = "replaced.toml"
-		}),
 	}
 }
 
 func createTestCase(overrides func(*testCase)) testCase {
 	c := testCase{
-		servingUse:     false,
-		configFilename: defaultConfigFilename,
-		env:            map[string]string{},
+		servingUse: false,
+		env:        map[string]string{},
 	}
 	overrides(&c)
 	return c

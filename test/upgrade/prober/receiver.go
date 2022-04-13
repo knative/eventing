@@ -96,11 +96,11 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{{
-						Name: p.config.ConfigMapName,
+						Name: defaultConfigName,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: p.config.ConfigMapName,
+									Name: defaultConfigName,
 								},
 							},
 						},
@@ -109,7 +109,7 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 						Name:  "receiver",
 						Image: p.config.ImageResolver(receiver.Name),
 						VolumeMounts: []corev1.VolumeMount{{
-							Name:      p.config.ConfigMapName,
+							Name:      defaultConfigName,
 							ReadOnly:  true,
 							MountPath: p.config.ConfigMountPoint,
 						}},

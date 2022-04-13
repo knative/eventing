@@ -73,7 +73,7 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 						"name":  forwarder.Name,
 						"image": p.config.ImageResolver(forwarder.Name),
 						"volumeMounts": []map[string]interface{}{{
-							"name":      p.config.ConfigMapName,
+							"name":      defaultConfigName,
 							"mountPath": p.config.ConfigMountPoint,
 							"readOnly":  true,
 						}},
@@ -84,9 +84,9 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 						},
 					}},
 					"volumes": []map[string]interface{}{{
-						"name": p.config.ConfigMapName,
+						"name": defaultConfigName,
 						"configMap": map[string]interface{}{
-							"name": p.config.ConfigMapName,
+							"name": defaultConfigName,
 						},
 					}},
 				},

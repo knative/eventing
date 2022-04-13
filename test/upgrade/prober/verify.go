@@ -239,11 +239,11 @@ func (p *prober) deployFetcher() *batchv1.Job {
 				Spec: corev1.PodSpec{
 					RestartPolicy: corev1.RestartPolicyNever,
 					Volumes: []corev1.Volume{{
-						Name: p.config.ConfigMapName,
+						Name: defaultConfigName,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: p.config.ConfigMapName,
+									Name: defaultConfigName,
 								},
 							},
 						},
@@ -252,7 +252,7 @@ func (p *prober) deployFetcher() *batchv1.Job {
 						Name:  fetcherName,
 						Image: p.config.ImageResolver(fetcherName),
 						VolumeMounts: []corev1.VolumeMount{{
-							Name:      p.config.ConfigMapName,
+							Name:      defaultConfigName,
 							ReadOnly:  true,
 							MountPath: p.config.ConfigMountPoint,
 						}},
