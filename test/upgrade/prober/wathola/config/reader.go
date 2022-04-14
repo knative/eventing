@@ -16,13 +16,19 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/pelletier/go-toml/v2"
+	"sigs.k8s.io/yaml"
 )
 
-var defaultLocation = "~/.config/wathola/config.toml"
+const (
+	// LocationEnvVariable holds a environmental variable name.
+	LocationEnvVariable = "WATHOLA_CONFIG_FILE_LOCATION"
+)
+
+var defaultLocation = "~/.config/wathola/config.yaml"
 var logFatal = Log.Fatal
 
 // ReadIfPresent read a configuration file if it exists
@@ -47,18 +53,15 @@ func ReadIfPresent() {
 
 // Read a config file and update configuration object
 func Read(configFile string) error {
-	r, err := os.Open(configFile)
+	bytes, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
-	d := toml.NewDecoder(r)
-	d.SetStrict(true)
-	err = d.Decode(Instance)
-	return err
+	return yaml.Unmarshal(bytes, Instance)
 }
 
 func configLocation() string {
-	location, set := os.LookupEnv("WATHOLA_CONFIG_FILE_LOCATION")
+	location, set := os.LookupEnv(LocationEnvVariable)
 	if !set {
 		location = defaultLocation
 	}
@@ -70,7 +73,7 @@ func setLogLevel() error {
 	if err == nil {
 		Instance.LogLevel = logConfig.Level.String()
 	} else {
-		Instance.LogLevel = defaultValues().LogLevel
+		Instance.LogLevel = Defaults().LogLevel
 	}
 	return err
 }

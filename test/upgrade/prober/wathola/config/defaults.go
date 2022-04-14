@@ -34,24 +34,13 @@ const (
 )
 
 // Instance holds configuration values
-var Instance = defaultValues()
+var Instance = Defaults()
 
 var port = envint("PORT", DefaultReceiverPort)
 var forwarderPort = envint("PORT", DefaultForwarderPort)
 
-func envint(envKey string, defaultValue int) int {
-	val, ok := os.LookupEnv(envKey)
-	if !ok {
-		return defaultValue
-	}
-	result, err := strconv.Atoi(val)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-
-func defaultValues() *Config {
+// Defaults for the wathola Config.
+func Defaults() *Config {
 	return &Config{
 		Receiver: ReceiverConfig{
 			Port: port,
@@ -82,4 +71,16 @@ func defaultValues() *Config {
 		LogLevel:      zap.InfoLevel.String(),
 		TracingConfig: `{"backend":"none","debug":"false","sample-rate":"0.1"}`,
 	}
+}
+
+func envint(envKey string, defaultValue int) int {
+	val, ok := os.LookupEnv(envKey)
+	if !ok {
+		return defaultValue
+	}
+	result, err := strconv.Atoi(val)
+	if err != nil {
+		panic(err)
+	}
+	return result
 }

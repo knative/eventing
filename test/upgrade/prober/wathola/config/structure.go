@@ -22,53 +22,53 @@ import (
 
 // ReceiverTeardownConfig holds config receiver teardown
 type ReceiverTeardownConfig struct {
-	Duration time.Duration
+	Duration time.Duration `json:"duration"`
 }
 
 // ReceiverProgressConfig holds config receiver progress reporting
 type ReceiverProgressConfig struct {
-	Duration time.Duration
+	Duration time.Duration `json:"duration"`
 }
 
 // ReceiverErrorConfig holds error reporting config of the receiver
 type ReceiverErrorConfig struct {
-	UnavailablePeriodToReport time.Duration
+	UnavailablePeriodToReport time.Duration `json:"unavailable-period-to-report"`
 }
 
 // ReceiverConfig hold configuration for receiver
 type ReceiverConfig struct {
-	Teardown ReceiverTeardownConfig
-	Progress ReceiverProgressConfig
-	Errors   ReceiverErrorConfig
-	Port     int
+	Teardown ReceiverTeardownConfig `json:"teardown"`
+	Progress ReceiverProgressConfig `json:"progress"`
+	Errors   ReceiverErrorConfig    `json:"errors"`
+	Port     int                    `json:"port"`
 }
 
 // SenderConfig hold configuration for sender
 type SenderConfig struct {
-	Address  interface{}
-	Interval time.Duration
+	Address  interface{}   `json:"address"`
+	Interval time.Duration `json:"interval"`
 }
 
 // ForwarderConfig holds configuration for forwarder
 type ForwarderConfig struct {
-	Target string
-	Port   int
+	Target string `json:"target"`
+	Port   int    `json:"port"`
 }
 
 // ReadinessConfig holds a readiness configuration
 type ReadinessConfig struct {
-	Enabled bool
-	URI     string
-	Message string
-	Status  int
+	Enabled bool   `json:"enabled"`
+	URI     string `json:"uri"`
+	Message string `json:"message"`
+	Status  int    `json:"status"`
 }
 
 // Config hold complete configuration
 type Config struct {
-	Sender        SenderConfig
-	Forwarder     ForwarderConfig
-	Receiver      ReceiverConfig
-	Readiness     ReadinessConfig
-	LogLevel      string
-	TracingConfig string
+	Sender        SenderConfig    `json:"sender"`
+	Forwarder     ForwarderConfig `json:"forwarder"`
+	Receiver      ReceiverConfig  `json:"receiver"`
+	Readiness     ReadinessConfig `json:"readiness"`
+	LogLevel      string          `json:"log-level"`
+	TracingConfig string          `json:"tracing"`
 }

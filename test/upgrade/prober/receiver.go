@@ -108,10 +108,14 @@ func (p *prober) createReceiverDeployment() *appsv1.Deployment {
 					Containers: []corev1.Container{{
 						Name:  "receiver",
 						Image: p.config.ImageResolver(receiver.Name),
+						Env: []corev1.EnvVar{{
+							Name:  watholaconfig.LocationEnvVariable,
+							Value: fmt.Sprintf("%s/%s", defaultConfigMountPoint, defaultConfigFilename),
+						}},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      defaultConfigName,
 							ReadOnly:  true,
-							MountPath: p.config.ConfigMountPoint,
+							MountPath: defaultConfigMountPoint,
 						}},
 						ReadinessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{

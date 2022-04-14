@@ -1,7 +1,0 @@
-# logLevel = 'DEBUG'
-tracingConfig = '{{- .TracingConfig -}}'
-[sender]
-address = '{{- .Endpoint -}}'
-interval = {{ .Config.Interval.Nanoseconds }}
-[forwarder]
-target = '{{- .ForwarderTarget -}}'

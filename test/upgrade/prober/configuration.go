@@ -16,30 +16,28 @@
 package prober
 
 import (
-	"bytes"
 	"context"
-	"embed"
 	"fmt"
-	"io/fs"
-	"io/ioutil"
-	"text/template"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"knative.dev/eventing/test/lib/resources"
 	"knative.dev/eventing/test/upgrade/prober/sut"
+	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 	pkgupgrade "knative.dev/pkg/test/upgrade"
+	"sigs.k8s.io/yaml"
 )
 
 const (
 	defaultConfigName       = "wathola-config"
 	defaultConfigMountPoint = "/etc/wathola"
-	defaultConfigFilename   = "config.toml"
+	defaultConfigFilename   = "config.yaml"
 	defaultHealthEndpoint   = "/healthz"
 
 	// Silence will suppress notification about event duplicates.
@@ -50,16 +48,10 @@ const (
 	Error DuplicateAction = "error"
 
 	prefix = "eventing_upgrade_tests"
-
-	forwarderTargetFmt = "http://" + receiver.Name + ".%s.svc.cluster.local"
 )
 
-var (
-	// ErrInvalidConfig is returned when the configuration is invalid.
-	ErrInvalidConfig = errors.New("invalid config")
-	//go:embed config.toml
-	defaultConfigFS embed.FS
-)
+// ErrInvalidConfig is returned when the configuration is invalid.
+var ErrInvalidConfig = errors.New("invalid config")
 
 // DuplicateAction is the action to take in case of duplicated events
 type DuplicateAction string
@@ -76,7 +68,7 @@ type Config struct {
 
 // Wathola represents options related strictly to wathola testing tool.
 type Wathola struct {
-	ConfigToml
+	*watholaconfig.Config
 	ImageResolver
 	SystemUnderTest sut.SystemUnderTest
 	HealthEndpoint  string
@@ -84,13 +76,6 @@ type Wathola struct {
 
 // ImageResolver will resolve the container image for given component.
 type ImageResolver func(component string) string
-
-// ConfigToml represents options of wathola config toml file.
-type ConfigToml struct {
-	// ConfigTemplate is a template file that will be compiled to the configmap
-	ConfigTemplate   fs.FS
-	ConfigMountPoint string
-}
 
 // ServingConfig represents a options for serving test component (wathola-forwarder).
 type ServingConfig struct {
@@ -119,11 +104,8 @@ func NewConfig() (*Config, error) {
 			ScaleToZero: true,
 		},
 		Wathola: Wathola{
-			ImageResolver: pkgTest.ImagePath,
-			ConfigToml: ConfigToml{
-				ConfigTemplate:   defaultConfigFS,
-				ConfigMountPoint: defaultConfigMountPoint,
-			},
+			Config:          watholaconfig.Defaults(),
+			ImageResolver:   pkgTest.ImagePath,
 			HealthEndpoint:  defaultHealthEndpoint,
 			SystemUnderTest: sut.NewDefault(),
 		},
@@ -155,37 +137,28 @@ func (p *prober) deployConfiguration() {
 		}
 	})
 
-	p.deployConfigToml(endpoint)
+	p.deployConfig(endpoint)
 }
 
-func (p *prober) deployConfigToml(endpoint interface{}) {
+func (p *prober) deployConfig(endpoint interface{}) {
 	name := defaultConfigName
 	p.log.Infof("Deploying config map: \"%s/%s\"", p.client.Namespace, name)
-	configData := p.compileTemplate(p.config.ConfigTemplate, endpoint, p.client.TracingCfg)
+	configData := p.compileConfigData(*p.config.Wathola.Config, endpoint, p.client.TracingCfg)
 	p.client.CreateConfigMapOrFail(name, p.client.Namespace, map[string]string{
 		defaultConfigFilename: configData,
 	})
 }
 
-func (p *prober) compileTemplate(templateFS fs.FS, endpoint interface{}, tracingConfig string) string {
-	templateFile, err := templateFS.Open(defaultConfigFilename)
+func (p *prober) compileConfigData(cfg watholaconfig.Config, endpoint interface{}, tracingConfig string) string {
+	cfg.Sender.Address = endpoint
+	cfg.Forwarder.Target = p.forwarderTarget()
+	cfg.TracingConfig = tracingConfig
+	bytes, err := yaml.Marshal(cfg)
 	p.ensureNoError(err)
-	templateBytes, err := ioutil.ReadAll(templateFile)
-	p.ensureNoError(err)
-	tmpl, err := template.New(defaultConfigName).Parse(string(templateBytes))
-	p.ensureNoError(err)
-	var buff bytes.Buffer
-	data := struct {
-		*Config
-		Endpoint        interface{}
-		TracingConfig   string
-		ForwarderTarget string
-	}{
-		p.config,
-		endpoint,
-		tracingConfig,
-		fmt.Sprintf(forwarderTargetFmt, p.client.Namespace),
-	}
-	p.ensureNoError(tmpl.Execute(&buff, data))
-	return buff.String()
+	return string(bytes)
+}
+
+func (p *prober) forwarderTarget() string {
+	uri := apis.HTTP(receiver.Name + "." + p.client.Namespace + ".svc")
+	return uri.String()
 }

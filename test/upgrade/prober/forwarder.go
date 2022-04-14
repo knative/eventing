@@ -23,6 +23,7 @@ import (
 	testlib "knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/forwarder"
 )
 
@@ -72,9 +73,13 @@ func (p *prober) forwarderKService(name, namespace string) *unstructured.Unstruc
 					"containers": []map[string]interface{}{{
 						"name":  forwarder.Name,
 						"image": p.config.ImageResolver(forwarder.Name),
+						"env": []map[string]interface{}{{
+							"name":  watholaconfig.LocationEnvVariable,
+							"value": fmt.Sprintf("%s/%s", defaultConfigMountPoint, defaultConfigFilename),
+						}},
 						"volumeMounts": []map[string]interface{}{{
 							"name":      defaultConfigName,
-							"mountPath": p.config.ConfigMountPoint,
+							"mountPath": defaultConfigMountPoint,
 							"readOnly":  true,
 						}},
 						"readinessProbe": map[string]interface{}{

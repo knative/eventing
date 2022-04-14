@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/event"
 	"knative.dev/eventing/test/upgrade/prober/wathola/fetcher"
 	"knative.dev/eventing/test/upgrade/prober/wathola/receiver"
@@ -65,8 +66,12 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
 	if err := wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {
-		report = p.fetchReport()
-		return report.State != "active", nil
+		var err error
+		report, err = p.fetchReport()
+		if err != nil {
+			return false, err
+		}
+		return report != nil && report.State != "active", nil
 	}); err != nil {
 		if err := p.exportTrace(p.getTraceForFinishedEvent(), "finished.json"); err != nil {
 			p.log.Warnf("Failed to export trace for Finished event: %v", err)
@@ -132,7 +137,7 @@ func (p *prober) getStepNoFromMsg(message string) string {
 func (p *prober) getTraceForStepEvent(eventNo string) []byte {
 	p.log.Infof("Fetching trace for Step event #%s", eventNo)
 	query := fmt.Sprintf("step=%s and cloudevents.type=%s and target=%s",
-		eventNo, event.StepType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
+		eventNo, event.StepType, p.forwarderTarget())
 	trace, err := event.FindTrace(query)
 	if err != nil {
 		p.log.Warn(err)
@@ -143,7 +148,7 @@ func (p *prober) getTraceForStepEvent(eventNo string) []byte {
 func (p *prober) getTraceForFinishedEvent() []byte {
 	p.log.Info("Fetching trace for Finished event")
 	query := fmt.Sprintf("cloudevents.type=%s and target=%s",
-		event.FinishedType, fmt.Sprintf(forwarderTargetFmt, p.client.Namespace))
+		event.FinishedType, p.forwarderTarget())
 	trace, err := event.FindTrace(query)
 	if err != nil {
 		p.log.Warn(err)
@@ -170,10 +175,13 @@ func (p *prober) exportTrace(trace []byte, fileName string) error {
 	return nil
 }
 
-func (p *prober) fetchReport() *receiver.Report {
-	exec := p.fetchExecution()
+func (p *prober) fetchReport() (*receiver.Report, error) {
+	exec, err := p.fetchExecution()
+	if err != nil {
+		return nil, err
+	}
 	replayLogs(p.log, exec)
-	return exec.Report
+	return exec.Report, nil
 }
 
 func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
@@ -191,14 +199,18 @@ func replayLogs(log *zap.SugaredLogger, exec *fetcher.Execution) {
 	}
 }
 
-func (p *prober) fetchExecution() *fetcher.Execution {
+func (p *prober) fetchExecution() (*fetcher.Execution, error) {
 	ns := p.client.Namespace
 	job := p.deployFetcher()
 	defer p.deleteFetcher(job.Name)
 	pod, err := p.findSucceededPod(job)
-	p.ensureNoError(err)
+	if err != nil {
+		return nil, err
+	}
 	bytes, err := pkgTest.PodLogs(p.config.Ctx, p.client.Kube, pod.Name, fetcherName, ns)
-	p.ensureNoError(err)
+	if err != nil {
+		return nil, err
+	}
 	ex := &fetcher.Execution{
 		Logs: []fetcher.LogEntry{},
 		Report: &receiver.Report{
@@ -214,8 +226,7 @@ func (p *prober) fetchExecution() *fetcher.Execution {
 		},
 	}
 	err = json.Unmarshal(bytes, ex)
-	p.ensureNoError(err)
-	return ex
+	return ex, err
 }
 
 func (p *prober) deployFetcher() *batchv1.Job {
@@ -251,10 +262,14 @@ func (p *prober) deployFetcher() *batchv1.Job {
 					Containers: []corev1.Container{{
 						Name:  fetcherName,
 						Image: p.config.ImageResolver(fetcherName),
+						Env: []corev1.EnvVar{{
+							Name:  watholaconfig.LocationEnvVariable,
+							Value: fmt.Sprintf("%s/%s", defaultConfigMountPoint, defaultConfigFilename),
+						}},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      defaultConfigName,
 							ReadOnly:  true,
-							MountPath: p.config.ConfigMountPoint,
+							MountPath: defaultConfigMountPoint,
 						}},
 					}},
 				},

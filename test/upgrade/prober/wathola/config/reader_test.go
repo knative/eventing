@@ -160,8 +160,8 @@ func withErrorsCaptured(t *testing.T, fn func()) []string {
 
 func ensureConfigFileNotPresent(t *testing.T) string {
 	t.Helper()
-	Instance = defaultValues()
-	defaultLocation = fmt.Sprintf("~/tmp/wathola-config-%s.toml", uuid.NewString())
+	Instance = Defaults()
+	defaultLocation = fmt.Sprintf("~/tmp/wathola-config-%s.yaml", uuid.NewString())
 	expanded, err := homedir.Expand(defaultLocation)
 	assert.NoError(t, err)
 	dir := path.Dir(expanded)

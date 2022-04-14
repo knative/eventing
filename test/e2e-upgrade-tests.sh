@@ -16,9 +16,8 @@
 
 # Docs -> file://./upgrade/README.md
 
-# Script entry point.
-
-export GO111MODULE=on
+# To install eventing always in the same namespace, for proper teardown.
+export SYSTEM_NAMESPACE=knative-eventing
 
 # shellcheck disable=SC1090
 source "$(dirname "${BASH_SOURCE[0]}")/e2e-common.sh"

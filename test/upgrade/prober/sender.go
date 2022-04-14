@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	watholaconfig "knative.dev/eventing/test/upgrade/prober/wathola/config"
 	"knative.dev/eventing/test/upgrade/prober/wathola/sender"
 	pkgTest "knative.dev/pkg/test"
 
@@ -67,10 +68,14 @@ func (p *prober) deploySender() {
 					Containers: []corev1.Container{{
 						Name:  "sender",
 						Image: p.config.ImageResolver(sender.Name),
+						Env: []corev1.EnvVar{{
+							Name:  watholaconfig.LocationEnvVariable,
+							Value: fmt.Sprintf("%s/%s", defaultConfigMountPoint, defaultConfigFilename),
+						}},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      defaultConfigName,
 							ReadOnly:  true,
-							MountPath: p.config.ConfigMountPoint,
+							MountPath: defaultConfigMountPoint,
 						}},
 					}},
 					TerminationGracePeriodSeconds: &gracePeriodSeconds,
