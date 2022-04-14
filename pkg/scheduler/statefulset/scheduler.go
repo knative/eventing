@@ -682,19 +682,11 @@ func (s *StatefulSetScheduler) updateStatefulset(obj interface{}) {
 }
 
 func (s *StatefulSetScheduler) reservePlacements(vpod scheduler.VPod, placements []duckv1alpha1.Placement) {
-	existing := vpod.GetPlacements()
-
 	if len(placements) == 0 { // clear our old placements in reserved
 		s.reserved[vpod.GetKey()] = make(map[string]int32)
 	}
 
 	for _, p := range placements {
-		for _, e := range existing {
-			if e.PodName == p.PodName {
-				break
-			}
-		}
-
 		// note: track all vreplicas, not only the new ones since
 		// the next time `state()` is called some vreplicas might
 		// have been committed.
