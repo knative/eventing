@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/protocol"
@@ -40,6 +41,7 @@ type crStatusEvent struct {
 }
 type CRStatusEventClient struct {
 	isEnabledVar bool
+	m            sync.RWMutex
 }
 
 func GetDefaultClient() *CRStatusEventClient {
@@ -52,11 +54,24 @@ func NewCRStatusEventClient(metricMap map[string]string) *CRStatusEventClient {
 	}
 
 	ret := &CRStatusEventClient{}
-	if "true" == metricMap["sink-event-error-reporting.enable"] {
+	if metricMap["sink-event-error-reporting.enable"] == "true" {
 		ret.isEnabledVar = true
 	}
 	return ret
 
+}
+
+// UpdateFromConfigMap returns an updater function to be used
+// with ConfigWatcher, that given an observability ConfigMap
+// updates the client's Event Recorder configuration.
+func UpdateFromConfigMap(client *CRStatusEventClient) func(configMap *corev1.ConfigMap) {
+	return func(cm *corev1.ConfigMap) {
+		if cm != nil && cm.Data != nil && cm.Data["sink-event-error-reporting.enable"] != "" {
+			client.m.Lock()
+			defer client.m.Unlock()
+			client.isEnabledVar, _ = strconv.ParseBool(cm.Data["sink-event-error-reporting.enable"])
+		}
+	}
 }
 
 var contextkey struct{}
@@ -77,6 +92,9 @@ func fromContext(ctx context.Context) (*crStatusEvent, bool) {
 }
 
 func (c *CRStatusEventClient) ReportCRStatusEvent(ctx context.Context, result protocol.Result) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	if !c.isEnabledVar {
 		return
 	}

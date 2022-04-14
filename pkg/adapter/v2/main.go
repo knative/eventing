@@ -28,21 +28,27 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
-	"knative.dev/eventing/pkg/metrics/source"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/configmap"
+	cminformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/signals"
 
 	"knative.dev/eventing/pkg/adapter/v2/util/crstatusevent"
+	"knative.dev/eventing/pkg/metrics/source"
 )
 
 // Adapter is the interface receive adapters are expected to implement
@@ -55,6 +61,52 @@ type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client 
 // ControllerConstructor is the function signature for creating controllers synchronizing
 // the multi-tenant receive adapter state
 type ControllerConstructor func(ctx context.Context, adapter Adapter) *controller.Impl
+
+// LoggerConfigurator configures the logger for an adapter.
+type LoggerConfigurator interface {
+	CreateLogger(ctx context.Context) *zap.SugaredLogger
+}
+
+// MetricsExporterConfigurator configures the metrics exporter for an adapter.
+type MetricsExporterConfigurator interface {
+	SetupMetricsExporter(ctx context.Context)
+}
+
+// TracingConfiguration for adapters.
+type TracingConfiguration struct {
+	InstanceName string
+}
+
+// TracingConfigurator configures the tracing settings for an adapter.
+type TracingConfigurator interface {
+	SetupTracing(ctx context.Context, cfg *TracingConfiguration)
+}
+
+// ObservabilityConfigurator groups the observability related methods
+// that configure an adapter.
+type ObservabilityConfigurator interface {
+	LoggerConfigurator
+	MetricsExporterConfigurator
+	TracingConfigurator
+}
+
+// ProfilerConfigurator configures the profiling settings for an adapter.
+type ProfilerConfigurator interface {
+	CreateProfilingServer(ctx context.Context) *http.Server
+}
+
+// CloudEventsStatusReporterConfigurator configures the CloudEvents client reporting
+// settings for an adapter.
+type CloudEventsStatusReporterConfigurator interface {
+	CreateCloudEventsStatusReporter(ctx context.Context) *crstatusevent.CRStatusEventClient
+}
+
+// AdapterConfigurator exposes methods for configuring the adapter.
+type AdapterConfigurator interface {
+	ObservabilityConfigurator
+	ProfilerConfigurator
+	CloudEventsStatusReporterConfigurator
+}
 
 type injectorEnabledKey struct{}
 
@@ -111,52 +163,53 @@ func MainWithInformers(ctx context.Context, component string, env EnvConfigAcces
 	}
 	env.SetComponent(component)
 
-	logger := env.GetLogger()
+	// If not explicitly set, use the namespace from the environment variable.
+	if NamespaceFromContext(ctx) == "" {
+		ctx = WithNamespace(ctx, env.GetNamespace())
+	}
+
+	// If required a ConfigMap watcher is made available for configuration, either at this
+	// shared main function or at the downstream adapter's code.
+	if IsConfigWatcherEnabled(ctx) {
+		if cmw := ConfigWatcherFromContext(ctx); cmw == nil {
+			ctx = WithConfigWatcher(ctx, SetupConfigMapWatch(ctx))
+		}
+	}
+
+	// The adapter configurator is used to setup and customize the adapter behavior
+	configurator := newConfigurator(env, ConfiguratorOptionsFromContext(ctx)...)
+
+	logger := configurator.CreateLogger(ctx)
 	defer flush(logger)
+
+	// Flush any previous initial logger and replace with the
+	// one created from the configurator.
+	prev := logging.FromContext(ctx)
+	_ = prev.Sync()
 	ctx = logging.WithLogger(ctx, logger)
 
-	// Report stats on Go memory usage every 30 seconds.
-	msp := metrics.NewMemStatsAll()
-	msp.Start(ctx, 30*time.Second)
-	if err := view.Register(msp.DefaultViews()...); err != nil {
-		logger.Fatalw("Error exporting go memstats view: %v", zap.Error(err))
-	}
+	configurator.SetupMetricsExporter(ctx)
 
-	var crStatusEventClient *crstatusevent.CRStatusEventClient
+	// Report stats on Go memory usage.
+	metrics.MemStatsOrDie(ctx)
 
-	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
-	if metricsConfig, err := env.GetMetricsConfig(); err != nil {
-		logger.Errorw("Failed to process metrics options", zap.Error(err))
-	} else if metricsConfig != nil {
-		if err := metrics.UpdateExporter(ctx, *metricsConfig, logger); err != nil {
-			logger.Errorw("Failed to create the metrics exporter", zap.Error(err))
-		}
-		// Check if metrics config contains profiling flag
-		if metricsConfig.ConfigMap != nil {
-			if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err == nil && enabled {
-				// Start a goroutine to server profiling metrics
-				logger.Info("Profiling enabled")
-				go func() {
-					server := profiling.NewServer(profiling.NewHandler(logger, true))
-					// Don't forward ErrServerClosed as that indicates we're already shutting down.
-					if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-						logger.Errorw("Profiling server failed", zap.Error(err))
-					}
-				}()
+	// Create a profiling server based on configuration.
+	if ps := configurator.CreateProfilingServer(ctx); ps != nil {
+		go func() {
+			// Don't forward ErrServerClosed as that indicates we're already shutting down.
+			if err := ps.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Errorw("profiling server failed", zap.Error(err))
 			}
-			crStatusEventClient = crstatusevent.NewCRStatusEventClient(metricsConfig.ConfigMap)
-		}
+		}()
 	}
+
+	configurator.SetupTracing(ctx, &TracingConfiguration{InstanceName: env.GetName()})
+
+	crStatusEventClient := configurator.CreateCloudEventsStatusReporter(ctx)
 
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
 		logger.Errorw("Error building statsreporter", zap.Error(err))
-	}
-
-	if err := env.SetupTracing(logger); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the adapter
-		// to continue to start.
-		logger.Errorw("Error setting up trace publishing", zap.Error(err))
 	}
 
 	eventsClient, err := NewCloudEventsClientCRStatus(env, reporter, crStatusEventClient)
@@ -244,3 +297,144 @@ func flush(logger *zap.SugaredLogger) {
 	_ = logger.Sync()
 	metrics.FlushExporter()
 }
+
+// GetConfigMapByPolling retrieves a ConfigMap.
+// If an error other than NotFound is returned, the operation will be repeated
+// each second up to 5 seconds.
+// These timeout and retry interval are set by heuristics.
+// e.g. istio sidecar needs a few seconds to configure the pod network.
+//
+// The context is expected to be initialized with injection and namespace.
+func GetConfigMapByPolling(ctx context.Context, name string) (cm *corev1.ConfigMap, err error) {
+	err = wait.PollImmediate(1*time.Second, 5*time.Second, func() (bool, error) {
+		cm, err = kubeclient.Get(ctx).
+			CoreV1().ConfigMaps(NamespaceFromContext(ctx)).
+			Get(ctx, name, metav1.GetOptions{})
+		return err == nil || apierrors.IsNotFound(err), nil
+	})
+
+	if err != nil {
+		err = fmt.Errorf("timed out waiting trying to retrieve ConfigMap: %w", err)
+	}
+
+	return cm, err
+}
+
+// ConfigMapWatchOptions are the options that can be set for
+// the ConfigMapWatch informer.
+type ConfigMapWatchOptions struct {
+	LabelsFilter []labels.Requirement
+}
+
+// ConfigMapWatchOption modifies setup for a ConfigMap informer.
+type ConfigMapWatchOption func(*ConfigMapWatchOptions)
+
+// ConfigMapWatchWithLabels sets the labels filter to be
+// configured at the ConfigMap watcher informer.
+func ConfigMapWatchWithLabels(ls []labels.Requirement) ConfigMapWatchOption {
+	return func(opts *ConfigMapWatchOptions) {
+		opts.LabelsFilter = ls
+	}
+}
+
+// SetupConfigMapWatch establishes a watch on a namespace's configmaps.
+func SetupConfigMapWatch(ctx context.Context, opts ...ConfigMapWatchOption) configmap.Watcher {
+	o := &ConfigMapWatchOptions{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	return cminformer.NewInformedWatcher(kubeclient.Get(ctx), NamespaceFromContext(ctx), o.LabelsFilter...)
+}
+
+// SecretFetcher provides a helper function to fetch individual Kubernetes
+// Secrets (for example, a key for client-side TLS). Note that this is not
+// intended for high-volume usage; the current use is when establishing a
+// metrics client connection in WatchObservabilityConfigOrDie.
+// This method requires that the Namespace has been added to the context.
+func SecretFetcher(ctx context.Context) metrics.SecretFetcher {
+	// NOTE: Do not use secrets.Get(ctx) here to get a SecretLister, as it will register
+	// a *global* SecretInformer and require cluster-level `secrets.list` permission,
+	// even if you scope down the Lister to a given namespace after requesting it. Instead,
+	// we package up a function from kubeclient.
+	// TODO(evankanderson): If this direct request to the apiserver on each TLS connection
+	// to the opencensus agent is too much load, switch to a cached Secret.
+	return func(name string) (*corev1.Secret, error) {
+		return kubeclient.Get(ctx).CoreV1().Secrets(NamespaceFromContext(ctx)).Get(ctx, name, metav1.GetOptions{})
+	}
+}
+
+// adapterConfigurator hosts the range of configurators that
+// will be used when setting up the adapter.
+type adapterConfigurator struct {
+	LoggerConfigurator
+	MetricsExporterConfigurator
+	TracingConfigurator
+	ProfilerConfigurator
+	CloudEventsStatusReporterConfigurator
+}
+
+// ConfiguratorOption enables customizing the adapter configuration.
+type ConfiguratorOption func(*adapterConfigurator)
+
+// WithLoggerConfigurator sets the adapter configurator with
+// a custom logger option.
+func WithLoggerConfigurator(c LoggerConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.LoggerConfigurator = c
+	}
+}
+
+// WithMetricsExporterConfigurator sets the adapter configurator with
+// a custom metrics exporter option.
+func WithMetricsExporterConfigurator(c MetricsExporterConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.MetricsExporterConfigurator = c
+	}
+}
+
+// WithTracingConfigurator sets the adapter configurator with
+// a custom tracing option.
+func WithTracingConfigurator(c TracingConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.TracingConfigurator = c
+	}
+}
+
+// WithProfilerConfigurator sets the adapter configurator with
+// a custom profiler option.
+func WithProfilerConfigurator(c ProfilerConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.ProfilerConfigurator = c
+	}
+}
+
+// WithCloudEventsStatusReporterConfigurator sets the adapter configurator with
+// a CloudEvents status reporter option.
+func WithCloudEventsStatusReporterConfigurator(c CloudEventsStatusReporterConfigurator) ConfiguratorOption {
+	return func(acfg *adapterConfigurator) {
+		acfg.CloudEventsStatusReporterConfigurator = c
+	}
+}
+
+// newConfigurator creates an adapter configurator that defaults to environment variable based
+// internal configurators, and can be overridden to use custom ones.
+func newConfigurator(env EnvConfigAccessor, opts ...ConfiguratorOption) AdapterConfigurator {
+	// default to environment variable based configurators
+	acfg := &adapterConfigurator{
+		LoggerConfigurator:                    NewLoggerConfiguratorFromEnvironment(env),
+		MetricsExporterConfigurator:           NewMetricsExporterConfiguratorFromEnvironment(env),
+		TracingConfigurator:                   NewTracingConfiguratorFromEnvironment(env),
+		ProfilerConfigurator:                  NewProfilerConfiguratorFromEnvironment(env),
+		CloudEventsStatusReporterConfigurator: NewCloudEventsStatusReporterConfiguratorFromEnvironment(env),
+	}
+
+	// override with user defined options
+	for _, opt := range opts {
+		opt(acfg)
+	}
+
+	return acfg
+}
+
+var _ AdapterConfigurator = (*adapterConfigurator)(nil)
