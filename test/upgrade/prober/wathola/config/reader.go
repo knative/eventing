@@ -28,26 +28,29 @@ const (
 	LocationEnvVariable = "WATHOLA_CONFIG_FILE_LOCATION"
 )
 
-var defaultLocation = "~/.config/wathola/config.yaml"
-var logFatal = Log.Fatal
+var (
+	// LogFatal is used to log a fatal error.
+	LogFatal        = Log.Fatal
+	defaultLocation = "~/.config/wathola/config.yaml"
+)
 
 // ReadIfPresent read a configuration file if it exists
 func ReadIfPresent() {
 	configFile, err := homedir.Expand(configLocation())
 	if err != nil {
-		logFatal(err)
+		LogFatal(err)
 	}
 	if fileExists(configFile) {
 		Log.Infof("Reading config file: %v", configFile)
 		err = Read(configFile)
 		if err != nil {
-			logFatal(err)
+			LogFatal(err)
 		}
 	} else {
 		Log.Infof("Define config file to be taken into account: %v", configFile)
 	}
 	if err = setLogLevel(); err != nil {
-		logFatal(err)
+		LogFatal(err)
 	}
 }
 

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package config
+package config_test
 
 import (
 	"fmt"
@@ -27,24 +27,26 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
+	"knative.dev/eventing/test/upgrade/prober/wathola/config"
 )
 
 func TestReadIfPresent(t *testing.T) {
 	// given
-	contents := `[sender]
-address = 'http://default-broker.event-example.svc.cluster.local/'
+	contents := `---
+sender:
+  address: "http://default-broker.event-example.svc/"
 `
 	errors := withErrorsCaptured(t, func() {
 		withConfigContents(t, contents, func() {
 			// when
-			ReadIfPresent()
+			config.ReadIfPresent()
 
 			// then
 			assert.Equal(t,
-				"http://default-broker.event-example.svc.cluster.local/",
-				Instance.Sender.Address)
-			assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
-			assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+				"http://default-broker.event-example.svc/",
+				config.Instance.Sender.Address)
+			assert.Equal(t, config.DefaultReceiverPort, config.Instance.Receiver.Port)
+			assert.Equal(t, config.DefaultForwarderPort, config.Instance.Forwarder.Port)
 		})
 	})
 	assert.Empty(t, errors)
@@ -52,18 +54,19 @@ address = 'http://default-broker.event-example.svc.cluster.local/'
 
 func TestReadIfPresentAndInvalid(t *testing.T) {
 	// given
-	contents := `[sender]
+	contents := `sender:
 address = 'http://default-broker.event-example.svc.cluster.local/
 `
 	errors := withErrorsCaptured(t, func() {
 		withConfigContents(t, contents, func() {
 			// when
-			ReadIfPresent()
+			config.ReadIfPresent()
 		})
 	})
 
 	// then
-	assert.Contains(t, errors, "[toml: literal strings cannot have new lines]")
+	assert.Contains(t, errors, "[error converting YAML to JSON: yaml:"+
+		" line 3: could not find expected ':']")
 }
 
 func TestReadIfNotPresent(t *testing.T) {
@@ -73,44 +76,45 @@ func TestReadIfNotPresent(t *testing.T) {
 
 	// when
 	errors := withErrorsCaptured(t, func() {
-		ReadIfPresent()
+		config.ReadIfPresent()
 	})
 
 	// then
 	assert.Equal(t,
-		fmt.Sprintf("http://localhost:%d/", DefaultForwarderPort),
-		Instance.Sender.Address)
-	assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
-	assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+		fmt.Sprintf("http://localhost:%d/", config.DefaultForwarderPort),
+		config.Instance.Sender.Address)
+	assert.Equal(t, config.DefaultReceiverPort, config.Instance.Receiver.Port)
+	assert.Equal(t, config.DefaultForwarderPort, config.Instance.Forwarder.Port)
 	assert.Empty(t, errors)
 }
 
 func TestReadingOfCompositeAddress(t *testing.T) {
 	// given
-	contents := `[sender]
-interval = 10000000
-  [sender.address]
-  bootstrapServers = 'my-cluster-kafka-bootstrap.kafka.svc:9092'
-  topicName = 'my-topic'
+	contents := `---
+sender:
+  interval: 10000000
+  address:
+    bootstrapServers: "my-cluster-kafka-bootstrap.kafka.svc:9092"
+    topicName: "my-topic"
 `
 	errors := withErrorsCaptured(t, func() {
 		withConfigContents(t, contents, func() {
 			// when
-			ReadIfPresent()
+			config.ReadIfPresent()
 
 			// then
-			address := Instance.Sender.Address.(map[string]interface{})
+			address := config.Instance.Sender.Address.(map[string]interface{})
 			assert.Equal(t,
 				"my-cluster-kafka-bootstrap.kafka.svc:9092",
 				address["bootstrapServers"])
 			assert.Equal(t,
 				"my-topic",
 				address["topicName"])
-			assert.Equal(t, DefaultReceiverPort, Instance.Receiver.Port)
-			assert.Equal(t, DefaultForwarderPort, Instance.Forwarder.Port)
+			assert.Equal(t, config.DefaultReceiverPort, config.Instance.Receiver.Port)
+			assert.Equal(t, config.DefaultForwarderPort, config.Instance.Forwarder.Port)
 			assert.Equal(t,
 				zapcore.InfoLevel.String(),
-				Instance.LogLevel,
+				config.Instance.LogLevel,
 			)
 		})
 	})
@@ -119,17 +123,18 @@ interval = 10000000
 
 func TestChangingLogLevel(t *testing.T) {
 	// given
-	contents := `logLevel = 'DEBUG'
+	contents := `---
+log-level: 'DEBUG'
 `
 	errors := withErrorsCaptured(t, func() {
 		withConfigContents(t, contents, func() {
 			// when
-			ReadIfPresent()
+			config.ReadIfPresent()
 
 			// then
 			assert.Equal(t,
 				zapcore.DebugLevel.String(),
-				Instance.LogLevel,
+				config.Instance.LogLevel,
 			)
 		})
 	})
@@ -148,10 +153,10 @@ func withConfigContents(t *testing.T, content string, fn func()) {
 
 func withErrorsCaptured(t *testing.T, fn func()) []string {
 	t.Helper()
-	origLogFatal := logFatal
-	defer func() { logFatal = origLogFatal }()
+	origLogFatal := config.LogFatal
+	defer func() { config.LogFatal = origLogFatal }()
 	var errors []string
-	logFatal = func(args ...interface{}) {
+	config.LogFatal = func(args ...interface{}) {
 		errors = append(errors, fmt.Sprint(args))
 	}
 	fn()
@@ -160,15 +165,16 @@ func withErrorsCaptured(t *testing.T, fn func()) []string {
 
 func ensureConfigFileNotPresent(t *testing.T) string {
 	t.Helper()
-	Instance = Defaults()
-	defaultLocation = fmt.Sprintf("~/tmp/wathola-config-%s.yaml", uuid.NewString())
-	expanded, err := homedir.Expand(defaultLocation)
+	config.Instance = config.Defaults()
+	location := fmt.Sprintf("~/tmp/wathola-config-%s.yaml", uuid.NewString())
+	expanded, err := homedir.Expand(location)
 	assert.NoError(t, err)
 	dir := path.Dir(expanded)
 	assert.NoError(t, os.MkdirAll(dir, os.ModePerm))
-	if _, err := os.Stat(expanded); err == nil {
+	if _, err = os.Stat(expanded); err == nil {
 		assert.NoError(t, os.Remove(expanded))
 	}
 
+	t.Setenv(config.LocationEnvVariable, expanded)
 	return expanded
 }
