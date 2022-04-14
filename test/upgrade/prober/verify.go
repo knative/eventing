@@ -61,7 +61,6 @@ func (p *prober) Verify() (eventErrs []error, eventsSent int) {
 		// Required for proper cleanup.
 		zipkin.ZipkinTracingEnabled = true
 	}
-	defer zipkin.CleanupZipkinTracingSetup(p.log.Infof)
 	p.log.Info("Waiting for complete report from receiver...")
 	start := time.Now()
 	if err := wait.PollImmediate(jobWaitInterval, jobWaitTimeout, func() (bool, error) {

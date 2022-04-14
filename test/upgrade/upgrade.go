@@ -17,11 +17,13 @@ limitations under the License.
 package upgrade
 
 import (
+	"log"
 	"os"
 	"testing"
 
 	"knative.dev/eventing/test"
 	testlib "knative.dev/eventing/test/lib"
+	"knative.dev/pkg/test/zipkin"
 )
 
 // RunMainTest initializes the flags to run the eventing upgrade tests, and runs the channel tests.
@@ -33,5 +35,11 @@ func RunMainTest(m *testing.M) {
 		ComponentFeatureMap: testlib.ChannelFeatureMap,
 		ComponentsToTest:    test.EventingFlags.Channels,
 	}
-	os.Exit(m.Run())
+	os.Exit(func() int {
+		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
+		// place that cleans it up. If an individual test calls this instead, then it will break other
+		// tests that need the tracing in place.
+		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
+		return m.Run()
+	}())
 }
