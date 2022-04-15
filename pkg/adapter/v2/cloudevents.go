@@ -116,7 +116,7 @@ func newCloudEventsClientCRStatus(env EnvConfigAccessor, ceOverrides *duckv1.Clo
 		ceClient:            ceClient,
 		ceOverrides:         ceOverrides,
 		reporter:            reporter,
-		crStatusEventClient: *crStatusEventClient,
+		crStatusEventClient: crStatusEventClient,
 	}, nil
 }
 
@@ -137,7 +137,7 @@ type client struct {
 	ceClient            cloudevents.Client
 	ceOverrides         *duckv1.CloudEventOverrides
 	reporter            source.StatsReporter
-	crStatusEventClient crstatusevent.CRStatusEventClient
+	crStatusEventClient *crstatusevent.CRStatusEventClient
 }
 
 var _ cloudevents.Client = (*client)(nil)

@@ -18,12 +18,14 @@ package crstatusevent
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
@@ -152,6 +154,53 @@ func TestReportCRStatusEvent(t *testing.T) {
 				t.Errorf("Message = %q; want: %q", event.Message, tt.args.wantMessage)
 			}
 
+		})
+	}
+}
+
+func TestUpdateFromConfigMap(t *testing.T) {
+	testCases := map[string]struct {
+		initEnabled     bool
+		reconfigEnabled bool
+	}{
+		"enabled to enabled": {
+			initEnabled:     true,
+			reconfigEnabled: true,
+		},
+		"disabled to disabled": {
+			initEnabled:     false,
+			reconfigEnabled: false,
+		},
+		"disabled to enabled": {
+			initEnabled:     false,
+			reconfigEnabled: true,
+		},
+		"enabled to disabled": {
+			initEnabled:     true,
+			reconfigEnabled: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			defer ctx.Done()
+
+			crStatusEventClient := NewCRStatusEventClient(map[string]string{"sink-event-error-reporting.enable": strconv.FormatBool(tc.initEnabled)})
+			if crStatusEventClient.isEnabledVar != tc.initEnabled {
+				require.Equal(t, tc.initEnabled, crStatusEventClient.isEnabledVar, "Wrong CRStatusEventClient enabled initial flag")
+			}
+
+			cm := &corev1.ConfigMap{
+				Data: map[string]string{
+					"sink-event-error-reporting.enable": strconv.FormatBool(tc.reconfigEnabled),
+				},
+			}
+			UpdateFromConfigMap(crStatusEventClient)(cm)
+
+			if crStatusEventClient.isEnabledVar != tc.reconfigEnabled {
+				require.Equal(t, tc.reconfigEnabled, crStatusEventClient.isEnabledVar, "Wrong CRStatusEventClient enabled reconfigured flag")
+			}
 		})
 	}
 }

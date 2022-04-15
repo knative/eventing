@@ -143,7 +143,7 @@ func (s *StatefulSetScheduler) Schedule(vpod scheduler.VPod) ([]duckv1alpha1.Pla
 		return nil, err
 	}
 	vpodFromLister := st.GetVPod(vpod.GetKey(), vpods)
-	if vpod.GetResourceVersion() != vpodFromLister.GetResourceVersion() {
+	if vpodFromLister != nil && vpod.GetResourceVersion() != vpodFromLister.GetResourceVersion() {
 		return nil, fmt.Errorf("vpod to schedule has resource version different from one in indexer")
 	}
 
@@ -682,36 +682,19 @@ func (s *StatefulSetScheduler) updateStatefulset(obj interface{}) {
 }
 
 func (s *StatefulSetScheduler) reservePlacements(vpod scheduler.VPod, placements []duckv1alpha1.Placement) {
-	existing := vpod.GetPlacements()
-
 	if len(placements) == 0 { // clear our old placements in reserved
 		s.reserved[vpod.GetKey()] = make(map[string]int32)
 	}
 
 	for _, p := range placements {
-		placed := int32(0)
-		for _, e := range existing {
-			if e.PodName == p.PodName {
-				placed = e.VReplicas
-				break
-			}
-		}
-
-		// Only record placements exceeding existing ones, since the
-		// goal is to prevent pods to be overcommitted.
-		// When less than existing ones, recording is done to help with
-		// for removal of vreps with descheduling policies
 		// note: track all vreplicas, not only the new ones since
 		// the next time `state()` is called some vreplicas might
 		// have been committed.
-		if placed != p.VReplicas {
-			if _, ok := s.reserved[vpod.GetKey()]; !ok {
-				s.reserved[vpod.GetKey()] = make(map[string]int32)
-			}
-			s.reserved[vpod.GetKey()][p.PodName] = p.VReplicas
+		if _, ok := s.reserved[vpod.GetKey()]; !ok {
+			s.reserved[vpod.GetKey()] = make(map[string]int32)
 		}
+		s.reserved[vpod.GetKey()][p.PodName] = p.VReplicas
 	}
-
 }
 
 func (s *StatefulSetScheduler) makeZeroPlacements(vpod scheduler.VPod, placements []duckv1alpha1.Placement) {

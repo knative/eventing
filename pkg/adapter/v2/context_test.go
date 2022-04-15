@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
 	_ "knative.dev/pkg/client/injection/kube/client/fake"
@@ -49,5 +50,29 @@ func TestWithHAEnabled(t *testing.T) {
 	if !isHADisabledFlag(ctx) {
 		t.Error("Expected HA to be disabled via commandline flag")
 	}
+}
 
+func TestWithConfigWatcher(t *testing.T) {
+	ctx := context.Background()
+
+	if IsConfigWatcherEnabled(ctx) {
+		t.Error("Expected ConfigWatcher not enabled default")
+	}
+
+	ctx = WithConfigWatcherEnabled(ctx)
+	if !IsConfigWatcherEnabled(ctx) {
+		t.Error("Expected ConfigWatcher to be enabled")
+	}
+
+	cmw := ConfigWatcherFromContext(ctx)
+	if cmw != nil {
+		t.Error("Expected ConfigWatcher at context to be nil")
+	}
+
+	mw := &configmap.ManualWatcher{}
+	ctx = WithConfigWatcher(ctx, mw)
+
+	if cmw = ConfigWatcherFromContext(ctx); cmw != mw {
+		t.Error("Expected ConfigWatcher to match the one set previously")
+	}
 }
