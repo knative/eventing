@@ -246,17 +246,16 @@ function unleash_duck() {
 # Teardown the Knative environment after tests finish.
 function knative_teardown() {
   echo ">> Stopping Knative Eventing"
-  echo "Uninstalling Knative Eventing"
-  ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
-  wait_until_object_does_not_exist namespaces ${SYSTEM_NAMESPACE}
-
-  echo ">> Uninstalling dependencies"
-  for i in ${!UNINSTALL_LIST[@]}; do
+  for i in "${!UNINSTALL_LIST[@]}"; do
     # We uninstall elements in the reverse of the order they were installed.
     local YAML="${UNINSTALL_LIST[$(( ${#array[@]} - $i ))]}"
     echo ">> Bringing down YAML: ${YAML}"
     kubectl delete --ignore-not-found=true -f "${YAML}" || return 1
   done
+  kubectl delete --ignore-not-found=true namespace "${SYSTEM_NAMESPACE}"
+  wait_until_object_does_not_exist namespaces "${SYSTEM_NAMESPACE}"
+  kubectl delete --ignore-not-found=true namespace 'knative-monitoring'
+  wait_until_object_does_not_exist namespaces 'knative-monitoring'
 }
 
 # Add function call to trap
