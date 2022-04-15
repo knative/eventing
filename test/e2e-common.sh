@@ -96,14 +96,21 @@ function scale_controlplane() {
 }
 
 # Install Knative Monitoring in the current cluster.
-# Parameters: $1 - Knative Monitoring manifest.
 # This is a lightly modified verion of start_knative_monitoring() from test-infra's library.sh.
 function start_knative_eventing_monitoring() {
   header "Starting Knative Eventing Monitoring"
-  subheader "Installing Knative Eventing Monitoring"
-  echo "Installing Monitoring from $1"
-  kubectl apply -f "$1" || return 1
-  wait_until_pods_running knative-eventing || return 1
+
+  local MONITORING_YAML="${TMP_DIR}/monitoring.yaml"
+  # Replace the default system namespace with the test's system namespace.
+  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" \
+    "${KNATIVE_EVENTING_MONITORING_YAML}" > "${MONITORING_YAML}"
+
+  echo "Knative Eventing Monitoring YAML: ${MONITORING_YAML}"
+
+  kubectl apply -f "${MONITORING_YAML}" || return $?
+  UNINSTALL_LIST+=( "${MONITORING_YAML}" )
+
+  wait_until_pods_running "${SYSTEM_NAMESPACE}" || return 1
 }
 
 # Create all manifests required to install Knative Eventing.
@@ -133,15 +140,16 @@ function build_knative_from_source() {
 # Parameters: $1 - Knative Eventing version "HEAD" or "latest-release".
 function install_knative_eventing() {
   echo ">> Creating ${SYSTEM_NAMESPACE} namespace if it does not exist"
-  kubectl get ns ${SYSTEM_NAMESPACE} || kubectl create namespace ${SYSTEM_NAMESPACE}
+  kubectl get ns "${SYSTEM_NAMESPACE}" || kubectl create namespace "${SYSTEM_NAMESPACE}"
   # Install Knative Eventing in the current cluster.
   echo "Installing Knative Eventing from: ${1}"
   if [[ "$1" == "HEAD" ]]; then
     build_knative_from_source
-    local EVENTING_CORE_NAME=${TMP_DIR}/${EVENTING_CORE_YAML##*/}
-    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${EVENTING_CORE_YAML} > ${EVENTING_CORE_NAME}
+    local EVENTING_CORE_NAME="${TMP_DIR}/${EVENTING_CORE_YAML##*/}"
+    sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" \
+      "${EVENTING_CORE_YAML}" > "${EVENTING_CORE_NAME}"
     kubectl apply \
-      -f "${EVENTING_CORE_NAME}" || return 1
+      -f "${EVENTING_CORE_NAME}" || return $?
     UNINSTALL_LIST+=( "${EVENTING_CORE_NAME}" )
 
     kubectl patch horizontalpodautoscalers.autoscaling -n ${SYSTEM_NAMESPACE} eventing-webhook -p '{"spec": {"minReplicas": '${REPLICAS}'}}' || return 1
@@ -162,29 +170,22 @@ function install_knative_eventing() {
     UNINSTALL_LIST+=( "${EVENTING_RELEASE_YAML}" )
   fi
 
-  # Setup config tracing for tracing tests
-  local TMP_CONFIG_TRACING_CONFIG=${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}
-  sed "s/namespace: ${KNATIVE_DEFAULT_NAMESPACE}/namespace: ${SYSTEM_NAMESPACE}/g" ${CONFIG_TRACING_CONFIG} > ${TMP_CONFIG_TRACING_CONFIG}
-  kubectl replace -f ${TMP_CONFIG_TRACING_CONFIG}
+  local TMP_CONFIG_TRACING_CONFIG="${TMP_DIR}/${CONFIG_TRACING_CONFIG##*/}"
+  sed "s/${KNATIVE_DEFAULT_NAMESPACE}/${SYSTEM_NAMESPACE}/g" \
+    "${CONFIG_TRACING_CONFIG}" > "${TMP_CONFIG_TRACING_CONFIG}"
+  echo "Setup config tracing for tracing tests, using YAML: ${TMP_CONFIG_TRACING_CONFIG}"
+  kubectl apply -f "${TMP_CONFIG_TRACING_CONFIG}"
+  UNINSTALL_LIST+=( "${TMP_CONFIG_TRACING_CONFIG}" )
 
   scale_controlplane eventing-webhook eventing-controller
 
-  wait_until_pods_running ${SYSTEM_NAMESPACE} || fail_test "Knative Eventing did not come up"
+  wait_until_pods_running "${SYSTEM_NAMESPACE}" || fail_test "Knative Eventing did not come up"
 
-  echo "check the config map"
-  kubectl get configmaps -n ${SYSTEM_NAMESPACE}
-  if ! (( DEPLOY_KNATIVE_MONITORING )); then return 0; fi
+  echo "Check the config map"
+  kubectl get configmaps -n "${SYSTEM_NAMESPACE}"
 
-  # Ensure knative monitoring is installed only once
-  kubectl get ns knative-monitoring|| kubectl create namespace knative-monitoring
-  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
-    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
-  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
-    echo ">> Installing Knative Monitoring"
-    start_knative_eventing_monitoring "${KNATIVE_EVENTING_MONITORING_YAML}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${KNATIVE_EVENTING_MONITORING_YAML}" )
-  else
-    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
+  if (( DEPLOY_KNATIVE_MONITORING )); then
+    start_knative_eventing_monitoring || fail_test 'Knative Monitoring did not come up'
   fi
 }
 
@@ -254,8 +255,6 @@ function knative_teardown() {
   done
   kubectl delete --ignore-not-found=true namespace "${SYSTEM_NAMESPACE}"
   wait_until_object_does_not_exist namespaces "${SYSTEM_NAMESPACE}"
-  kubectl delete --ignore-not-found=true namespace 'knative-monitoring'
-  wait_until_object_does_not_exist namespaces 'knative-monitoring'
 }
 
 # Add function call to trap
