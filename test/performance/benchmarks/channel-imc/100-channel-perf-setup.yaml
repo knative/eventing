@@ -85,7 +85,7 @@ roleRef:
 
 ---
 
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1
 kind: InMemoryChannel
 metadata:
   name: in-memory-test-channel
@@ -94,14 +94,14 @@ metadata:
 ---
 
 
-apiVersion: messaging.knative.dev/v1alpha1
+apiVersion: messaging.knative.dev/v1
 kind: Subscription
 metadata:
   name: in-memory-test-channel-sub
   namespace: perf-eventing
 spec:
   channel:
-    apiVersion: messaging.knative.dev/v1alpha1
+    apiVersion: messaging.knative.dev/v1
     kind: InMemoryChannel
     name: in-memory-test-channel
   subscriber:

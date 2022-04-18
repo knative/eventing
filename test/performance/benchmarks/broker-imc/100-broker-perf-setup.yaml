@@ -26,12 +26,12 @@ metadata:
   namespace: perf-eventing
 data:
   channel-template-spec: |
-    apiVersion: messaging.knative.dev/v1beta1
+    apiVersion: messaging.knative.dev/v1
     kind: InMemoryChannel
 
 ---
 
-apiVersion: eventing.knative.dev/v1beta1
+apiVersion: eventing.knative.dev/v1
 kind: Broker
 metadata:
   name: in-memory-test-broker
@@ -46,7 +46,7 @@ spec:
 
 ---
 
-apiVersion: eventing.knative.dev/v1beta1
+apiVersion: eventing.knative.dev/v1
 kind: Trigger
 metadata:
   name: broker-perf
